@@ -171,6 +171,25 @@ describe('SettingsDialog', () => {
     expect(clipInput.value).toBe('Enter');
   });
 
+  it('should show fixed reminders for UV smear and 3D fly navigation keys', () => {
+    dialog.show();
+    dialog.showTab('keyboard');
+    const content = dialog.getContentElement();
+    const reminders = Array.from(content.querySelectorAll('[data-settings-reminder]')).map((element) => ({
+      id: element.getAttribute('data-settings-reminder'),
+      value: (element as HTMLInputElement).value,
+      readOnly: (element as HTMLInputElement).readOnly,
+    }));
+
+    expect(reminders).toEqual([
+      { id: 'keyboard-reminder-uv-smear', value: 'G', readOnly: true },
+      { id: 'keyboard-reminder-fly-forward-backward', value: 'W / S', readOnly: true },
+      { id: 'keyboard-reminder-fly-left-right', value: 'A / D', readOnly: true },
+      { id: 'keyboard-reminder-fly-down-up', value: 'Q / E', readOnly: true },
+      { id: 'keyboard-reminder-fly-speed-boost', value: 'Shift', readOnly: true },
+    ]);
+  });
+
   it('should persist Mouse tab sensitivities and navigation options', () => {
     dialog.show();
     dialog.showTab('mouse');
