@@ -4,4 +4,9 @@ node_modules
 *.log
 coverage
 docs/
+dist/
+# Desktop build outputs
+desktop_build/
+desktop_build_cef/
+desktop_artifacts/
 reference/

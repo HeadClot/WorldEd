@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
+import {
+  createEditorWebGLCanvas,
+  getEditorWebGLRendererOptions,
+} from '../viewports/webgl_renderer_options.js';
 
 /**
  * Renders three colored arrows (X=red, Y=green, Z=blue) in the top-right
@@ -39,7 +43,10 @@ export class CameraWidget {
     this.widgetCamera.position.set(0, 0, 5);
     this.widgetCamera.lookAt(0, 0, 0);
 
-    this.widgetRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.widgetRenderer = new THREE.WebGLRenderer({
+      ...getEditorWebGLRendererOptions(true),
+      canvas: createEditorWebGLCanvas('camera_widget'),
+    });
     this.widgetRenderer.setPixelRatio(window.devicePixelRatio);
     this.widgetRenderer.setSize(this.canvasSize, this.canvasSize);
 
