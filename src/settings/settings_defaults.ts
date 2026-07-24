@@ -77,12 +77,52 @@ export function createDefaultUpdateSettings(): UpdateSettings {
  */
 export function createDefaultKeyboardShortcutSettings(): KeyboardShortcutSettings {
   return {
+    ...createDefaultTransformShortcuts(),
+    ...createDefaultEditFileShortcuts(),
+    ...createDefaultNavigationShortcuts(),
+    ...createDefaultShadingSnapClipShortcuts(),
+  };
+}
+
+/**
+ * Default transform-mode and selection-mode shortcuts.
+ *
+ * @returns Partial keyboard shortcut settings.
+ */
+function createDefaultTransformShortcuts(): Pick<
+  KeyboardShortcutSettings,
+  'move' | 'rotate' | 'scale' | 'bounds' | 'face' | 'selection_object'
+> {
+  return {
     move: createShortcut('KeyW'),
     rotate: createShortcut('KeyE'),
     scale: createShortcut('KeyR'),
     bounds: createShortcut('KeyT'),
     face: createShortcut('Tab', false, true),
     selection_object: createShortcut('Tab'),
+  };
+}
+
+/**
+ * Default edit and file operation shortcuts.
+ *
+ * @returns Partial keyboard shortcut settings.
+ */
+function createDefaultEditFileShortcuts(): Pick<
+  KeyboardShortcutSettings,
+  | 'delete_selected'
+  | 'escape'
+  | 'save'
+  | 'load'
+  | 'export_glb'
+  | 'undo'
+  | 'redo'
+  | 'redo_alternate'
+  | 'duplicate'
+  | 'group'
+  | 'ungroup'
+> {
+  return {
     delete_selected: createShortcut('Delete'),
     escape: createShortcut('Escape'),
     save: createShortcut('KeyS', true),
@@ -94,10 +134,47 @@ export function createDefaultKeyboardShortcutSettings(): KeyboardShortcutSetting
     duplicate: createShortcut('KeyD', true),
     group: createShortcut('KeyG', false, true),
     ungroup: createShortcut('KeyU', false, true),
+  };
+}
+
+/**
+ * Default camera fit and alignment shortcuts.
+ *
+ * @returns Partial keyboard shortcut settings.
+ */
+function createDefaultNavigationShortcuts(): Pick<
+  KeyboardShortcutSettings,
+  'align_origin' | 'axis_cycle' | 'fit_selection' | 'fit_all'
+> {
+  return {
     align_origin: createShortcut('KeyG', false, false, true),
     axis_cycle: createShortcut('KeyA'),
     fit_selection: createShortcut('KeyF'),
     fit_all: createShortcut('KeyF', false, true),
+  };
+}
+
+/**
+ * Default shading, snap, extrude, and clip shortcuts.
+ *
+ * @returns Partial keyboard shortcut settings.
+ */
+function createDefaultShadingSnapClipShortcuts(): Pick<
+  KeyboardShortcutSettings,
+  | 'shading_solid'
+  | 'shading_wireframe'
+  | 'shading_flat'
+  | 'shading_wireframe_overlay'
+  | 'snap_forward'
+  | 'snap_backward'
+  | 'snap_forward_large'
+  | 'snap_backward_large'
+  | 'extrude'
+  | 'clip_flip'
+  | 'clip_commit'
+  | 'clip_split'
+> {
+  return {
     shading_solid: createShortcut('Digit1'),
     shading_wireframe: createShortcut('Digit2'),
     shading_flat: createShortcut('Digit3'),

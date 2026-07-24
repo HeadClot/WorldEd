@@ -1,0 +1,83 @@
+import { AboutDialog } from '../ui/about_dialog.js';
+import { SettingsDialog } from '../ui/settings/settings_dialog.js';
+import { EditorSettingsStore } from '../settings/editor_settings_store.js';
+import { SettingsApplicator } from '../settings/settings_applicator.js';
+import type { Viewport3D } from '../viewports/viewport_3d.js';
+import type { ViewportPaneLayout } from './viewport_pane_layout.js';
+import type { StatusBar } from '../ui/status_bar.js';
+
+/** Result of creating the settings store, applicator, and dialog. */
+export interface LayoutSettingsSystemParts {
+  settingsStore: EditorSettingsStore;
+  settingsApplicator: SettingsApplicator;
+  settingsDialog: SettingsDialog;
+  settingsUnsubscribe: () => void;
+}
+
+/** Dependencies required to create and wire the settings subsystem. */
+export interface LayoutSettingsCreateDeps {
+  container: HTMLElement;
+  viewport3D: Viewport3D;
+  viewportPaneLayout: ViewportPaneLayout;
+  resizeAll: () => void;
+}
+
+/**
+ * Creates the settings store, applicator, dialog, and subscription.
+ *
+ * @param deps Layout settings create dependencies.
+ * @returns Owned settings subsystem parts.
+ */
+export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): LayoutSettingsSystemParts {
+  const settingsStore = new EditorSettingsStore();
+  const settingsApplicator = new SettingsApplicator(document.documentElement);
+  settingsApplicator.applySnapshot(settingsStore.getSnapshot());
+  applyLayoutViewportPaneCount(
+    deps.viewportPaneLayout,
+    deps.resizeAll,
+    settingsStore.getViewSettings().viewportPaneCount,
+  );
+  deps.viewport3D.setFlyingCameraMoveSpeed(settingsStore.getMouseSettings().moveSpeed);
+  const settingsUnsubscribe = settingsStore.subscribe((snapshot) => {
+    settingsApplicator.applySnapshot(snapshot);
+    applyLayoutViewportPaneCount(deps.viewportPaneLayout, deps.resizeAll, snapshot.view.viewportPaneCount);
+    deps.viewport3D.setFlyingCameraMoveSpeed(snapshot.mouse.moveSpeed);
+  });
+  const settingsDialog = new SettingsDialog(deps.container, settingsStore);
+  return { settingsStore, settingsApplicator, settingsDialog, settingsUnsubscribe };
+}
+
+/**
+ * Applies a pane count preference and updates visible viewport render sizes.
+ *
+ * @param viewportPaneLayout Pane layout controller.
+ * @param resizeAll Resize callback after layout settles.
+ * @param paneCount Number of viewport panes to display.
+ */
+export function applyLayoutViewportPaneCount(
+  viewportPaneLayout: ViewportPaneLayout,
+  resizeAll: () => void,
+  paneCount: 1 | 2 | 3 | 4,
+): void {
+  viewportPaneLayout.apply(paneCount);
+  requestAnimationFrame(() => resizeAll());
+}
+
+/**
+ * Opens the About dialog, creating it when missing.
+ *
+ * @param container Editor root element.
+ * @param existingDialog Existing dialog instance or null.
+ * @param statusBar Optional status bar for action text.
+ * @returns Dialog instance that was shown.
+ */
+export function openLayoutAboutDialog(
+  container: HTMLElement,
+  existingDialog: AboutDialog | null,
+  statusBar: StatusBar | null,
+): AboutDialog {
+  const aboutDialog = existingDialog ?? new AboutDialog(container);
+  aboutDialog.show();
+  statusBar?.setLastAction('About AI World Editor');
+  return aboutDialog;
+}

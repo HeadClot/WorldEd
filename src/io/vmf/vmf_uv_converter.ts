@@ -14,8 +14,8 @@ export const VMF_DEFAULT_TEXTURE_SIZE = 512;
 /**
  * Converts Hammer U/V axes into a face texture mapping. Stores exact swizzled
  * world axes for Source-accurate projection, plus scale and offset in the
- * editor's meters-per-tile / meter-offset convention. V is flipped to match
- * Source (and Chisel) texture orientation.
+ * editor's meters-per-tile / meter-offset convention. V is flipped so Source
+ * material orientation matches the editor projector.
  */
 export class VmfUvConverter {
   /**
@@ -44,14 +44,12 @@ export class VmfUvConverter {
     mapping.rotationDeg = 0;
     const worldU = this.swizzleAxisDirection(uAxis);
     const worldV = this.swizzleAxisDirection(vAxis);
-    // Source V runs opposite our projector when using positive V; flip V like Chisel.
     worldV.multiplyScalar(-1);
     mapping.customUAxis = { x: worldU.x, y: worldU.y, z: worldU.z };
     mapping.customVAxis = { x: worldV.x, y: worldV.y, z: worldV.z };
     mapping.scaleU = this.axisToMetersPerTile(uAxis, textureWidth, unitScale);
     mapping.scaleV = this.axisToMetersPerTile(vAxis, textureHeight, unitScale);
     mapping.offsetU = this.axisToMeterOffset(uAxis, unitScale);
-    // V was flipped; translation sign follows the flipped axis.
     mapping.offsetV = -this.axisToMeterOffset(vAxis, unitScale);
     return mapping;
   }

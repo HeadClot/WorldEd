@@ -84,33 +84,53 @@ export class SolidModelCodec {
    */
   private static encodeBrush(instance: SolidBrushInstance): SerializedSolidBrush {
     instance.pullTransformFromMesh();
-    const brush = instance.brush;
     const defaultMapping = instance.serializeDefaultMapping();
-    const faceMappings = instance.serializeFaceMappings();
     return {
       id: instance.id,
       name: instance.name,
       operation: instance.operation,
-      position: {
-        x: instance.position.x,
-        y: instance.position.y,
-        z: instance.position.z,
-      },
-      rotation: {
-        x: instance.rotation.x,
-        y: instance.rotation.y,
-        z: instance.rotation.z,
-      },
-      scale: {
-        x: instance.scale.x,
-        y: instance.scale.y,
-        z: instance.scale.z,
-      },
+      position: this.encodeVector3(instance.position),
+      rotation: this.encodeEuler(instance.rotation),
+      scale: this.encodeVector3(instance.scale),
       visible: instance.visible,
       surfaceTextureId: defaultMapping.textureId,
       faceTextureIds: instance.serializeFaceTextureIds(),
       defaultMapping,
-      faceMappings,
+      faceMappings: instance.serializeFaceMappings(),
+      ...this.encodeBrushGeometry(instance.brush),
+    };
+  }
+
+  /**
+   * Encodes a Vector3 into a plain object.
+   *
+   * @param vector Source vector.
+   * @returns Serializable xyz components.
+   */
+  private static encodeVector3(vector: THREE.Vector3): { x: number; y: number; z: number } {
+    return { x: vector.x, y: vector.y, z: vector.z };
+  }
+
+  /**
+   * Encodes an Euler into a plain object (order restored on decode).
+   *
+   * @param euler Source rotation.
+   * @returns Serializable xyz components.
+   */
+  private static encodeEuler(euler: THREE.Euler): { x: number; y: number; z: number } {
+    return { x: euler.x, y: euler.y, z: euler.z };
+  }
+
+  /**
+   * Encodes brush wing-edge topology and vertices.
+   *
+   * @param brush Source brush geometry.
+   * @returns Geometry fields for a serialized brush.
+   */
+  private static encodeBrushGeometry(
+    brush: SolidBrush,
+  ): Pick<SerializedSolidBrush, 'vertices' | 'wingEdges' | 'edgeFaceIndices' | 'faces'> {
+    return {
       vertices: this.flattenVertices(brush.vertices),
       wingEdges: brush.wingEdges.map((edge) => ({
         vertexIndex: edge.vertexIndex,

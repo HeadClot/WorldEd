@@ -31,6 +31,20 @@ export class StatusBar {
     this.container = document.createElement('div');
     this.leftPanel = document.createElement('div');
     this.rightPanel = document.createElement('div');
+    this.createTextElements();
+    this.snapInterval = 0.25;
+    this.snapIntervalFormatted = this.formatSnapInterval(0.25);
+    this.isDisposed = false;
+    this.applyContainerStyles(theme);
+    this.applyPanelStyles(this.leftPanel);
+    this.applyPanelStyles(this.rightPanel);
+    this.styleAllTextElements();
+    this.assembleDomHierarchy(container);
+    this.applyInitialTextContent();
+  }
+
+  /** Creates all status label span elements. */
+  private createTextElements(): void {
     this.undoRedoText = document.createElement('span');
     this.lastActionText = document.createElement('span');
     this.modeText = document.createElement('span');
@@ -40,12 +54,10 @@ export class StatusBar {
     this.fitFeedbackText = document.createElement('span');
     this.shadingModeText = document.createElement('span');
     this.selectionModeText = document.createElement('span');
-    this.snapInterval = 0.25;
-    this.snapIntervalFormatted = this.formatSnapInterval(0.25);
-    this.isDisposed = false;
-    this.applyContainerStyles(theme);
-    this.applyPanelStyles(this.leftPanel);
-    this.applyPanelStyles(this.rightPanel);
+  }
+
+  /** Applies shared text styles to every status label. */
+  private styleAllTextElements(): void {
     this.applyTextStyle(this.undoRedoText);
     this.applyTextStyle(this.lastActionText);
     this.applyTextStyle(this.modeText);
@@ -55,6 +67,14 @@ export class StatusBar {
     this.applyTextStyle(this.fitFeedbackText);
     this.applyTextStyle(this.shadingModeText);
     this.applyTextStyle(this.selectionModeText);
+  }
+
+  /**
+   * Mounts left/right panels into the status bar and attaches to the host.
+   *
+   * @param host Parent DOM element for the status bar.
+   */
+  private assembleDomHierarchy(host: HTMLElement): void {
     this.leftPanel.appendChild(this.undoRedoText);
     this.leftPanel.appendChild(this.lastActionText);
     this.leftPanel.appendChild(this.savedInfoText);
@@ -66,7 +86,11 @@ export class StatusBar {
     this.rightPanel.appendChild(this.shadingModeText);
     this.container.appendChild(this.leftPanel);
     this.container.appendChild(this.rightPanel);
-    container.appendChild(this.container);
+    host.appendChild(this.container);
+  }
+
+  /** Writes default status label strings for a fresh editor session. */
+  private applyInitialTextContent(): void {
     this.undoRedoText.textContent = 'Undo: 0 | Redo: 0';
     this.lastActionText.textContent = '';
     this.modeText.textContent = 'Mode: Bounds';

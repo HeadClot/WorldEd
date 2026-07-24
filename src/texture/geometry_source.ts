@@ -65,46 +65,86 @@ export function captureGeometrySourceIfNeeded(mesh: THREE.Mesh): void {
  */
 export function detectGeometrySourceFromInstance(geometry: THREE.BufferGeometry): GeometrySource | null {
   if (geometry instanceof THREE.BoxGeometry) {
-    return {
-      type: 'box',
-      params: {
-        width: geometry.parameters.width,
-        height: geometry.parameters.height,
-        depth: geometry.parameters.depth,
-      },
-    };
+    return detectBoxGeometrySource(geometry);
   }
   if (geometry instanceof THREE.SphereGeometry) {
-    return {
-      type: 'sphere',
-      params: {
-        radius: geometry.parameters.radius,
-        widthSegments: geometry.parameters.widthSegments,
-        heightSegments: geometry.parameters.heightSegments,
-      },
-    };
+    return detectSphereGeometrySource(geometry);
   }
   if (geometry instanceof THREE.CylinderGeometry) {
-    return {
-      type: 'cylinder',
-      params: {
-        radiusTop: geometry.parameters.radiusTop,
-        radiusBottom: geometry.parameters.radiusBottom,
-        height: geometry.parameters.height,
-        radialSegments: geometry.parameters.radialSegments,
-      },
-    };
+    return detectCylinderGeometrySource(geometry);
   }
   if (geometry instanceof THREE.PlaneGeometry) {
-    return {
-      type: 'plane',
-      params: {
-        width: geometry.parameters.width,
-        height: geometry.parameters.height,
-      },
-    };
+    return detectPlaneGeometrySource(geometry);
   }
   return null;
+}
+
+/**
+ * Captures box geometry constructor parameters.
+ *
+ * @param geometry Box geometry instance.
+ * @returns Geometry source snapshot.
+ */
+function detectBoxGeometrySource(geometry: THREE.BoxGeometry): GeometrySource {
+  return {
+    type: 'box',
+    params: {
+      width: geometry.parameters.width,
+      height: geometry.parameters.height,
+      depth: geometry.parameters.depth,
+    },
+  };
+}
+
+/**
+ * Captures sphere geometry constructor parameters.
+ *
+ * @param geometry Sphere geometry instance.
+ * @returns Geometry source snapshot.
+ */
+function detectSphereGeometrySource(geometry: THREE.SphereGeometry): GeometrySource {
+  return {
+    type: 'sphere',
+    params: {
+      radius: geometry.parameters.radius,
+      widthSegments: geometry.parameters.widthSegments,
+      heightSegments: geometry.parameters.heightSegments,
+    },
+  };
+}
+
+/**
+ * Captures cylinder geometry constructor parameters.
+ *
+ * @param geometry Cylinder geometry instance.
+ * @returns Geometry source snapshot.
+ */
+function detectCylinderGeometrySource(geometry: THREE.CylinderGeometry): GeometrySource {
+  return {
+    type: 'cylinder',
+    params: {
+      radiusTop: geometry.parameters.radiusTop,
+      radiusBottom: geometry.parameters.radiusBottom,
+      height: geometry.parameters.height,
+      radialSegments: geometry.parameters.radialSegments,
+    },
+  };
+}
+
+/**
+ * Captures plane geometry constructor parameters.
+ *
+ * @param geometry Plane geometry instance.
+ * @returns Geometry source snapshot.
+ */
+function detectPlaneGeometrySource(geometry: THREE.PlaneGeometry): GeometrySource {
+  return {
+    type: 'plane',
+    params: {
+      width: geometry.parameters.width,
+      height: geometry.parameters.height,
+    },
+  };
 }
 
 /**

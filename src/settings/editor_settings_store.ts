@@ -6,18 +6,27 @@ import {
   deriveHandedness,
   getBuiltInCoordinateSpace,
 } from './coordinate_space_presets.js';
-import type { AxisDirection, CoordinateSpaceDefinition, Handedness } from './coordinate_space_types.js';
+import type { AxisDirection, CoordinateSpaceDefinition } from './coordinate_space_types.js';
 import { CustomCoordinateSpaceRepository } from './custom_coordinate_space_repository.js';
-import {
-  createDefaultGameProfile,
-  createDefaultKeyboardShortcutSettings,
-  createDefaultMouseSettings,
-  createDefaultUpdateSettings,
-  createDefaultViewSettings,
-} from './settings_defaults.js';
+import { cloneProfile } from './game_profile_clone.js';
+import { createDefaultGameProfile } from './settings_defaults.js';
 import { createProfileId, GameProfileRepository } from './game_profile_repository.js';
+import { areShortcutsEqual, isValidKeyboardShortcut } from './settings_keyboard_helpers.js';
+import {
+  loadKeyboardShortcutSettings,
+  loadMouseSettings,
+  loadUpdateSettings,
+  loadViewSettings,
+} from './settings_loaders.js';
 import type { SettingsStorage } from './settings_storage.js';
 import { LocalSettingsStorage } from './settings_storage.js';
+import {
+  KEYBOARD_SHORTCUTS_STORAGE_KEY,
+  MOUSE_SETTINGS_STORAGE_KEY,
+  UPDATE_SETTINGS_STORAGE_KEY,
+  VIEW_SETTINGS_STORAGE_KEY,
+  type EditorSettingsListener,
+} from './settings_storage_keys.js';
 import type {
   EditorSettingsSnapshot,
   GameProfile,
@@ -30,32 +39,17 @@ import type {
   ViewportPaneCount,
   ViewSettings,
 } from './settings_types.js';
-import {
-  BRIGHTNESS_MAX,
-  BRIGHTNESS_MIN,
-  MOUSE_SENSITIVITY_MAX,
-  MOUSE_SENSITIVITY_MIN,
-  MOUSE_MOVE_SPEED_MAX,
-  MOUSE_MOVE_SPEED_MIN,
-  RENDERER_FONT_SIZE_MAX,
-  RENDERER_FONT_SIZE_MIN,
-} from './settings_types.js';
+import { BRIGHTNESS_MAX, BRIGHTNESS_MIN, RENDERER_FONT_SIZE_MAX, RENDERER_FONT_SIZE_MIN } from './settings_types.js';
+import { areMouseSettingsEqual, clampNumber, mergeMouseSettings } from './settings_value_sanitizers.js';
 import type { ImperialUnit, MetricUnit, UnitSystem } from './unit_presets.js';
 
-/** Storage key for view settings JSON. */
-export const VIEW_SETTINGS_STORAGE_KEY = 'aiworlded.settings.view';
-
-/** Storage key for primary editor keyboard shortcuts. */
-export const KEYBOARD_SHORTCUTS_STORAGE_KEY = 'aiworlded.settings.keyboard';
-
-/** Storage key for mouse navigation settings JSON. */
-export const MOUSE_SETTINGS_STORAGE_KEY = 'aiworlded.settings.mouse';
-
-/** Storage key for standalone updater preferences JSON. */
-export const UPDATE_SETTINGS_STORAGE_KEY = 'aiworlded.settings.update';
-
-/** Listener notified when any settings value changes. */
-export type EditorSettingsListener = (snapshot: EditorSettingsSnapshot) => void;
+export {
+  VIEW_SETTINGS_STORAGE_KEY,
+  KEYBOARD_SHORTCUTS_STORAGE_KEY,
+  MOUSE_SETTINGS_STORAGE_KEY,
+  UPDATE_SETTINGS_STORAGE_KEY,
+  type EditorSettingsListener,
+} from './settings_storage_keys.js';
 
 /**
  * Central editor settings store for game profiles and view preferences.
@@ -86,10 +80,10 @@ export class EditorSettingsStore {
     this.repository = repository ?? new GameProfileRepository(storage);
     this.coordinateSpaceRepository = new CustomCoordinateSpaceRepository(storage);
     this.listeners = new Set();
-    this.view = this.loadViewSettings();
-    this.mouse = this.loadMouseSettings();
-    this.update = this.loadUpdateSettings();
-    this.keyboard = this.loadKeyboardShortcutSettings();
+    this.view = loadViewSettings(storage);
+    this.mouse = loadMouseSettings(storage);
+    this.update = loadUpdateSettings(storage);
+    this.keyboard = loadKeyboardShortcutSettings(storage);
     this.customCoordinateSpaces = this.coordinateSpaceRepository.loadAll().map((space) => cloneCoordinateSpace(space));
     const loaded = this.repository.loadAll();
     this.profiles = loaded.profiles.map((profile) => cloneProfile(profile));
@@ -363,19 +357,9 @@ export class EditorSettingsStore {
     if (!space || space[axis] === direction) {
       return false;
     }
-    const next = cloneCoordinateSpace(space);
-    next[axis] = direction;
-    if (!areValidCoordinateAxes(next.up, next.right, next.forward)) {
+    if (!this.tryApplyCoordinateSpaceAxis(space, axis, direction)) {
       return false;
     }
-    const handedness = deriveHandedness(next.up, next.right, next.forward);
-    if (!handedness) {
-      return false;
-    }
-    space.up = next.up;
-    space.right = next.right;
-    space.forward = next.forward;
-    space.handedness = handedness;
     this.syncProfilesUsingCoordinateSpace(space);
     this.persistCustomCoordinateSpaces();
     this.persistProfiles();
@@ -396,12 +380,7 @@ export class EditorSettingsStore {
       return false;
     }
     this.customCoordinateSpaces.splice(index, 1);
-    const fallback = createDefaultCoordinateSpace();
-    this.profiles.forEach((profile) => {
-      if (profile.coordinateSpace.presetId === presetId) {
-        profile.coordinateSpace = cloneCoordinateSpace(fallback);
-      }
-    });
+    this.fallbackProfilesUsingPreset(presetId);
     this.persistCustomCoordinateSpaces();
     this.persistProfiles();
     this.notifyListeners();
@@ -698,6 +677,50 @@ export class EditorSettingsStore {
     }
   }
 
+  /**
+   * Tries to apply a new axis direction onto a custom space.
+   *
+   * @param space Mutable custom coordinate space.
+   * @param axis Role being edited.
+   * @param direction New axis direction.
+   * @returns True when axes remain valid and handedness was derived.
+   */
+  private tryApplyCoordinateSpaceAxis(
+    space: CoordinateSpaceDefinition,
+    axis: 'up' | 'right' | 'forward',
+    direction: AxisDirection,
+  ): boolean {
+    const next = cloneCoordinateSpace(space);
+    next[axis] = direction;
+    if (!areValidCoordinateAxes(next.up, next.right, next.forward)) {
+      return false;
+    }
+    const handedness = deriveHandedness(next.up, next.right, next.forward);
+    if (!handedness) {
+      return false;
+    }
+    space.up = next.up;
+    space.right = next.right;
+    space.forward = next.forward;
+    space.handedness = handedness;
+    return true;
+  }
+
+  /**
+   * Resets profiles that referenced a removed custom preset to the default
+   * space.
+   *
+   * @param presetId Removed custom preset id.
+   */
+  private fallbackProfilesUsingPreset(presetId: string): void {
+    const fallback = createDefaultCoordinateSpace();
+    this.profiles.forEach((profile) => {
+      if (profile.coordinateSpace.presetId === presetId) {
+        profile.coordinateSpace = cloneCoordinateSpace(fallback);
+      }
+    });
+  }
+
   /** Writes all game profiles through the repository. */
   private persistProfiles(): void {
     this.repository.saveAll(this.profiles, this.activeGameProfileId);
@@ -728,324 +751,9 @@ export class EditorSettingsStore {
     this.storage.setItem(KEYBOARD_SHORTCUTS_STORAGE_KEY, JSON.stringify(this.keyboard));
   }
 
-  /**
-   * Loads view settings from storage with defaults for missing fields.
-   *
-   * @returns Loaded view settings.
-   */
-  private loadViewSettings(): ViewSettings {
-    const defaults = createDefaultViewSettings();
-    const raw = this.storage.getItem(VIEW_SETTINGS_STORAGE_KEY);
-    if (!raw) {
-      return defaults;
-    }
-    return mergeViewSettings(defaults, raw);
-  }
-
-  /**
-   * Loads mouse navigation settings and fills missing values with defaults.
-   *
-   * @returns Valid mouse settings.
-   */
-  private loadMouseSettings(): MouseSettings {
-    const defaults = createDefaultMouseSettings();
-    const raw = this.storage.getItem(MOUSE_SETTINGS_STORAGE_KEY);
-    if (!raw) return defaults;
-    try {
-      return mergeMouseSettings(defaults, JSON.parse(raw) as Partial<MouseSettings>);
-    } catch {
-      return defaults;
-    }
-  }
-
-  /** Loads standalone updater preferences with safe defaults. */
-  private loadUpdateSettings(): UpdateSettings {
-    const defaults = createDefaultUpdateSettings();
-    const raw = this.storage.getItem(UPDATE_SETTINGS_STORAGE_KEY);
-    if (!raw) return defaults;
-    try {
-      const parsed = JSON.parse(raw) as Partial<UpdateSettings>;
-      return {
-        automaticChecks: sanitizeBoolean(parsed.automaticChecks, defaults.automaticChecks),
-      };
-    } catch {
-      return defaults;
-    }
-  }
-
-  /**
-   * Loads keyboard shortcut settings and fills missing values with defaults.
-   *
-   * @returns Valid keyboard shortcut settings.
-   */
-  private loadKeyboardShortcutSettings(): KeyboardShortcutSettings {
-    const defaults = createDefaultKeyboardShortcutSettings();
-    const raw = this.storage.getItem(KEYBOARD_SHORTCUTS_STORAGE_KEY);
-    if (!raw) return defaults;
-    try {
-      const parsed = JSON.parse(raw) as Partial<KeyboardShortcutSettings>;
-      return {
-        move: sanitizeKeyboardShortcut(parsed.move, defaults.move),
-        rotate: sanitizeKeyboardShortcut(parsed.rotate, defaults.rotate),
-        scale: sanitizeKeyboardShortcut(parsed.scale, defaults.scale),
-        bounds: sanitizeKeyboardShortcut(parsed.bounds, defaults.bounds),
-        face: sanitizeKeyboardShortcut(parsed.face, defaults.face),
-        selection_object: sanitizeKeyboardShortcut(parsed.selection_object, defaults.selection_object),
-        delete_selected: sanitizeKeyboardShortcut(parsed.delete_selected, defaults.delete_selected),
-        escape: sanitizeKeyboardShortcut(parsed.escape, defaults.escape),
-        save: sanitizeKeyboardShortcut(parsed.save, defaults.save),
-        load: sanitizeKeyboardShortcut(parsed.load, defaults.load),
-        export_glb: sanitizeKeyboardShortcut(parsed.export_glb, defaults.export_glb),
-        undo: sanitizeKeyboardShortcut(parsed.undo, defaults.undo),
-        redo: sanitizeKeyboardShortcut(parsed.redo, defaults.redo),
-        redo_alternate: sanitizeKeyboardShortcut(parsed.redo_alternate, defaults.redo_alternate),
-        duplicate: sanitizeKeyboardShortcut(parsed.duplicate, defaults.duplicate),
-        group: sanitizeKeyboardShortcut(parsed.group, defaults.group),
-        ungroup: sanitizeKeyboardShortcut(parsed.ungroup, defaults.ungroup),
-        align_origin: sanitizeKeyboardShortcut(parsed.align_origin, defaults.align_origin),
-        axis_cycle: sanitizeKeyboardShortcut(parsed.axis_cycle, defaults.axis_cycle),
-        fit_selection: sanitizeKeyboardShortcut(parsed.fit_selection, defaults.fit_selection),
-        fit_all: sanitizeKeyboardShortcut(parsed.fit_all, defaults.fit_all),
-        shading_solid: sanitizeKeyboardShortcut(parsed.shading_solid, defaults.shading_solid),
-        shading_wireframe: sanitizeKeyboardShortcut(parsed.shading_wireframe, defaults.shading_wireframe),
-        shading_flat: sanitizeKeyboardShortcut(parsed.shading_flat, defaults.shading_flat),
-        shading_wireframe_overlay: sanitizeKeyboardShortcut(
-          parsed.shading_wireframe_overlay,
-          defaults.shading_wireframe_overlay,
-        ),
-        snap_forward: sanitizeKeyboardShortcut(parsed.snap_forward, defaults.snap_forward),
-        snap_backward: sanitizeKeyboardShortcut(parsed.snap_backward, defaults.snap_backward),
-        snap_forward_large: sanitizeKeyboardShortcut(parsed.snap_forward_large, defaults.snap_forward_large),
-        snap_backward_large: sanitizeKeyboardShortcut(parsed.snap_backward_large, defaults.snap_backward_large),
-        extrude: sanitizeKeyboardShortcut(parsed.extrude, defaults.extrude),
-        clip_flip: sanitizeKeyboardShortcut(parsed.clip_flip, defaults.clip_flip),
-        clip_commit: sanitizeKeyboardShortcut(parsed.clip_commit, defaults.clip_commit),
-        clip_split: sanitizeKeyboardShortcut(parsed.clip_split, defaults.clip_split),
-      };
-    } catch {
-      return defaults;
-    }
-  }
-
   /** Notifies all subscribers with a fresh snapshot. */
   private notifyListeners(): void {
     const snapshot = this.getSnapshot();
     this.listeners.forEach((listener) => listener(snapshot));
   }
-}
-
-/**
- * Deep-clones a game profile object.
- *
- * @param profile Source profile.
- * @returns Cloned profile.
- */
-function cloneProfile(profile: GameProfile): GameProfile {
-  return {
-    id: profile.id,
-    name: profile.name,
-    unitSystem: profile.unitSystem,
-    metricUnit: profile.metricUnit,
-    imperialUnit: profile.imperialUnit,
-    coordinateSpace: cloneCoordinateSpace(profile.coordinateSpace ?? createDefaultCoordinateSpace()),
-  };
-}
-
-/**
- * Clamps a number into an inclusive range.
- *
- * @param value Input value.
- * @param min Inclusive minimum.
- * @param max Inclusive maximum.
- * @returns Clamped number.
- */
-function clampNumber(value: number, min: number, max: number): number {
-  if (Number.isNaN(value)) {
-    return min;
-  }
-  return Math.min(max, Math.max(min, value));
-}
-
-/**
- * Merges stored view JSON over defaults with validation.
- *
- * @param defaults Default view settings.
- * @param raw JSON text from storage.
- * @returns Merged view settings.
- */
-function mergeViewSettings(defaults: ViewSettings, raw: string): ViewSettings {
-  try {
-    const parsed = JSON.parse(raw) as Partial<ViewSettings>;
-    return {
-      theme: sanitizeTheme(parsed.theme, defaults.theme),
-      brightness: clampNumber(Number(parsed.brightness ?? defaults.brightness), BRIGHTNESS_MIN, BRIGHTNESS_MAX),
-      materialBrowserIconSizePercent: clampNumber(
-        Number(parsed.materialBrowserIconSizePercent ?? defaults.materialBrowserIconSizePercent),
-        25,
-        300,
-      ),
-      rendererFontSize: clampNumber(
-        Math.round(Number(parsed.rendererFontSize ?? defaults.rendererFontSize)),
-        RENDERER_FONT_SIZE_MIN,
-        RENDERER_FONT_SIZE_MAX,
-      ),
-      viewportPaneCount: clampNumber(
-        Math.round(Number(parsed.viewportPaneCount ?? defaults.viewportPaneCount)),
-        1,
-        4,
-      ) as ViewportPaneCount,
-    };
-  } catch {
-    return defaults;
-  }
-}
-
-/**
- * Validates a stored theme preference.
- *
- * @param value Candidate theme.
- * @param fallback Default theme.
- * @returns Safe theme preference.
- */
-function sanitizeTheme(value: unknown, fallback: UiThemePreference): UiThemePreference {
-  if (value === 'system' || value === 'light' || value === 'dark') {
-    return value;
-  }
-  return fallback;
-}
-
-/**
- * Merges mouse settings candidates over safe defaults.
- *
- * @param defaults Existing safe mouse settings.
- * @param candidate Potentially partial stored or updated settings.
- * @returns Validated mouse settings.
- */
-function mergeMouseSettings(defaults: MouseSettings, candidate: Partial<MouseSettings>): MouseSettings {
-  return {
-    lookSensitivity: sanitizeMouseSensitivity(candidate.lookSensitivity, defaults.lookSensitivity),
-    lookInvertXAxis: sanitizeBoolean(candidate.lookInvertXAxis, defaults.lookInvertXAxis),
-    lookInvertYAxis: sanitizeBoolean(candidate.lookInvertYAxis, defaults.lookInvertYAxis),
-    panSensitivity: sanitizeMouseSensitivity(candidate.panSensitivity, defaults.panSensitivity),
-    panInvertXAxis: sanitizeBoolean(candidate.panInvertXAxis, defaults.panInvertXAxis),
-    panInvertYAxis: sanitizeBoolean(candidate.panInvertYAxis, defaults.panInvertYAxis),
-    moveSpeed: sanitizeMouseMoveSpeed(candidate.moveSpeed, defaults.moveSpeed),
-    moveSensitivity: sanitizeMouseSensitivity(candidate.moveSensitivity, defaults.moveSensitivity),
-    invertMouseWheel: sanitizeBoolean(candidate.invertMouseWheel, defaults.invertMouseWheel),
-    altMiddleMouseDragMovesCamera: sanitizeBoolean(
-      candidate.altMiddleMouseDragMovesCamera,
-      defaults.altMiddleMouseDragMovesCamera,
-    ),
-    invertAltMiddleMouseDragZAxis: sanitizeBoolean(
-      candidate.invertAltMiddleMouseDragZAxis,
-      defaults.invertAltMiddleMouseDragZAxis,
-    ),
-    moveCameraTowardsCursor: sanitizeBoolean(candidate.moveCameraTowardsCursor, defaults.moveCameraTowardsCursor),
-  };
-}
-
-/**
- * Validates a mouse sensitivity value.
- *
- * @param value Candidate value.
- * @param fallback Safe fallback value.
- * @returns Clamped integer sensitivity.
- */
-function sanitizeMouseSensitivity(value: unknown, fallback: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-  return clampNumber(Math.round(value), MOUSE_SENSITIVITY_MIN, MOUSE_SENSITIVITY_MAX);
-}
-
-/**
- * Validates a 3D fly movement speed value.
- *
- * @param value Candidate value.
- * @param fallback Safe fallback value.
- * @returns Clamped movement speed.
- */
-function sanitizeMouseMoveSpeed(value: unknown, fallback: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-  return clampNumber(value, MOUSE_MOVE_SPEED_MIN, MOUSE_MOVE_SPEED_MAX);
-}
-
-/**
- * Validates a boolean preference.
- *
- * @param value Candidate value.
- * @param fallback Safe fallback value.
- * @returns Candidate when boolean; otherwise fallback.
- */
-function sanitizeBoolean(value: unknown, fallback: boolean): boolean {
-  return typeof value === 'boolean' ? value : fallback;
-}
-
-/**
- * Checks whether two mouse settings snapshots are identical.
- *
- * @param first First settings snapshot.
- * @param second Second settings snapshot.
- * @returns True when every preference matches.
- */
-function areMouseSettingsEqual(first: MouseSettings, second: MouseSettings): boolean {
-  return Object.keys(first).every((key) => first[key as keyof MouseSettings] === second[key as keyof MouseSettings]);
-}
-
-/**
- * Accepts browser keyboard event codes suitable for a primary shortcut.
- *
- * @param value Candidate keyboard event code.
- * @returns True when the value is a non-empty keyboard event code.
- */
-function isKeyboardEventCode(value: string): boolean {
-  return value.trim().length > 0 && value.trim().length <= 64;
-}
-
-/**
- * Validates a stored keyboard event code with a fallback.
- *
- * @param value Candidate stored event code.
- * @param fallback Safe default event code.
- * @returns A valid event code.
- */
-function sanitizeKeyboardShortcut(value: unknown, fallback: KeyboardShortcut): KeyboardShortcut {
-  if (typeof value === 'string' && isKeyboardEventCode(value)) {
-    return { ...fallback, code: value };
-  }
-  if (!isValidKeyboardShortcut(value)) return { ...fallback };
-  return { ...value };
-}
-
-/**
- * Checks whether a candidate is a valid keyboard shortcut.
- *
- * @param value Candidate shortcut value.
- * @returns True when the candidate can be stored.
- */
-function isValidKeyboardShortcut(value: unknown): value is KeyboardShortcut {
-  if (!value || typeof value !== 'object') return false;
-  const shortcut = value as KeyboardShortcut;
-  return (
-    isKeyboardEventCode(shortcut.code) &&
-    typeof shortcut.ctrl === 'boolean' &&
-    typeof shortcut.shift === 'boolean' &&
-    typeof shortcut.alt === 'boolean' &&
-    typeof shortcut.meta === 'boolean'
-  );
-}
-
-/**
- * Checks whether two shortcut bindings have the same key and modifiers.
- *
- * @param first First shortcut.
- * @param second Second shortcut.
- * @returns True when the shortcuts match exactly.
- */
-function areShortcutsEqual(first: KeyboardShortcut, second: KeyboardShortcut): boolean {
-  return (
-    first.code === second.code &&
-    first.ctrl === second.ctrl &&
-    first.shift === second.shift &&
-    first.alt === second.alt &&
-    first.meta === second.meta
-  );
 }

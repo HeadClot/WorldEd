@@ -1,0 +1,183 @@
+import * as THREE from 'three';
+import type { SolidBrushInstance } from './solid_brush_instance.js';
+import type { SolidSurfaceRegion } from '../algorithm/surface_triangulator.js';
+import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/face_texture_mapping.js';
+import { setFaceTextureMapsShared } from '../../texture/face_texture_storage.js';
+import { rebuildSolidResultMaterials } from '../../texture/surface_material_builder.js';
+import { createContentMaterial } from '../../materials/content_material_factory.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
+import { Theme } from '../../theme.js';
+import { SOLID_MODEL_RESULT_USERDATA_KEY } from './solid_model_keys.js';
+
+/** Snapshot of one brush UV/default and per-face mappings. */
+export type BrushUvSnapshot = {
+  brushId: string;
+  defaultMapping: FaceTextureMapping;
+  faceMappings: (FaceTextureMapping | undefined)[];
+};
+
+/**
+ * Presentation helpers for solid result meshes: materials, UV snapshots, and
+ * result mesh creation. Public SolidModel methods remain the facade.
+ */
+export class SolidModelPresentation {
+  /**
+   * Creates the empty result mesh that receives compiled solid geometry.
+   *
+   * @returns Result mesh child.
+   */
+  createResultMesh(): THREE.Mesh {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(0), 3));
+    const material = createContentMaterial(Theme.boxColor);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = 'Result';
+    mesh.userData[SOLID_MODEL_RESULT_USERDATA_KEY] = true;
+    return mesh;
+  }
+
+  /**
+   * Writes face maps and materials onto the result mesh. UVs are already baked
+   * into brush mesh chunks; this never reprojects them.
+   *
+   * @param resultMesh Compiled result mesh.
+   * @param surfaceRegions Last assembled surface regions.
+   * @param findBrush Lookup for authored face mappings.
+   * @param _forceMaterials Reserved; solid results always preserve order.
+   */
+  applySurfaceLayoutToResult(
+    resultMesh: THREE.Mesh,
+    surfaceRegions: readonly SolidSurfaceRegion[],
+    findBrush: (id: string) => SolidBrushInstance | undefined,
+    _forceMaterials: boolean,
+  ): void {
+    void _forceMaterials;
+    const textureRegions = this.buildTextureRegions(surfaceRegions, findBrush);
+    this.writeSharedFaceMaps(resultMesh, textureRegions);
+    this.writeSolidResultMaterials(resultMesh, textureRegions);
+  }
+
+  /**
+   * Resolves the authored face mapping for one compiled surface region.
+   *
+   * @param region Surface region with brush source identity.
+   * @param findBrush Lookup for the owning brush.
+   * @returns Mapping to bake onto the result mesh.
+   */
+  resolveRegionMapping(
+    region: { textureId: string; brushId: string; surfaceIndex: number },
+    findBrush: (id: string) => SolidBrushInstance | undefined,
+  ): FaceTextureMapping {
+    const brush = findBrush(region.brushId);
+    if (brush) return brush.getSurfaceMapping(region.surfaceIndex);
+    return createDefaultFaceTextureMapping(region.textureId || DEFAULT_CHECKER_TEXTURE_ID);
+  }
+
+  /**
+   * Captures default and per-face UV mappings for every brush (smear
+   * undo/redo).
+   *
+   * @param brushes Brushes to snapshot.
+   * @returns Snapshot list keyed by brush id.
+   */
+  captureBrushUvSnapshots(brushes: readonly SolidBrushInstance[]): BrushUvSnapshot[] {
+    return brushes.map((brush) => ({
+      brushId: brush.id,
+      defaultMapping: brush.serializeDefaultMapping(),
+      faceMappings: brush.serializeFaceMappings(),
+    }));
+  }
+
+  /**
+   * Restores brush UV mappings from a smear undo/redo snapshot.
+   *
+   * @param snapshots Brush UV snapshots previously captured.
+   * @param findBrush Lookup for brushes by id.
+   */
+  restoreBrushUvSnapshots(
+    snapshots: readonly BrushUvSnapshot[],
+    findBrush: (id: string) => SolidBrushInstance | undefined,
+  ): void {
+    for (const snapshot of snapshots) {
+      const brush = findBrush(snapshot.brushId);
+      if (!brush) continue;
+      brush.restoreFaceMappings(snapshot.defaultMapping, snapshot.faceMappings);
+    }
+  }
+
+  /**
+   * Filters brush ids to those that successfully updated polygon textures.
+   *
+   * @param brushIds Candidate brush ids.
+   * @param updatePolygonTextures Callback that updates one brush polygon cache.
+   * @returns Brush ids that remeshed from cache.
+   */
+  collectRemeshedBrushIds(brushIds: readonly string[], updatePolygonTextures: (brushId: string) => boolean): string[] {
+    const uniqueIds = Array.from(new Set(brushIds));
+    const remeshed: string[] = [];
+    for (const brushId of uniqueIds) {
+      if (updatePolygonTextures(brushId)) remeshed.push(brushId);
+    }
+    return remeshed;
+  }
+
+  /**
+   * Builds texture region descriptors used for materials and face maps.
+   *
+   * @param surfaceRegions Last assembled surface regions.
+   * @param findBrush Lookup for authored face mappings.
+   * @returns Texture regions with resolved mappings.
+   */
+  private buildTextureRegions(
+    surfaceRegions: readonly SolidSurfaceRegion[],
+    findBrush: (id: string) => SolidBrushInstance | undefined,
+  ): Array<{ triangleIndices: number[]; textureId: string; mapping: FaceTextureMapping }> {
+    return surfaceRegions.map((region) => {
+      const mapping = this.resolveRegionMapping(region, findBrush);
+      return {
+        triangleIndices: region.triangleIndices,
+        textureId: mapping.textureId || region.textureId,
+        mapping,
+      };
+    });
+  }
+
+  /**
+   * Writes shared face texture maps onto the result mesh.
+   *
+   * @param resultMesh Compiled result mesh.
+   * @param textureRegions Resolved texture regions.
+   */
+  private writeSharedFaceMaps(
+    resultMesh: THREE.Mesh,
+    textureRegions: Array<{ triangleIndices: number[]; mapping: FaceTextureMapping }>,
+  ): void {
+    setFaceTextureMapsShared(
+      resultMesh,
+      textureRegions.map((region) => ({
+        triangleIndices: region.triangleIndices,
+        mapping: region.mapping,
+      })),
+    );
+  }
+
+  /**
+   * Rebuilds multi-draw materials for solid result surfaces.
+   *
+   * @param resultMesh Compiled result mesh.
+   * @param textureRegions Resolved texture regions.
+   */
+  private writeSolidResultMaterials(
+    resultMesh: THREE.Mesh,
+    textureRegions: Array<{ triangleIndices: number[]; textureId: string }>,
+  ): void {
+    rebuildSolidResultMaterials(
+      resultMesh,
+      textureRegions.map((region) => ({
+        triangleIndices: region.triangleIndices,
+        textureId: region.textureId,
+      })),
+    );
+  }
+}

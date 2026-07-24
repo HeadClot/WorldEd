@@ -327,18 +327,50 @@ export class EditorShellBuilder {
    * @param actions Callbacks for each toolbar control.
    */
   private addMenuControls(toolbar: Toolbar, actions: EditorToolbarActions): void {
+    this.addFileMenu(toolbar, actions);
+    this.addEditMenu(toolbar, actions);
+    this.addAddMenu(toolbar, actions);
+    this.addCsgMenu(toolbar, actions);
+    this.addAlignMenu(toolbar, actions);
+  }
+
+  /**
+   * Adds the File menu (save, load, import, export).
+   *
+   * @param toolbar Toolbar instance to populate.
+   * @param actions Callbacks for each toolbar control.
+   */
+  private addFileMenu(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addDropdown('File', [
       { label: 'Save', onClick: () => actions.onSaveScene() },
       { label: 'Load', onClick: () => actions.onLoadScene() },
       { label: 'Import VMF…', onClick: () => actions.onImportVmf() },
       { label: 'Export GLB', onClick: () => actions.onExportGlb() },
     ]);
+  }
+
+  /**
+   * Adds the Edit menu (delete, duplicate, group, ungroup).
+   *
+   * @param toolbar Toolbar instance to populate.
+   * @param actions Callbacks for each toolbar control.
+   */
+  private addEditMenu(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addDropdown('Edit', [
       { label: 'Delete', onClick: () => actions.onDeleteSelected() },
       { label: 'Duplicate', onClick: () => actions.onDuplicateSelected() },
       { label: 'Group', onClick: () => actions.onGroupSelected() },
       { label: 'Ungroup', onClick: () => actions.onUngroupSelected() },
     ]);
+  }
+
+  /**
+   * Adds the Add menu for primitives and solid models.
+   *
+   * @param toolbar Toolbar instance to populate.
+   * @param actions Callbacks for each toolbar control.
+   */
+  private addAddMenu(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addDropdown('Add', [
       { label: 'Cube', onClick: () => actions.onAddCube() },
       { label: 'Sphere', onClick: () => actions.onAddSphere() },
@@ -347,6 +379,15 @@ export class EditorShellBuilder {
       { label: 'Terrain', onClick: () => actions.onAddTerrain() },
       { label: 'Solid Model', onClick: () => actions.onAddSolidModel() },
     ]);
+  }
+
+  /**
+   * Adds the CSG boolean menu with enable gates.
+   *
+   * @param toolbar Toolbar instance to populate.
+   * @param actions Callbacks for each toolbar control.
+   */
+  private addCsgMenu(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addDropdown('CSG', [
       {
         label: 'Union',
@@ -364,6 +405,15 @@ export class EditorShellBuilder {
         isEnabled: () => actions.canRunCsgBoolean(),
       },
     ]);
+  }
+
+  /**
+   * Adds the Align menu for selection alignment actions.
+   *
+   * @param toolbar Toolbar instance to populate.
+   * @param actions Callbacks for each toolbar control.
+   */
+  private addAlignMenu(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addDropdown('Align', [
       { label: 'Origin', onClick: () => actions.onAlignToOrigin() },
       { label: 'Grid Center', onClick: () => actions.onAlignToGridCenter() },

@@ -65,7 +65,6 @@ import { createWiredActionHandlers } from './layout_action_handler_factory.js';
 import { createAndRegisterKeyboardShortcuts } from './layout_keyboard_bindings.js';
 import { SolidModelPanel } from '../ui/solid_model_panel.js';
 import { SolidModelController } from './solid_model_controller.js';
-import { SolidModel } from '../solid/model/solid_model.js';
 import { setupSolidModelLayout } from './layout_solid_model_setup.js';
 import { buildLayoutTestComponents } from './layout_testing_accessors.js';
 import { disposeLayoutOwnedResources } from './layout_dispose_helpers.js';
@@ -78,6 +77,19 @@ import {
 import { LayoutRenderLoop } from './layout_render_loop.js';
 import { TransformSpace } from '../types/transform_space.js';
 import { ViewportPaneLayout } from './viewport_pane_layout.js';
+import {
+  applyLayoutTransformSpace,
+  updateLayoutGizmoCameraScale,
+  updateLayoutGizmoPivot,
+  type LayoutGizmoContext,
+} from './layout_gizmo_helpers.js';
+import {
+  applyLayoutHistoryChange,
+  handleLayoutSceneLoaded,
+  runLayoutExportGlb,
+  runLayoutVmfImport,
+} from './layout_scene_io_actions.js';
+import { createLayoutSettingsSystem, openLayoutAboutDialog } from './layout_settings_system.js';
 
 /**
  * Root composition manager for the four-viewport editor layout. Builds UI
@@ -424,11 +436,7 @@ export class ViewportLayoutManager {
 
   /** Opens the About dialog, creating it on first use. */
   private onOpenAboutDialog(): void {
-    if (!this.aboutDialog) {
-      this.aboutDialog = new AboutDialog(this.container);
-    }
-    this.aboutDialog.show();
-    this.statusBar?.setLastAction('About AI World Editor');
+    this.aboutDialog = openLayoutAboutDialog(this.container, this.aboutDialog, this.statusBar);
   }
 
   /** Toggles the Settings dialog, creating store and dialog on first use. */
@@ -447,27 +455,16 @@ export class ViewportLayoutManager {
     if (this.settingsStore && this.settingsDialog) {
       return;
     }
-    this.settingsStore = new EditorSettingsStore();
-    this.settingsApplicator = new SettingsApplicator(document.documentElement);
-    this.settingsApplicator.applySnapshot(this.settingsStore.getSnapshot());
-    this.applyViewportPaneLayout(this.settingsStore.getViewSettings().viewportPaneCount);
-    this.viewport3D.setFlyingCameraMoveSpeed(this.settingsStore.getMouseSettings().moveSpeed);
-    this.settingsUnsubscribe = this.settingsStore.subscribe((snapshot) => {
-      this.settingsApplicator?.applySnapshot(snapshot);
-      this.applyViewportPaneLayout(snapshot.view.viewportPaneCount);
-      this.viewport3D.setFlyingCameraMoveSpeed(snapshot.mouse.moveSpeed);
+    const parts = createLayoutSettingsSystem({
+      container: this.container,
+      viewport3D: this.viewport3D,
+      viewportPaneLayout: this.viewportPaneLayout,
+      resizeAll: () => this.resizeAll(),
     });
-    this.settingsDialog = new SettingsDialog(this.container, this.settingsStore);
-  }
-
-  /**
-   * Applies a pane count preference and updates visible viewport render sizes.
-   *
-   * @param paneCount Number of viewport panes to display.
-   */
-  private applyViewportPaneLayout(paneCount: 1 | 2 | 3 | 4): void {
-    this.viewportPaneLayout.apply(paneCount);
-    requestAnimationFrame(() => this.resizeAll());
+    this.settingsStore = parts.settingsStore;
+    this.settingsApplicator = parts.settingsApplicator;
+    this.settingsDialog = parts.settingsDialog;
+    this.settingsUnsubscribe = parts.settingsUnsubscribe;
   }
 
   /** Creates and initializes the snap settings controller. */
@@ -675,36 +672,7 @@ export class ViewportLayoutManager {
 
   /** Updates the gizmo pivot to the selection center. */
   private updateGizmoPivot(): void {
-    const selected = Array.from(this.selectionManager.getSelectedObjects());
-    if (selected.length > 0) {
-      const pivot = this.transformExecutor.computePivot(selected);
-      this.transformGizmo.setPivot(pivot);
-      this.transformGizmo.setOrientation(this.resolveGizmoOrientation(selected));
-      this.transformGizmo.updateScaleForCamera(this.viewport3D.getCamera());
-      this.transformGizmo.updateBoundsFromMeshes(selected, this.viewport3D.getCamera());
-      return;
-    }
-    this.transformGizmo.setPivot(new THREE.Vector3(0, 0, 0));
-    this.transformGizmo.setOrientation(new THREE.Quaternion());
-    this.transformGizmo.updateBoundsFromMeshes([]);
-  }
-
-  /**
-   * Resolves handle orientation from transform space and selection. Global (or
-   * multi-select) uses world axes; Local uses object rotation.
-   *
-   * @param selected Currently selected meshes.
-   * @returns World-space quaternion for the gizmo handles.
-   */
-  private resolveGizmoOrientation(selected: THREE.Object3D[]): THREE.Quaternion {
-    if (this.transformSpace !== TransformSpace.Local || selected.length !== 1) {
-      return new THREE.Quaternion();
-    }
-    const target = selected[0];
-    target.updateMatrixWorld(true);
-    const orientation = new THREE.Quaternion();
-    target.getWorldQuaternion(orientation);
-    return orientation;
+    updateLayoutGizmoPivot(this.getGizmoContext());
   }
 
   /** Switches gizmo handles to world axes. */
@@ -732,12 +700,26 @@ export class ViewportLayoutManager {
    * @param space Global or Local.
    */
   private setTransformSpace(space: TransformSpace): void {
-    this.transformSpace = space;
-    const isLocal = space === TransformSpace.Local;
-    this.toolbar.setButtonActiveByLabel('Global', !isLocal);
-    this.toolbar.setButtonActiveByLabel('Local', isLocal);
-    this.updateGizmoPivot();
-    this.showStatusMessage(isLocal ? 'Gizmo space: Local' : 'Gizmo space: Global');
+    applyLayoutTransformSpace(this.getGizmoContext(), space, (nextSpace) => {
+      this.transformSpace = nextSpace;
+    });
+  }
+
+  /**
+   * Builds gizmo helper dependencies from current layout fields.
+   *
+   * @returns Gizmo context bag.
+   */
+  private getGizmoContext(): LayoutGizmoContext {
+    return {
+      selectionManager: this.selectionManager,
+      transformGizmo: this.transformGizmo,
+      transformExecutor: this.transformExecutor,
+      transformSpace: this.transformSpace,
+      viewport3D: this.viewport3D,
+      toolbar: this.toolbar,
+      showStatusMessage: (message) => this.showStatusMessage(message),
+    };
   }
 
   /** Refreshes the outliner panel with current scene objects. */
@@ -811,11 +793,18 @@ export class ViewportLayoutManager {
 
   /** Handles post-load synchronization and UI refresh. */
   private onSceneLoaded(): void {
-    this.selectionManager.clearSelection();
-    this.faceModeCoordinator.getFaceExtrusionController().clearFaceSelection();
-    this.commandStack.clear();
-    this.clipPlaneHandler?.reattachPreviewToWorld();
-    this.refreshAfterWorldMutation();
+    handleLayoutSceneLoaded({
+      selectionManager: this.selectionManager,
+      faceModeCoordinator: this.faceModeCoordinator,
+      commandStack: this.commandStack,
+      clipPlaneHandler: this.clipPlaneHandler,
+      snapSettingsController: this.snapSettingsController,
+      worldObject: this.worldObject,
+      propertiesPanel: this.propertiesPanel,
+      refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
+      updateGizmoVisibility: () => this.updateGizmoVisibility(),
+      updateGizmoPivot: () => this.updateGizmoPivot(),
+    });
   }
 
   /**
@@ -826,27 +815,14 @@ export class ViewportLayoutManager {
   private onExportGlb(): void {
     this.ensureSettingsSystem();
     const profile = this.settingsStore?.getActiveGameProfile() ?? null;
-    void this.sceneIOHandler.exportGlb(this.worldObject, this.statusBar, profile);
+    runLayoutExportGlb(this.sceneIOHandler, this.worldObject, this.statusBar, profile);
   }
 
   /** Handles File → Import VMF: picks a map and places a solid model. */
   private onImportVmf(): void {
-    void this.runVmfImport();
-  }
-
-  /** Loads a VMF file, builds a solid model, and places it with undo support. */
-  private async runVmfImport(): Promise<void> {
-    const result = await this.sceneIOHandler.importVmf(this.statusBar);
-    if (!result) return;
-    if (!this.solidModelController) {
-      this.statusBar?.setErrorText('Solid model tools are not ready');
-      return;
-    }
-    this.solidModelController.placeImportedModel(
-      result.model,
-      `Imported ${result.importedBrushCount} brushes from VMF`,
+    void runLayoutVmfImport(this.sceneIOHandler, this.statusBar, this.solidModelController, () =>
+      this.refreshAfterWorldMutation(),
     );
-    this.refreshAfterWorldMutation();
   }
 
   /** Handles the undo action from toolbar or keyboard shortcut. */
@@ -865,18 +841,21 @@ export class ViewportLayoutManager {
    * @param direction Whether to undo or redo the top command.
    */
   private onHistoryChange(direction: 'undo' | 'redo'): void {
-    if (direction === 'undo') this.commandStack.undo();
-    else this.commandStack.redo();
-    this.selectionManager.pruneSelectionNotInScene(this.worldObject);
-    this.snapSettingsController.rebakeWorldTexturesIfLocked();
-    // Partial CSG for transform undos; full rebuild only when brush order changed.
-    // Never force-rebuild every solid after texture/presentation undos.
-    SolidModel.refreshAfterHistoryChange(this.worldObject);
-    this.refreshAfterWorldMutation();
-    this.propertiesPanel.refreshBoundObject();
-    // Transforms undo mesh poses without selection change events — re-sync gizmo.
-    this.updateGizmoVisibility();
-    this.updateGizmoPivot();
+    applyLayoutHistoryChange(
+      {
+        selectionManager: this.selectionManager,
+        faceModeCoordinator: this.faceModeCoordinator,
+        commandStack: this.commandStack,
+        clipPlaneHandler: this.clipPlaneHandler,
+        snapSettingsController: this.snapSettingsController,
+        worldObject: this.worldObject,
+        propertiesPanel: this.propertiesPanel,
+        refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
+        updateGizmoVisibility: () => this.updateGizmoVisibility(),
+        updateGizmoPivot: () => this.updateGizmoPivot(),
+      },
+      direction,
+    );
   }
 
   /** Syncs viewports, outliner, shading, and face selection after world changes. */
@@ -985,12 +964,7 @@ export class ViewportLayoutManager {
 
   /** Keeps the transform gizmo a readable size relative to the 3D camera. */
   private updateGizmoCameraScale(): void {
-    if (this.selectionManager.getSelectedObjectCount() === 0) return;
-    this.transformGizmo.updateScaleForCamera(this.viewport3D.getCamera());
-    if (this.transformGizmo.getMode() === TransformMode.BOUNDS) {
-      const selected = this.selectionManager.getAllSelectedObjectsAsArray();
-      this.transformGizmo.updateBoundsFromMeshes(selected, this.viewport3D.getCamera());
-    }
+    updateLayoutGizmoCameraScale(this.getGizmoContext());
   }
 
   /**
