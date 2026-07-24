@@ -1,28 +1,54 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { FaceSelection } from './face_selection_manager.js';
-import { getTriangleVertexIndices, getVertexPosition } from './triangle_geometry_utils.js';
+import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
+import { buildFacePickRegionKey } from './solid_triangle_source_index.js';
+import { getTriangleVertexIndices } from './triangle_geometry_utils.js';
 import { GizmoVisualStyle } from '../transform/gizmo_visual_style.js';
+import {
+  isResultMesh,
+  SOLID_TRIANGLE_SOURCES_USERDATA_KEY,
+} from '../solid/model/solid_model_keys.js';
 
-/** Opacity for face highlights that pass the depth test (in front). */
-const FACE_HIGHLIGHT_FRONT_OPACITY = 0.45;
+/**
+ * Face-fill opacities for ordinary content meshes (light underlays like default
+ * cubes). Transparent orange over light surfaces reads darker/heavier.
+ */
+const CONTENT_FACE_FRONT_OPACITY = 0.32;
+const CONTENT_FACE_OCCLUDED_OPACITY = 0.15;
 
-/** Opacity for face highlights occluded by other scene geometry. */
-const FACE_HIGHLIGHT_OCCLUDED_OPACITY = 0.18;
+/**
+ * Face-fill opacities for solid CSG result meshes (typically darker textured
+ * underlays). Same transparent orange reads weaker, so intensity is raised to
+ * match the content look.
+ */
+const SOLID_FACE_FRONT_OPACITY = 0.42;
+const SOLID_FACE_OCCLUDED_OPACITY = 0.2;
+
+/** Dual-pass materials for one underlay class. */
+interface FaceHighlightMaterials {
+  front: THREE.MeshBasicMaterial;
+  occluded: THREE.MeshBasicMaterial;
+}
 
 /**
  * Renders orange face-selection overlays with gizmo-style depth treatment.
- * Unoccluded faces stay bright; faces behind other geometry draw as ghosts. All
- * selected triangles on one mesh share a single dual-pass mesh so complex CSG
- * faces do not create thousands of draw calls.
+ * Content and solid meshes use different opacities so the fill reads equally
+ * strong over light primitives and dark brush surfaces. Geometry updates are
+ * per-region and incremental.
  */
 export class FaceSelectionHighlight {
   private scene: THREE.Scene;
   private highlightGroup: THREE.Group;
-  private frontMaterial: THREE.MeshBasicMaterial;
-  private occludedMaterial: THREE.MeshBasicMaterial;
-  /** One dual-pass group per source mesh uuid. */
-  private meshGroups: Map<string, THREE.Group>;
+  private readonly contentMaterials: FaceHighlightMaterials;
+  private readonly solidMaterials: FaceHighlightMaterials;
+  /** Dual-pass highlight group keyed by face region identity. */
+  private regionGroups: Map<string, THREE.Group>;
+  /** Seed selection used to build each active region group. */
+  private regionSeeds: Map<string, FaceSelection>;
+  private pendingFaces: FaceSelection[] | null;
+  private coalesceFrame: number;
+  private readonly scratchVertex = new THREE.Vector3();
 
   /**
    * Creates a new face highlight renderer and adds it to the scene.
@@ -32,110 +58,193 @@ export class FaceSelectionHighlight {
   constructor(scene: THREE.Scene) {
     this.scene = scene;
     this.highlightGroup = new THREE.Group();
-    this.frontMaterial = this.createFrontMaterial();
-    this.occludedMaterial = this.createOccludedMaterial();
-    this.meshGroups = new Map();
+    this.contentMaterials = this.createMaterialPair(
+      CONTENT_FACE_FRONT_OPACITY,
+      CONTENT_FACE_OCCLUDED_OPACITY,
+    );
+    this.solidMaterials = this.createMaterialPair(SOLID_FACE_FRONT_OPACITY, SOLID_FACE_OCCLUDED_OPACITY);
+    this.regionGroups = new Map();
+    this.regionSeeds = new Map();
+    this.pendingFaces = null;
+    this.coalesceFrame = 0;
     this.scene.add(this.highlightGroup);
   }
 
   /**
-   * Creates the bright front-pass material used where the face is unoccluded.
+   * Builds shared front/occluded materials for one underlay class.
    *
+   * @param frontOpacity Unoccluded fill opacity.
+   * @param occludedOpacity See-through / reverse-side opacity.
+   * @returns Material pair.
+   */
+  private createMaterialPair(frontOpacity: number, occludedOpacity: number): FaceHighlightMaterials {
+    return {
+      front: this.createPassMaterial(frontOpacity, THREE.LessEqualDepth),
+      occluded: this.createPassMaterial(occludedOpacity, THREE.GreaterDepth),
+    };
+  }
+
+  /**
+   * Creates one dual-pass face fill material.
+   *
+   * @param opacity Pass opacity.
+   * @param depthFunc Depth comparison for front or occluded pass.
    * @returns Configured MeshBasicMaterial.
    */
-  private createFrontMaterial(): THREE.MeshBasicMaterial {
+  private createPassMaterial(opacity: number, depthFunc: THREE.DepthModes): THREE.MeshBasicMaterial {
     return new THREE.MeshBasicMaterial({
       color: Theme.selectionColor,
       transparent: true,
-      opacity: FACE_HIGHLIGHT_FRONT_OPACITY,
+      opacity,
       depthTest: true,
       depthWrite: false,
-      depthFunc: THREE.LessEqualDepth,
+      depthFunc,
       side: THREE.DoubleSide,
       toneMapped: false,
       polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
     });
   }
 
   /**
-   * Creates the ghost material used where the face is behind other geometry.
+   * Updates highlights to match the selection. Coalesces to one apply per frame
+   * and only adds/removes regions that changed.
    *
-   * @returns Configured MeshBasicMaterial.
-   */
-  private createOccludedMaterial(): THREE.MeshBasicMaterial {
-    return new THREE.MeshBasicMaterial({
-      color: Theme.selectionColor,
-      transparent: true,
-      opacity: FACE_HIGHLIGHT_OCCLUDED_OPACITY,
-      depthTest: true,
-      depthWrite: false,
-      depthFunc: THREE.GreaterDepth,
-      side: THREE.DoubleSide,
-      toneMapped: false,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
-    });
-  }
-
-  /**
-   * Updates the highlight to show the given set of selected faces. Rebuilds
-   * batched mesh overlays (selection changes are infrequent).
-   *
-   * @param faces The array of face selections to highlight.
+   * @param faces Current face selection seeds.
    */
   setSelectedFaces(faces: FaceSelection[]): void {
-    this.clearHighlights();
-    if (faces.length === 0) return;
-    const byMesh = this.groupFacesByMesh(faces);
-    byMesh.forEach((faceIndices, mesh) => {
-      const group = this.buildBatchedMeshHighlight(mesh, faceIndices);
-      if (!group) return;
-      this.highlightGroup.add(group);
-      this.meshGroups.set(mesh.uuid, group);
+    this.pendingFaces = faces;
+    if (this.coalesceFrame !== 0) return;
+    if (typeof requestAnimationFrame !== 'function') {
+      this.flushPendingHighlights();
+      return;
+    }
+    this.coalesceFrame = requestAnimationFrame(() => {
+      this.coalesceFrame = 0;
+      this.flushPendingHighlights();
+    });
+  }
+
+  /** Applies any coalesced highlight update immediately. */
+  flushPendingHighlights(): void {
+    if (this.coalesceFrame !== 0 && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.coalesceFrame);
+      this.coalesceFrame = 0;
+    }
+    const pending = this.pendingFaces;
+    this.pendingFaces = null;
+    if (pending) {
+      this.applySelectedFacesIncremental(pending);
+    }
+  }
+
+  /**
+   * Diffs the desired selection against active region groups and only builds
+   * geometry for newly selected regions.
+   *
+   * @param faces Desired face selection seeds.
+   */
+  private applySelectedFacesIncremental(faces: FaceSelection[]): void {
+    const desired = this.buildDesiredRegionSeeds(faces);
+    for (const regionKey of Array.from(this.regionGroups.keys())) {
+      if (!desired.has(regionKey)) {
+        this.removeRegion(regionKey);
+      }
+    }
+    desired.forEach((seed, regionKey) => {
+      if (this.regionGroups.has(regionKey)) return;
+      this.addRegion(regionKey, seed);
     });
   }
 
   /**
-   * Buckets face selections by owning mesh.
+   * Builds a map of region key → seed selection for the desired set.
    *
-   * @param faces Face selection entries.
-   * @returns Map from mesh to triangle indices.
+   * @param faces Selection seeds from the manager.
+   * @returns Desired region map.
    */
-  private groupFacesByMesh(faces: FaceSelection[]): Map<THREE.Mesh, number[]> {
-    const byMesh = new Map<THREE.Mesh, number[]>();
+  private buildDesiredRegionSeeds(faces: FaceSelection[]): Map<string, FaceSelection> {
+    const desired = new Map<string, FaceSelection>();
     for (const entry of faces) {
-      const list = byMesh.get(entry.mesh);
-      if (list) {
-        if (!list.includes(entry.faceIndex)) list.push(entry.faceIndex);
-      } else {
-        byMesh.set(entry.mesh, [entry.faceIndex]);
+      const regionKey = buildFacePickRegionKey(entry.mesh, entry.faceIndex);
+      if (!desired.has(regionKey)) {
+        desired.set(regionKey, entry);
       }
     }
-    return byMesh;
+    return desired;
   }
 
   /**
-   * Builds one dual-pass highlight group for all selected triangles on a mesh.
+   * Builds and mounts a dual-pass highlight for one newly selected region.
+   *
+   * @param regionKey Stable region identity.
+   * @param seed Seed triangle selection for expansion.
+   */
+  private addRegion(regionKey: string, seed: FaceSelection): void {
+    const faceIndices = expandFaceSelectionIndices(seed.mesh, seed.faceIndex);
+    const group = this.buildRegionHighlight(seed.mesh, faceIndices);
+    if (!group) return;
+    this.highlightGroup.add(group);
+    this.regionGroups.set(regionKey, group);
+    this.regionSeeds.set(regionKey, seed);
+  }
+
+  /**
+   * Removes and disposes one region highlight.
+   *
+   * @param regionKey Region to remove.
+   */
+  private removeRegion(regionKey: string): void {
+    const group = this.regionGroups.get(regionKey);
+    if (!group) return;
+    this.disposeFaceGroup(group);
+    this.regionGroups.delete(regionKey);
+    this.regionSeeds.delete(regionKey);
+  }
+
+  /**
+   * Builds a dual-pass highlight group for one face region's triangles.
    *
    * @param mesh Source mesh.
-   * @param faceIndices Selected triangle indices on that mesh.
+   * @param faceIndices Triangle indices to highlight.
    * @returns Dual-pass group, or null when geometry is empty.
    */
-  private buildBatchedMeshHighlight(mesh: THREE.Mesh, faceIndices: number[]): THREE.Group | null {
+  private buildRegionHighlight(mesh: THREE.Mesh, faceIndices: number[]): THREE.Group | null {
     const geometry = this.buildWorldSpaceBatchedGeometry(mesh, faceIndices);
     if (!geometry) return null;
+    const materials = this.materialsForMesh(mesh);
     const group = new THREE.Group();
     group.userData.isFaceSelectionHighlight = true;
-    group.add(this.createOccludedFaceMesh(geometry));
-    group.add(this.createFrontFaceMesh(geometry));
+    group.add(this.createOccludedFaceMesh(geometry, materials.occluded));
+    group.add(this.createFrontFaceMesh(geometry, materials.front));
     return group;
   }
 
   /**
-   * Builds a single non-indexed world-space mesh for many selected triangles.
+   * Chooses fill materials so solid results and content meshes read equally.
+   *
+   * @param mesh Mesh whose faces are highlighted.
+   * @returns Material pair for that underlay class.
+   */
+  private materialsForMesh(mesh: THREE.Mesh): FaceHighlightMaterials {
+    return this.usesSolidFaceFillIntensity(mesh) ? this.solidMaterials : this.contentMaterials;
+  }
+
+  /**
+   * Returns whether the mesh is a solid CSG result (darker underlay).
+   *
+   * @param mesh Candidate mesh.
+   * @returns True for solid result meshes.
+   */
+  private usesSolidFaceFillIntensity(mesh: THREE.Mesh): boolean {
+    if (isResultMesh(mesh)) return true;
+    const sources = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY];
+    return Array.isArray(sources) && sources.length > 0;
+  }
+
+  /**
+   * Builds non-indexed world-space triangle geometry for the given faces.
    *
    * @param mesh Source mesh.
    * @param faceIndices Triangle indices to include.
@@ -148,18 +257,16 @@ export class FaceSelectionHighlight {
     const worldMatrix = mesh.matrixWorld;
     const floats = new Float32Array(faceIndices.length * 9);
     let write = 0;
-    const scratch = new THREE.Vector3();
     for (const faceIndex of faceIndices) {
       const [i0, i1, i2] = getTriangleVertexIndices(mesh.geometry, faceIndex);
-      write = this.writeWorldVertex(positions, i0, worldMatrix, floats, write, scratch);
-      write = this.writeWorldVertex(positions, i1, worldMatrix, floats, write, scratch);
-      write = this.writeWorldVertex(positions, i2, worldMatrix, floats, write, scratch);
+      write = this.writeWorldVertex(positions, i0, worldMatrix, floats, write);
+      write = this.writeWorldVertex(positions, i1, worldMatrix, floats, write);
+      write = this.writeWorldVertex(positions, i2, worldMatrix, floats, write);
     }
     if (write === 0) return null;
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(floats, 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(floats.subarray(0, write), 3));
     geometry.computeBoundingSphere();
-    geometry.computeBoundingBox();
     return geometry;
   }
 
@@ -171,7 +278,6 @@ export class FaceSelectionHighlight {
    * @param worldMatrix Mesh world matrix.
    * @param floats Destination float buffer.
    * @param write Next float write index.
-   * @param scratch Scratch vector.
    * @returns Updated write index.
    */
   private writeWorldVertex(
@@ -180,12 +286,12 @@ export class FaceSelectionHighlight {
     worldMatrix: THREE.Matrix4,
     floats: Float32Array,
     write: number,
-    scratch: THREE.Vector3,
   ): number {
-    scratch.copy(getVertexPosition(positions, vertexIndex)).applyMatrix4(worldMatrix);
-    floats[write] = scratch.x;
-    floats[write + 1] = scratch.y;
-    floats[write + 2] = scratch.z;
+    this.scratchVertex.set(positions.getX(vertexIndex), positions.getY(vertexIndex), positions.getZ(vertexIndex));
+    this.scratchVertex.applyMatrix4(worldMatrix);
+    floats[write] = this.scratchVertex.x;
+    floats[write + 1] = this.scratchVertex.y;
+    floats[write + 2] = this.scratchVertex.z;
     return write + 3;
   }
 
@@ -193,10 +299,11 @@ export class FaceSelectionHighlight {
    * Creates the bright front-pass mesh for a face highlight.
    *
    * @param geometry Shared triangle geometry.
+   * @param material Front-pass material for this underlay class.
    * @returns Front highlight mesh.
    */
-  private createFrontFaceMesh(geometry: THREE.BufferGeometry): THREE.Mesh {
-    const mesh = new THREE.Mesh(geometry, this.frontMaterial);
+  private createFrontFaceMesh(geometry: THREE.BufferGeometry, material: THREE.MeshBasicMaterial): THREE.Mesh {
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = GizmoVisualStyle.frontRenderOrder;
     mesh.userData.isFaceSelectionHighlight = true;
     mesh.frustumCulled = true;
@@ -207,10 +314,14 @@ export class FaceSelectionHighlight {
    * Creates the ghost mesh drawn only where the face is occluded.
    *
    * @param geometry Shared triangle geometry.
+   * @param material Occluded-pass material for this underlay class.
    * @returns Occluded highlight mesh.
    */
-  private createOccludedFaceMesh(geometry: THREE.BufferGeometry): THREE.Mesh {
-    const mesh = new THREE.Mesh(geometry, this.occludedMaterial);
+  private createOccludedFaceMesh(
+    geometry: THREE.BufferGeometry,
+    material: THREE.MeshBasicMaterial,
+  ): THREE.Mesh {
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = GizmoVisualStyle.occludedRenderOrder;
     mesh.userData.isFaceSelectionHighlight = true;
     mesh.userData.isFaceSelectionHighlightOccluded = true;
@@ -219,7 +330,7 @@ export class FaceSelectionHighlight {
   }
 
   /**
-   * Removes a mesh group from the scene and disposes its geometry.
+   * Removes a highlight group from the scene and disposes its geometry.
    *
    * @param group The dual-pass face highlight group.
    */
@@ -246,26 +357,34 @@ export class FaceSelectionHighlight {
 
   /** Removes all face highlights from the scene. */
   private clearHighlights(): void {
-    this.meshGroups.forEach((group) => {
-      this.disposeFaceGroup(group);
+    this.regionGroups.forEach((_group, regionKey) => {
+      this.removeRegion(regionKey);
     });
-    this.meshGroups.clear();
   }
 
   /** Disposes all highlight resources and removes the group from the scene. */
   dispose(): void {
+    if (this.coalesceFrame !== 0) {
+      cancelAnimationFrame(this.coalesceFrame);
+      this.coalesceFrame = 0;
+    }
+    this.pendingFaces = null;
     this.clearHighlights();
     this.scene.remove(this.highlightGroup);
-    this.frontMaterial.dispose();
-    this.occludedMaterial.dispose();
+    this.contentMaterials.front.dispose();
+    this.contentMaterials.occluded.dispose();
+    this.solidMaterials.front.dispose();
+    this.solidMaterials.occluded.dispose();
   }
 
   /**
-   * Returns the count of active highlight mesh groups (one per source mesh).
+   * Returns the count of active highlight region groups. Flushes pending work
+   * first so callers see the current state.
    *
-   * @returns The number of batched highlight groups.
+   * @returns Number of highlighted face regions.
    */
   getHighlightCount(): number {
-    return this.meshGroups.size;
+    this.flushPendingHighlights();
+    return this.regionGroups.size;
   }
 }

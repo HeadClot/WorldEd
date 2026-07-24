@@ -110,6 +110,7 @@ function wireUvEditorRefresh(deps: UvEditorSetupDeps, uvEditor: UvEditor, contro
     uvEditor.setFromSelection(mapping, count);
   });
   deps.faceController.setFaceSelectionChangedCallback(() => {
+    if (!uvEditor.isOpen()) return;
     controller.refreshFromSelection();
   });
 }

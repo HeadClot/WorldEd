@@ -79,6 +79,39 @@ describe('FaceSelectionRaycaster', () => {
   it('should dispose without errors', () => {
     expect(() => raycaster.dispose()).not.toThrow();
   });
+
+  it('should ignore a back-facing surface and miss when only the back is hit', () => {
+    const canvas = createMockCanvas(800, 600);
+    const renderer = createMockRenderer(canvas);
+    const camera = createCameraAt(0, 0, -5);
+    const facingPositiveZ = createDoubleSidedPlaneAt(0, 0, 0);
+    const event = createMockMouseEvent(400, 300);
+    const result = raycaster.pickFace(event, camera, renderer, [facingPositiveZ]);
+    expect(result).toBeNull();
+  });
+
+  it('should pick the front face of a double-sided plane from the front', () => {
+    const canvas = createMockCanvas(800, 600);
+    const renderer = createMockRenderer(canvas);
+    const camera = createCameraAt(0, 0, 5);
+    const facingPositiveZ = createDoubleSidedPlaneAt(0, 0, 0);
+    const event = createMockMouseEvent(400, 300);
+    const result = raycaster.pickFace(event, camera, renderer, [facingPositiveZ]);
+    expect(result?.mesh).toBe(facingPositiveZ);
+  });
+
+  it('should skip a nearer back-facing ceiling and pick the farther front face', () => {
+    const canvas = createMockCanvas(800, 600);
+    const renderer = createMockRenderer(canvas);
+    const camera = createCameraAt(0, 0, 5);
+    const nearerBackFacing = createDoubleSidedPlaneAt(0, 0, 0);
+    nearerBackFacing.rotation.y = Math.PI;
+    nearerBackFacing.updateMatrixWorld(true);
+    const fartherFrontFacing = createDoubleSidedPlaneAt(0, 0, -2);
+    const event = createMockMouseEvent(400, 300);
+    const result = raycaster.pickFace(event, camera, renderer, [nearerBackFacing, fartherFrontFacing]);
+    expect(result?.mesh).toBe(fartherFrontFacing);
+  });
 });
 
 /**
@@ -131,10 +164,38 @@ function createMockRenderer(canvas: HTMLElement): THREE.WebGLRenderer {
  * @returns A configured perspective camera.
  */
 function createTestCamera(): THREE.PerspectiveCamera {
+  return createCameraAt(0, 0, 5);
+}
+
+/**
+ * Creates a perspective camera at a world position looking at the origin.
+ *
+ * @param x Camera X.
+ * @param y Camera Y.
+ * @param z Camera Z.
+ * @returns Configured perspective camera with updated world matrix.
+ */
+function createCameraAt(x: number, y: number, z: number): THREE.PerspectiveCamera {
   const camera = new THREE.PerspectiveCamera(60, 800 / 600, 0.1, 1000);
-  camera.position.set(0, 0, 5);
+  camera.position.set(x, y, z);
   camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
   return camera;
+}
+
+/**
+ * Creates a double-sided unit plane at a position (local +Z is the front).
+ *
+ * @param posX X position.
+ * @param posY Y position.
+ * @param posZ Z position.
+ * @returns Plane mesh with updated world matrix.
+ */
+function createDoubleSidedPlaneAt(posX: number, posY: number, posZ: number): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+  mesh.position.set(posX, posY, posZ);
+  mesh.updateMatrixWorld(true);
+  return mesh;
 }
 
 /**

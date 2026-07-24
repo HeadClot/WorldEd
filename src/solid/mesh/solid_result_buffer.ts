@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';
+import { invalidateFacePickAcceleration } from '../../selection/mesh_pick_acceleration.js';
 import { SolidBrushMeshChunk } from './solid_brush_mesh_chunk.js';
 import { SolidBrushMeshRange, SolidMeshUpdateRange } from './solid_brush_mesh_range.js';
 import { SolidMeshChunkCache } from './solid_mesh_chunk_cache.js';
@@ -194,14 +195,17 @@ export class SolidResultBuffer {
     const vertexCount = this.positions.length / 3;
     if (vertexCount === 0) {
       this.writeEmptyAttributes(geometry);
+      invalidateFacePickAcceleration(geometry);
       return;
     }
     if (this.tryUploadSharedOrInPlace(geometry, vertexCount)) {
       this.refreshGeometryBounds(geometry);
+      invalidateFacePickAcceleration(geometry);
       return;
     }
     this.bindFreshAttributes(geometry);
     this.refreshGeometryBounds(geometry);
+    invalidateFacePickAcceleration(geometry);
   }
 
   /**

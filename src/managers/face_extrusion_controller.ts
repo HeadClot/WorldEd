@@ -7,6 +7,7 @@ import { CommandStack } from '../commands/command_stack.js';
 import { ExtrudeFacesCommand } from '../commands/extrude_faces_command.js';
 import { createConvexPrismFromFace } from '../transform/convex_face_prism.js';
 import { groupSelectionsIntoFaceRegions } from '../selection/face_region_grouper.js';
+import { buildFacePickRegionKey } from '../selection/solid_triangle_source_index.js';
 import { GridSnap } from '../transform/grid_snap.js';
 
 /**
@@ -42,6 +43,8 @@ export class FaceExtrusionController {
   private lastCreatedMeshes: THREE.Mesh[];
   private isFaceDragActive: boolean;
   private lastDragRegionKey: string | null;
+  /** True when external listeners need a post-drag selection notification. */
+  private externalSelectionNotifyPending: boolean;
 
   /**
    * Creates a new face extrusion controller.
@@ -67,6 +70,7 @@ export class FaceExtrusionController {
     this.lastCreatedMeshes = [];
     this.isFaceDragActive = false;
     this.lastDragRegionKey = null;
+    this.externalSelectionNotifyPending = false;
     this.bindSelectionChangeCallback();
   }
 
@@ -77,6 +81,8 @@ export class FaceExtrusionController {
 
   /**
    * Registers a listener for face selection changes (highlights stay internal).
+   * Heavy listeners (UV editor target rebuild) are deferred while
+   * drag-painting.
    *
    * @param callback Invoked with the current face list, or null to clear.
    */
@@ -85,7 +91,9 @@ export class FaceExtrusionController {
   }
 
   /**
-   * Handles face selection changes by updating visual highlights.
+   * Handles face selection changes by updating visual highlights immediately.
+   * External listeners are deferred during drag-paint so UV/target rebuilds do
+   * not run once per painted surface.
    *
    * @param faces The new set of selected faces.
    */
@@ -93,9 +101,20 @@ export class FaceExtrusionController {
     if (this.highlight) {
       this.highlight.setSelectedFaces(faces);
     }
-    if (this.faceSelectionChangedCallback) {
-      this.faceSelectionChangedCallback(faces);
+    if (!this.faceSelectionChangedCallback) return;
+    if (this.isFaceDragActive) {
+      this.externalSelectionNotifyPending = true;
+      return;
     }
+    this.faceSelectionChangedCallback(faces);
+  }
+
+  /** Notifies deferred external selection listeners after a drag ends. */
+  private flushExternalSelectionNotify(): void {
+    if (!this.externalSelectionNotifyPending) return;
+    this.externalSelectionNotifyPending = false;
+    if (!this.faceSelectionChangedCallback) return;
+    this.faceSelectionChangedCallback(this.selectionManager.getSelectedFaces());
   }
 
   /**
@@ -162,10 +181,11 @@ export class FaceExtrusionController {
    * @param event The pointer event.
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
-   * @returns True if the event was consumed.
+   * @returns The picked face when a hit occurred, otherwise null (event still
+   *   consumed while in face mode).
    */
-  onPointerDown(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): boolean {
-    if (this.currentMode !== SelectionMode.FACE) return false;
+  onPointerDown(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): FacePickResult | null {
+    if (this.currentMode !== SelectionMode.FACE) return null;
     this.isFaceDragActive = true;
     this.lastDragRegionKey = null;
     const result = this.raycaster.pickFace(event, camera, renderer, this.availableMeshes);
@@ -173,10 +193,10 @@ export class FaceExtrusionController {
       if (!event.shiftKey) {
         this.selectionManager.deselectAll();
       }
-      return true;
+      return null;
     }
     this.paintSelectFace(result, event.shiftKey, false);
-    return true;
+    return result;
   }
 
   /**
@@ -186,21 +206,22 @@ export class FaceExtrusionController {
    * @param event The pointer event.
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
-   * @returns True if a face was painted this move.
+   * @returns The painted pick result, or null when nothing new was painted.
    */
-  onPointerMove(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): boolean {
-    if (this.currentMode !== SelectionMode.FACE) return false;
-    if (!this.isFaceDragActive) return false;
+  onPointerMove(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): FacePickResult | null {
+    if (this.currentMode !== SelectionMode.FACE) return null;
+    if (!this.isFaceDragActive) return null;
     const result = this.raycaster.pickFace(event, camera, renderer, this.availableMeshes);
-    if (!result) return false;
+    if (!result) return null;
     this.paintSelectFace(result, true, true);
-    return true;
+    return result;
   }
 
-  /** Ends a face drag-paint session. */
+  /** Ends a face drag-paint session and flushes deferred selection listeners. */
   onPointerUp(): void {
     this.isFaceDragActive = false;
     this.lastDragRegionKey = null;
+    this.flushExternalSelectionNotify();
   }
 
   /**
@@ -234,7 +255,7 @@ export class FaceExtrusionController {
    * @param skipIfSameRegion When true, ignores repeats of the last drag region.
    */
   private paintSelectFace(result: FacePickResult, addToSelection: boolean, skipIfSameRegion: boolean): void {
-    const regionKey = `${result.mesh.uuid}:${result.faceIndex}`;
+    const regionKey = buildFacePickRegionKey(result.mesh, result.faceIndex);
     if (skipIfSameRegion && regionKey === this.lastDragRegionKey) return;
     this.lastDragRegionKey = regionKey;
     this.selectionManager.selectFace(result.mesh, result.faceIndex, addToSelection);

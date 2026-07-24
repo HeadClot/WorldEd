@@ -83,7 +83,7 @@ describe('FaceSelectionHighlight', () => {
     });
   });
 
-  it('should batch multiple faces on one mesh into a single highlight group', () => {
+  it('should create one highlight region group per selected face unit', () => {
     const geometry = createMultiFaceGeometry(4);
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
     scene.add(mesh);
@@ -93,14 +93,12 @@ describe('FaceSelectionHighlight', () => {
       { mesh, faceIndex: 2 },
     ];
     highlight.setSelectedFaces(faces);
-    expect(highlight.getHighlightCount()).toBe(1);
+    expect(highlight.getHighlightCount()).toBe(3);
     const meshes = getHighlightMeshes(highlight);
-    expect(meshes.length).toBe(2);
-    const position = meshes[0].geometry.getAttribute('position');
-    expect(position.count).toBe(9);
+    expect(meshes.length).toBe(6);
   });
 
-  it('should replace batched highlight when selection changes', () => {
+  it('should only keep highlights for the current selection set', () => {
     const geometry = createMultiFaceGeometry(4);
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
     scene.add(mesh);
@@ -108,12 +106,27 @@ describe('FaceSelectionHighlight', () => {
       { mesh, faceIndex: 0 },
       { mesh, faceIndex: 1 },
     ]);
-    expect(highlight.getHighlightCount()).toBe(1);
+    expect(highlight.getHighlightCount()).toBe(2);
     highlight.setSelectedFaces([{ mesh, faceIndex: 2 }]);
     expect(highlight.getHighlightCount()).toBe(1);
     const meshes = getHighlightMeshes(highlight);
     const position = meshes[0].geometry.getAttribute('position');
     expect(position.count).toBe(3);
+  });
+
+  it('should add only new regions when selection grows during drag-paint', () => {
+    const geometry = createMultiFaceGeometry(4);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+    scene.add(mesh);
+    highlight.setSelectedFaces([{ mesh, faceIndex: 0 }]);
+    highlight.flushPendingHighlights();
+    const firstCount = highlight.getHighlightCount();
+    highlight.setSelectedFaces([
+      { mesh, faceIndex: 0 },
+      { mesh, faceIndex: 1 },
+    ]);
+    highlight.flushPendingHighlights();
+    expect(highlight.getHighlightCount()).toBe(firstCount + 1);
   });
 
   it('should clear all highlights when given empty array', () => {
@@ -187,13 +200,14 @@ function createMultiFaceGeometry(faceCount: number): THREE.BufferGeometry {
  * @returns An array of front and occluded mesh objects.
  */
 function getHighlightMeshes(highlight: FaceSelectionHighlight): THREE.Mesh[] {
-  const meshGroups = (
+  highlight.flushPendingHighlights();
+  const regionGroups = (
     highlight as unknown as {
-      meshGroups: Map<string, THREE.Group>;
+      regionGroups: Map<string, THREE.Group>;
     }
-  ).meshGroups;
+  ).regionGroups;
   const meshes: THREE.Mesh[] = [];
-  meshGroups.forEach((group) => {
+  regionGroups.forEach((group) => {
     group.children.forEach((child) => {
       if (child instanceof THREE.Mesh) meshes.push(child);
     });

@@ -7,7 +7,13 @@ import {
   cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
 } from './face_texture_mapping.js';
-import { upsertFaceTextureMap, getFaceTextureMaps, setFaceTextureMaps } from './face_texture_storage.js';
+import {
+  upsertFaceTextureMap,
+  getFaceTextureMaps,
+  getFaceTextureMapsLive,
+  setFaceTextureMaps,
+} from './face_texture_storage.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../solid/model/solid_model_keys.js';
 import {
   bakeFaceUVs,
   bakeAllFacesDefaultUVs,
@@ -64,18 +70,60 @@ export function buildTargetsFromMeshes(meshes: THREE.Mesh[]): TextureApplyTarget
 }
 
 /**
- * Finds a stored mapping for a triangle region. Prefers exact triangle-set
- * match, then a covering entry, then any overlap.
+ * Finds a stored mapping for a triangle region. Prefers solid brush-surface
+ * identity when present (O(entries) without cloning). Ordinary meshes use exact
+ * set / cover / overlap matching.
  *
  * @param mesh Mesh to search.
  * @param triangleIndices Region indices.
  * @returns Existing mapping or null.
  */
 function findExistingMapping(mesh: THREE.Mesh, triangleIndices: number[]): FaceTextureMapping | null {
+  if (triangleIndices.length === 0) return null;
+  const solidMapping = findSolidSurfaceMapping(mesh, triangleIndices[0]);
+  if (solidMapping) return solidMapping;
+  return findOrdinaryMeshMapping(mesh, triangleIndices);
+}
+
+/**
+ * Resolves a solid-result face mapping via triangle source identity without
+ * cloning the entire face-map table.
+ *
+ * @param mesh Solid result mesh.
+ * @param seedFaceIndex Any triangle on the brush surface.
+ * @returns Cloned mapping or null when not a solid result / not found.
+ */
+function findSolidSurfaceMapping(mesh: THREE.Mesh, seedFaceIndex: number): FaceTextureMapping | null {
+  const sources = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY];
+  if (!Array.isArray(sources) || sources.length === 0) return null;
+  const seed = sources[seedFaceIndex] as { brushId?: string; surfaceIndex?: number } | undefined;
+  if (!seed?.brushId || typeof seed.surfaceIndex !== 'number') return null;
+  const entries = getFaceTextureMapsLive(mesh);
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const sampleIndex = entry.triangleIndices[0];
+    if (sampleIndex === undefined) continue;
+    const sample = sources[sampleIndex] as { brushId?: string; surfaceIndex?: number } | undefined;
+    if (!sample) continue;
+    if (sample.brushId === seed.brushId && sample.surfaceIndex === seed.surfaceIndex) {
+      return cloneFaceTextureMapping(entry.mapping);
+    }
+  }
+  return null;
+}
+
+/**
+ * Finds a stored mapping for ordinary (non-solid) mesh regions.
+ *
+ * @param mesh Mesh to search.
+ * @param triangleIndices Region indices.
+ * @returns Existing mapping or null.
+ */
+function findOrdinaryMeshMapping(mesh: THREE.Mesh, triangleIndices: number[]): FaceTextureMapping | null {
   const sorted = triangleIndices.slice().sort((a, b) => a - b);
   const key = sorted.join(',');
   const indexSet = new Set(sorted);
-  const entries = getFaceTextureMaps(mesh);
+  const entries = getFaceTextureMapsLive(mesh);
   for (let i = 0; i < entries.length; i++) {
     const entryKey = entries[i].triangleIndices
       .slice()

@@ -5,6 +5,7 @@ import { countTriangles } from './planar_uv_projector.js';
 import { TextureMapCache, getTextureMapCache } from './texture_map_cache.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from './texture_id.js';
 import { CONTENT_METALNESS, CONTENT_ROUGHNESS } from '../materials/content_material_factory.js';
+import { invalidateFacePickAcceleration } from '../selection/mesh_pick_acceleration.js';
 
 /**
  * UserData key for per-triangle brush surface sources on solid result meshes.
@@ -253,9 +254,12 @@ function reorderGeometryTriangles(geometry: THREE.BufferGeometry, order: number[
   const index = geometry.getIndex();
   if (index) {
     reorderIndexedTriangles(geometry, order);
-    return;
+  } else {
+    reorderNonIndexedTriangles(geometry, order);
   }
-  reorderNonIndexedTriangles(geometry, order);
+  // Triangle order changed: face-pick BVH AABBs must be rebuilt or picks hit the
+  // wrong surfaces after multi-texture material sorting.
+  invalidateFacePickAcceleration(geometry);
 }
 
 /**

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { hasEdgeBuildableGeometry } from '../utils/mesh_edge_sync.js';
+import { GizmoVisualStyle } from '../transform/gizmo_visual_style.js';
 
 /**
  * UserData flag marking a LineSegments object as a selection outline. Used to
@@ -8,17 +9,23 @@ import { hasEdgeBuildableGeometry } from '../utils/mesh_edge_sync.js';
  */
 export const SELECTION_HIGHLIGHT_USERDATA_KEY = 'isSelectionHighlight';
 
+/** Front-pass opacity for unoccluded selection edges (matches soft CSG look). */
+const SELECTION_EDGE_FRONT_OPACITY = 0.82;
+
+/** Occluded-pass opacity so outlines remain readable without blowing out. */
+const SELECTION_EDGE_OCCLUDED_OPACITY = 0.22;
+
 /**
- * Visual orange edge outlines on selected objects. Outlines are parented to
- * their meshes so they follow transforms in real time. Never reparents scene
- * objects — only attaches outline children to meshes that already live in this
- * highlight's scene graph.
+ * Visual selection edge outlines on selected objects. Uses dual-pass depth
+ * treatment (front + faint occluded) like gizmos and solid brush edges so
+ * object mode is not a flat full-bright always-on-top orange.
  */
 export class SelectionHighlight {
   private scene: THREE.Scene;
-  private highlightMap: Map<THREE.Mesh, THREE.LineSegments>;
+  private highlightMap: Map<THREE.Mesh, THREE.Group>;
   private highlightColor: number;
-  private lineMaterial: THREE.LineBasicMaterial;
+  private frontMaterial: THREE.LineBasicMaterial;
+  private occludedMaterial: THREE.LineBasicMaterial;
 
   /**
    * Creates a new selection highlight manager for the given scene.
@@ -30,11 +37,8 @@ export class SelectionHighlight {
     this.scene = scene;
     this.highlightMap = new Map();
     this.highlightColor = theme.selectionColor;
-    this.lineMaterial = new THREE.LineBasicMaterial({
-      color: this.highlightColor,
-      linewidth: 2,
-      depthTest: false,
-    });
+    this.frontMaterial = this.createFrontMaterial(this.highlightColor);
+    this.occludedMaterial = this.createOccludedMaterial(this.highlightColor);
   }
 
   /**
@@ -47,9 +51,9 @@ export class SelectionHighlight {
     if (!this.isDescendantOfScene(mesh)) return;
     if (!hasEdgeBuildableGeometry(mesh)) return;
     this.stripOrphanHighlights(mesh);
-    const lineSegments = this.createOutlineForMesh(mesh);
-    mesh.add(lineSegments);
-    this.highlightMap.set(mesh, lineSegments);
+    const outlineGroup = this.createOutlineForMesh(mesh);
+    mesh.add(outlineGroup);
+    this.highlightMap.set(mesh, outlineGroup);
   }
 
   /**
@@ -58,9 +62,9 @@ export class SelectionHighlight {
    * @param mesh The mesh to un-highlight.
    */
   remove(mesh: THREE.Mesh): void {
-    const lineSegments = this.highlightMap.get(mesh);
-    if (!lineSegments) return;
-    this.disposeLineSegments(mesh, lineSegments);
+    const outlineGroup = this.highlightMap.get(mesh);
+    if (!outlineGroup) return;
+    this.disposeOutlineGroup(mesh, outlineGroup);
     this.highlightMap.delete(mesh);
   }
 
@@ -76,14 +80,14 @@ export class SelectionHighlight {
    * external transform updates keeps multi-viewport clones consistent.
    */
   syncTransforms(): void {
-    this.highlightMap.forEach((lineSegments, mesh) => {
-      if (lineSegments.parent !== mesh) {
-        mesh.add(lineSegments);
+    this.highlightMap.forEach((outlineGroup, mesh) => {
+      if (outlineGroup.parent !== mesh) {
+        mesh.add(outlineGroup);
       }
-      lineSegments.position.set(0, 0, 0);
-      lineSegments.rotation.set(0, 0, 0);
-      lineSegments.scale.set(1, 1, 1);
-      lineSegments.updateMatrix();
+      outlineGroup.position.set(0, 0, 0);
+      outlineGroup.rotation.set(0, 0, 0);
+      outlineGroup.scale.set(1, 1, 1);
+      outlineGroup.updateMatrix();
     });
   }
 
@@ -106,16 +110,15 @@ export class SelectionHighlight {
    */
   updateColor(color: number): void {
     this.highlightColor = color;
-    this.highlightMap.forEach((lineSegments) => {
-      const lineMaterial = lineSegments.material as THREE.LineBasicMaterial;
-      lineMaterial.color.setHex(color);
-    });
+    this.frontMaterial.color.setHex(color);
+    this.occludedMaterial.color.setHex(color);
   }
 
   /** Disposes all highlight resources and clears state. */
   dispose(): void {
     this.clearAll();
-    this.lineMaterial.dispose();
+    this.frontMaterial.dispose();
+    this.occludedMaterial.dispose();
   }
 
   /**
@@ -128,20 +131,75 @@ export class SelectionHighlight {
   }
 
   /**
-   * Creates outline LineSegments for a mesh in local space.
+   * Creates dual-pass outline line segments for a mesh in local space.
    *
    * @param mesh The mesh whose edges will be outlined.
-   * @returns Configured LineSegments ready to parent under the mesh.
+   * @returns Group containing front and occluded edge passes.
    */
-  private createOutlineForMesh(mesh: THREE.Mesh): THREE.LineSegments {
+  private createOutlineForMesh(mesh: THREE.Mesh): THREE.Group {
     const edges = new THREE.EdgesGeometry(mesh.geometry);
-    const lineSegments = new THREE.LineSegments(edges, this.lineMaterial.clone());
-    const material = lineSegments.material as THREE.LineBasicMaterial;
-    material.color.setHex(this.highlightColor);
-    lineSegments.renderOrder = 998;
+    const group = new THREE.Group();
+    group.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] = true;
+    group.matrixAutoUpdate = true;
+    group.add(this.createEdgePass(edges, this.occludedMaterial, GizmoVisualStyle.occludedRenderOrder));
+    group.add(this.createEdgePass(edges, this.frontMaterial, GizmoVisualStyle.frontRenderOrder));
+    return group;
+  }
+
+  /**
+   * Creates one edge line-pass mesh sharing geometry with its sibling pass.
+   *
+   * @param edges Shared edge geometry.
+   * @param material Front or occluded line material.
+   * @param renderOrder Draw order for the pass.
+   * @returns Configured line segments.
+   */
+  private createEdgePass(
+    edges: THREE.EdgesGeometry,
+    material: THREE.LineBasicMaterial,
+    renderOrder: number,
+  ): THREE.LineSegments {
+    const lineSegments = new THREE.LineSegments(edges, material);
+    lineSegments.renderOrder = renderOrder;
     lineSegments.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] = true;
     lineSegments.matrixAutoUpdate = true;
     return lineSegments;
+  }
+
+  /**
+   * Builds the soft front-pass selection edge material.
+   *
+   * @param color Selection hex color.
+   * @returns Configured line material.
+   */
+  private createFrontMaterial(color: number): THREE.LineBasicMaterial {
+    return new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: SELECTION_EDGE_FRONT_OPACITY,
+      depthTest: true,
+      depthWrite: false,
+      depthFunc: THREE.LessEqualDepth,
+      toneMapped: false,
+    });
+  }
+
+  /**
+   * Builds the faint occluded-pass selection edge material.
+   *
+   * @param color Selection hex color.
+   * @returns Configured line material.
+   */
+  private createOccludedMaterial(color: number): THREE.LineBasicMaterial {
+    return new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: SELECTION_EDGE_OCCLUDED_OPACITY,
+      depthTest: true,
+      depthWrite: false,
+      depthFunc: THREE.GreaterDepth,
+      toneMapped: false,
+    });
   }
 
   /**
@@ -151,24 +209,35 @@ export class SelectionHighlight {
    */
   private stripOrphanHighlights(mesh: THREE.Mesh): void {
     const orphans = mesh.children.filter(
-      (child) => child instanceof THREE.LineSegments && child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
+      (child) =>
+        (child instanceof THREE.LineSegments || child instanceof THREE.Group) &&
+        child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
     );
     orphans.forEach((child) => {
-      this.disposeLineSegments(mesh, child as THREE.LineSegments);
+      if (child instanceof THREE.Group) {
+        this.disposeOutlineGroup(mesh, child);
+      } else {
+        mesh.remove(child);
+        (child as THREE.LineSegments).geometry.dispose();
+      }
     });
   }
 
   /**
-   * Detaches and disposes a LineSegments outline.
+   * Detaches and disposes a dual-pass outline group.
    *
    * @param mesh The parent mesh.
-   * @param lineSegments The outline to dispose.
+   * @param outlineGroup The outline group to dispose.
    */
-  private disposeLineSegments(mesh: THREE.Mesh, lineSegments: THREE.LineSegments): void {
-    mesh.remove(lineSegments);
-    lineSegments.geometry.dispose();
-    const lineMaterial = lineSegments.material as THREE.LineBasicMaterial;
-    lineMaterial.dispose();
+  private disposeOutlineGroup(mesh: THREE.Mesh, outlineGroup: THREE.Group): void {
+    mesh.remove(outlineGroup);
+    let sharedGeometry: THREE.BufferGeometry | null = null;
+    outlineGroup.children.forEach((child) => {
+      if (!(child instanceof THREE.LineSegments)) return;
+      if (!sharedGeometry) sharedGeometry = child.geometry;
+    });
+    outlineGroup.clear();
+    sharedGeometry?.dispose();
   }
 
   /**

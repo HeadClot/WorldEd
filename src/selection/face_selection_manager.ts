@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { computeTriangleNormal } from './triangle_geometry_utils.js';
-import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
+import { expandFaceSelectionIndices, findSameSolidBrushSurfaceIndices } from './solid_result_face_indices.js';
+import { buildFacePickRegionKey } from './solid_triangle_source_index.js';
 
 /** A single face selection entry referencing a mesh and a face index. */
 export interface FaceSelection {
@@ -16,68 +17,71 @@ export interface FaceSelection {
 export type FaceSelectionChangedCallback = (selected: FaceSelection[]) => void;
 
 /**
- * Manages selection of polygonal faces on meshes. Ordinary meshes expand to the
- * edge-connected coplanar polygon. Solid CSG results expand only within one
- * brush face (brushId + surfaceIndex) so adjacent walls and carpet/detail
- * brushes stay independently selectable.
+ * Manages selection of polygonal faces on meshes. Solid CSG results store one
+ * entry per authored brush face (region), not every fragmented triangle —
+ * critical for large VMF-style solids. Ordinary meshes expand to coplanar
+ * triangles as before.
  */
 export class FaceSelectionManager {
   private selectedFaces: FaceSelection[];
+  /** Region keys (solid brush faces) or mesh:triangle keys already selected. */
+  private readonly selectedRegionKeys: Set<string>;
   private changeCallback: FaceSelectionChangedCallback | null;
 
   /** Creates a new face selection manager with an empty selection. */
   constructor() {
     this.selectedFaces = [];
+    this.selectedRegionKeys = new Set();
     this.changeCallback = null;
   }
 
   /**
-   * Selects a face on a mesh. Expands to a full face unit by default.
+   * Selects a face on a mesh. Solid results add one region seed; ordinary
+   * meshes expand to the full coplanar face unit when expandFace is true.
    *
    * @param mesh The mesh containing the face.
    * @param faceIndex The triangle index of the face to select.
    * @param addToSelection Whether to add to existing selection or replace it.
-   * @param expandFace When true, expands to the full selectable face unit.
+   * @param expandFace When true, expands ordinary meshes to coplanar faces.
    */
   selectFace(mesh: THREE.Mesh, faceIndex: number, addToSelection: boolean, expandFace: boolean = true): void {
     if (!addToSelection) {
       this.selectedFaces = [];
+      this.selectedRegionKeys.clear();
     }
-    const faceIndices = expandFace ? expandFaceSelectionIndices(mesh, faceIndex) : [faceIndex];
-    let changed = false;
-    faceIndices.forEach((index) => {
-      if (this.isFaceSelected(mesh, index)) return;
-      this.selectedFaces.push({ mesh, faceIndex: index });
-      changed = true;
-    });
-    if (changed) {
-      this.notifyChange();
+    if (this.isSolidResultMesh(mesh)) {
+      this.selectSolidRegion(mesh, faceIndex);
+      return;
     }
+    this.selectOrdinaryFace(mesh, faceIndex, expandFace);
   }
 
   /** Clears all selected faces. */
   deselectAll(): void {
     if (this.selectedFaces.length === 0) return;
     this.selectedFaces = [];
+    this.selectedRegionKeys.clear();
     this.notifyChange();
   }
 
   /**
-   * Removes a specific face from the selection.
+   * Removes a specific face (or its solid region) from the selection.
    *
    * @param mesh The mesh containing the face.
    * @param faceIndex The triangle index of the face to remove.
    */
   removeFace(mesh: THREE.Mesh, faceIndex: number): void {
-    const initialLength = this.selectedFaces.length;
-    this.selectedFaces = this.selectedFaces.filter((entry) => !(entry.mesh === mesh && entry.faceIndex === faceIndex));
-    if (this.selectedFaces.length !== initialLength) {
-      this.notifyChange();
-    }
+    const regionKey = buildFacePickRegionKey(mesh, faceIndex);
+    if (!this.selectedRegionKeys.has(regionKey)) return;
+    this.selectedRegionKeys.delete(regionKey);
+    this.selectedFaces = this.selectedFaces.filter(
+      (entry) => buildFacePickRegionKey(entry.mesh, entry.faceIndex) !== regionKey,
+    );
+    this.notifyChange();
   }
 
   /**
-   * Returns the array of currently selected faces.
+   * Returns the array of currently selected faces (region seeds for solids).
    *
    * @returns The array of face selection entries.
    */
@@ -86,28 +90,28 @@ export class FaceSelectionManager {
   }
 
   /**
-   * Returns the count of currently selected faces.
+   * Returns the count of currently selected faces (regions for solid results).
    *
-   * @returns The number of selected faces.
+   * @returns The number of selected face units.
    */
   getSelectedFaceCount(): number {
     return this.selectedFaces.length;
   }
 
   /**
-   * Checks whether a specific face is currently selected.
+   * Checks whether a triangle belongs to the current selection (including other
+   * triangles of the same solid brush face).
    *
    * @param mesh The mesh to check.
    * @param faceIndex The face index to check.
-   * @returns True if the face is in the selection.
+   * @returns True if the face unit is selected.
    */
   isFaceSelected(mesh: THREE.Mesh, faceIndex: number): boolean {
-    return this.selectedFaces.some((entry) => entry.mesh === mesh && entry.faceIndex === faceIndex);
+    return this.selectedRegionKeys.has(buildFacePickRegionKey(mesh, faceIndex));
   }
 
   /**
-   * Computes the average normal vector across all selected faces. Returns a
-   * zero vector if no faces are selected.
+   * Computes the average normal vector across all selected face seeds.
    *
    * @returns The average normal direction as a Vector3.
    */
@@ -134,7 +138,54 @@ export class FaceSelectionManager {
   /** Clears all state and callbacks. */
   clear(): void {
     this.selectedFaces = [];
+    this.selectedRegionKeys.clear();
     this.changeCallback = null;
+  }
+
+  /**
+   * Adds one solid brush-face region if it is not already selected.
+   *
+   * @param mesh Solid result mesh.
+   * @param faceIndex Seed triangle on that region.
+   */
+  private selectSolidRegion(mesh: THREE.Mesh, faceIndex: number): void {
+    const regionKey = buildFacePickRegionKey(mesh, faceIndex);
+    if (this.selectedRegionKeys.has(regionKey)) return;
+    this.selectedRegionKeys.add(regionKey);
+    this.selectedFaces.push({ mesh, faceIndex });
+    this.notifyChange();
+  }
+
+  /**
+   * Selects ordinary mesh faces with optional coplanar expansion.
+   *
+   * @param mesh Non-solid mesh.
+   * @param faceIndex Seed triangle.
+   * @param expandFace Whether to expand to coplanar triangles.
+   */
+  private selectOrdinaryFace(mesh: THREE.Mesh, faceIndex: number, expandFace: boolean): void {
+    const faceIndices = expandFace ? expandFaceSelectionIndices(mesh, faceIndex) : [faceIndex];
+    let changed = false;
+    for (const index of faceIndices) {
+      const regionKey = buildFacePickRegionKey(mesh, index);
+      if (this.selectedRegionKeys.has(regionKey)) continue;
+      this.selectedRegionKeys.add(regionKey);
+      this.selectedFaces.push({ mesh, faceIndex: index });
+      changed = true;
+    }
+    if (changed) {
+      this.notifyChange();
+    }
+  }
+
+  /**
+   * Returns whether the mesh carries solid triangle sources (CSG result).
+   *
+   * @param mesh Candidate mesh.
+   * @returns True when solid region selection applies.
+   */
+  private isSolidResultMesh(mesh: THREE.Mesh): boolean {
+    return findSameSolidBrushSurfaceIndices(mesh, 0) !== null;
   }
 
   /** Notifies the registered callback of a selection change. */

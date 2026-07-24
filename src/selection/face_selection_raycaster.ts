@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { pointerEventToNdc } from '../utils/pointer_ndc.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
+import { getOrBuildFacePickBvh } from './mesh_pick_acceleration.js';
 
 /** Result of a face picking operation. */
 export interface FacePickResult {
@@ -10,28 +11,33 @@ export interface FacePickResult {
 }
 
 /**
- * Performs triangle-precision raycasting for face picking on meshes. Updates
- * world matrices and uses DoubleSide intersection so all faces pick reliably.
+ * Performs triangle-precision raycasting for face picking on meshes. Uses a
+ * cached triangle BVH per geometry so large solid results stay interactive.
+ * Ignores back-facing triangles. Does not touch gizmo picking.
  */
 export class FaceSelectionRaycaster {
-  private raycaster: THREE.Raycaster;
-  private ndcVector: THREE.Vector2;
-
-  /** Creates a new face selection raycaster. */
-  constructor() {
-    this.raycaster = new THREE.Raycaster();
-    this.ndcVector = new THREE.Vector2();
-  }
+  private readonly helperRaycaster = new THREE.Raycaster();
+  private readonly ndcVector = new THREE.Vector2();
+  private readonly rayOrigin = new THREE.Vector3();
+  private readonly rayDirection = new THREE.Vector3();
+  private readonly localOrigin = new THREE.Vector3();
+  private readonly localDirection = new THREE.Vector3();
+  private readonly inverseMatrix = new THREE.Matrix4();
+  private readonly worldNormal = new THREE.Vector3();
+  private readonly normalMatrix = new THREE.Matrix3();
+  private readonly worldBox = new THREE.Box3();
+  private readonly boxHitPoint = new THREE.Vector3();
+  private readonly worldRay = new THREE.Ray();
 
   /**
    * Picks a face from a set of meshes at the given mouse position. Returns the
-   * closest face intersection with the triangle index.
+   * closest front-facing face intersection with the triangle index.
    *
    * @param event The mouse event providing click coordinates.
    * @param camera The camera to cast the ray from.
    * @param renderer The renderer for canvas dimension queries.
    * @param meshes The meshes to test for intersection.
-   * @returns A face pick result, or null if no face was hit.
+   * @returns A face pick result, or null if no front-facing face was hit.
    */
   pickFace(
     event: MouseEvent,
@@ -40,64 +46,32 @@ export class FaceSelectionRaycaster {
     meshes: THREE.Mesh[],
   ): FacePickResult | null {
     if (meshes.length === 0) return null;
-    this.prepareMeshesForPicking(meshes);
     camera.updateMatrixWorld(true);
     this.setRayFromEvent(event, camera, renderer);
-    const restored = this.enableDoubleSidedPicking(meshes);
-    const intersections = this.raycaster.intersectObjects(meshes, false);
-    this.restoreMaterialSides(restored);
-    const hit = this.findFirstMeshHit(intersections, meshes);
-    if (!hit) return null;
+    let bestMesh: THREE.Mesh | null = null;
+    let bestFaceIndex = -1;
+    let bestDistance = Infinity;
+    let bestPoint: THREE.Vector3 | null = null;
+    for (const mesh of meshes) {
+      if (SolidBrushVisual.shouldSkipFacePick(mesh)) continue;
+      if (!mesh.visible) continue;
+      const candidate = this.pickFrontFaceOnMesh(mesh, bestDistance);
+      if (!candidate) continue;
+      bestMesh = mesh;
+      bestFaceIndex = candidate.faceIndex;
+      bestDistance = candidate.distance;
+      bestPoint = candidate.point;
+    }
+    if (!bestMesh || !bestPoint || bestFaceIndex < 0) return null;
     return {
-      mesh: hit.object as THREE.Mesh,
-      faceIndex: this.extractFaceIndex(hit),
-      hitPoint: hit.point.clone(),
+      mesh: bestMesh,
+      faceIndex: bestFaceIndex,
+      hitPoint: bestPoint,
     };
   }
 
   /**
-   * Temporarily enables DoubleSide on materials so all faces are pickable.
-   *
-   * @param meshes The meshes being picked.
-   * @returns Previous side values for restoration.
-   */
-  private enableDoubleSidedPicking(meshes: THREE.Mesh[]): Array<{ material: THREE.Material; side: THREE.Side }> {
-    const restored: Array<{ material: THREE.Material; side: THREE.Side }> = [];
-    meshes.forEach((mesh) => {
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      materials.forEach((material) => {
-        if (!material) return;
-        restored.push({ material, side: material.side });
-        material.side = THREE.DoubleSide;
-      });
-    });
-    return restored;
-  }
-
-  /**
-   * Restores material side values after face picking.
-   *
-   * @param restored Previous material side snapshots.
-   */
-  private restoreMaterialSides(restored: Array<{ material: THREE.Material; side: THREE.Side }>): void {
-    restored.forEach((entry) => {
-      entry.material.side = entry.side;
-    });
-  }
-
-  /**
-   * Ensures mesh world matrices are current before raycasting.
-   *
-   * @param meshes The meshes that will be tested.
-   */
-  private prepareMeshesForPicking(meshes: THREE.Mesh[]): void {
-    meshes.forEach((mesh) => {
-      mesh.updateMatrixWorld(true);
-    });
-  }
-
-  /**
-   * Configures the raycaster from a mouse event and camera.
+   * Configures the world-space pick ray from a pointer event and camera.
    *
    * @param event The mouse event.
    * @param camera The camera to cast from.
@@ -105,46 +79,79 @@ export class FaceSelectionRaycaster {
    */
   private setRayFromEvent(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): void {
     pointerEventToNdc(event, renderer.domElement, this.ndcVector);
-    this.raycaster.setFromCamera(this.ndcVector, camera);
+    this.helperRaycaster.setFromCamera(this.ndcVector, camera);
+    this.rayOrigin.copy(this.helperRaycaster.ray.origin);
+    this.rayDirection.copy(this.helperRaycaster.ray.direction);
   }
 
   /**
-   * Returns the first intersection whose object is in the pickable mesh list.
+   * Picks the closest front-facing triangle on one mesh closer than
+   * maxDistance.
    *
-   * @param intersections Raycast hits sorted by distance.
-   * @param meshes The allowed mesh set.
-   * @returns The first valid hit, or null.
+   * @param mesh Candidate mesh.
+   * @param maxDistance Current closest hit distance in world units.
+   * @returns Local hit converted to world space, or null.
    */
-  private findFirstMeshHit(intersections: THREE.Intersection[], meshes: THREE.Mesh[]): THREE.Intersection | null {
-    const meshSet = new Set(meshes);
-    for (const hit of intersections) {
-      if (!(hit.object instanceof THREE.Mesh) || !meshSet.has(hit.object)) {
-        continue;
-      }
-      // Solid brush volume helpers must never steal face picks from CSG results.
-      if (SolidBrushVisual.shouldSkipFacePick(hit.object)) continue;
-      if (hit.faceIndex === undefined || hit.faceIndex === null) continue;
-      return hit;
+  private pickFrontFaceOnMesh(
+    mesh: THREE.Mesh,
+    maxDistance: number,
+  ): { faceIndex: number; distance: number; point: THREE.Vector3 } | null {
+    mesh.updateMatrixWorld(true);
+    if (!this.rayIntersectsWorldBounds(mesh, maxDistance)) {
+      return null;
     }
-    return null;
+    const bvh = getOrBuildFacePickBvh(mesh);
+    if (!bvh) return null;
+    this.inverseMatrix.copy(mesh.matrixWorld).invert();
+    this.localOrigin.copy(this.rayOrigin).applyMatrix4(this.inverseMatrix);
+    this.localDirection.copy(this.rayDirection).transformDirection(this.inverseMatrix).normalize();
+    const localMaxDistance = this.estimateLocalMaxDistance(mesh, maxDistance);
+    const hit = bvh.raycastFrontFacing(this.localOrigin, this.localDirection, localMaxDistance);
+    if (!hit) return null;
+    const worldPoint = hit.point.applyMatrix4(mesh.matrixWorld);
+    const worldDistance = worldPoint.distanceTo(this.rayOrigin);
+    if (worldDistance >= maxDistance) return null;
+    this.normalMatrix.getNormalMatrix(mesh.matrixWorld);
+    this.worldNormal.copy(hit.localNormal).applyMatrix3(this.normalMatrix).normalize();
+    if (this.worldNormal.dot(this.rayDirection) >= 0) return null;
+    return { faceIndex: hit.faceIndex, distance: worldDistance, point: worldPoint };
   }
 
   /**
-   * Extracts the triangle index from a raycast intersection.
+   * Cheap world-AABB rejection before transforming the ray into local space.
    *
-   * @param intersection The Three.js intersection result.
-   * @returns The face index, defaulting to 0 if unavailable.
+   * @param mesh Candidate mesh.
+   * @param maxDistance Current closest hit distance.
+   * @returns True when the ray may still hit the mesh sooner than maxDistance.
    */
-  private extractFaceIndex(intersection: THREE.Intersection): number {
-    if (intersection.faceIndex !== undefined && intersection.faceIndex !== null) {
-      return intersection.faceIndex;
+  private rayIntersectsWorldBounds(mesh: THREE.Mesh, maxDistance: number): boolean {
+    const geometry = mesh.geometry;
+    if (!geometry.boundingBox) {
+      geometry.computeBoundingBox();
     }
-    return 0;
+    const box = geometry.boundingBox;
+    if (!box) return true;
+    this.worldBox.copy(box).applyMatrix4(mesh.matrixWorld);
+    this.worldRay.origin.copy(this.rayOrigin);
+    this.worldRay.direction.copy(this.rayDirection);
+    if (!this.worldRay.intersectBox(this.worldBox, this.boxHitPoint)) return false;
+    return this.rayOrigin.distanceTo(this.boxHitPoint) < maxDistance;
   }
 
-  /** Disposes internal Three.js resources. */
-  dispose(): void {
-    this.raycaster.ray.origin.set(0, 0, 0);
-    this.raycaster.ray.direction.set(0, 0, 0);
+  /**
+   * Converts a world-space distance cap into a conservative local-space cap.
+   *
+   * @param mesh Mesh being tested.
+   * @param maxDistance World-space max distance.
+   * @returns Local-space max distance for BVH traversal.
+   */
+  private estimateLocalMaxDistance(mesh: THREE.Mesh, maxDistance: number): number {
+    if (!Number.isFinite(maxDistance)) return Infinity;
+    const scale = mesh.matrixWorld.getMaxScaleOnAxis();
+    if (scale <= 1e-12) return maxDistance;
+    return maxDistance / scale + 1e-4;
   }
+
+  /** Disposes internal resources (no GPU objects owned). */
+  dispose(): void {}
 }

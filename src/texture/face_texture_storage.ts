@@ -12,9 +12,22 @@ import {
  * @returns Cloned entries array (never the live reference).
  */
 export function getFaceTextureMaps(mesh: THREE.Mesh): FaceTextureMapEntry[] {
+  const raw = getFaceTextureMapsLive(mesh);
+  return raw.map((entry) => cloneFaceTextureMapEntry(entry));
+}
+
+/**
+ * Returns the live face texture map table without cloning. Callers must not
+ * mutate the returned arrays; use this for read-only lookups on large solid
+ * results where cloning every entry is prohibitively expensive.
+ *
+ * @param mesh Mesh to read.
+ * @returns Live entries array or empty array.
+ */
+export function getFaceTextureMapsLive(mesh: THREE.Mesh): readonly FaceTextureMapEntry[] {
   const raw = mesh.userData[FACE_TEXTURE_MAPS_USERDATA_KEY];
   if (!Array.isArray(raw)) return [];
-  return raw.map((entry: FaceTextureMapEntry) => cloneFaceTextureMapEntry(entry));
+  return raw as FaceTextureMapEntry[];
 }
 
 /**

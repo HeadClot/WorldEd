@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FaceSelection } from './face_selection_manager.js';
 import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
+import { buildFacePickRegionKey } from './solid_triangle_source_index.js';
 
 /** A distinct coplanar face region on a single mesh, ready for extrusion. */
 export interface FaceRegion {
@@ -9,9 +10,10 @@ export interface FaceRegion {
 }
 
 /**
- * Groups selected face triangles into independent face regions. Solid results
- * keep one region per brush face; ordinary meshes use coplanar units. Each
- * region becomes one convex prism when extruded.
+ * Groups selected face entries into independent face regions. Solid results
+ * keep one region per brush face (selection may only store a seed triangle);
+ * ordinary meshes use coplanar units. Each region becomes one convex prism when
+ * extruded.
  *
  * @param selections The current face selection entries.
  * @returns Ordered face regions (stable per mesh, then by seed face index).
@@ -52,23 +54,29 @@ function groupSelectionsByMesh(selections: FaceSelection[]): Map<THREE.Mesh, num
 
 /**
  * Splits selected triangle indices on one mesh into selectable face regions.
- * Uses solid brush-surface identity when present; otherwise connected
- * coplanar.
+ * Expands solid seeds to every triangle on that brush face.
  *
  * @param mesh The mesh owning the faces.
- * @param faceIndices Selected triangle indices on that mesh.
+ * @param faceIndices Selected triangle seeds on that mesh.
  * @returns Arrays of triangle indices, one region each.
  */
 function splitMeshFacesIntoSelectableRegions(mesh: THREE.Mesh, faceIndices: number[]): number[][] {
   const remaining = new Set(faceIndices);
   const regions: number[][] = [];
   const sortedSeeds = faceIndices.slice().sort((a, b) => a - b);
-  sortedSeeds.forEach((seed) => {
-    if (!remaining.has(seed)) return;
-    const region = expandFaceSelectionIndices(mesh, seed).filter((index) => remaining.has(index));
+  for (const seed of sortedSeeds) {
+    if (!remaining.has(seed)) continue;
+    const region = expandFaceSelectionIndices(mesh, seed);
     const finalRegion = region.length > 0 ? region : [seed];
-    finalRegion.forEach((index) => remaining.delete(index));
-    regions.push(finalRegion.sort((a, b) => a - b));
-  });
+    const regionSet = new Set(finalRegion);
+    const regionKey = buildFacePickRegionKey(mesh, seed);
+    for (const selected of faceIndices) {
+      if (!remaining.has(selected)) continue;
+      if (regionSet.has(selected) || buildFacePickRegionKey(mesh, selected) === regionKey) {
+        remaining.delete(selected);
+      }
+    }
+    regions.push(finalRegion.slice().sort((a, b) => a - b));
+  }
   return regions;
 }

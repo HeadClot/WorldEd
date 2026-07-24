@@ -43,6 +43,9 @@ export class FaceModeCoordinator {
   private windowPointerMoveListener: ((event: PointerEvent) => void) | null;
   private windowPointerUpListener: ((event: PointerEvent) => void) | null;
   private isSmearStrokeLive: boolean;
+  private lastStatusFaceCount: number;
+  private dragPickFrame: number;
+  private pendingDragEvent: PointerEvent | null;
 
   /**
    * Creates a face mode coordinator and wires viewport/face callbacks.
@@ -58,6 +61,9 @@ export class FaceModeCoordinator {
     this.windowPointerMoveListener = null;
     this.windowPointerUpListener = null;
     this.isSmearStrokeLive = false;
+    this.lastStatusFaceCount = -1;
+    this.dragPickFrame = 0;
+    this.pendingDragEvent = null;
     this.bindFaceSelectionCallbacks();
     this.bindViewportFaceCallbacks();
     this.updateSelectionModeStatus();
@@ -189,15 +195,12 @@ export class FaceModeCoordinator {
     const smearHeld = this.isUvSmearKeyHeld();
     const camera = viewport.getCamera();
     const renderer = viewport.getRenderer();
-    this.faceExtrusionController.onPointerDown(event, camera, renderer);
-    if (smearHeld) {
-      const pick = this.faceExtrusionController.pickFaceAtPointer(event, camera, renderer);
-      if (pick) {
-        this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);
-        this.isSmearStrokeLive = true;
-        this.deps.updateShadingMeshes();
-        this.deps.showStatusMessage('Smearing UVs — drag across faces, release to finish');
-      }
+    const pick = this.faceExtrusionController.onPointerDown(event, camera, renderer);
+    if (smearHeld && pick) {
+      this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);
+      this.isSmearStrokeLive = true;
+      this.deps.updateShadingMeshes();
+      this.deps.showStatusMessage('Smearing UVs — drag across faces, release to finish');
     }
     this.beginWindowDragTracking(viewport);
     this.updateSelectionModeStatus();
@@ -239,38 +242,56 @@ export class FaceModeCoordinator {
 
   /**
    * Continues face selection drag and optional UV smear while the button is
-   * held.
+   * held. Coalesces to one pick per animation frame so high-frequency mouse
+   * events cannot stack expensive work.
    *
    * @param event Window pointer move event.
    */
   private onWindowPointerMove(event: PointerEvent): void {
+    if ((event.buttons & 1) === 0) {
+      this.onWindowPointerUp();
+      return;
+    }
+    this.pendingDragEvent = event;
+    if (this.dragPickFrame !== 0) return;
+    this.dragPickFrame = requestAnimationFrame(() => {
+      this.dragPickFrame = 0;
+      this.processPendingDragPick();
+    });
+  }
+
+  /** Runs one coalesced face drag pick from the latest pointer sample. */
+  private processPendingDragPick(): void {
     const viewport = this.activeDragViewport;
-    if (!viewport) return;
+    const event = this.pendingDragEvent;
+    this.pendingDragEvent = null;
+    if (!viewport || !event) return;
     if ((event.buttons & 1) === 0) {
       this.onWindowPointerUp();
       return;
     }
     const camera = viewport.getCamera();
     const renderer = viewport.getRenderer();
-    if (this.isSmearStrokeLive || this.isUvSmearKeyHeld()) {
-      const pick = this.faceExtrusionController.pickFaceAtPointer(event, camera, renderer);
-      if (pick) {
-        if (!this.isSmearStrokeLive) {
-          this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);
-          this.isSmearStrokeLive = true;
-        } else {
-          this.uvSmearController.continueStroke(pick.mesh, pick.faceIndex);
-        }
-        this.faceExtrusionController.selectFace(pick.mesh, pick.faceIndex, true);
-        this.deps.updateShadingMeshes();
+    const pick = this.faceExtrusionController.onPointerMove(event, camera, renderer);
+    if (pick && (this.isSmearStrokeLive || this.isUvSmearKeyHeld())) {
+      if (!this.isSmearStrokeLive) {
+        this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);
+        this.isSmearStrokeLive = true;
+      } else {
+        this.uvSmearController.continueStroke(pick.mesh, pick.faceIndex);
       }
+      this.deps.updateShadingMeshes();
     }
-    this.faceExtrusionController.onPointerMove(event, camera, renderer);
     this.updateSelectionModeStatus();
   }
 
   /** Ends face drag-paint and commits any UV smear stroke. */
   private onWindowPointerUp(): void {
+    if (this.dragPickFrame !== 0) {
+      cancelAnimationFrame(this.dragPickFrame);
+      this.dragPickFrame = 0;
+    }
+    this.pendingDragEvent = null;
     this.faceExtrusionController.onPointerUp();
     if (this.isSmearStrokeLive) {
       this.uvSmearController.endStroke();
@@ -279,7 +300,7 @@ export class FaceModeCoordinator {
       this.deps.showStatusMessage('UV smear stroke finished');
     }
     this.endWindowDragTracking();
-    this.updateSelectionModeStatus();
+    this.updateSelectionModeStatus(true);
   }
 
   /**
@@ -328,11 +349,19 @@ export class FaceModeCoordinator {
     this.deps.showStatusMessage('Face mode: drag to select faces · hold G and drag to smear UVs · Extrude / Shift+E');
   }
 
-  /** Updates the status bar to reflect the current selection mode. */
-  private updateSelectionModeStatus(): void {
+  /**
+   * Updates the status bar to reflect the current selection mode.
+   *
+   * @param force When true, writes even if the face count is unchanged.
+   */
+  private updateSelectionModeStatus(force: boolean = false): void {
     if (!this.deps.statusBar) return;
     const mode = this.faceExtrusionController.getSelectionMode();
     const count = this.faceExtrusionController.getSelectedFaceCount();
+    if (!force && mode === SelectionMode.FACE && count === this.lastStatusFaceCount) {
+      return;
+    }
+    this.lastStatusFaceCount = count;
     this.deps.statusBar.setSelectionModeInfo(this.formatSelectionMode(mode), count);
   }
 

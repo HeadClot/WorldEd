@@ -113,7 +113,7 @@ describe('FaceExtrusionController', () => {
       const mockEvent = createMockPointerEvent(100, 100);
       const camera = new THREE.PerspectiveCamera();
       const result = controller.onPointerDown(mockEvent, camera, createMockRenderer());
-      expect(result).toBe(false);
+      expect(result).toBeNull();
     });
   });
 
