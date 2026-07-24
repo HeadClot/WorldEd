@@ -457,10 +457,8 @@ export class EditorShellBuilder {
     toolbar.addIconButton('Solid Model', ToolbarIcons.solidModel(), () =>
       actions.onToggleSolidModelPanel(),
     );
-    toolbar.addIconButton(
-      'Settings',
-      ToolbarIcons.settings(),
-      () => actions.onToggleSettingsDialog()
+    toolbar.addIconButton('Settings', ToolbarIcons.settings(), () =>
+      actions.onToggleSettingsDialog(),
     );
     toolbar.addSeparator();
     toolbar.addIconButton('About', ToolbarIcons.about(), () => actions.onOpenAboutDialog());

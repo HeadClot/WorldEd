@@ -42,10 +42,7 @@ export function createSettingsCategory(title: string): {
  * @param control Right-side control element.
  * @returns Row element.
  */
-export function createSettingsControlRow(
-  labelText: string,
-  control: HTMLElement
-): HTMLElement {
+export function createSettingsControlRow(labelText: string, control: HTMLElement): HTMLElement {
   const row = document.createElement('div');
   row.classList.add('settings-dialog-control-row');
   row.style.display = 'flex';
@@ -73,7 +70,7 @@ export function createSettingsControlRow(
 export function createSettingsSelect(
   options: readonly { value: string; label: string }[],
   selectedValue: string,
-  onChange: (value: string) => void
+  onChange: (value: string) => void,
 ): HTMLSelectElement {
   const select = document.createElement('select');
   styleSettingsSelect(select);
@@ -104,7 +101,7 @@ export function createSettingsSlider(
   step: number,
   value: number,
   formatValue: (value: number) => string,
-  onChange: (value: number) => void
+  onChange: (value: number) => void,
 ): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
@@ -138,10 +135,7 @@ export function createSettingsSlider(
  * @param onClick Click handler.
  * @returns Button element.
  */
-export function createSettingsButton(
-  label: string,
-  onClick: () => void
-): HTMLButtonElement {
+export function createSettingsButton(label: string, onClick: () => void): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = label;
@@ -161,17 +155,13 @@ export function createSettingsButton(
  */
 export function createSettingsSecondaryButton(
   label: string,
-  onClick: () => void
+  onClick: () => void,
 ): HTMLButtonElement {
   const button = createSettingsButton(label, onClick);
   button.style.background = hexToRgb(Theme.buttonBackground);
   button.style.color = Theme.buttonTextColor;
   button.style.border = `1px solid ${Theme.inputBorderColor}`;
-  bindButtonHover(
-    button,
-    hexToRgb(Theme.buttonHoverColor),
-    hexToRgb(Theme.buttonBackground)
-  );
+  bindButtonHover(button, hexToRgb(Theme.buttonHoverColor), hexToRgb(Theme.buttonBackground));
   return button;
 }
 
@@ -185,7 +175,7 @@ export function createSettingsSecondaryButton(
 export function createSettingsTextInput(
   value: string,
   ariaLabel: string,
-  onChange: (value: string) => void
+  onChange: (value: string) => void,
 ): HTMLInputElement {
   const input = document.createElement('input');
   input.type = 'text';
@@ -278,11 +268,7 @@ function styleSettingsButton(button: HTMLButtonElement): void {
   button.style.background = hexToRgb(Theme.buttonBackground);
   button.style.color = Theme.buttonTextColor;
   button.style.transition = 'background 80ms ease';
-  bindButtonHover(
-    button,
-    hexToRgb(Theme.buttonHoverColor),
-    hexToRgb(Theme.buttonBackground)
-  );
+  bindButtonHover(button, hexToRgb(Theme.buttonHoverColor), hexToRgb(Theme.buttonBackground));
 }
 
 /**
@@ -308,11 +294,7 @@ function styleSettingsTextInput(input: HTMLInputElement): void {
  * @param hoverColor Hover background.
  * @param idleColor Resting background.
  */
-function bindButtonHover(
-  button: HTMLButtonElement,
-  hoverColor: string,
-  idleColor: string
-): void {
+function bindButtonHover(button: HTMLButtonElement, hoverColor: string, idleColor: string): void {
   button.addEventListener('mouseenter', () => {
     button.style.background = hoverColor;
   });

@@ -1,7 +1,4 @@
-import type {
-  GitHubReleaseAsset,
-  StandalonePlatform
-} from './update_types.js';
+import type { GitHubReleaseAsset, StandalonePlatform } from './update_types.js';
 
 /**
  * Selects the best executable asset for a standalone platform.
@@ -11,7 +8,7 @@ import type {
  */
 export function selectStandaloneUpdateAsset(
   assets: readonly GitHubReleaseAsset[],
-  platform: StandalonePlatform
+  platform: StandalonePlatform,
 ): GitHubReleaseAsset | null {
   const candidates = assets.filter((asset) => isPlatformAsset(asset, platform));
   return candidates.sort(compareAssetPreference)[0] ?? null;
@@ -52,7 +49,7 @@ function hasPlatformMarker(name: string, platform: StandalonePlatform): boolean 
   const markers = {
     windows: ['windows', 'win', 'win32', 'win64'],
     macos: ['macos', 'mac', 'darwin', 'osx'],
-    linux: ['linux', 'ubuntu', 'appimage']
+    linux: ['linux', 'ubuntu', 'appimage'],
   } as const;
   return markers[platform].some((marker) => name.includes(marker));
 }
@@ -72,9 +69,19 @@ function isNonInstallableArchive(name: string): boolean {
  * @returns True when any platform marker is present.
  */
 function hasAnyPlatformMarker(name: string): boolean {
-  return ['windows', 'win', 'win32', 'win64', 'macos', 'mac', 'darwin', 'osx', 'linux', 'ubuntu', 'appimage'].some(
-    (marker) => name.includes(marker)
-  );
+  return [
+    'windows',
+    'win',
+    'win32',
+    'win64',
+    'macos',
+    'mac',
+    'darwin',
+    'osx',
+    'linux',
+    'ubuntu',
+    'appimage',
+  ].some((marker) => name.includes(marker));
 }
 
 /**
@@ -85,7 +92,7 @@ function hasAnyPlatformMarker(name: string): boolean {
  */
 function compareAssetPreference(
   firstAsset: GitHubReleaseAsset,
-  secondAsset: GitHubReleaseAsset
+  secondAsset: GitHubReleaseAsset,
 ): number {
   return assetPreference(secondAsset) - assetPreference(firstAsset);
 }

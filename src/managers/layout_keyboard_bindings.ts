@@ -32,7 +32,7 @@ export interface LayoutKeyboardBindingHost {
 export function createAndRegisterKeyboardShortcuts(
   inputManager: InputManager,
   host: LayoutKeyboardBindingHost,
-  getKeyboardShortcuts: () => KeyboardShortcutSettings
+  getKeyboardShortcuts: () => KeyboardShortcutSettings,
 ): KeyboardShortcutHandler {
   const handler = new KeyboardShortcutHandler(inputManager, getKeyboardShortcuts);
   handler.setNavigationActiveCallback(() => host.isCameraNavigating());

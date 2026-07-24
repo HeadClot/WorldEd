@@ -128,7 +128,7 @@ describe('GlbExporter', () => {
     profile.coordinateSpace = getBuiltInCoordinateSpace('blender')!;
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     worldGroup.add(mesh);
     const buffer = await exporter.export(worldGroup, profile);
@@ -145,7 +145,7 @@ describe('GlbExporter', () => {
     profile.coordinateSpace = getBuiltInCoordinateSpace('blender')!;
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     worldGroup.add(mesh);
     const originalParent = mesh.parent;
@@ -156,7 +156,7 @@ describe('GlbExporter', () => {
   it.each([
     ['Unity', createLeftHandedProfile('unity')],
     ['Unreal Engine', createLeftHandedProfile('unreal')],
-    ['custom', createCustomLeftHandedProfile()]
+    ['custom', createCustomLeftHandedProfile()],
   ])(
     'should round-trip %s geometry with reflected positions normals and winding',
     async (_name, profile) => {
@@ -173,7 +173,7 @@ describe('GlbExporter', () => {
       const expectedNormal = transformNormal(sourceNormal, expectedTransform);
       const exportedNormal = transformNormal(
         readFirstNormal(exportedMesh),
-        exportedMesh.matrixWorld
+        exportedMesh.matrixWorld,
       );
 
       expectVectorsToMatch(exportedPositions, expectedPositions);
@@ -181,7 +181,7 @@ describe('GlbExporter', () => {
       expect(exportedMesh.matrixWorld.determinant()).toBeLessThan(0);
       expect(exportedNormal.dot(expectedNormal)).toBeCloseTo(1, 6);
       expect(getTriangleNormal(exportedPositions).dot(exportedNormal)).toBeCloseTo(-1, 6);
-    }
+    },
   );
 });
 
@@ -208,7 +208,7 @@ function createCustomLeftHandedProfile(): GameProfile {
     name: 'Custom Left',
     handedness: 'left',
     forward: '+z',
-    isCustom: true
+    isCustom: true,
   };
   return profile;
 }
@@ -219,11 +219,10 @@ function createCustomLeftHandedProfile(): GameProfile {
  */
 function createNamedTriangleMesh(): THREE.Mesh {
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute([
-    0, 0, 0,
-    1, 0, 0,
-    0, 1, 1
-  ], 3));
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 1], 3),
+  );
   geometry.setIndex([0, 1, 2]);
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial());
@@ -239,11 +238,16 @@ function createNamedTriangleMesh(): THREE.Mesh {
  */
 function loadNamedMesh(buffer: ArrayBuffer, meshName: string): Promise<THREE.Mesh> {
   return new Promise((resolve, reject) => {
-    new GLTFLoader().parse(buffer, '', (gltf) => {
-      gltf.scene.updateMatrixWorld(true);
-      const mesh = findNamedMesh(gltf.scene, meshName);
-      mesh ? resolve(mesh) : reject(new Error(`Missing mesh ${meshName}`));
-    }, reject);
+    new GLTFLoader().parse(
+      buffer,
+      '',
+      (gltf) => {
+        gltf.scene.updateMatrixWorld(true);
+        const mesh = findNamedMesh(gltf.scene, meshName);
+        mesh ? resolve(mesh) : reject(new Error(`Missing mesh ${meshName}`));
+      },
+      reject,
+    );
   });
 }
 
@@ -271,10 +275,11 @@ function findNamedMesh(root: THREE.Object3D, meshName: string): THREE.Mesh | nul
 function readTrianglePositions(mesh: THREE.Mesh): THREE.Vector3[] {
   const position = mesh.geometry.getAttribute('position');
   const index = mesh.geometry.getIndex();
-  return [0, 1, 2].map((offset) => new THREE.Vector3().fromBufferAttribute(
-    position,
-    index ? index.getX(offset) : offset
-  ).applyMatrix4(mesh.matrixWorld));
+  return [0, 1, 2].map((offset) =>
+    new THREE.Vector3()
+      .fromBufferAttribute(position, index ? index.getX(offset) : offset)
+      .applyMatrix4(mesh.matrixWorld),
+  );
 }
 
 /**
@@ -293,10 +298,7 @@ function readFirstNormal(mesh: THREE.Mesh): THREE.Vector3 {
  * @param transform Coordinate transform.
  * @returns Transformed positions.
  */
-function transformPositions(
-  positions: THREE.Vector3[],
-  transform: THREE.Matrix4
-): THREE.Vector3[] {
+function transformPositions(positions: THREE.Vector3[], transform: THREE.Matrix4): THREE.Vector3[] {
   return positions.map((position) => position.clone().applyMatrix4(transform));
 }
 
@@ -317,9 +319,11 @@ function transformNormal(normal: THREE.Vector3, transform: THREE.Matrix4): THREE
  * @returns Normalized geometric normal.
  */
 function getTriangleNormal(positions: THREE.Vector3[]): THREE.Vector3 {
-  return positions[1].clone().sub(positions[0]).cross(
-    positions[2].clone().sub(positions[0])
-  ).normalize();
+  return positions[1]
+    .clone()
+    .sub(positions[0])
+    .cross(positions[2].clone().sub(positions[0]))
+    .normalize();
 }
 
 /**

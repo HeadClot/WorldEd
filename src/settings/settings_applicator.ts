@@ -35,9 +35,7 @@ export class SettingsApplicator {
     this.applyTheme(snapshot.view.theme);
     this.applyBrightness(snapshot.view.brightness);
     this.applyRendererFontSize(snapshot.view.rendererFontSize);
-    this.applyMaterialBrowserIconSize(
-      snapshot.view.materialBrowserIconSizePercent
-    );
+    this.applyMaterialBrowserIconSize(snapshot.view.materialBrowserIconSizePercent);
   }
 
   /**
@@ -121,10 +119,7 @@ export class SettingsApplicator {
     this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     this.boundSystemThemeListener = () => {
       if (this.lastThemePreference === 'system') {
-        this.root.setAttribute(
-          ROOT_THEME_ATTRIBUTE,
-          this.resolveTheme('system')
-        );
+        this.root.setAttribute(ROOT_THEME_ATTRIBUTE, this.resolveTheme('system'));
       }
     };
     this.mediaQuery.addEventListener('change', this.boundSystemThemeListener);
@@ -135,10 +130,7 @@ export class SettingsApplicator {
    */
   private unbindSystemThemeListener(): void {
     if (this.mediaQuery && this.boundSystemThemeListener) {
-      this.mediaQuery.removeEventListener(
-        'change',
-        this.boundSystemThemeListener
-      );
+      this.mediaQuery.removeEventListener('change', this.boundSystemThemeListener);
     }
     this.mediaQuery = null;
     this.boundSystemThemeListener = null;

@@ -2,7 +2,7 @@ import type {
   AxisDirection,
   BuiltInCoordinateSpaceId,
   CoordinateSpaceDefinition,
-  Handedness
+  Handedness,
 } from './coordinate_space_types.js';
 import { AXIS_DIRECTION_OPTIONS } from './coordinate_space_types.js';
 
@@ -28,7 +28,7 @@ export const BUILT_IN_COORDINATE_SPACE_PRESETS: readonly CoordinateSpaceDefiniti
       up: '+z',
       right: '+x',
       forward: '+y',
-      isCustom: false
+      isCustom: false,
     }),
     Object.freeze({
       presetId: 'unity',
@@ -37,7 +37,7 @@ export const BUILT_IN_COORDINATE_SPACE_PRESETS: readonly CoordinateSpaceDefiniti
       up: '+y',
       right: '+x',
       forward: '+z',
-      isCustom: false
+      isCustom: false,
     }),
     Object.freeze({
       presetId: 'godot',
@@ -46,7 +46,7 @@ export const BUILT_IN_COORDINATE_SPACE_PRESETS: readonly CoordinateSpaceDefiniti
       up: '+y',
       right: '+x',
       forward: '-z',
-      isCustom: false
+      isCustom: false,
     }),
     Object.freeze({
       presetId: 'unreal',
@@ -55,8 +55,8 @@ export const BUILT_IN_COORDINATE_SPACE_PRESETS: readonly CoordinateSpaceDefiniti
       up: '+z',
       right: '+y',
       forward: '+x',
-      isCustom: false
-    })
+      isCustom: false,
+    }),
   ]);
 
 /**
@@ -64,12 +64,8 @@ export const BUILT_IN_COORDINATE_SPACE_PRESETS: readonly CoordinateSpaceDefiniti
  * @param presetId Built-in preset identifier.
  * @returns Cloned definition or null when unknown.
  */
-export function getBuiltInCoordinateSpace(
-  presetId: string
-): CoordinateSpaceDefinition | null {
-  const found = BUILT_IN_COORDINATE_SPACE_PRESETS.find(
-    (preset) => preset.presetId === presetId
-  );
+export function getBuiltInCoordinateSpace(presetId: string): CoordinateSpaceDefinition | null {
+  const found = BUILT_IN_COORDINATE_SPACE_PRESETS.find((preset) => preset.presetId === presetId);
   return found ? cloneCoordinateSpace(found) : null;
 }
 
@@ -86,9 +82,7 @@ export function createDefaultCoordinateSpace(): CoordinateSpaceDefinition {
  * @param space Source definition.
  * @returns Independent clone.
  */
-export function cloneCoordinateSpace(
-  space: CoordinateSpaceDefinition
-): CoordinateSpaceDefinition {
+export function cloneCoordinateSpace(space: CoordinateSpaceDefinition): CoordinateSpaceDefinition {
   return {
     presetId: space.presetId,
     name: space.name,
@@ -96,7 +90,7 @@ export function cloneCoordinateSpace(
     up: space.up,
     right: space.right,
     forward: space.forward,
-    isCustom: space.isCustom
+    isCustom: space.isCustom,
   };
 }
 
@@ -105,9 +99,7 @@ export function cloneCoordinateSpace(
  * @param space Coordinate space definition.
  * @returns Summary string for UI labels.
  */
-export function formatCoordinateSpaceSummary(
-  space: CoordinateSpaceDefinition
-): string {
+export function formatCoordinateSpaceSummary(space: CoordinateSpaceDefinition): string {
   const hand = space.handedness === 'right' ? 'Right-handed' : 'Left-handed';
   return `${hand} · Up ${formatAxis(space.up)} · Right ${formatAxis(space.right)} · Forward ${formatAxis(space.forward)}`;
 }
@@ -133,7 +125,7 @@ export function formatAxis(axis: AxisDirection): string {
 export function deriveHandedness(
   up: AxisDirection,
   right: AxisDirection,
-  forward: AxisDirection
+  forward: AxisDirection,
 ): Handedness | null {
   const upVec = axisToVector(up);
   const rightVec = axisToVector(right);
@@ -162,7 +154,7 @@ export function deriveHandedness(
 export function areValidCoordinateAxes(
   up: AxisDirection,
   right: AxisDirection,
-  forward: AxisDirection
+  forward: AxisDirection,
 ): boolean {
   return deriveHandedness(up, right, forward) !== null;
 }
@@ -173,10 +165,7 @@ export function areValidCoordinateAxes(
  * @returns True when value is a valid AxisDirection.
  */
 export function isAxisDirection(value: unknown): value is AxisDirection {
-  return (
-    typeof value === 'string' &&
-    AXIS_DIRECTION_OPTIONS.includes(value as AxisDirection)
-  );
+  return typeof value === 'string' && AXIS_DIRECTION_OPTIONS.includes(value as AxisDirection);
 }
 
 /**
@@ -196,9 +185,7 @@ export function isHandedness(value: unknown): value is Handedness {
  * @returns Cloned definition.
  * @throws Error when invalid.
  */
-export function parseCoordinateSpaceDefinition(
-  value: unknown
-): CoordinateSpaceDefinition {
+export function parseCoordinateSpaceDefinition(value: unknown): CoordinateSpaceDefinition {
   if (!value || typeof value !== 'object') {
     throw new Error('Coordinate space must be an object');
   }
@@ -217,11 +204,7 @@ export function parseCoordinateSpaceDefinition(
   if (!areValidCoordinateAxes(candidate.up, candidate.right, candidate.forward)) {
     throw new Error('Coordinate space axes are not a valid basis');
   }
-  const handedness = deriveHandedness(
-    candidate.up,
-    candidate.right,
-    candidate.forward
-  );
+  const handedness = deriveHandedness(candidate.up, candidate.right, candidate.forward);
   if (!handedness) {
     throw new Error('Coordinate space has invalid handedness');
   }
@@ -232,7 +215,7 @@ export function parseCoordinateSpaceDefinition(
     up: candidate.up,
     right: candidate.right,
     forward: candidate.forward,
-    isCustom: candidate.isCustom === true
+    isCustom: candidate.isCustom === true,
   };
 }
 
@@ -268,7 +251,7 @@ function axisToVector(axis: AxisDirection): [number, number, number] {
 function areAxesOrthogonal(
   a: [number, number, number],
   b: [number, number, number],
-  c: [number, number, number]
+  c: [number, number, number],
 ): boolean {
   return (
     Math.abs(dotProduct(a, b)) < 1e-9 &&
@@ -283,10 +266,7 @@ function areAxesOrthogonal(
  * @param b Second vector.
  * @returns Scalar product.
  */
-function dotProduct(
-  a: [number, number, number],
-  b: [number, number, number]
-): number {
+function dotProduct(a: [number, number, number], b: [number, number, number]): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
@@ -298,13 +278,9 @@ function dotProduct(
  */
 function crossProduct(
   a: [number, number, number],
-  b: [number, number, number]
+  b: [number, number, number],
 ): [number, number, number] {
-  return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0]
-  ];
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
 /**

@@ -644,9 +644,9 @@ export class ViewportLayoutManager {
         onLoadScene: () => this.onLoadScene(),
         onExportGlb: () => this.onExportGlb(),
         getObjectActionHandler: () => this.objectActionHandler,
-        getAlignmentHandler: () => this.alignmentHandler
+        getAlignmentHandler: () => this.alignmentHandler,
       },
-      () => this.settingsStore!.getKeyboardShortcutSettings()
+      () => this.settingsStore!.getKeyboardShortcutSettings(),
     );
   }
 
@@ -915,11 +915,7 @@ export class ViewportLayoutManager {
   private onExportGlb(): void {
     this.ensureSettingsSystem();
     const profile = this.settingsStore?.getActiveGameProfile() ?? null;
-    void this.sceneIOHandler.exportGlb(
-      this.worldObject,
-      this.statusBar,
-      profile
-    );
+    void this.sceneIOHandler.exportGlb(this.worldObject, this.statusBar, profile);
   }
 
   /**

@@ -1,7 +1,4 @@
-import type {
-  StandalonePlatform,
-  StandaloneUpdateInstallRequest
-} from './update_types.js';
+import type { StandalonePlatform, StandaloneUpdateInstallRequest } from './update_types.js';
 
 /** Host bridge exposed by a standalone executable shell. */
 export interface StandaloneUpdaterBridge {
@@ -32,9 +29,10 @@ export function getStandaloneUpdaterBridge(): StandaloneUpdaterBridge | null {
  * @returns Best-effort standalone platform guess.
  */
 export function detectStandalonePlatform(): StandalonePlatform {
-  const platform = typeof navigator === 'undefined'
-    ? ''
-    : `${navigator.userAgent} ${navigator.platform}`.toLowerCase();
+  const platform =
+    typeof navigator === 'undefined'
+      ? ''
+      : `${navigator.userAgent} ${navigator.platform}`.toLowerCase();
   if (platform.includes('mac')) return 'macos';
   if (platform.includes('linux')) return 'linux';
   return 'windows';

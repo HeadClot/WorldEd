@@ -1,15 +1,11 @@
-import type {
-  GitHubRelease,
-  GitHubReleaseAsset
-} from './update_types.js';
+import type { GitHubRelease, GitHubReleaseAsset } from './update_types.js';
 
 /** GitHub Releases API endpoint for the AiWorldEd repository. */
 export const GITHUB_LATEST_RELEASE_URL =
   'https://api.github.com/repos/Henry00IS/AiWorldEd/releases/latest';
 
 /** Public release page used when no executable host bridge is available. */
-export const GITHUB_RELEASES_PAGE_URL =
-  'https://github.com/Henry00IS/AiWorldEd/releases';
+export const GITHUB_RELEASES_PAGE_URL = 'https://github.com/Henry00IS/AiWorldEd/releases';
 
 /** Small client for the public GitHub Releases API. */
 export class GitHubReleaseClient {
@@ -30,7 +26,7 @@ export class GitHubReleaseClient {
    */
   async fetchLatestRelease(): Promise<GitHubRelease | null> {
     const response = await this.request(GITHUB_LATEST_RELEASE_URL, {
-      headers: { Accept: 'application/vnd.github+json' }
+      headers: { Accept: 'application/vnd.github+json' },
     });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error(`GitHub returned HTTP ${response.status}.`);
@@ -51,9 +47,10 @@ function parseReleasePayload(payload: unknown): GitHubRelease {
   return {
     tagName: payload.tag_name,
     title: typeof payload.name === 'string' && payload.name ? payload.name : payload.tag_name,
-    releasePageUrl: typeof payload.html_url === 'string' ? payload.html_url : GITHUB_RELEASES_PAGE_URL,
+    releasePageUrl:
+      typeof payload.html_url === 'string' ? payload.html_url : GITHUB_RELEASES_PAGE_URL,
     notes: typeof payload.body === 'string' ? payload.body : '',
-    assets: parseAssets(payload.assets)
+    assets: parseAssets(payload.assets),
   };
 }
 
@@ -75,11 +72,13 @@ function parseAssets(value: unknown): GitHubReleaseAsset[] {
 function parseAsset(value: unknown): GitHubReleaseAsset[] {
   if (!isRecord(value)) return [];
   if (typeof value.name !== 'string' || typeof value.browser_download_url !== 'string') return [];
-  return [{
-    name: value.name,
-    browserDownloadUrl: value.browser_download_url,
-    size: typeof value.size === 'number' ? value.size : 0
-  }];
+  return [
+    {
+      name: value.name,
+      browserDownloadUrl: value.browser_download_url,
+      size: typeof value.size === 'number' ? value.size : 0,
+    },
+  ];
 }
 
 /**

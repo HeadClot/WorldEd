@@ -7,7 +7,7 @@ import {
   isReflectionMatrix,
   metersPerImperialUnit,
   metersPerMetricUnit,
-  unitsPerMeter
+  unitsPerMeter,
 } from '../../src/io/coordinate_space_transform.js';
 import { getBuiltInCoordinateSpace } from '../../src/settings/coordinate_space_presets.js';
 import { createDefaultGameProfile } from '../../src/settings/settings_defaults.js';
@@ -25,7 +25,7 @@ describe('coordinate_space_transform', () => {
     const godot = getBuiltInCoordinateSpace('godot')!;
     const rotation = buildCoordinateRotation(godot);
     expect(normalizeZeroSign(rotation.elements)).toEqual(
-      normalizeZeroSign(new THREE.Matrix3().elements)
+      normalizeZeroSign(new THREE.Matrix3().elements),
     );
   });
 
@@ -99,7 +99,7 @@ describe('coordinate_space_transform', () => {
     const profile = createDefaultGameProfile('p-godot', 'Godot');
     const matrix = buildExportRootTransform(profile);
     expect(normalizeZeroSign(matrix.elements)).toEqual(
-      normalizeZeroSign(new THREE.Matrix4().elements)
+      normalizeZeroSign(new THREE.Matrix4().elements),
     );
   });
 
@@ -130,7 +130,7 @@ describe('coordinate_space_transform', () => {
       ...space,
       name: 'Godot with stale metadata',
       handedness: 'left',
-      isCustom: true
+      isCustom: true,
     };
     const natural = buildCoordinateRotation(space);
     const overriddenRotation = buildCoordinateRotation(overridden);
@@ -140,9 +140,7 @@ describe('coordinate_space_transform', () => {
   it('should not add a reflection when stored handedness matches the axes', () => {
     const blender = getBuiltInCoordinateSpace('blender')!;
     expect(
-      new THREE.Matrix4()
-        .setFromMatrix3(buildCoordinateRotation(blender))
-        .determinant()
+      new THREE.Matrix4().setFromMatrix3(buildCoordinateRotation(blender)).determinant(),
     ).toBeGreaterThan(0);
   });
 });

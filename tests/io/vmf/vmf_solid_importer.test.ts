@@ -103,7 +103,7 @@ ${detailSides}
     expect(parsed.solids.length).toBeGreaterThan(0);
     const result = new VmfSolidImporter().importFromText(source, {
       modelName: 'Representative VMF',
-      rebuild: false
+      rebuild: false,
     });
     expect(result.model.root.name).toBe('Representative VMF');
     expect(result.importedBrushCount).toBeGreaterThan(0);
@@ -129,12 +129,37 @@ ${detailSides}
  */
 function buildRepresentativeVmfMap(): string {
   const worldSolids = [
-    createVmfSolidBlock(10, { x: -128, y: -128, z: 0 }, { x: -64, y: -64, z: 64 }, 'CONCRETE/CONCRETEWALL001A'),
-    createVmfSolidBlock(11, { x: -48, y: -48, z: 0 }, { x: 48, y: 48, z: 96 }, 'BRICK/BRICKWALL001A'),
-    createVmfSolidBlock(12, { x: 64, y: 64, z: 0 }, { x: 128, y: 128, z: 32 }, 'DEV/DEV_MEASUREGENERIC01'),
-    createVmfSolidBlock(13, { x: 160, y: 160, z: 0 }, { x: 192, y: 192, z: 32 }, 'TOOLS/TOOLSTRIGGER')
+    createVmfSolidBlock(
+      10,
+      { x: -128, y: -128, z: 0 },
+      { x: -64, y: -64, z: 64 },
+      'CONCRETE/CONCRETEWALL001A',
+    ),
+    createVmfSolidBlock(
+      11,
+      { x: -48, y: -48, z: 0 },
+      { x: 48, y: 48, z: 96 },
+      'BRICK/BRICKWALL001A',
+    ),
+    createVmfSolidBlock(
+      12,
+      { x: 64, y: 64, z: 0 },
+      { x: 128, y: 128, z: 32 },
+      'DEV/DEV_MEASUREGENERIC01',
+    ),
+    createVmfSolidBlock(
+      13,
+      { x: 160, y: 160, z: 0 },
+      { x: 192, y: 192, z: 32 },
+      'TOOLS/TOOLSTRIGGER',
+    ),
   ].join('\n');
-  const detailSolid = createVmfSolidBlock(20, { x: -24, y: 64, z: 0 }, { x: 24, y: 112, z: 48 }, 'METAL/METALWALL001A');
+  const detailSolid = createVmfSolidBlock(
+    20,
+    { x: -24, y: 64, z: 0 },
+    { x: 24, y: 112, z: 48 },
+    'METAL/METALWALL001A',
+  );
   return `world\n{\n\t"id" "1"\n\t"classname" "worldspawn"\n\t"skyname" "sky_representative"\n${worldSolids}\n}\nentity\n{\n\t"id" "2"\n\t"classname" "func_detail"\n${detailSolid}\n}`;
 }
 
@@ -150,7 +175,7 @@ function createVmfSolidBlock(
   id: number,
   min: { x: number; y: number; z: number },
   max: { x: number; y: number; z: number },
-  material: string
+  material: string,
 ): string {
   return `\tsolid\n\t{\n\t\t"id" "${id}"\n${buildAxisAlignedSideBlocks(min, max, material)}\n\t}`;
 }

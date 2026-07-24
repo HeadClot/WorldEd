@@ -244,7 +244,7 @@ export class SceneIOHandler {
   async exportGlb(
     worldGroup: THREE.Group,
     statusBar: StatusBar | null,
-    profile: GameProfile | null = null
+    profile: GameProfile | null = null,
   ): Promise<void> {
     try {
       if (worldGroup.children.length === 0) {
@@ -256,10 +256,7 @@ export class SceneIOHandler {
         this.showError(statusBar, 'Failed to export GLB: empty result');
         return;
       }
-      const filename = await this.fileDialogManager.saveBinary(
-        buffer,
-        'scene.glb'
-      );
+      const filename = await this.fileDialogManager.saveBinary(buffer, 'scene.glb');
       this.showExportResult(filename, statusBar, profile);
     } catch (error) {
       this.showError(statusBar, `Failed to export GLB: ${this.formatError(error)}`);
@@ -276,7 +273,7 @@ export class SceneIOHandler {
   private showExportResult(
     filename: string | null,
     statusBar: StatusBar | null,
-    profile: GameProfile | null
+    profile: GameProfile | null,
   ): void {
     if (!statusBar) return;
     if (filename) {
@@ -295,8 +292,7 @@ export class SceneIOHandler {
    */
   private describeProfile(profile: GameProfile | null): string {
     if (!profile) return '';
-    const activeUnit =
-      profile.unitSystem === 'metric' ? profile.metricUnit : profile.imperialUnit;
+    const activeUnit = profile.unitSystem === 'metric' ? profile.metricUnit : profile.imperialUnit;
     const unit = getUnitLabel(profile.unitSystem, activeUnit);
     const space = formatCoordinateSpaceSummary(profile.coordinateSpace);
     return ` (${unit}, ${space})`;

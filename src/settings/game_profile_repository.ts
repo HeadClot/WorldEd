@@ -2,7 +2,7 @@ import { createDefaultGameProfile } from './settings_defaults.js';
 import {
   buildGameProfileFileName,
   parseGameProfileJson,
-  serializeGameProfileToJson
+  serializeGameProfileToJson,
 } from './game_profile_json.js';
 import type { GameProfile } from './settings_types.js';
 import type { SettingsStorage } from './settings_storage.js';
@@ -132,9 +132,7 @@ export class GameProfileRepository {
         ? parsed.profileIds.filter((id) => typeof id === 'string')
         : [];
       const active =
-        typeof parsed.activeGameProfileId === 'string'
-          ? parsed.activeGameProfileId
-          : null;
+        typeof parsed.activeGameProfileId === 'string' ? parsed.activeGameProfileId : null;
       return { activeGameProfileId: active, profileIds };
     } catch {
       return { activeGameProfileId: null, profileIds: [] };
@@ -179,13 +177,10 @@ export class GameProfileRepository {
    * @param profiles Profiles being saved.
    * @param activeGameProfileId Active profile id.
    */
-  private writeIndex(
-    profiles: GameProfile[],
-    activeGameProfileId: string | null
-  ): void {
+  private writeIndex(profiles: GameProfile[], activeGameProfileId: string | null): void {
     const document: GameProfileIndexDocument = {
       activeGameProfileId,
-      profileIds: profiles.map((profile) => profile.id)
+      profileIds: profiles.map((profile) => profile.id),
     };
     this.storage.setItem(GAME_PROFILE_INDEX_KEY, JSON.stringify(document));
   }
@@ -195,10 +190,7 @@ export class GameProfileRepository {
    * @param previousIds Prior index ids.
    * @param profiles Current profiles.
    */
-  private removeOrphanedProfiles(
-    previousIds: string[],
-    profiles: GameProfile[]
-  ): void {
+  private removeOrphanedProfiles(previousIds: string[], profiles: GameProfile[]): void {
     const keep = new Set(profiles.map((profile) => profile.id));
     previousIds.forEach((profileId) => {
       if (!keep.has(profileId)) {
@@ -226,10 +218,7 @@ export class GameProfileRepository {
    * @param profiles Loaded profiles.
    * @returns Active profile id.
    */
-  private resolveActiveId(
-    index: GameProfileIndexDocument,
-    profiles: GameProfile[]
-  ): string | null {
+  private resolveActiveId(index: GameProfileIndexDocument, profiles: GameProfile[]): string | null {
     if (
       index.activeGameProfileId &&
       profiles.some((profile) => profile.id === index.activeGameProfileId)

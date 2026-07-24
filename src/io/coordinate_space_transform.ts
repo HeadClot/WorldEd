@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type {
   AxisDirection,
-  CoordinateSpaceDefinition
+  CoordinateSpaceDefinition,
 } from '../settings/coordinate_space_types.js';
 import type { GameProfile } from '../settings/settings_types.js';
 import type { ImperialUnit, MetricUnit } from '../settings/unit_presets.js';
@@ -18,7 +18,7 @@ export const EDITOR_COORDINATE_SPACE: Readonly<CoordinateSpaceDefinition> = Obje
   up: '+y',
   right: '+x',
   forward: '-z',
-  isCustom: false
+  isCustom: false,
 });
 
 /**
@@ -116,16 +116,20 @@ export function axisToVector(axis: AxisDirection): THREE.Vector3 {
  * @param target Target coordinate space definition.
  * @returns Column-major 3x3 rotation matrix elements [r00..r22].
  */
-export function buildCoordinateRotation(
-  target: CoordinateSpaceDefinition
-): THREE.Matrix3 {
+export function buildCoordinateRotation(target: CoordinateSpaceDefinition): THREE.Matrix3 {
   const right = axisToVector(target.right);
   const up = axisToVector(target.up);
   const negativeForward = axisToVector(target.forward).negate();
   const rotation = new THREE.Matrix3(
-    right.x, up.x, negativeForward.x,
-    right.y, up.y, negativeForward.y,
-    right.z, up.z, negativeForward.z
+    right.x,
+    up.x,
+    negativeForward.x,
+    right.y,
+    up.y,
+    negativeForward.y,
+    right.z,
+    up.z,
+    negativeForward.z,
   );
   return rotation;
 }
@@ -188,13 +192,25 @@ function normalizeNegativeZeros(matrix: THREE.Matrix4): void {
 function composeFromRotationScale(
   destination: THREE.Matrix4,
   rotation: THREE.Matrix3,
-  scale: number
+  scale: number,
 ): void {
   const r = rotation.elements;
   destination.set(
-    r[0] * scale, r[3] * scale, r[6] * scale, 0,
-    r[1] * scale, r[4] * scale, r[7] * scale, 0,
-    r[2] * scale, r[5] * scale, r[8] * scale, 0,
-    0, 0, 0, 1
+    r[0] * scale,
+    r[3] * scale,
+    r[6] * scale,
+    0,
+    r[1] * scale,
+    r[4] * scale,
+    r[7] * scale,
+    0,
+    r[2] * scale,
+    r[5] * scale,
+    r[8] * scale,
+    0,
+    0,
+    0,
+    0,
+    1,
   );
 }

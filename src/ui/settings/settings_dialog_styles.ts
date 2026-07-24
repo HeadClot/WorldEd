@@ -133,7 +133,11 @@ export function styleSettingsCloseButton(closeButton: HTMLButtonElement): void {
   closeButton.style.fontSize = '16px';
   closeButton.style.lineHeight = '1';
   closeButton.style.fontFamily = Theme.uiFontFamily;
-  bindHoverBackground(closeButton, hexToRgb(Theme.buttonHoverColor), hexToRgb(Theme.buttonBackground));
+  bindHoverBackground(
+    closeButton,
+    hexToRgb(Theme.buttonHoverColor),
+    hexToRgb(Theme.buttonBackground),
+  );
 }
 
 /**
@@ -220,11 +224,7 @@ function bindTabHover(tab: HTMLButtonElement): void {
  * @param hoverColor Background while hovered.
  * @param idleColor Background at rest.
  */
-function bindHoverBackground(
-  button: HTMLElement,
-  hoverColor: string,
-  idleColor: string
-): void {
+function bindHoverBackground(button: HTMLElement, hoverColor: string, idleColor: string): void {
   button.addEventListener('mouseenter', () => {
     button.style.background = hoverColor;
   });

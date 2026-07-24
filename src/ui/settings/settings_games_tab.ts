@@ -9,7 +9,7 @@ import {
   UNIT_SYSTEM_LABELS,
   type ImperialUnit,
   type MetricUnit,
-  type UnitSystem
+  type UnitSystem,
 } from '../../settings/unit_presets.js';
 import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
@@ -19,7 +19,7 @@ import {
   createSettingsControlRow,
   createSettingsSecondaryButton,
   createSettingsSelect,
-  createSettingsTextInput
+  createSettingsTextInput,
 } from './settings_form_controls.js';
 import { SettingsCoordinateSpaceSection } from './settings_coordinate_space_section.js';
 
@@ -154,9 +154,7 @@ export class SettingsGamesTab {
   private buildProfileList(): void {
     const snapshot = this.store.getSnapshot();
     snapshot.gameProfiles.forEach((profile) => {
-      this.listHost.appendChild(
-        this.createProfileListItem(profile, snapshot.activeGameProfileId)
-      );
+      this.listHost.appendChild(this.createProfileListItem(profile, snapshot.activeGameProfileId));
     });
   }
 
@@ -166,10 +164,7 @@ export class SettingsGamesTab {
    * @param activeId Active profile id.
    * @returns List item element.
    */
-  private createProfileListItem(
-    profile: GameProfile,
-    activeId: string | null
-  ): HTMLElement {
+  private createProfileListItem(profile: GameProfile, activeId: string | null): HTMLElement {
     const item = document.createElement('button');
     item.type = 'button';
     item.textContent = profile.name;
@@ -261,9 +256,10 @@ export class SettingsGamesTab {
    * @returns Control row.
    */
   private createUnitSystemRow(profile: GameProfile): HTMLElement {
-    const options = (Object.keys(UNIT_SYSTEM_LABELS) as UnitSystem[]).map(
-      (value) => ({ value, label: UNIT_SYSTEM_LABELS[value] })
-    );
+    const options = (Object.keys(UNIT_SYSTEM_LABELS) as UnitSystem[]).map((value) => ({
+      value,
+      label: UNIT_SYSTEM_LABELS[value],
+    }));
     const select = createSettingsSelect(options, profile.unitSystem, (value) => {
       this.store.setGameProfileUnitSystem(profile.id, value as UnitSystem);
     });
@@ -279,12 +275,9 @@ export class SettingsGamesTab {
   private createLengthUnitRow(profile: GameProfile): HTMLElement {
     const options = getUnitOptionsForSystem(profile.unitSystem).map((unit) => ({
       value: unit,
-      label: getUnitLabel(profile.unitSystem, unit)
+      label: getUnitLabel(profile.unitSystem, unit),
     }));
-    const selected =
-      profile.unitSystem === 'metric'
-        ? profile.metricUnit
-        : profile.imperialUnit;
+    const selected = profile.unitSystem === 'metric' ? profile.metricUnit : profile.imperialUnit;
     const select = createSettingsSelect(options, selected, (value) => {
       this.applyLengthUnit(profile, value);
     });

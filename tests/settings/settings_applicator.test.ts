@@ -3,7 +3,7 @@ import { SettingsApplicator } from '../../src/settings/settings_applicator.js';
 import {
   createDefaultKeyboardShortcutSettings,
   createDefaultMouseSettings,
-  createDefaultViewSettings
+  createDefaultViewSettings,
 } from '../../src/settings/settings_defaults.js';
 import type { EditorSettingsSnapshot } from '../../src/settings/settings_types.js';
 
@@ -31,20 +31,16 @@ describe('SettingsApplicator', () => {
         theme: 'light',
         brightness: 125,
         rendererFontSize: 16,
-        materialBrowserIconSizePercent: 150
+        materialBrowserIconSizePercent: 150,
       },
       mouse: createDefaultMouseSettings(),
-      keyboard: createDefaultKeyboardShortcutSettings()
+      keyboard: createDefaultKeyboardShortcutSettings(),
     };
     applicator.applySnapshot(snapshot);
     expect(root.getAttribute('data-aiworlded-theme')).toBe('light');
-    expect(root.style.getPropertyValue('--aiworlded-viewport-brightness')).toBe(
-      '1.25'
-    );
+    expect(root.style.getPropertyValue('--aiworlded-viewport-brightness')).toBe('1.25');
     expect(root.style.fontSize).toBe('16px');
-    expect(root.style.getPropertyValue('--aiworlded-material-icon-scale')).toBe(
-      '1.5'
-    );
+    expect(root.style.getPropertyValue('--aiworlded-material-icon-scale')).toBe('1.5');
   });
 
   it('should resolve dark theme preference directly', () => {
@@ -58,7 +54,7 @@ describe('SettingsApplicator', () => {
       gameProfiles: [],
       view: { ...createDefaultViewSettings(), theme: 'light' },
       mouse: createDefaultMouseSettings(),
-      keyboard: createDefaultKeyboardShortcutSettings()
+      keyboard: createDefaultKeyboardShortcutSettings(),
     });
     const style = document.getElementById('aiworlded-view-settings-styles');
     expect(style?.textContent).toContain('--aiworlded-ui-font-size');
@@ -77,9 +73,7 @@ describe('SettingsApplicator', () => {
     expect(style?.textContent).toContain('.settings-dialog-header');
     expect(style?.textContent).toContain('.settings-dialog-content');
     expect(style?.textContent).toContain('.settings-dialog-category');
-    expect(style?.textContent).toContain(
-      "[data-settings-field='coordinate-space-summary']"
-    );
+    expect(style?.textContent).toContain("[data-settings-field='coordinate-space-summary']");
     expect(style?.textContent).toContain('color: #424242 !important');
     expect(style?.textContent).toContain('background: #e5e5e5 !important');
     expect(style?.textContent).toContain('color: #0a0a0a !important');
@@ -88,8 +82,6 @@ describe('SettingsApplicator', () => {
     expect(style?.textContent).toContain('.settings-dialog-panel');
     expect(style?.textContent).not.toContain("[role='dialog']");
     expect(style?.textContent).not.toContain('.tb-browser-root');
-    expect(style?.textContent).toContain(
-      ".tb-browser-tile[aria-selected='true']"
-    );
+    expect(style?.textContent).toContain(".tb-browser-tile[aria-selected='true']");
   });
 });

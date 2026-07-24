@@ -3,7 +3,7 @@ import {
   getUnitLabel,
   getUnitOptionsForSystem,
   IMPERIAL_UNIT_OPTIONS,
-  METRIC_UNIT_OPTIONS
+  METRIC_UNIT_OPTIONS,
 } from '../../src/settings/unit_presets.js';
 
 describe('unit_presets', () => {
@@ -12,18 +12,13 @@ describe('unit_presets', () => {
       'millimeter',
       'centimeter',
       'meter',
-      'kilometer'
+      'kilometer',
     ]);
     expect(METRIC_UNIT_OPTIONS).toHaveLength(4);
   });
 
   it('should list imperial length units', () => {
-    expect(getUnitOptionsForSystem('imperial')).toEqual([
-      'inch',
-      'foot',
-      'yard',
-      'mile'
-    ]);
+    expect(getUnitOptionsForSystem('imperial')).toEqual(['inch', 'foot', 'yard', 'mile']);
     expect(IMPERIAL_UNIT_OPTIONS).toHaveLength(4);
   });
 

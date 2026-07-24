@@ -58,4 +58,3 @@ export interface StandaloneUpdateInstallRequest {
   fileName: string;
   releasePageUrl: string;
 }
-

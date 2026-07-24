@@ -1,14 +1,11 @@
 import {
   createDefaultCoordinateSpace,
-  parseCoordinateSpaceDefinition
+  parseCoordinateSpaceDefinition,
 } from './coordinate_space_presets.js';
 import type { CoordinateSpaceDefinition } from './coordinate_space_types.js';
 import type { GameProfile } from './settings_types.js';
 import type { ImperialUnit, MetricUnit, UnitSystem } from './unit_presets.js';
-import {
-  IMPERIAL_UNIT_OPTIONS,
-  METRIC_UNIT_OPTIONS
-} from './unit_presets.js';
+import { IMPERIAL_UNIT_OPTIONS, METRIC_UNIT_OPTIONS } from './unit_presets.js';
 
 /** JSON schema version embedded in each game profile file. */
 export const GAME_PROFILE_JSON_VERSION = 2;
@@ -39,7 +36,7 @@ export function serializeGameProfileToJson(profile: GameProfile): string {
     unitSystem: profile.unitSystem,
     metricUnit: profile.metricUnit,
     imperialUnit: profile.imperialUnit,
-    coordinateSpace: profile.coordinateSpace
+    coordinateSpace: profile.coordinateSpace,
   };
   return `${JSON.stringify(document, null, 2)}\n`;
 }
@@ -59,7 +56,7 @@ export function parseGameProfileJson(jsonText: string): GameProfile {
     unitSystem: parsed.unitSystem as UnitSystem,
     metricUnit: parsed.metricUnit as MetricUnit,
     imperialUnit: parsed.imperialUnit as ImperialUnit,
-    coordinateSpace: resolveCoordinateSpace(parsed.coordinateSpace)
+    coordinateSpace: resolveCoordinateSpace(parsed.coordinateSpace),
   };
 }
 
@@ -84,9 +81,7 @@ export function buildGameProfileFileName(profileName: string): string {
  * Validates required fields on a parsed game profile document.
  * @param document Candidate document object.
  */
-function validateGameProfileDocument(
-  document: Partial<GameProfileJsonDocument>
-): void {
+function validateGameProfileDocument(document: Partial<GameProfileJsonDocument>): void {
   if (!document || typeof document !== 'object') {
     throw new Error('Game profile JSON must be an object');
   }

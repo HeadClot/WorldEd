@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  compareUpdateVersions,
-  isNewerUpdateVersion
-} from '../../src/updater/update_version.js';
+import { compareUpdateVersions, isNewerUpdateVersion } from '../../src/updater/update_version.js';
 
 describe('update version comparison', () => {
   it('compares tagged releases without treating the leading v as significant', () => {
@@ -20,4 +17,3 @@ describe('update version comparison', () => {
     expect(compareUpdateVersions('1.3.0-beta.1', '1.3.0')).toBeLessThan(0);
   });
 });
-

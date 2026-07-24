@@ -4,12 +4,12 @@ import {
   MOUSE_SENSITIVITY_MIN,
   MOUSE_MOVE_SPEED_MAX,
   MOUSE_MOVE_SPEED_MIN,
-  type MouseSettings
+  type MouseSettings,
 } from '../../settings/settings_types.js';
 import {
   createSettingsCategory,
   createSettingsControlRow,
-  createSettingsSlider
+  createSettingsSlider,
 } from './settings_form_controls.js';
 
 /** Mouse navigation preferences for look, pan, and movement. */
@@ -43,7 +43,7 @@ export class SettingsMouseTab {
     this.root.replaceChildren(
       this.buildLookCategory(settings),
       this.buildPanCategory(settings),
-      this.buildMoveCategory(settings)
+      this.buildMoveCategory(settings),
     );
   }
 
@@ -54,9 +54,25 @@ export class SettingsMouseTab {
    */
   private buildLookCategory(settings: MouseSettings): HTMLElement {
     const { section, body } = createSettingsCategory('Mouse Look');
-    body.appendChild(this.createSensitivityRow('look-sensitivity', settings.lookSensitivity, 'lookSensitivity'));
-    body.appendChild(this.createCheckboxRow('Invert X axis', 'look-invert-x-axis', settings.lookInvertXAxis, 'lookInvertXAxis'));
-    body.appendChild(this.createCheckboxRow('Invert Y axis', 'look-invert-y-axis', settings.lookInvertYAxis, 'lookInvertYAxis'));
+    body.appendChild(
+      this.createSensitivityRow('look-sensitivity', settings.lookSensitivity, 'lookSensitivity'),
+    );
+    body.appendChild(
+      this.createCheckboxRow(
+        'Invert X axis',
+        'look-invert-x-axis',
+        settings.lookInvertXAxis,
+        'lookInvertXAxis',
+      ),
+    );
+    body.appendChild(
+      this.createCheckboxRow(
+        'Invert Y axis',
+        'look-invert-y-axis',
+        settings.lookInvertYAxis,
+        'lookInvertYAxis',
+      ),
+    );
     return section;
   }
 
@@ -67,9 +83,25 @@ export class SettingsMouseTab {
    */
   private buildPanCategory(settings: MouseSettings): HTMLElement {
     const { section, body } = createSettingsCategory('Mouse Pan');
-    body.appendChild(this.createSensitivityRow('pan-sensitivity', settings.panSensitivity, 'panSensitivity'));
-    body.appendChild(this.createCheckboxRow('Invert X axis', 'pan-invert-x-axis', settings.panInvertXAxis, 'panInvertXAxis'));
-    body.appendChild(this.createCheckboxRow('Invert Y axis', 'pan-invert-y-axis', settings.panInvertYAxis, 'panInvertYAxis'));
+    body.appendChild(
+      this.createSensitivityRow('pan-sensitivity', settings.panSensitivity, 'panSensitivity'),
+    );
+    body.appendChild(
+      this.createCheckboxRow(
+        'Invert X axis',
+        'pan-invert-x-axis',
+        settings.panInvertXAxis,
+        'panInvertXAxis',
+      ),
+    );
+    body.appendChild(
+      this.createCheckboxRow(
+        'Invert Y axis',
+        'pan-invert-y-axis',
+        settings.panInvertYAxis,
+        'panInvertYAxis',
+      ),
+    );
     return section;
   }
 
@@ -81,11 +113,41 @@ export class SettingsMouseTab {
   private buildMoveCategory(settings: MouseSettings): HTMLElement {
     const { section, body } = createSettingsCategory('Mouse Move');
     body.appendChild(this.createSpeedRow(settings.moveSpeed));
-    body.appendChild(this.createSensitivityRow('move-sensitivity', settings.moveSensitivity, 'moveSensitivity'));
-    body.appendChild(this.createCheckboxRow('Invert mouse wheel', 'invert-mouse-wheel', settings.invertMouseWheel, 'invertMouseWheel'));
-    body.appendChild(this.createCheckboxRow('Alt + middle mouse drag to move camera', 'alt-middle-mouse-drag-moves-camera', settings.altMiddleMouseDragMovesCamera, 'altMiddleMouseDragMovesCamera'));
-    body.appendChild(this.createCheckboxRow('Invert Z axis in Alt + middle mouse drag', 'invert-alt-middle-mouse-drag-z-axis', settings.invertAltMiddleMouseDragZAxis, 'invertAltMiddleMouseDragZAxis'));
-    body.appendChild(this.createCheckboxRow('Move camera towards cursor', 'move-camera-towards-cursor', settings.moveCameraTowardsCursor, 'moveCameraTowardsCursor'));
+    body.appendChild(
+      this.createSensitivityRow('move-sensitivity', settings.moveSensitivity, 'moveSensitivity'),
+    );
+    body.appendChild(
+      this.createCheckboxRow(
+        'Invert mouse wheel',
+        'invert-mouse-wheel',
+        settings.invertMouseWheel,
+        'invertMouseWheel',
+      ),
+    );
+    body.appendChild(
+      this.createCheckboxRow(
+        'Alt + middle mouse drag to move camera',
+        'alt-middle-mouse-drag-moves-camera',
+        settings.altMiddleMouseDragMovesCamera,
+        'altMiddleMouseDragMovesCamera',
+      ),
+    );
+    body.appendChild(
+      this.createCheckboxRow(
+        'Invert Z axis in Alt + middle mouse drag',
+        'invert-alt-middle-mouse-drag-z-axis',
+        settings.invertAltMiddleMouseDragZAxis,
+        'invertAltMiddleMouseDragZAxis',
+      ),
+    );
+    body.appendChild(
+      this.createCheckboxRow(
+        'Move camera towards cursor',
+        'move-camera-towards-cursor',
+        settings.moveCameraTowardsCursor,
+        'moveCameraTowardsCursor',
+      ),
+    );
     return section;
   }
 
@@ -95,7 +157,14 @@ export class SettingsMouseTab {
    * @returns Movement speed control row.
    */
   private createSpeedRow(value: number): HTMLElement {
-    const slider = createSettingsSlider(MOUSE_MOVE_SPEED_MIN, MOUSE_MOVE_SPEED_MAX, 1, value, String, (nextValue) => this.store.updateMouseSettings({ moveSpeed: nextValue }));
+    const slider = createSettingsSlider(
+      MOUSE_MOVE_SPEED_MIN,
+      MOUSE_MOVE_SPEED_MAX,
+      1,
+      value,
+      String,
+      (nextValue) => this.store.updateMouseSettings({ moveSpeed: nextValue }),
+    );
     const input = slider.querySelector('input') as HTMLInputElement;
     input.dataset.settingsField = 'move-speed';
     return createSettingsControlRow('Speed', slider);
@@ -108,8 +177,19 @@ export class SettingsMouseTab {
    * @param settingKey Mouse preference updated by the slider.
    * @returns Sensitivity control row.
    */
-  private createSensitivityRow(fieldId: string, value: number, settingKey: keyof MouseSettings): HTMLElement {
-    const slider = createSettingsSlider(MOUSE_SENSITIVITY_MIN, MOUSE_SENSITIVITY_MAX, 1, value, String, (nextValue) => this.store.updateMouseSettings({ [settingKey]: nextValue }));
+  private createSensitivityRow(
+    fieldId: string,
+    value: number,
+    settingKey: keyof MouseSettings,
+  ): HTMLElement {
+    const slider = createSettingsSlider(
+      MOUSE_SENSITIVITY_MIN,
+      MOUSE_SENSITIVITY_MAX,
+      1,
+      value,
+      String,
+      (nextValue) => this.store.updateMouseSettings({ [settingKey]: nextValue }),
+    );
     const input = slider.querySelector('input') as HTMLInputElement;
     input.dataset.settingsField = fieldId;
     return createSettingsControlRow('Sensitivity', slider);
@@ -123,12 +203,19 @@ export class SettingsMouseTab {
    * @param settingKey Mouse preference updated by the checkbox.
    * @returns Checkbox control row.
    */
-  private createCheckboxRow(label: string, fieldId: string, checked: boolean, settingKey: keyof MouseSettings): HTMLElement {
+  private createCheckboxRow(
+    label: string,
+    fieldId: string,
+    checked: boolean,
+    settingKey: keyof MouseSettings,
+  ): HTMLElement {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = checked;
     checkbox.dataset.settingsField = fieldId;
-    checkbox.addEventListener('change', () => this.store.updateMouseSettings({ [settingKey]: checkbox.checked }));
+    checkbox.addEventListener('change', () =>
+      this.store.updateMouseSettings({ [settingKey]: checkbox.checked }),
+    );
     return createSettingsControlRow(label, checkbox);
   }
 }

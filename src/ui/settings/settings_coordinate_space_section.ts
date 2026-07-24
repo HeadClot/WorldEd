@@ -1,14 +1,12 @@
 import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
-import {
-  formatCoordinateSpaceSummary
-} from '../../settings/coordinate_space_presets.js';
+import { formatCoordinateSpaceSummary } from '../../settings/coordinate_space_presets.js';
 import type {
   AxisDirection,
-  CoordinateSpaceDefinition
+  CoordinateSpaceDefinition,
 } from '../../settings/coordinate_space_types.js';
 import {
   AXIS_DIRECTION_LABELS,
-  AXIS_DIRECTION_OPTIONS
+  AXIS_DIRECTION_OPTIONS,
 } from '../../settings/coordinate_space_types.js';
 import type { GameProfile } from '../../settings/settings_types.js';
 import { Theme } from '../../theme.js';
@@ -17,7 +15,7 @@ import {
   createSettingsControlRow,
   createSettingsSecondaryButton,
   createSettingsSelect,
-  createSettingsTextInput
+  createSettingsTextInput,
 } from './settings_form_controls.js';
 
 /** Sentinel value for the "create custom" dropdown action. */
@@ -72,10 +70,8 @@ export class SettingsCoordinateSpaceSection {
    */
   private createPresetRow(profile: GameProfile): HTMLElement {
     const options = this.buildPresetOptions();
-    const select = createSettingsSelect(
-      options,
-      profile.coordinateSpace.presetId,
-      (value) => this.handlePresetSelection(profile.id, value)
+    const select = createSettingsSelect(options, profile.coordinateSpace.presetId, (value) =>
+      this.handlePresetSelection(profile.id, value),
     );
     select.dataset.settingsField = 'coordinate-space-preset';
     return createSettingsControlRow('Preset', select);
@@ -89,11 +85,11 @@ export class SettingsCoordinateSpaceSection {
     const presets = this.store.listCoordinateSpacePresets();
     const options = presets.map((space) => ({
       value: space.presetId,
-      label: space.isCustom ? `${space.name} (Custom)` : space.name
+      label: space.isCustom ? `${space.name} (Custom)` : space.name,
     }));
     options.push({
       value: CREATE_CUSTOM_COORDINATE_SPACE_VALUE,
-      label: '+ Create custom…'
+      label: '+ Create custom…',
     });
     return options;
   }
@@ -138,11 +134,8 @@ export class SettingsCoordinateSpaceSection {
       profile.coordinateSpace.name,
       'Custom coordinate space name',
       (value) => {
-        this.store.renameCustomCoordinateSpace(
-          profile.coordinateSpace.presetId,
-          value
-        );
-      }
+        this.store.renameCustomCoordinateSpace(profile.coordinateSpace.presetId, value);
+      },
     );
     input.dataset.settingsField = 'coordinate-space-name';
     return createSettingsControlRow('Preset name', input);
@@ -158,23 +151,19 @@ export class SettingsCoordinateSpaceSection {
   private createAxisRow(
     profile: GameProfile,
     axis: 'up' | 'right' | 'forward',
-    label: string
+    label: string,
   ): HTMLElement {
     const options = AXIS_DIRECTION_OPTIONS.map((direction) => ({
       value: direction,
-      label: AXIS_DIRECTION_LABELS[direction]
+      label: AXIS_DIRECTION_LABELS[direction],
     }));
-    const select = createSettingsSelect(
-      options,
-      profile.coordinateSpace[axis],
-      (value) => {
-        this.store.setCustomCoordinateSpaceAxis(
-          profile.coordinateSpace.presetId,
-          axis,
-          value as AxisDirection
-        );
-      }
-    );
+    const select = createSettingsSelect(options, profile.coordinateSpace[axis], (value) => {
+      this.store.setCustomCoordinateSpaceAxis(
+        profile.coordinateSpace.presetId,
+        axis,
+        value as AxisDirection,
+      );
+    });
     select.dataset.settingsField = `coordinate-space-${axis}`;
     return createSettingsControlRow(label, select);
   }

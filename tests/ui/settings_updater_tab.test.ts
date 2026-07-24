@@ -12,4 +12,3 @@ describe('SettingsUpdaterTab', () => {
     expect(link?.href).toBe(GITHUB_RELEASES_PAGE_URL);
   });
 });
-

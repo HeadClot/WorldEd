@@ -7,13 +7,13 @@ import {
   VIEWPORT_PANE_COUNT_OPTIONS,
   UI_THEME_LABELS,
   UI_THEME_OPTIONS,
-  type UiThemePreference
+  type UiThemePreference,
 } from '../../settings/settings_types.js';
 import {
   createSettingsCategory,
   createSettingsControlRow,
   createSettingsSelect,
-  createSettingsSlider
+  createSettingsSlider,
 } from './settings_form_controls.js';
 
 /**
@@ -96,7 +96,7 @@ export class SettingsViewTab {
   private createPaneCountRow(paneCount: number): HTMLElement {
     const options = VIEWPORT_PANE_COUNT_OPTIONS.map((value) => ({
       value: String(value),
-      label: `${value} pane${value === 1 ? '' : 's'}`
+      label: `${value} pane${value === 1 ? '' : 's'}`,
     }));
     const select = createSettingsSelect(options, String(paneCount), (value) => {
       this.store.setViewportPaneCount(Number(value));
@@ -124,7 +124,7 @@ export class SettingsViewTab {
   private createThemeRow(theme: UiThemePreference): HTMLElement {
     const options = UI_THEME_OPTIONS.map((value) => ({
       value,
-      label: UI_THEME_LABELS[value]
+      label: UI_THEME_LABELS[value],
     }));
     const select = createSettingsSelect(options, theme, (value) => {
       this.store.setTheme(value as UiThemePreference);
@@ -145,7 +145,7 @@ export class SettingsViewTab {
       1,
       brightness,
       (value) => `${value}%`,
-      (value) => this.store.setBrightness(value)
+      (value) => this.store.setBrightness(value),
     );
     const range = slider.querySelector('input[type="range"]') as HTMLInputElement;
     if (range) {
@@ -162,7 +162,7 @@ export class SettingsViewTab {
   private createIconSizeRow(percent: number): HTMLElement {
     const options = MATERIAL_BROWSER_ICON_SIZE_OPTIONS.map((value) => ({
       value: String(value),
-      label: `${value}%`
+      label: `${value}%`,
     }));
     const select = createSettingsSelect(options, String(percent), (value) => {
       this.store.setMaterialBrowserIconSizePercent(Number(value));
@@ -179,7 +179,7 @@ export class SettingsViewTab {
   private createFontSizeRow(fontSize: number): HTMLElement {
     const options = buildRendererFontSizeOptions().map((value) => ({
       value: String(value),
-      label: String(value)
+      label: String(value),
     }));
     const select = createSettingsSelect(options, String(fontSize), (value) => {
       this.store.setRendererFontSize(Number(value));

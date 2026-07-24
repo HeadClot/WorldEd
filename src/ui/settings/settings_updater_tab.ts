@@ -1,14 +1,12 @@
 import { Theme } from '../../theme.js';
-import {
-  GITHUB_RELEASES_PAGE_URL
-} from '../../updater/github_release_client.js';
+import { GITHUB_RELEASES_PAGE_URL } from '../../updater/github_release_client.js';
 import { StandaloneUpdateService } from '../../updater/standalone_update_service.js';
 import type { UpdateCheckResult } from '../../updater/update_types.js';
 import { hexToRgb } from '../../utils/color_utils.js';
 import {
   createSettingsButton,
   createSettingsCategory,
-  createSettingsSecondaryButton
+  createSettingsSecondaryButton,
 } from './settings_form_controls.js';
 
 /** Settings tab that checks and installs standalone executable releases. */
@@ -96,7 +94,8 @@ export class SettingsUpdaterTab {
 
   /** Renders the state shown by a normal browser build. */
   private renderBrowserMessage(): void {
-    this.detailLabel.textContent = 'Automatic installation is available only in standalone executable builds.';
+    this.detailLabel.textContent =
+      'Automatic installation is available only in standalone executable builds.';
     this.actionHost.replaceChildren(this.createReleasePageLink());
   }
 
@@ -119,9 +118,10 @@ export class SettingsUpdaterTab {
 
   /** Renders the initial standalone state. */
   private renderReadyState(): void {
-    this.detailLabel.textContent = 'Checks the AiWorldEd GitHub Releases page for a newer executable.';
+    this.detailLabel.textContent =
+      'Checks the AiWorldEd GitHub Releases page for a newer executable.';
     this.actionHost.replaceChildren(
-      createSettingsButton('Check for updates', () => void this.checkForUpdates())
+      createSettingsButton('Check for updates', () => void this.checkForUpdates()),
     );
   }
 
@@ -132,7 +132,7 @@ export class SettingsUpdaterTab {
    */
   private createResultActions(result: UpdateCheckResult): HTMLElement[] {
     const actions: HTMLElement[] = [
-      createSettingsSecondaryButton('Check again', () => void this.checkForUpdates())
+      createSettingsSecondaryButton('Check again', () => void this.checkForUpdates()),
     ];
     if (result.status === 'update-available') actions.unshift(this.createInstallButton());
     return actions;
@@ -152,14 +152,16 @@ export class SettingsUpdaterTab {
       await this.service.installUpdate(this.lastResult);
       this.detailLabel.textContent = 'Update installed. Restarting…';
     } catch (error) {
-      this.detailLabel.textContent = error instanceof Error ? error.message : 'The update could not be installed.';
+      this.detailLabel.textContent =
+        error instanceof Error ? error.message : 'The update could not be installed.';
       this.renderResultActionsAfterInstallFailure();
     }
   }
 
   /** Restores retry controls when installation fails. */
   private renderResultActionsAfterInstallFailure(): void {
-    if (this.lastResult) this.actionHost.replaceChildren(...this.createResultActions(this.lastResult));
+    if (this.lastResult)
+      this.actionHost.replaceChildren(...this.createResultActions(this.lastResult));
   }
 
   /**
@@ -168,7 +170,8 @@ export class SettingsUpdaterTab {
    * @returns Concise status text.
    */
   private describeResult(result: UpdateCheckResult): string {
-    if (result.status === 'update-available') return `Version ${result.latestRelease?.version} is ready to install.`;
+    if (result.status === 'update-available')
+      return `Version ${result.latestRelease?.version} is ready to install.`;
     return result.message ?? this.describeKnownStatus(result);
   }
 
@@ -180,7 +183,8 @@ export class SettingsUpdaterTab {
   private describeKnownStatus(result: UpdateCheckResult): string {
     if (result.status === 'up-to-date') return 'You are using the latest compatible release.';
     if (result.status === 'no-release') return 'No published releases are available yet.';
-    if (result.status === 'no-compatible-asset') return 'The latest release has no compatible executable.';
+    if (result.status === 'no-compatible-asset')
+      return 'The latest release has no compatible executable.';
     return 'The release check failed.';
   }
 

@@ -3,7 +3,7 @@ import { GitHubReleaseClient } from './github_release_client.js';
 import {
   detectStandalonePlatform,
   getStandaloneUpdaterBridge,
-  type StandaloneUpdaterBridge
+  type StandaloneUpdaterBridge,
 } from './standalone_updater_bridge.js';
 import { selectStandaloneUpdateAsset } from './update_asset_selector.js';
 import { isNewerUpdateVersion } from './update_version.js';
@@ -12,7 +12,7 @@ import type {
   GitHubReleaseAsset,
   StandalonePlatform,
   StandaloneUpdateRelease,
-  UpdateCheckResult
+  UpdateCheckResult,
 } from './update_types.js';
 
 /** Version embedded in the current Vite application build. */
@@ -88,7 +88,7 @@ export class StandaloneUpdateService {
       version: release.version,
       downloadUrl: release.asset.downloadUrl,
       fileName: release.asset.name,
-      releasePageUrl: release.releasePageUrl
+      releasePageUrl: release.releasePageUrl,
     });
   }
 
@@ -98,9 +98,14 @@ export class StandaloneUpdateService {
    * @returns Update status derived from the release.
    */
   private createReleaseResult(release: GitHubRelease | null): UpdateCheckResult {
-    if (!release) return this.createResult('no-release', 'No published releases are available yet.');
+    if (!release)
+      return this.createResult('no-release', 'No published releases are available yet.');
     const asset = selectStandaloneUpdateAsset(release.assets, this.platform);
-    if (!asset) return this.createResult('no-compatible-asset', 'The latest release has no compatible executable.');
+    if (!asset)
+      return this.createResult(
+        'no-compatible-asset',
+        'The latest release has no compatible executable.',
+      );
     const latestRelease = this.createUpdateRelease(release, asset);
     const status = isNewerUpdateVersion(this.currentVersion, latestRelease.version)
       ? 'update-available'
@@ -116,14 +121,14 @@ export class StandaloneUpdateService {
    */
   private createUpdateRelease(
     release: GitHubRelease,
-    asset: GitHubReleaseAsset
+    asset: GitHubReleaseAsset,
   ): StandaloneUpdateRelease {
     return {
       version: release.tagName,
       title: release.title,
       releasePageUrl: release.releasePageUrl,
       notes: release.notes,
-      asset: { name: asset.name, downloadUrl: asset.browserDownloadUrl, size: asset.size }
+      asset: { name: asset.name, downloadUrl: asset.browserDownloadUrl, size: asset.size },
     };
   }
 

@@ -83,9 +83,7 @@ describe('ContextMenu', () => {
     const disabledMenu = new ContextMenu(container, disabledItems);
     disabledMenu.show(100, 100);
     const menuEl = container.children[1] as HTMLElement;
-    expect(
-      menuEl.children[0].classList.contains('editor-context-menu-item-disabled')
-    ).toBe(true);
+    expect(menuEl.children[0].classList.contains('editor-context-menu-item-disabled')).toBe(true);
     menuEl.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(disabledCallback).not.toHaveBeenCalled();
     disabledMenu.dispose();

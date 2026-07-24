@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { EditorSettingsStore } from '../../src/settings/editor_settings_store.js';
 import {
   GAME_PROFILE_INDEX_KEY,
-  GAME_PROFILE_STORAGE_PREFIX
+  GAME_PROFILE_STORAGE_PREFIX,
 } from '../../src/settings/game_profile_repository.js';
 import { MemorySettingsStorage } from '../../src/settings/settings_storage.js';
 import { parseGameProfileJson } from '../../src/settings/game_profile_json.js';
@@ -52,9 +52,7 @@ describe('EditorSettingsStore', () => {
     expect(imported.metricUnit).toBe('centimeter');
     expect(store.getActiveGameProfile()).toEqual(imported);
     expect(store.getSnapshot().gameProfiles).toHaveLength(2);
-    expect(parseGameProfileJson(store.getGameProfileJson(imported.id)!)).toEqual(
-      imported
-    );
+    expect(parseGameProfileJson(store.getGameProfileJson(imported.id)!)).toEqual(imported);
   });
 
   it('should register an imported custom coordinate space as editable', () => {
@@ -62,18 +60,12 @@ describe('EditorSettingsStore', () => {
     const custom = store.addCustomCoordinateSpace(source.id, 'Portable Space')!;
     store.setCustomCoordinateSpaceAxis(custom.presetId, 'forward', '+z');
 
-    const imported = store.importGameProfileJson(
-      store.getGameProfileJson(source.id)!
-    );
+    const imported = store.importGameProfileJson(store.getGameProfileJson(source.id)!);
 
     expect(imported.coordinateSpace.isCustom).toBe(true);
     expect(imported.coordinateSpace.presetId).not.toBe(custom.presetId);
     expect(
-      store.setCustomCoordinateSpaceAxis(
-        imported.coordinateSpace.presetId,
-        'forward',
-        '-z'
-      )
+      store.setCustomCoordinateSpaceAxis(imported.coordinateSpace.presetId, 'forward', '-z'),
     ).toBe(true);
     expect(store.getActiveGameProfile()!.coordinateSpace.handedness).toBe('right');
   });
@@ -126,7 +118,7 @@ describe('EditorSettingsStore', () => {
       lookSensitivity: 61,
       moveSpeed: 8,
       panInvertXAxis: true,
-      moveCameraTowardsCursor: true
+      moveCameraTowardsCursor: true,
     });
     store.updateMouseSettings({ moveSensitivity: 500 });
 
@@ -163,9 +155,7 @@ describe('EditorSettingsStore', () => {
 
     const reloaded = new EditorSettingsStore(storage);
     const snapshot = reloaded.getSnapshot();
-    expect(snapshot.gameProfiles.map((entry) => entry.name)).toContain(
-      'Persisted'
-    );
+    expect(snapshot.gameProfiles.map((entry) => entry.name)).toContain('Persisted');
     expect(snapshot.activeGameProfileId).toBe(profile.id);
     expect(snapshot.view.theme).toBe('system');
     expect(snapshot.view.rendererFontSize).toBe(20);
@@ -214,13 +204,9 @@ describe('EditorSettingsStore', () => {
     const custom = store.addCustomCoordinateSpace(profile.id, 'Quake-like')!;
     expect(custom.isCustom).toBe(true);
     expect(store.getActiveGameProfile()!.coordinateSpace.name).toBe('Quake-like');
-    expect(store.listCoordinateSpacePresets().some((space) => space.isCustom)).toBe(
-      true
-    );
+    expect(store.listCoordinateSpacePresets().some((space) => space.isCustom)).toBe(true);
 
-    expect(
-      store.setCustomCoordinateSpaceAxis(custom.presetId, 'forward', '+z')
-    ).toBe(true);
+    expect(store.setCustomCoordinateSpaceAxis(custom.presetId, 'forward', '+z')).toBe(true);
     expect(store.getActiveGameProfile()!.coordinateSpace.forward).toBe('+z');
     expect(store.getActiveGameProfile()!.coordinateSpace.handedness).toBe('left');
 
@@ -235,21 +221,14 @@ describe('EditorSettingsStore', () => {
   it('should persist custom coordinate spaces across reloads', () => {
     const profile = store.getActiveGameProfile()!;
     const custom = store.addCustomCoordinateSpace(profile.id, 'Saved Space')!;
-    expect(
-      store.setCustomCoordinateSpaceAxis(custom.presetId, 'forward', '+z')
-    ).toBe(true);
+    expect(store.setCustomCoordinateSpaceAxis(custom.presetId, 'forward', '+z')).toBe(true);
 
     const reloaded = new EditorSettingsStore(storage);
     expect(reloaded.getSnapshot().customCoordinateSpaces).toHaveLength(1);
-    expect(reloaded.getActiveGameProfile()!.coordinateSpace.name).toBe(
-      'Saved Space'
-    );
+    expect(reloaded.getActiveGameProfile()!.coordinateSpace.name).toBe('Saved Space');
     expect(reloaded.getActiveGameProfile()!.coordinateSpace.forward).toBe('+z');
-    expect(reloaded.getActiveGameProfile()!.coordinateSpace.handedness).toBe(
-      'left'
-    );
+    expect(reloaded.getActiveGameProfile()!.coordinateSpace.handedness).toBe('left');
   });
-
 });
 
 /**

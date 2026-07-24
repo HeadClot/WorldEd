@@ -9,11 +9,7 @@ export type AxisDirection = '+x' | '-x' | '+y' | '-y' | '+z' | '-z';
 export type Handedness = 'right' | 'left';
 
 /** Built-in engine coordinate space preset identifiers. */
-export type BuiltInCoordinateSpaceId =
-  | 'blender'
-  | 'unity'
-  | 'godot'
-  | 'unreal';
+export type BuiltInCoordinateSpaceId = 'blender' | 'unity' | 'godot' | 'unreal';
 
 /**
  * Full coordinate space definition stored on a game profile or custom preset.
@@ -39,23 +35,21 @@ export const AXIS_DIRECTION_OPTIONS: readonly AxisDirection[] = Object.freeze([
   '+y',
   '-y',
   '+z',
-  '-z'
+  '-z',
 ]);
 
 /** Human-readable labels for axis directions. */
-export const AXIS_DIRECTION_LABELS: Readonly<Record<AxisDirection, string>> =
-  Object.freeze({
-    '+x': '+X',
-    '-x': '-X',
-    '+y': '+Y',
-    '-y': '-Y',
-    '+z': '+Z',
-    '-z': '-Z'
-  });
+export const AXIS_DIRECTION_LABELS: Readonly<Record<AxisDirection, string>> = Object.freeze({
+  '+x': '+X',
+  '-x': '-X',
+  '+y': '+Y',
+  '-y': '-Y',
+  '+z': '+Z',
+  '-z': '-Z',
+});
 
 /** Human-readable labels for handedness. */
-export const HANDEDNESS_LABELS: Readonly<Record<Handedness, string>> =
-  Object.freeze({
-    right: 'Right-handed',
-    left: 'Left-handed'
-  });
+export const HANDEDNESS_LABELS: Readonly<Record<Handedness, string>> = Object.freeze({
+  right: 'Right-handed',
+  left: 'Left-handed',
+});

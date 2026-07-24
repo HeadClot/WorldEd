@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EditorSettingsStore } from '../../src/settings/editor_settings_store.js';
 import { MemorySettingsStorage } from '../../src/settings/settings_storage.js';
 import { SettingsDialog } from '../../src/ui/settings/settings_dialog.js';
-import {
-  IMPERIAL_UNIT_LABELS,
-  METRIC_UNIT_LABELS
-} from '../../src/settings/unit_presets.js';
+import { IMPERIAL_UNIT_LABELS, METRIC_UNIT_LABELS } from '../../src/settings/unit_presets.js';
 
 describe('SettingsDialog', () => {
   let host: HTMLElement;
@@ -37,16 +34,10 @@ describe('SettingsDialog', () => {
   it('should expose settings tabs without the removed Themes tab', () => {
     dialog.show();
     const panel = dialog.getPanelElement();
-    const labels = Array.from(panel.querySelectorAll('[role="tab"]')).map(
-      (tab) => (tab.textContent || '').trim()
+    const labels = Array.from(panel.querySelectorAll('[role="tab"]')).map((tab) =>
+      (tab.textContent || '').trim(),
     );
-    expect(labels).toEqual([
-      'Games',
-      'View',
-      'Mouse',
-      'Keyboard',
-      'Update'
-    ]);
+    expect(labels).toEqual(['Games', 'View', 'Mouse', 'Keyboard', 'Update']);
     expect(panel.querySelector('[data-settings-tab="themes"]')).toBeNull();
   });
 
@@ -64,12 +55,12 @@ describe('SettingsDialog', () => {
   it('should place Load Game Profile immediately after Add Game Profile', () => {
     dialog.show();
     const actions = Array.from(
-      dialog.getPanelElement().querySelectorAll('[data-settings-action]')
+      dialog.getPanelElement().querySelectorAll('[data-settings-action]'),
     ).map((element) => element.getAttribute('data-settings-action'));
     expect(actions.slice(0, 3)).toEqual([
       'add-game-profile',
       'load-game-profile',
-      'save-game-profile'
+      'save-game-profile',
     ]);
   });
 
@@ -77,9 +68,7 @@ describe('SettingsDialog', () => {
     dialog.show();
     const presetSelect = dialog
       .getContentElement()
-      .querySelector(
-        '[data-settings-field="coordinate-space-preset"]'
-      ) as HTMLSelectElement;
+      .querySelector('[data-settings-field="coordinate-space-preset"]') as HTMLSelectElement;
     expect(presetSelect).toBeTruthy();
     const labels = Array.from(presetSelect.options).map((option) => option.text);
     expect(labels).toContain('Blender');
@@ -92,23 +81,19 @@ describe('SettingsDialog', () => {
     presetSelect.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getActiveGameProfile()?.coordinateSpace.presetId).toBe('blender');
     expect(
-      dialog
-        .getContentElement()
-        .querySelector('[data-settings-field="coordinate-space-summary"]')
-        ?.textContent
+      dialog.getContentElement().querySelector('[data-settings-field="coordinate-space-summary"]')
+        ?.textContent,
     ).toContain('Forward +Y');
 
     const createOption = Array.from(presetSelect.options).find((option) =>
-      option.text.includes('Create custom')
+      option.text.includes('Create custom'),
     );
     expect(createOption).toBeTruthy();
     presetSelect.value = createOption!.value;
     presetSelect.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getActiveGameProfile()?.coordinateSpace.isCustom).toBe(true);
     expect(
-      dialog
-        .getContentElement()
-        .querySelector('[data-settings-field="coordinate-space-up"]')
+      dialog.getContentElement().querySelector('[data-settings-field="coordinate-space-up"]'),
     ).toBeTruthy();
   });
 
@@ -130,9 +115,7 @@ describe('SettingsDialog', () => {
     const imperialSelect = dialog
       .getContentElement()
       .querySelector('[data-settings-field="length-unit"]') as HTMLSelectElement;
-    const imperialLabels = Array.from(imperialSelect.options).map(
-      (option) => option.text
-    );
+    const imperialLabels = Array.from(imperialSelect.options).map((option) => option.text);
     expect(imperialLabels).toEqual(Object.values(IMPERIAL_UNIT_LABELS));
     expect(store.getActiveGameProfile()?.unitSystem).toBe('imperial');
   });
@@ -146,36 +129,34 @@ describe('SettingsDialog', () => {
     expect(content.textContent).toContain('Material browser');
     expect(content.textContent).toContain('Fonts');
 
-    const theme = content.querySelector(
-      '[data-settings-field="theme"]'
-    ) as HTMLSelectElement;
+    const theme = content.querySelector('[data-settings-field="theme"]') as HTMLSelectElement;
     theme.value = 'system';
     theme.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().theme).toBe('system');
 
     const brightness = content.querySelector(
-      '[data-settings-field="brightness"]'
+      '[data-settings-field="brightness"]',
     ) as HTMLInputElement;
     brightness.value = '140';
     brightness.dispatchEvent(new Event('input', { bubbles: true }));
     expect(store.getViewSettings().brightness).toBe(140);
 
     const paneCount = content.querySelector(
-      '[data-settings-field="viewport-pane-count"]'
+      '[data-settings-field="viewport-pane-count"]',
     ) as HTMLSelectElement;
     paneCount.value = '3';
     paneCount.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().viewportPaneCount).toBe(3);
 
     const iconSize = content.querySelector(
-      '[data-settings-field="material-icon-size"]'
+      '[data-settings-field="material-icon-size"]',
     ) as HTMLSelectElement;
     iconSize.value = '200';
     iconSize.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().materialBrowserIconSizePercent).toBe(200);
 
     const fontSize = content.querySelector(
-      '[data-settings-field="renderer-font-size"]'
+      '[data-settings-field="renderer-font-size"]',
     ) as HTMLSelectElement;
     fontSize.value = '18';
     fontSize.dispatchEvent(new Event('change', { bubbles: true }));
@@ -185,27 +166,25 @@ describe('SettingsDialog', () => {
   it('should capture and persist keyboard shortcuts from the Keyboard tab', () => {
     dialog.show();
     dialog.showTab('keyboard');
-    const moveInput = dialog.getContentElement().querySelector(
-      '[data-settings-field="keyboard-shortcut-move"]'
-    ) as HTMLInputElement;
-    const deleteInput = dialog.getContentElement().querySelector(
-      '[data-settings-field="keyboard-shortcut-delete_selected"]'
-    ) as HTMLInputElement;
-    const saveInput = dialog.getContentElement().querySelector(
-      '[data-settings-field="keyboard-shortcut-save"]'
-    ) as HTMLInputElement;
-    const clipInput = dialog.getContentElement().querySelector(
-      '[data-settings-field="keyboard-shortcut-clip_commit"]'
-    ) as HTMLInputElement;
+    const moveInput = dialog
+      .getContentElement()
+      .querySelector('[data-settings-field="keyboard-shortcut-move"]') as HTMLInputElement;
+    const deleteInput = dialog
+      .getContentElement()
+      .querySelector(
+        '[data-settings-field="keyboard-shortcut-delete_selected"]',
+      ) as HTMLInputElement;
+    const saveInput = dialog
+      .getContentElement()
+      .querySelector('[data-settings-field="keyboard-shortcut-save"]') as HTMLInputElement;
+    const clipInput = dialog
+      .getContentElement()
+      .querySelector('[data-settings-field="keyboard-shortcut-clip_commit"]') as HTMLInputElement;
 
-    moveInput.dispatchEvent(
-      new KeyboardEvent('keydown', { code: 'KeyM', bubbles: true })
-    );
-    deleteInput.dispatchEvent(
-      new KeyboardEvent('keydown', { code: 'Backspace', bubbles: true })
-    );
+    moveInput.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM', bubbles: true }));
+    deleteInput.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backspace', bubbles: true }));
     saveInput.dispatchEvent(
-      new KeyboardEvent('keydown', { code: 'KeyP', ctrlKey: true, bubbles: true })
+      new KeyboardEvent('keydown', { code: 'KeyP', ctrlKey: true, bubbles: true }),
     );
 
     expect(store.getKeyboardShortcutSettings().move.code).toBe('KeyM');
@@ -224,24 +203,24 @@ describe('SettingsDialog', () => {
     expect(content.textContent).toContain('Mouse Move');
 
     const moveSpeed = content.querySelector(
-      '[data-settings-field="move-speed"]'
+      '[data-settings-field="move-speed"]',
     ) as HTMLInputElement;
     const lookSensitivity = content.querySelector(
-      '[data-settings-field="look-sensitivity"]'
+      '[data-settings-field="look-sensitivity"]',
     ) as HTMLInputElement;
     moveSpeed.value = '8';
     moveSpeed.dispatchEvent(new Event('input', { bubbles: true }));
     const rebuiltLookSensitivity = content.querySelector(
-      '[data-settings-field="look-sensitivity"]'
+      '[data-settings-field="look-sensitivity"]',
     ) as HTMLInputElement;
     rebuiltLookSensitivity.value = '61';
     rebuiltLookSensitivity.dispatchEvent(new Event('input', { bubbles: true }));
     const panInvertYAxis = content.querySelector(
-      '[data-settings-field="pan-invert-y-axis"]'
+      '[data-settings-field="pan-invert-y-axis"]',
     ) as HTMLInputElement;
     panInvertYAxis.click();
     const moveTowardsCursor = content.querySelector(
-      '[data-settings-field="move-camera-towards-cursor"]'
+      '[data-settings-field="move-camera-towards-cursor"]',
     ) as HTMLInputElement;
     moveTowardsCursor.click();
 
@@ -254,9 +233,7 @@ describe('SettingsDialog', () => {
 
   it('should close when Escape is pressed', () => {
     dialog.show();
-    document.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
-    );
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(dialog.isOpen()).toBe(false);
   });
 
@@ -274,5 +251,3 @@ describe('SettingsDialog', () => {
     expect(panel.style.border).toContain('10, 10, 10');
   });
 });
-
-

@@ -32,9 +32,7 @@ function getOrCreateViewSettingsStyle(): HTMLStyleElement {
  * @returns Complete view settings stylesheet.
  */
 function buildViewSettingsCss(): string {
-  return [buildFontSizeCss(), buildTextureBrowserCss(), buildLightThemeCss()].join(
-    '\n'
-  );
+  return [buildFontSizeCss(), buildTextureBrowserCss(), buildLightThemeCss()].join('\n');
 }
 
 /**
@@ -79,7 +77,7 @@ function buildLightThemeCss(): string {
     buildLightThemeChromeCss(),
     buildLightThemeContextMenuCss(),
     buildLightThemeFocusCss(),
-    buildLightThemeActiveTabCss()
+    buildLightThemeActiveTabCss(),
   ].join('\n');
 }
 

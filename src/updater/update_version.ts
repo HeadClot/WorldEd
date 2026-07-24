@@ -36,7 +36,7 @@ function parseVersion(version: string): ParsedVersion | null {
   if (!match) return null;
   return {
     numbers: [Number(match[1]), Number(match[2] ?? 0), Number(match[3] ?? 0)],
-    preRelease: match[4] ?? null
+    preRelease: match[4] ?? null,
   };
 }
 

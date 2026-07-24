@@ -85,8 +85,7 @@ export class KeyboardShortcutHandler {
    */
   constructor(
     inputManager: InputManager,
-    getKeyboardShortcuts: () => KeyboardShortcutSettings =
-      createDefaultKeyboardShortcutSettings
+    getKeyboardShortcuts: () => KeyboardShortcutSettings = createDefaultKeyboardShortcutSettings,
   ) {
     this.inputManager = inputManager;
     this.getKeyboardShortcuts = getKeyboardShortcuts;
@@ -730,9 +729,13 @@ export class KeyboardShortcutHandler {
    */
   private matchesShortcut(event: KeyboardEvent, action: keyof KeyboardShortcutSettings): boolean {
     const shortcut = this.getKeyboardShortcuts()[action];
-    return this.matchesShortcutCode(event, action, shortcut.code) && this.isCtrlDown(event) === shortcut.ctrl &&
-      this.isShiftDown(event) === shortcut.shift && this.isAltDown(event) === shortcut.alt &&
-      event.metaKey === shortcut.meta;
+    return (
+      this.matchesShortcutCode(event, action, shortcut.code) &&
+      this.isCtrlDown(event) === shortcut.ctrl &&
+      this.isShiftDown(event) === shortcut.shift &&
+      this.isAltDown(event) === shortcut.alt &&
+      event.metaKey === shortcut.meta
+    );
   }
 
   /**
@@ -745,7 +748,7 @@ export class KeyboardShortcutHandler {
   private matchesShortcutCode(
     event: KeyboardEvent,
     action: keyof KeyboardShortcutSettings,
-    code: string
+    code: string,
   ): boolean {
     if (action !== 'undo' && action !== 'redo' && action !== 'redo_alternate') {
       return event.code === code;

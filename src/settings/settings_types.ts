@@ -4,12 +4,7 @@ import type { ImperialUnit, MetricUnit, UnitSystem } from './unit_presets.js';
 /**
  * Settings dialog tab identifiers.
  */
-export type SettingsTabId =
-  | 'games'
-  | 'view'
-  | 'mouse'
-  | 'keyboard'
-  | 'update';
+export type SettingsTabId = 'games' | 'view' | 'mouse' | 'keyboard' | 'update';
 
 /** Ordered settings tabs shown in the dialog. */
 export const SETTINGS_TAB_ORDER: readonly SettingsTabId[] = Object.freeze([
@@ -17,18 +12,17 @@ export const SETTINGS_TAB_ORDER: readonly SettingsTabId[] = Object.freeze([
   'view',
   'mouse',
   'keyboard',
-  'update'
+  'update',
 ]);
 
 /** Display labels for settings tabs. */
-export const SETTINGS_TAB_LABELS: Readonly<Record<SettingsTabId, string>> =
-  Object.freeze({
-    games: 'Games',
-    view: 'View',
-    mouse: 'Mouse',
-    keyboard: 'Keyboard',
-    update: 'Update'
-  });
+export const SETTINGS_TAB_LABELS: Readonly<Record<SettingsTabId, string>> = Object.freeze({
+  games: 'Games',
+  view: 'View',
+  mouse: 'Mouse',
+  keyboard: 'Keyboard',
+  update: 'Update',
+});
 
 /**
  * UI theme preference for the editor chrome and viewports.
@@ -40,22 +34,22 @@ export type UiThemePreference = 'system' | 'light' | 'dark';
 export type ViewportPaneCount = 1 | 2 | 3 | 4;
 
 /** Ordered viewport pane count options shown in View preferences. */
-export const VIEWPORT_PANE_COUNT_OPTIONS: readonly ViewportPaneCount[] =
-  Object.freeze([1, 2, 3, 4]);
+export const VIEWPORT_PANE_COUNT_OPTIONS: readonly ViewportPaneCount[] = Object.freeze([
+  1, 2, 3, 4,
+]);
 
 /** Theme preference labels for dropdowns. */
-export const UI_THEME_LABELS: Readonly<Record<UiThemePreference, string>> =
-  Object.freeze({
-    system: 'System',
-    light: 'Light',
-    dark: 'Dark'
-  });
+export const UI_THEME_LABELS: Readonly<Record<UiThemePreference, string>> = Object.freeze({
+  system: 'System',
+  light: 'Light',
+  dark: 'Dark',
+});
 
 /** Ordered theme options. */
 export const UI_THEME_OPTIONS: readonly UiThemePreference[] = Object.freeze([
   'system',
   'light',
-  'dark'
+  'dark',
 ]);
 
 /**
@@ -178,8 +172,9 @@ export const MOUSE_MOVE_SPEED_MAX = 20;
 /**
  * Material browser icon size choices as percent strings for dropdowns.
  */
-export const MATERIAL_BROWSER_ICON_SIZE_OPTIONS: readonly number[] =
-  Object.freeze([25, 50, 75, 100, 125, 150, 175, 200, 250, 300]);
+export const MATERIAL_BROWSER_ICON_SIZE_OPTIONS: readonly number[] = Object.freeze([
+  25, 50, 75, 100, 125, 150, 175, 200, 250, 300,
+]);
 
 /** Inclusive minimum renderer font size. */
 export const RENDERER_FONT_SIZE_MIN = 8;

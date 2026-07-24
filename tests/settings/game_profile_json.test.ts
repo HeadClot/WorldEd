@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildGameProfileFileName,
   parseGameProfileJson,
-  serializeGameProfileToJson
+  serializeGameProfileToJson,
 } from '../../src/settings/game_profile_json.js';
 import { createDefaultGameProfile } from '../../src/settings/settings_defaults.js';
 
@@ -32,7 +32,7 @@ describe('game_profile_json', () => {
       up: '+z',
       right: '+y',
       forward: '+x',
-      isCustom: false
+      isCustom: false,
     };
     const restored = parseGameProfileJson(serializeGameProfileToJson(profile));
     expect(restored).toEqual(profile);
@@ -46,8 +46,8 @@ describe('game_profile_json', () => {
         name: 'Old',
         unitSystem: 'metric',
         metricUnit: 'meter',
-        imperialUnit: 'foot'
-      })
+        imperialUnit: 'foot',
+      }),
     );
     expect(restored.coordinateSpace.presetId).toBe('godot');
     expect(restored.coordinateSpace.up).toBe('+y');
@@ -62,9 +62,9 @@ describe('game_profile_json', () => {
           name: 'Bad',
           unitSystem: 'cubits',
           metricUnit: 'meter',
-          imperialUnit: 'foot'
-        })
-      )
+          imperialUnit: 'foot',
+        }),
+      ),
     ).toThrow(/unitSystem/);
   });
 

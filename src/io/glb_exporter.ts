@@ -18,10 +18,7 @@ export class GlbExporter {
    * @param profile Active game profile, or null to skip the conversion.
    * @returns A promise resolving to the GLB ArrayBuffer.
    */
-  export(
-    worldGroup: THREE.Group,
-    profile: GameProfile | null = null
-  ): Promise<ArrayBuffer> {
+  export(worldGroup: THREE.Group, profile: GameProfile | null = null): Promise<ArrayBuffer> {
     return new Promise<ArrayBuffer>((resolve, reject) => {
       const exportRoot = this.wrapForExport(worldGroup, profile);
       this.executeExport(exportRoot, resolve, reject);
@@ -35,10 +32,7 @@ export class GlbExporter {
    * @param profile Active game profile, or null.
    * @returns A wrapped group ready for GLTFExporter.
    */
-  private wrapForExport(
-    worldGroup: THREE.Group,
-    profile: GameProfile | null
-  ): THREE.Group {
+  private wrapForExport(worldGroup: THREE.Group, profile: GameProfile | null): THREE.Group {
     const exportScene = buildExportScene(worldGroup);
     const transform = buildExportRootTransform(profile);
     if (transform.equals(new THREE.Matrix4())) {

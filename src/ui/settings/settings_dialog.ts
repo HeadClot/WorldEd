@@ -2,7 +2,7 @@ import type { EditorSettingsStore } from '../../settings/editor_settings_store.j
 import {
   SETTINGS_TAB_LABELS,
   SETTINGS_TAB_ORDER,
-  type SettingsTabId
+  type SettingsTabId,
 } from '../../settings/settings_types.js';
 import {
   ensureSettingsDialogStyles,
@@ -13,7 +13,7 @@ import {
   styleSettingsPanel,
   styleSettingsTabBar,
   styleSettingsTabButton,
-  styleSettingsTitle
+  styleSettingsTitle,
 } from './settings_dialog_styles.js';
 import { SettingsGamesTab } from './settings_games_tab.js';
 import { SettingsKeyboardTab } from './settings_keyboard_tab.js';

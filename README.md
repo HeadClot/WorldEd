@@ -163,13 +163,13 @@ Right-handed profiles produce a positive-determinant root transform.
 Left-handed profiles (Unity, Unreal, and custom left-handed bases) produce a
 negative-determinant root transform.
 
-| Target profile | Export basis | Units | Import requirement |
-| --- | --- | --- | --- |
-| Godot | Right-handed, Y-up, `-Z` forward | Select the project unit | Preserve the GLB node hierarchy and root transform. |
-| Blender | Right-handed, Z-up, `+Y` forward | Select the desired Blender unit scale | Preserve the GLB node hierarchy and root transform. |
-| Unity | Left-handed, Y-up, `+Z` forward | Meter profile | Preserve the mirrored root transform; do not bake it without reversing triangle winding. |
-| Unreal Engine | Left-handed, Z-up, `+X` forward | Centimeter profile | Preserve the mirrored root transform; do not bake it without reversing triangle winding. |
-| Custom | The three selected axes define the basis and handedness | Selected profile unit | Apply the same determinant and bake rules as the derived basis. |
+| Target profile | Export basis                                            | Units                                 | Import requirement                                                                       |
+| -------------- | ------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Godot          | Right-handed, Y-up, `-Z` forward                        | Select the project unit               | Preserve the GLB node hierarchy and root transform.                                      |
+| Blender        | Right-handed, Z-up, `+Y` forward                        | Select the desired Blender unit scale | Preserve the GLB node hierarchy and root transform.                                      |
+| Unity          | Left-handed, Y-up, `+Z` forward                         | Meter profile                         | Preserve the mirrored root transform; do not bake it without reversing triangle winding. |
+| Unreal Engine  | Left-handed, Z-up, `+X` forward                         | Centimeter profile                    | Preserve the mirrored root transform; do not bake it without reversing triangle winding. |
+| Custom         | The three selected axes define the basis and handedness | Selected profile unit                 | Apply the same determinant and bake rules as the derived basis.                          |
 
 For every target, validate a test asset containing an asymmetric triangle,
 outward normals, a textured face, and collision geometry. Its position and
@@ -243,7 +243,7 @@ window.aiworldedStandaloneUpdater = {
   platform: 'windows',
   installUpdate: async ({ version, downloadUrl, fileName, releasePageUrl }) => {
     // The shell downloads, verifies, replaces, and restarts the executable.
-  }
+  },
 };
 ```
 

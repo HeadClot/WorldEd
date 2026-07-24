@@ -9,10 +9,10 @@ describe('standalone update asset selection', () => {
       'AiWorldEd-windows-installer.exe',
       'AiWorldEd-linux.AppImage',
       'AiWorldEd-sha256.txt',
-      'AiWorldEd-source.zip'
+      'AiWorldEd-source.zip',
     );
     expect(selectStandaloneUpdateAsset(assets, 'windows')?.name).toBe(
-      'AiWorldEd-windows-installer.exe'
+      'AiWorldEd-windows-installer.exe',
     );
   });
 
@@ -20,7 +20,7 @@ describe('standalone update asset selection', () => {
     const assets = createAssets(
       'AiWorldEd-macos.dmg',
       'AiWorldEd-linux.AppImage',
-      'AiWorldEd-windows.exe'
+      'AiWorldEd-windows.exe',
     );
     expect(selectStandaloneUpdateAsset(assets, 'macos')?.name).toBe('AiWorldEd-macos.dmg');
     expect(selectStandaloneUpdateAsset(assets, 'linux')?.name).toBe('AiWorldEd-linux.AppImage');
@@ -41,6 +41,6 @@ function createAssets(...names: string[]): GitHubReleaseAsset[] {
   return names.map((name, index) => ({
     name,
     browserDownloadUrl: `https://github.com/Henry00IS/AiWorldEd/releases/download/test/${name}`,
-    size: index + 1
+    size: index + 1,
   }));
 }

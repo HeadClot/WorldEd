@@ -14,26 +14,26 @@ const PANE_LAYOUTS: Readonly<Record<ViewportPaneCount, PaneLayoutDefinition>> = 
     columns: '1fr',
     rows: '1fr',
     areas: '"perspective"',
-    visibleSlots: ['perspective']
+    visibleSlots: ['perspective'],
   },
   2: {
     columns: '1fr 1fr',
     rows: '1fr',
     areas: '"top perspective"',
-    visibleSlots: ['top', 'perspective']
+    visibleSlots: ['top', 'perspective'],
   },
   3: {
     columns: '1fr 1fr',
     rows: '1fr 1fr',
     areas: '"top front"\n"perspective perspective"',
-    visibleSlots: ['top', 'front', 'perspective']
+    visibleSlots: ['top', 'front', 'perspective'],
   },
   4: {
     columns: '1fr 1fr',
     rows: '1fr 1fr',
     areas: '"top front"\n"side perspective"',
-    visibleSlots: ['top', 'front', 'side', 'perspective']
-  }
+    visibleSlots: ['top', 'front', 'side', 'perspective'],
+  },
 };
 
 /**

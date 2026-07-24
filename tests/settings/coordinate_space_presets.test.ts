@@ -5,7 +5,7 @@ import {
   deriveHandedness,
   formatCoordinateSpaceSummary,
   getBuiltInCoordinateSpace,
-  parseCoordinateSpaceDefinition
+  parseCoordinateSpaceDefinition,
 } from '../../src/settings/coordinate_space_presets.js';
 
 describe('coordinate_space_presets', () => {
@@ -20,9 +20,7 @@ describe('coordinate_space_presets', () => {
     expect(blender.right).toBe('+x');
     expect(blender.forward).toBe('+y');
     expect(blender.handedness).toBe('right');
-    expect(deriveHandedness(blender.up, blender.right, blender.forward)).toBe(
-      'right'
-    );
+    expect(deriveHandedness(blender.up, blender.right, blender.forward)).toBe('right');
   });
 
   it('should match documented Unity axes and handedness', () => {
@@ -70,7 +68,7 @@ describe('coordinate_space_presets', () => {
       up: '+z',
       right: '+x',
       forward: '-y',
-      isCustom: true
+      isCustom: true,
     });
     expect(space.name).toBe('My Space');
     expect(space.isCustom).toBe(true);
@@ -84,7 +82,7 @@ describe('coordinate_space_presets', () => {
       up: '+y',
       right: '+x',
       forward: '-z',
-      isCustom: true
+      isCustom: true,
     });
     expect(space.handedness).toBe('right');
   });

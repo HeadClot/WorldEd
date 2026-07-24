@@ -24,7 +24,7 @@ describe('ViewportPaneLayout', () => {
       ['perspective'],
       ['top', 'perspective'],
       ['top', 'front', 'perspective'],
-      ['top', 'front', 'side', 'perspective']
+      ['top', 'front', 'side', 'perspective'],
     ];
 
     expectedVisibleSlots.forEach((expectedSlots, index) => {

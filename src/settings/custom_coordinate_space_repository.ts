@@ -1,13 +1,12 @@
 import {
   cloneCoordinateSpace,
-  parseCoordinateSpaceDefinition
+  parseCoordinateSpaceDefinition,
 } from './coordinate_space_presets.js';
 import type { CoordinateSpaceDefinition } from './coordinate_space_types.js';
 import type { SettingsStorage } from './settings_storage.js';
 
 /** Storage key for user-authored coordinate space presets. */
-export const CUSTOM_COORDINATE_SPACE_STORAGE_KEY =
-  'aiworlded.coordinate_space.custom_presets';
+export const CUSTOM_COORDINATE_SPACE_STORAGE_KEY = 'aiworlded.coordinate_space.custom_presets';
 
 /**
  * Loads and saves custom coordinate space presets as a JSON array.
@@ -41,10 +40,7 @@ export class CustomCoordinateSpaceRepository {
    */
   saveAll(presets: CoordinateSpaceDefinition[]): void {
     const document = presets.map((preset) => cloneCoordinateSpace(preset));
-    this.storage.setItem(
-      CUSTOM_COORDINATE_SPACE_STORAGE_KEY,
-      JSON.stringify(document)
-    );
+    this.storage.setItem(CUSTOM_COORDINATE_SPACE_STORAGE_KEY, JSON.stringify(document));
   }
 
   /**

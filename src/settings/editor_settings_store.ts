@@ -4,19 +4,19 @@ import {
   cloneCoordinateSpace,
   createDefaultCoordinateSpace,
   deriveHandedness,
-  getBuiltInCoordinateSpace
+  getBuiltInCoordinateSpace,
 } from './coordinate_space_presets.js';
 import type {
   AxisDirection,
   CoordinateSpaceDefinition,
-  Handedness
+  Handedness,
 } from './coordinate_space_types.js';
 import { CustomCoordinateSpaceRepository } from './custom_coordinate_space_repository.js';
 import {
   createDefaultGameProfile,
   createDefaultKeyboardShortcutSettings,
   createDefaultMouseSettings,
-  createDefaultViewSettings
+  createDefaultViewSettings,
 } from './settings_defaults.js';
 import { createProfileId, GameProfileRepository } from './game_profile_repository.js';
 import type { SettingsStorage } from './settings_storage.js';
@@ -30,7 +30,7 @@ import type {
   MouseSettings,
   UiThemePreference,
   ViewportPaneCount,
-  ViewSettings
+  ViewSettings,
 } from './settings_types.js';
 import {
   BRIGHTNESS_MAX,
@@ -40,7 +40,7 @@ import {
   MOUSE_MOVE_SPEED_MAX,
   MOUSE_MOVE_SPEED_MIN,
   RENDERER_FONT_SIZE_MAX,
-  RENDERER_FONT_SIZE_MIN
+  RENDERER_FONT_SIZE_MIN,
 } from './settings_types.js';
 import type { ImperialUnit, MetricUnit, UnitSystem } from './unit_presets.js';
 
@@ -79,7 +79,7 @@ export class EditorSettingsStore {
    */
   constructor(
     storage: SettingsStorage = new LocalSettingsStorage(),
-    repository?: GameProfileRepository
+    repository?: GameProfileRepository,
   ) {
     this.storage = storage;
     this.repository = repository ?? new GameProfileRepository(storage);
@@ -105,11 +105,11 @@ export class EditorSettingsStore {
       activeGameProfileId: this.activeGameProfileId,
       gameProfiles: this.profiles.map((profile) => cloneProfile(profile)),
       customCoordinateSpaces: this.customCoordinateSpaces.map((space) =>
-        cloneCoordinateSpace(space)
+        cloneCoordinateSpace(space),
       ),
       view: { ...this.view },
       mouse: { ...this.mouse },
-      keyboard: { ...this.keyboard }
+      keyboard: { ...this.keyboard },
     };
   }
 
@@ -118,12 +118,8 @@ export class EditorSettingsStore {
    * @returns Ordered preset list (built-ins first).
    */
   listCoordinateSpacePresets(): CoordinateSpaceDefinition[] {
-    const builtIns = BUILT_IN_COORDINATE_SPACE_PRESETS.map((space) =>
-      cloneCoordinateSpace(space)
-    );
-    const customs = this.customCoordinateSpaces.map((space) =>
-      cloneCoordinateSpace(space)
-    );
+    const builtIns = BUILT_IN_COORDINATE_SPACE_PRESETS.map((space) => cloneCoordinateSpace(space));
+    const customs = this.customCoordinateSpaces.map((space) => cloneCoordinateSpace(space));
     return [...builtIns, ...customs];
   }
 
@@ -132,9 +128,7 @@ export class EditorSettingsStore {
    * @returns Active profile clone or null.
    */
   getActiveGameProfile(): GameProfile | null {
-    const profile = this.profiles.find(
-      (entry) => entry.id === this.activeGameProfileId
-    );
+    const profile = this.profiles.find((entry) => entry.id === this.activeGameProfileId);
     return profile ? cloneProfile(profile) : null;
   }
 
@@ -246,10 +240,7 @@ export class EditorSettingsStore {
    * @param profileId Profile identifier.
    * @param imperialUnit Imperial unit option.
    */
-  setGameProfileImperialUnit(
-    profileId: string,
-    imperialUnit: ImperialUnit
-  ): void {
+  setGameProfileImperialUnit(profileId: string, imperialUnit: ImperialUnit): void {
     const profile = this.findProfile(profileId);
     if (!profile || profile.imperialUnit === imperialUnit) {
       return;
@@ -284,10 +275,7 @@ export class EditorSettingsStore {
    * @param profileId Profile identifier.
    * @param presetId Built-in or custom preset id.
    */
-  setGameProfileCoordinateSpacePreset(
-    profileId: string,
-    presetId: string
-  ): void {
+  setGameProfileCoordinateSpacePreset(profileId: string, presetId: string): void {
     const profile = this.findProfile(profileId);
     const preset = this.findCoordinateSpacePreset(presetId);
     if (!profile || !preset) {
@@ -307,10 +295,7 @@ export class EditorSettingsStore {
    * @param name Optional display name.
    * @returns The created custom coordinate space.
    */
-  addCustomCoordinateSpace(
-    profileId: string,
-    name?: string
-  ): CoordinateSpaceDefinition | null {
+  addCustomCoordinateSpace(profileId: string, name?: string): CoordinateSpaceDefinition | null {
     const profile = this.findProfile(profileId);
     if (!profile) {
       return null;
@@ -352,7 +337,7 @@ export class EditorSettingsStore {
   setCustomCoordinateSpaceAxis(
     presetId: string,
     axis: 'up' | 'right' | 'forward',
-    direction: AxisDirection
+    direction: AxisDirection,
   ): boolean {
     const space = this.findCustomCoordinateSpace(presetId);
     if (!space || space[axis] === direction) {
@@ -385,9 +370,7 @@ export class EditorSettingsStore {
    * @returns True when a preset was removed.
    */
   removeCustomCoordinateSpace(presetId: string): boolean {
-    const index = this.customCoordinateSpaces.findIndex(
-      (space) => space.presetId === presetId
-    );
+    const index = this.customCoordinateSpaces.findIndex((space) => space.presetId === presetId);
     if (index < 0) {
       return false;
     }
@@ -453,7 +436,7 @@ export class EditorSettingsStore {
     const clamped = clampNumber(
       Math.round(fontSize),
       RENDERER_FONT_SIZE_MIN,
-      RENDERER_FONT_SIZE_MAX
+      RENDERER_FONT_SIZE_MAX,
     );
     if (this.view.rendererFontSize === clamped) {
       return;
@@ -587,9 +570,7 @@ export class EditorSettingsStore {
    * @param presetId Preset identifier.
    * @returns Cloned definition or null.
    */
-  private findCoordinateSpacePreset(
-    presetId: string
-  ): CoordinateSpaceDefinition | null {
+  private findCoordinateSpacePreset(presetId: string): CoordinateSpaceDefinition | null {
     const builtIn = getBuiltInCoordinateSpace(presetId);
     if (builtIn) {
       return builtIn;
@@ -603,12 +584,8 @@ export class EditorSettingsStore {
    * @param presetId Custom preset identifier.
    * @returns Mutable custom space or undefined.
    */
-  private findCustomCoordinateSpace(
-    presetId: string
-  ): CoordinateSpaceDefinition | undefined {
-    return this.customCoordinateSpaces.find(
-      (space) => space.presetId === presetId
-    );
+  private findCustomCoordinateSpace(presetId: string): CoordinateSpaceDefinition | undefined {
+    return this.customCoordinateSpaces.find((space) => space.presetId === presetId);
   }
 
   /**
@@ -616,9 +593,7 @@ export class EditorSettingsStore {
    * @param name Optional display name.
    * @returns New custom definition.
    */
-  private buildNewCustomCoordinateSpace(
-    name?: string
-  ): CoordinateSpaceDefinition {
+  private buildNewCustomCoordinateSpace(name?: string): CoordinateSpaceDefinition {
     const base = createDefaultCoordinateSpace();
     base.presetId = createProfileId();
     base.name = name?.trim() || this.buildNextCustomSpaceName();
@@ -633,9 +608,7 @@ export class EditorSettingsStore {
   private buildNextCustomSpaceName(): string {
     let suffix = this.customCoordinateSpaces.length + 1;
     let candidate = `Custom ${suffix}`;
-    while (
-      this.customCoordinateSpaces.some((space) => space.name === candidate)
-    ) {
+    while (this.customCoordinateSpaces.some((space) => space.name === candidate)) {
       suffix += 1;
       candidate = `Custom ${suffix}`;
     }
@@ -646,9 +619,7 @@ export class EditorSettingsStore {
    * Copies an updated custom space onto all profiles that use its id.
    * @param space Updated custom coordinate space.
    */
-  private syncProfilesUsingCoordinateSpace(
-    space: CoordinateSpaceDefinition
-  ): void {
+  private syncProfilesUsingCoordinateSpace(space: CoordinateSpaceDefinition): void {
     this.profiles.forEach((profile) => {
       if (profile.coordinateSpace.presetId === space.presetId) {
         profile.coordinateSpace = cloneCoordinateSpace(space);
@@ -675,9 +646,7 @@ export class EditorSettingsStore {
    * Ensures the active id still points at an existing profile after deletion.
    */
   private ensureActiveProfileAfterRemoval(): void {
-    const stillActive = this.profiles.some(
-      (profile) => profile.id === this.activeGameProfileId
-    );
+    const stillActive = this.profiles.some((profile) => profile.id === this.activeGameProfileId);
     if (!stillActive) {
       this.activeGameProfileId = this.profiles[0]?.id ?? null;
     }
@@ -711,10 +680,7 @@ export class EditorSettingsStore {
 
   /** Writes keyboard shortcut settings to storage. */
   private persistKeyboardShortcutSettings(): void {
-    this.storage.setItem(
-      KEYBOARD_SHORTCUTS_STORAGE_KEY,
-      JSON.stringify(this.keyboard)
-    );
+    this.storage.setItem(KEYBOARD_SHORTCUTS_STORAGE_KEY, JSON.stringify(this.keyboard));
   }
 
   /**
@@ -761,7 +727,10 @@ export class EditorSettingsStore {
         scale: sanitizeKeyboardShortcut(parsed.scale, defaults.scale),
         bounds: sanitizeKeyboardShortcut(parsed.bounds, defaults.bounds),
         face: sanitizeKeyboardShortcut(parsed.face, defaults.face),
-        selection_object: sanitizeKeyboardShortcut(parsed.selection_object, defaults.selection_object),
+        selection_object: sanitizeKeyboardShortcut(
+          parsed.selection_object,
+          defaults.selection_object,
+        ),
         delete_selected: sanitizeKeyboardShortcut(parsed.delete_selected, defaults.delete_selected),
         escape: sanitizeKeyboardShortcut(parsed.escape, defaults.escape),
         save: sanitizeKeyboardShortcut(parsed.save, defaults.save),
@@ -778,17 +747,29 @@ export class EditorSettingsStore {
         fit_selection: sanitizeKeyboardShortcut(parsed.fit_selection, defaults.fit_selection),
         fit_all: sanitizeKeyboardShortcut(parsed.fit_all, defaults.fit_all),
         shading_solid: sanitizeKeyboardShortcut(parsed.shading_solid, defaults.shading_solid),
-        shading_wireframe: sanitizeKeyboardShortcut(parsed.shading_wireframe, defaults.shading_wireframe),
+        shading_wireframe: sanitizeKeyboardShortcut(
+          parsed.shading_wireframe,
+          defaults.shading_wireframe,
+        ),
         shading_flat: sanitizeKeyboardShortcut(parsed.shading_flat, defaults.shading_flat),
-        shading_wireframe_overlay: sanitizeKeyboardShortcut(parsed.shading_wireframe_overlay, defaults.shading_wireframe_overlay),
+        shading_wireframe_overlay: sanitizeKeyboardShortcut(
+          parsed.shading_wireframe_overlay,
+          defaults.shading_wireframe_overlay,
+        ),
         snap_forward: sanitizeKeyboardShortcut(parsed.snap_forward, defaults.snap_forward),
         snap_backward: sanitizeKeyboardShortcut(parsed.snap_backward, defaults.snap_backward),
-        snap_forward_large: sanitizeKeyboardShortcut(parsed.snap_forward_large, defaults.snap_forward_large),
-        snap_backward_large: sanitizeKeyboardShortcut(parsed.snap_backward_large, defaults.snap_backward_large),
+        snap_forward_large: sanitizeKeyboardShortcut(
+          parsed.snap_forward_large,
+          defaults.snap_forward_large,
+        ),
+        snap_backward_large: sanitizeKeyboardShortcut(
+          parsed.snap_backward_large,
+          defaults.snap_backward_large,
+        ),
         extrude: sanitizeKeyboardShortcut(parsed.extrude, defaults.extrude),
         clip_flip: sanitizeKeyboardShortcut(parsed.clip_flip, defaults.clip_flip),
         clip_commit: sanitizeKeyboardShortcut(parsed.clip_commit, defaults.clip_commit),
-        clip_split: sanitizeKeyboardShortcut(parsed.clip_split, defaults.clip_split)
+        clip_split: sanitizeKeyboardShortcut(parsed.clip_split, defaults.clip_split),
       };
     } catch {
       return defaults;
@@ -817,8 +798,8 @@ function cloneProfile(profile: GameProfile): GameProfile {
     metricUnit: profile.metricUnit,
     imperialUnit: profile.imperialUnit,
     coordinateSpace: cloneCoordinateSpace(
-      profile.coordinateSpace ?? createDefaultCoordinateSpace()
-    )
+      profile.coordinateSpace ?? createDefaultCoordinateSpace(),
+    ),
   };
 }
 
@@ -850,26 +831,23 @@ function mergeViewSettings(defaults: ViewSettings, raw: string): ViewSettings {
       brightness: clampNumber(
         Number(parsed.brightness ?? defaults.brightness),
         BRIGHTNESS_MIN,
-        BRIGHTNESS_MAX
+        BRIGHTNESS_MAX,
       ),
       materialBrowserIconSizePercent: clampNumber(
-        Number(
-          parsed.materialBrowserIconSizePercent ??
-            defaults.materialBrowserIconSizePercent
-        ),
+        Number(parsed.materialBrowserIconSizePercent ?? defaults.materialBrowserIconSizePercent),
         25,
-        300
+        300,
       ),
       rendererFontSize: clampNumber(
         Math.round(Number(parsed.rendererFontSize ?? defaults.rendererFontSize)),
         RENDERER_FONT_SIZE_MIN,
-        RENDERER_FONT_SIZE_MAX
+        RENDERER_FONT_SIZE_MAX,
       ),
       viewportPaneCount: clampNumber(
         Math.round(Number(parsed.viewportPaneCount ?? defaults.viewportPaneCount)),
         1,
-        4
-      ) as ViewportPaneCount
+        4,
+      ) as ViewportPaneCount,
     };
   } catch {
     return defaults;
@@ -882,10 +860,7 @@ function mergeViewSettings(defaults: ViewSettings, raw: string): ViewSettings {
  * @param fallback Default theme.
  * @returns Safe theme preference.
  */
-function sanitizeTheme(
-  value: unknown,
-  fallback: UiThemePreference
-): UiThemePreference {
+function sanitizeTheme(value: unknown, fallback: UiThemePreference): UiThemePreference {
   if (value === 'system' || value === 'light' || value === 'dark') {
     return value;
   }
@@ -900,7 +875,7 @@ function sanitizeTheme(
  */
 function mergeMouseSettings(
   defaults: MouseSettings,
-  candidate: Partial<MouseSettings>
+  candidate: Partial<MouseSettings>,
 ): MouseSettings {
   return {
     lookSensitivity: sanitizeMouseSensitivity(candidate.lookSensitivity, defaults.lookSensitivity),
@@ -912,9 +887,18 @@ function mergeMouseSettings(
     moveSpeed: sanitizeMouseMoveSpeed(candidate.moveSpeed, defaults.moveSpeed),
     moveSensitivity: sanitizeMouseSensitivity(candidate.moveSensitivity, defaults.moveSensitivity),
     invertMouseWheel: sanitizeBoolean(candidate.invertMouseWheel, defaults.invertMouseWheel),
-    altMiddleMouseDragMovesCamera: sanitizeBoolean(candidate.altMiddleMouseDragMovesCamera, defaults.altMiddleMouseDragMovesCamera),
-    invertAltMiddleMouseDragZAxis: sanitizeBoolean(candidate.invertAltMiddleMouseDragZAxis, defaults.invertAltMiddleMouseDragZAxis),
-    moveCameraTowardsCursor: sanitizeBoolean(candidate.moveCameraTowardsCursor, defaults.moveCameraTowardsCursor)
+    altMiddleMouseDragMovesCamera: sanitizeBoolean(
+      candidate.altMiddleMouseDragMovesCamera,
+      defaults.altMiddleMouseDragMovesCamera,
+    ),
+    invertAltMiddleMouseDragZAxis: sanitizeBoolean(
+      candidate.invertAltMiddleMouseDragZAxis,
+      defaults.invertAltMiddleMouseDragZAxis,
+    ),
+    moveCameraTowardsCursor: sanitizeBoolean(
+      candidate.moveCameraTowardsCursor,
+      defaults.moveCameraTowardsCursor,
+    ),
   };
 }
 
@@ -957,8 +941,8 @@ function sanitizeBoolean(value: unknown, fallback: boolean): boolean {
  * @returns True when every preference matches.
  */
 function areMouseSettingsEqual(first: MouseSettings, second: MouseSettings): boolean {
-  return Object.keys(first).every((key) =>
-    first[key as keyof MouseSettings] === second[key as keyof MouseSettings]
+  return Object.keys(first).every(
+    (key) => first[key as keyof MouseSettings] === second[key as keyof MouseSettings],
   );
 }
 
@@ -977,10 +961,7 @@ function isKeyboardEventCode(value: string): boolean {
  * @param fallback Safe default event code.
  * @returns A valid event code.
  */
-function sanitizeKeyboardShortcut(
-  value: unknown,
-  fallback: KeyboardShortcut
-): KeyboardShortcut {
+function sanitizeKeyboardShortcut(value: unknown, fallback: KeyboardShortcut): KeyboardShortcut {
   if (typeof value === 'string' && isKeyboardEventCode(value)) {
     return { ...fallback, code: value };
   }
@@ -996,9 +977,13 @@ function sanitizeKeyboardShortcut(
 function isValidKeyboardShortcut(value: unknown): value is KeyboardShortcut {
   if (!value || typeof value !== 'object') return false;
   const shortcut = value as KeyboardShortcut;
-  return isKeyboardEventCode(shortcut.code) &&
-    typeof shortcut.ctrl === 'boolean' && typeof shortcut.shift === 'boolean' &&
-    typeof shortcut.alt === 'boolean' && typeof shortcut.meta === 'boolean';
+  return (
+    isKeyboardEventCode(shortcut.code) &&
+    typeof shortcut.ctrl === 'boolean' &&
+    typeof shortcut.shift === 'boolean' &&
+    typeof shortcut.alt === 'boolean' &&
+    typeof shortcut.meta === 'boolean'
+  );
 }
 
 /**
@@ -1008,6 +993,11 @@ function isValidKeyboardShortcut(value: unknown): value is KeyboardShortcut {
  * @returns True when the shortcuts match exactly.
  */
 function areShortcutsEqual(first: KeyboardShortcut, second: KeyboardShortcut): boolean {
-  return first.code === second.code && first.ctrl === second.ctrl &&
-    first.shift === second.shift && first.alt === second.alt && first.meta === second.meta;
+  return (
+    first.code === second.code &&
+    first.ctrl === second.ctrl &&
+    first.shift === second.shift &&
+    first.alt === second.alt &&
+    first.meta === second.meta
+  );
 }
