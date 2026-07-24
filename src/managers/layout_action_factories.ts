@@ -19,8 +19,8 @@ import { SnapSettingsController } from './snap_settings_controller.js';
 import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 
 /**
- * Host callbacks used when building outliner shell action bindings.
- * Handler getters may resolve after shell construction completes.
+ * Host callbacks used when building outliner shell action bindings. Handler
+ * getters may resolve after shell construction completes.
  */
 export interface OutlinerActionHost {
   selectionManager: SelectionManager;
@@ -35,8 +35,8 @@ export interface OutlinerActionHost {
 }
 
 /**
- * Host callbacks used when building toolbar shell action bindings.
- * Handler getters may resolve after shell construction completes.
+ * Host callbacks used when building toolbar shell action bindings. Handler
+ * getters may resolve after shell construction completes.
  */
 export interface ToolbarActionHost {
   textureLock: TextureLockSettings;
@@ -69,6 +69,7 @@ export interface ToolbarActionHost {
 
 /**
  * Builds outliner context-menu and drop action callbacks for the shell.
+ *
  * @param host Layout manager callbacks and shared services.
  * @returns Outliner action callback bundle.
  */
@@ -79,12 +80,9 @@ export function buildOutlinerActions(host: OutlinerActionHost): EditorShellOutli
     onDeleteFromOutliner: (obj) => deleteFromOutliner(host, obj),
     onGroupFromOutliner: (objects) => host.getObjectActionHandler().groupObjects(objects),
     onUngroupFromOutliner: (group) => host.getObjectActionHandler().ungroupGroup(group),
-    onRenameFromOutliner: (obj, newName) =>
-      applyOutlinerRename(host.commandStack, obj, newName, host.refreshOutliner),
+    onRenameFromOutliner: (obj, newName) => applyOutlinerRename(host.commandStack, obj, newName, host.refreshOutliner),
     onToggleVisibilityFromOutliner: (obj) =>
-      applyOutlinerVisibilityToggle(host.commandStack, obj, host.refreshOutliner, () =>
-        host.syncViewports(),
-      ),
+      applyOutlinerVisibilityToggle(host.commandStack, obj, host.refreshOutliner, () => host.syncViewports()),
     onToggleLockFromOutliner: (obj) => toggleLockFromOutliner(host, obj),
     reparentFromDrop: (dragged, target) => {
       if (!target) return;
@@ -97,7 +95,9 @@ export function buildOutlinerActions(host: OutlinerActionHost): EditorShellOutli
 }
 
 /**
- * Deletes hierarchy roots selected in the outliner, or the right-clicked object.
+ * Deletes hierarchy roots selected in the outliner, or the right-clicked
+ * object.
+ *
  * @param host Outliner action host.
  * @param obj Object that was right-clicked for delete.
  */
@@ -112,6 +112,7 @@ function deleteFromOutliner(host: OutlinerActionHost, obj: THREE.Object3D): void
 
 /**
  * Toggles lock on an outliner object and refreshes selection-dependent UI.
+ *
  * @param host Outliner action host.
  * @param obj Object whose lock state is toggled.
  */
@@ -122,6 +123,7 @@ function toggleLockFromOutliner(host: OutlinerActionHost, obj: THREE.Object3D): 
 
 /**
  * Builds toolbar button action callbacks for the shell.
+ *
  * @param host Layout manager callbacks and shared services.
  * @returns Toolbar action callback bundle.
  */
@@ -136,6 +138,7 @@ export function buildToolbarActions(host: ToolbarActionHost): EditorToolbarActio
 
 /**
  * Builds primitive creation and panel toggle toolbar actions.
+ *
  * @param host Toolbar action host.
  * @returns Partial toolbar action bundle.
  */
@@ -174,6 +177,7 @@ function buildPrimitiveToolbarActions(
 
 /**
  * Builds history and edit toolbar actions.
+ *
  * @param host Toolbar action host.
  * @returns Partial toolbar action bundle.
  */
@@ -181,12 +185,7 @@ function buildEditToolbarActions(
   host: ToolbarActionHost,
 ): Pick<
   EditorToolbarActions,
-  | 'onUndo'
-  | 'onRedo'
-  | 'onDeleteSelected'
-  | 'onDuplicateSelected'
-  | 'onGroupSelected'
-  | 'onUngroupSelected'
+  'onUndo' | 'onRedo' | 'onDeleteSelected' | 'onDuplicateSelected' | 'onGroupSelected' | 'onUngroupSelected'
 > {
   return {
     onUndo: () => host.onUndo(),
@@ -200,6 +199,7 @@ function buildEditToolbarActions(
 
 /**
  * Builds CSG, snap, texture lock, and alignment toolbar actions.
+ *
  * @param host Toolbar action host.
  * @returns Partial toolbar action bundle.
  */
@@ -246,6 +246,7 @@ function buildCsgSnapAlignToolbarActions(
 
 /**
  * Builds scene save/load/export toolbar actions.
+ *
  * @param host Toolbar action host.
  * @returns Partial toolbar action bundle.
  */

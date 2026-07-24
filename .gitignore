@@ -10,3 +10,4 @@ desktop_build/
 desktop_build_cef/
 desktop_artifacts/
 reference/
+.vite/

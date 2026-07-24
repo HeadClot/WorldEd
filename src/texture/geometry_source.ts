@@ -1,29 +1,24 @@
 import * as THREE from 'three';
 
-/**
- * Primitive geometry identity retained when buffers are expanded for UV seams.
- */
+/** Primitive geometry identity retained when buffers are expanded for UV seams. */
 export type GeometrySourceType = 'box' | 'sphere' | 'cylinder' | 'plane' | 'buffer';
 
-/**
- * Snapshot of constructor parameters for a primitive geometry.
- */
+/** Snapshot of constructor parameters for a primitive geometry. */
 export interface GeometrySource {
   type: GeometrySourceType;
   params: Record<string, number>;
 }
 
-/** userData key storing GeometrySource on content meshes. */
+/** UserData key storing GeometrySource on content meshes. */
 export const GEOMETRY_SOURCE_USERDATA_KEY = 'geometrySource';
 
 /**
  * Reads a stamped geometry source from mesh or geometry userData.
+ *
  * @param target Mesh or geometry to inspect.
  * @returns Geometry source or null.
  */
-export function getGeometrySource(
-  target: THREE.Mesh | THREE.BufferGeometry,
-): GeometrySource | null {
+export function getGeometrySource(target: THREE.Mesh | THREE.BufferGeometry): GeometrySource | null {
   const raw = target.userData[GEOMETRY_SOURCE_USERDATA_KEY];
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as GeometrySource;
@@ -36,6 +31,7 @@ export function getGeometrySource(
 
 /**
  * Stamps geometry source identity onto mesh and geometry userData.
+ *
  * @param mesh Mesh to stamp.
  * @param source Source identity.
  */
@@ -49,8 +45,9 @@ export function setGeometrySource(mesh: THREE.Mesh, source: GeometrySource): voi
 }
 
 /**
- * Captures typed primitive parameters before the geometry is expanded.
- * No-ops when already stamped or when geometry is not a known primitive.
+ * Captures typed primitive parameters before the geometry is expanded. No-ops
+ * when already stamped or when geometry is not a known primitive.
+ *
  * @param mesh Mesh whose geometry may be converted to non-indexed.
  */
 export function captureGeometrySourceIfNeeded(mesh: THREE.Mesh): void {
@@ -62,12 +59,11 @@ export function captureGeometrySourceIfNeeded(mesh: THREE.Mesh): void {
 
 /**
  * Detects geometry source from a live Three.js typed geometry instance.
+ *
  * @param geometry Geometry to inspect.
  * @returns Source snapshot or null for plain buffers.
  */
-export function detectGeometrySourceFromInstance(
-  geometry: THREE.BufferGeometry,
-): GeometrySource | null {
+export function detectGeometrySourceFromInstance(geometry: THREE.BufferGeometry): GeometrySource | null {
   if (geometry instanceof THREE.BoxGeometry) {
     return {
       type: 'box',
@@ -113,6 +109,7 @@ export function detectGeometrySourceFromInstance(
 
 /**
  * Resolves geometry type for serialization: stamp first, then instanceof.
+ *
  * @param geometry Geometry to classify.
  * @returns Geometry source type string.
  */
@@ -126,12 +123,11 @@ export function resolveGeometrySourceType(geometry: THREE.BufferGeometry): Geome
 
 /**
  * Resolves geometry constructor params for serialization.
+ *
  * @param geometry Geometry to inspect.
  * @returns Parameter record (empty for plain buffers).
  */
-export function resolveGeometrySourceParams(
-  geometry: THREE.BufferGeometry,
-): Record<string, number> {
+export function resolveGeometrySourceParams(geometry: THREE.BufferGeometry): Record<string, number> {
   const stamped = getGeometrySource(geometry);
   if (stamped) return { ...stamped.params };
   const detected = detectGeometrySourceFromInstance(geometry);

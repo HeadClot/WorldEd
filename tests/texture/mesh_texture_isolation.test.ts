@@ -8,14 +8,8 @@ import {
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
-import {
-  setTexturePaintStateForTests,
-  TexturePaintState,
-} from '../../src/texture/texture_paint_state.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/texture_paint_state.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 import { ShadingModeManager } from '../../src/viewports/shading_mode_manager.js';
 import { ShadingMode } from '../../src/types/shading_mode.js';
 import { ObjectDuplicator } from '../../src/managers/object_duplicator.js';
@@ -98,6 +92,7 @@ describe('mesh texture isolation', () => {
 
 /**
  * Creates a unit cube with a content material.
+ *
  * @returns Mesh ready for texture tests.
  */
 function createCube(): THREE.Mesh {

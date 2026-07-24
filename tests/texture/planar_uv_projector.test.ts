@@ -110,10 +110,7 @@ describe('planar_uv_projector', () => {
 
   it('should create a UV attribute when missing', () => {
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3),
-    );
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3));
     const uv = ensureUvAttribute(geometry);
     expect(uv.count).toBe(3);
   });
@@ -139,15 +136,9 @@ describe('planar_uv_projector', () => {
     initializeMeshTextureUVs(mesh);
     const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
     const position = mesh.geometry.getAttribute('position');
-    const topRim = collectVerticesNear(
-      position,
-      uv,
-      (x, y, z) => Math.abs(y - 0.5) < 1e-3 && Math.hypot(x, z) > 0.4,
-    );
+    const topRim = collectVerticesNear(position, uv, (x, y, z) => Math.abs(y - 0.5) < 1e-3 && Math.hypot(x, z) > 0.4);
     expect(topRim.length).toBeGreaterThan(4);
-    const uniqueUvKeys = new Set(
-      topRim.map((entry) => `${entry.u.toFixed(4)},${entry.v.toFixed(4)}`),
-    );
+    const uniqueUvKeys = new Set(topRim.map((entry) => `${entry.u.toFixed(4)},${entry.v.toFixed(4)}`));
     expect(uniqueUvKeys.size).toBeGreaterThan(1);
   });
 
@@ -227,6 +218,7 @@ describe('planar_uv_projector', () => {
 
 /**
  * Collects UV samples for vertices matching a predicate.
+ *
  * @param position Position attribute.
  * @param uv UV attribute.
  * @param match Local-space vertex filter.
@@ -249,18 +241,15 @@ function collectVerticesNear(
 }
 
 /**
- * Measures UV/world aspect ratio for each cylinder side region.
- * Ratio of 1 means no squash in U relative to physical chord width.
+ * Measures UV/world aspect ratio for each cylinder side region. Ratio of 1
+ * means no squash in U relative to physical chord width.
+ *
  * @param mesh Initialized cylinder mesh.
  * @param sideLength Physical chord length of one side.
  * @param height Physical side height.
  * @returns One aspect ratio per side face.
  */
-function measureCylinderSideAspectRatios(
-  mesh: THREE.Mesh,
-  sideLength: number,
-  height: number,
-): number[] {
+function measureCylinderSideAspectRatios(mesh: THREE.Mesh, sideLength: number, height: number): number[] {
   const entries = getFaceTextureMaps(mesh);
   const ratios: number[] = [];
   entries.forEach((entry) => {
@@ -276,6 +265,7 @@ function measureCylinderSideAspectRatios(
 
 /**
  * Collects U min/max for each cylinder side region.
+ *
  * @param mesh Initialized cylinder mesh.
  * @returns U ranges for side faces.
  */
@@ -293,6 +283,7 @@ function measureCylinderSideURanges(mesh: THREE.Mesh): Array<{ minU: number; max
 
 /**
  * Reads UV extents for the vertices of a triangle region.
+ *
  * @param mesh Mesh with baked UVs.
  * @param triangleIndices Region triangles.
  * @returns U/V span and min/max U.

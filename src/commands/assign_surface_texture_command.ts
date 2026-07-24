@@ -6,9 +6,7 @@ import { TextureApplyTarget, applyTextureIdToTargets } from '../texture/face_tex
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
 import { rebakeStoredFaceTextureMaps } from '../texture/planar_uv_projector.js';
 
-/**
- * Snapshot of one mesh surface state for undo.
- */
+/** Snapshot of one mesh surface state for undo. */
 interface MeshSurfaceSnapshot {
   mesh: THREE.Mesh;
   maps: FaceTextureMapEntry[];
@@ -27,6 +25,7 @@ export class AssignSurfaceTextureCommand implements UndoCommand {
 
   /**
    * Creates an assign-surface-texture command.
+   *
    * @param targets Regions that receive the texture id.
    * @param textureId Stable texture identity to apply.
    */
@@ -37,9 +36,7 @@ export class AssignSurfaceTextureCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Applies the texture id and rebuilds surface materials.
-   */
+  /** Applies the texture id and rebuilds surface materials. */
   execute(): void {
     if (this.executed) return;
     this.beforeSnapshots = this.captureSnapshots();
@@ -47,9 +44,7 @@ export class AssignSurfaceTextureCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores prior face maps, UVs, and materials.
-   */
+  /** Restores prior face maps, UVs, and materials. */
   undo(): void {
     if (!this.executed) return;
     this.beforeSnapshots.forEach((snapshot) => {
@@ -60,6 +55,7 @@ export class AssignSurfaceTextureCommand implements UndoCommand {
 
   /**
    * Captures unique meshes referenced by targets.
+   *
    * @returns Snapshots for undo.
    */
   private captureSnapshots(): MeshSurfaceSnapshot[] {
@@ -74,6 +70,7 @@ export class AssignSurfaceTextureCommand implements UndoCommand {
 
   /**
    * Snapshots maps and UV buffer for one mesh.
+   *
    * @param mesh Mesh to capture.
    * @returns Snapshot object.
    */
@@ -86,6 +83,7 @@ export class AssignSurfaceTextureCommand implements UndoCommand {
 
   /**
    * Restores a mesh snapshot and rebuilds materials.
+   *
    * @param snapshot Prior state.
    */
   private restoreSnapshot(snapshot: MeshSurfaceSnapshot): void {
@@ -100,6 +98,7 @@ export class AssignSurfaceTextureCommand implements UndoCommand {
 
   /**
    * Writes a saved UV array back onto geometry.
+   *
    * @param mesh Target mesh.
    * @param uvArray Saved interleaved UVs.
    */

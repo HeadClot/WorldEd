@@ -1,13 +1,11 @@
 /**
- * Style injection and visual helpers for the fancy About dialog.
- * Dark blue Blender-inspired chrome with orange selection accents.
+ * Style injection and visual helpers for the fancy About dialog. Dark blue
+ * Blender-inspired chrome with orange selection accents.
  */
 
 const STYLE_ELEMENT_ID = 'aiworlded-about-dialog-styles';
 
-/**
- * Ensures About dialog keyframe animations exist in the document once.
- */
+/** Ensures About dialog keyframe animations exist in the document once. */
 export function ensureAboutDialogStyles(): void {
   if (document.getElementById(STYLE_ELEMENT_ID)) return;
   const styleElement = document.createElement('style');
@@ -18,6 +16,7 @@ export function ensureAboutDialogStyles(): void {
 
 /**
  * Builds CSS keyframe and class rules for the About dialog.
+ *
  * @returns CSS text for injection.
  */
 function buildKeyframeCss(): string {
@@ -33,6 +32,7 @@ function buildKeyframeCss(): string {
 
 /**
  * Backdrop fade animation.
+ *
  * @returns CSS keyframes string.
  */
 function buildBackdropKeyframes(): string {
@@ -44,6 +44,7 @@ function buildBackdropKeyframes(): string {
 
 /**
  * Panel entrance animation with scale and rise.
+ *
  * @returns CSS keyframes string.
  */
 function buildPanelKeyframes(): string {
@@ -55,6 +56,7 @@ function buildPanelKeyframes(): string {
 
 /**
  * Animated gradient shift for the project title.
+ *
  * @returns CSS keyframes string.
  */
 function buildTitleKeyframes(): string {
@@ -67,6 +69,7 @@ function buildTitleKeyframes(): string {
 
 /**
  * Soft border glow pulse.
+ *
  * @returns CSS keyframes string.
  */
 function buildGlowKeyframes(): string {
@@ -78,6 +81,7 @@ function buildGlowKeyframes(): string {
 
 /**
  * Horizontal shimmer sweep over the header band.
+ *
  * @returns CSS keyframes string.
  */
 function buildShimmerKeyframes(): string {
@@ -89,6 +93,7 @@ function buildShimmerKeyframes(): string {
 
 /**
  * Class rules that apply the keyframe animations.
+ *
  * @returns CSS class rules string.
  */
 function buildClassRules(): string {
@@ -116,6 +121,7 @@ function buildClassRules(): string {
 
 /**
  * Applies fixed full-viewport overlay styles to the backdrop.
+ *
  * @param backdrop Backdrop element.
  */
 export function styleAboutBackdrop(backdrop: HTMLElement): void {
@@ -127,13 +133,13 @@ export function styleAboutBackdrop(backdrop: HTMLElement): void {
   backdrop.style.alignItems = 'center';
   backdrop.style.justifyContent = 'center';
   backdrop.style.padding = '24px';
-  backdrop.style.background =
-    'radial-gradient(ellipse at center, rgba(20,28,55,0.82) 0%, rgba(6,8,14,0.94) 70%)';
+  backdrop.style.background = 'radial-gradient(ellipse at center, rgba(20,28,55,0.82) 0%, rgba(6,8,14,0.94) 70%)';
   backdrop.style.backdropFilter = 'blur(6px)';
 }
 
 /**
  * Applies chrome styles to the dialog panel card.
+ *
  * @param panel Panel element.
  */
 export function styleAboutPanel(panel: HTMLElement): void {
@@ -154,6 +160,7 @@ export function styleAboutPanel(panel: HTMLElement): void {
 
 /**
  * Applies styles to the animated header band.
+ *
  * @param header Header container.
  */
 export function styleAboutHeader(header: HTMLElement): void {
@@ -167,6 +174,7 @@ export function styleAboutHeader(header: HTMLElement): void {
 
 /**
  * Applies styles to the scrolling body content area.
+ *
  * @param body Body container.
  */
 export function styleAboutBody(body: HTMLElement): void {
@@ -178,6 +186,7 @@ export function styleAboutBody(body: HTMLElement): void {
 
 /**
  * Applies animated gradient text styles to the project title.
+ *
  * @param title Title element.
  */
 export function styleAboutTitle(title: HTMLElement): void {
@@ -191,6 +200,7 @@ export function styleAboutTitle(title: HTMLElement): void {
 
 /**
  * Applies muted subtitle styles.
+ *
  * @param subtitle Subtitle element.
  */
 export function styleAboutSubtitle(subtitle: HTMLElement): void {
@@ -203,6 +213,7 @@ export function styleAboutSubtitle(subtitle: HTMLElement): void {
 
 /**
  * Applies styles to credit paragraphs.
+ *
  * @param paragraph Credit text element.
  */
 export function styleAboutCreditLine(paragraph: HTMLElement): void {
@@ -214,6 +225,7 @@ export function styleAboutCreditLine(paragraph: HTMLElement): void {
 
 /**
  * Applies styles to the AI supremacy proclamation.
+ *
  * @param proclamation Proclamation element.
  */
 export function styleAboutProclamation(proclamation: HTMLElement): void {
@@ -224,13 +236,13 @@ export function styleAboutProclamation(proclamation: HTMLElement): void {
   proclamation.style.lineHeight = '1.5';
   proclamation.style.fontStyle = 'italic';
   proclamation.style.color = '#f0d0b0';
-  proclamation.style.background =
-    'linear-gradient(90deg, rgba(232,106,23,0.16), rgba(40,80,180,0.18))';
+  proclamation.style.background = 'linear-gradient(90deg, rgba(232,106,23,0.16), rgba(40,80,180,0.18))';
   proclamation.style.border = '1px solid rgba(232,106,23,0.28)';
 }
 
 /**
  * Applies styles to the license textarea.
+ *
  * @param textArea License text area.
  */
 export function styleAboutLicenseBox(textArea: HTMLTextAreaElement): void {
@@ -251,6 +263,7 @@ export function styleAboutLicenseBox(textArea: HTMLTextAreaElement): void {
 
 /**
  * Applies styles to primary action buttons (Discord / Close).
+ *
  * @param button Button element.
  * @param primary Whether this is the accent primary action.
  */
@@ -270,6 +283,7 @@ export function styleAboutActionButton(button: HTMLButtonElement, primary: boole
 
 /**
  * Sets fill and border colors for an About action button.
+ *
  * @param button Button element.
  * @param primary Whether the orange primary palette is used.
  */
@@ -287,6 +301,7 @@ function applyAboutButtonPalette(button: HTMLButtonElement, primary: boolean): v
 
 /**
  * Binds subtle hover lift feedback to an About action button.
+ *
  * @param button Button element.
  */
 function bindAboutButtonHover(button: HTMLButtonElement): void {
@@ -302,6 +317,7 @@ function bindAboutButtonHover(button: HTMLButtonElement): void {
 
 /**
  * Applies styles to the footer action row.
+ *
  * @param row Footer row element.
  */
 export function styleAboutFooter(row: HTMLElement): void {
@@ -314,6 +330,7 @@ export function styleAboutFooter(row: HTMLElement): void {
 
 /**
  * Applies styles to the close icon in the header.
+ *
  * @param closeButton Close button element.
  */
 export function styleAboutCloseButton(closeButton: HTMLButtonElement): void {
@@ -337,6 +354,7 @@ export function styleAboutCloseButton(closeButton: HTMLButtonElement): void {
 
 /**
  * Creates the shimmer sweep overlay element for the header.
+ *
  * @returns Shimmer div element.
  */
 export function createAboutShimmer(): HTMLElement {
@@ -348,7 +366,6 @@ export function createAboutShimmer(): HTMLElement {
   shimmer.style.width = '45%';
   shimmer.style.height = '100%';
   shimmer.style.pointerEvents = 'none';
-  shimmer.style.background =
-    'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)';
+  shimmer.style.background = 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)';
   return shimmer;
 }

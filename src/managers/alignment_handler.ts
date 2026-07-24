@@ -5,20 +5,19 @@ import { SelectionManager } from './selection_manager.js';
 import { GridSnap } from '../transform/grid_snap.js';
 import { StatusBar } from '../ui/status_bar.js';
 
-/**
- * Callback invoked to sync scene state to all viewports.
- */
+/** Callback invoked to sync scene state to all viewports. */
 export type SyncViewportsCallback = () => void;
 
 /**
  * Callback invoked to update the status bar axis restriction display.
+ *
  * @param axis The current axis restriction label.
  */
 export type AxisRestrictionCallback = (axis: AlignmentAxis) => void;
 
 /**
- * Centralized handler for alignment operations.
- * Coordinates alignment execution, viewport sync, and status feedback.
+ * Centralized handler for alignment operations. Coordinates alignment
+ * execution, viewport sync, and status feedback.
  */
 export class AlignmentHandler {
   private alignmentController: AlignmentController;
@@ -31,6 +30,7 @@ export class AlignmentHandler {
 
   /**
    * Creates a new alignment handler.
+   *
    * @param alignmentController The core alignment logic controller.
    * @param commandStack The command stack for undo support.
    * @param selectionManager The selection manager.
@@ -53,6 +53,7 @@ export class AlignmentHandler {
 
   /**
    * Sets the status bar reference for feedback display.
+   *
    * @param statusBar The status bar instance.
    */
   setStatusBar(statusBar: StatusBar): void {
@@ -61,6 +62,7 @@ export class AlignmentHandler {
 
   /**
    * Sets the callback for synchronizing viewports after actions.
+   *
    * @param callback The synchronization function.
    */
   setSyncViewports(callback: SyncViewportsCallback): void {
@@ -69,15 +71,14 @@ export class AlignmentHandler {
 
   /**
    * Sets the callback for axis restriction changes.
+   *
    * @param callback The axis restriction update function.
    */
   setOnAxisRestriction(callback: AxisRestrictionCallback): void {
     this.onAxisRestriction = callback;
   }
 
-  /**
-   * Aligns selected objects to world origin on the current axis restriction.
-   */
+  /** Aligns selected objects to world origin on the current axis restriction. */
   onAlignToOrigin(): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     if (selected.length === 0) return;
@@ -86,9 +87,7 @@ export class AlignmentHandler {
     this.syncViewportsAndShowFeedback('origin', selected.length);
   }
 
-  /**
-   * Aligns selected objects' bounding box centers to the nearest grid cell.
-   */
+  /** Aligns selected objects' bounding box centers to the nearest grid cell. */
   onAlignToGridCenter(): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     if (selected.length === 0) return;
@@ -99,8 +98,8 @@ export class AlignmentHandler {
   }
 
   /**
-   * Aligns source objects to the target reference object.
-   * The last selected object serves as the alignment target.
+   * Aligns source objects to the target reference object. The last selected
+   * object serves as the alignment target.
    */
   onAlignToObject(): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
@@ -112,9 +111,7 @@ export class AlignmentHandler {
     this.syncViewportsAndShowFeedback('object', sources.length);
   }
 
-  /**
-   * Cycles the axis restriction and notifies registered callbacks.
-   */
+  /** Cycles the axis restriction and notifies registered callbacks. */
   onAxisCycle(): void {
     const axis = this.alignmentController.cycleAxisRestriction();
     this.notifyAxisRestriction(axis);
@@ -122,6 +119,7 @@ export class AlignmentHandler {
 
   /**
    * Returns the current axis restriction.
+   *
    * @returns The current alignment axis.
    */
   getAxisRestriction(): AlignmentAxis {
@@ -130,6 +128,7 @@ export class AlignmentHandler {
 
   /**
    * Syncs viewports and displays alignment feedback.
+   *
    * @param target The alignment target description.
    * @param count The number of objects aligned.
    */
@@ -142,6 +141,7 @@ export class AlignmentHandler {
 
   /**
    * Displays alignment feedback in the status bar.
+   *
    * @param target The alignment target description.
    * @param count The number of objects aligned.
    */
@@ -153,6 +153,7 @@ export class AlignmentHandler {
 
   /**
    * Notifies the axis restriction callback of a change.
+   *
    * @param axis The new axis restriction.
    */
   private notifyAxisRestriction(axis: AlignmentAxis): void {

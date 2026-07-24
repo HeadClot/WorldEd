@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 import { SOLID_SQR_VERTEX_EQUAL_EPSILON } from './solid_math_constants.js';
 
-/**
- * Welds nearly-identical vertices for solid CSG intermediate geometry.
- */
+/** Welds nearly-identical vertices for solid CSG intermediate geometry. */
 export class HashedVertexTable {
   private readonly vertices: THREE.Vector3[] = [];
   private readonly cellMap = new Map<string, number[]>();
@@ -11,6 +9,7 @@ export class HashedVertexTable {
 
   /**
    * Creates a hashed vertex table.
+   *
    * @param cellSize Spatial hash cell size (defaults near vertex epsilon).
    */
   constructor(cellSize: number = 0.001) {
@@ -19,6 +18,7 @@ export class HashedVertexTable {
 
   /**
    * Inserts a point, returning the stable welded index.
+   *
    * @param point Point to insert.
    * @returns Index of the existing or newly created vertex.
    */
@@ -38,6 +38,7 @@ export class HashedVertexTable {
 
   /**
    * Returns the welded vertex list.
+   *
    * @returns Vertices in insertion order.
    */
   getVertices(): THREE.Vector3[] {
@@ -46,6 +47,7 @@ export class HashedVertexTable {
 
   /**
    * Returns the number of unique vertices.
+   *
    * @returns Vertex count.
    */
   get count(): number {
@@ -54,6 +56,7 @@ export class HashedVertexTable {
 
   /**
    * Returns a vertex by index.
+   *
    * @param index Vertex index.
    * @returns Vertex position.
    */
@@ -63,6 +66,7 @@ export class HashedVertexTable {
 
   /**
    * Builds a spatial hash key for a point.
+   *
    * @param point Point to hash.
    * @returns Cell key string.
    */
@@ -75,6 +79,7 @@ export class HashedVertexTable {
 
   /**
    * Collects candidate vertex indices from a cell and its neighbors.
+   *
    * @param cellKey Center cell key.
    * @returns Candidate indices.
    */
@@ -95,6 +100,7 @@ export class HashedVertexTable {
 
   /**
    * Stores an index in a spatial cell bucket.
+   *
    * @param cellKey Cell key.
    * @param index Vertex index.
    */

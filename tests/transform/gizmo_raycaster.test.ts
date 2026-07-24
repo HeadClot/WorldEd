@@ -59,12 +59,7 @@ describe('GizmoRaycaster', () => {
     cameraAtOrigin.position.set(0, 0, 0);
     cameraAtOrigin.lookAt(1, 0, 0);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.projectMouseToPlane(
-      cameraAtOrigin,
-      mockRenderer,
-      event,
-      parallelPlane,
-    );
+    const result = raycaster.projectMouseToPlane(cameraAtOrigin, mockRenderer, event, parallelPlane);
     expect(result).toBeNull();
   });
 
@@ -107,13 +102,7 @@ describe('GizmoRaycaster', () => {
     setup.gizmoGroup.visible = false;
     setup.gizmoGroup.updateMatrixWorld(true);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.pickHandle(
-      setup.handles,
-      setup.camera,
-      setup.renderer,
-      event,
-      setup.gizmoGroup,
-    );
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.renderer, event, setup.gizmoGroup);
     expect(result).toBeNull();
   });
 
@@ -122,26 +111,14 @@ describe('GizmoRaycaster', () => {
     setup.gizmoGroup.visible = true;
     setup.gizmoGroup.updateMatrixWorld(true);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.pickHandle(
-      setup.handles,
-      setup.camera,
-      setup.renderer,
-      event,
-      setup.gizmoGroup,
-    );
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.renderer, event, setup.gizmoGroup);
     expect(result).toBe(setup.handles[0]);
   });
 
   it('should pick a far handle through a nearer bounds face pick plane', () => {
     const setup = createFarHandleBehindFacePickSetup();
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.pickHandle(
-      setup.handles,
-      setup.camera,
-      setup.renderer,
-      event,
-      setup.gizmoGroup,
-    );
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.renderer, event, setup.gizmoGroup);
     expect(result).toBe(setup.handles[0]);
   });
 });
@@ -149,6 +126,7 @@ describe('GizmoRaycaster', () => {
 /**
  * Builds a camera, renderer, handle, and gizmo group for pickHandle tests.
  * Places a large mesh at the origin so a center-screen ray intersects it.
+ *
  * @returns Fixtures for gizmo picking tests.
  */
 function createPickableGizmoSetup(): {
@@ -181,6 +159,7 @@ function createPickableGizmoSetup(): {
 /**
  * Places a face-pick plane in front of a far handle so a center ray hits both.
  * Verifies handle picking ignores bounds face pick meshes.
+ *
  * @returns Fixtures with a far handle behind a face pick plane.
  */
 function createFarHandleBehindFacePickSetup(): {

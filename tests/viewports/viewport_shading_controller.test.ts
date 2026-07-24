@@ -4,9 +4,7 @@ import { ViewportShadingController } from '../../src/viewports/viewport_shading_
 import { ShadingMode } from '../../src/types/shading_mode.js';
 import { ShadableViewport } from '../../src/viewports/viewport_shading_controller.js';
 
-/**
- * Minimal viewport mock for testing the shading controller.
- */
+/** Minimal viewport mock for testing the shading controller. */
 class MockViewport implements ShadableViewport {
   private scene: THREE.Scene;
 

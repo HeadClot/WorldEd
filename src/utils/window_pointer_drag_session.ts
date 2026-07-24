@@ -6,9 +6,7 @@ export class WindowPointerDragSession {
   private boundMove: ((event: PointerEvent) => void) | null;
   private boundUp: ((event: Event) => void) | null;
 
-  /**
-   * Creates an inactive window pointer drag session.
-   */
+  /** Creates an inactive window pointer drag session. */
   constructor() {
     this.boundMove = null;
     this.boundUp = null;
@@ -17,9 +15,10 @@ export class WindowPointerDragSession {
   /**
    * Attaches window-level move and release listeners for an active drag.
    * Replaces any previous capture from this session.
+   *
    * @param onMove Called for each window pointermove during the drag.
    * @param onUp Called once for pointerup or pointercancel; listeners are
-   * removed before this callback runs.
+   *   removed before this callback runs.
    */
   begin(onMove: (event: PointerEvent) => void, onUp: () => void): void {
     this.end();
@@ -30,9 +29,7 @@ export class WindowPointerDragSession {
     window.addEventListener('pointercancel', this.boundUp);
   }
 
-  /**
-   * Removes window listeners if any are attached.
-   */
+  /** Removes window listeners if any are attached. */
   end(): void {
     if (this.boundMove) {
       window.removeEventListener('pointermove', this.boundMove);
@@ -47,6 +44,7 @@ export class WindowPointerDragSession {
 
   /**
    * Returns whether this session currently owns window listeners.
+   *
    * @returns True when move/up listeners are attached to window.
    */
   isActive(): boolean {
@@ -55,6 +53,7 @@ export class WindowPointerDragSession {
 
   /**
    * Detaches listeners then invokes the release callback.
+   *
    * @param onUp Caller-provided release handler.
    */
   private finishWithCallback(onUp: () => void): void {

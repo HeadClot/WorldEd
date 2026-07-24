@@ -105,6 +105,7 @@ describe('bounds face helpers', () => {
 
 /**
  * Creates a box mesh at the origin with the given dimensions.
+ *
  * @param width Box width.
  * @param height Box height.
  * @param depth Box depth.

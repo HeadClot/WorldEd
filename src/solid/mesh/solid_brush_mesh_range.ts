@@ -1,5 +1,6 @@
 /**
- * Byte/vertex range of one brush's contribution inside the combined result mesh.
+ * Byte/vertex range of one brush's contribution inside the combined result
+ * mesh.
  */
 export interface SolidBrushMeshRange {
   /** Brush instance id. */
@@ -14,9 +15,7 @@ export interface SolidBrushMeshRange {
   triangleCount: number;
 }
 
-/**
- * GPU attribute update window for a dirty brush patch.
- */
+/** GPU attribute update window for a dirty brush patch. */
 export interface SolidMeshUpdateRange {
   /** First float index in the position/normal arrays (vertexStart * 3). */
   positionFloatStart: number;

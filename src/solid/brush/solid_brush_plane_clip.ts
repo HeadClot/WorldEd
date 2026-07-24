@@ -6,14 +6,15 @@ import { SolidPlane } from './solid_plane.js';
 import { SOLID_FAT_PLANE_EPSILON } from '../algorithm/solid_math_constants.js';
 
 /**
- * Clips convex solid brushes by a half-space, producing a new solid brush.
- * Uses face polygon clipping plus a closing cap face (not a mesh CSG hack).
+ * Clips convex solid brushes by a half-space, producing a new solid brush. Uses
+ * face polygon clipping plus a closing cap face (not a mesh CSG hack).
  */
 export class SolidBrushPlaneClip {
   /**
    * Keeps the portion of a brush on the negative side of a plane
    * (signedDistance <= 0), which is the solid interior half-space for
    * outward-facing SolidPlanes.
+   *
    * @param brush Source convex brush in local space.
    * @param plane Outward clip plane in the same local space.
    * @returns Clipped brush, or null when the kept region is empty.
@@ -40,6 +41,7 @@ export class SolidBrushPlaneClip {
   /**
    * Clips a brush keeping either the Three.js plane front or back half-space.
    * Three.js plane: n·x + constant = 0; front is n·x + constant >= 0.
+   *
    * @param brush Source brush in local space.
    * @param localThreePlane Plane already transformed into brush local space.
    * @param keepFront When true, keep the Three.js front half-space.
@@ -56,14 +58,12 @@ export class SolidBrushPlaneClip {
 
   /**
    * Builds the SolidPlane whose negative half-space is the desired keep side.
+   *
    * @param threePlane Three.js plane in brush local space.
    * @param keepFront Whether to keep the Three.js front half-space.
    * @returns SolidPlane for clipKeepInside.
    */
-  private static threePlaneToSolidKeepPlane(
-    threePlane: THREE.Plane,
-    keepFront: boolean,
-  ): SolidPlane {
+  private static threePlaneToSolidKeepPlane(threePlane: THREE.Plane, keepFront: boolean): SolidPlane {
     const normal = threePlane.normal.clone().normalize();
     const offset = threePlane.constant;
     if (keepFront) {
@@ -74,15 +74,12 @@ export class SolidBrushPlaneClip {
 
   /**
    * Collects intersection points of a face ring with the clip plane.
+   *
    * @param polygon Face vertices.
    * @param plane Clip plane.
    * @param capPoints Accumulator for unique cap vertices.
    */
-  private static collectCapEdgePoints(
-    polygon: THREE.Vector3[],
-    plane: SolidPlane,
-    capPoints: THREE.Vector3[],
-  ): void {
+  private static collectCapEdgePoints(polygon: THREE.Vector3[], plane: SolidPlane, capPoints: THREE.Vector3[]): void {
     const count = polygon.length;
     for (let index = 0; index < count; index++) {
       const current = polygon[index];
@@ -101,6 +98,7 @@ export class SolidBrushPlaneClip {
 
   /**
    * Adds a point when no existing cap point is near it.
+   *
    * @param points Cap point list.
    * @param point Candidate.
    */
@@ -113,6 +111,7 @@ export class SolidBrushPlaneClip {
 
   /**
    * Orders coplanar cap points into a convex polygon with outward winding.
+   *
    * @param points Unordered points on the clip plane.
    * @param plane Clip plane (outward for the kept solid).
    * @returns Ordered cap loop, or null when degenerate.
@@ -136,6 +135,7 @@ export class SolidBrushPlaneClip {
 
   /**
    * Builds a tangent frame for angular sorting on a plane.
+   *
    * @param normal Unit plane normal.
    * @returns Orthonormal U/V axes.
    */

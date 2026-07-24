@@ -35,10 +35,7 @@ describe('ShadingModeManager', () => {
     });
 
     it('should handle multiple meshes correctly', () => {
-      const meshC = new THREE.Mesh(
-        new THREE.PlaneGeometry(1, 1),
-        new THREE.MeshStandardMaterial({ color: 0x0000ff }),
-      );
+      const meshC = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0x0000ff }));
       scene.add(meshA);
       scene.add(meshB);
       scene.add(meshC);
@@ -272,20 +269,14 @@ describe('ShadingModeManager', () => {
     });
 
     it('should report bounds handles as shading-exempt', () => {
-      const handleMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 1, 1),
-        new THREE.MeshBasicMaterial(),
-      );
+      const handleMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
       handleMesh.userData.handleId = 9;
       expect(manager.isShadingExempt(handleMesh)).toBe(true);
       expect(manager.isShadingExempt(meshA)).toBe(false);
     });
 
     it('should report solid brush helpers as shading-exempt', () => {
-      const brushMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 1, 1),
-        new THREE.MeshBasicMaterial(),
-      );
+      const brushMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
       brushMesh.userData.isSolidBrush = true;
       expect(manager.isShadingExempt(brushMesh)).toBe(true);
     });

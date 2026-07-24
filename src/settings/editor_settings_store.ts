@@ -6,11 +6,7 @@ import {
   deriveHandedness,
   getBuiltInCoordinateSpace,
 } from './coordinate_space_presets.js';
-import type {
-  AxisDirection,
-  CoordinateSpaceDefinition,
-  Handedness,
-} from './coordinate_space_types.js';
+import type { AxisDirection, CoordinateSpaceDefinition, Handedness } from './coordinate_space_types.js';
 import { CustomCoordinateSpaceRepository } from './custom_coordinate_space_repository.js';
 import {
   createDefaultGameProfile,
@@ -63,7 +59,8 @@ export type EditorSettingsListener = (snapshot: EditorSettingsSnapshot) => void;
 
 /**
  * Central editor settings store for game profiles and view preferences.
- * Persists game profiles as one JSON document each and view settings separately.
+ * Persists game profiles as one JSON document each and view settings
+ * separately.
  */
 export class EditorSettingsStore {
   private readonly storage: SettingsStorage;
@@ -80,13 +77,11 @@ export class EditorSettingsStore {
 
   /**
    * Creates a settings store and loads persisted values.
+   *
    * @param storage Optional storage backend (defaults to localStorage).
    * @param repository Optional profile repository override for tests.
    */
-  constructor(
-    storage: SettingsStorage = new LocalSettingsStorage(),
-    repository?: GameProfileRepository,
-  ) {
+  constructor(storage: SettingsStorage = new LocalSettingsStorage(), repository?: GameProfileRepository) {
     this.storage = storage;
     this.repository = repository ?? new GameProfileRepository(storage);
     this.coordinateSpaceRepository = new CustomCoordinateSpaceRepository(storage);
@@ -95,9 +90,7 @@ export class EditorSettingsStore {
     this.mouse = this.loadMouseSettings();
     this.update = this.loadUpdateSettings();
     this.keyboard = this.loadKeyboardShortcutSettings();
-    this.customCoordinateSpaces = this.coordinateSpaceRepository
-      .loadAll()
-      .map((space) => cloneCoordinateSpace(space));
+    this.customCoordinateSpaces = this.coordinateSpaceRepository.loadAll().map((space) => cloneCoordinateSpace(space));
     const loaded = this.repository.loadAll();
     this.profiles = loaded.profiles.map((profile) => cloneProfile(profile));
     this.activeGameProfileId = loaded.activeGameProfileId;
@@ -105,15 +98,14 @@ export class EditorSettingsStore {
 
   /**
    * Returns an immutable snapshot of current settings.
+   *
    * @returns Cloned settings snapshot.
    */
   getSnapshot(): EditorSettingsSnapshot {
     return {
       activeGameProfileId: this.activeGameProfileId,
       gameProfiles: this.profiles.map((profile) => cloneProfile(profile)),
-      customCoordinateSpaces: this.customCoordinateSpaces.map((space) =>
-        cloneCoordinateSpace(space),
-      ),
+      customCoordinateSpaces: this.customCoordinateSpaces.map((space) => cloneCoordinateSpace(space)),
       view: { ...this.view },
       mouse: { ...this.mouse },
       update: { ...this.update },
@@ -123,6 +115,7 @@ export class EditorSettingsStore {
 
   /**
    * Returns built-in and custom coordinate space presets for selection UI.
+   *
    * @returns Ordered preset list (built-ins first).
    */
   listCoordinateSpacePresets(): CoordinateSpaceDefinition[] {
@@ -133,6 +126,7 @@ export class EditorSettingsStore {
 
   /**
    * Returns the currently active game profile, if any.
+   *
    * @returns Active profile clone or null.
    */
   getActiveGameProfile(): GameProfile | null {
@@ -142,6 +136,7 @@ export class EditorSettingsStore {
 
   /**
    * Returns current view settings.
+   *
    * @returns Cloned view settings.
    */
   getViewSettings(): ViewSettings {
@@ -150,6 +145,7 @@ export class EditorSettingsStore {
 
   /**
    * Returns current mouse navigation settings.
+   *
    * @returns Cloned mouse settings.
    */
   getMouseSettings(): MouseSettings {
@@ -163,6 +159,7 @@ export class EditorSettingsStore {
 
   /**
    * Subscribes to settings changes.
+   *
    * @param listener Callback receiving the latest snapshot.
    * @returns Unsubscribe function.
    */
@@ -174,7 +171,9 @@ export class EditorSettingsStore {
   }
 
   /**
-   * Adds a new game profile, persists it as its own JSON file, and activates it.
+   * Adds a new game profile, persists it as its own JSON file, and activates
+   * it.
+   *
    * @param name Optional display name for the new profile.
    * @returns The created profile.
    */
@@ -190,6 +189,7 @@ export class EditorSettingsStore {
 
   /**
    * Selects the active game profile by id.
+   *
    * @param profileId Profile identifier.
    */
   setActiveGameProfileId(profileId: string): void {
@@ -204,6 +204,7 @@ export class EditorSettingsStore {
 
   /**
    * Renames a game profile and rewrites its JSON document.
+   *
    * @param profileId Profile identifier.
    * @param name New display name.
    */
@@ -219,7 +220,9 @@ export class EditorSettingsStore {
   }
 
   /**
-   * Updates the unit system for a profile and refreshes dependent unit UI state.
+   * Updates the unit system for a profile and refreshes dependent unit UI
+   * state.
+   *
    * @param profileId Profile identifier.
    * @param unitSystem Metric or imperial.
    */
@@ -235,6 +238,7 @@ export class EditorSettingsStore {
 
   /**
    * Sets the metric length unit for a profile.
+   *
    * @param profileId Profile identifier.
    * @param metricUnit Metric unit option.
    */
@@ -250,6 +254,7 @@ export class EditorSettingsStore {
 
   /**
    * Sets the imperial length unit for a profile.
+   *
    * @param profileId Profile identifier.
    * @param imperialUnit Imperial unit option.
    */
@@ -265,6 +270,7 @@ export class EditorSettingsStore {
 
   /**
    * Removes a game profile and its JSON document when more than one remains.
+   *
    * @param profileId Profile identifier.
    * @returns True when a profile was removed.
    */
@@ -285,6 +291,7 @@ export class EditorSettingsStore {
 
   /**
    * Applies a built-in or custom coordinate space preset to a game profile.
+   *
    * @param profileId Profile identifier.
    * @param presetId Built-in or custom preset id.
    */
@@ -303,7 +310,9 @@ export class EditorSettingsStore {
   }
 
   /**
-   * Creates a custom coordinate space preset, saves it, and assigns it to a profile.
+   * Creates a custom coordinate space preset, saves it, and assigns it to a
+   * profile.
+   *
    * @param profileId Profile that receives the new preset.
    * @param name Optional display name.
    * @returns The created custom coordinate space.
@@ -324,6 +333,7 @@ export class EditorSettingsStore {
 
   /**
    * Renames a custom coordinate space and updates profiles that reference it.
+   *
    * @param presetId Custom preset id.
    * @param name New display name.
    */
@@ -342,16 +352,13 @@ export class EditorSettingsStore {
 
   /**
    * Updates one axis on a custom coordinate space and re-derives handedness.
+   *
    * @param presetId Custom preset id.
    * @param axis Role being edited.
    * @param direction New axis direction.
    * @returns True when the update was applied.
    */
-  setCustomCoordinateSpaceAxis(
-    presetId: string,
-    axis: 'up' | 'right' | 'forward',
-    direction: AxisDirection,
-  ): boolean {
+  setCustomCoordinateSpaceAxis(presetId: string, axis: 'up' | 'right' | 'forward', direction: AxisDirection): boolean {
     const space = this.findCustomCoordinateSpace(presetId);
     if (!space || space[axis] === direction) {
       return false;
@@ -377,8 +384,9 @@ export class EditorSettingsStore {
   }
 
   /**
-   * Removes a custom coordinate space preset.
-   * Profiles still using it fall back to the default Godot preset.
+   * Removes a custom coordinate space preset. Profiles still using it fall back
+   * to the default Godot preset.
+   *
    * @param presetId Custom preset id.
    * @returns True when a preset was removed.
    */
@@ -402,6 +410,7 @@ export class EditorSettingsStore {
 
   /**
    * Sets the UI theme preference.
+   *
    * @param theme System, light, or dark.
    */
   setTheme(theme: UiThemePreference): void {
@@ -415,6 +424,7 @@ export class EditorSettingsStore {
 
   /**
    * Sets viewport texture/material brightness percent.
+   *
    * @param brightness Percent from 0 to 200.
    */
   setBrightness(brightness: number): void {
@@ -429,6 +439,7 @@ export class EditorSettingsStore {
 
   /**
    * Sets material browser icon preview size percent.
+   *
    * @param percent Size percent from 25 to 300.
    */
   setMaterialBrowserIconSizePercent(percent: number): void {
@@ -443,14 +454,11 @@ export class EditorSettingsStore {
 
   /**
    * Sets the renderer / program UI font size in pixels.
+   *
    * @param fontSize Font size from 8 to 72.
    */
   setRendererFontSize(fontSize: number): void {
-    const clamped = clampNumber(
-      Math.round(fontSize),
-      RENDERER_FONT_SIZE_MIN,
-      RENDERER_FONT_SIZE_MAX,
-    );
+    const clamped = clampNumber(Math.round(fontSize), RENDERER_FONT_SIZE_MIN, RENDERER_FONT_SIZE_MAX);
     if (this.view.rendererFontSize === clamped) {
       return;
     }
@@ -461,6 +469,7 @@ export class EditorSettingsStore {
 
   /**
    * Returns the currently configured primary keyboard shortcuts.
+   *
    * @returns Cloned keyboard shortcut settings.
    */
   getKeyboardShortcutSettings(): KeyboardShortcutSettings {
@@ -469,6 +478,7 @@ export class EditorSettingsStore {
 
   /**
    * Updates one primary keyboard shortcut and persists the change.
+   *
    * @param action Editor action receiving the shortcut.
    * @param shortcut Key and modifier state to assign.
    */
@@ -483,6 +493,7 @@ export class EditorSettingsStore {
 
   /**
    * Sets how many viewport panes are visible in the workspace.
+   *
    * @param paneCount Requested pane count from one through four.
    */
   setViewportPaneCount(paneCount: number): void {
@@ -497,6 +508,7 @@ export class EditorSettingsStore {
 
   /**
    * Updates one mouse navigation preference.
+   *
    * @param settings Updated settings values.
    */
   updateMouseSettings(settings: Partial<MouseSettings>): void {
@@ -509,6 +521,7 @@ export class EditorSettingsStore {
 
   /**
    * Enables or disables automatic standalone release checks.
+   *
    * @param enabled Whether the updater should check when the Update tab opens.
    */
   setAutomaticUpdateChecksEnabled(enabled: boolean): void {
@@ -520,6 +533,7 @@ export class EditorSettingsStore {
 
   /**
    * Returns JSON file contents for a profile id.
+   *
    * @param profileId Profile identifier.
    * @returns JSON text or null when missing.
    */
@@ -533,6 +547,7 @@ export class EditorSettingsStore {
 
   /**
    * Returns the `.json` filename for a profile id.
+   *
    * @param profileId Profile identifier.
    * @returns Filename or null when missing.
    */
@@ -545,10 +560,11 @@ export class EditorSettingsStore {
   }
 
   /**
-   * Imports a game profile JSON document as a new active profile.
-   * Imported profiles receive a new local id so loading a file never replaces
-   * an existing profile. Imported custom coordinate spaces are registered as
+   * Imports a game profile JSON document as a new active profile. Imported
+   * profiles receive a new local id so loading a file never replaces an
+   * existing profile. Imported custom coordinate spaces are registered as
    * independent editable presets.
+   *
    * @param jsonText Profile JSON file contents.
    * @returns The newly imported profile.
    * @throws Error when the JSON document is invalid.
@@ -568,6 +584,7 @@ export class EditorSettingsStore {
 
   /**
    * Registers an imported custom coordinate space under a new local id.
+   *
    * @param profile Imported profile whose custom space may be registered.
    */
   private registerImportedCustomCoordinateSpace(profile: GameProfile): void {
@@ -582,6 +599,7 @@ export class EditorSettingsStore {
 
   /**
    * Finds a mutable profile by id.
+   *
    * @param profileId Profile identifier.
    * @returns Profile reference or undefined.
    */
@@ -591,6 +609,7 @@ export class EditorSettingsStore {
 
   /**
    * Finds a built-in or custom coordinate space by preset id.
+   *
    * @param presetId Preset identifier.
    * @returns Cloned definition or null.
    */
@@ -605,6 +624,7 @@ export class EditorSettingsStore {
 
   /**
    * Finds a mutable custom coordinate space by id.
+   *
    * @param presetId Custom preset identifier.
    * @returns Mutable custom space or undefined.
    */
@@ -614,6 +634,7 @@ export class EditorSettingsStore {
 
   /**
    * Builds a new custom coordinate space based on Godot defaults.
+   *
    * @param name Optional display name.
    * @returns New custom definition.
    */
@@ -627,6 +648,7 @@ export class EditorSettingsStore {
 
   /**
    * Builds a unique default name for a custom coordinate space.
+   *
    * @returns Display name.
    */
   private buildNextCustomSpaceName(): string {
@@ -641,6 +663,7 @@ export class EditorSettingsStore {
 
   /**
    * Copies an updated custom space onto all profiles that use its id.
+   *
    * @param space Updated custom coordinate space.
    */
   private syncProfilesUsingCoordinateSpace(space: CoordinateSpaceDefinition): void {
@@ -653,6 +676,7 @@ export class EditorSettingsStore {
 
   /**
    * Builds a unique default name for a newly added profile.
+   *
    * @returns Display name.
    */
   private buildNextProfileName(): string {
@@ -666,9 +690,7 @@ export class EditorSettingsStore {
     return candidate;
   }
 
-  /**
-   * Ensures the active id still points at an existing profile after deletion.
-   */
+  /** Ensures the active id still points at an existing profile after deletion. */
   private ensureActiveProfileAfterRemoval(): void {
     const stillActive = this.profiles.some((profile) => profile.id === this.activeGameProfileId);
     if (!stillActive) {
@@ -676,23 +698,17 @@ export class EditorSettingsStore {
     }
   }
 
-  /**
-   * Writes all game profiles through the repository.
-   */
+  /** Writes all game profiles through the repository. */
   private persistProfiles(): void {
     this.repository.saveAll(this.profiles, this.activeGameProfileId);
   }
 
-  /**
-   * Writes custom coordinate space presets to storage.
-   */
+  /** Writes custom coordinate space presets to storage. */
   private persistCustomCoordinateSpaces(): void {
     this.coordinateSpaceRepository.saveAll(this.customCoordinateSpaces);
   }
 
-  /**
-   * Writes view settings to storage.
-   */
+  /** Writes view settings to storage. */
   private persistViewSettings(): void {
     this.storage.setItem(VIEW_SETTINGS_STORAGE_KEY, JSON.stringify(this.view));
   }
@@ -714,6 +730,7 @@ export class EditorSettingsStore {
 
   /**
    * Loads view settings from storage with defaults for missing fields.
+   *
    * @returns Loaded view settings.
    */
   private loadViewSettings(): ViewSettings {
@@ -727,6 +744,7 @@ export class EditorSettingsStore {
 
   /**
    * Loads mouse navigation settings and fills missing values with defaults.
+   *
    * @returns Valid mouse settings.
    */
   private loadMouseSettings(): MouseSettings {
@@ -757,6 +775,7 @@ export class EditorSettingsStore {
 
   /**
    * Loads keyboard shortcut settings and fills missing values with defaults.
+   *
    * @returns Valid keyboard shortcut settings.
    */
   private loadKeyboardShortcutSettings(): KeyboardShortcutSettings {
@@ -771,10 +790,7 @@ export class EditorSettingsStore {
         scale: sanitizeKeyboardShortcut(parsed.scale, defaults.scale),
         bounds: sanitizeKeyboardShortcut(parsed.bounds, defaults.bounds),
         face: sanitizeKeyboardShortcut(parsed.face, defaults.face),
-        selection_object: sanitizeKeyboardShortcut(
-          parsed.selection_object,
-          defaults.selection_object,
-        ),
+        selection_object: sanitizeKeyboardShortcut(parsed.selection_object, defaults.selection_object),
         delete_selected: sanitizeKeyboardShortcut(parsed.delete_selected, defaults.delete_selected),
         escape: sanitizeKeyboardShortcut(parsed.escape, defaults.escape),
         save: sanitizeKeyboardShortcut(parsed.save, defaults.save),
@@ -791,10 +807,7 @@ export class EditorSettingsStore {
         fit_selection: sanitizeKeyboardShortcut(parsed.fit_selection, defaults.fit_selection),
         fit_all: sanitizeKeyboardShortcut(parsed.fit_all, defaults.fit_all),
         shading_solid: sanitizeKeyboardShortcut(parsed.shading_solid, defaults.shading_solid),
-        shading_wireframe: sanitizeKeyboardShortcut(
-          parsed.shading_wireframe,
-          defaults.shading_wireframe,
-        ),
+        shading_wireframe: sanitizeKeyboardShortcut(parsed.shading_wireframe, defaults.shading_wireframe),
         shading_flat: sanitizeKeyboardShortcut(parsed.shading_flat, defaults.shading_flat),
         shading_wireframe_overlay: sanitizeKeyboardShortcut(
           parsed.shading_wireframe_overlay,
@@ -802,14 +815,8 @@ export class EditorSettingsStore {
         ),
         snap_forward: sanitizeKeyboardShortcut(parsed.snap_forward, defaults.snap_forward),
         snap_backward: sanitizeKeyboardShortcut(parsed.snap_backward, defaults.snap_backward),
-        snap_forward_large: sanitizeKeyboardShortcut(
-          parsed.snap_forward_large,
-          defaults.snap_forward_large,
-        ),
-        snap_backward_large: sanitizeKeyboardShortcut(
-          parsed.snap_backward_large,
-          defaults.snap_backward_large,
-        ),
+        snap_forward_large: sanitizeKeyboardShortcut(parsed.snap_forward_large, defaults.snap_forward_large),
+        snap_backward_large: sanitizeKeyboardShortcut(parsed.snap_backward_large, defaults.snap_backward_large),
         extrude: sanitizeKeyboardShortcut(parsed.extrude, defaults.extrude),
         clip_flip: sanitizeKeyboardShortcut(parsed.clip_flip, defaults.clip_flip),
         clip_commit: sanitizeKeyboardShortcut(parsed.clip_commit, defaults.clip_commit),
@@ -820,9 +827,7 @@ export class EditorSettingsStore {
     }
   }
 
-  /**
-   * Notifies all subscribers with a fresh snapshot.
-   */
+  /** Notifies all subscribers with a fresh snapshot. */
   private notifyListeners(): void {
     const snapshot = this.getSnapshot();
     this.listeners.forEach((listener) => listener(snapshot));
@@ -831,6 +836,7 @@ export class EditorSettingsStore {
 
 /**
  * Deep-clones a game profile object.
+ *
  * @param profile Source profile.
  * @returns Cloned profile.
  */
@@ -841,14 +847,13 @@ function cloneProfile(profile: GameProfile): GameProfile {
     unitSystem: profile.unitSystem,
     metricUnit: profile.metricUnit,
     imperialUnit: profile.imperialUnit,
-    coordinateSpace: cloneCoordinateSpace(
-      profile.coordinateSpace ?? createDefaultCoordinateSpace(),
-    ),
+    coordinateSpace: cloneCoordinateSpace(profile.coordinateSpace ?? createDefaultCoordinateSpace()),
   };
 }
 
 /**
  * Clamps a number into an inclusive range.
+ *
  * @param value Input value.
  * @param min Inclusive minimum.
  * @param max Inclusive maximum.
@@ -863,6 +868,7 @@ function clampNumber(value: number, min: number, max: number): number {
 
 /**
  * Merges stored view JSON over defaults with validation.
+ *
  * @param defaults Default view settings.
  * @param raw JSON text from storage.
  * @returns Merged view settings.
@@ -872,11 +878,7 @@ function mergeViewSettings(defaults: ViewSettings, raw: string): ViewSettings {
     const parsed = JSON.parse(raw) as Partial<ViewSettings>;
     return {
       theme: sanitizeTheme(parsed.theme, defaults.theme),
-      brightness: clampNumber(
-        Number(parsed.brightness ?? defaults.brightness),
-        BRIGHTNESS_MIN,
-        BRIGHTNESS_MAX,
-      ),
+      brightness: clampNumber(Number(parsed.brightness ?? defaults.brightness), BRIGHTNESS_MIN, BRIGHTNESS_MAX),
       materialBrowserIconSizePercent: clampNumber(
         Number(parsed.materialBrowserIconSizePercent ?? defaults.materialBrowserIconSizePercent),
         25,
@@ -900,6 +902,7 @@ function mergeViewSettings(defaults: ViewSettings, raw: string): ViewSettings {
 
 /**
  * Validates a stored theme preference.
+ *
  * @param value Candidate theme.
  * @param fallback Default theme.
  * @returns Safe theme preference.
@@ -913,14 +916,12 @@ function sanitizeTheme(value: unknown, fallback: UiThemePreference): UiThemePref
 
 /**
  * Merges mouse settings candidates over safe defaults.
+ *
  * @param defaults Existing safe mouse settings.
  * @param candidate Potentially partial stored or updated settings.
  * @returns Validated mouse settings.
  */
-function mergeMouseSettings(
-  defaults: MouseSettings,
-  candidate: Partial<MouseSettings>,
-): MouseSettings {
+function mergeMouseSettings(defaults: MouseSettings, candidate: Partial<MouseSettings>): MouseSettings {
   return {
     lookSensitivity: sanitizeMouseSensitivity(candidate.lookSensitivity, defaults.lookSensitivity),
     lookInvertXAxis: sanitizeBoolean(candidate.lookInvertXAxis, defaults.lookInvertXAxis),
@@ -939,15 +940,13 @@ function mergeMouseSettings(
       candidate.invertAltMiddleMouseDragZAxis,
       defaults.invertAltMiddleMouseDragZAxis,
     ),
-    moveCameraTowardsCursor: sanitizeBoolean(
-      candidate.moveCameraTowardsCursor,
-      defaults.moveCameraTowardsCursor,
-    ),
+    moveCameraTowardsCursor: sanitizeBoolean(candidate.moveCameraTowardsCursor, defaults.moveCameraTowardsCursor),
   };
 }
 
 /**
  * Validates a mouse sensitivity value.
+ *
  * @param value Candidate value.
  * @param fallback Safe fallback value.
  * @returns Clamped integer sensitivity.
@@ -959,6 +958,7 @@ function sanitizeMouseSensitivity(value: unknown, fallback: number): number {
 
 /**
  * Validates a 3D fly movement speed value.
+ *
  * @param value Candidate value.
  * @param fallback Safe fallback value.
  * @returns Clamped movement speed.
@@ -970,6 +970,7 @@ function sanitizeMouseMoveSpeed(value: unknown, fallback: number): number {
 
 /**
  * Validates a boolean preference.
+ *
  * @param value Candidate value.
  * @param fallback Safe fallback value.
  * @returns Candidate when boolean; otherwise fallback.
@@ -980,18 +981,18 @@ function sanitizeBoolean(value: unknown, fallback: boolean): boolean {
 
 /**
  * Checks whether two mouse settings snapshots are identical.
+ *
  * @param first First settings snapshot.
  * @param second Second settings snapshot.
  * @returns True when every preference matches.
  */
 function areMouseSettingsEqual(first: MouseSettings, second: MouseSettings): boolean {
-  return Object.keys(first).every(
-    (key) => first[key as keyof MouseSettings] === second[key as keyof MouseSettings],
-  );
+  return Object.keys(first).every((key) => first[key as keyof MouseSettings] === second[key as keyof MouseSettings]);
 }
 
 /**
  * Accepts browser keyboard event codes suitable for a primary shortcut.
+ *
  * @param value Candidate keyboard event code.
  * @returns True when the value is a non-empty keyboard event code.
  */
@@ -1001,6 +1002,7 @@ function isKeyboardEventCode(value: string): boolean {
 
 /**
  * Validates a stored keyboard event code with a fallback.
+ *
  * @param value Candidate stored event code.
  * @param fallback Safe default event code.
  * @returns A valid event code.
@@ -1015,6 +1017,7 @@ function sanitizeKeyboardShortcut(value: unknown, fallback: KeyboardShortcut): K
 
 /**
  * Checks whether a candidate is a valid keyboard shortcut.
+ *
  * @param value Candidate shortcut value.
  * @returns True when the candidate can be stored.
  */
@@ -1032,6 +1035,7 @@ function isValidKeyboardShortcut(value: unknown): value is KeyboardShortcut {
 
 /**
  * Checks whether two shortcut bindings have the same key and modifiers.
+ *
  * @param first First shortcut.
  * @param second Second shortcut.
  * @returns True when the shortcuts match exactly.

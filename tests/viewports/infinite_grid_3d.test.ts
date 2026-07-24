@@ -131,6 +131,7 @@ describe('InfiniteGrid3D', () => {
 
 /**
  * Samples average start-vertex luma of X-constant lines at a world X value.
+ *
  * @param grid Grid instance after update.
  * @param worldX World X of the line.
  * @returns RGB sum luma, or 0 when not found.

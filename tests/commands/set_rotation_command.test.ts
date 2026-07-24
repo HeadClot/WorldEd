@@ -8,15 +8,9 @@ describe('SetRotationCommand', () => {
   let mesh2: THREE.Mesh;
 
   beforeEach(() => {
-    mesh1 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    mesh1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     mesh1.rotation.set(0, 0, 0);
-    mesh2 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    mesh2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     mesh2.rotation.set(1, 2, 3);
   });
 

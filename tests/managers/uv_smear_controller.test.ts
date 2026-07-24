@@ -5,14 +5,8 @@ import { UvSmearController } from '../../src/managers/uv_smear_controller.js';
 import { initializeMeshTextureUVs } from '../../src/texture/face_texture_applier.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
-import {
-  setTexturePaintStateForTests,
-  TexturePaintState,
-} from '../../src/texture/texture_paint_state.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/texture_paint_state.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 import { computeRegionWorldNormal } from '../../src/texture/planar_uv_projector.js';
 
 describe('UvSmearController', () => {
@@ -32,10 +26,7 @@ describe('UvSmearController', () => {
   });
 
   it('should paint multiple cylinder sides during one stroke and support undo', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.5, 0.5, 1, 8),
-      createContentMaterial(0xcccccc),
-    );
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 8), createContentMaterial(0xcccccc));
     mesh.position.set(0, 0.5, 0);
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh);
@@ -69,6 +60,7 @@ describe('UvSmearController', () => {
 
 /**
  * Signature of side-face offsetU values for change detection.
+ *
  * @param mesh Mesh with face maps.
  * @returns Joined offset string.
  */

@@ -13,22 +13,22 @@ import {
 export const DECORATIVE_EDGE_USERDATA_KEY = 'isDecorativeEdge';
 
 /**
- * UserData keys that mark meshes which must never receive content outline edges.
- * Kept as literals here to avoid circular imports with solid modules; must match
- * SOLID_BRUSH_USERDATA_KEY / SOLID_MODEL_RESULT_USERDATA_KEY in solid model code.
+ * UserData keys that mark meshes which must never receive content outline
+ * edges. Kept as literals here to avoid circular imports with solid modules;
+ * must match SOLID_BRUSH_USERDATA_KEY / SOLID_MODEL_RESULT_USERDATA_KEY in
+ * solid model code.
  */
 const SKIP_CONTENT_EDGE_MESH_KEYS = ['isSolidBrush', 'isSolidModelResult'] as const;
 
 /**
  * Rebuilds content decorative edge LineSegments for a mesh from its geometry.
- * No-ops for solid brush previews and solid CSG result meshes (they use other systems).
+ * No-ops for solid brush previews and solid CSG result meshes (they use other
+ * systems).
+ *
  * @param mesh The mesh whose content edges should match its geometry.
  * @param edgeColor Optional edge color (defaults to theme box edge color).
  */
-export function rebuildDecorativeEdges(
-  mesh: THREE.Mesh,
-  edgeColor: number = Theme.boxEdgeColor,
-): void {
+export function rebuildDecorativeEdges(mesh: THREE.Mesh, edgeColor: number = Theme.boxEdgeColor): void {
   if (!usesContentDecorativeEdges(mesh)) {
     removeDecorativeEdges(mesh);
     return;
@@ -42,8 +42,9 @@ export function rebuildDecorativeEdges(
 }
 
 /**
- * Returns whether a mesh should carry white content outline edges.
- * Solid brush helpers use colored dual-pass edges; CSG results use surface materials only.
+ * Returns whether a mesh should carry white content outline edges. Solid brush
+ * helpers use colored dual-pass edges; CSG results use surface materials only.
+ *
  * @param mesh Candidate mesh.
  * @returns True for ordinary content meshes.
  */
@@ -56,6 +57,7 @@ export function usesContentDecorativeEdges(mesh: THREE.Mesh): boolean {
 
 /**
  * Returns whether a mesh has a position attribute suitable for EdgesGeometry.
+ *
  * @param mesh Candidate mesh.
  * @returns True when at least three position vertices exist.
  */
@@ -67,6 +69,7 @@ export function hasEdgeBuildableGeometry(mesh: THREE.Mesh): boolean {
 
 /**
  * Removes decorative edge children from a mesh and disposes their resources.
+ *
  * @param mesh The mesh to clean.
  */
 export function removeDecorativeEdges(mesh: THREE.Mesh): void {
@@ -80,6 +83,7 @@ export function removeDecorativeEdges(mesh: THREE.Mesh): void {
 /**
  * Removes selection and wireframe overlay children that should not persist
  * across geometry replacement (they are recreated by their owners).
+ *
  * @param mesh The mesh to clean.
  */
 export function stripEditorOverlayChildren(mesh: THREE.Mesh): void {
@@ -92,8 +96,9 @@ export function stripEditorOverlayChildren(mesh: THREE.Mesh): void {
 
 /**
  * Prepares a geometry for hard-edge (flat) shading used by the world editor.
- * Converts to non-indexed triangles so each face has independent normals.
- * Does not dispose the input geometry (caller owns that reference).
+ * Converts to non-indexed triangles so each face has independent normals. Does
+ * not dispose the input geometry (caller owns that reference).
+ *
  * @param geometry The source geometry (may be indexed).
  * @returns A flat-shaded non-indexed geometry ready for a mesh.
  */
@@ -107,6 +112,7 @@ export function prepareFlatShadedGeometry(geometry: THREE.BufferGeometry): THREE
 
 /**
  * Applies flat shading to a mesh material when supported.
+ *
  * @param mesh The mesh whose material should use flat shading.
  */
 export function enableFlatShadingOnMesh(mesh: THREE.Mesh): void {
@@ -122,7 +128,9 @@ export function enableFlatShadingOnMesh(mesh: THREE.Mesh): void {
 
 /**
  * Returns true for content decorative edge line children (white outlines).
- * Solid brush edge helpers are excluded; they use SOLID_BRUSH_EDGE_USERDATA_KEY.
+ * Solid brush edge helpers are excluded; they use
+ * SOLID_BRUSH_EDGE_USERDATA_KEY.
+ *
  * @param object The child object to test.
  * @returns True if the object is a content decorative edge outline.
  */
@@ -134,6 +142,7 @@ export function isDecorativeEdge(object: THREE.Object3D): boolean {
 
 /**
  * Returns true for solid brush dual-pass edge line children.
+ *
  * @param object The child object to test.
  * @returns True if the object is a brush volume edge helper.
  */
@@ -144,6 +153,7 @@ export function isSolidBrushEdge(object: THREE.Object3D): boolean {
 
 /**
  * Returns true for selection/wireframe overlay children.
+ *
  * @param object The child object to test.
  * @returns True if the object is an editor overlay.
  */
@@ -156,9 +166,11 @@ function isEditorOverlayChild(object: THREE.Object3D): boolean {
 }
 
 /**
- * Returns true for objects that are editor internals, not scene hierarchy content.
- * Used by the outliner and hierarchy tools to hide decorative edges, selection
- * outlines, wireframe overlays, and similar helpers parented under meshes.
+ * Returns true for objects that are editor internals, not scene hierarchy
+ * content. Used by the outliner and hierarchy tools to hide decorative edges,
+ * selection outlines, wireframe overlays, and similar helpers parented under
+ * meshes.
+ *
  * @param object The object to test.
  * @returns True when the object should be hidden from the content outliner.
  */
@@ -175,8 +187,9 @@ export function isEditorHelperObject(object: THREE.Object3D): boolean {
 }
 
 /**
- * Disposes geometry and material of a line object.
- * Shared brush edge materials are left alive for reuse.
+ * Disposes geometry and material of a line object. Shared brush edge materials
+ * are left alive for reuse.
+ *
  * @param object The line object to dispose.
  */
 function disposeLineObject(object: THREE.Object3D): void {
@@ -193,6 +206,7 @@ function disposeLineObject(object: THREE.Object3D): void {
 
 /**
  * Disposes a line material unless it is a shared brush edge material.
+ *
  * @param material Material to dispose.
  */
 function disposeOwnedLineMaterial(material: THREE.Material): void {

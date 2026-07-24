@@ -1,9 +1,8 @@
-/**
- * Shared VMF solid snippets with correct Hammer outward plane winding.
- */
+/** Shared VMF solid snippets with correct Hammer outward plane winding. */
 
 /**
  * Builds a VMF document with one axis-aligned world solid.
+ *
  * @param min Inclusive minimum corner in Source inches (Z-up).
  * @param max Inclusive maximum corner in Source inches (Z-up).
  * @param material Material applied to every side.
@@ -34,6 +33,7 @@ ${sides}
 
 /**
  * Builds six side blocks for an axis-aligned Source box.
+ *
  * @param min Inclusive minimum corner.
  * @param max Inclusive maximum corner.
  * @param material Material name for every side.

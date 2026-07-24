@@ -1,5 +1,6 @@
 /**
  * Disposes optional subsystems that own DOM listeners, GPU helpers, or stacks.
+ *
  * @param parts Objects with optional dispose methods.
  */
 export function disposeLayoutOwnedResources(parts: {

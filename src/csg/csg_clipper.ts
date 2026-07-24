@@ -1,22 +1,19 @@
 import * as THREE from 'three';
 import { CsgPolygon } from './csg_polygon.js';
 
-/**
- * Classification of a vertex relative to a clipping plane.
- */
+/** Classification of a vertex relative to a clipping plane. */
 const COPLANAR = 0;
 const FRONT = 1;
 const BACK = 2;
 const SPANNING = 3;
 
-/**
- * Clips polygons against planes for CSG boolean operations.
- */
+/** Clips polygons against planes for CSG boolean operations. */
 export class CsgClipper {
   private epsilon: number;
 
   /**
    * Creates a clipper with a coplanar epsilon tolerance.
+   *
    * @param epsilon Distance treated as on-plane.
    */
   constructor(epsilon: number = 1e-5) {
@@ -25,16 +22,13 @@ export class CsgClipper {
 
   /**
    * Clips a list of polygons by a clipping plane, keeping the front side.
+   *
    * @param polygons The polygons to clip.
    * @param planeNormal The clipping plane normal.
    * @param planeConstant The clipping plane constant.
    * @returns Polygons remaining on the front side of the plane.
    */
-  clipPolygonsToFront(
-    polygons: CsgPolygon[],
-    planeNormal: THREE.Vector3,
-    planeConstant: number,
-  ): CsgPolygon[] {
+  clipPolygonsToFront(polygons: CsgPolygon[], planeNormal: THREE.Vector3, planeConstant: number): CsgPolygon[] {
     const result: CsgPolygon[] = [];
     polygons.forEach((polygon) => {
       this.clipPolygonToFront(polygon, planeNormal, planeConstant, result);
@@ -44,6 +38,7 @@ export class CsgClipper {
 
   /**
    * Clips a single polygon, appending front fragments into the result list.
+   *
    * @param polygon The polygon to clip.
    * @param planeNormal The clipping plane normal.
    * @param planeConstant The clipping plane constant.
@@ -73,16 +68,13 @@ export class CsgClipper {
 
   /**
    * Classifies each vertex relative to a plane.
+   *
    * @param vertices The vertices to classify.
    * @param planeNormal The plane normal.
    * @param planeConstant The plane constant.
    * @returns Per-vertex classification codes.
    */
-  private classifyVertices(
-    vertices: THREE.Vector3[],
-    planeNormal: THREE.Vector3,
-    planeConstant: number,
-  ): number[] {
+  private classifyVertices(vertices: THREE.Vector3[], planeNormal: THREE.Vector3, planeConstant: number): number[] {
     return vertices.map((vertex) => {
       const distance = planeNormal.dot(vertex) - planeConstant;
       if (distance > this.epsilon) return FRONT;
@@ -93,6 +85,7 @@ export class CsgClipper {
 
   /**
    * Combines vertex classifications into a polygon classification.
+   *
    * @param types Per-vertex classification codes.
    * @returns Combined polygon classification.
    */
@@ -106,6 +99,7 @@ export class CsgClipper {
 
   /**
    * Builds the front-side vertices for a spanning polygon.
+   *
    * @param vertices Original polygon vertices.
    * @param types Per-vertex classifications.
    * @param planeNormal Clipping plane normal.
@@ -138,6 +132,7 @@ export class CsgClipper {
 
   /**
    * Intersects an edge with a plane.
+   *
    * @param start Edge start vertex.
    * @param end Edge end vertex.
    * @param planeNormal Plane normal.

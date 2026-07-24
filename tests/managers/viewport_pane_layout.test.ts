@@ -3,6 +3,7 @@ import { ViewportPaneLayout } from '../../src/managers/viewport_pane_layout.js';
 
 /**
  * Creates independently named viewport containers in the production ordering.
+ *
  * @returns Viewport area and its top, front, side, and perspective containers.
  */
 function createViewportLayoutFixture(): { area: HTMLElement; viewports: HTMLElement[] } {

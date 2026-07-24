@@ -47,22 +47,13 @@ describe('OutlinerTree', () => {
   it('should hide decorative edges and selection outlines under meshes', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'CubeWithHelpers';
-    const decorative = new THREE.LineSegments(
-      new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial(),
-    );
+    const decorative = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial());
     decorative.name = 'DecorativeEdge';
     decorative.userData.isDecorativeEdge = true;
-    const outline = new THREE.LineSegments(
-      new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial(),
-    );
+    const outline = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial());
     outline.name = 'SelectionOutline';
     outline.userData.isSelectionHighlight = true;
-    const realChild = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 0.5, 0.5),
-      new THREE.MeshBasicMaterial(),
-    );
+    const realChild = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial());
     realChild.name = 'RealChild';
     mesh.add(decorative);
     mesh.add(outline);
@@ -81,10 +72,7 @@ describe('OutlinerTree', () => {
   it('should not show expand chevron when mesh only has editor helper children', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'LeafCube';
-    const decorative = new THREE.LineSegments(
-      new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial(),
-    );
+    const decorative = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial());
     decorative.userData.isDecorativeEdge = true;
     mesh.add(decorative);
     root.add(mesh);
@@ -191,10 +179,7 @@ describe('OutlinerTree', () => {
   it('should expand and collapse children', () => {
     const childGroup = new THREE.Group();
     childGroup.name = 'ChildGroup';
-    const grandchild = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial(),
-    );
+    const grandchild = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     grandchild.name = 'Grandchild';
     childGroup.add(grandchild);
     root.add(childGroup);

@@ -12,14 +12,8 @@ import { computeRegionWorldNormal } from '../../src/texture/planar_uv_projector.
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
-import {
-  setTexturePaintStateForTests,
-  TexturePaintState,
-} from '../../src/texture/texture_paint_state.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/texture_paint_state.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 
 describe('reset UV preserves texture assignment', () => {
   beforeEach(() => {
@@ -75,10 +69,7 @@ describe('reset UV preserves texture assignment', () => {
 
   it('should restore cylinder side unwrap on full-mesh UV reset', () => {
     const segments = 8;
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(1, 1, 2, segments),
-      createContentMaterial(0x888888),
-    );
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 2, segments), createContentMaterial(0x888888));
     mesh.position.set(0, 1, 0);
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);

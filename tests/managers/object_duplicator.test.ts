@@ -49,18 +49,14 @@ describe('ObjectDuplicator', () => {
 
   it('should not copy selection highlight overlays onto the clone', () => {
     const highlightEdges = new THREE.EdgesGeometry(originalGeometry);
-    const highlight = new THREE.LineSegments(
-      highlightEdges,
-      new THREE.LineBasicMaterial({ color: 0xe86a17 }),
-    );
+    const highlight = new THREE.LineSegments(highlightEdges, new THREE.LineBasicMaterial({ color: 0xe86a17 }));
     highlight.userData.isSelectionHighlight = true;
     originalMesh.add(highlight);
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
     const clone = clones[0];
     const highlightCopies = clone.children.filter(
-      (child) =>
-        child instanceof THREE.LineSegments && child.userData.isSelectionHighlight === true,
+      (child) => child instanceof THREE.LineSegments && child.userData.isSelectionHighlight === true,
     );
     expect(highlightCopies.length).toBe(0);
     const decorativeLines = clone.children.filter((child) => child instanceof THREE.LineSegments);

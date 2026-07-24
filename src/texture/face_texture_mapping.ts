@@ -1,14 +1,14 @@
 import { DEFAULT_CHECKER_TEXTURE_ID } from './texture_id.js';
 
 /**
- * World-axis alignment presets for planar face texture projection.
- * Matches classic CSG / brush editor surface tools.
+ * World-axis alignment presets for planar face texture projection. Matches
+ * classic CSG / brush editor surface tools.
  */
 export type FaceTextureAlign = 'auto' | 'floor' | 'ceiling' | 'wall' | 'face';
 
 /**
- * Optional explicit world-space UV axis (Source/VMF style).
- * When both custom axes are set, they override align/rotation basis.
+ * Optional explicit world-space UV axis (Source/VMF style). When both custom
+ * axes are set, they override align/rotation basis.
  */
 export interface FaceTextureAxis {
   x: number;
@@ -17,9 +17,9 @@ export interface FaceTextureAxis {
 }
 
 /**
- * Authored texture parameters for one coplanar face region.
- * UVs are baked from these via world-space planar projection.
- * textureId is the durable surface material identity for paint and export.
+ * Authored texture parameters for one coplanar face region. UVs are baked from
+ * these via world-space planar projection. textureId is the durable surface
+ * material identity for paint and export.
  */
 export interface FaceTextureMapping {
   /** Projection basis preset. */
@@ -44,15 +44,11 @@ export interface FaceTextureMapping {
    * for Source-accurate VMF projections that need non-fitted axes.
    */
   customUAxis?: FaceTextureAxis;
-  /**
-   * Optional world-space V direction (unit preferred). Used with customUAxis.
-   */
+  /** Optional world-space V direction (unit preferred). Used with customUAxis. */
   customVAxis?: FaceTextureAxis;
 }
 
-/**
- * Stored mapping for a coplanar set of triangles on a mesh.
- */
+/** Stored mapping for a coplanar set of triangles on a mesh. */
 export interface FaceTextureMapEntry {
   /** Triangle indices that share this mapping. */
   triangleIndices: number[];
@@ -60,17 +56,16 @@ export interface FaceTextureMapEntry {
   mapping: FaceTextureMapping;
 }
 
-/** userData key for face texture map tables on content meshes. */
+/** UserData key for face texture map tables on content meshes. */
 export const FACE_TEXTURE_MAPS_USERDATA_KEY = 'faceTextureMaps';
 
 /**
  * Creates default face texture mapping (1 m tile, auto projection, checker).
+ *
  * @param textureId Optional texture id (defaults to built-in checker).
  * @returns A new default mapping object.
  */
-export function createDefaultFaceTextureMapping(
-  textureId: string = DEFAULT_CHECKER_TEXTURE_ID,
-): FaceTextureMapping {
+export function createDefaultFaceTextureMapping(textureId: string = DEFAULT_CHECKER_TEXTURE_ID): FaceTextureMapping {
   return {
     align: 'auto',
     scaleU: 1,
@@ -84,6 +79,7 @@ export function createDefaultFaceTextureMapping(
 
 /**
  * Deep-clones a face texture mapping.
+ *
  * @param mapping Source mapping.
  * @returns Independent copy.
  */
@@ -108,6 +104,7 @@ export function cloneFaceTextureMapping(mapping: FaceTextureMapping): FaceTextur
 
 /**
  * Clones a face texture map entry including triangle index list.
+ *
  * @param entry Source entry.
  * @returns Independent copy.
  */

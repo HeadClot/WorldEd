@@ -27,12 +27,11 @@ export interface ElectrobunUpdaterRpcClient {
 
 /**
  * Creates the renderer bridge backed by Electrobun's native updater RPC.
+ *
  * @param rpc Typed RPC client connected to the Bun process.
  * @returns Standalone updater bridge for the renderer.
  */
-export function createElectrobunUpdaterBridge(
-  rpc: ElectrobunUpdaterRpcClient,
-): StandaloneUpdaterBridge {
+export function createElectrobunUpdaterBridge(rpc: ElectrobunUpdaterRpcClient): StandaloneUpdaterBridge {
   return {
     kind: 'electrobun',
     platform: detectStandalonePlatform(),

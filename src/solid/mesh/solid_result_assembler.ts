@@ -2,9 +2,7 @@ import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_tr
 import { SolidBrushMeshChunk } from './solid_brush_mesh_chunk.js';
 import { SolidMeshChunkCache } from './solid_mesh_chunk_cache.js';
 
-/**
- * Assembled non-indexed mesh buffers ready to upload to a result mesh.
- */
+/** Assembled non-indexed mesh buffers ready to upload to a result mesh. */
 export interface SolidAssembledMesh {
   /** Concatenated positions. */
   positions: Float32Array;
@@ -21,20 +19,18 @@ export interface SolidAssembledMesh {
 }
 
 /**
- * Concatenates per-brush mesh chunks into final result buffers.
- * Only copies typed arrays; does not retriangulate or rebake UVs.
+ * Concatenates per-brush mesh chunks into final result buffers. Only copies
+ * typed arrays; does not retriangulate or rebake UVs.
  */
 export class SolidResultAssembler {
   /**
    * Assembles cached chunks in brush tree order into one mesh payload.
+   *
    * @param brushIds Visible brush ids in evaluation order.
    * @param chunkCache Per-brush chunk cache.
    * @returns Assembled mesh buffers, or empty payload when nothing is present.
    */
-  static assemble(
-    brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache,
-  ): SolidAssembledMesh {
+  static assemble(brushIds: readonly string[], chunkCache: SolidMeshChunkCache): SolidAssembledMesh {
     const chunks = this.collectChunks(brushIds, chunkCache);
     if (chunks.length === 0) {
       return this.emptyMesh();
@@ -67,14 +63,12 @@ export class SolidResultAssembler {
 
   /**
    * Collects chunks for the given brush order, skipping missing empties.
+   *
    * @param brushIds Brush ids.
    * @param chunkCache Chunk cache.
    * @returns Present chunks in order.
    */
-  private static collectChunks(
-    brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache,
-  ): SolidBrushMeshChunk[] {
+  private static collectChunks(brushIds: readonly string[], chunkCache: SolidMeshChunkCache): SolidBrushMeshChunk[] {
     const chunks: SolidBrushMeshChunk[] = [];
     for (const brushId of brushIds) {
       const chunk = chunkCache.get(brushId);
@@ -87,6 +81,7 @@ export class SolidResultAssembler {
 
   /**
    * Sums vertex and triangle counts across chunks.
+   *
    * @param chunks Chunk list.
    * @returns Totals.
    */
@@ -105,6 +100,7 @@ export class SolidResultAssembler {
 
   /**
    * Appends chunk regions and sources with global triangle index offsets.
+   *
    * @param chunk Source chunk.
    * @param triangleOffset Global triangle base index.
    * @param surfaceRegions Output regions.
@@ -131,6 +127,7 @@ export class SolidResultAssembler {
 
   /**
    * Returns an empty assembled mesh payload.
+   *
    * @returns Empty buffers.
    */
   private static emptyMesh(): SolidAssembledMesh {

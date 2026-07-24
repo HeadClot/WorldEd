@@ -81,44 +81,28 @@ describe('TransformConstraint.computeRotationAngle', () => {
   it('should return PI/2 for perpendicular directions in XY plane', () => {
     const initial = new THREE.Vector3(1, 0, 0);
     const current = new THREE.Vector3(0, 1, 0);
-    const result = TransformConstraint.computeRotationAngle(
-      initial,
-      current,
-      new THREE.Vector3(0, 0, 1),
-    );
+    const result = TransformConstraint.computeRotationAngle(initial, current, new THREE.Vector3(0, 0, 1));
     expect(result).toBeCloseTo(Math.PI / 2);
   });
 
   it('should return negative angle for clockwise rotation', () => {
     const initial = new THREE.Vector3(0, 1, 0);
     const current = new THREE.Vector3(1, 0, 0);
-    const result = TransformConstraint.computeRotationAngle(
-      initial,
-      current,
-      new THREE.Vector3(0, 0, 1),
-    );
+    const result = TransformConstraint.computeRotationAngle(initial, current, new THREE.Vector3(0, 0, 1));
     expect(result).toBeCloseTo(-Math.PI / 2);
   });
 
   it('should handle zero vector gracefully', () => {
     const initial = new THREE.Vector3(0, 0, 0);
     const current = new THREE.Vector3(1, 0, 0);
-    const result = TransformConstraint.computeRotationAngle(
-      initial,
-      current,
-      new THREE.Vector3(0, 0, 1),
-    );
+    const result = TransformConstraint.computeRotationAngle(initial, current, new THREE.Vector3(0, 0, 1));
     expect(result).toBe(0);
   });
 
   it('should return PI for 180 degree rotation in plane', () => {
     const initial = new THREE.Vector3(1, 0, 0);
     const current = new THREE.Vector3(-1, 0.0001, 0);
-    const result = TransformConstraint.computeRotationAngle(
-      initial,
-      current,
-      new THREE.Vector3(0, 0, 1),
-    );
+    const result = TransformConstraint.computeRotationAngle(initial, current, new THREE.Vector3(0, 0, 1));
     expect(result).toBeCloseTo(Math.PI, 1);
   });
 });

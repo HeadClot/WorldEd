@@ -65,10 +65,7 @@ describe('TextureBrowser', () => {
   });
 
   it('should render thumbs as background-image squares with names below', () => {
-    const entries = [
-      createEntry('brick.png', 'brick', 'blob:brick'),
-      createEntry('floor.png', 'floor', 'blob:floor'),
-    ];
+    const entries = [createEntry('brick.png', 'brick', 'blob:brick'), createEntry('floor.png', 'floor', 'blob:floor')];
     browser.setEntries(entries, 'brick.png', 'MyTextures');
     browser.show();
     expect(host.textContent).toContain('Texture Browser');
@@ -92,11 +89,7 @@ describe('TextureBrowser', () => {
   });
 
   it('should highlight the selected tile with aria-selected', () => {
-    browser.setEntries(
-      [createEntry('a.png', 'a', 'blob:a'), createEntry('b.png', 'b', 'blob:b')],
-      'a.png',
-      'Pack',
-    );
+    browser.setEntries([createEntry('a.png', 'a', 'blob:a'), createEntry('b.png', 'b', 'blob:b')], 'a.png', 'Pack');
     browser.setSelectedId('b.png');
     const selected = host.querySelector('[aria-label="b.png"]') as HTMLElement;
     const unselected = host.querySelector('[aria-label="a.png"]') as HTMLElement;
@@ -140,9 +133,7 @@ describe('TextureBrowser', () => {
     const grid = browser.getGridElement();
     expect(grid.classList.contains(TEXTURE_BROWSER_GRID_CLASS)).toBe(true);
     const sheet = document.getElementById('tb-browser-stylesheet');
-    expect(sheet?.textContent).toContain(
-      `repeat(auto-fill, minmax(${TEXTURE_BROWSER_MIN_TRACK_PX}px, 1fr))`,
-    );
+    expect(sheet?.textContent).toContain(`repeat(auto-fill, minmax(${TEXTURE_BROWSER_MIN_TRACK_PX}px, 1fr))`);
   });
 
   it('should expose a resize handle and enforce minimum panel size', () => {
@@ -219,16 +210,13 @@ describe('TextureBrowser', () => {
 
 /**
  * Creates a lightweight entry for UI tests (no real object URL).
+ *
  * @param id Entry id / relative path.
  * @param displayName Label under the thumbnail.
  * @param previewObjectUrl Fake blob URL.
  * @returns Texture browser entry.
  */
-function createEntry(
-  id: string,
-  displayName: string,
-  previewObjectUrl: string,
-): TextureBrowserEntry {
+function createEntry(id: string, displayName: string, previewObjectUrl: string): TextureBrowserEntry {
   const file = new File(['x'], `${displayName}.png`, { type: 'image/png' });
   return {
     id,

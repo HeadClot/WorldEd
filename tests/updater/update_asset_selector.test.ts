@@ -11,17 +11,11 @@ describe('standalone update asset selection', () => {
       'AiWorldEd-sha256.txt',
       'AiWorldEd-source.zip',
     );
-    expect(selectStandaloneUpdateAsset(assets, 'windows')?.name).toBe(
-      'AiWorldEd-windows-installer.exe',
-    );
+    expect(selectStandaloneUpdateAsset(assets, 'windows')?.name).toBe('AiWorldEd-windows-installer.exe');
   });
 
   it('selects native macOS and Linux packages only for their platform', () => {
-    const assets = createAssets(
-      'AiWorldEd-macos.dmg',
-      'AiWorldEd-linux.AppImage',
-      'AiWorldEd-windows.exe',
-    );
+    const assets = createAssets('AiWorldEd-macos.dmg', 'AiWorldEd-linux.AppImage', 'AiWorldEd-windows.exe');
     expect(selectStandaloneUpdateAsset(assets, 'macos')?.name).toBe('AiWorldEd-macos.dmg');
     expect(selectStandaloneUpdateAsset(assets, 'linux')?.name).toBe('AiWorldEd-linux.AppImage');
   });
@@ -34,6 +28,7 @@ describe('standalone update asset selection', () => {
 
 /**
  * Creates independent release asset records for each selection scenario.
+ *
  * @param names Asset names to materialize.
  * @returns Release asset records.
  */

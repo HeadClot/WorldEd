@@ -143,6 +143,7 @@ world
 
 /**
  * Minimal valid VMF with one axis-aligned world solid.
+ *
  * @returns VMF text.
  */
 function buildSimpleBoxVmf(): string {
@@ -228,6 +229,7 @@ world
 
 /**
  * Creates a test mesh with box geometry.
+ *
  * @param name The mesh name.
  * @returns The created mesh.
  */

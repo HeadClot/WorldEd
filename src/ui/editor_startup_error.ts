@@ -2,6 +2,7 @@ import { Theme } from '../theme.js';
 
 /**
  * Displays a visible startup failure message over the editor shell.
+ *
  * @param container Root editor container.
  * @param error Failure thrown during editor startup.
  */
@@ -13,6 +14,7 @@ export function showEditorStartupError(container: HTMLElement, error: unknown): 
 
 /**
  * Converts an unknown startup failure into a useful message.
+ *
  * @param error Failure thrown during editor startup.
  * @returns Human-readable failure text.
  */
@@ -28,6 +30,7 @@ export function getEditorStartupErrorMessage(error: unknown): string {
 
 /**
  * Builds the startup failure overlay shown to the user.
+ *
  * @param error Failure thrown during editor startup.
  * @returns Configured startup error element.
  */
@@ -43,6 +46,7 @@ function createStartupErrorOverlay(error: unknown): HTMLElement {
 
 /**
  * Applies layout and color styles to the startup failure overlay.
+ *
  * @param overlay Startup failure overlay element.
  */
 function applyOverlayStyles(overlay: HTMLElement): void {
@@ -63,6 +67,7 @@ function applyOverlayStyles(overlay: HTMLElement): void {
 
 /**
  * Creates the startup failure title.
+ *
  * @returns Title element.
  */
 function createStartupErrorTitle(): HTMLElement {
@@ -75,6 +80,7 @@ function createStartupErrorTitle(): HTMLElement {
 
 /**
  * Creates the desktop troubleshooting description.
+ *
  * @returns Description element.
  */
 function createStartupErrorDescription(): HTMLElement {
@@ -88,6 +94,7 @@ function createStartupErrorDescription(): HTMLElement {
 
 /**
  * Creates the technical startup failure details.
+ *
  * @param error Failure thrown during editor startup.
  * @returns Details element.
  */

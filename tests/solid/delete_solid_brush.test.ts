@@ -4,9 +4,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { DeleteSolidBrushesCommand } from '../../src/commands/delete_solid_brushes_command.js';
 
-/**
- * Deleting a brush must drop it from the solid model CSG list and rebuild.
- */
+/** Deleting a brush must drop it from the solid model CSG list and rebuild. */
 describe('Delete solid brushes', () => {
   it('removes the brush from the solid model and updates the result mesh', () => {
     const model = new SolidModel('DelSolid');

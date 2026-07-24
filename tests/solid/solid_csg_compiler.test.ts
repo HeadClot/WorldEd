@@ -8,7 +8,9 @@ import { BrushMembership } from '../../src/solid/algorithm/brush_membership.js';
 import { SurfaceTriangulator } from '../../src/solid/algorithm/surface_triangulator.js';
 
 /**
- * Builds a solid brush instance from a box with optional transform and operation.
+ * Builds a solid brush instance from a box with optional transform and
+ * operation.
+ *
  * @param id Brush id.
  * @param size Box edge length.
  * @param operation CSG operation.
@@ -28,7 +30,9 @@ function makeBoxBrush(
 }
 
 /**
- * Returns true when a point is inside the compiled solid via membership evaluation.
+ * Returns true when a point is inside the compiled solid via membership
+ * evaluation.
+ *
  * @param point Sample point.
  * @param brushes Brush instances in tree order.
  * @returns Membership result.
@@ -49,9 +53,7 @@ function isInsideSolid(point: THREE.Vector3, brushes: SolidBrushInstance[]): boo
   return inside;
 }
 
-/**
- * Unit tests for Sander-style solid CSG compilation.
- */
+/** Unit tests for Sander-style solid CSG compilation. */
 describe('SolidCsgCompiler', () => {
   it('compiles a single additive box into a closed surface with volume', () => {
     const size = 2;
@@ -67,12 +69,7 @@ describe('SolidCsgCompiler', () => {
 
   it('subtracts a smaller box from a larger box creating a cavity', () => {
     const outer = makeBoxBrush('outer', 4, SolidOperation.Additive);
-    const cutter = makeBoxBrush(
-      'cutter',
-      2,
-      SolidOperation.Subtractive,
-      new THREE.Vector3(0, 0, 0),
-    );
+    const cutter = makeBoxBrush('cutter', 2, SolidOperation.Subtractive, new THREE.Vector3(0, 0, 0));
     const brushes = [outer, cutter];
     const compiler = new SolidCsgCompiler();
     const polygons = compiler.compile(brushes);
@@ -112,12 +109,7 @@ describe('SolidCsgCompiler', () => {
     const size = 2;
     const centerOffset = size * 0.5;
     const left = makeBoxBrush('left', size, SolidOperation.Additive, new THREE.Vector3(0, 0, 0));
-    const right = makeBoxBrush(
-      'right',
-      size,
-      SolidOperation.Additive,
-      new THREE.Vector3(centerOffset, 0, 0),
-    );
+    const right = makeBoxBrush('right', size, SolidOperation.Additive, new THREE.Vector3(centerOffset, 0, 0));
     left.surfaceTextureId = 'folder/left.png';
     right.surfaceTextureId = 'folder/right.png';
     const brushes = [left, right];
@@ -126,14 +118,11 @@ describe('SolidCsgCompiler', () => {
     const topNormal = new THREE.Vector3(0, 1, 0);
     const topPolygons = polygons.filter((polygon) => polygon.normal.dot(topNormal) > 0.99);
     const samplePoint = new THREE.Vector3(centerOffset * 0.5, size * 0.5, 0);
-    const coveringTops = topPolygons.filter((polygon) =>
-      polygonCoversPointOnPlane(polygon.vertices, samplePoint),
-    );
+    const coveringTops = topPolygons.filter((polygon) => polygonCoversPointOnPlane(polygon.vertices, samplePoint));
     const coverageSummary = coveringTops.map((polygon) => ({
       brushId: polygon.brushId,
       vertexCount: polygon.vertices.length,
-      centerX:
-        polygon.vertices.reduce((sum, vertex) => sum + vertex.x, 0) / polygon.vertices.length,
+      centerX: polygon.vertices.reduce((sum, vertex) => sum + vertex.x, 0) / polygon.vertices.length,
     }));
     expect(coverageSummary, JSON.stringify(coverageSummary)).toHaveLength(1);
     expect(coveringTops[0].brushId).toBe('right');
@@ -144,6 +133,7 @@ describe('SolidCsgCompiler', () => {
 
 /**
  * Returns true when a coplanar polygon roughly covers a point (2D XY for top).
+ *
  * @param vertices Polygon vertices.
  * @param point Point on the polygon plane.
  * @returns True when the point lies inside the polygon AABB in XZ.
@@ -160,7 +150,5 @@ function polygonCoversPointOnPlane(vertices: THREE.Vector3[], point: THREE.Vecto
     maxZ = Math.max(maxZ, vertex.z);
   }
   const pad = 1e-4;
-  return (
-    point.x >= minX - pad && point.x <= maxX + pad && point.z >= minZ - pad && point.z <= maxZ + pad
-  );
+  return point.x >= minX - pad && point.x <= maxX + pad && point.z >= minZ - pad && point.z <= maxZ + pad;
 }

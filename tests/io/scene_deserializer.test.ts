@@ -5,14 +5,8 @@ import { SceneSerializer } from '../../src/io/scene_serializer.js';
 import { SceneJSON, ObjectEntry } from '../../src/io/io_types.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
-import {
-  setTexturePaintStateForTests,
-  TexturePaintState,
-} from '../../src/texture/texture_paint_state.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/texture_paint_state.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 import { CLIP_PREVIEW_USERDATA_KEY } from '../../src/managers/clip_plane_preview.js';
 import { getGeometrySource, resolveGeometrySourceType } from '../../src/texture/geometry_source.js';
 
@@ -205,10 +199,7 @@ describe('SceneDeserializer', () => {
 
   it('should round-trip serialize then deserialize preserving scene', () => {
     const originalGroup = new THREE.Group();
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 3, 4),
-      new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 4), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
     mesh.name = 'RoundTripCube';
     mesh.position.set(10, 20, 30);
     mesh.scale.set(0.5, 1.5, 2.5);
@@ -274,10 +265,7 @@ describe('SceneDeserializer', () => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.computeVertexNormals();
-    const originalMesh = new THREE.Mesh(
-      geometry,
-      new THREE.MeshStandardMaterial({ color: 0xff8800 }),
-    );
+    const originalMesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0xff8800 }));
     originalMesh.name = 'CsgMesh';
     originalMesh.position.set(3, 4, 5);
     const sourceGroup = new THREE.Group();
@@ -292,9 +280,7 @@ describe('SceneDeserializer', () => {
     expect(restored.name).toBe('CsgMesh');
     expect(restored.position.x).toBe(3);
     expect(restored.geometry).not.toBeInstanceOf(THREE.BoxGeometry);
-    const restoredPositions = Array.from(
-      restored.geometry.getAttribute('position').array as ArrayLike<number>,
-    );
+    const restoredPositions = Array.from(restored.geometry.getAttribute('position').array as ArrayLike<number>);
     expect(restoredPositions).toEqual(positions);
     const mat = restored.material as THREE.MeshStandardMaterial;
     expect(mat.color.getHex()).toBe(0xff8800);
@@ -326,16 +312,14 @@ describe('SceneDeserializer', () => {
 
 /**
  * Creates a clip plane preview helper group as attached under the world root.
+ *
  * @returns Preview root with a marker mesh child.
  */
 function createClipPreviewHelper(): THREE.Group {
   const previewRoot = new THREE.Group();
   previewRoot.name = 'clip_plane_preview';
   previewRoot.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
-  const marker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.05, 8, 8),
-    new THREE.MeshBasicMaterial({ color: 0xffff00 }),
-  );
+  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
   marker.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
   previewRoot.add(marker);
   return previewRoot;
@@ -343,6 +327,7 @@ function createClipPreviewHelper(): THREE.Group {
 
 /**
  * Creates a scene JSON with the given entries.
+ *
  * @param entries The object entries.
  * @returns A SceneJSON object.
  */
@@ -352,6 +337,7 @@ function createSceneJSON(entries: ObjectEntry[]): SceneJSON {
 
 /**
  * Creates a box object entry.
+ *
  * @param uuid The UUID.
  * @param name The name.
  * @param width Box width.
@@ -359,13 +345,7 @@ function createSceneJSON(entries: ObjectEntry[]): SceneJSON {
  * @param depth Box depth.
  * @returns A box ObjectEntry.
  */
-function createBoxEntry(
-  uuid: string,
-  name: string,
-  width: number,
-  height: number,
-  depth: number,
-): ObjectEntry {
+function createBoxEntry(uuid: string, name: string, width: number, height: number, depth: number): ObjectEntry {
   return {
     uuid: uuid,
     name: name,
@@ -383,6 +363,7 @@ function createBoxEntry(
 
 /**
  * Creates a sphere object entry.
+ *
  * @param uuid The UUID.
  * @param name The name.
  * @param radius The sphere radius.
@@ -406,6 +387,7 @@ function createSphereEntry(uuid: string, name: string, radius: number): ObjectEn
 
 /**
  * Creates a cylinder object entry.
+ *
  * @param uuid The UUID.
  * @param name The name.
  * @param radiusTop Top radius.
@@ -437,6 +419,7 @@ function createCylinderEntry(
 
 /**
  * Creates a plane object entry.
+ *
  * @param uuid The UUID.
  * @param name The name.
  * @param width Plane width.
@@ -461,6 +444,7 @@ function createPlaneEntry(uuid: string, name: string, width: number, height: num
 
 /**
  * Creates a group object entry.
+ *
  * @param uuid The UUID.
  * @param name The name.
  * @returns A group ObjectEntry.

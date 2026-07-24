@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { computeTriangleNormal } from './triangle_geometry_utils.js';
 import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
 
-/**
- * A single face selection entry referencing a mesh and a face index.
- */
+/** A single face selection entry referencing a mesh and a face index. */
 export interface FaceSelection {
   mesh: THREE.Mesh;
   faceIndex: number;
@@ -12,23 +10,22 @@ export interface FaceSelection {
 
 /**
  * Callback invoked when the face selection set changes.
+ *
  * @param selected The current set of face selections.
  */
 export type FaceSelectionChangedCallback = (selected: FaceSelection[]) => void;
 
 /**
- * Manages selection of polygonal faces on meshes.
- * Ordinary meshes expand to the edge-connected coplanar polygon.
- * Solid CSG results expand only within one brush face (brushId + surfaceIndex)
- * so adjacent walls and carpet/detail brushes stay independently selectable.
+ * Manages selection of polygonal faces on meshes. Ordinary meshes expand to the
+ * edge-connected coplanar polygon. Solid CSG results expand only within one
+ * brush face (brushId + surfaceIndex) so adjacent walls and carpet/detail
+ * brushes stay independently selectable.
  */
 export class FaceSelectionManager {
   private selectedFaces: FaceSelection[];
   private changeCallback: FaceSelectionChangedCallback | null;
 
-  /**
-   * Creates a new face selection manager with an empty selection.
-   */
+  /** Creates a new face selection manager with an empty selection. */
   constructor() {
     this.selectedFaces = [];
     this.changeCallback = null;
@@ -36,17 +33,13 @@ export class FaceSelectionManager {
 
   /**
    * Selects a face on a mesh. Expands to a full face unit by default.
+   *
    * @param mesh The mesh containing the face.
    * @param faceIndex The triangle index of the face to select.
    * @param addToSelection Whether to add to existing selection or replace it.
    * @param expandFace When true, expands to the full selectable face unit.
    */
-  selectFace(
-    mesh: THREE.Mesh,
-    faceIndex: number,
-    addToSelection: boolean,
-    expandFace: boolean = true,
-  ): void {
+  selectFace(mesh: THREE.Mesh, faceIndex: number, addToSelection: boolean, expandFace: boolean = true): void {
     if (!addToSelection) {
       this.selectedFaces = [];
     }
@@ -62,9 +55,7 @@ export class FaceSelectionManager {
     }
   }
 
-  /**
-   * Clears all selected faces.
-   */
+  /** Clears all selected faces. */
   deselectAll(): void {
     if (this.selectedFaces.length === 0) return;
     this.selectedFaces = [];
@@ -73,14 +64,13 @@ export class FaceSelectionManager {
 
   /**
    * Removes a specific face from the selection.
+   *
    * @param mesh The mesh containing the face.
    * @param faceIndex The triangle index of the face to remove.
    */
   removeFace(mesh: THREE.Mesh, faceIndex: number): void {
     const initialLength = this.selectedFaces.length;
-    this.selectedFaces = this.selectedFaces.filter(
-      (entry) => !(entry.mesh === mesh && entry.faceIndex === faceIndex),
-    );
+    this.selectedFaces = this.selectedFaces.filter((entry) => !(entry.mesh === mesh && entry.faceIndex === faceIndex));
     if (this.selectedFaces.length !== initialLength) {
       this.notifyChange();
     }
@@ -88,6 +78,7 @@ export class FaceSelectionManager {
 
   /**
    * Returns the array of currently selected faces.
+   *
    * @returns The array of face selection entries.
    */
   getSelectedFaces(): FaceSelection[] {
@@ -96,6 +87,7 @@ export class FaceSelectionManager {
 
   /**
    * Returns the count of currently selected faces.
+   *
    * @returns The number of selected faces.
    */
   getSelectedFaceCount(): number {
@@ -104,6 +96,7 @@ export class FaceSelectionManager {
 
   /**
    * Checks whether a specific face is currently selected.
+   *
    * @param mesh The mesh to check.
    * @param faceIndex The face index to check.
    * @returns True if the face is in the selection.
@@ -113,8 +106,9 @@ export class FaceSelectionManager {
   }
 
   /**
-   * Computes the average normal vector across all selected faces.
-   * Returns a zero vector if no faces are selected.
+   * Computes the average normal vector across all selected faces. Returns a
+   * zero vector if no faces are selected.
+   *
    * @returns The average normal direction as a Vector3.
    */
   computeAverageNormal(): THREE.Vector3 {
@@ -130,23 +124,20 @@ export class FaceSelectionManager {
 
   /**
    * Registers a callback to be invoked on face selection changes.
+   *
    * @param callback The function to call when selection changes.
    */
   setSelectionChangedCallback(callback: FaceSelectionChangedCallback): void {
     this.changeCallback = callback;
   }
 
-  /**
-   * Clears all state and callbacks.
-   */
+  /** Clears all state and callbacks. */
   clear(): void {
     this.selectedFaces = [];
     this.changeCallback = null;
   }
 
-  /**
-   * Notifies the registered callback of a selection change.
-   */
+  /** Notifies the registered callback of a selection change. */
   private notifyChange(): void {
     if (this.changeCallback) {
       this.changeCallback(this.selectedFaces);

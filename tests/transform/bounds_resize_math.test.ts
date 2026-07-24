@@ -73,6 +73,7 @@ describe('bounds_resize_math', () => {
 
 /**
  * Creates identity-oriented unit half-extent bounds at the origin.
+ *
  * @returns Oriented bounds with halfExtents of 0.5 on each axis.
  */
 function createUnitBounds(): OrientedBoundsData {

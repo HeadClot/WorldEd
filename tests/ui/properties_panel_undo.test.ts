@@ -249,6 +249,7 @@ describe('PropertiesPanel Undo Integration', () => {
 
 /**
  * Creates a PropertiesPanel without a command stack attached.
+ *
  * @returns A fresh panel instance with no command stack.
  */
 function createUnboundPanel(): PropertiesPanel {

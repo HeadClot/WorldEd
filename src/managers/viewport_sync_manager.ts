@@ -3,25 +3,16 @@ import { Viewport3D } from '../viewports/viewport_3d.js';
 import { Viewport2D } from '../viewports/viewport_2d.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
 import { CLIP_PREVIEW_USERDATA_KEY } from './clip_plane_preview.js';
-import {
-  SolidBrushEdgeMaterials,
-  SOLID_BRUSH_EDGE_USERDATA_KEY,
-} from '../solid/model/solid_brush_edge_materials.js';
+import { SolidBrushEdgeMaterials, SOLID_BRUSH_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_edge_materials.js';
 import { SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 
-/**
- * UserData key used to map viewport clone meshes back to world meshes.
- */
+/** UserData key used to map viewport clone meshes back to world meshes. */
 export const EDITOR_SOURCE_UUID_KEY = 'editorSourceUuid';
 
-/**
- * UserData key marking a top-level group as a 2D viewport world clone.
- */
+/** UserData key marking a top-level group as a 2D viewport world clone. */
 export const EDITOR_VIEWPORT_CLONE_KEY = 'isEditorViewportClone';
 
-/**
- * Configuration mapping a viewport to its container element.
- */
+/** Configuration mapping a viewport to its container element. */
 export interface ViewportContainerPair {
   /** The viewport instance. */
   viewport: Viewport3D | Viewport2D;
@@ -31,8 +22,8 @@ export interface ViewportContainerPair {
 }
 
 /**
- * Manages synchronization of the world object across multiple viewports.
- * 2D viewports receive deep clones with independent geometry/materials so
+ * Manages synchronization of the world object across multiple viewports. 2D
+ * viewports receive deep clones with independent geometry/materials so
  * disposing clones never destroys the authoritative world meshes.
  */
 export class ViewportSyncManager {
@@ -44,6 +35,7 @@ export class ViewportSyncManager {
 
   /**
    * Creates a new viewport sync manager for the given viewports.
+   *
    * @param viewport2DTop The top-down 2D viewport.
    * @param viewport2DFront The front-facing 2D viewport.
    * @param viewport2DSide The side-facing 2D viewport.
@@ -64,6 +56,7 @@ export class ViewportSyncManager {
 
   /**
    * Stores the authoritative world object used for selection remapping.
+   *
    * @param worldObject The shared world group.
    */
   setWorldObject(worldObject: THREE.Group): void {
@@ -72,6 +65,7 @@ export class ViewportSyncManager {
 
   /**
    * Returns all viewport scenes managed by this sync manager.
+   *
    * @returns An array of all viewport scene references.
    */
   getAllViewportScenes(): THREE.Scene[] {
@@ -85,6 +79,7 @@ export class ViewportSyncManager {
 
   /**
    * Collects all selectable meshes from the authoritative world object only.
+   *
    * @returns An array of world meshes suitable for selection state.
    */
   getWorldSelectableMeshes(): THREE.Mesh[] {
@@ -100,6 +95,7 @@ export class ViewportSyncManager {
 
   /**
    * Collects selectable meshes across all viewport scenes, excluding helpers.
+   *
    * @returns An array of selectable meshes.
    */
   getAllViewportSelectableMeshes(): THREE.Mesh[] {
@@ -116,8 +112,10 @@ export class ViewportSyncManager {
 
   /**
    * Resolves a raycast hit mesh (possibly a 2D clone) to the world mesh.
+   *
    * @param hitMesh The mesh returned by raycasting.
-   * @returns The corresponding world mesh, or the original if already authoritative.
+   * @returns The corresponding world mesh, or the original if already
+   *   authoritative.
    */
   resolveToWorldMesh(hitMesh: THREE.Mesh): THREE.Mesh {
     const sourceUuid = hitMesh.userData[EDITOR_SOURCE_UUID_KEY];
@@ -130,6 +128,7 @@ export class ViewportSyncManager {
 
   /**
    * Finds a mesh in a hierarchy by UUID.
+   *
    * @param root The root to search.
    * @param uuid The UUID to find.
    * @returns The matching mesh, or null.
@@ -146,27 +145,27 @@ export class ViewportSyncManager {
 
   /**
    * Finds clone meshes in all 2D scenes that map to a given world mesh UUID.
+   *
    * @param worldUuid The world mesh UUID to match.
    * @returns Matching clone meshes.
    */
   findCloneMeshesForWorldUuid(worldUuid: string): THREE.Mesh[] {
     const clones: THREE.Mesh[] = [];
-    [
-      this.viewport2DTop.getScene(),
-      this.viewport2DFront.getScene(),
-      this.viewport2DSide.getScene(),
-    ].forEach((scene) => {
-      scene.traverse((child) => {
-        if (child instanceof THREE.Mesh && child.userData[EDITOR_SOURCE_UUID_KEY] === worldUuid) {
-          clones.push(child);
-        }
-      });
-    });
+    [this.viewport2DTop.getScene(), this.viewport2DFront.getScene(), this.viewport2DSide.getScene()].forEach(
+      (scene) => {
+        scene.traverse((child) => {
+          if (child instanceof THREE.Mesh && child.userData[EDITOR_SOURCE_UUID_KEY] === worldUuid) {
+            clones.push(child);
+          }
+        });
+      },
+    );
     return clones;
   }
 
   /**
    * Syncs a world object to all 2D viewport scenes by cloning and replacing.
+   *
    * @param worldObject The world object to clone into 2D viewports.
    */
   syncWorldObjectToViewports(worldObject: THREE.Group): void {
@@ -178,8 +177,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Pushes updated world mesh geometry into matching 2D viewport clones.
-   * Used for live solid CSG preview without a full scene reclone.
+   * Pushes updated world mesh geometry into matching 2D viewport clones. Used
+   * for live solid CSG preview without a full scene reclone.
+   *
    * @param worldMeshes World meshes whose geometry changed.
    */
   syncMeshGeometriesToClones(worldMeshes: THREE.Mesh[]): void {
@@ -188,11 +188,7 @@ export class ViewportSyncManager {
     for (const mesh of worldMeshes) {
       byUuid.set(mesh.uuid, mesh);
     }
-    const scenes = [
-      this.viewport2DTop.getScene(),
-      this.viewport2DFront.getScene(),
-      this.viewport2DSide.getScene(),
-    ];
+    const scenes = [this.viewport2DTop.getScene(), this.viewport2DFront.getScene(), this.viewport2DSide.getScene()];
     for (const scene of scenes) {
       this.pushGeometriesIntoSceneClones(scene, byUuid);
     }
@@ -200,13 +196,11 @@ export class ViewportSyncManager {
 
   /**
    * Updates clone mesh buffers that map to the given world mesh uuids.
+   *
    * @param scene Viewport scene containing clones.
    * @param worldByUuid World meshes keyed by uuid.
    */
-  private pushGeometriesIntoSceneClones(
-    scene: THREE.Scene,
-    worldByUuid: Map<string, THREE.Mesh>,
-  ): void {
+  private pushGeometriesIntoSceneClones(scene: THREE.Scene, worldByUuid: Map<string, THREE.Mesh>): void {
     scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
       const sourceUuid = child.userData[EDITOR_SOURCE_UUID_KEY];
@@ -220,6 +214,7 @@ export class ViewportSyncManager {
   /**
    * Updates a clone's geometry from the world mesh without a full deep clone
    * when buffer sizes match (live solid CSG path).
+   *
    * @param cloneMesh Viewport clone mesh.
    * @param worldMesh Authoritative world mesh.
    */
@@ -235,14 +230,12 @@ export class ViewportSyncManager {
   /**
    * Copies position/normal/uv arrays and groups when vertex counts match.
    * Avoids allocating full geometry clones on every live CSG frame.
+   *
    * @param destination Clone geometry to update.
    * @param source World geometry to read.
    * @returns True when an in-place copy was performed.
    */
-  private copyGeometryAttributesInPlace(
-    destination: THREE.BufferGeometry,
-    source: THREE.BufferGeometry,
-  ): boolean {
+  private copyGeometryAttributesInPlace(destination: THREE.BufferGeometry, source: THREE.BufferGeometry): boolean {
     if (!this.canCopyGeometryInPlace(destination, source)) {
       return false;
     }
@@ -261,14 +254,12 @@ export class ViewportSyncManager {
 
   /**
    * Returns whether source and destination geometries share compatible layout.
+   *
    * @param destination Clone geometry.
    * @param source World geometry.
    * @returns True when in-place attribute copy is safe.
    */
-  private canCopyGeometryInPlace(
-    destination: THREE.BufferGeometry,
-    source: THREE.BufferGeometry,
-  ): boolean {
+  private canCopyGeometryInPlace(destination: THREE.BufferGeometry, source: THREE.BufferGeometry): boolean {
     if (source.getIndex() || destination.getIndex()) return false;
     const sourcePosition = source.getAttribute('position');
     const destPosition = destination.getAttribute('position');
@@ -281,15 +272,12 @@ export class ViewportSyncManager {
   /**
    * Copies one named attribute array when both sides exist and match length.
    * Uses solid mesh update ranges when present to avoid full-buffer copies.
+   *
    * @param destination Destination geometry.
    * @param source Source geometry.
    * @param name Attribute name.
    */
-  private copyNamedAttribute(
-    destination: THREE.BufferGeometry,
-    source: THREE.BufferGeometry,
-    name: string,
-  ): void {
+  private copyNamedAttribute(destination: THREE.BufferGeometry, source: THREE.BufferGeometry, name: string): void {
     const sourceAttribute = source.getAttribute(name);
     const destAttribute = destination.getAttribute(name);
     if (!sourceAttribute || !destAttribute) return;
@@ -303,7 +291,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Copies only dirty solid-result float ranges when the world mesh exposes them.
+   * Copies only dirty solid-result float ranges when the world mesh exposes
+   * them.
+   *
    * @param destArray Destination attribute array.
    * @param sourceArray Source attribute array.
    * @param name Attribute name (position/normal/uv).
@@ -333,10 +323,7 @@ export class ViewportSyncManager {
         );
       } else {
         destArray.set(
-          sourceArray.subarray(
-            range.positionFloatStart,
-            range.positionFloatStart + range.positionFloatCount,
-          ),
+          sourceArray.subarray(range.positionFloatStart, range.positionFloatStart + range.positionFloatCount),
           range.positionFloatStart,
         );
       }
@@ -346,13 +333,11 @@ export class ViewportSyncManager {
 
   /**
    * Mirrors geometry groups used for multi-material draw ranges.
+   *
    * @param destination Destination geometry.
    * @param source Source geometry.
    */
-  private copyGeometryGroups(
-    destination: THREE.BufferGeometry,
-    source: THREE.BufferGeometry,
-  ): void {
+  private copyGeometryGroups(destination: THREE.BufferGeometry, source: THREE.BufferGeometry): void {
     destination.clearGroups();
     for (const group of source.groups) {
       destination.addGroup(group.start, group.count, group.materialIndex);
@@ -361,6 +346,7 @@ export class ViewportSyncManager {
 
   /**
    * Replaces the previous viewport clone in a scene with a fresh deep clone.
+   *
    * @param scene The 2D viewport scene.
    * @param worldObject The authoritative world group.
    */
@@ -370,8 +356,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Creates a deep clone with independent geometry and materials.
-   * Selection and wireframe overlays are stripped so each viewport owns them.
+   * Creates a deep clone with independent geometry and materials. Selection and
+   * wireframe overlays are stripped so each viewport owns them.
+   *
    * @param worldObject The world object to clone.
    * @returns A tagged clone group for a 2D viewport.
    */
@@ -387,8 +374,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Forces solid brush edge helpers visible on a 2D clone hierarchy.
-   * 3D distance culling must never hide wireframes in orthographic views.
+   * Forces solid brush edge helpers visible on a 2D clone hierarchy. 3D
+   * distance culling must never hide wireframes in orthographic views.
+   *
    * @param root Cloned hierarchy root.
    */
   private forceBrushEdgesVisible(root: THREE.Object3D): void {
@@ -400,6 +388,7 @@ export class ViewportSyncManager {
 
   /**
    * Returns whether an object is a solid brush decorative edge line.
+   *
    * @param object Candidate object.
    * @returns True for solid brush edge helpers.
    */
@@ -408,9 +397,10 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Removes occluded brush edge passes from 2D clones.
-   * Ortho views keep front outlines only, cutting line draw calls roughly in half.
-   * Runs after resource detach so dispose never frees shared 3D materials.
+   * Removes occluded brush edge passes from 2D clones. Ortho views keep front
+   * outlines only, cutting line draw calls roughly in half. Runs after resource
+   * detach so dispose never frees shared 3D materials.
+   *
    * @param root Cloned hierarchy root.
    */
   private stripOccludedBrushEdges(root: THREE.Object3D): void {
@@ -427,7 +417,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Removes selection highlights and wireframe overlays from a cloned hierarchy.
+   * Removes selection highlights and wireframe overlays from a cloned
+   * hierarchy.
+   *
    * @param root The cloned hierarchy root.
    */
   private stripEditorOverlays(root: THREE.Object3D): void {
@@ -445,6 +437,7 @@ export class ViewportSyncManager {
 
   /**
    * Returns true for selection outlines and shading wireframe overlays.
+   *
    * @param object The object to test.
    * @returns True if the object is an editor-only overlay.
    */
@@ -456,6 +449,7 @@ export class ViewportSyncManager {
 
   /**
    * Clones geometry and materials so disposing viewport clones is safe.
+   *
    * @param root The cloned hierarchy root.
    */
   private detachSharedResources(root: THREE.Object3D): void {
@@ -471,6 +465,7 @@ export class ViewportSyncManager {
 
   /**
    * Gives a mesh its own geometry and material instances.
+   *
    * @param mesh The mesh to detach.
    */
   private detachMeshResources(mesh: THREE.Mesh): void {
@@ -485,8 +480,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Gives a line object its own geometry and material instances.
-   * Brush edge clones drop distance fade and depth tests for 2D clarity.
+   * Gives a line object its own geometry and material instances. Brush edge
+   * clones drop distance fade and depth tests for 2D clarity.
+   *
    * @param line The line object to detach.
    */
   private detachLineResources(line: THREE.Line | THREE.LineSegments): void {
@@ -503,6 +499,7 @@ export class ViewportSyncManager {
 
   /**
    * Clones a line material and configures brush edges for orthographic clones.
+   *
    * @param material Source material.
    * @returns Independent material for a 2D viewport clone.
    */
@@ -513,7 +510,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Ensures solid brush edge lines always draw in 2D (no frustum/depth culling).
+   * Ensures solid brush edge lines always draw in 2D (no frustum/depth
+   * culling).
+   *
    * @param line Cloned line object in a 2D viewport scene.
    */
   private prepareBrushEdgeLineForOrtho(line: THREE.Line | THREE.LineSegments): void {
@@ -523,7 +522,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Recursively writes source UUID tags from original hierarchy onto clone hierarchy.
+   * Recursively writes source UUID tags from original hierarchy onto clone
+   * hierarchy.
+   *
    * @param original The original object.
    * @param clone The cloned counterpart at the same hierarchy path.
    */
@@ -535,36 +536,25 @@ export class ViewportSyncManager {
     }
   }
 
-  /**
-   * Sets up selectable object references for all viewports.
-   */
+  /** Sets up selectable object references for all viewports. */
   private setupViewportSelectableObjects(): void {
     const worldMeshes = this.getWorldSelectableMeshes();
     this.viewport3D.setSelectableObjects(worldMeshes);
-    this.viewport2DTop.setSelectableObjects(
-      this.collectCloneMeshesFromScene(this.viewport2DTop.getScene()),
-    );
-    this.viewport2DFront.setSelectableObjects(
-      this.collectCloneMeshesFromScene(this.viewport2DFront.getScene()),
-    );
-    this.viewport2DSide.setSelectableObjects(
-      this.collectCloneMeshesFromScene(this.viewport2DSide.getScene()),
-    );
+    this.viewport2DTop.setSelectableObjects(this.collectCloneMeshesFromScene(this.viewport2DTop.getScene()));
+    this.viewport2DFront.setSelectableObjects(this.collectCloneMeshesFromScene(this.viewport2DFront.getScene()));
+    this.viewport2DSide.setSelectableObjects(this.collectCloneMeshesFromScene(this.viewport2DSide.getScene()));
   }
 
   /**
    * Collects clone meshes suitable for raycasting from a 2D scene.
+   *
    * @param scene The viewport scene.
    * @returns Selectable clone meshes.
    */
   private collectCloneMeshesFromScene(scene: THREE.Scene): THREE.Mesh[] {
     const meshes: THREE.Mesh[] = [];
     scene.traverse((child) => {
-      if (
-        child instanceof THREE.Mesh &&
-        child.userData[EDITOR_SOURCE_UUID_KEY] &&
-        !this.isHelperMesh(child)
-      ) {
+      if (child instanceof THREE.Mesh && child.userData[EDITOR_SOURCE_UUID_KEY] && !this.isHelperMesh(child)) {
         meshes.push(child);
       }
     });
@@ -572,7 +562,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Returns true for wireframe helpers and highlight overlays that must not be selected.
+   * Returns true for wireframe helpers and highlight overlays that must not be
+   * selected.
+   *
    * @param mesh The mesh to test.
    * @returns True if the mesh is a helper.
    */
@@ -595,7 +587,9 @@ export class ViewportSyncManager {
 
   /**
    * Mirrors transforms from the original world object into 2D viewport clones.
-   * @param worldObject The original world object whose children serve as source.
+   *
+   * @param worldObject The original world object whose children serve as
+   *   source.
    */
   syncClonePositionsToWorldObject(worldObject: THREE.Group): void {
     this.syncSingleViewportClone(this.viewport2DTop.getScene(), worldObject);
@@ -604,7 +598,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Syncs clone children in a single viewport scene to match the original world object.
+   * Syncs clone children in a single viewport scene to match the original world
+   * object.
+   *
    * @param scene The viewport scene containing the clone group.
    * @param worldObject The original world object with authoritative transforms.
    */
@@ -616,8 +612,9 @@ export class ViewportSyncManager {
 
   /**
    * Recursively copies local transforms from original to clone hierarchy.
-   * Matches children by source UUID when tags exist so stripped occluded
-   * brush edges do not shift later siblings onto the wrong originals.
+   * Matches children by source UUID when tags exist so stripped occluded brush
+   * edges do not shift later siblings onto the wrong originals.
+   *
    * @param original The authoritative object.
    * @param clone The viewport clone counterpart.
    */
@@ -630,8 +627,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Copies object visibility unless the clone is a solid brush edge helper.
-   * 2D brush edges stay visible even when 3D distance culling hides world edges.
+   * Copies object visibility unless the clone is a solid brush edge helper. 2D
+   * brush edges stay visible even when 3D distance culling hides world edges.
+   *
    * @param original Authoritative object.
    * @param clone Viewport clone counterpart.
    */
@@ -645,6 +643,7 @@ export class ViewportSyncManager {
 
   /**
    * Syncs each clone child to its matching original child.
+   *
    * @param original Authoritative parent.
    * @param clone Viewport clone parent.
    */
@@ -657,16 +656,14 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Finds the original child that corresponds to a clone child.
-   * Prefers EDITOR_SOURCE_UUID_KEY tags; falls back to sibling index.
+   * Finds the original child that corresponds to a clone child. Prefers
+   * EDITOR_SOURCE_UUID_KEY tags; falls back to sibling index.
+   *
    * @param originalParent Authoritative parent.
    * @param cloneChild Clone child to match.
    * @returns Matching original child, or null.
    */
-  private findMatchingOriginalChild(
-    originalParent: THREE.Object3D,
-    cloneChild: THREE.Object3D,
-  ): THREE.Object3D | null {
+  private findMatchingOriginalChild(originalParent: THREE.Object3D, cloneChild: THREE.Object3D): THREE.Object3D | null {
     const sourceUuid = cloneChild.userData[EDITOR_SOURCE_UUID_KEY];
     if (typeof sourceUuid === 'string') {
       const byUuid = originalParent.children.find((child) => child.uuid === sourceUuid);
@@ -679,6 +676,7 @@ export class ViewportSyncManager {
 
   /**
    * Locates the cloned world group within a viewport scene.
+   *
    * @param scene The scene to search.
    * @returns The marked clone group, or null.
    */
@@ -698,6 +696,7 @@ export class ViewportSyncManager {
 
   /**
    * Removes only editor viewport clone groups from a scene.
+   *
    * @param scene The scene to clean up.
    */
   private removeOldClones(scene: THREE.Scene): void {
@@ -717,16 +716,13 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Recursively disposes geometries and materials of a clone hierarchy.
-   * Safe because clones always own independent resources.
+   * Recursively disposes geometries and materials of a clone hierarchy. Safe
+   * because clones always own independent resources.
+   *
    * @param obj The Three.js object whose resources should be disposed.
    */
   private disposeObject3D(obj: THREE.Object3D): void {
-    if (
-      obj instanceof THREE.Mesh ||
-      obj instanceof THREE.Line ||
-      obj instanceof THREE.LineSegments
-    ) {
+    if (obj instanceof THREE.Mesh || obj instanceof THREE.Line || obj instanceof THREE.LineSegments) {
       if (obj.geometry) obj.geometry.dispose();
       this.disposeCloneMaterials(obj.material);
     }
@@ -736,6 +732,7 @@ export class ViewportSyncManager {
 
   /**
    * Disposes clone-owned materials, never shared brush edge materials.
+   *
    * @param material Material or material array on a disposed clone object.
    */
   private disposeCloneMaterials(material: THREE.Material | THREE.Material[] | undefined): void {
@@ -748,6 +745,7 @@ export class ViewportSyncManager {
 
   /**
    * Disposes one material when it is not a shared brush edge material.
+   *
    * @param material Material to dispose.
    */
   private disposeCloneMaterial(material: THREE.Material): void {

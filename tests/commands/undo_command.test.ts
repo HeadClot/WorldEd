@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { UndoCommand } from '../../src/commands/undo_command.js';
 
 /**
- * A simple concrete implementation of UndoCommand for testing.
- * Stores a mutable value that can be toggled by execute/undo.
+ * A simple concrete implementation of UndoCommand for testing. Stores a mutable
+ * value that can be toggled by execute/undo.
  */
 class ToggleCommand implements UndoCommand {
   private value: number;

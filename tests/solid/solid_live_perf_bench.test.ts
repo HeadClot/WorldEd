@@ -7,8 +7,8 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { BrushSpatialIndex } from '../../src/solid/algorithm/brush_spatial_index.js';
 
 /**
- * Performance regression checks for live solid brush manipulation.
- * These assert both correctness-scale partial work and wall-clock budgets.
+ * Performance regression checks for live solid brush manipulation. These assert
+ * both correctness-scale partial work and wall-clock budgets.
  */
 describe('Solid live rebuild performance', () => {
   it('keeps partial recompile small when moving one brush in a 256 grid', () => {
@@ -60,15 +60,11 @@ describe('Solid live rebuild performance', () => {
       brushId: string;
     }>;
     expect(liveSources.length).toBe(fullSources.length);
-    expect(liveSources.map((s) => s.brushId).sort()).toEqual(
-      fullSources.map((s) => s.brushId).sort(),
-    );
+    expect(liveSources.map((s) => s.brushId).sort()).toEqual(fullSources.map((s) => s.brushId).sort());
   });
 });
 
-/**
- * Unit tests for the brush spatial index used by membership queries.
- */
+/** Unit tests for the brush spatial index used by membership queries. */
 describe('BrushSpatialIndex', () => {
   it('finds containing brushes without scanning the full set', () => {
     const entries = [];
@@ -76,10 +72,7 @@ describe('BrushSpatialIndex', () => {
       const x = (index % 10) * 5;
       const z = Math.floor(index / 10) * 5;
       entries.push({
-        bounds: new THREE.Box3(
-          new THREE.Vector3(x - 1, -1, z - 1),
-          new THREE.Vector3(x + 1, 1, z + 1),
-        ),
+        bounds: new THREE.Box3(new THREE.Vector3(x - 1, -1, z - 1), new THREE.Vector3(x + 1, 1, z + 1)),
       });
     }
     const index = new BrushSpatialIndex(entries, 0.01);
@@ -93,6 +86,7 @@ describe('BrushSpatialIndex', () => {
 
 /**
  * Builds a solid model filled with a square grid of additive boxes.
+ *
  * @param count Brush count.
  * @param spacing Center spacing.
  * @param size Box size.
@@ -106,12 +100,7 @@ function buildGridModel(count: number, spacing: number, size: number): SolidMode
     const column = index % columns;
     const row = Math.floor(index / columns);
     const brush = SolidBrushFactory.createCenteredBox(size, size, size);
-    const instance = new SolidBrushInstance(
-      `brush-${index}`,
-      `Brush${index}`,
-      brush,
-      SolidOperation.Additive,
-    );
+    const instance = new SolidBrushInstance(`brush-${index}`, `Brush${index}`, brush, SolidOperation.Additive);
     instance.position.set(column * spacing, 0, row * spacing);
     instances.push(instance);
   }

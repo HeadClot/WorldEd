@@ -9,9 +9,7 @@ import {
   createGizmoOccludedMesh,
 } from './gizmo_visual_style.js';
 
-/**
- * Data stored alongside each arrow handle for proper scene management.
- */
+/** Data stored alongside each arrow handle for proper scene management. */
 interface ArrowData {
   group: THREE.Group;
   headMesh: THREE.Mesh;
@@ -19,8 +17,8 @@ interface ArrowData {
 }
 
 /**
- * Creates the translate transform gizmo with axis arrows only.
- * Uses shared gizmo sizing and depth-aware materials.
+ * Creates the translate transform gizmo with axis arrows only. Uses shared
+ * gizmo sizing and depth-aware materials.
  */
 export class TranslateGizmo {
   private theme: typeof Theme;
@@ -29,6 +27,7 @@ export class TranslateGizmo {
 
   /**
    * Creates a new translate gizmo builder.
+   *
    * @param theme The theme containing gizmo color definitions.
    */
   constructor(theme: typeof Theme) {
@@ -39,6 +38,7 @@ export class TranslateGizmo {
 
   /**
    * Creates the three axis arrow handles and returns them.
+   *
    * @returns An array of GizmoHandle instances for X, Y, and Z.
    */
   createHandles(): GizmoHandle[] {
@@ -52,6 +52,7 @@ export class TranslateGizmo {
 
   /**
    * Returns all scene objects that need to be added to the gizmo group.
+   *
    * @returns An array of all Three.js objects created by this gizmo.
    */
   getAllSceneObjects(): THREE.Object3D[] {
@@ -60,9 +61,7 @@ export class TranslateGizmo {
     return objects;
   }
 
-  /**
-   * Disposes all geometries and materials created by this gizmo.
-   */
+  /** Disposes all geometries and materials created by this gizmo. */
   dispose(): void {
     this.arrowData.forEach((data) => this.disposeObject3D(data.group));
     this.arrowData = [];
@@ -72,6 +71,7 @@ export class TranslateGizmo {
   /**
    * Creates a single axis arrow handle with a cone head and cylinder stem.
    * Front and occluded ghost meshes share geometry and handle id.
+   *
    * @param axis The gizmo axis for this arrow.
    * @param color The hex color of the arrow.
    * @param direction The unit direction vector for the arrow orientation.
@@ -84,11 +84,7 @@ export class TranslateGizmo {
       GizmoVisualStyle.moveStemLength,
       8,
     );
-    const headGeometry = new THREE.ConeGeometry(
-      GizmoVisualStyle.moveHeadRadius,
-      GizmoVisualStyle.moveHeadLength,
-      8,
-    );
+    const headGeometry = new THREE.ConeGeometry(GizmoVisualStyle.moveHeadRadius, GizmoVisualStyle.moveHeadLength, 8);
     const stemMesh = this.createFrontMesh(stemGeometry, color);
     stemMesh.position.set(0, GizmoVisualStyle.moveStemLength * 0.5, 0);
     const headMesh = this.createFrontMesh(headGeometry, color);
@@ -109,6 +105,7 @@ export class TranslateGizmo {
 
   /**
    * Creates a front-facing gizmo mesh with shared styling.
+   *
    * @param geometry Mesh geometry.
    * @param color Hex color.
    * @returns Configured front mesh.
@@ -121,6 +118,7 @@ export class TranslateGizmo {
 
   /**
    * Adds an occluded ghost mesh at the same local position as a front part.
+   *
    * @param group Parent group.
    * @param geometry Shared geometry.
    * @param color Hex color.
@@ -141,6 +139,7 @@ export class TranslateGizmo {
 
   /**
    * Stores the handle id on a mesh for raycast matching.
+   *
    * @param mesh The mesh to tag.
    * @param handleId The handle identifier.
    */
@@ -150,6 +149,7 @@ export class TranslateGizmo {
 
   /**
    * Aligns a group so its local Y axis points along the given direction.
+   *
    * @param group The group to rotate.
    * @param direction The target direction vector.
    */
@@ -162,6 +162,7 @@ export class TranslateGizmo {
 
   /**
    * Recursively disposes all geometries and materials of an object.
+   *
    * @param obj The object to dispose.
    */
   private disposeObject3D(obj: THREE.Object3D): void {
@@ -173,6 +174,7 @@ export class TranslateGizmo {
 
   /**
    * Disposes the geometry and material of a single mesh.
+   *
    * @param mesh The mesh to dispose.
    */
   private disposeMesh(mesh: THREE.Mesh): void {

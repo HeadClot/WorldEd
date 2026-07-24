@@ -3,18 +3,14 @@ import { Theme } from '../theme.js';
 import { GizmoAxis } from '../types/transform_mode.js';
 import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '../types/bounds_face.js';
 import { GizmoHandle } from './gizmo_handle.js';
-import {
-  getAllBoundsFaces,
-  getBoundsFaceLocalNormal,
-  OrientedBoundsData,
-} from './oriented_bounds.js';
+import { getAllBoundsFaces, getBoundsFaceLocalNormal, OrientedBoundsData } from './oriented_bounds.js';
 import { BoundsGuideLines } from './bounds_guide_lines.js';
 
 /**
- * Builds the unified Bounds tool visualization: an oriented wire box,
- * six face resize handles, and invisible face pick planes for sliding.
- * Both resize and face-move are available at once (handles win over faces).
- * RGB corner guide lines appear while dragging a brush bounds.
+ * Builds the unified Bounds tool visualization: an oriented wire box, six face
+ * resize handles, and invisible face pick planes for sliding. Both resize and
+ * face-move are available at once (handles win over faces). RGB corner guide
+ * lines appear while dragging a brush bounds.
  */
 export class BoundsGizmo {
   private theme: typeof Theme;
@@ -30,6 +26,7 @@ export class BoundsGizmo {
 
   /**
    * Creates a bounds gizmo builder.
+   *
    * @param theme Theme colors for wireframe and handles.
    */
   constructor(theme: typeof Theme) {
@@ -48,6 +45,7 @@ export class BoundsGizmo {
 
   /**
    * Builds wireframe, face pick planes, six resize handles, and guide lines.
+   *
    * @returns Gizmo handles for raycast id matching.
    */
   createHandles(): GizmoHandle[] {
@@ -65,6 +63,7 @@ export class BoundsGizmo {
 
   /**
    * Returns scene objects to parent under the transform gizmo group.
+   *
    * @returns An array containing the bounds root group.
    */
   getAllSceneObjects(): THREE.Object3D[] {
@@ -73,6 +72,7 @@ export class BoundsGizmo {
 
   /**
    * Returns the current handle list.
+   *
    * @returns Active gizmo handles.
    */
   getHandles(): GizmoHandle[] {
@@ -81,6 +81,7 @@ export class BoundsGizmo {
 
   /**
    * Updates gizmo pose and size from oriented bounds data.
+   *
    * @param bounds The OBB to display, or null to hide contents.
    * @param handleWorldSize Optional world size for handle cubes.
    */
@@ -105,6 +106,7 @@ export class BoundsGizmo {
 
   /**
    * Shows or hides RGB corner guide lines (used while dragging bounds).
+   *
    * @param visible Whether guide lines should be drawn.
    */
   setGuideLinesVisible(visible: boolean): void {
@@ -115,6 +117,7 @@ export class BoundsGizmo {
 
   /**
    * Returns whether guide lines are requested to be shown.
+   *
    * @returns True when guide lines should be visible during bounds drag.
    */
   areGuideLinesVisible(): boolean {
@@ -123,23 +126,20 @@ export class BoundsGizmo {
 
   /**
    * Returns the last bounds applied to this gizmo.
+   *
    * @returns Oriented bounds data, or null.
    */
   getCurrentBounds(): OrientedBoundsData | null {
     return this.currentBounds;
   }
 
-  /**
-   * Disposes geometries and materials created by this gizmo.
-   */
+  /** Disposes geometries and materials created by this gizmo. */
   dispose(): void {
     this.disposeInternalResources();
     this.handles = [];
   }
 
-  /**
-   * Creates RGB corner guide lines (hidden until a bounds drag begins).
-   */
+  /** Creates RGB corner guide lines (hidden until a bounds drag begins). */
   private createGuideLines(): void {
     this.guideLines = new BoundsGuideLines(this.theme);
     this.guideLines.setVisible(false);
@@ -148,6 +148,7 @@ export class BoundsGizmo {
 
   /**
    * Rebuilds guide-line geometry for the current half extents.
+   *
    * @param halfExtents Local half extents of the OBB.
    */
   private updateGuideLines(halfExtents: THREE.Vector3): void {
@@ -156,9 +157,7 @@ export class BoundsGizmo {
     this.guideLines.setVisible(this.guideLinesWanted);
   }
 
-  /**
-   * Creates the unit wire box that will be scaled to half extents.
-   */
+  /** Creates the unit wire box that will be scaled to half extents. */
   private createWireframe(): void {
     const geometry = new THREE.BoxGeometry(2, 2, 2);
     const edges = new THREE.EdgesGeometry(geometry);
@@ -176,9 +175,7 @@ export class BoundsGizmo {
     this.rootGroup.add(this.wireframe);
   }
 
-  /**
-   * Creates six thin pick planes used in Move mode.
-   */
+  /** Creates six thin pick planes used in Move mode. */
   private createFacePickMeshes(): void {
     getAllBoundsFaces().forEach((face) => {
       const mesh = this.createFacePickMesh(face);
@@ -189,6 +186,7 @@ export class BoundsGizmo {
 
   /**
    * Creates one pick plane for a bounds face.
+   *
    * @param face The face this plane represents.
    * @returns A configured mesh.
    */
@@ -210,9 +208,7 @@ export class BoundsGizmo {
     return mesh;
   }
 
-  /**
-   * Creates six small box handles at face centers for Resize mode.
-   */
+  /** Creates six small box handles at face centers for Resize mode. */
   private createResizeHandles(): void {
     getAllBoundsFaces().forEach((face) => {
       const color = this.colorForFace(face);
@@ -229,6 +225,7 @@ export class BoundsGizmo {
 
   /**
    * Builds a small cube handle mesh for a face.
+   *
    * @param face The bounds face.
    * @param color Handle color.
    * @returns The handle mesh.
@@ -251,6 +248,7 @@ export class BoundsGizmo {
 
   /**
    * Scales the wireframe box to match half extents.
+   *
    * @param halfExtents Local half extents of the OBB.
    */
   private updateWireframeGeometry(halfExtents: THREE.Vector3): void {
@@ -264,6 +262,7 @@ export class BoundsGizmo {
 
   /**
    * Places and sizes resize handles at each face center.
+   *
    * @param halfExtents Local half extents of the OBB.
    */
   private updateHandlePositions(halfExtents: THREE.Vector3): void {
@@ -278,6 +277,7 @@ export class BoundsGizmo {
 
   /**
    * Sizes and places face pick planes on each OBB face.
+   *
    * @param halfExtents Local half extents of the OBB.
    */
   private updateFacePickGeometry(halfExtents: THREE.Vector3): void {
@@ -292,6 +292,7 @@ export class BoundsGizmo {
 
   /**
    * Scales a face pick plane to cover the face rectangle.
+   *
    * @param mesh The pick mesh.
    * @param face The face being covered.
    * @param halfExtents OBB half extents.
@@ -310,6 +311,7 @@ export class BoundsGizmo {
 
   /**
    * Orients a plane mesh so its normal matches the bounds face.
+   *
    * @param mesh The plane mesh.
    * @param face The target face.
    */
@@ -320,9 +322,7 @@ export class BoundsGizmo {
     mesh.quaternion.copy(quaternion);
   }
 
-  /**
-   * Keeps resize handles and face pick planes available together.
-   */
+  /** Keeps resize handles and face pick planes available together. */
   private showAllInteractiveParts(): void {
     this.handleMeshes.forEach((mesh) => {
       mesh.visible = true;
@@ -334,6 +334,7 @@ export class BoundsGizmo {
 
   /**
    * Maps a face to a theme color by axis.
+   *
    * @param face The bounds face.
    * @returns Hex color.
    */
@@ -349,6 +350,7 @@ export class BoundsGizmo {
 
   /**
    * Maps a face to a gizmo axis for handle storage.
+   *
    * @param face The bounds face.
    * @returns The related GizmoAxis.
    */
@@ -360,6 +362,7 @@ export class BoundsGizmo {
 
   /**
    * Reads half extent for a face axis.
+   *
    * @param halfExtents Full half extent vector.
    * @param face The face.
    * @returns Half size along the face axis.
@@ -370,9 +373,7 @@ export class BoundsGizmo {
     return halfExtents.z;
   }
 
-  /**
-   * Clears and disposes internal meshes without dropping the class instance.
-   */
+  /** Clears and disposes internal meshes without dropping the class instance. */
   private disposeInternalResources(): void {
     if (this.guideLines) {
       this.rootGroup.remove(this.guideLines.getObject());
@@ -389,6 +390,7 @@ export class BoundsGizmo {
 
   /**
    * Disposes geometries and materials under a root object.
+   *
    * @param root The object tree to dispose.
    */
   private disposeObjectTree(root: THREE.Object3D): void {
@@ -405,6 +407,7 @@ export class BoundsGizmo {
 
   /**
    * Disposes a material or material array.
+   *
    * @param material The material(s) to dispose.
    */
   private disposeMaterial(material: THREE.Material | THREE.Material[]): void {

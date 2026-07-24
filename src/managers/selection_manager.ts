@@ -2,13 +2,14 @@ import * as THREE from 'three';
 
 /**
  * Callback invoked when the selection set changes.
+ *
  * @param selected The current set of selected meshes.
  */
 export type SelectionChangedCallback = (selected: Set<THREE.Mesh>) => void;
 
 /**
- * Central selection state manager.
- * Maintains a set of selected meshes and notifies listeners on changes.
+ * Central selection state manager. Maintains a set of selected meshes and
+ * notifies listeners on changes.
  */
 export class SelectionManager {
   private selectedObjects: Set<THREE.Mesh>;
@@ -16,9 +17,7 @@ export class SelectionManager {
   /** Most recently selected mesh (for outliner reveal / multi-select focus). */
   private lastSelectedMesh: THREE.Mesh | null;
 
-  /**
-   * Creates a new selection manager with an initially empty selection set.
-   */
+  /** Creates a new selection manager with an initially empty selection set. */
   constructor() {
     this.selectedObjects = new Set();
     this.changeCallbacks = [];
@@ -27,6 +26,7 @@ export class SelectionManager {
 
   /**
    * Selects a single object, clearing any previous selection.
+   *
    * @param mesh The mesh to select.
    */
   selectObject(mesh: THREE.Mesh): void {
@@ -38,8 +38,9 @@ export class SelectionManager {
   }
 
   /**
-   * Replaces the selection with the given meshes.
-   * Skips notification when the set is already identical (preserves outliner rename).
+   * Replaces the selection with the given meshes. Skips notification when the
+   * set is already identical (preserves outliner rename).
+   *
    * @param meshes The meshes that should become the selection set.
    */
   setSelection(meshes: THREE.Mesh[]): void {
@@ -52,6 +53,7 @@ export class SelectionManager {
 
   /**
    * Returns whether the given meshes match the current selection set.
+   *
    * @param meshes Candidate selection.
    * @returns True when membership is identical.
    */
@@ -62,6 +64,7 @@ export class SelectionManager {
 
   /**
    * Adds an object to the current selection set.
+   *
    * @param mesh The mesh to add to selection.
    */
   addToSelection(mesh: THREE.Mesh): void {
@@ -73,6 +76,7 @@ export class SelectionManager {
 
   /**
    * Toggles a mesh in or out of the multi-selection set.
+   *
    * @param mesh The mesh to toggle.
    */
   toggleSelection(mesh: THREE.Mesh): void {
@@ -89,8 +93,9 @@ export class SelectionManager {
   }
 
   /**
-   * Applies a click selection with optional multi-select modifiers.
-   * Shift or Ctrl/Meta adds or toggles; plain click replaces selection.
+   * Applies a click selection with optional multi-select modifiers. Shift or
+   * Ctrl/Meta adds or toggles; plain click replaces selection.
+   *
    * @param mesh The mesh that was clicked.
    * @param additive True when Shift is held (add if missing).
    * @param toggle True when Ctrl/Meta is held (toggle membership).
@@ -109,6 +114,7 @@ export class SelectionManager {
 
   /**
    * Removes an object from the current selection set.
+   *
    * @param mesh The mesh to deselect.
    */
   removeFromSelection(mesh: THREE.Mesh): void {
@@ -120,9 +126,7 @@ export class SelectionManager {
     this.notifyChange();
   }
 
-  /**
-   * Clears all selected objects.
-   */
+  /** Clears all selected objects. */
   clearSelection(): void {
     if (this.selectedObjects.size === 0) return;
     this.selectedObjects.clear();
@@ -131,9 +135,10 @@ export class SelectionManager {
   }
 
   /**
-   * Drops selected meshes that are no longer under the given scene root.
-   * Use after load, delete, undo, or redo so the selection never keeps
-   * references to meshes removed from the scene graph.
+   * Drops selected meshes that are no longer under the given scene root. Use
+   * after load, delete, undo, or redo so the selection never keeps references
+   * to meshes removed from the scene graph.
+   *
    * @param sceneRoot The world root objects must remain under.
    * @returns True when at least one mesh was removed from the selection.
    */
@@ -159,6 +164,7 @@ export class SelectionManager {
 
   /**
    * Returns whether an object is the root or a descendant of the root.
+   *
    * @param object The object to test.
    * @param root The scene root to search toward.
    * @returns True when object is under root in the parent chain.
@@ -174,6 +180,7 @@ export class SelectionManager {
 
   /**
    * Returns the current set of selected objects.
+   *
    * @returns A set containing all selected meshes.
    */
   getSelectedObjects(): Set<THREE.Mesh> {
@@ -182,6 +189,7 @@ export class SelectionManager {
 
   /**
    * Returns the count of currently selected objects.
+   *
    * @returns The number of selected meshes.
    */
   getSelectedObjectCount(): number {
@@ -190,6 +198,7 @@ export class SelectionManager {
 
   /**
    * Checks whether a mesh is currently selected.
+   *
    * @param mesh The mesh to check.
    * @returns True if the mesh is in the selection set.
    */
@@ -199,6 +208,7 @@ export class SelectionManager {
 
   /**
    * Returns the first selected object from the selection set.
+   *
    * @returns The first selected mesh, or null if the selection is empty.
    */
   getFirstSelectedObject(): THREE.Mesh | null {
@@ -210,6 +220,7 @@ export class SelectionManager {
 
   /**
    * Returns all selected objects as a standard array.
+   *
    * @returns An array containing all selected meshes.
    */
   getAllSelectedObjectsAsArray(): THREE.Mesh[] {
@@ -217,8 +228,9 @@ export class SelectionManager {
   }
 
   /**
-   * Returns the most recently selected mesh still in the selection set.
-   * Used by the outliner to expand and scroll to the latest pick.
+   * Returns the most recently selected mesh still in the selection set. Used by
+   * the outliner to expand and scroll to the latest pick.
+   *
    * @returns Last selected mesh, or null when selection is empty.
    */
   getLastSelectedObject(): THREE.Mesh | null {
@@ -230,6 +242,7 @@ export class SelectionManager {
 
   /**
    * Registers a callback to be invoked whenever the selection changes.
+   *
    * @param callback The function to call on selection changes.
    */
   onSelectionChanged(callback: SelectionChangedCallback): void {
@@ -238,6 +251,7 @@ export class SelectionManager {
 
   /**
    * Unregisters a previously registered selection change callback.
+   *
    * @param callback The function to remove from callbacks.
    */
   offSelectionChanged(callback: SelectionChangedCallback): void {
@@ -247,17 +261,13 @@ export class SelectionManager {
     }
   }
 
-  /**
-   * Removes all change callbacks and clears selection.
-   */
+  /** Removes all change callbacks and clears selection. */
   dispose(): void {
     this.selectedObjects.clear();
     this.changeCallbacks = [];
   }
 
-  /**
-   * Notifies all registered callbacks of a selection change.
-   */
+  /** Notifies all registered callbacks of a selection change. */
   private notifyChange(): void {
     this.changeCallbacks.forEach((callback) => {
       callback(this.selectedObjects);

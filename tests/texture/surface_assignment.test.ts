@@ -9,14 +9,8 @@ import {
 } from '../../src/texture/face_texture_applier.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
-import {
-  setTexturePaintStateForTests,
-  TexturePaintState,
-} from '../../src/texture/texture_paint_state.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/texture_paint_state.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 
 describe('surface texture assignment', () => {
   beforeEach(() => {

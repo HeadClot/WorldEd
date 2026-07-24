@@ -53,6 +53,7 @@ describe('Solid history refresh', () => {
 
 /**
  * Counts triangles on the compiled solid result mesh.
+ *
  * @param model Solid model.
  * @returns Triangle count.
  */

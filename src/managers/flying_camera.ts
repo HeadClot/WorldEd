@@ -3,9 +3,9 @@ import { InputManager } from './input_manager.js';
 import { blurActiveFormField } from '../utils/dom_focus.js';
 
 /**
- * First-person flying camera for the 3D viewport.
- * Look and WASD/QE movement only apply while the right mouse button is held
- * (or middle mouse for pan). This prevents camera drift and tool-key conflicts.
+ * First-person flying camera for the 3D viewport. Look and WASD/QE movement
+ * only apply while the right mouse button is held (or middle mouse for pan).
+ * This prevents camera drift and tool-key conflicts.
  */
 export class FlyingCamera {
   private canvas: HTMLElement;
@@ -26,6 +26,7 @@ export class FlyingCamera {
 
   /**
    * Creates a flying camera controller for a canvas and perspective camera.
+   *
    * @param canvas The DOM element that receives pointer events.
    * @param camera The perspective camera to drive.
    * @param inputManager Shared input state for keyboard queries.
@@ -56,9 +57,7 @@ export class FlyingCamera {
     this.setupEventListeners();
   }
 
-  /**
-   * Wires pointer, wheel, and pointer-lock listeners on the canvas.
-   */
+  /** Wires pointer, wheel, and pointer-lock listeners on the canvas. */
   private setupEventListeners(): void {
     this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
     this.canvas.addEventListener('pointerdown', (event) => this.onPointerDown(event));
@@ -72,6 +71,7 @@ export class FlyingCamera {
 
   /**
    * Starts rotate (RMB) or pan (MMB) navigation and requests pointer lock.
+   *
    * @param event The pointer down event.
    */
   private onPointerDown(event: PointerEvent): void {
@@ -91,9 +91,7 @@ export class FlyingCamera {
     }
   }
 
-  /**
-   * Begins middle-mouse pan by capturing the look target distance.
-   */
+  /** Begins middle-mouse pan by capturing the look target distance. */
   private beginPan(): void {
     this.syncOrientationFromCamera();
     this.isPanning = true;
@@ -102,8 +100,8 @@ export class FlyingCamera {
   }
 
   /**
-   * Updates yaw and pitch from the camera's current world look direction.
-   * Call after external camera moves such as fit-to-selection.
+   * Updates yaw and pitch from the camera's current world look direction. Call
+   * after external camera moves such as fit-to-selection.
    */
   syncOrientationFromCamera(): void {
     const forward = new THREE.Vector3();
@@ -112,9 +110,7 @@ export class FlyingCamera {
     this.pitch = Math.asin(THREE.MathUtils.clamp(forward.y, -1, 1));
   }
 
-  /**
-   * Requests pointer lock when not already locked.
-   */
+  /** Requests pointer lock when not already locked. */
   private ensurePointerLock(): void {
     if (!this.isPointerLocked) {
       this.tryRequestPointerLock();
@@ -123,6 +119,7 @@ export class FlyingCamera {
 
   /**
    * Applies rotation or pan from pointer movement while navigating.
+   *
    * @param event The pointer move event.
    */
   private onPointerMove(event: PointerEvent): void {
@@ -136,6 +133,7 @@ export class FlyingCamera {
 
   /**
    * Ends rotate or pan when a mouse button is released.
+   *
    * @param event The pointer up or cancel event.
    */
   private onPointerUp(event: PointerEvent): void {
@@ -154,6 +152,7 @@ export class FlyingCamera {
 
   /**
    * Zooms the camera along its look direction.
+   *
    * @param event The wheel event.
    */
   private onWheel(event: WheelEvent): void {
@@ -165,6 +164,7 @@ export class FlyingCamera {
 
   /**
    * Updates yaw and pitch from mouse deltas.
+   *
    * @param deltaX Horizontal mouse movement.
    * @param deltaY Vertical mouse movement.
    */
@@ -176,6 +176,7 @@ export class FlyingCamera {
 
   /**
    * Pans the camera in the view plane.
+   *
    * @param deltaX Horizontal mouse movement.
    * @param deltaY Vertical mouse movement.
    */
@@ -189,6 +190,7 @@ export class FlyingCamera {
 
   /**
    * Builds the current forward direction from yaw and pitch.
+   *
    * @returns A unit forward vector.
    */
   private getForward(): THREE.Vector3 {
@@ -201,6 +203,7 @@ export class FlyingCamera {
 
   /**
    * Builds the camera right vector from forward and world up.
+   *
    * @returns A unit right vector.
    */
   private getRight(): THREE.Vector3 {
@@ -211,6 +214,7 @@ export class FlyingCamera {
 
   /**
    * Builds the camera up vector from right and forward.
+   *
    * @returns A unit up vector.
    */
   private getCameraUp(): THREE.Vector3 {
@@ -222,6 +226,7 @@ export class FlyingCamera {
   /**
    * Advances fly movement and applies yaw/pitch orientation while navigating.
    * When idle, the camera transform is left alone so fit animations stick.
+   *
    * @param deltaTime Frame delta in seconds.
    */
   update(deltaTime: number): void {
@@ -236,6 +241,7 @@ export class FlyingCamera {
 
   /**
    * Returns true only while right-mouse fly mode is held.
+   *
    * @returns Whether fly translation keys should move the camera.
    */
   private shouldApplyFlyMovement(): boolean {
@@ -244,6 +250,7 @@ export class FlyingCamera {
 
   /**
    * Applies WASD/QE translation relative to the current view.
+   *
    * @param deltaTime Frame delta in seconds.
    * @param forward Current forward direction.
    */
@@ -273,6 +280,7 @@ export class FlyingCamera {
 
   /**
    * Resolves per-frame fly displacement, boosting speed while Shift is held.
+   *
    * @param deltaTime Frame delta in seconds.
    * @returns World units to move this frame.
    */
@@ -283,6 +291,7 @@ export class FlyingCamera {
 
   /**
    * Returns whether the camera is currently in fly or pan navigation.
+   *
    * @returns True if right or middle mouse navigation is active.
    */
   isNavigating(): boolean {
@@ -291,15 +300,14 @@ export class FlyingCamera {
 
   /**
    * Returns a copy of the current forward look direction.
+   *
    * @returns The forward direction vector.
    */
   getForwardDirection(): THREE.Vector3 {
     return this.getForward().clone();
   }
 
-  /**
-   * Handles pointer lock state changes from the browser.
-   */
+  /** Handles pointer lock state changes from the browser. */
   private onPointerLockChange(): void {
     if (document.pointerLockElement === this.canvas) {
       this.isPointerLocked = true;
@@ -308,16 +316,12 @@ export class FlyingCamera {
     }
   }
 
-  /**
-   * Clears pointer lock state after a lock error.
-   */
+  /** Clears pointer lock state after a lock error. */
   private onPointerLockError(): void {
     this.isPointerLocked = false;
   }
 
-  /**
-   * Resets navigation flags when pointer lock is lost.
-   */
+  /** Resets navigation flags when pointer lock is lost. */
   private handlePointerLockLost(): void {
     this.isPointerLocked = false;
     this.isRotating = false;
@@ -325,18 +329,14 @@ export class FlyingCamera {
     this.activeButtons.clear();
   }
 
-  /**
-   * Requests pointer lock on the canvas when supported.
-   */
+  /** Requests pointer lock on the canvas when supported. */
   private tryRequestPointerLock(): void {
     if (typeof this.canvas.requestPointerLock === 'function') {
       this.canvas.requestPointerLock();
     }
   }
 
-  /**
-   * Exits pointer lock when supported.
-   */
+  /** Exits pointer lock when supported. */
   private tryExitPointerLock(): void {
     if (typeof document.exitPointerLock === 'function') {
       document.exitPointerLock();
@@ -345,6 +345,7 @@ export class FlyingCamera {
 
   /**
    * Returns the current yaw angle in radians.
+   *
    * @returns Yaw in radians.
    */
   getYaw(): number {
@@ -353,6 +354,7 @@ export class FlyingCamera {
 
   /**
    * Returns the current pitch angle in radians.
+   *
    * @returns Pitch in radians.
    */
   getPitch(): number {
@@ -361,6 +363,7 @@ export class FlyingCamera {
 
   /**
    * Sets the base speed used for 3D fly movement.
+   *
    * @param speed World units moved per second before Shift boost.
    */
   setMoveSpeed(speed: number): void {

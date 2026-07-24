@@ -1,30 +1,24 @@
 /**
- * Parsed Valve Map Format 2006 (Source Engine) data structures.
- * Coordinates in these types remain in Source space (Z-up, inches)
- * until conversion for the solid model.
+ * Parsed Valve Map Format 2006 (Source Engine) data structures. Coordinates in
+ * these types remain in Source space (Z-up, inches) until conversion for the
+ * solid model.
  */
 
-/**
- * Three-component vector from a VMF file.
- */
+/** Three-component vector from a VMF file. */
 export interface VmfVector3 {
   x: number;
   y: number;
   z: number;
 }
 
-/**
- * Plane defined by three points on the face (Source winding).
- */
+/** Plane defined by three points on the face (Source winding). */
 export interface VmfPlanePoints {
   p1: VmfVector3;
   p2: VmfVector3;
   p3: VmfVector3;
 }
 
-/**
- * Texture axis: direction, texel translation, and scale (texels per unit).
- */
+/** Texture axis: direction, texel translation, and scale (texels per unit). */
 export interface VmfTextureAxis {
   x: number;
   y: number;
@@ -33,9 +27,7 @@ export interface VmfTextureAxis {
   scale: number;
 }
 
-/**
- * Optional displacement info on a solid side (imported as base brush only).
- */
+/** Optional displacement info on a solid side (imported as base brush only). */
 export interface VmfDisplacementInfo {
   power: number;
   startPosition: VmfVector3;
@@ -43,9 +35,7 @@ export interface VmfDisplacementInfo {
   subdivide: number;
 }
 
-/**
- * One face of a Hammer solid (side block).
- */
+/** One face of a Hammer solid (side block). */
 export interface VmfSolidSide {
   id: number;
   plane: VmfPlanePoints;
@@ -58,17 +48,13 @@ export interface VmfSolidSide {
   displacement: VmfDisplacementInfo | null;
 }
 
-/**
- * Convex solid defined by bounding planes (sides).
- */
+/** Convex solid defined by bounding planes (sides). */
 export interface VmfSolid {
   id: number;
   sides: VmfSolidSide[];
 }
 
-/**
- * Entity with optional brush solids and keyvalues.
- */
+/** Entity with optional brush solids and keyvalues. */
 export interface VmfEntity {
   id: number;
   className: string;
@@ -76,9 +62,7 @@ export interface VmfEntity {
   properties: Record<string, string | number | VmfVector3>;
 }
 
-/**
- * Root world block plus entities from a VMF document.
- */
+/** Root world block plus entities from a VMF document. */
 export interface VmfWorld {
   versionInfoEditorVersion: number;
   versionInfoEditorBuild: number;
@@ -103,6 +87,7 @@ export interface VmfWorld {
 
 /**
  * Creates an empty VMF world with unset numeric fields at -1.
+ *
  * @returns Fresh world document.
  */
 export function createEmptyVmfWorld(): VmfWorld {
@@ -131,6 +116,7 @@ export function createEmptyVmfWorld(): VmfWorld {
 
 /**
  * Creates a default texture axis along +X with Valve-style scale 0.25.
+ *
  * @returns Default U-style axis (direction +X, translation 0, scale 0.25).
  */
 export function createDefaultVmfTextureAxis(): VmfTextureAxis {

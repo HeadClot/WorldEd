@@ -10,9 +10,7 @@ import { KeyboardShortcutHandler } from './keyboard_shortcut_handler.js';
 import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 
-/**
- * Dependencies for snap interval, snap toggle, and texture lock controls.
- */
+/** Dependencies for snap interval, snap toggle, and texture lock controls. */
 export interface SnapSettingsControllerDependencies {
   gridSnap: GridSnap;
   snapManager: SnapManager;
@@ -29,23 +27,20 @@ export interface SnapSettingsControllerDependencies {
   setUserSnapEnabled: (enabled: boolean) => void;
 }
 
-/**
- * Owns snap interval changes, snap toggle, texture lock, and grid refresh.
- */
+/** Owns snap interval changes, snap toggle, texture lock, and grid refresh. */
 export class SnapSettingsController {
   private deps: SnapSettingsControllerDependencies;
 
   /**
    * Creates a snap settings controller.
+   *
    * @param deps Shared editor systems used by snap controls.
    */
   constructor(deps: SnapSettingsControllerDependencies) {
     this.deps = deps;
   }
 
-  /**
-   * Wires SnapManager change notifications and keyboard interval shortcuts.
-   */
+  /** Wires SnapManager change notifications and keyboard interval shortcuts. */
   setup(): void {
     this.deps.snapManager.onIntervalChanged((interval) => {
       this.onSnapIntervalChanged(interval);
@@ -54,9 +49,7 @@ export class SnapSettingsController {
     this.onSnapIntervalChanged(this.deps.snapManager.getInterval());
   }
 
-  /**
-   * Toggles user snap preference and refreshes toolbar/status UI.
-   */
+  /** Toggles user snap preference and refreshes toolbar/status UI. */
   onToggleSnap(): void {
     const next = !this.deps.getUserSnapEnabled();
     this.deps.setUserSnapEnabled(next);
@@ -67,9 +60,9 @@ export class SnapSettingsController {
   }
 
   /**
-   * Toggles CSG-style texture lock for transforms.
-   * On: solid brush UVs stick when moved; content meshes keep world density on scale.
-   * Off: solid brush UVs slide in world space; content mesh UVs stretch on scale.
+   * Toggles CSG-style texture lock for transforms. On: solid brush UVs stick
+   * when moved; content meshes keep world density on scale. Off: solid brush
+   * UVs slide in world space; content mesh UVs stretch on scale.
    */
   onToggleTextureLock(): void {
     const locked = this.deps.textureLock.toggle();
@@ -84,6 +77,7 @@ export class SnapSettingsController {
 
   /**
    * Updates all solid models to bake UVs in brush-local or world space.
+   *
    * @param stickToBrush True when Tex Lock is on.
    */
   private applySolidUvStickMode(stickToBrush: boolean): void {
@@ -95,16 +89,12 @@ export class SnapSettingsController {
     });
   }
 
-  /**
-   * Cycles the snap interval to the next preset value.
-   */
+  /** Cycles the snap interval to the next preset value. */
   onSnapIntervalForward(): void {
     this.deps.snapManager.cycleForward();
   }
 
-  /**
-   * Cycles the snap interval to the previous preset value.
-   */
+  /** Cycles the snap interval to the previous preset value. */
   onSnapIntervalBackward(): void {
     this.deps.snapManager.cycleBackward();
   }
@@ -126,6 +116,7 @@ export class SnapSettingsController {
 
   /**
    * Handles snap interval change events by updating all dependent systems.
+   *
    * @param interval The new snap interval value.
    */
   private onSnapIntervalChanged(interval: number): void {
@@ -136,6 +127,7 @@ export class SnapSettingsController {
 
   /**
    * Updates the grid division count in all four viewports.
+   *
    * @param interval The new snap interval value.
    */
   private updateAllViewportGrids(interval: number): void {
@@ -145,13 +137,9 @@ export class SnapSettingsController {
     updateGridDivisions(this.deps.viewport3D.getGrid(), interval);
   }
 
-  /**
-   * Binds keyboard shortcuts for snap interval cycling.
-   */
+  /** Binds keyboard shortcuts for snap interval cycling. */
   private bindSnapKeyboardShortcuts(): void {
     this.deps.keyboardShortcutHandler.setOnSnapIntervalForward(() => this.onSnapIntervalForward());
-    this.deps.keyboardShortcutHandler.setOnSnapIntervalBackward(() =>
-      this.onSnapIntervalBackward(),
-    );
+    this.deps.keyboardShortcutHandler.setOnSnapIntervalBackward(() => this.onSnapIntervalBackward());
   }
 }

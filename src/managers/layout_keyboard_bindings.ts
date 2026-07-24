@@ -5,9 +5,7 @@ import { ObjectActionHandler } from './object_action_handler.js';
 import { AlignmentHandler } from './alignment_handler.js';
 import type { KeyboardShortcutSettings } from '../settings/settings_types.js';
 
-/**
- * Callbacks required when registering layout keyboard shortcuts.
- */
+/** Callbacks required when registering layout keyboard shortcuts. */
 export interface LayoutKeyboardBindingHost {
   isCameraNavigating: () => boolean;
   onTransformMode: (mode: TransformMode) => void;
@@ -25,6 +23,7 @@ export interface LayoutKeyboardBindingHost {
 
 /**
  * Creates and registers the editor keyboard shortcut handler.
+ *
  * @param inputManager Shared input manager for key state.
  * @param host Layout callbacks and deferred handlers.
  * @returns Registered keyboard shortcut handler.
@@ -44,13 +43,11 @@ export function createAndRegisterKeyboardShortcuts(
 
 /**
  * Binds transform, edit, and alignment keyboard shortcuts.
+ *
  * @param handler Keyboard shortcut handler being configured.
  * @param host Layout callbacks and deferred handlers.
  */
-function bindPrimaryKeyboardShortcuts(
-  handler: KeyboardShortcutHandler,
-  host: LayoutKeyboardBindingHost,
-): void {
+function bindPrimaryKeyboardShortcuts(handler: KeyboardShortcutHandler, host: LayoutKeyboardBindingHost): void {
   handler.setOnTransformMode((mode) => host.onTransformMode(mode));
   handler.setOnDeleteSelected(() => host.onDeleteSelected());
   handler.setOnEscape(() => host.onEscapeCancel());
@@ -65,13 +62,11 @@ function bindPrimaryKeyboardShortcuts(
 
 /**
  * Binds scene IO keyboard shortcuts.
+ *
  * @param handler Keyboard shortcut handler being configured.
  * @param host Layout callbacks for save/load/export.
  */
-function bindIoKeyboardShortcuts(
-  handler: KeyboardShortcutHandler,
-  host: LayoutKeyboardBindingHost,
-): void {
+function bindIoKeyboardShortcuts(handler: KeyboardShortcutHandler, host: LayoutKeyboardBindingHost): void {
   handler.setOnSaveScene(() => host.onSaveScene());
   handler.setOnLoadScene(() => host.onLoadScene());
   handler.setOnExportGlb(() => host.onExportGlb());

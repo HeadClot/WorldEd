@@ -5,9 +5,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { DuplicateSolidBrushesCommand } from '../../src/commands/duplicate_solid_brushes_command.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 
-/**
- * Tests that solid brush duplication stays inside the solid model hierarchy.
- */
+/** Tests that solid brush duplication stays inside the solid model hierarchy. */
 describe('Duplicate solid brushes', () => {
   it('duplicates a brush under the same solid model root', () => {
     const world = new THREE.Group();

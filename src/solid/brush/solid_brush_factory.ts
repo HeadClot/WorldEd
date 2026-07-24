@@ -2,27 +2,18 @@ import * as THREE from 'three';
 import { SolidBrush } from './solid_brush.js';
 import { createSolidFace, createWingEdge } from '../types/wing_edge.js';
 
-/**
- * Builds convex solid brushes with correct wing-edge topology.
- */
+/** Builds convex solid brushes with correct wing-edge topology. */
 export class SolidBrushFactory {
   /**
    * Creates an axis-aligned box brush from min/max corners.
+   *
    * @param min Inclusive minimum corner.
    * @param max Inclusive maximum corner.
    * @returns Convex box solid brush with six faces.
    */
   static createBox(min: THREE.Vector3, max: THREE.Vector3): SolidBrush {
-    const lo = new THREE.Vector3(
-      Math.min(min.x, max.x),
-      Math.min(min.y, max.y),
-      Math.min(min.z, max.z),
-    );
-    const hi = new THREE.Vector3(
-      Math.max(min.x, max.x),
-      Math.max(min.y, max.y),
-      Math.max(min.z, max.z),
-    );
+    const lo = new THREE.Vector3(Math.min(min.x, max.x), Math.min(min.y, max.y), Math.min(min.z, max.z));
+    const hi = new THREE.Vector3(Math.max(min.x, max.x), Math.max(min.y, max.y), Math.max(min.z, max.z));
     const brush = new SolidBrush();
     brush.vertices = [
       new THREE.Vector3(lo.x, lo.y, hi.z),
@@ -43,6 +34,7 @@ export class SolidBrushFactory {
 
   /**
    * Creates a box brush centered at the origin with the given size.
+   *
    * @param width Size along X.
    * @param height Size along Y.
    * @param depth Size along Z.
@@ -54,8 +46,9 @@ export class SolidBrushFactory {
   }
 
   /**
-   * Builds a convex brush from ordered face polygon loops.
-   * Vertices are welded; each loop must be convex and share edges with neighbors.
+   * Builds a convex brush from ordered face polygon loops. Vertices are welded;
+   * each loop must be convex and share edges with neighbors.
+   *
    * @param faceLoops Ordered vertex rings (CCW along outward normals).
    * @returns Solid brush, or null when topology cannot be formed.
    */
@@ -81,6 +74,7 @@ export class SolidBrushFactory {
 
   /**
    * Welds a point into the brush vertex list.
+   *
    * @param vertices Existing vertices (mutated when a new point is added).
    * @param point Candidate position.
    * @returns Vertex index of the welded point.
@@ -96,6 +90,7 @@ export class SolidBrushFactory {
 
   /**
    * Builds mutual wing edges from face vertex-index loops.
+   *
    * @param brush Brush receiving wing edges.
    * @param faceVertexIndices Per-face ordered vertex indices.
    */
@@ -117,6 +112,7 @@ export class SolidBrushFactory {
 
   /**
    * Links each directed edge to its opposite twin.
+   *
    * @param brush Brush with wing edges allocated.
    * @param edgeKeyToIndex Map of "from->to" keys to edge indices.
    */
@@ -133,6 +129,7 @@ export class SolidBrushFactory {
 
   /**
    * Creates face descriptors covering contiguous wing-edge ranges.
+   *
    * @param brush Brush with wing edges already built in face order.
    * @param faceVertexIndices Per-face vertex index loops.
    */
@@ -148,6 +145,7 @@ export class SolidBrushFactory {
 
   /**
    * Fills wing edges for a unit-topology box (24 half-edges, 6 quads).
+   *
    * @param brush Brush receiving edge data (must already have 8 vertices).
    */
   private static buildBoxWingEdges(brush: SolidBrush): void {
@@ -164,6 +162,7 @@ export class SolidBrushFactory {
 
   /**
    * Creates six quad faces over the box wing-edge layout.
+   *
    * @param brush Brush with 24 wing edges already built.
    */
   private static buildBoxFaces(brush: SolidBrush): void {

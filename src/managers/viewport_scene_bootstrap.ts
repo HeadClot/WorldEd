@@ -15,9 +15,7 @@ import {
   getDefaultTopCameraPosition,
 } from '../navigation/default_camera_placement.js';
 
-/**
- * Created viewport instances after bootstrap.
- */
+/** Created viewport instances after bootstrap. */
 export interface BootstrappedViewports {
   viewport2DTop: Viewport2D;
   viewport2DFront: Viewport2D;
@@ -25,45 +23,28 @@ export interface BootstrappedViewports {
   viewport3D: Viewport3D;
 }
 
-/**
- * Creates the four editor viewports and seeds shared world content.
- */
+/** Creates the four editor viewports and seeds shared world content. */
 export class ViewportSceneBootstrap {
   /**
    * Instantiates all four viewport types into the given containers.
-   * @param viewportContainers DOM containers ordered top, front, side, perspective.
+   *
+   * @param viewportContainers DOM containers ordered top, front, side,
+   *   perspective.
    * @param inputManager Input manager for the 3D viewport.
    * @returns The four viewport instances.
    */
-  createViewports(
-    viewportContainers: HTMLElement[],
-    inputManager: InputManager,
-  ): BootstrappedViewports {
+  createViewports(viewportContainers: HTMLElement[], inputManager: InputManager): BootstrappedViewports {
     return {
-      viewport2DTop: new Viewport2D(
-        viewportContainers[0],
-        'Top',
-        'xz',
-        getDefaultTopCameraPosition(),
-      ),
-      viewport2DFront: new Viewport2D(
-        viewportContainers[1],
-        'Front',
-        'xy',
-        getDefaultFrontCameraPosition(),
-      ),
-      viewport2DSide: new Viewport2D(
-        viewportContainers[2],
-        'Side',
-        'yz',
-        getDefaultSideCameraPosition(),
-      ),
+      viewport2DTop: new Viewport2D(viewportContainers[0], 'Top', 'xz', getDefaultTopCameraPosition()),
+      viewport2DFront: new Viewport2D(viewportContainers[1], 'Front', 'xy', getDefaultFrontCameraPosition()),
+      viewport2DSide: new Viewport2D(viewportContainers[2], 'Side', 'yz', getDefaultSideCameraPosition()),
       viewport3D: new Viewport3D(viewportContainers[3], inputManager),
     };
   }
 
   /**
    * Adds shared world objects, lights, and gizmo clones to all viewport scenes.
+   *
    * @param worldObject Root hierarchy group.
    * @param viewports The four viewports.
    * @param viewportSyncManager Sync manager for clone resolution.
@@ -89,13 +70,11 @@ export class ViewportSceneBootstrap {
 
   /**
    * Wires clone-to-world mesh resolution into every viewport.
+   *
    * @param viewports The four viewports.
    * @param viewportSyncManager Sync manager providing resolveToWorldMesh.
    */
-  private bindMeshResolveCallbacks(
-    viewports: BootstrappedViewports,
-    viewportSyncManager: ViewportSyncManager,
-  ): void {
+  private bindMeshResolveCallbacks(viewports: BootstrappedViewports, viewportSyncManager: ViewportSyncManager): void {
     const resolve = (mesh: THREE.Mesh) => viewportSyncManager.resolveToWorldMesh(mesh);
     viewports.viewport2DTop.setMeshResolveCallback(resolve);
     viewports.viewport2DFront.setMeshResolveCallback(resolve);
@@ -105,19 +84,12 @@ export class ViewportSceneBootstrap {
 
   /**
    * Adds a cloned transform gizmo group to each viewport scene.
+   *
    * @param viewports The four viewports.
    * @param transformGizmo Source gizmo for handle group clones.
    */
-  private addGizmoToAllViewports(
-    viewports: BootstrappedViewports,
-    transformGizmo: TransformGizmo,
-  ): void {
-    const list = [
-      viewports.viewport2DTop,
-      viewports.viewport2DFront,
-      viewports.viewport2DSide,
-      viewports.viewport3D,
-    ];
+  private addGizmoToAllViewports(viewports: BootstrappedViewports, transformGizmo: TransformGizmo): void {
+    const list = [viewports.viewport2DTop, viewports.viewport2DFront, viewports.viewport2DSide, viewports.viewport3D];
     list.forEach((vp) => {
       const gizmoGroup = transformGizmo.getHandleGroupClone();
       vp.setGizmoGroup(gizmoGroup);
@@ -126,6 +98,7 @@ export class ViewportSceneBootstrap {
 
   /**
    * Creates the default box primitive placed at world origin.
+   *
    * @returns A configured box mesh with decorative edges.
    */
   private createDefaultBox(): THREE.Mesh {
@@ -136,10 +109,7 @@ export class ViewportSceneBootstrap {
     box.name = 'DefaultCube';
     initializeMeshTextureUVs(box);
     const edges = new THREE.EdgesGeometry(geometry, 1);
-    const line = new THREE.LineSegments(
-      edges,
-      new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor }),
-    );
+    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor }));
     line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
     box.add(line);
     return box;
@@ -147,6 +117,7 @@ export class ViewportSceneBootstrap {
 
   /**
    * Adds lighting to all 2D viewport scenes.
+   *
    * @param viewports The four viewports (3D is skipped).
    */
   private addLightsTo2DScenes(viewports: BootstrappedViewports): void {

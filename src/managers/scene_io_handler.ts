@@ -11,8 +11,8 @@ import { VmfImportResult, VmfSolidImporter } from '../io/vmf/vmf_solid_importer.
 import { ImportProgressOverlay } from '../ui/import_progress_overlay.js';
 
 /**
- * Orchestrates save, load, GLB export, and VMF import operations.
- * Coordinates serializer, deserializer, exporter, and file dialog.
+ * Orchestrates save, load, GLB export, and VMF import operations. Coordinates
+ * serializer, deserializer, exporter, and file dialog.
  */
 export class SceneIOHandler {
   private sceneSerializer: SceneSerializer;
@@ -21,9 +21,7 @@ export class SceneIOHandler {
   private fileDialogManager: FileDialogManager;
   private vmfImporter: VmfSolidImporter;
 
-  /**
-   * Creates a new scene I/O handler.
-   */
+  /** Creates a new scene I/O handler. */
   constructor() {
     this.sceneSerializer = new SceneSerializer();
     this.sceneDeserializer = new SceneDeserializer();
@@ -34,6 +32,7 @@ export class SceneIOHandler {
 
   /**
    * Saves the scene by serializing and writing to a file.
+   *
    * @param worldGroup The root group containing the scene objects.
    * @param statusBar The status bar for feedback, or null.
    */
@@ -50,6 +49,7 @@ export class SceneIOHandler {
 
   /**
    * Displays save result in the status bar.
+   *
    * @param filename The saved filename, or null on failure.
    * @param statusBar The status bar for feedback, or null.
    */
@@ -65,15 +65,12 @@ export class SceneIOHandler {
 
   /**
    * Loads the scene by reading and deserializing a file.
+   *
    * @param worldGroup The target group to populate with loaded objects.
    * @param onSceneLoaded Callback invoked after successful scene load.
    * @param statusBar The status bar for feedback, or null.
    */
-  async loadScene(
-    worldGroup: THREE.Group,
-    onSceneLoaded: () => void,
-    statusBar: StatusBar | null,
-  ): Promise<void> {
+  async loadScene(worldGroup: THREE.Group, onSceneLoaded: () => void, statusBar: StatusBar | null): Promise<void> {
     try {
       const jsonString = await this.fileDialogManager.loadJSON();
       this.processLoadResult(jsonString, worldGroup, onSceneLoaded, statusBar);
@@ -83,8 +80,9 @@ export class SceneIOHandler {
   }
 
   /**
-   * Processes the load result and rebuilds the scene.
-   * Always attempts load when JSON is present, even if status bar is null.
+   * Processes the load result and rebuilds the scene. Always attempts load when
+   * JSON is present, even if status bar is null.
+   *
    * @param jsonString The loaded JSON string, or null on failure.
    * @param worldGroup The target group to populate.
    * @param onSceneLoaded Callback invoked after successful scene load.
@@ -105,6 +103,7 @@ export class SceneIOHandler {
 
   /**
    * Parses JSON and deserializes into the world group.
+   *
    * @param jsonString The JSON string to parse and load.
    * @param worldGroup The target group to populate.
    * @param onSceneLoaded Callback invoked after successful scene load.
@@ -135,6 +134,7 @@ export class SceneIOHandler {
 
   /**
    * Validates that parsed data has the minimum required scene shape.
+   *
    * @param data The parsed JSON value.
    * @returns True if the data looks like a SceneJSON payload.
    */
@@ -145,18 +145,15 @@ export class SceneIOHandler {
   }
 
   /**
-   * Opens a VMF file dialog and imports brushes into a solid model.
-   * Does not attach the model to the scene; the caller places it with undo.
+   * Opens a VMF file dialog and imports brushes into a solid model. Does not
+   * attach the model to the scene; the caller places it with undo.
+   *
    * @param statusBar Status bar for feedback, or null.
    * @returns Import result, or null when cancelled or failed.
    */
   async importVmf(statusBar: StatusBar | null): Promise<VmfImportResult | null> {
     try {
-      const file = await this.fileDialogManager.loadTextFile(
-        '.vmf,text/plain',
-        'Valve Map Format (VMF)',
-        ['.vmf'],
-      );
+      const file = await this.fileDialogManager.loadTextFile('.vmf,text/plain', 'Valve Map Format (VMF)', ['.vmf']);
       if (!file) {
         this.showError(statusBar, 'VMF import cancelled');
         return null;
@@ -169,7 +166,9 @@ export class SceneIOHandler {
   }
 
   /**
-   * Imports a VMF document from text into a solid model (async, non-blocking UI).
+   * Imports a VMF document from text into a solid model (async, non-blocking
+   * UI).
+   *
    * @param source VMF file contents.
    * @param filename Source filename used for the model name.
    * @param statusBar Status bar for feedback, or null.
@@ -208,6 +207,7 @@ export class SceneIOHandler {
 
   /**
    * Builds a solid model display name from a VMF path or filename.
+   *
    * @param filename File name, possibly with path.
    * @returns Model name without extension.
    */
@@ -218,25 +218,21 @@ export class SceneIOHandler {
 
   /**
    * Writes VMF import success feedback to the status bar.
+   *
    * @param result Import summary.
    * @param filename Source filename.
    * @param statusBar Status bar, or null.
    */
-  private showVmfImportResult(
-    result: VmfImportResult,
-    filename: string,
-    statusBar: StatusBar | null,
-  ): void {
+  private showVmfImportResult(result: VmfImportResult, filename: string, statusBar: StatusBar | null): void {
     if (!statusBar) return;
     const skipped = result.skippedBrushCount > 0 ? `, skipped ${result.skippedBrushCount}` : '';
-    statusBar.setLastAction(
-      `Imported ${result.importedBrushCount} brushes from ${filename}${skipped}`,
-    );
+    statusBar.setLastAction(`Imported ${result.importedBrushCount} brushes from ${filename}${skipped}`);
   }
 
   /**
    * Exports the scene as a binary GLB file baked with the active profile's
    * coordinate space and length-unit conventions.
+   *
    * @param worldGroup The root group to export.
    * @param statusBar The status bar for feedback, or null.
    * @param profile Active game profile controlling conversion, or null.
@@ -266,15 +262,12 @@ export class SceneIOHandler {
   /**
    * Displays export result in the status bar, annotated with the active
    * profile's coordinate space and unit when available.
+   *
    * @param filename The exported filename, or null on failure.
    * @param statusBar The status bar for feedback, or null.
    * @param profile The profile used for conversion, or null.
    */
-  private showExportResult(
-    filename: string | null,
-    statusBar: StatusBar | null,
-    profile: GameProfile | null,
-  ): void {
+  private showExportResult(filename: string | null, statusBar: StatusBar | null, profile: GameProfile | null): void {
     if (!statusBar) return;
     if (filename) {
       const suffix = this.describeProfile(profile);
@@ -285,8 +278,9 @@ export class SceneIOHandler {
   }
 
   /**
-   * Builds a short "(<unit>, <space>)" suffix describing the conversion
-   * applied during export. Returns an empty string when no profile is set.
+   * Builds a short "(<unit>, <space>)" suffix describing the conversion applied
+   * during export. Returns an empty string when no profile is set.
+   *
    * @param profile The profile used for conversion, or null.
    * @returns Suffix text for the status bar message.
    */
@@ -300,6 +294,7 @@ export class SceneIOHandler {
 
   /**
    * Writes an error message to the status bar when available.
+   *
    * @param statusBar The status bar, or null.
    * @param message The error message.
    */
@@ -311,6 +306,7 @@ export class SceneIOHandler {
 
   /**
    * Formats an unknown error into a short string.
+   *
    * @param error The thrown value.
    * @returns A readable error string.
    */

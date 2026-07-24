@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import { GizmoAxis } from '../types/transform_mode.js';
 
 /**
- * Represents a single interactive handle on a transform gizmo.
- * Stores axis, color, and the visual mesh used for rendering.
+ * Represents a single interactive handle on a transform gizmo. Stores axis,
+ * color, and the visual mesh used for rendering.
  */
 let nextHandleId = 0;
 
 /**
  * Returns the next unique handle identifier.
+ *
  * @returns A unique numeric ID for a new handle.
  */
 function getNextHandleId(): number {
@@ -25,6 +26,7 @@ export class GizmoHandle {
 
   /**
    * Creates a new gizmo handle with the given axis, color, and visual mesh.
+   *
    * @param axis The gizmo axis this handle represents.
    * @param color The base color of the handle.
    * @param visualMesh The Three.js mesh representing this handle visually.
@@ -40,6 +42,7 @@ export class GizmoHandle {
 
   /**
    * Returns the gizmo axis associated with this handle.
+   *
    * @returns The axis enum value.
    */
   getAxis(): GizmoAxis {
@@ -48,6 +51,7 @@ export class GizmoHandle {
 
   /**
    * Returns the unique identifier for this handle.
+   *
    * @returns The handle ID for matching against cloned meshes.
    */
   getHandleId(): number {
@@ -56,6 +60,7 @@ export class GizmoHandle {
 
   /**
    * Returns the base color of this handle.
+   *
    * @returns The hex color value.
    */
   getColor(): number {
@@ -64,6 +69,7 @@ export class GizmoHandle {
 
   /**
    * Returns the visual Three.js mesh of this handle.
+   *
    * @returns The mesh used for rendering and raycasting.
    */
   getVisualMesh(): THREE.Mesh {
@@ -72,6 +78,7 @@ export class GizmoHandle {
 
   /**
    * Sets the base color of this handle and updates the mesh material.
+   *
    * @param color The new hex color value.
    */
   setColor(color: number): void {
@@ -81,6 +88,7 @@ export class GizmoHandle {
 
   /**
    * Toggles the hover color state on or off.
+   *
    * @param isHovered Whether the handle is currently hovered.
    */
   setHoverColor(isHovered: boolean): void {
@@ -90,6 +98,7 @@ export class GizmoHandle {
 
   /**
    * Checks if this handle is currently in hover state.
+   *
    * @returns True if the handle is hovered, false otherwise.
    */
   isHoveredState(): boolean {
@@ -98,15 +107,14 @@ export class GizmoHandle {
 
   /**
    * Sets the hover color to use when the handle is hovered.
+   *
    * @param color The hover color hex value.
    */
   setHoverColorValue(color: number): void {
     this.hoverColor = color;
   }
 
-  /**
-   * Applies the correct color to the mesh material based on hover state.
-   */
+  /** Applies the correct color to the mesh material based on hover state. */
   private updateMeshColor(): void {
     const targetColor = this.isHovered ? this.hoverColor : this.baseColor;
     const material = this.visualMesh.material;

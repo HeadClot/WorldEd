@@ -4,10 +4,7 @@ import { SolidPlane } from '../brush/solid_plane.js';
 import { SolidBrushInstance } from '../model/solid_brush_instance.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { SurfaceCategory } from '../types/surface_category.js';
-import {
-  shouldKeepSurfaceCategory,
-  shouldReverseSurfaceWinding,
-} from '../types/surface_category.js';
+import { shouldKeepSurfaceCategory, shouldReverseSurfaceWinding } from '../types/surface_category.js';
 import { BrushMembership } from './brush_membership.js';
 import { BrushOverlapGraph } from './brush_overlap_graph.js';
 import { BrushShapeFingerprint } from './brush_shape_fingerprint.js';
@@ -22,9 +19,7 @@ import { forBatchesAsync } from '../../utils/async_yield.js';
 
 export type { SolidCompiledPolygon } from './solid_compiled_polygon.js';
 
-/**
- * Options controlling full versus partial solid CSG compilation.
- */
+/** Options controlling full versus partial solid CSG compilation. */
 export interface SolidCompileOptions {
   /**
    * Brush ids known to have changed. When set (and forceFull is false), only
@@ -34,15 +29,13 @@ export interface SolidCompileOptions {
   /** When true, discards reuse and recompiles every brush. */
   forceFull?: boolean;
   /**
-   * When true, skips concatenating all cached polygons into one array.
-   * Solid model meshing reads per-brush caches directly.
+   * When true, skips concatenating all cached polygons into one array. Solid
+   * model meshing reads per-brush caches directly.
    */
   skipPolygonAssembly?: boolean;
 }
 
-/**
- * Diagnostics from the most recent compile pass (for tests and profiling).
- */
+/** Diagnostics from the most recent compile pass (for tests and profiling). */
 export interface SolidCompileStats {
   /** True when every brush was recompiled. */
   fullRebuild: boolean;
@@ -54,9 +47,7 @@ export interface SolidCompileStats {
   preparedBrushCount: number;
 }
 
-/**
- * World-space brush snapshot used during compilation.
- */
+/** World-space brush snapshot used during compilation. */
 interface PreparedBrush {
   instance: SolidBrushInstance;
   brush: SolidBrush;
@@ -91,6 +82,7 @@ export class SolidCsgCompiler {
 
   /**
    * Creates a solid CSG compiler.
+   *
    * @param membershipEpsilon Optional fat-plane epsilon for membership tests.
    */
   constructor(membershipEpsilon: number = SOLID_FAT_PLANE_EPSILON) {
@@ -100,6 +92,7 @@ export class SolidCsgCompiler {
 
   /**
    * Returns diagnostics from the most recent compile.
+   *
    * @returns Copy of the last compile stats.
    */
   getLastCompileStats(): SolidCompileStats {
@@ -108,6 +101,7 @@ export class SolidCsgCompiler {
 
   /**
    * Returns brush ids whose surfaces were recompiled on the last pass.
+   *
    * @returns Brush ids that need mesh-chunk rebuild.
    */
   getLastUpdateBrushIds(): string[] {
@@ -116,6 +110,7 @@ export class SolidCsgCompiler {
 
   /**
    * Returns the brush evaluation order from the last successful compile.
+   *
    * @returns Ordered brush ids.
    */
   getLastBrushOrder(): string[] {
@@ -124,6 +119,7 @@ export class SolidCsgCompiler {
 
   /**
    * Returns cached compiled polygons for one brush after compile.
+   *
    * @param brushId Brush instance id.
    * @returns Polygon list or undefined.
    */
@@ -133,6 +129,7 @@ export class SolidCsgCompiler {
 
   /**
    * Returns previously overlapping peer ids for a brush from the last compile.
+   *
    * @param brushId Brush instance id.
    * @returns Peer brush ids.
    */
@@ -142,15 +139,14 @@ export class SolidCsgCompiler {
 
   /**
    * Drops cached data for a removed brush.
+   *
    * @param brushId Brush instance id.
    */
   invalidateBrush(brushId: string): void {
     this.cache.removeBrush(brushId);
   }
 
-  /**
-   * Clears all compile caches (forces the next compile to rebuild everything).
-   */
+  /** Clears all compile caches (forces the next compile to rebuild everything). */
   clearCache(): void {
     this.cache.clear();
     this.lastUpdateBrushIds = [];
@@ -159,14 +155,12 @@ export class SolidCsgCompiler {
   /**
    * Updates texture ids on cached polygons for a brush without recompiling CSG.
    * Used by presentation-only remesh after texture paint.
+   *
    * @param brushId Brush instance id.
    * @param textureForSurface Maps surface index to texture id.
    * @returns True when a polygon cache exists and was updated.
    */
-  updateCachedPolygonTextures(
-    brushId: string,
-    textureForSurface: (surfaceIndex: number) => string,
-  ): boolean {
+  updateCachedPolygonTextures(brushId: string, textureForSurface: (surfaceIndex: number) => string): boolean {
     const polygons = this.cache.getPolygons(brushId);
     if (!polygons) return false;
     for (const polygon of polygons) {
@@ -177,21 +171,21 @@ export class SolidCsgCompiler {
 
   /**
    * Compiles visible brushes into final surface polygons.
+   *
    * @param instances Ordered brush instances (tree order = list order).
    * @param options Optional partial-update controls.
    * @returns Compiled surface polygons for meshing.
    */
-  compile(
-    instances: SolidBrushInstance[],
-    options: SolidCompileOptions = {},
-  ): SolidCompiledPolygon[] {
+  compile(instances: SolidBrushInstance[], options: SolidCompileOptions = {}): SolidCompiledPolygon[] {
     const prepared = this.beginCompile(instances, options);
     if (!prepared) return [];
     return this.compileWithCache(prepared, options, false);
   }
 
   /**
-   * Compiles surfaces while yielding between brush batches so the UI can update.
+   * Compiles surfaces while yielding between brush batches so the UI can
+   * update.
+   *
    * @param instances Ordered brush instances.
    * @param options Compile options.
    * @param onProgress Optional 0..1 progress for the recompile phase.
@@ -211,15 +205,14 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Shared setup: prepare brushes, detect intersecting ops, build overlap graph.
+   * Shared setup: prepare brushes, detect intersecting ops, build overlap
+   * graph.
+   *
    * @param instances Source instances.
    * @param options Compile options.
    * @returns Prepared list, or null when empty.
    */
-  private beginCompile(
-    instances: SolidBrushInstance[],
-    options: SolidCompileOptions,
-  ): PreparedBrush[] | null {
+  private beginCompile(instances: SolidBrushInstance[], options: SolidCompileOptions): PreparedBrush[] | null {
     this.refreshedBrushIds.clear();
     const prepared = this.prepareBrushes(instances, options);
     if (prepared.length === 0) {
@@ -233,9 +226,7 @@ export class SolidCsgCompiler {
       };
       return null;
     }
-    this.hasIntersectingOperations = prepared.some(
-      (entry) => entry.operation === SolidOperation.Intersecting,
-    );
+    this.hasIntersectingOperations = prepared.some((entry) => entry.operation === SolidOperation.Intersecting);
     this.buildOverlapGraph(prepared, options);
     this.membershipIndex = new BrushSpatialIndex(prepared, this.boundsPad);
     return prepared;
@@ -243,6 +234,7 @@ export class SolidCsgCompiler {
 
   /**
    * Builds full or partial bounds-overlap adjacency for prepared brushes.
+   *
    * @param prepared Prepared brushes with empty overlap lists.
    * @param options Compile options with optional dirty seeds.
    */
@@ -263,6 +255,7 @@ export class SolidCsgCompiler {
 
   /**
    * Maps dirty brush ids to prepared indices (including auto-refreshed ids).
+   *
    * @param prepared Prepared brushes.
    * @param options Compile options.
    * @returns Seed index set.
@@ -280,6 +273,7 @@ export class SolidCsgCompiler {
 
   /**
    * Loads previous overlap peer indices from the touch cache.
+   *
    * @param prepared Prepared brushes.
    * @returns Peer index lists aligned with prepared order.
    */
@@ -301,6 +295,7 @@ export class SolidCsgCompiler {
 
   /**
    * Runs full or partial compilation against the persistent cache.
+   *
    * @param prepared Prepared brushes in tree order.
    * @param options Compile options.
    * @param asyncRecompile When true, yields between recompile batches.
@@ -327,6 +322,7 @@ export class SolidCsgCompiler {
 
   /**
    * Async recompile path with browser yields between brush batches.
+   *
    * @param prepared Prepared brushes.
    * @param options Compile options.
    * @param forceFull Whether this was a full rebuild.
@@ -351,6 +347,7 @@ export class SolidCsgCompiler {
 
   /**
    * Stores touch caches, order, stats after recompile.
+   *
    * @param prepared Prepared brushes.
    * @param forceFull Full rebuild flag.
    * @param updateSet Recompiled brush ids.
@@ -371,15 +368,12 @@ export class SolidCsgCompiler {
 
   /**
    * Stores diagnostics for the completed compile pass.
+   *
    * @param fullRebuild Whether every brush was recompiled.
    * @param recompiledBrushCount Brushes regenerated this pass.
    * @param preparedBrushCount Visible brush count.
    */
-  private recordCompileStats(
-    fullRebuild: boolean,
-    recompiledBrushCount: number,
-    preparedBrushCount: number,
-  ): void {
+  private recordCompileStats(fullRebuild: boolean, recompiledBrushCount: number, preparedBrushCount: number): void {
     this.lastStats = {
       fullRebuild,
       recompiledBrushCount,
@@ -390,6 +384,7 @@ export class SolidCsgCompiler {
 
   /**
    * Returns whether a full rebuild is required for this pass.
+   *
    * @param brushIds Visible brush ids in order.
    * @param options Compile options.
    * @returns True when every brush must be recompiled.
@@ -404,6 +399,7 @@ export class SolidCsgCompiler {
 
   /**
    * Collects seed dirty ids including brushes refreshed during prepare.
+   *
    * @param options Compile options.
    * @returns Seed set for partial updates.
    */
@@ -416,8 +412,9 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Returns whether non-seed brushes can keep their cached polygons.
-   * Requires cached output and stable relative tree order among reusable brushes.
+   * Returns whether non-seed brushes can keep their cached polygons. Requires
+   * cached output and stable relative tree order among reusable brushes.
+   *
    * @param brushIds Current visible brush ids in order.
    * @param seedDirtyIds Brushes that will be recompiled.
    * @returns True when partial reuse is safe.
@@ -438,14 +435,12 @@ export class SolidCsgCompiler {
 
   /**
    * Builds the partial recompile set from seed dirty ids and touch peers.
+   *
    * @param prepared Prepared brushes.
    * @param options Compile options with dirty seeds.
    * @returns Brush ids to recompile.
    */
-  private buildPartialUpdateSet(
-    prepared: PreparedBrush[],
-    options: SolidCompileOptions,
-  ): Set<string> {
+  private buildPartialUpdateSet(prepared: PreparedBrush[], options: SolidCompileOptions): Set<string> {
     const seed = this.collectSeedDirtyIds(options);
     const brushIds = prepared.map((entry) => entry.instance.id);
     const currentTouches = this.buildCurrentTouchMap(prepared);
@@ -455,6 +450,7 @@ export class SolidCsgCompiler {
 
   /**
    * Builds current overlap adjacency keyed by brush id.
+   *
    * @param prepared Prepared brushes with overlap indices.
    * @returns Map of brush id to peer ids.
    */
@@ -462,9 +458,7 @@ export class SolidCsgCompiler {
     const map = new Map<string, string[]>();
     for (let index = 0; index < prepared.length; index++) {
       const entry = prepared[index];
-      const peerIds = entry.overlappingPeerIndices.map(
-        (peerIndex) => prepared[peerIndex].instance.id,
-      );
+      const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex].instance.id);
       map.set(entry.instance.id, peerIds);
     }
     return map;
@@ -472,6 +466,7 @@ export class SolidCsgCompiler {
 
   /**
    * Loads previous touch peers for the given brush ids from cache.
+   *
    * @param brushIds Brush ids to look up.
    * @returns Map of brush id to previous peer ids.
    */
@@ -485,6 +480,7 @@ export class SolidCsgCompiler {
 
   /**
    * Recompiles every brush in the update set and writes polygon cache entries.
+   *
    * @param prepared All prepared brushes.
    * @param updateSet Brush ids to recompile.
    */
@@ -496,7 +492,9 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Recompiles update-set brushes in batches, yielding to the browser between them.
+   * Recompiles update-set brushes in batches, yielding to the browser between
+   * them.
+   *
    * @param prepared All prepared brushes.
    * @param updateSet Brush ids to recompile.
    * @param onProgress Optional 0..1 progress.
@@ -521,6 +519,7 @@ export class SolidCsgCompiler {
 
   /**
    * Lists prepared indices that belong to the update set (tree order).
+   *
    * @param prepared Prepared brushes.
    * @param updateSet Brush ids to recompile.
    * @returns Indices into prepared.
@@ -537,6 +536,7 @@ export class SolidCsgCompiler {
 
   /**
    * Compiles surfaces for one prepared brush into the polygon cache.
+   *
    * @param prepared All prepared brushes.
    * @param brushIndex Index of the brush to compile.
    */
@@ -549,19 +549,19 @@ export class SolidCsgCompiler {
 
   /**
    * Writes current overlap peers into the persistent touch cache.
+   *
    * @param prepared Prepared brushes after overlap build.
    */
   private storeTouchCaches(prepared: PreparedBrush[]): void {
     for (const entry of prepared) {
-      const peerIds = entry.overlappingPeerIndices.map(
-        (peerIndex) => prepared[peerIndex].instance.id,
-      );
+      const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex].instance.id);
       this.cache.setTouchPeerIds(entry.instance.id, peerIds);
     }
   }
 
   /**
    * Concatenates cached polygons in tree order.
+   *
    * @param prepared Prepared brushes in evaluation order.
    * @returns Full polygon soup for meshing.
    */
@@ -578,21 +578,15 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Transforms visible instances into model-space prepared brushes.
-   * Reuses cached geometry for brushes not listed as dirty.
+   * Transforms visible instances into model-space prepared brushes. Reuses
+   * cached geometry for brushes not listed as dirty.
+   *
    * @param instances Source instances.
    * @param options Compile options (dirty seeds).
    * @returns Prepared brush list.
    */
-  private prepareBrushes(
-    instances: SolidBrushInstance[],
-    options: SolidCompileOptions,
-  ): PreparedBrush[] {
-    const dirtySeeds = options.forceFull
-      ? null
-      : options.dirtyBrushIds
-        ? new Set(options.dirtyBrushIds)
-        : null;
+  private prepareBrushes(instances: SolidBrushInstance[], options: SolidCompileOptions): PreparedBrush[] {
+    const dirtySeeds = options.forceFull ? null : options.dirtyBrushIds ? new Set(options.dirtyBrushIds) : null;
     const prepared: PreparedBrush[] = [];
     for (const instance of instances) {
       if (!instance.visible) continue;
@@ -603,16 +597,13 @@ export class SolidCsgCompiler {
 
   /**
    * Prepares one brush, reusing cached model-space data when still valid.
+   *
    * @param instance Source instance.
    * @param dirtySeeds Seed dirty ids, or null to force re-prepare.
    * @returns Prepared brush entry.
    */
-  private prepareOneBrush(
-    instance: SolidBrushInstance,
-    dirtySeeds: Set<string> | null,
-  ): PreparedBrush {
-    const mustRefresh =
-      dirtySeeds === null || dirtySeeds.has(instance.id) || !this.canReusePrepared(instance);
+  private prepareOneBrush(instance: SolidBrushInstance, dirtySeeds: Set<string> | null): PreparedBrush {
+    const mustRefresh = dirtySeeds === null || dirtySeeds.has(instance.id) || !this.canReusePrepared(instance);
     if (!mustRefresh) {
       return this.preparedFromCache(instance);
     }
@@ -623,7 +614,9 @@ export class SolidCsgCompiler {
   /**
    * Returns whether cached prepared geometry still matches the instance.
    * Transform/op/visibility mismatches force a refresh. Shape fingerprints are
-   * only checked when the transform matches so the hot path stays allocation-free.
+   * only checked when the transform matches so the hot path stays
+   * allocation-free.
+   *
    * @param instance Brush instance.
    * @returns True when cache is reusable.
    */
@@ -640,6 +633,7 @@ export class SolidCsgCompiler {
 
   /**
    * Builds a prepared entry from the prepare cache.
+   *
    * @param instance Brush instance.
    * @returns Prepared brush using cached geometry.
    */
@@ -656,6 +650,7 @@ export class SolidCsgCompiler {
 
   /**
    * Transforms an instance into model space and stores the prepare cache entry.
+   *
    * @param instance Brush instance.
    * @returns Fresh prepared brush.
    */
@@ -683,6 +678,7 @@ export class SolidCsgCompiler {
 
   /**
    * Compares two Euler rotations component-wise.
+   *
    * @param a First rotation.
    * @param b Second rotation.
    * @returns True when all components match.
@@ -693,15 +689,12 @@ export class SolidCsgCompiler {
 
   /**
    * Compiles all faces of one brush into the output list.
+   *
    * @param prepared All prepared brushes.
    * @param brushIndex Index of the subject brush.
    * @param output Accumulator for compiled polygons.
    */
-  private compileBrushSurfaces(
-    prepared: PreparedBrush[],
-    brushIndex: number,
-    output: SolidCompiledPolygon[],
-  ): void {
+  private compileBrushSurfaces(prepared: PreparedBrush[], brushIndex: number, output: SolidCompiledPolygon[]): void {
     const subject = prepared[brushIndex];
     if (subject.overlappingPeerIndices.length === 0) {
       this.emitIsolatedBrushSurfaces(subject, prepared, brushIndex, output);
@@ -714,6 +707,7 @@ export class SolidCsgCompiler {
 
   /**
    * Compiles a single face of a brush into surface fragments.
+   *
    * @param prepared All prepared brushes.
    * @param brushIndex Subject brush index.
    * @param faceIndex Face index on the subject brush.
@@ -731,24 +725,16 @@ export class SolidCsgCompiler {
     const facePlane = subject.brush.planes[faceIndex];
     const cutPlanes = this.collectCutPlanes(prepared, brushIndex, facePlane, faceVertices);
     const fragments =
-      cutPlanes.length === 0
-        ? [faceVertices]
-        : SurfaceFragmentSplitter.splitByPlanes(faceVertices, cutPlanes);
+      cutPlanes.length === 0 ? [faceVertices] : SurfaceFragmentSplitter.splitByPlanes(faceVertices, cutPlanes);
     for (const fragment of fragments) {
-      const compiled = this.finalizeFragment(
-        fragment,
-        facePlane,
-        face.surfaceIndex,
-        subject,
-        prepared,
-        brushIndex,
-      );
+      const compiled = this.finalizeFragment(fragment, facePlane, face.surfaceIndex, subject, prepared, brushIndex);
       if (compiled) output.push(compiled);
     }
   }
 
   /**
    * Fast path for a brush that does not overlap any peer volume.
+   *
    * @param subject Isolated brush.
    * @param prepared All brushes (for membership tests when needed).
    * @param brushIndex Subject index.
@@ -770,8 +756,9 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Emits isolated additive faces using full membership classification.
-   * Used when intersecting operations exist elsewhere in the model.
+   * Emits isolated additive faces using full membership classification. Used
+   * when intersecting operations exist elsewhere in the model.
+   *
    * @param subject Isolated brush.
    * @param prepared All brushes.
    * @param brushIndex Subject index.
@@ -798,15 +785,13 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Emits exterior faces of an isolated additive brush without membership tests.
-   * Safe when the model has no intersecting operations.
+   * Emits exterior faces of an isolated additive brush without membership
+   * tests. Safe when the model has no intersecting operations.
+   *
    * @param subject Isolated additive brush.
    * @param output Polygon accumulator.
    */
-  private emitIsolatedAdditiveSurfacesDirect(
-    subject: PreparedBrush,
-    output: SolidCompiledPolygon[],
-  ): void {
+  private emitIsolatedAdditiveSurfacesDirect(subject: PreparedBrush, output: SolidCompiledPolygon[]): void {
     for (let faceIndex = 0; faceIndex < subject.brush.faces.length; faceIndex++) {
       const face = subject.brush.faces[faceIndex];
       const faceVertices = subject.brush.getFaceVertices(face);
@@ -824,7 +809,9 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Collects planes from overlapping peer brushes that may cut the subject face.
+   * Collects planes from overlapping peer brushes that may cut the subject
+   * face.
+   *
    * @param prepared All brushes.
    * @param subjectIndex Subject brush index.
    * @param facePlane Subject face plane.
@@ -853,6 +840,7 @@ export class SolidCsgCompiler {
 
   /**
    * Returns whether a plane straddles a polygon (may produce a cut).
+   *
    * @param polygon Face or fragment vertices.
    * @param plane Candidate cut plane.
    * @returns True when the plane may split the polygon.
@@ -871,6 +859,7 @@ export class SolidCsgCompiler {
 
   /**
    * Classifies a fragment and emits a compiled polygon when it is a boundary.
+   *
    * @param fragment Fragment vertices.
    * @param facePlane Original face plane.
    * @param surfaceIndex Face surface index.
@@ -898,6 +887,7 @@ export class SolidCsgCompiler {
 
   /**
    * Builds a compiled polygon from a kept fragment.
+   *
    * @param fragment Fragment vertices.
    * @param facePlane Original face plane.
    * @param surfaceIndex Face surface index.
@@ -931,7 +921,9 @@ export class SolidCsgCompiler {
   /**
    * Routes a fragment's categories through brush operations in tree order.
    * Non-overlapping peers contribute Outside without a full plane classify.
-   * When no intersecting ops exist, only self and overlapping peers are routed.
+   * When no intersecting ops exist, only self and overlapping peers are
+   * routed.
+   *
    * @param fragment Fragment polygon.
    * @param normal Face normal.
    * @param prepared All brushes.
@@ -952,6 +944,7 @@ export class SolidCsgCompiler {
 
   /**
    * Full tree-order routing including non-overlapping peers (intersecting ops).
+   *
    * @param fragment Fragment polygon.
    * @param normal Face normal.
    * @param prepared All brushes.
@@ -970,14 +963,7 @@ export class SolidCsgCompiler {
     overlapSet.add(subjectIndex);
     for (let index = 0; index < prepared.length; index++) {
       const peer = prepared[index];
-      const relative = this.relativeCategoryForPeer(
-        fragment,
-        normal,
-        peer,
-        index,
-        subjectIndex,
-        overlapSet,
-      );
+      const relative = this.relativeCategoryForPeer(fragment, normal, peer, index, subjectIndex, overlapSet);
       category = CategoryRouter.route(category, relative, peer.operation);
     }
     return category;
@@ -985,6 +971,7 @@ export class SolidCsgCompiler {
 
   /**
    * Local routing through self and overlapping peers only (additive/subtract).
+   *
    * @param fragment Fragment polygon.
    * @param normal Face normal.
    * @param prepared All brushes.
@@ -1013,6 +1000,7 @@ export class SolidCsgCompiler {
 
   /**
    * Resolves the category of a fragment relative to one peer brush.
+   *
    * @param fragment Fragment polygon.
    * @param normal Face normal.
    * @param peer Peer prepared brush.
@@ -1035,17 +1023,15 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Double-checks boundary status with solid-membership samples across the face.
+   * Double-checks boundary status with solid-membership samples across the
+   * face.
+   *
    * @param fragment Fragment vertices.
    * @param normal Face normal.
    * @param prepared All brushes.
    * @returns True when the fragment lies on the final solid boundary.
    */
-  private isBoundaryFragment(
-    fragment: THREE.Vector3[],
-    normal: THREE.Vector3,
-    prepared: PreparedBrush[],
-  ): boolean {
+  private isBoundaryFragment(fragment: THREE.Vector3[], normal: THREE.Vector3, prepared: PreparedBrush[]): boolean {
     this.computeCentroidInto(fragment, this.scratchCentroid);
     const offset = Math.max(this.membershipEpsilon * 4, 1e-4);
     this.scratchOutside.copy(this.scratchCentroid).addScaledVector(normal, offset);
@@ -1056,9 +1042,10 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Evaluates the ordered CSG expression at a point.
-   * Additive/subtractive models only test brushes whose bounds contain the point
-   * (spatial hash). Intersecting ops still walk the full tree in order.
+   * Evaluates the ordered CSG expression at a point. Additive/subtractive
+   * models only test brushes whose bounds contain the point (spatial hash).
+   * Intersecting ops still walk the full tree in order.
+   *
    * @param point Sample point in model space.
    * @param prepared Brush list in tree order.
    * @returns True when the point is inside the final solid.
@@ -1072,6 +1059,7 @@ export class SolidCsgCompiler {
 
   /**
    * Full tree-order membership including non-overlapping intersecting operands.
+   *
    * @param point Sample point.
    * @param prepared Brush list.
    * @returns Solid membership.
@@ -1083,11 +1071,7 @@ export class SolidCsgCompiler {
         inside = this.applyOperation(inside, false, entry.operation);
         continue;
       }
-      const inBrush = BrushMembership.isInsidePlanes(
-        point,
-        entry.brush.planes,
-        this.membershipEpsilon,
-      );
+      const inBrush = BrushMembership.isInsidePlanes(point, entry.brush.planes, this.membershipEpsilon);
       inside = this.applyOperation(inside, inBrush, entry.operation);
     }
     return inside;
@@ -1095,7 +1079,9 @@ export class SolidCsgCompiler {
 
   /**
    * Membership for additive/subtractive models using the spatial brush index.
-   * Brushes that cannot contain the point never affect the result and are skipped.
+   * Brushes that cannot contain the point never affect the result and are
+   * skipped.
+   *
    * @param point Sample point.
    * @param prepared Brush list.
    * @returns Solid membership.
@@ -1109,11 +1095,7 @@ export class SolidCsgCompiler {
     let inside = false;
     for (const index of candidates) {
       const entry = prepared[index];
-      const inBrush = BrushMembership.isInsidePlanes(
-        point,
-        entry.brush.planes,
-        this.membershipEpsilon,
-      );
+      const inBrush = BrushMembership.isInsidePlanes(point, entry.brush.planes, this.membershipEpsilon);
       inside = this.applyOperation(inside, inBrush, entry.operation);
     }
     return inside;
@@ -1121,6 +1103,7 @@ export class SolidCsgCompiler {
 
   /**
    * Linear fallback that lists brushes whose bounds contain a point.
+   *
    * @param point Sample point.
    * @param prepared Brush list.
    * @returns Prepared indices.
@@ -1137,6 +1120,7 @@ export class SolidCsgCompiler {
 
   /**
    * Applies a CSG operation to an accumulated membership flag.
+   *
    * @param current Current solid membership.
    * @param inBrush Whether the point is inside the operand brush.
    * @param operation Operand operation.
@@ -1150,6 +1134,7 @@ export class SolidCsgCompiler {
 
   /**
    * Returns whether a padded AABB contains a point.
+   *
    * @param bounds Axis-aligned bounds.
    * @param point Sample point.
    * @returns True when the point is inside the expanded box.
@@ -1168,6 +1153,7 @@ export class SolidCsgCompiler {
 
   /**
    * Writes the arithmetic centroid of a polygon into a target vector.
+   *
    * @param polygon Vertices.
    * @param target Output vector.
    */

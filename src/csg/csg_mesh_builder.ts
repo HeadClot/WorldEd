@@ -9,21 +9,19 @@ import {
 } from '../texture/face_texture_mapping.js';
 import { setFaceTextureMaps } from '../texture/face_texture_storage.js';
 import { getFaceTextureMaps } from '../texture/face_texture_storage.js';
-import {
-  rebakeStoredFaceTextureMaps,
-  splitMeshIntoCoplanarRegions,
-} from '../texture/planar_uv_projector.js';
+import { rebakeStoredFaceTextureMaps, splitMeshIntoCoplanarRegions } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
 import { getTexturePaintState } from '../texture/texture_paint_state.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/texture_id.js';
 
 /**
- * Converts between Three.js meshes and CSG polygon soups.
- * Carries per-polygon surface texture mappings through rebuilds.
+ * Converts between Three.js meshes and CSG polygon soups. Carries per-polygon
+ * surface texture mappings through rebuilds.
  */
 export class CsgMeshBuilder {
   /**
    * Extracts world-space triangles from a mesh as CSG polygons.
+   *
    * @param mesh The source mesh.
    * @returns An array of triangular polygons with surface mappings.
    */
@@ -46,6 +44,7 @@ export class CsgMeshBuilder {
   /**
    * Builds a mesh from a polygon soup using the provided material color.
    * Restores face texture maps from polygon surface bindings.
+   *
    * @param polygons The CSG polygons to convert.
    * @param color The material color hex value.
    * @param name The mesh name.
@@ -66,7 +65,9 @@ export class CsgMeshBuilder {
   }
 
   /**
-   * Builds per-triangle mapping lookup from stored face maps (or paint default).
+   * Builds per-triangle mapping lookup from stored face maps (or paint
+   * default).
+   *
    * @param mesh Source mesh.
    * @returns Mapping per triangle index.
    */
@@ -83,14 +84,12 @@ export class CsgMeshBuilder {
 
   /**
    * Resolves mapping for a triangle, falling back to last paint texture.
+   *
    * @param triangleIndex Triangle index.
    * @param table Lookup table from the source mesh.
    * @returns Mapping for the polygon.
    */
-  private resolveTriangleMapping(
-    triangleIndex: number,
-    table: Map<number, FaceTextureMapping>,
-  ): FaceTextureMapping {
+  private resolveTriangleMapping(triangleIndex: number, table: Map<number, FaceTextureMapping>): FaceTextureMapping {
     const existing = table.get(triangleIndex);
     if (existing) return cloneFaceTextureMapping(existing);
     return createDefaultFaceTextureMapping(getTexturePaintState().getLastTextureId());
@@ -98,6 +97,7 @@ export class CsgMeshBuilder {
 
   /**
    * Extracts triangles from indexed geometry.
+   *
    * @param position The position attribute.
    * @param index The index buffer.
    * @param polygons The accumulator list.
@@ -124,6 +124,7 @@ export class CsgMeshBuilder {
 
   /**
    * Extracts triangles from non-indexed geometry.
+   *
    * @param position The position attribute.
    * @param polygons The accumulator list.
    * @param triangleMappings Source triangle mapping table.
@@ -148,19 +149,18 @@ export class CsgMeshBuilder {
 
   /**
    * Reads a vertex from a buffer attribute.
+   *
    * @param position The position attribute.
    * @param index The vertex index.
    * @returns A new Vector3.
    */
-  private readVertex(
-    position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-    index: number,
-  ): THREE.Vector3 {
+  private readVertex(position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute, index: number): THREE.Vector3 {
     return new THREE.Vector3(position.getX(index), position.getY(index), position.getZ(index));
   }
 
   /**
    * Rejects degenerate zero-area triangles.
+   *
    * @param a First vertex.
    * @param b Second vertex.
    * @param c Third vertex.
@@ -174,6 +174,7 @@ export class CsgMeshBuilder {
 
   /**
    * Builds a BufferGeometry from polygons by fan-triangulating each face.
+   *
    * @param polygons The source polygons.
    * @returns Geometry plus per-triangle surface mappings.
    */
@@ -201,15 +202,13 @@ export class CsgMeshBuilder {
 
   /**
    * Writes face texture maps from per-triangle mappings and rebuilds materials.
-   * Groups by coplanar region so UV bake uses a single plane per face
-   * (never averages opposite walls that share the same texture id).
+   * Groups by coplanar region so UV bake uses a single plane per face (never
+   * averages opposite walls that share the same texture id).
+   *
    * @param mesh Result mesh.
    * @param triangleMappings Mapping for each output triangle.
    */
-  private applyTriangleMappingsToMesh(
-    mesh: THREE.Mesh,
-    triangleMappings: FaceTextureMapping[],
-  ): void {
+  private applyTriangleMappingsToMesh(mesh: THREE.Mesh, triangleMappings: FaceTextureMapping[]): void {
     mesh.updateMatrixWorld(true);
     const entries = this.groupByCoplanarRegion(mesh, triangleMappings);
     setFaceTextureMaps(mesh, entries);
@@ -218,16 +217,15 @@ export class CsgMeshBuilder {
   }
 
   /**
-   * Builds map entries by coplanar face regions, taking mapping from the seed triangle.
-   * When one plane has mixed texture ids, splits further by mapping identity.
+   * Builds map entries by coplanar face regions, taking mapping from the seed
+   * triangle. When one plane has mixed texture ids, splits further by mapping
+   * identity.
+   *
    * @param mesh Result mesh (geometry already recentered).
    * @param triangleMappings Mapping for each triangle index.
    * @returns Face texture map entries suitable for planar UV bake.
    */
-  private groupByCoplanarRegion(
-    mesh: THREE.Mesh,
-    triangleMappings: FaceTextureMapping[],
-  ): FaceTextureMapEntry[] {
+  private groupByCoplanarRegion(mesh: THREE.Mesh, triangleMappings: FaceTextureMapping[]): FaceTextureMapEntry[] {
     const fallback = createDefaultFaceTextureMapping(getTexturePaintState().getLastTextureId());
     const regions = splitMeshIntoCoplanarRegions(mesh);
     const entries: FaceTextureMapEntry[] = [];
@@ -239,6 +237,7 @@ export class CsgMeshBuilder {
 
   /**
    * Appends one or more map entries for a coplanar region.
+   *
    * @param region Coplanar triangle indices.
    * @param triangleMappings Per-triangle mappings.
    * @param fallback Mapping when a triangle lacks one.
@@ -273,6 +272,7 @@ export class CsgMeshBuilder {
 
   /**
    * Recenters geometry so the mesh position sits at the bounds center.
+   *
    * @param mesh The mesh to adjust.
    */
   private bakeGeometryCenterIntoPosition(mesh: THREE.Mesh): void {
@@ -288,6 +288,7 @@ export class CsgMeshBuilder {
 
 /**
  * Builds a stable key for grouping identical surface mappings.
+ *
  * @param mapping Mapping to key.
  * @returns String key.
  */

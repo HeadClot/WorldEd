@@ -3,22 +3,16 @@ import * as THREE from 'three';
 /**
  * Returns the three position-attribute vertex indices for a triangle face.
  * Correctly handles both indexed and non-indexed BufferGeometry.
+ *
  * @param geometry The buffer geometry to read.
  * @param faceIndex The triangle index (from raycast faceIndex).
  * @returns A tuple of three vertex indices into the position attribute.
  */
-export function getTriangleVertexIndices(
-  geometry: THREE.BufferGeometry,
-  faceIndex: number,
-): [number, number, number] {
+export function getTriangleVertexIndices(geometry: THREE.BufferGeometry, faceIndex: number): [number, number, number] {
   const indexAttribute = geometry.index;
   if (indexAttribute) {
     const base = faceIndex * 3;
-    return [
-      indexAttribute.getX(base),
-      indexAttribute.getX(base + 1),
-      indexAttribute.getX(base + 2),
-    ];
+    return [indexAttribute.getX(base), indexAttribute.getX(base + 1), indexAttribute.getX(base + 2)];
   }
   const base = faceIndex * 3;
   return [base, base + 1, base + 2];
@@ -26,6 +20,7 @@ export function getTriangleVertexIndices(
 
 /**
  * Returns the number of triangles in a buffer geometry.
+ *
  * @param geometry The geometry to inspect.
  * @returns Triangle count.
  */
@@ -41,6 +36,7 @@ export function getTriangleCount(geometry: THREE.BufferGeometry): number {
 
 /**
  * Reads a vertex position from a position attribute.
+ *
  * @param positions The position attribute.
  * @param vertexIndex The vertex index.
  * @returns The vertex as a Vector3.
@@ -49,23 +45,17 @@ export function getVertexPosition(
   positions: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   vertexIndex: number,
 ): THREE.Vector3 {
-  return new THREE.Vector3(
-    positions.getX(vertexIndex),
-    positions.getY(vertexIndex),
-    positions.getZ(vertexIndex),
-  );
+  return new THREE.Vector3(positions.getX(vertexIndex), positions.getY(vertexIndex), positions.getZ(vertexIndex));
 }
 
 /**
  * Computes the normal of a triangle face, handling indexed geometry.
+ *
  * @param geometry The buffer geometry.
  * @param faceIndex The triangle index.
  * @returns A normalized face normal.
  */
-export function computeTriangleNormal(
-  geometry: THREE.BufferGeometry,
-  faceIndex: number,
-): THREE.Vector3 {
+export function computeTriangleNormal(geometry: THREE.BufferGeometry, faceIndex: number): THREE.Vector3 {
   const positions = geometry.getAttribute('position');
   const [i0, i1, i2] = getTriangleVertexIndices(geometry, faceIndex);
   const v0 = getVertexPosition(positions, i0);
@@ -78,14 +68,12 @@ export function computeTriangleNormal(
 
 /**
  * Computes a point on the triangle used as a plane sample (centroid).
+ *
  * @param geometry The buffer geometry.
  * @param faceIndex The triangle index.
  * @returns The triangle centroid.
  */
-export function computeTriangleCentroid(
-  geometry: THREE.BufferGeometry,
-  faceIndex: number,
-): THREE.Vector3 {
+export function computeTriangleCentroid(geometry: THREE.BufferGeometry, faceIndex: number): THREE.Vector3 {
   const positions = geometry.getAttribute('position');
   const [i0, i1, i2] = getTriangleVertexIndices(geometry, faceIndex);
   const v0 = getVertexPosition(positions, i0);
@@ -98,13 +86,15 @@ export function computeTriangleCentroid(
 }
 
 /**
- * Finds all triangle indices coplanar with a seed triangle.
- * Used so face selection picks whole flat faces (e.g. both tris of a box side).
- * Does not require edge connectivity; prefer findConnectedCoplanarFaceIndices for
- * CSG result meshes where many distant fragments may share a plane.
+ * Finds all triangle indices coplanar with a seed triangle. Used so face
+ * selection picks whole flat faces (e.g. both tris of a box side). Does not
+ * require edge connectivity; prefer findConnectedCoplanarFaceIndices for CSG
+ * result meshes where many distant fragments may share a plane.
+ *
  * @param geometry The buffer geometry.
  * @param seedFaceIndex The triangle that was clicked.
- * @param normalDotTolerance Minimum |n·seed| for normals to match (default ~5°).
+ * @param normalDotTolerance Minimum |n·seed| for normals to match (default
+ *   ~5°).
  * @param planeTolerance Max plane distance error for coplanarity.
  * @returns Sorted unique triangle indices including the seed.
  */
@@ -143,6 +133,7 @@ export function findCoplanarFaceIndices(
 /**
  * Finds the edge-connected coplanar polygon containing the seed triangle.
  * Position-based edge matching works for non-indexed CSG result meshes.
+ *
  * @param geometry The buffer geometry.
  * @param seedFaceIndex The triangle that was clicked.
  * @param normalDotTolerance Minimum normal alignment with the seed.
@@ -155,18 +146,14 @@ export function findConnectedCoplanarFaceIndices(
   normalDotTolerance: number = 0.995,
   planeTolerance: number = 1e-3,
 ): number[] {
-  const coplanar = findCoplanarFaceIndices(
-    geometry,
-    seedFaceIndex,
-    normalDotTolerance,
-    planeTolerance,
-  );
+  const coplanar = findCoplanarFaceIndices(geometry, seedFaceIndex, normalDotTolerance, planeTolerance);
   if (coplanar.length <= 1) return coplanar;
   return floodFillConnectedFaces(geometry, seedFaceIndex, new Set(coplanar));
 }
 
 /**
  * Flood-fills face indices among a candidate set using shared position edges.
+ *
  * @param geometry Source geometry.
  * @param seedFaceIndex Start triangle (must be in candidates).
  * @param candidates Allowed triangle indices.
@@ -197,6 +184,7 @@ export function floodFillConnectedFaces(
 
 /**
  * Builds undirected triangle adjacency via quantized shared edges.
+ *
  * @param geometry Source geometry.
  * @param faceIndices Candidate triangle indices.
  * @returns Map from face index to neighboring face indices.
@@ -228,6 +216,7 @@ function buildPositionEdgeAdjacency(
 
 /**
  * Adds an undirected adjacency link between two face indices.
+ *
  * @param adjacency Adjacency map to mutate.
  * @param a First face index.
  * @param b Second face index.
@@ -249,14 +238,12 @@ function addAdjacencyEdge(adjacency: Map<number, number[]>, a: number, b: number
 
 /**
  * Returns three quantized edge keys for a triangle (position-based).
+ *
  * @param geometry Source geometry.
  * @param faceIndex Triangle index.
  * @returns Edge key strings.
  */
-function getTrianglePositionEdgeKeys(
-  geometry: THREE.BufferGeometry,
-  faceIndex: number,
-): [string, string, string] {
+function getTrianglePositionEdgeKeys(geometry: THREE.BufferGeometry, faceIndex: number): [string, string, string] {
   const positions = geometry.getAttribute('position');
   const [i0, i1, i2] = getTriangleVertexIndices(geometry, faceIndex);
   const p0 = getVertexPosition(positions, i0);
@@ -267,6 +254,7 @@ function getTrianglePositionEdgeKeys(
 
 /**
  * Builds a stable key for an unordered edge from two positions.
+ *
  * @param a First endpoint.
  * @param b Second endpoint.
  * @returns Quantized edge key.
@@ -279,6 +267,7 @@ function makePositionEdgeKey(a: THREE.Vector3, b: THREE.Vector3): string {
 
 /**
  * Quantizes a position for edge matching across non-indexed duplicates.
+ *
  * @param point World/local position.
  * @returns Compact coordinate key.
  */
@@ -292,6 +281,7 @@ function quantizePositionKey(point: THREE.Vector3): string {
 
 /**
  * Tests whether a triangle shares the seed face plane and normal direction.
+ *
  * @param geometry The buffer geometry.
  * @param faceIndex The triangle to test.
  * @param seedNormal The seed face normal.
@@ -319,14 +309,12 @@ function isTriangleCoplanarWithSeed(
 
 /**
  * Collects unique position-attribute indices referenced by face indices.
+ *
  * @param geometry The buffer geometry.
  * @param faceIndices The triangle indices.
  * @returns Sorted unique vertex indices.
  */
-export function getUniqueVertexIndicesForFaces(
-  geometry: THREE.BufferGeometry,
-  faceIndices: number[],
-): number[] {
+export function getUniqueVertexIndicesForFaces(geometry: THREE.BufferGeometry, faceIndices: number[]): number[] {
   const vertexSet = new Set<number>();
   faceIndices.forEach((faceIndex) => {
     const [i0, i1, i2] = getTriangleVertexIndices(geometry, faceIndex);

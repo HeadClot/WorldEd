@@ -5,9 +5,7 @@ import { SolidBrushValidator } from '../../../src/solid/brush/solid_brush_valida
 import { SolidModel } from '../../../src/solid/model/solid_model.js';
 import { buildAxisAlignedSideBlocks, buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 
-/**
- * Unit tests for full VMF → solid model import.
- */
+/** Unit tests for full VMF → solid model import. */
 describe('VmfSolidImporter', () => {
   it('imports world brushes into one solid model and skips triggers', () => {
     const good = buildAxisAlignedSideBlocks(
@@ -86,12 +84,7 @@ ${detailSides}
 
   it('builds a solid model from a single world solid helper', () => {
     const result = new VmfSolidImporter().importFromText(
-      buildAxisAlignedWorldSolidVmf(
-        { x: -64, y: -64, z: 0 },
-        { x: 64, y: 64, z: 128 },
-        'CONCRETE/CONCRETEWALL001A',
-        7,
-      ),
+      buildAxisAlignedWorldSolidVmf({ x: -64, y: -64, z: 0 }, { x: 64, y: 64, z: 128 }, 'CONCRETE/CONCRETEWALL001A', 7),
     );
     expect(result.importedBrushCount).toBe(1);
     expect(result.model.getBrushes()[0].name).toBe('Solid 7');
@@ -107,8 +100,7 @@ ${detailSides}
     });
     expect(result.model.root.name).toBe('Representative VMF');
     expect(result.importedBrushCount).toBeGreaterThan(0);
-    const totalSolids =
-      parsed.solids.length + parsed.entities.reduce((sum, entity) => sum + entity.solids.length, 0);
+    const totalSolids = parsed.solids.length + parsed.entities.reduce((sum, entity) => sum + entity.solids.length, 0);
     expect(result.importedBrushCount + result.skippedBrushCount).toBe(totalSolids);
     const sampleCount = Math.min(12, result.model.getBrushCount());
     for (let index = 0; index < sampleCount; index++) {
@@ -125,46 +117,23 @@ ${detailSides}
 
 /**
  * Builds a self-contained VMF map with world, entity, and skipped brushes.
+ *
  * @returns VMF source text representing a small but varied map.
  */
 function buildRepresentativeVmfMap(): string {
   const worldSolids = [
-    createVmfSolidBlock(
-      10,
-      { x: -128, y: -128, z: 0 },
-      { x: -64, y: -64, z: 64 },
-      'CONCRETE/CONCRETEWALL001A',
-    ),
-    createVmfSolidBlock(
-      11,
-      { x: -48, y: -48, z: 0 },
-      { x: 48, y: 48, z: 96 },
-      'BRICK/BRICKWALL001A',
-    ),
-    createVmfSolidBlock(
-      12,
-      { x: 64, y: 64, z: 0 },
-      { x: 128, y: 128, z: 32 },
-      'DEV/DEV_MEASUREGENERIC01',
-    ),
-    createVmfSolidBlock(
-      13,
-      { x: 160, y: 160, z: 0 },
-      { x: 192, y: 192, z: 32 },
-      'TOOLS/TOOLSTRIGGER',
-    ),
+    createVmfSolidBlock(10, { x: -128, y: -128, z: 0 }, { x: -64, y: -64, z: 64 }, 'CONCRETE/CONCRETEWALL001A'),
+    createVmfSolidBlock(11, { x: -48, y: -48, z: 0 }, { x: 48, y: 48, z: 96 }, 'BRICK/BRICKWALL001A'),
+    createVmfSolidBlock(12, { x: 64, y: 64, z: 0 }, { x: 128, y: 128, z: 32 }, 'DEV/DEV_MEASUREGENERIC01'),
+    createVmfSolidBlock(13, { x: 160, y: 160, z: 0 }, { x: 192, y: 192, z: 32 }, 'TOOLS/TOOLSTRIGGER'),
   ].join('\n');
-  const detailSolid = createVmfSolidBlock(
-    20,
-    { x: -24, y: 64, z: 0 },
-    { x: 24, y: 112, z: 48 },
-    'METAL/METALWALL001A',
-  );
+  const detailSolid = createVmfSolidBlock(20, { x: -24, y: 64, z: 0 }, { x: 24, y: 112, z: 48 }, 'METAL/METALWALL001A');
   return `world\n{\n\t"id" "1"\n\t"classname" "worldspawn"\n\t"skyname" "sky_representative"\n${worldSolids}\n}\nentity\n{\n\t"id" "2"\n\t"classname" "func_detail"\n${detailSolid}\n}`;
 }
 
 /**
  * Builds one complete indented VMF solid block from axis-aligned bounds.
+ *
  * @param id VMF solid identifier.
  * @param min Minimum Source coordinate.
  * @param max Maximum Source coordinate.

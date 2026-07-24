@@ -12,9 +12,7 @@ import {
   createDefaultFaceTextureMapping,
 } from '../../texture/face_texture_mapping.js';
 
-/**
- * Serializable snapshot of a solid brush instance.
- */
+/** Serializable snapshot of a solid brush instance. */
 export interface SerializedSolidBrush {
   id: string;
   name: string;
@@ -38,18 +36,18 @@ export interface SerializedSolidBrush {
 }
 
 /**
- * Serializable snapshot of a solid model (brushes only; mesh geometry is rebuilt).
+ * Serializable snapshot of a solid model (brushes only; mesh geometry is
+ * rebuilt).
  */
 export interface SerializedSolidModel {
   brushes: SerializedSolidBrush[];
 }
 
-/**
- * Encodes and decodes solid models for scene persistence.
- */
+/** Encodes and decodes solid models for scene persistence. */
 export class SolidModelCodec {
   /**
    * Serializes a solid model into a JSON-safe snapshot.
+   *
    * @param model Solid model to encode.
    * @returns Serialized solid model payload.
    */
@@ -63,6 +61,7 @@ export class SolidModelCodec {
 
   /**
    * Rebuilds a solid model from a serialized snapshot.
+   *
    * @param data Serialized solid model.
    * @param name Root display name.
    * @returns Restored solid model with rebuilt geometry.
@@ -79,6 +78,7 @@ export class SolidModelCodec {
 
   /**
    * Encodes one brush instance.
+   *
    * @param instance Brush instance.
    * @returns Serialized brush.
    */
@@ -127,17 +127,13 @@ export class SolidModelCodec {
 
   /**
    * Decodes one brush instance.
+   *
    * @param data Serialized brush.
    * @returns Brush instance.
    */
   private static decodeBrush(data: SerializedSolidBrush): SolidBrushInstance {
     const brush = this.decodeBrushGeometry(data);
-    const instance = new SolidBrushInstance(
-      data.id,
-      data.name,
-      brush,
-      data.operation ?? SolidOperation.Additive,
-    );
+    const instance = new SolidBrushInstance(data.id, data.name, brush, data.operation ?? SolidOperation.Additive);
     instance.position.set(data.position.x, data.position.y, data.position.z);
     instance.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z, 'XYZ');
     instance.scale.set(data.scale.x, data.scale.y, data.scale.z);
@@ -148,13 +144,11 @@ export class SolidModelCodec {
 
   /**
    * Restores default and per-face UV mappings, with legacy texture-id fallback.
+   *
    * @param instance Target brush instance.
    * @param data Serialized brush data.
    */
-  private static restoreBrushSurfaceData(
-    instance: SolidBrushInstance,
-    data: SerializedSolidBrush,
-  ): void {
+  private static restoreBrushSurfaceData(instance: SolidBrushInstance, data: SerializedSolidBrush): void {
     if (data.defaultMapping || data.faceMappings) {
       instance.restoreFaceMappings(
         this.normalizeMapping(data.defaultMapping, data.surfaceTextureId),
@@ -168,6 +162,7 @@ export class SolidModelCodec {
 
   /**
    * Normalizes a stored mapping or builds a default from a legacy texture id.
+   *
    * @param mapping Optional stored mapping.
    * @param fallbackTextureId Legacy texture id fallback.
    * @returns Normalized mapping.
@@ -188,6 +183,7 @@ export class SolidModelCodec {
 
   /**
    * Normalizes a sparse face mapping list from JSON.
+   *
    * @param faceMappings Optional sparse list.
    * @returns Cloned sparse list.
    */
@@ -199,8 +195,9 @@ export class SolidModelCodec {
   }
 
   /**
-   * Rebuilds wing-edge brush geometry from serialized arrays.
-   * Falls back to a unit box when topology data is missing.
+   * Rebuilds wing-edge brush geometry from serialized arrays. Falls back to a
+   * unit box when topology data is missing.
+   *
    * @param data Serialized brush.
    * @returns Solid brush geometry.
    */
@@ -210,13 +207,9 @@ export class SolidModelCodec {
     }
     const brush = new SolidBrush();
     brush.vertices = this.inflateVertices(data.vertices);
-    brush.wingEdges = data.wingEdges.map((edge) =>
-      createWingEdge(edge.vertexIndex, edge.twinIndex),
-    );
+    brush.wingEdges = data.wingEdges.map((edge) => createWingEdge(edge.vertexIndex, edge.twinIndex));
     brush.edgeFaceIndices = data.edgeFaceIndices?.slice() ?? [];
-    brush.faces = (data.faces ?? []).map((face) =>
-      createSolidFace(face.firstEdge, face.edgeCount, face.surfaceIndex),
-    );
+    brush.faces = (data.faces ?? []).map((face) => createSolidFace(face.firstEdge, face.edgeCount, face.surfaceIndex));
     if (brush.edgeFaceIndices.length !== brush.wingEdges.length) {
       brush.rebuildEdgeFaceIndices();
     }
@@ -226,6 +219,7 @@ export class SolidModelCodec {
 
   /**
    * Flattens vertex vectors into a number array.
+   *
    * @param vertices Vertex list.
    * @returns Flat xyz components.
    */
@@ -239,6 +233,7 @@ export class SolidModelCodec {
 
   /**
    * Inflates a flat xyz array into Vector3 vertices.
+   *
    * @param values Flat components.
    * @returns Vertex list.
    */

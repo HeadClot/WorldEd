@@ -4,9 +4,7 @@ import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidBrushInstance } from '../solid/model/solid_brush_instance.js';
 import { SolidOperation } from '../solid/types/solid_operation.js';
 
-/**
- * Undoable command that adds a box brush under a solid model.
- */
+/** Undoable command that adds a box brush under a solid model. */
 export class AddSolidBoxBrushCommand implements UndoCommand {
   private readonly model: SolidModel;
   private readonly size: number;
@@ -18,6 +16,7 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
 
   /**
    * Creates an add-box-brush command.
+   *
    * @param model Solid model that will own the brush.
    * @param size Box edge length.
    * @param operation CSG operation for the new brush.
@@ -33,9 +32,7 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Creates the brush on first run, or re-inserts it on redo.
-   */
+  /** Creates the brush on first run, or re-inserts it on redo. */
   execute(): void {
     if (this.executed) return;
     if (this.created) {
@@ -46,9 +43,7 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Removes the created brush without disposing preview resources.
-   */
+  /** Removes the created brush without disposing preview resources. */
   undo(): void {
     if (!this.executed || !this.created) return;
     this.model.removeBrush(this.created.id, false);
@@ -57,15 +52,14 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
 
   /**
    * Returns the brush created by this command when available.
+   *
    * @returns Created brush instance or null.
    */
   getCreatedBrush(): SolidBrushInstance | null {
     return this.created;
   }
 
-  /**
-   * Builds a new box brush, applies offset, and records its list index.
-   */
+  /** Builds a new box brush, applies offset, and records its list index. */
   private createBrush(): void {
     const brush = this.model.addBoxBrush(this.size, this.operation);
     brush.position.copy(this.offset);
@@ -75,9 +69,7 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
     this.listIndex = this.model.getBrushes().findIndex((entry) => entry.id === brush.id);
   }
 
-  /**
-   * Re-inserts a previously created brush at its recorded index.
-   */
+  /** Re-inserts a previously created brush at its recorded index. */
   private reinsertCreatedBrush(): void {
     if (!this.created) return;
     if (this.model.findBrush(this.created.id)) return;

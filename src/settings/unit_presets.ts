@@ -1,6 +1,4 @@
-/**
- * Unit system and length-unit presets for game profiles.
- */
+/** Unit system and length-unit presets for game profiles. */
 
 /** Measurement system used by a game profile. */
 export type UnitSystem = 'metric' | 'imperial';
@@ -20,12 +18,7 @@ export const METRIC_UNIT_OPTIONS: readonly MetricUnit[] = Object.freeze([
 ]);
 
 /** Ordered imperial unit options for dropdowns. */
-export const IMPERIAL_UNIT_OPTIONS: readonly ImperialUnit[] = Object.freeze([
-  'inch',
-  'foot',
-  'yard',
-  'mile',
-]);
+export const IMPERIAL_UNIT_OPTIONS: readonly ImperialUnit[] = Object.freeze(['inch', 'foot', 'yard', 'mile']);
 
 /** Human-readable labels for unit systems. */
 export const UNIT_SYSTEM_LABELS: Readonly<Record<UnitSystem, string>> = Object.freeze({
@@ -51,12 +44,11 @@ export const IMPERIAL_UNIT_LABELS: Readonly<Record<ImperialUnit, string>> = Obje
 
 /**
  * Returns the unit options for a measurement system.
+ *
  * @param system Unit system selection.
  * @returns Metric or imperial unit list.
  */
-export function getUnitOptionsForSystem(
-  system: UnitSystem,
-): readonly MetricUnit[] | readonly ImperialUnit[] {
+export function getUnitOptionsForSystem(system: UnitSystem): readonly MetricUnit[] | readonly ImperialUnit[] {
   if (system === 'metric') {
     return METRIC_UNIT_OPTIONS;
   }
@@ -65,6 +57,7 @@ export function getUnitOptionsForSystem(
 
 /**
  * Returns the display label for a unit under the given system.
+ *
  * @param system Unit system selection.
  * @param unit Unit value within that system.
  * @returns Human-readable label.

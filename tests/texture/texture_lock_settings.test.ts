@@ -46,6 +46,7 @@ describe('TextureLockSettings', () => {
 
 /**
  * Returns the maximum absolute UV component on an axis across all vertices.
+ *
  * @param mesh Mesh with UV attribute.
  * @param component 0 for U, 1 for V.
  * @returns Max absolute component value.

@@ -1,13 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  createConvexPrismFromFace,
-  orderConvexPolygon,
-} from '../../src/transform/convex_face_prism.js';
-import {
-  findCoplanarFaceIndices,
-  getTriangleCount,
-} from '../../src/selection/triangle_geometry_utils.js';
+import { createConvexPrismFromFace, orderConvexPolygon } from '../../src/transform/convex_face_prism.js';
+import { findCoplanarFaceIndices, getTriangleCount } from '../../src/selection/triangle_geometry_utils.js';
 
 describe('createConvexPrismFromFace', () => {
   it('should create a new mesh without modifying the source', () => {
@@ -48,9 +42,7 @@ describe('createConvexPrismFromFace', () => {
     source.updateMatrixWorld(true);
     const faceIndices = findCoplanarFaceIndices(source.geometry, 0);
     const prism = createConvexPrismFromFace(source, faceIndices, 1.0, 'Extrude005');
-    const edge = prism!.children.find(
-      (child) => child instanceof THREE.LineSegments,
-    ) as THREE.LineSegments;
+    const edge = prism!.children.find((child) => child instanceof THREE.LineSegments) as THREE.LineSegments;
     expect(edge).toBeDefined();
     edge.geometry.computeBoundingBox();
     prism!.geometry.computeBoundingBox();

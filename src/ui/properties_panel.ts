@@ -9,17 +9,12 @@ import { SetScaleCommand } from '../commands/set_scale_command.js';
 import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 import { filterUnlockedObjects } from '../utils/object_lock.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
-import {
-  PropertiesSolidBrushSection,
-  SolidBrushPropertyHandlers,
-} from './properties_solid_brush_section.js';
+import { PropertiesSolidBrushSection, SolidBrushPropertyHandlers } from './properties_solid_brush_section.js';
 import { PropertiesColorSession } from './properties_color_session.js';
 
 export type { SolidBrushPropertyHandlers };
 
-/**
- * Configuration for a single axis input row in a property section.
- */
+/** Configuration for a single axis input row in a property section. */
 interface AxisInputConfig {
   label: string;
   color: string;
@@ -56,6 +51,7 @@ export class PropertiesPanel {
 
   /**
    * Creates a new properties panel.
+   *
    * @param container The parent DOM element to append the panel into.
    * @param theme The theme containing color definitions.
    * @param selectionManager The selection manager to bind to.
@@ -83,8 +79,7 @@ export class PropertiesPanel {
     );
     this.solidBrushSection.setEditableBrushMeshProvider(() =>
       this.getEditableBoundObjects().filter(
-        (object): object is THREE.Mesh =>
-          object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object),
+        (object): object is THREE.Mesh => object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object),
       ),
     );
     this.applyContainerStyles();
@@ -99,6 +94,7 @@ export class PropertiesPanel {
 
   /**
    * Wires solid-brush operation and rebuild handlers from the layout.
+   *
    * @param handlers Brush property handlers, or null to clear.
    */
   setSolidBrushHandlers(handlers: SolidBrushPropertyHandlers | null): void {
@@ -107,6 +103,7 @@ export class PropertiesPanel {
 
   /**
    * Sets the command stack for undo/redo support on property edits.
+   *
    * @param stack The command stack to use for property changes.
    */
   setCommandStack(stack: CommandStack): void {
@@ -116,6 +113,7 @@ export class PropertiesPanel {
 
   /**
    * Sets texture lock settings for scale edits from the inspector.
+   *
    * @param settings Shared texture lock settings, or null.
    */
   setTextureLockSettings(settings: TextureLockSettings | null): void {
@@ -124,6 +122,7 @@ export class PropertiesPanel {
 
   /**
    * Binds the panel to a single object for editing.
+   *
    * @param object The Three.js object to bind to.
    */
   bindObject(object: THREE.Object3D): void {
@@ -132,6 +131,7 @@ export class PropertiesPanel {
 
   /**
    * Binds the panel to multiple objects for multi-edit.
+   *
    * @param objects The objects currently selected.
    */
   bindObjects(objects: THREE.Object3D[]): void {
@@ -140,9 +140,7 @@ export class PropertiesPanel {
     this.updateFromObjects(this.boundObjects);
   }
 
-  /**
-   * Unbinds the panel from any objects and clears inputs.
-   */
+  /** Unbinds the panel from any objects and clears inputs. */
   unbindObject(): void {
     this.colorSession.finalize();
     this.boundObjects = [];
@@ -150,8 +148,8 @@ export class PropertiesPanel {
   }
 
   /**
-   * Re-reads transform values from the currently bound objects.
-   * Call during gizmo drags so position/rotation/scale inputs stay live.
+   * Re-reads transform values from the currently bound objects. Call during
+   * gizmo drags so position/rotation/scale inputs stay live.
    */
   refreshBoundObject(): void {
     if (this.isDisposed || this.boundObjects.length === 0) return;
@@ -160,6 +158,7 @@ export class PropertiesPanel {
 
   /**
    * Updates all input values from one object (single-selection helper).
+   *
    * @param object The Three.js object to read values from.
    */
   updateFromObject(object: THREE.Object3D): void {
@@ -168,6 +167,7 @@ export class PropertiesPanel {
 
   /**
    * Updates inputs from multiple objects, showing dashes for mixed fields.
+   *
    * @param objects Objects in the current selection.
    */
   updateFromObjects(objects: THREE.Object3D[]): void {
@@ -195,9 +195,7 @@ export class PropertiesPanel {
     this.solidBrushSection.updateFromObjects(objects);
   }
 
-  /**
-   * Disposes the panel and removes it from the DOM.
-   */
+  /** Disposes the panel and removes it from the DOM. */
   dispose(): void {
     this.isDisposed = true;
     this.colorSession.finalize();
@@ -213,6 +211,7 @@ export class PropertiesPanel {
 
   /**
    * Returns the container element for layout purposes.
+   *
    * @returns The DOM element of the panel.
    */
   getContainer(): HTMLElement {
@@ -221,6 +220,7 @@ export class PropertiesPanel {
 
   /**
    * Converts an Euler rotation to a Vector3 of degrees.
+   *
    * @param rotation Source Euler angles in radians.
    * @returns Degrees as x/y/z components.
    */
@@ -234,15 +234,12 @@ export class PropertiesPanel {
 
   /**
    * Writes shared or mixed axis values into an input map.
+   *
    * @param inputMap Axis inputs to update.
    * @param vectors Per-object vector values (position/scale/degrees).
    * @param decimals Fixed decimal places for shared numbers.
    */
-  private writeVectorInputs(
-    inputMap: Map<string, HTMLInputElement>,
-    vectors: THREE.Vector3[],
-    decimals: number,
-  ): void {
+  private writeVectorInputs(inputMap: Map<string, HTMLInputElement>, vectors: THREE.Vector3[], decimals: number): void {
     this.writeAxisInput(
       inputMap,
       'x',
@@ -265,6 +262,7 @@ export class PropertiesPanel {
 
   /**
    * Writes one axis field as a shared number or mixed dash.
+   *
    * @param inputMap Input map.
    * @param axis Axis key.
    * @param values Per-object values for this axis.
@@ -287,6 +285,7 @@ export class PropertiesPanel {
 
   /**
    * Returns whether all numeric values match within epsilon.
+   *
    * @param values Values to compare.
    * @returns True when all values are effectively equal.
    */
@@ -298,6 +297,7 @@ export class PropertiesPanel {
 
   /**
    * Parses an input string into a number, or null when mixed/empty/invalid.
+   *
    * @param text Raw input text.
    * @returns Parsed number, or null to leave the axis unchanged.
    */
@@ -312,8 +312,8 @@ export class PropertiesPanel {
   }
 
   /**
-   * Applies position edits from the panel to all bound objects.
-   * Only axes with valid numbers are written (mixed axes keep per-object values).
+   * Applies position edits from the panel to all bound objects. Only axes with
+   * valid numbers are written (mixed axes keep per-object values).
    */
   private applyPositionCommand(): void {
     const editable = this.getEditableBoundObjects();
@@ -335,9 +335,7 @@ export class PropertiesPanel {
     this.updateFromObjects(this.boundObjects);
   }
 
-  /**
-   * Applies rotation edits (degrees in the UI) to unlocked bound objects.
-   */
+  /** Applies rotation edits (degrees in the UI) to unlocked bound objects. */
   private applyRotationCommand(): void {
     const editable = this.getEditableBoundObjects();
     if (editable.length === 0) return;
@@ -357,9 +355,7 @@ export class PropertiesPanel {
     this.updateFromObjects(this.boundObjects);
   }
 
-  /**
-   * Applies scale edits to unlocked bound objects.
-   */
+  /** Applies scale edits to unlocked bound objects. */
   private applyScaleCommand(): void {
     const editable = this.getEditableBoundObjects();
     if (editable.length === 0) return;
@@ -382,7 +378,9 @@ export class PropertiesPanel {
   }
 
   /**
-   * Notifies solid CSG to rebuild when brush transforms change from the inspector.
+   * Notifies solid CSG to rebuild when brush transforms change from the
+   * inspector.
+   *
    * @param objects Edited objects.
    */
   private notifySolidBrushEdits(objects: THREE.Object3D[]): void {
@@ -391,15 +389,14 @@ export class PropertiesPanel {
 
   /**
    * Returns bound objects that are not locked for editing.
+   *
    * @returns Unlocked bound objects.
    */
   private getEditableBoundObjects(): THREE.Object3D[] {
     return filterUnlockedObjects(this.boundObjects);
   }
 
-  /**
-   * Re-bakes world planar UVs on unlocked bound meshes when texture lock is on.
-   */
+  /** Re-bakes world planar UVs on unlocked bound meshes when texture lock is on. */
   private rebakeBoundMeshesIfTextureLocked(): void {
     if (!this.textureLock) return;
     const meshes = this.getEditableBoundObjects().filter(
@@ -410,14 +407,12 @@ export class PropertiesPanel {
 
   /**
    * Returns true when proposed positions match the given objects.
+   *
    * @param objects Objects to compare.
    * @param positions Proposed positions.
    * @returns True when nothing would change.
    */
-  private areObjectPositionsUnchanged(
-    objects: THREE.Object3D[],
-    positions: THREE.Vector3[],
-  ): boolean {
+  private areObjectPositionsUnchanged(objects: THREE.Object3D[], positions: THREE.Vector3[]): boolean {
     return objects.every((object, index) => {
       return object.position.distanceToSquared(positions[index]) < 1e-12;
     });
@@ -425,14 +420,12 @@ export class PropertiesPanel {
 
   /**
    * Returns true when proposed rotations match the given objects.
+   *
    * @param objects Objects to compare.
    * @param rotations Proposed Euler rotations.
    * @returns True when nothing would change.
    */
-  private areObjectRotationsUnchanged(
-    objects: THREE.Object3D[],
-    rotations: THREE.Euler[],
-  ): boolean {
+  private areObjectRotationsUnchanged(objects: THREE.Object3D[], rotations: THREE.Euler[]): boolean {
     return objects.every((object, index) => {
       const current = object.rotation;
       const next = rotations[index];
@@ -446,6 +439,7 @@ export class PropertiesPanel {
 
   /**
    * Returns true when proposed scales match the given objects.
+   *
    * @param objects Objects to compare.
    * @param scales Proposed scales.
    * @returns True when nothing would change.
@@ -458,6 +452,7 @@ export class PropertiesPanel {
 
   /**
    * Pushes a command through the stack, or executes it directly.
+   *
    * @param command Undoable command to run.
    */
   private pushOrExecute(command: UndoCommand): void {
@@ -468,9 +463,7 @@ export class PropertiesPanel {
     command.execute();
   }
 
-  /**
-   * Applies styles to the panel container.
-   */
+  /** Applies styles to the panel container. */
   private applyContainerStyles(): void {
     this.container.classList.add('editor-properties-panel');
     this.container.style.display = 'flex';
@@ -483,9 +476,7 @@ export class PropertiesPanel {
     this.container.style.userSelect = 'none';
   }
 
-  /**
-   * Creates the Position collapsible section.
-   */
+  /** Creates the Position collapsible section. */
   private createPositionSection(): void {
     const section = this.createSection(
       'Position',
@@ -500,9 +491,7 @@ export class PropertiesPanel {
     this.container.appendChild(section);
   }
 
-  /**
-   * Creates the Rotation collapsible section.
-   */
+  /** Creates the Rotation collapsible section. */
   private createRotationSection(): void {
     const section = this.createSection(
       'Rotation',
@@ -517,9 +506,7 @@ export class PropertiesPanel {
     this.container.appendChild(section);
   }
 
-  /**
-   * Creates the Scale collapsible section.
-   */
+  /** Creates the Scale collapsible section. */
   private createScaleSection(): void {
     const section = this.createSection(
       'Scale',
@@ -536,6 +523,7 @@ export class PropertiesPanel {
 
   /**
    * Formats a theme hex color as a CSS #rrggbb string.
+   *
    * @param hex Theme color number.
    * @returns CSS color string.
    */
@@ -543,9 +531,7 @@ export class PropertiesPanel {
     return '#' + hex.toString(16).padStart(6, '0');
   }
 
-  /**
-   * Creates the Material color section for mesh color editing.
-   */
+  /** Creates the Material color section for mesh color editing. */
   private createMaterialSection(): void {
     const section = this.createSectionContainer();
     section.appendChild(this.createSectionHeader('Material'));
@@ -557,9 +543,7 @@ export class PropertiesPanel {
     this.container.appendChild(section);
   }
 
-  /**
-   * Mounts the solid brush section into the panel.
-   */
+  /** Mounts the solid brush section into the panel. */
   private mountSolidBrushSection(): void {
     const element = this.solidBrushSection.getElement();
     this.sections.push(element);
@@ -568,6 +552,7 @@ export class PropertiesPanel {
 
   /**
    * Builds the color label and picker row for the material section.
+   *
    * @returns Row element containing the color control.
    */
   private createColorPickerRow(): HTMLElement {
@@ -583,6 +568,7 @@ export class PropertiesPanel {
 
   /**
    * Creates the "Color" label for the material section.
+   *
    * @returns Styled label element.
    */
   private createColorLabel(): HTMLElement {
@@ -596,6 +582,7 @@ export class PropertiesPanel {
 
   /**
    * Creates the color input and binds edit/finalize listeners.
+   *
    * @returns Configured color input element.
    */
   private createColorInput(): HTMLInputElement {
@@ -615,6 +602,7 @@ export class PropertiesPanel {
 
   /**
    * Updates the color picker from selected mesh materials.
+   *
    * @param objects Selected objects.
    */
   private updateColorFromObjects(objects: THREE.Object3D[]): void {
@@ -636,6 +624,7 @@ export class PropertiesPanel {
 
   /**
    * Collects material color hex values from mesh objects.
+   *
    * @param objects Selected objects.
    * @returns Color hex list.
    */
@@ -652,6 +641,7 @@ export class PropertiesPanel {
 
   /**
    * Returns whether all colors are identical.
+   *
    * @param colors Hex colors.
    * @returns True when shared.
    */
@@ -660,22 +650,18 @@ export class PropertiesPanel {
     return colors.every((color) => color === colors[0]);
   }
 
-  /**
-   * Applies a color picker value with a single coalesced undo command.
-   */
+  /** Applies a color picker value with a single coalesced undo command. */
   private onColorPickerValueEdited(): void {
     if (!this.colorInput || this.boundObjects.length === 0) return;
     const colorHex = this.parseColorInputHex(this.colorInput.value);
     if (colorHex === null) return;
-    this.colorSession.onColorEdited(
-      colorHex,
-      this.collectColorEditableMeshes(this.getEditableBoundObjects()),
-    );
+    this.colorSession.onColorEdited(colorHex, this.collectColorEditableMeshes(this.getEditableBoundObjects()));
     this.colorInput.style.opacity = '1';
   }
 
   /**
    * Parses a CSS #rrggbb color string into a hex number.
+   *
    * @param value The color input value (e.g. "#ff0000").
    * @returns Hex number, or null when invalid.
    */
@@ -687,6 +673,7 @@ export class PropertiesPanel {
 
   /**
    * Collects bound meshes that expose a writable material color.
+   *
    * @param objects Selected objects.
    * @returns Editable meshes.
    */
@@ -703,16 +690,13 @@ export class PropertiesPanel {
 
   /**
    * Creates a collapsible section with axis inputs.
+   *
    * @param title The section title.
    * @param axes The axis configuration for each row.
    * @param inputMap The map to store input references.
    * @returns The created section element.
    */
-  private createSection(
-    title: string,
-    axes: AxisInputConfig[],
-    inputMap: Map<string, HTMLInputElement>,
-  ): HTMLElement {
+  private createSection(title: string, axes: AxisInputConfig[], inputMap: Map<string, HTMLInputElement>): HTMLElement {
     const section = this.createSectionContainer();
     const header = this.createSectionHeader(title);
     section.appendChild(header);
@@ -724,6 +708,7 @@ export class PropertiesPanel {
 
   /**
    * Creates the outer container element for a section.
+   *
    * @returns The styled section container element.
    */
   private createSectionContainer(): HTMLElement {
@@ -735,6 +720,7 @@ export class PropertiesPanel {
 
   /**
    * Creates the clickable header element for a section.
+   *
    * @param title The text to display in the header.
    * @returns The styled header element.
    */
@@ -752,23 +738,16 @@ export class PropertiesPanel {
 
   /**
    * Creates the content container with axis input rows.
+   *
    * @param axes The axis configuration for each row.
    * @param inputMap The map to store input references.
    * @returns The styled content element.
    */
-  private createSectionContent(
-    axes: AxisInputConfig[],
-    inputMap: Map<string, HTMLInputElement>,
-  ): HTMLElement {
+  private createSectionContent(axes: AxisInputConfig[], inputMap: Map<string, HTMLInputElement>): HTMLElement {
     const content = document.createElement('div');
     content.style.paddingLeft = '4px';
     axes.forEach((axisConfig) => {
-      const row = this.createAxisRow(
-        axisConfig.label.toUpperCase(),
-        axisConfig.color,
-        axisConfig.axis,
-        inputMap,
-      );
+      const row = this.createAxisRow(axisConfig.label.toUpperCase(), axisConfig.color, axisConfig.axis, inputMap);
       content.appendChild(row);
     });
     return content;
@@ -776,6 +755,7 @@ export class PropertiesPanel {
 
   /**
    * Creates a single axis input row with label and number input.
+   *
    * @param label The axis label (X, Y, Z).
    * @param color The label color.
    * @param axis The axis identifier.
@@ -798,6 +778,7 @@ export class PropertiesPanel {
 
   /**
    * Creates the container element for an axis row.
+   *
    * @returns The styled row container.
    */
   private createAxisRowContainer(): HTMLElement {
@@ -811,6 +792,7 @@ export class PropertiesPanel {
 
   /**
    * Creates the axis label span element.
+   *
    * @param label The axis label text.
    * @param color The label text color.
    * @returns The styled label element.
@@ -827,6 +809,7 @@ export class PropertiesPanel {
 
   /**
    * Creates the text input element for an axis (supports mixed "—" display).
+   *
    * @param axis The axis identifier.
    * @param inputMap The map to store the input reference.
    * @returns The styled input element.
@@ -851,7 +834,9 @@ export class PropertiesPanel {
   }
 
   /**
-   * Clears a mixed-value dash when the user focuses the field so typing replaces it.
+   * Clears a mixed-value dash when the user focuses the field so typing
+   * replaces it.
+   *
    * @param input Axis input element.
    */
   private bindMixedValueFocusClear(input: HTMLInputElement): void {
@@ -865,13 +850,11 @@ export class PropertiesPanel {
 
   /**
    * Binds an input element to apply multi-object changes on commit.
+   *
    * @param input The input element.
    * @param inputMap The input map this belongs to.
    */
-  private bindInputToChanges(
-    input: HTMLInputElement,
-    inputMap: Map<string, HTMLInputElement>,
-  ): void {
+  private bindInputToChanges(input: HTMLInputElement, inputMap: Map<string, HTMLInputElement>): void {
     const handleChange = () => {
       if (this.boundObjects.length === 0) return;
       if (inputMap === this.positionInputs) this.applyPositionCommand();
@@ -882,9 +865,7 @@ export class PropertiesPanel {
     this.inputChangeHandlers.push({ input, handler: handleChange });
   }
 
-  /**
-   * Removes all change and focus listeners from axis input elements.
-   */
+  /** Removes all change and focus listeners from axis input elements. */
   private removeInputChangeListeners(): void {
     this.inputChangeHandlers.forEach(({ input, handler }) => {
       input.removeEventListener('change', handler);
@@ -893,9 +874,7 @@ export class PropertiesPanel {
     this.inputChangeHandlers = [];
   }
 
-  /**
-   * Binds selection change events to update the panel for multi-select.
-   */
+  /** Binds selection change events to update the panel for multi-select. */
   private bindSelectionChanges(): void {
     this.selectionManager.onSelectionChanged(() => {
       if (this.isDisposed) return;
@@ -908,9 +887,7 @@ export class PropertiesPanel {
     });
   }
 
-  /**
-   * Clears all input values to empty strings.
-   */
+  /** Clears all input values to empty strings. */
   private clearAllInputs(): void {
     this.positionInputs.forEach((input) => {
       input.value = '';
@@ -929,6 +906,7 @@ export class PropertiesPanel {
 
   /**
    * Toggles section visibility on header click.
+   *
    * @param header The header element.
    * @param content The content element to toggle.
    */
@@ -942,6 +920,7 @@ export class PropertiesPanel {
 
   /**
    * Converts a hex color number to an RGB CSS string.
+   *
    * @param hex The hex color value.
    * @returns An RGB CSS color string.
    */

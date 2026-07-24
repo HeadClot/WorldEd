@@ -17,6 +17,7 @@ import {
 
 /**
  * Builds a unit box matching the editor default cube placement.
+ *
  * @returns A mesh with size 1 centered above the ground plane.
  */
 function createDefaultCubeMesh(): THREE.Mesh {

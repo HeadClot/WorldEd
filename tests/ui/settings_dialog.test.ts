@@ -34,9 +34,7 @@ describe('SettingsDialog', () => {
   it('should expose settings tabs without the removed Themes tab', () => {
     dialog.show();
     const panel = dialog.getPanelElement();
-    const labels = Array.from(panel.querySelectorAll('[role="tab"]')).map((tab) =>
-      (tab.textContent || '').trim(),
-    );
+    const labels = Array.from(panel.querySelectorAll('[role="tab"]')).map((tab) => (tab.textContent || '').trim());
     expect(labels).toEqual(['Games', 'View', 'Mouse', 'Keyboard', 'Update']);
     expect(panel.querySelector('[data-settings-tab="themes"]')).toBeNull();
   });
@@ -54,14 +52,10 @@ describe('SettingsDialog', () => {
 
   it('should place Load Game Profile immediately after Add Game Profile', () => {
     dialog.show();
-    const actions = Array.from(
-      dialog.getPanelElement().querySelectorAll('[data-settings-action]'),
-    ).map((element) => element.getAttribute('data-settings-action'));
-    expect(actions.slice(0, 3)).toEqual([
-      'add-game-profile',
-      'load-game-profile',
-      'save-game-profile',
-    ]);
+    const actions = Array.from(dialog.getPanelElement().querySelectorAll('[data-settings-action]')).map((element) =>
+      element.getAttribute('data-settings-action'),
+    );
+    expect(actions.slice(0, 3)).toEqual(['add-game-profile', 'load-game-profile', 'save-game-profile']);
   });
 
   it('should list built-in coordinate space presets and create custom ones', () => {
@@ -81,20 +75,15 @@ describe('SettingsDialog', () => {
     presetSelect.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getActiveGameProfile()?.coordinateSpace.presetId).toBe('blender');
     expect(
-      dialog.getContentElement().querySelector('[data-settings-field="coordinate-space-summary"]')
-        ?.textContent,
+      dialog.getContentElement().querySelector('[data-settings-field="coordinate-space-summary"]')?.textContent,
     ).toContain('Forward +Y');
 
-    const createOption = Array.from(presetSelect.options).find((option) =>
-      option.text.includes('Create custom'),
-    );
+    const createOption = Array.from(presetSelect.options).find((option) => option.text.includes('Create custom'));
     expect(createOption).toBeTruthy();
     presetSelect.value = createOption!.value;
     presetSelect.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getActiveGameProfile()?.coordinateSpace.isCustom).toBe(true);
-    expect(
-      dialog.getContentElement().querySelector('[data-settings-field="coordinate-space-up"]'),
-    ).toBeTruthy();
+    expect(dialog.getContentElement().querySelector('[data-settings-field="coordinate-space-up"]')).toBeTruthy();
   });
 
   it('should show metric unit options and switch to imperial options', () => {
@@ -134,30 +123,22 @@ describe('SettingsDialog', () => {
     theme.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().theme).toBe('system');
 
-    const brightness = content.querySelector(
-      '[data-settings-field="brightness"]',
-    ) as HTMLInputElement;
+    const brightness = content.querySelector('[data-settings-field="brightness"]') as HTMLInputElement;
     brightness.value = '140';
     brightness.dispatchEvent(new Event('input', { bubbles: true }));
     expect(store.getViewSettings().brightness).toBe(140);
 
-    const paneCount = content.querySelector(
-      '[data-settings-field="viewport-pane-count"]',
-    ) as HTMLSelectElement;
+    const paneCount = content.querySelector('[data-settings-field="viewport-pane-count"]') as HTMLSelectElement;
     paneCount.value = '3';
     paneCount.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().viewportPaneCount).toBe(3);
 
-    const iconSize = content.querySelector(
-      '[data-settings-field="material-icon-size"]',
-    ) as HTMLSelectElement;
+    const iconSize = content.querySelector('[data-settings-field="material-icon-size"]') as HTMLSelectElement;
     iconSize.value = '200';
     iconSize.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().materialBrowserIconSizePercent).toBe(200);
 
-    const fontSize = content.querySelector(
-      '[data-settings-field="renderer-font-size"]',
-    ) as HTMLSelectElement;
+    const fontSize = content.querySelector('[data-settings-field="renderer-font-size"]') as HTMLSelectElement;
     fontSize.value = '18';
     fontSize.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().rendererFontSize).toBe(18);
@@ -171,9 +152,7 @@ describe('SettingsDialog', () => {
       .querySelector('[data-settings-field="keyboard-shortcut-move"]') as HTMLInputElement;
     const deleteInput = dialog
       .getContentElement()
-      .querySelector(
-        '[data-settings-field="keyboard-shortcut-delete_selected"]',
-      ) as HTMLInputElement;
+      .querySelector('[data-settings-field="keyboard-shortcut-delete_selected"]') as HTMLInputElement;
     const saveInput = dialog
       .getContentElement()
       .querySelector('[data-settings-field="keyboard-shortcut-save"]') as HTMLInputElement;
@@ -183,9 +162,7 @@ describe('SettingsDialog', () => {
 
     moveInput.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM', bubbles: true }));
     deleteInput.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backspace', bubbles: true }));
-    saveInput.dispatchEvent(
-      new KeyboardEvent('keydown', { code: 'KeyP', ctrlKey: true, bubbles: true }),
-    );
+    saveInput.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyP', ctrlKey: true, bubbles: true }));
 
     expect(store.getKeyboardShortcutSettings().move.code).toBe('KeyM');
     expect(store.getKeyboardShortcutSettings().delete_selected.code).toBe('Backspace');
@@ -202,12 +179,8 @@ describe('SettingsDialog', () => {
     expect(content.textContent).toContain('Mouse Pan');
     expect(content.textContent).toContain('Mouse Move');
 
-    const moveSpeed = content.querySelector(
-      '[data-settings-field="move-speed"]',
-    ) as HTMLInputElement;
-    const lookSensitivity = content.querySelector(
-      '[data-settings-field="look-sensitivity"]',
-    ) as HTMLInputElement;
+    const moveSpeed = content.querySelector('[data-settings-field="move-speed"]') as HTMLInputElement;
+    const lookSensitivity = content.querySelector('[data-settings-field="look-sensitivity"]') as HTMLInputElement;
     moveSpeed.value = '8';
     moveSpeed.dispatchEvent(new Event('input', { bubbles: true }));
     const rebuiltLookSensitivity = content.querySelector(
@@ -215,9 +188,7 @@ describe('SettingsDialog', () => {
     ) as HTMLInputElement;
     rebuiltLookSensitivity.value = '61';
     rebuiltLookSensitivity.dispatchEvent(new Event('input', { bubbles: true }));
-    const panInvertYAxis = content.querySelector(
-      '[data-settings-field="pan-invert-y-axis"]',
-    ) as HTMLInputElement;
+    const panInvertYAxis = content.querySelector('[data-settings-field="pan-invert-y-axis"]') as HTMLInputElement;
     panInvertYAxis.click();
     const moveTowardsCursor = content.querySelector(
       '[data-settings-field="move-camera-towards-cursor"]',

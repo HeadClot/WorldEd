@@ -8,9 +8,7 @@ import { setFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../src/solid/model/solid_model.js';
 
-/**
- * Unit tests for UV smear preserving solid-brush authored scale/phase.
- */
+/** Unit tests for UV smear preserving solid-brush authored scale/phase. */
 describe('UV smear solid mapping', () => {
   it('does not replace VMF-scale brush mapping with default 1m scale on G press', () => {
     const model = new SolidModel('SmearSolid');
@@ -28,9 +26,7 @@ describe('UV smear solid mapping', () => {
     const sources = result.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
       Array<{ brushId: string; surfaceIndex: number }> | undefined;
     expect(sources?.length).toBeGreaterThan(0);
-    const seedTriangle = sources!.findIndex(
-      (source) => source.brushId === brush.id && source.surfaceIndex === 0,
-    );
+    const seedTriangle = sources!.findIndex((source) => source.brushId === brush.id && source.surfaceIndex === 0);
     expect(seedTriangle).toBeGreaterThanOrEqual(0);
 
     const controller = new UvSmearController(new CommandStack(8));
@@ -92,8 +88,7 @@ describe('UV smear solid mapping', () => {
     const controller = new UvSmearController(new CommandStack(8));
     controller.beginStroke(result, 0);
     controller.endStroke();
-    const maps = result.userData.faceTextureMaps as
-      Array<{ mapping: { scaleU: number } }> | undefined;
+    const maps = result.userData.faceTextureMaps as Array<{ mapping: { scaleU: number } }> | undefined;
     expect(maps?.some((entry) => entry.mapping.scaleU === 2.25)).toBe(true);
   });
 });

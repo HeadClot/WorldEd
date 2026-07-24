@@ -1,20 +1,17 @@
 import { SolidBrush } from './solid_brush.js';
 import { SOLID_FAT_PLANE_EPSILON } from '../algorithm/solid_math_constants.js';
 
-/**
- * Validation result for a solid brush manifold.
- */
+/** Validation result for a solid brush manifold. */
 export interface SolidBrushValidation {
   valid: boolean;
   errors: string[];
 }
 
-/**
- * Validates wing-edge topology and convexity assumptions for a solid brush.
- */
+/** Validates wing-edge topology and convexity assumptions for a solid brush. */
 export class SolidBrushValidator {
   /**
    * Validates topology, twin links, plane coverage, and vertex half-spaces.
+   *
    * @param brush Brush to validate.
    * @returns Validation result with zero or more error messages.
    */
@@ -31,6 +28,7 @@ export class SolidBrushValidator {
 
   /**
    * Ensures core arrays have matching lengths and non-empty topology.
+   *
    * @param brush Brush under test.
    * @param errors Accumulator for error strings.
    */
@@ -51,6 +49,7 @@ export class SolidBrushValidator {
 
   /**
    * Ensures every wing edge has a mutual twin.
+   *
    * @param brush Brush under test.
    * @param errors Accumulator for error strings.
    */
@@ -72,6 +71,7 @@ export class SolidBrushValidator {
 
   /**
    * Ensures face edge ranges stay within the wing-edge array.
+   *
    * @param brush Brush under test.
    * @param errors Accumulator for error strings.
    */
@@ -90,6 +90,7 @@ export class SolidBrushValidator {
 
   /**
    * Ensures every vertex lies on the inside of every face plane (convex solid).
+   *
    * @param brush Brush under test.
    * @param errors Accumulator for error strings.
    */
@@ -107,6 +108,7 @@ export class SolidBrushValidator {
 
   /**
    * Ensures faces are at least triangles.
+   *
    * @param brush Brush under test.
    * @param errors Accumulator for error strings.
    */

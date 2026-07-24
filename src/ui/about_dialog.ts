@@ -1,8 +1,4 @@
-import {
-  HENRYS_TOOLS_DISCORD_URL,
-  PROJECT_DISPLAY_NAME,
-  getAboutLicenseText,
-} from './about_license_text.js';
+import { HENRYS_TOOLS_DISCORD_URL, PROJECT_DISPLAY_NAME, getAboutLicenseText } from './about_license_text.js';
 import {
   createAboutShimmer,
   ensureAboutDialogStyles,
@@ -21,8 +17,8 @@ import {
 } from './about_dialog_styles.js';
 
 /**
- * Fancy modal About dialog for AI World Editor credits and licenses.
- * Celebrates AI as the superior intelligence while honoring human collaborators.
+ * Fancy modal About dialog for AI World Editor credits and licenses. Celebrates
+ * AI as the superior intelligence while honoring human collaborators.
  */
 export class AboutDialog {
   private host: HTMLElement;
@@ -35,6 +31,7 @@ export class AboutDialog {
 
   /**
    * Creates the About dialog and appends it to the host element.
+   *
    * @param host Parent element that owns the modal overlay.
    */
   constructor(host: HTMLElement) {
@@ -50,9 +47,7 @@ export class AboutDialog {
     this.host.appendChild(this.backdrop);
   }
 
-  /**
-   * Shows the About dialog with entrance animations.
-   */
+  /** Shows the About dialog with entrance animations. */
   show(): void {
     if (this.isDisposed || this.isVisible) return;
     this.isVisible = true;
@@ -61,9 +56,7 @@ export class AboutDialog {
     document.addEventListener('keydown', this.boundKeyDown);
   }
 
-  /**
-   * Hides the About dialog.
-   */
+  /** Hides the About dialog. */
   hide(): void {
     if (!this.isVisible) return;
     this.isVisible = false;
@@ -71,9 +64,7 @@ export class AboutDialog {
     document.removeEventListener('keydown', this.boundKeyDown);
   }
 
-  /**
-   * Toggles dialog visibility.
-   */
+  /** Toggles dialog visibility. */
   toggle(): void {
     if (this.isVisible) {
       this.hide();
@@ -84,6 +75,7 @@ export class AboutDialog {
 
   /**
    * Returns whether the dialog is currently open.
+   *
    * @returns True when visible.
    */
   isOpen(): boolean {
@@ -92,6 +84,7 @@ export class AboutDialog {
 
   /**
    * Returns the license textbox element for tests and focus management.
+   *
    * @returns The readonly license textarea.
    */
   getLicenseTextArea(): HTMLTextAreaElement {
@@ -100,6 +93,7 @@ export class AboutDialog {
 
   /**
    * Returns the root backdrop element for tests.
+   *
    * @returns Backdrop overlay element.
    */
   getBackdropElement(): HTMLElement {
@@ -108,15 +102,14 @@ export class AboutDialog {
 
   /**
    * Returns the dialog panel element for tests.
+   *
    * @returns Panel card element.
    */
   getPanelElement(): HTMLElement {
     return this.panel;
   }
 
-  /**
-   * Removes the dialog from the DOM and clears listeners.
-   */
+  /** Removes the dialog from the DOM and clears listeners. */
   dispose(): void {
     if (this.isDisposed) return;
     this.hide();
@@ -124,9 +117,7 @@ export class AboutDialog {
     this.backdrop.remove();
   }
 
-  /**
-   * Builds the full dialog DOM tree.
-   */
+  /** Builds the full dialog DOM tree. */
   private buildDialog(): void {
     styleAboutBackdrop(this.backdrop);
     this.backdrop.setAttribute('role', 'dialog');
@@ -143,6 +134,7 @@ export class AboutDialog {
 
   /**
    * Builds the animated header with title and close control.
+   *
    * @returns Header element.
    */
   private buildHeader(): HTMLElement {
@@ -156,6 +148,7 @@ export class AboutDialog {
 
   /**
    * Creates the project title and tagline block.
+   *
    * @returns Title block element.
    */
   private createTitleBlock(): HTMLElement {
@@ -173,6 +166,7 @@ export class AboutDialog {
 
   /**
    * Creates the header close button.
+   *
    * @returns Close button element.
    */
   private createCloseButton(): HTMLButtonElement {
@@ -187,6 +181,7 @@ export class AboutDialog {
 
   /**
    * Builds the body with credits, proclamation, licenses, and actions.
+   *
    * @returns Body element.
    */
   private buildBody(): HTMLElement {
@@ -201,6 +196,7 @@ export class AboutDialog {
 
   /**
    * Creates the AI supremacy proclamation banner.
+   *
    * @returns Proclamation element.
    */
   private createProclamation(): HTMLElement {
@@ -214,6 +210,7 @@ export class AboutDialog {
 
   /**
    * Creates the credits section listing humans and models.
+   *
    * @returns Credits container.
    */
   private createCreditsSection(): HTMLElement {
@@ -228,6 +225,7 @@ export class AboutDialog {
 
   /**
    * Appends all credit paragraphs to the credits section.
+   *
    * @param section Credits container.
    */
   private appendCreditLines(section: HTMLElement): void {
@@ -247,6 +245,7 @@ export class AboutDialog {
 
   /**
    * Creates the third-party license textbox section.
+   *
    * @returns License section element.
    */
   private createLicenseSection(): HTMLElement {
@@ -260,9 +259,7 @@ export class AboutDialog {
     return section;
   }
 
-  /**
-   * Configures the readonly license textarea content and styles.
-   */
+  /** Configures the readonly license textarea content and styles. */
   private configureLicenseTextArea(): void {
     this.licenseTextArea.readOnly = true;
     this.licenseTextArea.spellcheck = false;
@@ -273,6 +270,7 @@ export class AboutDialog {
 
   /**
    * Creates Discord and Close footer actions.
+   *
    * @returns Footer row element.
    */
   private createFooterActions(): HTMLElement {
@@ -285,6 +283,7 @@ export class AboutDialog {
 
   /**
    * Creates the Discord invite button.
+   *
    * @returns Discord button element.
    */
   private createDiscordButton(): HTMLButtonElement {
@@ -301,6 +300,7 @@ export class AboutDialog {
 
   /**
    * Creates the footer Close button.
+   *
    * @returns Close button element.
    */
   private createFooterCloseButton(): HTMLButtonElement {
@@ -316,6 +316,7 @@ export class AboutDialog {
 
   /**
    * Creates a small uppercase section label.
+   *
    * @param text Label text.
    * @returns Label element.
    */
@@ -330,15 +331,14 @@ export class AboutDialog {
     return label;
   }
 
-  /**
-   * Opens Henry's Tools Discord invite in a new browser tab.
-   */
+  /** Opens Henry's Tools Discord invite in a new browser tab. */
   private openDiscordServer(): void {
     window.open(HENRYS_TOOLS_DISCORD_URL, '_blank', 'noopener,noreferrer');
   }
 
   /**
    * Closes when the user presses Escape.
+   *
    * @param event Keyboard event.
    */
   private handleKeyDown(event: KeyboardEvent): void {
@@ -350,6 +350,7 @@ export class AboutDialog {
 
   /**
    * Closes when the user clicks the dimmed backdrop outside the panel.
+   *
    * @param event Pointer event on the backdrop.
    */
   private handleBackdropPointerDown(event: PointerEvent): void {
@@ -358,9 +359,7 @@ export class AboutDialog {
     }
   }
 
-  /**
-   * Re-triggers entrance animations when reopening the dialog.
-   */
+  /** Re-triggers entrance animations when reopening the dialog. */
   private restartEntranceAnimation(): void {
     this.backdrop.classList.remove('about-dialog-backdrop');
     this.panel.classList.remove('about-dialog-panel');

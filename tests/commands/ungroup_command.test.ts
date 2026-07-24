@@ -66,10 +66,7 @@ describe('UngroupCommand', () => {
 
   it('should ungroup single child group', () => {
     const singleGroup = new THREE.Group();
-    const singleMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial(),
-    );
+    const singleMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     singleMesh.name = 'SingleMesh';
     singleGroup.add(singleMesh);
     parent.add(singleGroup);
@@ -82,10 +79,7 @@ describe('UngroupCommand', () => {
 
   it('should handle group with no parent', () => {
     const orphanGroup = new THREE.Group();
-    const orphanMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial(),
-    );
+    const orphanMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     orphanMesh.name = 'OrphanMesh';
     orphanGroup.add(orphanMesh);
     const command = new UngroupCommand(orphanGroup);

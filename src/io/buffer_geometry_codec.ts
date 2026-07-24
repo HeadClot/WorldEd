@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import { BufferGeometryData } from './io_types.js';
 
 /**
- * Encodes and decodes Three.js BufferGeometry for JSON scene files.
- * Used for CSG results and any mesh that is not a named primitive.
+ * Encodes and decodes Three.js BufferGeometry for JSON scene files. Used for
+ * CSG results and any mesh that is not a named primitive.
  */
 export class BufferGeometryCodec {
   /**
    * Converts a BufferGeometry into a JSON-safe vertex payload.
+   *
    * @param geometry The geometry to encode.
    * @returns Position data plus optional normals and indices.
    */
@@ -31,6 +32,7 @@ export class BufferGeometryCodec {
 
   /**
    * Rebuilds a BufferGeometry from a JSON vertex payload.
+   *
    * @param data The encoded geometry data.
    * @returns A new BufferGeometry ready for mesh construction.
    */
@@ -47,6 +49,7 @@ export class BufferGeometryCodec {
 
   /**
    * Reads a named buffer attribute into a plain number array.
+   *
    * @param geometry The source geometry.
    * @param attributeName The attribute to read.
    * @returns Component values, or an empty array when missing.
@@ -59,6 +62,7 @@ export class BufferGeometryCodec {
 
   /**
    * Reads the geometry index buffer into a plain number array.
+   *
    * @param geometry The source geometry.
    * @returns Index values, or an empty array when non-indexed.
    */
@@ -70,6 +74,7 @@ export class BufferGeometryCodec {
 
   /**
    * Assigns the position attribute from encoded values.
+   *
    * @param geometry The target geometry.
    * @param position Interleaved position components.
    */
@@ -79,6 +84,7 @@ export class BufferGeometryCodec {
 
   /**
    * Assigns normals from encoded values, or computes them when absent.
+   *
    * @param geometry The target geometry.
    * @param normal Optional interleaved normal components.
    */
@@ -92,6 +98,7 @@ export class BufferGeometryCodec {
 
   /**
    * Assigns UV coordinates from encoded values when present.
+   *
    * @param geometry The target geometry.
    * @param uv Optional interleaved UV components.
    */
@@ -102,6 +109,7 @@ export class BufferGeometryCodec {
 
   /**
    * Assigns triangle indices when present.
+   *
    * @param geometry The target geometry.
    * @param index Optional index values.
    */

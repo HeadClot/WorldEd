@@ -1,13 +1,12 @@
 import { Theme } from '../theme.js';
 
-/**
- * Corner label overlay for a viewport (Top, Front, Side, Perspective).
- */
+/** Corner label overlay for a viewport (Top, Front, Side, Perspective). */
 export class ViewportLabel {
   private labelElement: HTMLElement;
 
   /**
    * Creates a non-interactive viewport label inside the parent element.
+   *
    * @param parentElement Viewport container that receives the label.
    * @param labelText Text shown in the corner badge.
    */
@@ -18,9 +17,7 @@ export class ViewportLabel {
     parentElement.appendChild(this.labelElement);
   }
 
-  /**
-   * Applies absolute positioning and theme colors to the label element.
-   */
+  /** Applies absolute positioning and theme colors to the label element. */
   private applyStyles(): void {
     this.labelElement.classList.add('editor-viewport-label');
     this.labelElement.style.position = 'absolute';
@@ -40,6 +37,7 @@ export class ViewportLabel {
 
   /**
    * Returns the root label DOM element.
+   *
    * @returns The label HTML element.
    */
   getLabelElement(): HTMLElement {

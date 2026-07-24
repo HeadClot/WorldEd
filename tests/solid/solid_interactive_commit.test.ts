@@ -6,9 +6,7 @@ import { CommandStack } from '../../src/commands/command_stack.js';
 import { SelectionManager } from '../../src/managers/selection_manager.js';
 import * as THREE from 'three';
 
-/**
- * Lightweight mock of the solid tools panel used by the controller.
- */
+/** Lightweight mock of the solid tools panel used by the controller. */
 class MockSolidPanel {
   setModel(_model: SolidModel | null): void {
     void _model;
@@ -23,9 +21,7 @@ class MockSolidPanel {
   }
 }
 
-/**
- * Unit tests for interactive transform commit performance path.
- */
+/** Unit tests for interactive transform commit performance path. */
 describe('Solid interactive transform commit', () => {
   it('finalizeAfterInteractiveEdit keeps live geometry without forcing a full rebuild', () => {
     const model = new SolidModel('CommitLive');
@@ -118,8 +114,7 @@ describe('Solid interactive transform commit', () => {
     mover.mesh!.position.x = 2.2;
     model.prepareLiveBrushEdit([mover.mesh!]);
     model.rebuildLive();
-    const sources = model.getResultMesh().userData.solidTriangleSources as
-      Array<{ brushId: string }> | undefined;
+    const sources = model.getResultMesh().userData.solidTriangleSources as Array<{ brushId: string }> | undefined;
     const brushIds = new Set((sources ?? []).map((source) => source.brushId));
     expect(brushIds.has(base.id)).toBe(true);
     expect(brushIds.has(mover.id)).toBe(true);

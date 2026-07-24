@@ -1,6 +1,6 @@
 /**
- * The current transform mode of the gizmo.
- * Determines which type of transform handles are displayed.
+ * The current transform mode of the gizmo. Determines which type of transform
+ * handles are displayed.
  */
 export enum TransformMode {
   TRANSLATE = 'translate',
@@ -10,8 +10,8 @@ export enum TransformMode {
 }
 
 /**
- * Individual gizmo axes and planes that can be interacted with.
- * X, Y, Z are single-axis handles. XY_PLANE, YZ_PLANE, XZ_PLANE are planar handles.
+ * Individual gizmo axes and planes that can be interacted with. X, Y, Z are
+ * single-axis handles. XY_PLANE, YZ_PLANE, XZ_PLANE are planar handles.
  */
 export enum GizmoAxis {
   X = 'x',

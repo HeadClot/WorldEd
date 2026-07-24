@@ -6,8 +6,8 @@ import { GridLineBuffer } from './grid_line_buffer.js';
 const PATCH_HALF_EXTENT = 50;
 
 /**
- * Safety cap on lines per axis. Kept high so the 3D minor cell can match
- * the editor snap interval (and 2D grids) without coarsening.
+ * Safety cap on lines per axis. Kept high so the 3D minor cell can match the
+ * editor snap interval (and 2D grids) without coarsening.
  */
 const MAX_LINES_PER_AXIS = 2000;
 
@@ -40,6 +40,7 @@ export class InfiniteGrid3D {
 
   /**
    * Creates a 3D infinite floor grid.
+   *
    * @param cellSize World size of one grid cell (typically the snap interval).
    */
   constructor(cellSize: number = 0.25) {
@@ -60,6 +61,7 @@ export class InfiniteGrid3D {
 
   /**
    * Returns the root object to parent in a viewport scene.
+   *
    * @returns The grid group.
    */
   getObject(): THREE.Group {
@@ -68,6 +70,7 @@ export class InfiniteGrid3D {
 
   /**
    * Sets the preferred metric cell size (typically the snap interval).
+   *
    * @param cellSize World units per cell.
    */
   setCellSize(cellSize: number): void {
@@ -76,6 +79,7 @@ export class InfiniteGrid3D {
 
   /**
    * Rebuilds the grid centered under the camera on the XZ plane.
+   *
    * @param camera The perspective camera driving the view.
    */
   update(camera: THREE.Camera): void {
@@ -94,8 +98,9 @@ export class InfiniteGrid3D {
   }
 
   /**
-   * Resolves the display cell to the editor snap size so 3D matches 2D.
-   * Patch coverage stays large; only an extreme safety cap may shrink span.
+   * Resolves the display cell to the editor snap size so 3D matches 2D. Patch
+   * coverage stays large; only an extreme safety cap may shrink span.
+   *
    * @returns Display cell size and number of lines per axis.
    */
   private resolveDisplayCell(): { cell: number; lineCount: number } {
@@ -109,6 +114,7 @@ export class InfiniteGrid3D {
 
   /**
    * Snaps a camera coordinate to the nearest display-cell boundary.
+   *
    * @param value Camera X or Z.
    * @param cell Display cell size.
    * @returns Snapped origin for the patch.
@@ -118,8 +124,9 @@ export class InfiniteGrid3D {
   }
 
   /**
-   * Draws minor, section, and major grid lines with edge fade.
-   * Section/major ranks use world coordinates so bright lines stay world-locked.
+   * Draws minor, section, and major grid lines with edge fade. Section/major
+   * ranks use world coordinates so bright lines stay world-locked.
+   *
    * @param offsetX Snapped camera X.
    * @param offsetZ Snapped camera Z.
    * @param halfWorld Half patch extent in world units.
@@ -150,6 +157,7 @@ export class InfiniteGrid3D {
 
   /**
    * Radial falloff from patch center to edge (1 at center, 0 at edge).
+   *
    * @param index Signed line index relative to the patch center.
    * @param lineCount Total lines on this axis.
    * @returns Falloff 0..1.
@@ -164,6 +172,7 @@ export class InfiniteGrid3D {
    * Sets center/edge colors for a line based on minor/section/major hierarchy.
    * Minor uses minorColor; section and major share sectionColor, with major
    * getting a stronger center blend (there is no separate majorColor).
+   *
    * @param rank World-locked line rank.
    * @param radial Edge falloff 0..1.
    */
@@ -183,8 +192,9 @@ export class InfiniteGrid3D {
   }
 
   /**
-   * Classifies a world-space line coordinate as minor, section, or major.
-   * Uses world multiples so bright lines do not follow the camera.
+   * Classifies a world-space line coordinate as minor, section, or major. Uses
+   * world multiples so bright lines do not follow the camera.
+   *
    * @param worldCoordinate World X or Z of the line.
    * @param sectionStep World spacing for section lines.
    * @param majorStep World spacing for major lines.
@@ -202,6 +212,7 @@ export class InfiniteGrid3D {
 
   /**
    * Returns true when value is an integer multiple of step (float-safe).
+   *
    * @param value World coordinate.
    * @param step Step size.
    * @returns Whether the coordinate sits on that step.
@@ -214,6 +225,7 @@ export class InfiniteGrid3D {
 
   /**
    * Draws one X-constant line as two halves meeting at the patch center.
+   *
    * @param x World X of the line.
    * @param centerZ Patch center Z.
    * @param halfWorld Half patch extent.
@@ -225,6 +237,7 @@ export class InfiniteGrid3D {
 
   /**
    * Draws one Z-constant line as two halves meeting at the patch center.
+   *
    * @param z World Z of the line.
    * @param centerX Patch center X.
    * @param halfWorld Half patch extent.
@@ -236,6 +249,7 @@ export class InfiniteGrid3D {
 
   /**
    * Draws the global world X and Z axes through the origin.
+   *
    * @param axisLength Half-length of each axis line.
    */
   private appendWorldAxes(axisLength: number): void {
@@ -247,6 +261,7 @@ export class InfiniteGrid3D {
 
   /**
    * Floating-point modulo that truncates toward zero.
+   *
    * @param value Dividend.
    * @param modulus Divisor.
    * @returns Remainder with the sign of value.
@@ -257,6 +272,7 @@ export class InfiniteGrid3D {
 
   /**
    * Returns the number of line segments drawn in the last update.
+   *
    * @returns Segment count.
    */
   getSegmentCount(): number {
@@ -265,15 +281,14 @@ export class InfiniteGrid3D {
 
   /**
    * Returns the world half-extent of the grid patch.
+   *
    * @returns Half-extent in world units.
    */
   getPatchHalfExtent(): number {
     return PATCH_HALF_EXTENT;
   }
 
-  /**
-   * Disposes grid resources.
-   */
+  /** Disposes grid resources. */
   dispose(): void {
     this.buffer.dispose();
   }

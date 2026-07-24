@@ -3,9 +3,7 @@ import * as THREE from 'three';
 import { SelectionManager } from '../../src/managers/selection_manager.js';
 import { SelectionClickThrough } from '../../src/selection/selection_click_through.js';
 
-/**
- * Unit tests for nested object click-through selection cycling.
- */
+/** Unit tests for nested object click-through selection cycling. */
 describe('SelectionClickThrough', () => {
   let selectionManager: SelectionManager;
   let outer: THREE.Mesh;
@@ -66,6 +64,7 @@ describe('SelectionClickThrough', () => {
 
 /**
  * Creates a named box mesh for pick-stack tests.
+ *
  * @param name Mesh display name.
  * @returns A simple mesh instance.
  */

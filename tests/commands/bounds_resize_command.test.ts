@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  BoundsResizeCommand,
-  BoundsResizeSnapshot,
-} from '../../src/commands/bounds_resize_command.js';
+import { BoundsResizeCommand, BoundsResizeSnapshot } from '../../src/commands/bounds_resize_command.js';
 
 describe('BoundsResizeCommand', () => {
   it('should apply final position and scale on execute', () => {
@@ -38,6 +35,7 @@ describe('BoundsResizeCommand', () => {
 
 /**
  * Creates a unit box mesh at the origin.
+ *
  * @returns A mesh for command tests.
  */
 function createMesh(): THREE.Mesh {
@@ -46,6 +44,7 @@ function createMesh(): THREE.Mesh {
 
 /**
  * Builds a bounds resize snapshot with known original and final transforms.
+ *
  * @param mesh The mesh to snapshot.
  * @returns A BoundsResizeSnapshot for testing.
  */

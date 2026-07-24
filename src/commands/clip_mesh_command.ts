@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 import { restoreObjectAtIndex } from '../utils/hierarchy_utils.js';
 
-/**
- * Undoable command that replaces one source mesh with a single clip result.
- */
+/** Undoable command that replaces one source mesh with a single clip result. */
 export class ClipMeshCommand implements UndoCommand {
   private sourceMesh: THREE.Mesh;
   private resultMesh: THREE.Mesh;
@@ -15,6 +13,7 @@ export class ClipMeshCommand implements UndoCommand {
 
   /**
    * Creates a clip mesh command.
+   *
    * @param sourceMesh The mesh being replaced.
    * @param resultMesh The capped clip result.
    * @param worldGroup Fallback parent when the source has none.
@@ -28,9 +27,7 @@ export class ClipMeshCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Removes the source mesh and inserts the clip result.
-   */
+  /** Removes the source mesh and inserts the clip result. */
   execute(): void {
     if (this.executed) return;
     this.parent?.remove(this.sourceMesh);
@@ -39,9 +36,7 @@ export class ClipMeshCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Removes the result and restores the source mesh.
-   */
+  /** Removes the result and restores the source mesh. */
   undo(): void {
     if (!this.executed) return;
     this.resultMesh.parent?.remove(this.resultMesh);
@@ -51,6 +46,7 @@ export class ClipMeshCommand implements UndoCommand {
 
   /**
    * Returns the clip result mesh.
+   *
    * @returns The result mesh.
    */
   getResultMesh(): THREE.Mesh {

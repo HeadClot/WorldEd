@@ -33,14 +33,8 @@ describe('local_directory_access', () => {
       createMockFileHandle('brick.png', 'png-bytes'),
       createMockDirectoryHandle('floors', [createMockFileHandle('wood.jpg', 'jpg-bytes')]),
     ]);
-    const files = await collectFilesFromDirectoryHandle(
-      root as unknown as FileSystemDirectoryHandle,
-      '',
-    );
-    expect(files.map((entry) => entry.relativePath).sort()).toEqual([
-      'brick.png',
-      'floors/wood.jpg',
-    ]);
+    const files = await collectFilesFromDirectoryHandle(root as unknown as FileSystemDirectoryHandle, '');
+    expect(files.map((entry) => entry.relativePath).sort()).toEqual(['brick.png', 'floors/wood.jpg']);
     expect(files.find((entry) => entry.name === 'wood.jpg')?.file.size).toBe('jpg-bytes'.length);
   });
 
@@ -65,9 +59,7 @@ describe('local_directory_access', () => {
   });
 });
 
-/**
- * Minimal handle shape used by collectFilesFromDirectoryHandle tests.
- */
+/** Minimal handle shape used by collectFilesFromDirectoryHandle tests. */
 interface MockFsHandle {
   kind: 'file' | 'directory';
   name: string;
@@ -77,6 +69,7 @@ interface MockFsHandle {
 
 /**
  * Creates a mock file handle returning a File.
+ *
  * @param name File name.
  * @param contents File contents.
  * @returns Mock file handle cast for the scanner API.
@@ -91,6 +84,7 @@ function createMockFileHandle(name: string, contents: string): MockFsHandle {
 
 /**
  * Creates a mock directory handle with child handles.
+ *
  * @param name Directory name.
  * @param children Nested handles.
  * @returns Mock directory handle cast for the scanner API.
@@ -109,6 +103,7 @@ function createMockDirectoryHandle(name: string, children: MockFsHandle[]): Mock
 
 /**
  * Creates a File with webkitRelativePath for folder input tests.
+ *
  * @param name File name.
  * @param relativePath Relative path from the folder root.
  * @returns File with webkitRelativePath.
@@ -124,6 +119,7 @@ function createWebkitFile(name: string, relativePath: string): File {
 
 /**
  * Builds a minimal FileList-like object for tests.
+ *
  * @param files Files to include.
  * @returns FileList-compatible object.
  */

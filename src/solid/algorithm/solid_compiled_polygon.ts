@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 import { SurfaceCategory } from '../types/surface_category.js';
 
-/**
- * A finalized surface polygon produced by solid CSG compilation.
- */
+/** A finalized surface polygon produced by solid CSG compilation. */
 export interface SolidCompiledPolygon {
   /** Ordered vertices in model space. */
   vertices: THREE.Vector3[];

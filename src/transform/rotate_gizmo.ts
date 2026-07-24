@@ -21,6 +21,7 @@ export class RotateGizmo {
 
   /**
    * Creates a new rotate gizmo builder.
+   *
    * @param theme The theme containing gizmo color definitions.
    */
   constructor(theme: typeof Theme) {
@@ -31,6 +32,7 @@ export class RotateGizmo {
 
   /**
    * Creates all 3 rotate handles and returns them.
+   *
    * @returns An array of GizmoHandle instances for X, Y, Z axes.
    */
   createHandles(): GizmoHandle[] {
@@ -44,15 +46,14 @@ export class RotateGizmo {
 
   /**
    * Returns all scene objects that need to be added to the gizmo group.
+   *
    * @returns An array of all Three.js objects created by this gizmo.
    */
   getAllSceneObjects(): THREE.Object3D[] {
     return [...this.ringGroups];
   }
 
-  /**
-   * Disposes all geometries and materials created by this gizmo.
-   */
+  /** Disposes all geometries and materials created by this gizmo. */
   dispose(): void {
     this.ringGroups.forEach((group) => this.disposeObject3D(group));
     this.ringGroups = [];
@@ -61,18 +62,14 @@ export class RotateGizmo {
 
   /**
    * Creates a single ring handle with front and occluded ghost meshes.
+   *
    * @param axis The gizmo axis for this ring.
    * @param color The hex color of the ring.
    * @param axisDirection The direction vector of the rotation axis.
    */
   private createRing(axis: GizmoAxis, color: number, axisDirection: THREE.Vector3): void {
     const group = new THREE.Group();
-    const geometry = new THREE.TorusGeometry(
-      GizmoVisualStyle.ringRadius,
-      GizmoVisualStyle.stemRadius,
-      12,
-      64,
-    );
+    const geometry = new THREE.TorusGeometry(GizmoVisualStyle.ringRadius, GizmoVisualStyle.stemRadius, 12, 64);
     const frontMesh = new THREE.Mesh(geometry, createGizmoFrontMaterial(color));
     applyGizmoFrontRenderOrder(frontMesh);
     const handle = new GizmoHandle(axis, color, frontMesh);
@@ -87,7 +84,9 @@ export class RotateGizmo {
   }
 
   /**
-   * Aligns a ring group so the torus lies in the plane perpendicular to the axis.
+   * Aligns a ring group so the torus lies in the plane perpendicular to the
+   * axis.
+   *
    * @param group The ring group to rotate.
    * @param axisDirection The direction of the rotation axis.
    */
@@ -101,6 +100,7 @@ export class RotateGizmo {
 
   /**
    * Recursively disposes geometries and materials under an object.
+   *
    * @param obj The object to dispose.
    */
   private disposeObject3D(obj: THREE.Object3D): void {
@@ -111,8 +111,9 @@ export class RotateGizmo {
   }
 
   /**
-   * Disposes the geometry and material of a single mesh.
-   * Shared geometries are disposed once when first encountered.
+   * Disposes the geometry and material of a single mesh. Shared geometries are
+   * disposed once when first encountered.
+   *
    * @param mesh The mesh to dispose.
    */
   private disposeMesh(mesh: THREE.Mesh): void {

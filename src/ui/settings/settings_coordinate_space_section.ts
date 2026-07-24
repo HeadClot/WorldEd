@@ -1,13 +1,7 @@
 import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
 import { formatCoordinateSpaceSummary } from '../../settings/coordinate_space_presets.js';
-import type {
-  AxisDirection,
-  CoordinateSpaceDefinition,
-} from '../../settings/coordinate_space_types.js';
-import {
-  AXIS_DIRECTION_LABELS,
-  AXIS_DIRECTION_OPTIONS,
-} from '../../settings/coordinate_space_types.js';
+import type { AxisDirection, CoordinateSpaceDefinition } from '../../settings/coordinate_space_types.js';
+import { AXIS_DIRECTION_LABELS, AXIS_DIRECTION_OPTIONS } from '../../settings/coordinate_space_types.js';
 import type { GameProfile } from '../../settings/settings_types.js';
 import { Theme } from '../../theme.js';
 import {
@@ -21,14 +15,13 @@ import {
 /** Sentinel value for the "create custom" dropdown action. */
 export const CREATE_CUSTOM_COORDINATE_SPACE_VALUE = '__create_custom__';
 
-/**
- * Builds the Coordinate space category for a game profile editor.
- */
+/** Builds the Coordinate space category for a game profile editor. */
 export class SettingsCoordinateSpaceSection {
   private readonly store: EditorSettingsStore;
 
   /**
    * Creates the section builder.
+   *
    * @param store Settings store for coordinate space mutations.
    */
   constructor(store: EditorSettingsStore) {
@@ -37,6 +30,7 @@ export class SettingsCoordinateSpaceSection {
 
   /**
    * Builds the full coordinate space category for the active profile.
+   *
    * @param profile Active game profile.
    * @returns Category section element.
    */
@@ -52,6 +46,7 @@ export class SettingsCoordinateSpaceSection {
 
   /**
    * Appends custom-only name/axis/remove controls.
+   *
    * @param body Category body container.
    * @param profile Active profile using a custom space.
    */
@@ -65,6 +60,7 @@ export class SettingsCoordinateSpaceSection {
 
   /**
    * Creates the preset selection dropdown.
+   *
    * @param profile Active profile.
    * @returns Control row.
    */
@@ -79,6 +75,7 @@ export class SettingsCoordinateSpaceSection {
 
   /**
    * Builds dropdown options for built-in, custom, and create-new entries.
+   *
    * @returns Option list for the preset select.
    */
   private buildPresetOptions(): { value: string; label: string }[] {
@@ -96,6 +93,7 @@ export class SettingsCoordinateSpaceSection {
 
   /**
    * Handles preset dropdown changes including custom creation.
+   *
    * @param profileId Active profile id.
    * @param value Selected option value.
    */
@@ -109,6 +107,7 @@ export class SettingsCoordinateSpaceSection {
 
   /**
    * Creates a read-only summary of the active axes.
+   *
    * @param space Active coordinate space.
    * @returns Summary row element.
    */
@@ -126,43 +125,33 @@ export class SettingsCoordinateSpaceSection {
 
   /**
    * Creates the custom preset name field.
+   *
    * @param profile Active profile.
    * @returns Control row.
    */
   private createCustomNameRow(profile: GameProfile): HTMLElement {
-    const input = createSettingsTextInput(
-      profile.coordinateSpace.name,
-      'Custom coordinate space name',
-      (value) => {
-        this.store.renameCustomCoordinateSpace(profile.coordinateSpace.presetId, value);
-      },
-    );
+    const input = createSettingsTextInput(profile.coordinateSpace.name, 'Custom coordinate space name', (value) => {
+      this.store.renameCustomCoordinateSpace(profile.coordinateSpace.presetId, value);
+    });
     input.dataset.settingsField = 'coordinate-space-name';
     return createSettingsControlRow('Preset name', input);
   }
 
   /**
    * Creates an axis direction dropdown for custom presets.
+   *
    * @param profile Active profile.
    * @param axis Axis role.
    * @param label Row label.
    * @returns Control row.
    */
-  private createAxisRow(
-    profile: GameProfile,
-    axis: 'up' | 'right' | 'forward',
-    label: string,
-  ): HTMLElement {
+  private createAxisRow(profile: GameProfile, axis: 'up' | 'right' | 'forward', label: string): HTMLElement {
     const options = AXIS_DIRECTION_OPTIONS.map((direction) => ({
       value: direction,
       label: AXIS_DIRECTION_LABELS[direction],
     }));
     const select = createSettingsSelect(options, profile.coordinateSpace[axis], (value) => {
-      this.store.setCustomCoordinateSpaceAxis(
-        profile.coordinateSpace.presetId,
-        axis,
-        value as AxisDirection,
-      );
+      this.store.setCustomCoordinateSpaceAxis(profile.coordinateSpace.presetId, axis, value as AxisDirection);
     });
     select.dataset.settingsField = `coordinate-space-${axis}`;
     return createSettingsControlRow(label, select);
@@ -170,6 +159,7 @@ export class SettingsCoordinateSpaceSection {
 
   /**
    * Creates a remove action for the active custom preset.
+   *
    * @param profile Active profile.
    * @returns Control row.
    */

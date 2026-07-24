@@ -3,9 +3,7 @@ import { resolveGeometrySourceType } from '../../texture/geometry_source.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
 
-/**
- * Icon configuration for different object types in the outliner.
- */
+/** Icon configuration for different object types in the outliner. */
 export interface ObjectIcon {
   /** The display character or emoji for the icon. */
   character: string;
@@ -21,6 +19,7 @@ export interface ObjectIcon {
 export class ObjectIconFactory {
   /**
    * Returns the icon configuration for a given Three.js object.
+   *
    * @param obj The Three.js object to get the icon for.
    * @returns The icon configuration with character and color.
    */
@@ -51,6 +50,7 @@ export class ObjectIconFactory {
 
   /**
    * Determines the specific mesh icon based on geometry type.
+   *
    * @param mesh The mesh to identify the icon for.
    * @returns The icon configuration for the mesh type.
    */
@@ -80,6 +80,7 @@ export class ObjectIconFactory {
 
   /**
    * Determines the specific light icon based on light type.
+   *
    * @param light The light object to identify the icon for.
    * @returns The icon configuration for the light type.
    */
@@ -98,6 +99,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a group object.
+   *
    * @returns The group icon configuration.
    */
   private static getGroupIcon(): ObjectIcon {
@@ -106,6 +108,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a solid model root.
+   *
    * @returns The solid model icon configuration.
    */
   private static getSolidModelIcon(): ObjectIcon {
@@ -114,6 +117,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a solid brush volume.
+   *
    * @returns The solid brush icon configuration.
    */
   private static getSolidBrushIcon(): ObjectIcon {
@@ -122,6 +126,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a solid model compiled result mesh.
+   *
    * @returns The solid result icon configuration.
    */
   private static getSolidResultIcon(): ObjectIcon {
@@ -130,6 +135,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a box mesh.
+   *
    * @returns The box icon configuration.
    */
   private static getBoxIcon(): ObjectIcon {
@@ -138,6 +144,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a sphere mesh.
+   *
    * @returns The sphere icon configuration.
    */
   private static getSphereIcon(): ObjectIcon {
@@ -146,6 +153,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a plane mesh.
+   *
    * @returns The plane icon configuration.
    */
   private static getPlaneIcon(): ObjectIcon {
@@ -154,6 +162,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a cylinder mesh.
+   *
    * @returns The cylinder icon configuration.
    */
   private static getCylinderIcon(): ObjectIcon {
@@ -162,6 +171,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the generic icon for unknown mesh types.
+   *
    * @returns The generic mesh icon configuration.
    */
   private static getGenericMeshIcon(): ObjectIcon {
@@ -170,6 +180,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a directional light.
+   *
    * @returns The directional light icon configuration.
    */
   private static getDirectionalLightIcon(): ObjectIcon {
@@ -178,6 +189,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a point light.
+   *
    * @returns The point light icon configuration.
    */
   private static getPointLightIcon(): ObjectIcon {
@@ -186,6 +198,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a spot light.
+   *
    * @returns The spot light icon configuration.
    */
   private static getSpotLightIcon(): ObjectIcon {
@@ -194,6 +207,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the generic icon for unknown light types.
+   *
    * @returns The generic light icon configuration.
    */
   private static getGenericLightIcon(): ObjectIcon {
@@ -202,6 +216,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the icon for a camera object.
+   *
    * @returns The camera icon configuration.
    */
   private static getCameraIcon(): ObjectIcon {
@@ -210,6 +225,7 @@ export class ObjectIconFactory {
 
   /**
    * Returns the fallback icon for unrecognized object types.
+   *
    * @returns The generic icon configuration.
    */
   private static getGenericIcon(): ObjectIcon {

@@ -13,9 +13,7 @@ import { Viewport3D } from '../viewports/viewport_3d.js';
 import { Viewport2D } from '../viewports/viewport_2d.js';
 import * as THREE from 'three';
 
-/**
- * Dependencies for tools palette and clip plane wiring.
- */
+/** Dependencies for tools palette and clip plane wiring. */
 export interface ClipToolsSetupDeps {
   worldObject: THREE.Group;
   commandStack: CommandStack;
@@ -41,9 +39,7 @@ export interface ClipToolsSetupDeps {
   onExtrudeFaces: () => void;
 }
 
-/**
- * Result of tools palette and clip plane construction.
- */
+/** Result of tools palette and clip plane construction. */
 export interface ClipToolsSetupResult {
   toolsPalette: ToolsPalette;
   toolsPaletteController: ToolsPaletteController;
@@ -52,6 +48,7 @@ export interface ClipToolsSetupResult {
 
 /**
  * Creates the floating Tools palette, clip plane handler, and related wiring.
+ *
  * @param deps Shared services and viewports for clip/tools setup.
  * @returns Created palette, controller, and clip handler.
  */
@@ -71,6 +68,7 @@ export function setupClipToolsAndPalette(deps: ClipToolsSetupDeps): ClipToolsSet
 
 /**
  * Builds the clip plane handler with scene mutation callbacks.
+ *
  * @param deps Clip/tools setup dependencies.
  * @returns Configured clip plane handler.
  */
@@ -91,6 +89,7 @@ function createClipPlaneHandler(deps: ClipToolsSetupDeps): ClipPlaneHandler {
 
 /**
  * Builds the tools palette UI with deferred controller callbacks.
+ *
  * @param deps Clip/tools setup dependencies.
  * @param controllerHolder Mutable holder filled after controller construction.
  * @param clipPlaneHandler Clip plane handler for commit/flip actions.
@@ -118,6 +117,7 @@ function createToolsPalette(
 
 /**
  * Creates the tools palette controller for selection-mode tool switching.
+ *
  * @param deps Clip/tools setup dependencies.
  * @param toolsPalette Tools palette panel.
  * @param clipPlaneHandler Clip plane handler.
@@ -140,19 +140,12 @@ function createToolsPaletteController(
 
 /**
  * Wires clip plane pointer callbacks on all viewports.
+ *
  * @param deps Clip/tools setup dependencies.
  * @param clipPlaneHandler Clip plane handler receiving pointer events.
  */
-function wireClipPlaneViewportCallbacks(
-  deps: ClipToolsSetupDeps,
-  clipPlaneHandler: ClipPlaneHandler,
-): void {
-  const viewports = [
-    deps.viewport3D,
-    deps.viewport2DTop,
-    deps.viewport2DFront,
-    deps.viewport2DSide,
-  ];
+function wireClipPlaneViewportCallbacks(deps: ClipToolsSetupDeps, clipPlaneHandler: ClipPlaneHandler): void {
+  const viewports = [deps.viewport3D, deps.viewport2DTop, deps.viewport2DFront, deps.viewport2DSide];
   viewports.forEach((viewport) => {
     viewport.setClipPlaneCallback((event) => {
       return clipPlaneHandler.onPointerDown(event, viewport.getCamera(), viewport.getRenderer());
@@ -162,13 +155,11 @@ function wireClipPlaneViewportCallbacks(
 
 /**
  * Wires keyboard shortcuts used while the clip plane tool is active.
+ *
  * @param deps Clip/tools setup dependencies.
  * @param clipPlaneHandler Clip plane handler for flip/commit actions.
  */
-function wireClipPlaneKeyboardShortcuts(
-  deps: ClipToolsSetupDeps,
-  clipPlaneHandler: ClipPlaneHandler,
-): void {
+function wireClipPlaneKeyboardShortcuts(deps: ClipToolsSetupDeps, clipPlaneHandler: ClipPlaneHandler): void {
   deps.keyboardShortcutHandler.setClipPlaneShortcuts(
     () => deps.clipPlaneTool.isActive(),
     () => clipPlaneHandler.flipPlane(),
@@ -180,6 +171,7 @@ function wireClipPlaneKeyboardShortcuts(
 
 /**
  * Cancels the clip tool and returns the palette to object select.
+ *
  * @param clipPlaneHandler Active clip plane handler, if any.
  * @param toolsPaletteController Tools palette controller, if any.
  */

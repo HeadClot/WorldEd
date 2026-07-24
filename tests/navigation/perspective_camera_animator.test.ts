@@ -32,24 +32,14 @@ describe('PerspectiveCameraAnimator', () => {
 
   it('should start animation when animateToTarget is called', () => {
     config.setAnimationEnabled(true);
-    const result = animator.animateToTarget(
-      camera,
-      new THREE.Vector3(10, 10, 10),
-      new THREE.Vector3(0, 0, 0),
-      config,
-    );
+    const result = animator.animateToTarget(camera, new THREE.Vector3(10, 10, 10), new THREE.Vector3(0, 0, 0), config);
     expect(result).toBe(true);
     expect(animator.isAnimating()).toBe(true);
   });
 
   it('should complete animation on update calls', () => {
     config.setAnimationEnabled(true);
-    animator.animateToTarget(
-      camera,
-      new THREE.Vector3(10, 10, 10),
-      new THREE.Vector3(0, 0, 0),
-      config,
-    );
+    animator.animateToTarget(camera, new THREE.Vector3(10, 10, 10), new THREE.Vector3(0, 0, 0), config);
     mockTime += 200;
     const stillRunning = animator.update();
     expect(stillRunning).toBe(false);
@@ -58,12 +48,7 @@ describe('PerspectiveCameraAnimator', () => {
 
   it('should snap instantly when animation is disabled', () => {
     config.setAnimationEnabled(false);
-    const result = animator.animateToTarget(
-      camera,
-      new THREE.Vector3(10, 10, 10),
-      new THREE.Vector3(0, 0, 0),
-      config,
-    );
+    const result = animator.animateToTarget(camera, new THREE.Vector3(10, 10, 10), new THREE.Vector3(0, 0, 0), config);
     expect(result).toBe(false);
     expect(animator.isAnimating()).toBe(false);
     expect(camera.position.x).toBeCloseTo(10);
@@ -74,12 +59,7 @@ describe('PerspectiveCameraAnimator', () => {
   it('should move camera position toward target during animation', () => {
     config.setAnimationEnabled(true);
     const startPosition = camera.position.clone();
-    animator.animateToTarget(
-      camera,
-      new THREE.Vector3(20, 20, 20),
-      new THREE.Vector3(0, 0, 0),
-      config,
-    );
+    animator.animateToTarget(camera, new THREE.Vector3(20, 20, 20), new THREE.Vector3(0, 0, 0), config);
     mockTime += 50;
     animator.update();
     const distanceFromStart = camera.position.distanceTo(startPosition);
@@ -118,12 +98,7 @@ describe('PerspectiveCameraAnimator', () => {
 
   it('should not throw on update after animation completes', () => {
     config.setAnimationEnabled(true);
-    animator.animateToTarget(
-      camera,
-      new THREE.Vector3(10, 10, 10),
-      new THREE.Vector3(0, 0, 0),
-      config,
-    );
+    animator.animateToTarget(camera, new THREE.Vector3(10, 10, 10), new THREE.Vector3(0, 0, 0), config);
     mockTime += 200;
     animator.update();
     expect(() => animator.update()).not.toThrow();

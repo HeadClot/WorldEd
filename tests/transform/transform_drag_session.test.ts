@@ -5,6 +5,7 @@ import { TransformDragSession } from '../../src/transform/transform_drag_session
 describe('TransformDragSession', () => {
   /**
    * Creates a mesh with a non-default transform for snapshot tests.
+   *
    * @returns A mesh with position, rotation, and scale set.
    */
   function createTransformedMesh(): THREE.Mesh {

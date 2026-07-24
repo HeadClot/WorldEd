@@ -17,23 +17,20 @@ import {
 
 /**
  * Callback for status messages.
+ *
  * @param message Status text.
  */
 export type UvEditorStatusCallback = (message: string) => void;
 
 /**
  * Callback when UV editor field values should refresh.
+ *
  * @param mapping Common mapping or null when mixed/empty.
  * @param targetCount Number of face regions targeted.
  */
-export type UvEditorUiRefreshCallback = (
-  mapping: FaceTextureMapping | null,
-  targetCount: number,
-) => void;
+export type UvEditorUiRefreshCallback = (mapping: FaceTextureMapping | null, targetCount: number) => void;
 
-/**
- * Coordinates UV editor actions with selection and undo.
- */
+/** Coordinates UV editor actions with selection and undo. */
 export class UvEditorController {
   private selectionManager: SelectionManager;
   private faceExtrusionController: FaceExtrusionController;
@@ -43,6 +40,7 @@ export class UvEditorController {
 
   /**
    * Creates a UV editor controller.
+   *
    * @param selectionManager Object selection manager.
    * @param faceExtrusionController Face selection / mode owner.
    * @param commandStack Undo stack.
@@ -61,6 +59,7 @@ export class UvEditorController {
 
   /**
    * Registers a status message callback.
+   *
    * @param callback Status handler.
    */
   setStatusCallback(callback: UvEditorStatusCallback | null): void {
@@ -69,15 +68,14 @@ export class UvEditorController {
 
   /**
    * Registers a UI refresh callback for mixed-value display.
+   *
    * @param callback UI refresh handler.
    */
   setUiRefreshCallback(callback: UvEditorUiRefreshCallback | null): void {
     this.uiRefreshCallback = callback;
   }
 
-  /**
-   * Refreshes UV editor fields from the current selection.
-   */
+  /** Refreshes UV editor fields from the current selection. */
   refreshFromSelection(): void {
     const targets = this.collectTargets();
     const common = getCommonMapping(targets);
@@ -88,6 +86,7 @@ export class UvEditorController {
 
   /**
    * Applies an align preset without clobbering per-region scale/offset.
+   *
    * @param align Align mode.
    */
   applyAlign(align: FaceTextureAlign): void {
@@ -106,6 +105,7 @@ export class UvEditorController {
 
   /**
    * Applies scale/offset/rotation values from the UV editor.
+   *
    * @param mapping Mapping fields read from the UV editor form.
    */
   applyMappingFields(mapping: FaceTextureMapping): void {
@@ -120,7 +120,8 @@ export class UvEditorController {
   }
 
   /**
-   * Resets UV projection params to defaults without clearing texture assignments.
+   * Resets UV projection params to defaults without clearing texture
+   * assignments.
    */
   resetMapping(): void {
     const targets = this.collectTargets();
@@ -138,6 +139,7 @@ export class UvEditorController {
 
   /**
    * Collects texture targets from face selection or whole objects.
+   *
    * @returns Apply targets.
    */
   private collectTargets(): TextureApplyTarget[] {
@@ -153,6 +155,7 @@ export class UvEditorController {
 
   /**
    * Pushes an undoable apply command.
+   *
    * @param targets Regions.
    * @param mapping Mapping to apply.
    */
@@ -161,9 +164,7 @@ export class UvEditorController {
     this.commandStack.push(command);
   }
 
-  /**
-   * Reports that no valid selection is available.
-   */
+  /** Reports that no valid selection is available. */
   private reportNoSelection(): void {
     this.statusCallback?.('Select face(s) in Face mode, or object(s) in Object mode');
   }

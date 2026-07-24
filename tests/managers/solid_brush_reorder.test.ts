@@ -5,9 +5,7 @@ import { CommandStack } from '../../src/commands/command_stack.js';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 
-/**
- * Outliner reparent must change solid CSG evaluation order.
- */
+/** Outliner reparent must change solid CSG evaluation order. */
 describe('Solid brush outliner reorder', () => {
   it('rebuilds without cavity when subtractive is moved before additive', () => {
     const world = new THREE.Group();
@@ -22,10 +20,7 @@ describe('Solid brush outliner reorder', () => {
     expect(holeVertexCount).toBeGreaterThan(0);
     // Drop subtractive onto additive → insert before → first in CSG order.
     handler.reparentFromDrop(subtractive.mesh!, additive.mesh!);
-    expect(model.getBrushes().map((b) => b.operation)).toEqual([
-      SolidOperation.Subtractive,
-      SolidOperation.Additive,
-    ]);
+    expect(model.getBrushes().map((b) => b.operation)).toEqual([SolidOperation.Subtractive, SolidOperation.Additive]);
     const solidVertexCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(solidVertexCount).toBeLessThan(holeVertexCount);
   });

@@ -3,6 +3,7 @@ import { attachWebGLContextDiagnostics } from './webgl_context_diagnostics.js';
 
 /**
  * Creates a canvas that reports WebGL failures before renderer construction.
+ *
  * @param ownerName Human-readable renderer owner used in diagnostics.
  * @returns Canvas prepared for Three.js WebGL rendering.
  */
@@ -13,8 +14,9 @@ export function createEditorWebGLCanvas(ownerName: string): HTMLCanvasElement {
 }
 
 /**
- * Returns WebGL settings for editor viewports and overlay widgets.
- * Multisample antialiasing keeps edge/wireframe lines thick and clean.
+ * Returns WebGL settings for editor viewports and overlay widgets. Multisample
+ * antialiasing keeps edge/wireframe lines thick and clean.
+ *
  * @param alpha Whether the renderer needs a transparent drawing buffer.
  * @returns Three.js WebGL renderer parameters.
  */

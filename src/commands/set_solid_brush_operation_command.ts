@@ -3,9 +3,7 @@ import { UndoCommand } from './undo_command.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidOperation } from '../solid/types/solid_operation.js';
 
-/**
- * Snapshot of one brush operation for undo.
- */
+/** Snapshot of one brush operation for undo. */
 interface OperationSnapshot {
   model: SolidModel;
   brushId: string;
@@ -14,7 +12,8 @@ interface OperationSnapshot {
 
 /**
  * Undoable command that sets the CSG operation on one or more solid brushes.
- * Uses partial CSG via setBrushOperation — never force-rebuilds the entire map.
+ * Uses partial CSG via setBrushOperation — never force-rebuilds the entire
+ * map.
  */
 export class SetSolidBrushOperationCommand implements UndoCommand {
   private readonly brushMeshes: THREE.Mesh[];
@@ -24,6 +23,7 @@ export class SetSolidBrushOperationCommand implements UndoCommand {
 
   /**
    * Creates a set-operation command for solid brushes.
+   *
    * @param brushMeshes Brush preview meshes to update.
    * @param operation New CSG operation.
    */
@@ -34,9 +34,7 @@ export class SetSolidBrushOperationCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Applies the operation to each brush (partial CSG rebuild per model).
-   */
+  /** Applies the operation to each brush (partial CSG rebuild per model). */
   execute(): void {
     if (this.executed) return;
     this.snapshots = [];
@@ -47,9 +45,7 @@ export class SetSolidBrushOperationCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores prior operations with partial CSG rebuilds.
-   */
+  /** Restores prior operations with partial CSG rebuilds. */
   undo(): void {
     if (!this.executed) return;
     for (const snapshot of this.snapshots) {
@@ -61,6 +57,7 @@ export class SetSolidBrushOperationCommand implements UndoCommand {
 
   /**
    * Snapshots and updates one brush mesh operation.
+   *
    * @param mesh Brush preview mesh.
    */
   private applyToMesh(mesh: THREE.Mesh): void {

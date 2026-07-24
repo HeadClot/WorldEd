@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TextureLibrary } from '../../src/texture/texture_library.js';
-import {
-  TextureBrowserEntry,
-  createTextureBrowserEntry,
-} from '../../src/texture/texture_browser_entry.js';
+import { TextureBrowserEntry, createTextureBrowserEntry } from '../../src/texture/texture_browser_entry.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
 import { mockObjectUrlApis } from './object_url_test_utils.js';
 
@@ -48,10 +45,7 @@ describe('TextureLibrary', () => {
   });
 
   it('should select by id only when the entry exists', () => {
-    library.replaceAll('Folder', [
-      createEntry('one.png', 'one.png'),
-      createEntry('two.png', 'two.png'),
-    ]);
+    library.replaceAll('Folder', [createEntry('one.png', 'one.png'), createEntry('two.png', 'two.png')]);
     expect(library.selectById('two.png')).toBe(true);
     expect(library.getSelectedEntry()?.displayName).toBe('two');
     expect(library.selectById('missing.png')).toBe(false);
@@ -70,13 +64,11 @@ describe('TextureLibrary', () => {
 
 /**
  * Creates a test texture entry with a unique object URL.
+ *
  * @param fileName File name.
  * @param relativePath Relative path id.
  * @returns Browser entry.
  */
 function createEntry(fileName: string, relativePath: string): TextureBrowserEntry {
-  return createTextureBrowserEntry(
-    new File(['img'], fileName, { type: 'image/png' }),
-    relativePath,
-  );
+  return createTextureBrowserEntry(new File(['img'], fileName, { type: 'image/png' }), relativePath);
 }

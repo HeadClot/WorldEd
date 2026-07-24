@@ -156,12 +156,7 @@ describe('TransformExecutor.executeRotation', () => {
     const mesh = new THREE.Mesh();
     mesh.position.set(1, 0, 0);
     const before = mesh.quaternion.clone();
-    executor.executeRotation(
-      [mesh],
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 0, 1),
-      Math.PI / 2,
-    );
+    executor.executeRotation([mesh], new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1), Math.PI / 2);
     expect(mesh.quaternion.equals(before)).toBe(false);
   });
 

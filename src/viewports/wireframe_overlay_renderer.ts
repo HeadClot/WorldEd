@@ -5,9 +5,9 @@ import { hasEdgeBuildableGeometry } from '../utils/mesh_edge_sync.js';
 import { SOLID_BRUSH_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 
 /**
- * Renders wireframe overlays on top of the viewport scene.
- * Overlays are parented to their source meshes so they follow transforms
- * during live drag operations without waiting for a full rebuild.
+ * Renders wireframe overlays on top of the viewport scene. Overlays are
+ * parented to their source meshes so they follow transforms during live drag
+ * operations without waiting for a full rebuild.
  */
 export class WireframeOverlayRenderer {
   private viewportScene: THREE.Scene;
@@ -17,6 +17,7 @@ export class WireframeOverlayRenderer {
 
   /**
    * Creates a new wireframe overlay renderer for the given scene.
+   *
    * @param viewportScene The Three.js scene that owns the target meshes.
    */
   constructor(viewportScene: THREE.Scene) {
@@ -31,8 +32,9 @@ export class WireframeOverlayRenderer {
   }
 
   /**
-   * Builds wireframe overlays for the given meshes.
-   * Clears any previously built overlays before creating new ones.
+   * Builds wireframe overlays for the given meshes. Clears any previously built
+   * overlays before creating new ones.
+   *
    * @param meshes The meshes to generate wireframe edges for.
    */
   setMeshes(meshes: THREE.Mesh[]): void {
@@ -41,8 +43,8 @@ export class WireframeOverlayRenderer {
   }
 
   /**
-   * Re-syncs overlay local transforms so they stay glued to their meshes.
-   * Safe to call every frame or during live transform drags.
+   * Re-syncs overlay local transforms so they stay glued to their meshes. Safe
+   * to call every frame or during live transform drags.
    */
   syncTransforms(): void {
     this.overlayEntries.forEach((lineSegments, mesh) => {
@@ -56,9 +58,7 @@ export class WireframeOverlayRenderer {
     });
   }
 
-  /**
-   * Removes all overlay LineSegments from their parent meshes.
-   */
+  /** Removes all overlay LineSegments from their parent meshes. */
   private clearOverlays(): void {
     this.overlayEntries.forEach((lineSegments, mesh) => {
       mesh.remove(lineSegments);
@@ -68,8 +68,9 @@ export class WireframeOverlayRenderer {
   }
 
   /**
-   * Creates a LineSegments overlay parented under a single mesh.
-   * Skips meshes with empty or missing position data (e.g. empty solid models).
+   * Creates a LineSegments overlay parented under a single mesh. Skips meshes
+   * with empty or missing position data (e.g. empty solid models).
+   *
    * @param mesh The source mesh to generate edges from.
    */
   private addMeshOverlay(mesh: THREE.Mesh): void {
@@ -87,6 +88,7 @@ export class WireframeOverlayRenderer {
 
   /**
    * Shows or hides all wireframe overlays.
+   *
    * @param visible Whether the overlays should be visible.
    */
   setVisible(visible: boolean): void {
@@ -98,15 +100,14 @@ export class WireframeOverlayRenderer {
 
   /**
    * Returns whether overlays are currently set to visible.
+   *
    * @returns True if overlays should be shown.
    */
   isVisible(): boolean {
     return this.overlaysVisible;
   }
 
-  /**
-   * Removes overlays from meshes and disposes all resources.
-   */
+  /** Removes overlays from meshes and disposes all resources. */
   dispose(): void {
     this.clearOverlays();
     this.lineMaterial.dispose();
@@ -114,6 +115,7 @@ export class WireframeOverlayRenderer {
 
   /**
    * Returns the number of active overlay entries (for tests).
+   *
    * @returns Overlay count.
    */
   getOverlayCount(): number {
@@ -122,6 +124,7 @@ export class WireframeOverlayRenderer {
 
   /**
    * Returns the overlay for a mesh when present (for tests).
+   *
    * @param mesh The mesh to look up.
    * @returns The overlay LineSegments, or undefined.
    */

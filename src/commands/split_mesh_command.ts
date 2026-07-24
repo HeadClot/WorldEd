@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 import { restoreObjectAtIndex } from '../utils/hierarchy_utils.js';
 
-/**
- * Undoable command that replaces one source mesh with two split results.
- */
+/** Undoable command that replaces one source mesh with two split results. */
 export class SplitMeshCommand implements UndoCommand {
   private sourceMesh: THREE.Mesh;
   private frontMesh: THREE.Mesh;
@@ -16,17 +14,13 @@ export class SplitMeshCommand implements UndoCommand {
 
   /**
    * Creates a split mesh command.
+   *
    * @param sourceMesh The mesh being replaced.
    * @param frontMesh The front half result.
    * @param backMesh The back half result.
    * @param worldGroup Fallback parent when the source has none.
    */
-  constructor(
-    sourceMesh: THREE.Mesh,
-    frontMesh: THREE.Mesh,
-    backMesh: THREE.Mesh,
-    worldGroup: THREE.Group,
-  ) {
+  constructor(sourceMesh: THREE.Mesh, frontMesh: THREE.Mesh, backMesh: THREE.Mesh, worldGroup: THREE.Group) {
     this.sourceMesh = sourceMesh;
     this.frontMesh = frontMesh;
     this.backMesh = backMesh;
@@ -36,9 +30,7 @@ export class SplitMeshCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Removes the source mesh and inserts both split pieces.
-   */
+  /** Removes the source mesh and inserts both split pieces. */
   execute(): void {
     if (this.executed) return;
     this.parent?.remove(this.sourceMesh);
@@ -48,9 +40,7 @@ export class SplitMeshCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Removes both results and restores the source mesh.
-   */
+  /** Removes both results and restores the source mesh. */
   undo(): void {
     if (!this.executed) return;
     this.frontMesh.parent?.remove(this.frontMesh);
@@ -61,6 +51,7 @@ export class SplitMeshCommand implements UndoCommand {
 
   /**
    * Returns both result meshes.
+   *
    * @returns Front and back meshes.
    */
   getResultMeshes(): THREE.Mesh[] {

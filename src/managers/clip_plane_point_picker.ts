@@ -3,9 +3,7 @@ import { FaceSelectionRaycaster } from '../selection/face_selection_raycaster.js
 import { GridSnap } from '../transform/grid_snap.js';
 import { pointerEventToNdc } from '../utils/pointer_ndc.js';
 
-/**
- * Picks world points for clip plane placement from mesh hits or a ground plane.
- */
+/** Picks world points for clip plane placement from mesh hits or a ground plane. */
 export class ClipPlanePointPicker {
   private faceRaycaster: FaceSelectionRaycaster;
   private raycaster: THREE.Raycaster;
@@ -14,6 +12,7 @@ export class ClipPlanePointPicker {
 
   /**
    * Creates a point picker bound to a snap configuration.
+   *
    * @param gridSnap Shared grid snap settings.
    */
   constructor(gridSnap: GridSnap) {
@@ -24,8 +23,9 @@ export class ClipPlanePointPicker {
   }
 
   /**
-   * Picks a world point from a pointer event.
-   * Prefers mesh surface hits, then falls back to the XZ ground plane.
+   * Picks a world point from a pointer event. Prefers mesh surface hits, then
+   * falls back to the XZ ground plane.
+   *
    * @param event Pointer event.
    * @param camera Viewport camera.
    * @param renderer Viewport renderer.
@@ -49,6 +49,7 @@ export class ClipPlanePointPicker {
 
   /**
    * Intersects the pointer ray with the world XZ plane (y = 0).
+   *
    * @param event Pointer event.
    * @param camera Viewport camera.
    * @param renderer Viewport renderer.
@@ -70,6 +71,7 @@ export class ClipPlanePointPicker {
 
   /**
    * Applies grid snap when enabled.
+   *
    * @param point World point to snap.
    * @returns Possibly snapped clone.
    */

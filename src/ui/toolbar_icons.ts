@@ -1,10 +1,11 @@
 /**
- * Inline SVG icon markup for editor toolbars.
- * Icons use currentColor so button text color styles them.
+ * Inline SVG icon markup for editor toolbars. Icons use currentColor so button
+ * text color styles them.
  */
 export class ToolbarIcons {
   /**
    * Solid shaded cube icon.
+   *
    * @returns SVG markup string.
    */
   static solid(): string {
@@ -15,6 +16,7 @@ export class ToolbarIcons {
 
   /**
    * Wireframe cube icon.
+   *
    * @returns SVG markup string.
    */
   static wireframe(): string {
@@ -25,6 +27,7 @@ export class ToolbarIcons {
 
   /**
    * Flat shaded cube icon.
+   *
    * @returns SVG markup string.
    */
   static flat(): string {
@@ -35,6 +38,7 @@ export class ToolbarIcons {
 
   /**
    * Fit / frame selection icon (bounding box with arrows).
+   *
    * @returns SVG markup string.
    */
   static fit(): string {
@@ -45,6 +49,7 @@ export class ToolbarIcons {
 
   /**
    * Floor align icon (horizontal plane).
+   *
    * @returns SVG markup string.
    */
   static alignFloor(): string {
@@ -55,16 +60,16 @@ export class ToolbarIcons {
 
   /**
    * Wall align icon (vertical plane).
+   *
    * @returns SVG markup string.
    */
   static alignWall(): string {
-    return this.wrapSvg(
-      '<path fill="none" stroke="currentColor" stroke-width="1.6" d="M7 4h10v16H7zM7 12h10"/>',
-    );
+    return this.wrapSvg('<path fill="none" stroke="currentColor" stroke-width="1.6" d="M7 4h10v16H7zM7 12h10"/>');
   }
 
   /**
    * Ceiling align icon (plane above).
+   *
    * @returns SVG markup string.
    */
   static alignCeiling(): string {
@@ -75,6 +80,7 @@ export class ToolbarIcons {
 
   /**
    * Texture reset icon (circular arrow).
+   *
    * @returns SVG markup string.
    */
   static textureReset(): string {
@@ -85,6 +91,7 @@ export class ToolbarIcons {
 
   /**
    * Object selection cursor icon.
+   *
    * @returns SVG markup string.
    */
   static toolObjectSelect(): string {
@@ -93,6 +100,7 @@ export class ToolbarIcons {
 
   /**
    * Face selection icon (highlighted polygon face).
+   *
    * @returns SVG markup string.
    */
   static toolFaceSelect(): string {
@@ -103,6 +111,7 @@ export class ToolbarIcons {
 
   /**
    * Clip plane icon (solid cut by a diagonal plane).
+   *
    * @returns SVG markup string.
    */
   static toolClipPlane(): string {
@@ -113,6 +122,7 @@ export class ToolbarIcons {
 
   /**
    * Bounds / rect transform icon.
+   *
    * @returns SVG markup string.
    */
   static toolBounds(): string {
@@ -123,6 +133,7 @@ export class ToolbarIcons {
 
   /**
    * Move / translate gizmo icon.
+   *
    * @returns SVG markup string.
    */
   static toolMove(): string {
@@ -133,6 +144,7 @@ export class ToolbarIcons {
 
   /**
    * Rotate gizmo icon.
+   *
    * @returns SVG markup string.
    */
   static toolRotate(): string {
@@ -143,6 +155,7 @@ export class ToolbarIcons {
 
   /**
    * Scale gizmo icon.
+   *
    * @returns SVG markup string.
    */
   static toolScale(): string {
@@ -153,6 +166,7 @@ export class ToolbarIcons {
 
   /**
    * Undo curved arrow icon.
+   *
    * @returns SVG markup string.
    */
   static undo(): string {
@@ -163,6 +177,7 @@ export class ToolbarIcons {
 
   /**
    * Redo curved arrow icon.
+   *
    * @returns SVG markup string.
    */
   static redo(): string {
@@ -173,6 +188,7 @@ export class ToolbarIcons {
 
   /**
    * UV editor grid icon.
+   *
    * @returns SVG markup string.
    */
   static uvEditor(): string {
@@ -183,6 +199,7 @@ export class ToolbarIcons {
 
   /**
    * Texture browser image icon.
+   *
    * @returns SVG markup string.
    */
   static textureBrowser(): string {
@@ -193,6 +210,7 @@ export class ToolbarIcons {
 
   /**
    * Tools palette wrench/panel icon.
+   *
    * @returns SVG markup string.
    */
   static toolsPanel(): string {
@@ -203,6 +221,7 @@ export class ToolbarIcons {
 
   /**
    * Snap-to-grid icon (grid with a snap target at the intersection).
+   *
    * @returns SVG markup string.
    */
   static snap(): string {
@@ -213,6 +232,7 @@ export class ToolbarIcons {
 
   /**
    * Cube primitive icon for the main toolbar.
+   *
    * @returns SVG markup string.
    */
   static primitiveCube(): string {
@@ -223,6 +243,7 @@ export class ToolbarIcons {
 
   /**
    * Sphere primitive icon for the main toolbar.
+   *
    * @returns SVG markup string.
    */
   static primitiveSphere(): string {
@@ -233,6 +254,7 @@ export class ToolbarIcons {
 
   /**
    * Cylinder primitive icon for the main toolbar.
+   *
    * @returns SVG markup string.
    */
   static primitiveCylinder(): string {
@@ -243,6 +265,7 @@ export class ToolbarIcons {
 
   /**
    * Plane primitive icon for the main toolbar.
+   *
    * @returns SVG markup string.
    */
   static primitivePlane(): string {
@@ -253,6 +276,7 @@ export class ToolbarIcons {
 
   /**
    * Terrain primitive icon for the main toolbar.
+   *
    * @returns SVG markup string.
    */
   static primitiveTerrain(): string {
@@ -263,6 +287,7 @@ export class ToolbarIcons {
 
   /**
    * Solid model (brush CSG) icon for the main toolbar.
+   *
    * @returns SVG markup string.
    */
   static solidModel(): string {
@@ -273,6 +298,7 @@ export class ToolbarIcons {
 
   /**
    * About / information circle icon for the main toolbar.
+   *
    * @returns SVG markup string.
    */
   static about(): string {
@@ -283,6 +309,7 @@ export class ToolbarIcons {
 
   /**
    * Settings / gear icon for the main toolbar.
+   *
    * @returns SVG markup string.
    */
   static settings(): string {
@@ -293,6 +320,7 @@ export class ToolbarIcons {
 
   /**
    * Wraps path content in a standard 24x24 SVG element.
+   *
    * @param content Inner SVG path markup.
    * @returns Complete SVG element markup.
    */

@@ -16,15 +16,14 @@ import {
   createSettingsSlider,
 } from './settings_form_controls.js';
 
-/**
- * View tab content: UI theme, brightness, material browser, and fonts.
- */
+/** View tab content: UI theme, brightness, material browser, and fonts. */
 export class SettingsViewTab {
   private readonly store: EditorSettingsStore;
   private readonly root: HTMLElement;
 
   /**
    * Creates the View tab panel.
+   *
    * @param store Settings store driving view preferences.
    */
   constructor(store: EditorSettingsStore) {
@@ -37,15 +36,14 @@ export class SettingsViewTab {
 
   /**
    * Returns the tab root element.
+   *
    * @returns Root element.
    */
   getElement(): HTMLElement {
     return this.root;
   }
 
-  /**
-   * Rebuilds all View tab controls from the store.
-   */
+  /** Rebuilds all View tab controls from the store. */
   rebuild(): void {
     this.root.replaceChildren();
     this.root.appendChild(this.buildUserInterfaceCategory());
@@ -56,6 +54,7 @@ export class SettingsViewTab {
 
   /**
    * Builds the User Interface category.
+   *
    * @returns Section element.
    */
   private buildUserInterfaceCategory(): HTMLElement {
@@ -68,6 +67,7 @@ export class SettingsViewTab {
 
   /**
    * Builds the Material browser category.
+   *
    * @returns Section element.
    */
   private buildMaterialBrowserCategory(): HTMLElement {
@@ -79,6 +79,7 @@ export class SettingsViewTab {
 
   /**
    * Builds the viewport layout category.
+   *
    * @returns Section containing the pane count control.
    */
   private buildViewportsCategory(): HTMLElement {
@@ -90,6 +91,7 @@ export class SettingsViewTab {
 
   /**
    * Creates the viewport pane count dropdown.
+   *
    * @param paneCount Current number of visible viewport panes.
    * @returns Control row for the pane count preference.
    */
@@ -107,6 +109,7 @@ export class SettingsViewTab {
 
   /**
    * Builds the Fonts category.
+   *
    * @returns Section element.
    */
   private buildFontsCategory(): HTMLElement {
@@ -118,6 +121,7 @@ export class SettingsViewTab {
 
   /**
    * Creates the theme dropdown row.
+   *
    * @param theme Current theme preference.
    * @returns Control row.
    */
@@ -135,6 +139,7 @@ export class SettingsViewTab {
 
   /**
    * Creates the brightness slider row.
+   *
    * @param brightness Current brightness percent.
    * @returns Control row.
    */
@@ -156,6 +161,7 @@ export class SettingsViewTab {
 
   /**
    * Creates the material browser icon size dropdown.
+   *
    * @param percent Current icon size percent.
    * @returns Control row.
    */
@@ -173,6 +179,7 @@ export class SettingsViewTab {
 
   /**
    * Creates the renderer font size dropdown.
+   *
    * @param fontSize Current font size in pixels.
    * @returns Control row.
    */

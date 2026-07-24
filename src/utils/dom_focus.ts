@@ -11,6 +11,7 @@ export function blurActiveFormField(): void {
 
 /**
  * Returns whether an element is a form field that captures typing.
+ *
  * @param element Element to test.
  * @returns True for input, textarea, select, or contenteditable.
  */

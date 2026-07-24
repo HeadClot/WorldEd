@@ -3,16 +3,16 @@ import { Theme } from '../theme.js';
 import { hasEdgeBuildableGeometry } from '../utils/mesh_edge_sync.js';
 
 /**
- * UserData flag marking a LineSegments object as a selection outline.
- * Used to exclude outlines from viewport clones and raycast targets.
+ * UserData flag marking a LineSegments object as a selection outline. Used to
+ * exclude outlines from viewport clones and raycast targets.
  */
 export const SELECTION_HIGHLIGHT_USERDATA_KEY = 'isSelectionHighlight';
 
 /**
- * Visual orange edge outlines on selected objects.
- * Outlines are parented to their meshes so they follow transforms in real time.
- * Never reparents scene objects — only attaches outline children to meshes
- * that already live in this highlight's scene graph.
+ * Visual orange edge outlines on selected objects. Outlines are parented to
+ * their meshes so they follow transforms in real time. Never reparents scene
+ * objects — only attaches outline children to meshes that already live in this
+ * highlight's scene graph.
  */
 export class SelectionHighlight {
   private scene: THREE.Scene;
@@ -22,6 +22,7 @@ export class SelectionHighlight {
 
   /**
    * Creates a new selection highlight manager for the given scene.
+   *
    * @param scene The Three.js scene this highlight instance belongs to.
    * @param theme The theme color constants used for highlight appearance.
    */
@@ -38,6 +39,7 @@ export class SelectionHighlight {
 
   /**
    * Applies an orange edge outline to a mesh if it belongs to this scene.
+   *
    * @param mesh The mesh to highlight.
    */
   apply(mesh: THREE.Mesh): void {
@@ -52,6 +54,7 @@ export class SelectionHighlight {
 
   /**
    * Removes the orange edge outline from a mesh.
+   *
    * @param mesh The mesh to un-highlight.
    */
   remove(mesh: THREE.Mesh): void {
@@ -61,18 +64,16 @@ export class SelectionHighlight {
     this.highlightMap.delete(mesh);
   }
 
-  /**
-   * Removes all active highlights from the scene.
-   */
+  /** Removes all active highlights from the scene. */
   clearAll(): void {
     const meshes = Array.from(this.highlightMap.keys());
     meshes.forEach((mesh) => this.remove(mesh));
   }
 
   /**
-   * Forces every active outline to match its parent mesh transform.
-   * Outlines are mesh children so this is normally automatic; calling this
-   * after external transform updates keeps multi-viewport clones consistent.
+   * Forces every active outline to match its parent mesh transform. Outlines
+   * are mesh children so this is normally automatic; calling this after
+   * external transform updates keeps multi-viewport clones consistent.
    */
   syncTransforms(): void {
     this.highlightMap.forEach((lineSegments, mesh) => {
@@ -87,8 +88,8 @@ export class SelectionHighlight {
   }
 
   /**
-   * Rebuilds outline geometry for all highlighted meshes.
-   * Call after geometry edits so edges match the current mesh.
+   * Rebuilds outline geometry for all highlighted meshes. Call after geometry
+   * edits so edges match the current mesh.
    */
   rebuildGeometries(): void {
     const meshes = Array.from(this.highlightMap.keys());
@@ -100,6 +101,7 @@ export class SelectionHighlight {
 
   /**
    * Updates the highlight color for all active highlights.
+   *
    * @param color The new hex color value for highlights.
    */
   updateColor(color: number): void {
@@ -110,9 +112,7 @@ export class SelectionHighlight {
     });
   }
 
-  /**
-   * Disposes all highlight resources and clears state.
-   */
+  /** Disposes all highlight resources and clears state. */
   dispose(): void {
     this.clearAll();
     this.lineMaterial.dispose();
@@ -120,6 +120,7 @@ export class SelectionHighlight {
 
   /**
    * Returns the set of meshes currently highlighted.
+   *
    * @returns A set of highlighted mesh references.
    */
   getHighlightedMeshes(): Set<THREE.Mesh> {
@@ -128,6 +129,7 @@ export class SelectionHighlight {
 
   /**
    * Creates outline LineSegments for a mesh in local space.
+   *
    * @param mesh The mesh whose edges will be outlined.
    * @returns Configured LineSegments ready to parent under the mesh.
    */
@@ -144,13 +146,12 @@ export class SelectionHighlight {
 
   /**
    * Removes any orphaned outline children left behind by cloning.
+   *
    * @param mesh The mesh to clean.
    */
   private stripOrphanHighlights(mesh: THREE.Mesh): void {
     const orphans = mesh.children.filter(
-      (child) =>
-        child instanceof THREE.LineSegments &&
-        child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
+      (child) => child instanceof THREE.LineSegments && child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
     );
     orphans.forEach((child) => {
       this.disposeLineSegments(mesh, child as THREE.LineSegments);
@@ -159,6 +160,7 @@ export class SelectionHighlight {
 
   /**
    * Detaches and disposes a LineSegments outline.
+   *
    * @param mesh The parent mesh.
    * @param lineSegments The outline to dispose.
    */
@@ -171,6 +173,7 @@ export class SelectionHighlight {
 
   /**
    * Checks whether a mesh is part of this highlight's scene graph.
+   *
    * @param mesh The mesh to test.
    * @returns True if the mesh is the scene or a descendant of it.
    */

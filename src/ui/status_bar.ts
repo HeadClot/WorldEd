@@ -1,8 +1,8 @@
 import { Theme } from '../theme.js';
 
 /**
- * Bottom status bar displaying editor state information.
- * Shows undo/redo counts on the left and mode/snap info on the right.
+ * Bottom status bar displaying editor state information. Shows undo/redo counts
+ * on the left and mode/snap info on the right.
  */
 export class StatusBar {
   private container: HTMLElement;
@@ -23,6 +23,7 @@ export class StatusBar {
 
   /**
    * Creates a new status bar and appends it to the given container.
+   *
    * @param container The parent DOM element to append the status bar into.
    * @param theme The theme containing color definitions.
    */
@@ -79,6 +80,7 @@ export class StatusBar {
 
   /**
    * Updates the current shading mode display.
+   *
    * @param mode The shading mode name to show in the status bar.
    */
   setShadingMode(mode: string): void {
@@ -88,6 +90,7 @@ export class StatusBar {
 
   /**
    * Updates the undo and redo counter display.
+   *
    * @param undoCount The number of available undo operations.
    * @param redoCount The number of available redo operations.
    */
@@ -98,6 +101,7 @@ export class StatusBar {
 
   /**
    * Updates the current transform mode display.
+   *
    * @param mode The current transform mode name.
    */
   setTransformMode(mode: string): void {
@@ -107,6 +111,7 @@ export class StatusBar {
 
   /**
    * Updates the snap status display with enabled state and current interval.
+   *
    * @param enabled Whether grid snapping is currently enabled.
    */
   setSnapStatus(enabled: boolean): void {
@@ -120,6 +125,7 @@ export class StatusBar {
 
   /**
    * Updates the snap interval display in the status bar.
+   *
    * @param interval The current snap interval value.
    */
   setSnapInterval(interval: number): void {
@@ -130,7 +136,9 @@ export class StatusBar {
   }
 
   /**
-   * Formats a snap interval number for display, ensuring consistent decimal formatting.
+   * Formats a snap interval number for display, ensuring consistent decimal
+   * formatting.
+   *
    * @param value The interval value to format.
    * @returns A formatted string representation of the interval.
    */
@@ -145,6 +153,7 @@ export class StatusBar {
 
   /**
    * Updates the alignment axis restriction display.
+   *
    * @param axis The axis restriction label to show in the status bar.
    */
   setAxisRestriction(axis: string): void {
@@ -154,6 +163,7 @@ export class StatusBar {
 
   /**
    * Updates the last action feedback message.
+   *
    * @param message The action message to display, or empty string to clear.
    */
   setLastAction(message: string): void {
@@ -163,6 +173,7 @@ export class StatusBar {
 
   /**
    * Updates the last saved file information display.
+   *
    * @param filename The filename to show as last saved.
    */
   setLastSavedInfo(filename: string): void {
@@ -172,6 +183,7 @@ export class StatusBar {
 
   /**
    * Updates the status bar with an error message.
+   *
    * @param message The error message to display.
    */
   setErrorText(message: string): void {
@@ -181,9 +193,7 @@ export class StatusBar {
     this.clearErrorColor();
   }
 
-  /**
-   * Schedules clearing the error color after a short delay.
-   */
+  /** Schedules clearing the error color after a short delay. */
   private clearErrorColor(): void {
     setTimeout(() => {
       if (!this.isDisposed) {
@@ -194,6 +204,7 @@ export class StatusBar {
 
   /**
    * Updates the fit-to-selection feedback message in the status bar.
+   *
    * @param message The fit feedback message, or empty string to clear.
    */
   setFitFeedback(message: string): void {
@@ -203,6 +214,7 @@ export class StatusBar {
 
   /**
    * Updates the selection mode and face count display in the status bar.
+   *
    * @param mode The selection mode label (e.g. "Object" or "Face").
    * @param count The number of selected faces when in face mode.
    */
@@ -217,15 +229,14 @@ export class StatusBar {
 
   /**
    * Returns the root DOM element of the status bar.
+   *
    * @returns The container element.
    */
   getRootElement(): HTMLElement {
     return this.container;
   }
 
-  /**
-   * Disposes the status bar and removes it from the DOM.
-   */
+  /** Disposes the status bar and removes it from the DOM. */
   dispose(): void {
     this.isDisposed = true;
     if (this.container.parentNode) {
@@ -235,6 +246,7 @@ export class StatusBar {
 
   /**
    * Applies the outer container styles for the status bar.
+   *
    * @param theme The theme containing color definitions.
    */
   private applyContainerStyles(theme: typeof Theme): void {
@@ -251,6 +263,7 @@ export class StatusBar {
 
   /**
    * Applies flex styles to panel elements.
+   *
    * @param panel The panel element to style.
    */
   private applyPanelStyles(panel: HTMLElement): void {
@@ -261,6 +274,7 @@ export class StatusBar {
 
   /**
    * Applies text styling to status bar text elements.
+   *
    * @param element The text element to style.
    */
   private applyTextStyle(element: HTMLElement): void {

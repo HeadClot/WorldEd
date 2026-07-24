@@ -15,6 +15,7 @@ export class ImportProgressOverlay {
 
   /**
    * Creates an unmounted progress overlay.
+   *
    * @param title Heading text (e.g. "Importing VMF").
    */
   constructor(title: string = 'Importing…') {
@@ -26,9 +27,7 @@ export class ImportProgressOverlay {
     this.buildDom(title);
   }
 
-  /**
-   * Appends the overlay to document.body if not already mounted.
-   */
+  /** Appends the overlay to document.body if not already mounted. */
   show(): void {
     if (this.mounted) return;
     document.body.appendChild(this.root);
@@ -37,6 +36,7 @@ export class ImportProgressOverlay {
 
   /**
    * Updates the bar and caption.
+   *
    * @param ratio Progress in 0..1.
    * @param label Optional status line under the title.
    */
@@ -50,9 +50,7 @@ export class ImportProgressOverlay {
     }
   }
 
-  /**
-   * Removes the overlay from the document.
-   */
+  /** Removes the overlay from the document. */
   hide(): void {
     if (!this.mounted) return;
     if (this.root.parentNode) {
@@ -63,6 +61,7 @@ export class ImportProgressOverlay {
 
   /**
    * Builds overlay DOM structure and styles.
+   *
    * @param title Heading text.
    */
   private buildDom(title: string): void {

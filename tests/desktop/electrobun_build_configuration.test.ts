@@ -6,15 +6,11 @@ describe('Electrobun desktop build configuration', () => {
     expect(electrobunConfig.app.name).toBe('AiWorldEd');
     expect(electrobunConfig.build?.bun?.entrypoint).toBe('src/desktop/bun/index.ts');
     expect(electrobunConfig.build?.views?.main_ui?.entrypoint).toBe('src/desktop/main_ui/index.ts');
-    expect(electrobunConfig.build?.copy?.['src/desktop/main_ui/index.html']).toBe(
-      'views/main_ui/index.html',
-    );
+    expect(electrobunConfig.build?.copy?.['src/desktop/main_ui/index.html']).toBe('views/main_ui/index.html');
     expect(electrobunConfig.build?.win).toMatchObject({
       defaultRenderer: 'native',
       bundleCEF: false,
     });
-    expect(electrobunConfig.release?.baseUrl).toBe(
-      'https://github.com/Henry00IS/AiWorldEd/releases/latest/download',
-    );
+    expect(electrobunConfig.release?.baseUrl).toBe('https://github.com/Henry00IS/AiWorldEd/releases/latest/download');
   });
 });

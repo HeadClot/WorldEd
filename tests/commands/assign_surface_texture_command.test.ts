@@ -1,21 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { AssignSurfaceTextureCommand } from '../../src/commands/assign_surface_texture_command.js';
-import {
-  buildTargetsFromMeshes,
-  initializeMeshTextureUVs,
-} from '../../src/texture/face_texture_applier.js';
+import { buildTargetsFromMeshes, initializeMeshTextureUVs } from '../../src/texture/face_texture_applier.js';
 import { getFaceTextureMaps, setFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
-import {
-  setTexturePaintStateForTests,
-  TexturePaintState,
-} from '../../src/texture/texture_paint_state.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/texture_paint_state.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 
 describe('AssignSurfaceTextureCommand', () => {
   beforeEach(() => {

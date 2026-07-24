@@ -4,9 +4,7 @@ import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { FaceTextureMapping, cloneFaceTextureMapping } from '../texture/face_texture_mapping.js';
 
-/**
- * Snapshot of one brush texture assignment for undo.
- */
+/** Snapshot of one brush texture assignment for undo. */
 interface BrushTextureSnapshot {
   model: SolidModel;
   brushId: string;
@@ -27,6 +25,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
 
   /**
    * Creates a solid-brush texture assignment command.
+   *
    * @param brushMeshes Selected solid brush preview meshes.
    * @param textureId Texture identity to apply.
    */
@@ -37,9 +36,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Applies the texture to each brush and remeshes presentation.
-   */
+  /** Applies the texture to each brush and remeshes presentation. */
   execute(): void {
     if (this.executed) return;
     this.snapshots = [];
@@ -53,9 +50,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores prior brush surface and per-face textures, then remeshes.
-   */
+  /** Restores prior brush surface and per-face textures, then remeshes. */
   undo(): void {
     if (!this.executed) return;
     const brushesByModel = new Map<SolidModel, Set<string>>();
@@ -70,6 +65,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
 
   /**
    * Filters an array of meshes down to solid brush previews.
+   *
    * @param meshes Candidate meshes.
    * @returns Solid brush meshes only.
    */
@@ -79,6 +75,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
 
   /**
    * Snapshots and paints one brush mesh.
+   *
    * @param mesh Brush preview mesh.
    * @returns Model and brush id when applied, otherwise null.
    */
@@ -99,6 +96,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
 
   /**
    * Restores one brush texture snapshot.
+   *
    * @param snapshot Prior texture state.
    * @returns True when the brush was found and restored.
    */
@@ -107,24 +105,19 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
     if (!brush) return false;
     brush.restoreFaceMappings(
       cloneFaceTextureMapping(snapshot.previousDefaultMapping),
-      snapshot.previousFaceMappings.map((mapping) =>
-        mapping ? cloneFaceTextureMapping(mapping) : undefined,
-      ),
+      snapshot.previousFaceMappings.map((mapping) => (mapping ? cloneFaceTextureMapping(mapping) : undefined)),
     );
     return true;
   }
 
   /**
    * Records a brush id under its solid model.
+   *
    * @param brushesByModel Accumulator.
    * @param model Solid model.
    * @param brushId Brush id.
    */
-  private addBrush(
-    brushesByModel: Map<SolidModel, Set<string>>,
-    model: SolidModel,
-    brushId: string,
-  ): void {
+  private addBrush(brushesByModel: Map<SolidModel, Set<string>>, model: SolidModel, brushId: string): void {
     const set = brushesByModel.get(model);
     if (set) {
       set.add(brushId);
@@ -135,6 +128,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
 
   /**
    * Remeshes painted brushes without CSG.
+   *
    * @param brushesByModel Brushes grouped by solid model.
    */
   private refreshPresentations(brushesByModel: Map<SolidModel, Set<string>>): void {

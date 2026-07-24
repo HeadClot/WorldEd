@@ -6,9 +6,7 @@ const BRIGHTNESS_CSS_VARIABLE = '--aiworlded-viewport-brightness';
 const FONT_SIZE_CSS_VARIABLE = '--aiworlded-ui-font-size';
 const ICON_SIZE_CSS_VARIABLE = '--aiworlded-material-icon-scale';
 
-/**
- * Applies editor settings to the document root for CSS consumers.
- */
+/** Applies editor settings to the document root for CSS consumers. */
 export class SettingsApplicator {
   private readonly root: HTMLElement;
   private mediaQuery: MediaQueryList | null;
@@ -17,6 +15,7 @@ export class SettingsApplicator {
 
   /**
    * Creates an applicator bound to a document root element.
+   *
    * @param root Element that receives theme attributes and CSS variables.
    */
   constructor(root: HTMLElement = document.documentElement) {
@@ -29,6 +28,7 @@ export class SettingsApplicator {
 
   /**
    * Applies a full settings snapshot to the document.
+   *
    * @param snapshot Current settings snapshot.
    */
   applySnapshot(snapshot: EditorSettingsSnapshot): void {
@@ -40,6 +40,7 @@ export class SettingsApplicator {
 
   /**
    * Applies the theme preference, resolving System against OS settings.
+   *
    * @param theme Theme preference.
    */
   applyTheme(theme: UiThemePreference): void {
@@ -54,6 +55,7 @@ export class SettingsApplicator {
 
   /**
    * Applies brightness as a CSS variable (1.0 = 100%).
+   *
    * @param brightnessPercent Brightness percent 0–200.
    */
   applyBrightness(brightnessPercent: number): void {
@@ -63,6 +65,7 @@ export class SettingsApplicator {
 
   /**
    * Applies the UI font size to the document root.
+   *
    * @param fontSizePx Font size in pixels.
    */
   applyRendererFontSize(fontSizePx: number): void {
@@ -72,6 +75,7 @@ export class SettingsApplicator {
 
   /**
    * Applies material browser icon scale as a CSS variable (1.0 = 100%).
+   *
    * @param percent Icon size percent 25–300.
    */
   applyMaterialBrowserIconSize(percent: number): void {
@@ -79,15 +83,14 @@ export class SettingsApplicator {
     this.root.style.setProperty(ICON_SIZE_CSS_VARIABLE, String(scale));
   }
 
-  /**
-   * Removes system theme listeners.
-   */
+  /** Removes system theme listeners. */
   dispose(): void {
     this.unbindSystemThemeListener();
   }
 
   /**
    * Resolves a preference to a concrete light or dark theme.
+   *
    * @param theme Theme preference.
    * @returns Resolved theme id.
    */
@@ -100,6 +103,7 @@ export class SettingsApplicator {
 
   /**
    * Detects whether the OS prefers a dark color scheme.
+   *
    * @returns True when dark mode is preferred.
    */
   private detectSystemPrefersDark(): boolean {
@@ -109,9 +113,7 @@ export class SettingsApplicator {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
-  /**
-   * Listens for OS theme changes while System is selected.
-   */
+  /** Listens for OS theme changes while System is selected. */
   private bindSystemThemeListener(): void {
     if (typeof window === 'undefined' || !window.matchMedia) {
       return;
@@ -125,9 +127,7 @@ export class SettingsApplicator {
     this.mediaQuery.addEventListener('change', this.boundSystemThemeListener);
   }
 
-  /**
-   * Detaches the OS theme change listener when present.
-   */
+  /** Detaches the OS theme change listener when present. */
   private unbindSystemThemeListener(): void {
     if (this.mediaQuery && this.boundSystemThemeListener) {
       this.mediaQuery.removeEventListener('change', this.boundSystemThemeListener);

@@ -1,17 +1,15 @@
 /**
- * Data contracts for scene persistence operations.
- * Defines the JSON structure used for saving and loading scenes.
+ * Data contracts for scene persistence operations. Defines the JSON structure
+ * used for saving and loading scenes.
  */
 
 /**
- * Supported geometry classifications in scene files.
- * Primitive types store constructor params; buffer stores raw vertex data.
+ * Supported geometry classifications in scene files. Primitive types store
+ * constructor params; buffer stores raw vertex data.
  */
 export type GeometryType = 'box' | 'sphere' | 'cylinder' | 'plane' | 'buffer';
 
-/**
- * Raw BufferGeometry payload for CSG and other non-primitive meshes.
- */
+/** Raw BufferGeometry payload for CSG and other non-primitive meshes. */
 export interface BufferGeometryData {
   /** Interleaved position components (x, y, z, ...). */
   position: number[];
@@ -23,9 +21,7 @@ export interface BufferGeometryData {
   index?: number[];
 }
 
-/**
- * Serialized planar texture mapping for a coplanar face region.
- */
+/** Serialized planar texture mapping for a coplanar face region. */
 export interface SerializedFaceTextureMap {
   triangleIndices: number[];
   mapping: {
@@ -40,9 +36,7 @@ export interface SerializedFaceTextureMap {
   };
 }
 
-/**
- * Container for a complete serializable scene.
- */
+/** Container for a complete serializable scene. */
 export interface SceneJSON {
   /** Schema version number for compatibility checking. */
   version: number;
@@ -50,9 +44,7 @@ export interface SceneJSON {
   objects: ObjectEntry[];
 }
 
-/**
- * A single object entry in the serialized scene.
- */
+/** A single object entry in the serialized scene. */
 export interface ObjectEntry {
   /** Unique identifier matching THREE.Object3D.uuid. */
   uuid: string;

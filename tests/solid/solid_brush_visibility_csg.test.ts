@@ -9,6 +9,7 @@ import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.j
 
 /**
  * Samples whether a model-space point is inside the solid via brush ops.
+ *
  * @param point Sample point.
  * @param brushes Visible brush instances only.
  * @returns True when inside the evaluated solid.
@@ -30,9 +31,7 @@ function isInsideFromBrushes(point: THREE.Vector3, brushes: SolidBrushInstance[]
   return inside;
 }
 
-/**
- * Unit tests for solid brush visibility excluding brushes from CSG.
- */
+/** Unit tests for solid brush visibility excluding brushes from CSG. */
 describe('Solid brush visibility CSG', () => {
   it('hides a brush from CSG when the eye toggles visibility off', () => {
     const model = new SolidModel('VisSolid');

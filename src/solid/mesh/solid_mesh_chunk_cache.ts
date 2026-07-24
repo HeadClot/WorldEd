@@ -1,21 +1,20 @@
 import { SolidBrushMeshChunk } from './solid_brush_mesh_chunk.js';
 
 /**
- * Caches per-brush triangulated mesh chunks so partial CSG updates only
- * remesh brushes that actually recompiled.
+ * Caches per-brush triangulated mesh chunks so partial CSG updates only remesh
+ * brushes that actually recompiled.
  */
 export class SolidMeshChunkCache {
   private readonly chunksByBrushId = new Map<string, SolidBrushMeshChunk>();
 
-  /**
-   * Clears every cached mesh chunk.
-   */
+  /** Clears every cached mesh chunk. */
   clear(): void {
     this.chunksByBrushId.clear();
   }
 
   /**
    * Returns a cached chunk for a brush.
+   *
    * @param brushId Brush instance id.
    * @returns Chunk or undefined.
    */
@@ -25,6 +24,7 @@ export class SolidMeshChunkCache {
 
   /**
    * Stores a mesh chunk for a brush.
+   *
    * @param brushId Brush instance id.
    * @param chunk Triangulated chunk.
    */
@@ -34,6 +34,7 @@ export class SolidMeshChunkCache {
 
   /**
    * Removes one brush chunk.
+   *
    * @param brushId Brush instance id.
    */
   remove(brushId: string): void {
@@ -42,6 +43,7 @@ export class SolidMeshChunkCache {
 
   /**
    * Drops chunks for brushes no longer present.
+   *
    * @param activeIds Active brush ids.
    */
   pruneToIds(activeIds: Set<string>): void {
@@ -54,6 +56,7 @@ export class SolidMeshChunkCache {
 
   /**
    * Returns whether every listed brush has a mesh chunk.
+   *
    * @param brushIds Brush ids in tree order.
    * @returns True when all chunks exist.
    */

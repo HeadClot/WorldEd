@@ -37,13 +37,7 @@ describe('uv_smear_transfer', () => {
     sourceMapping.offsetU = 0.25;
     sourceMapping.rotationDeg = 15;
     bakeFaceUVs(mesh, sourceRegion, sourceMapping);
-    const destMapping = transferUvMappingAcrossFaces(
-      mesh,
-      sourceRegion,
-      sourceMapping,
-      mesh,
-      destRegion,
-    );
+    const destMapping = transferUvMappingAcrossFaces(mesh, sourceRegion, sourceMapping, mesh, destRegion);
     bakeFaceUVs(mesh, destRegion, destMapping);
     const shared = findSharedWorldPoints(mesh, sourceRegion, destRegion);
     expect(shared.length).toBeGreaterThanOrEqual(2);
@@ -73,13 +67,7 @@ describe('uv_smear_transfer', () => {
     const sourceMapping = createDefaultFaceTextureMapping('brick.png');
     sourceMapping.scaleU = 2;
     sourceMapping.scaleV = 0.5;
-    const destMapping = transferUvMappingAcrossFaces(
-      mesh,
-      regions[0],
-      sourceMapping,
-      mesh,
-      regions[1],
-    );
+    const destMapping = transferUvMappingAcrossFaces(mesh, regions[0], sourceMapping, mesh, regions[1]);
     expect(destMapping.textureId).toBe('brick.png');
     expect(Math.abs(destMapping.scaleU)).toBeCloseTo(2, 5);
     expect(destMapping.scaleV).toBeCloseTo(0.5, 5);
@@ -88,10 +76,7 @@ describe('uv_smear_transfer', () => {
 
   it('should keep cylinder sides continuous after sequential smear transfers', () => {
     const segments = 8;
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(1, 1, 2, segments),
-      createContentMaterial(0xffffff),
-    );
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 2, segments), createContentMaterial(0xffffff));
     mesh.position.set(0, 1, 0);
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh);
@@ -136,14 +121,12 @@ describe('uv_smear_transfer', () => {
 
 /**
  * Finds two wall regions that share at least two world vertices.
+ *
  * @param mesh Mesh owner.
  * @param walls Wall region list.
  * @returns Adjacent pair or null.
  */
-function findAdjacentRegionPair(
-  mesh: THREE.Mesh,
-  walls: number[][],
-): { source: number[]; dest: number[] } | null {
+function findAdjacentRegionPair(mesh: THREE.Mesh, walls: number[][]): { source: number[]; dest: number[] } | null {
   for (let i = 0; i < walls.length; i++) {
     for (let j = i + 1; j < walls.length; j++) {
       const shared = findSharedWorldPoints(mesh, walls[i], walls[j]);
@@ -157,16 +140,13 @@ function findAdjacentRegionPair(
 
 /**
  * Finds world points that appear on both regions (shared edge vertices).
+ *
  * @param mesh Mesh owner.
  * @param regionA First region.
  * @param regionB Second region.
  * @returns Shared world positions.
  */
-function findSharedWorldPoints(
-  mesh: THREE.Mesh,
-  regionA: number[],
-  regionB: number[],
-): THREE.Vector3[] {
+function findSharedWorldPoints(mesh: THREE.Mesh, regionA: number[], regionB: number[]): THREE.Vector3[] {
   const pointsA = collectRegionWorldPoints(mesh, regionA);
   const pointsB = collectRegionWorldPoints(mesh, regionB);
   const shared: THREE.Vector3[] = [];
@@ -179,6 +159,7 @@ function findSharedWorldPoints(
 
 /**
  * Collects unique world vertices for a triangle region.
+ *
  * @param mesh Mesh owner.
  * @param triangleIndices Region triangles.
  * @returns World points.
@@ -203,6 +184,7 @@ function collectRegionWorldPoints(mesh: THREE.Mesh, triangleIndices: number[]): 
 
 /**
  * Samples baked UVs for region vertices near a world point.
+ *
  * @param mesh Mesh with baked UVs.
  * @param region Triangle indices.
  * @param worldPoint Query point.

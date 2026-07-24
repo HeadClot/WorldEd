@@ -1,5 +1,6 @@
 /**
  * Converts a hex color number to an RGB CSS string.
+ *
  * @param hex The hex color value as a number.
  * @returns An RGB CSS color string.
  */

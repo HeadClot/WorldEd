@@ -2,12 +2,12 @@ import { SolidOperation } from '../types/solid_operation.js';
 import { SurfaceCategory } from '../types/surface_category.js';
 
 /**
- * Category routing tables for ordered solid CSG operations.
- * Six-category model distinguishes subject-owned surfaces from peer coplanar
- * contact so coplanar additive faces cancel instead of z-fighting.
+ * Category routing tables for ordered solid CSG operations. Six-category model
+ * distinguishes subject-owned surfaces from peer coplanar contact so coplanar
+ * additive faces cancel instead of z-fighting.
  *
- * Table indices follow SurfaceCategory enum order:
- * Inside, Aligned, SelfAligned, SelfReverseAligned, ReverseAligned, Outside.
+ * Table indices follow SurfaceCategory enum order: Inside, Aligned,
+ * SelfAligned, SelfReverseAligned, ReverseAligned, Outside.
  */
 export class CategoryRouter {
   private static readonly ADDITIVE_TABLE: SurfaceCategory[][] = [
@@ -165,6 +165,7 @@ export class CategoryRouter {
 
   /**
    * Routes two surface categories through a solid operation.
+   *
    * @param leftCategory Category from the left / accumulated operand.
    * @param rightCategory Category relative to the right operand brush.
    * @param operation CSG operation of the right operand.
@@ -181,6 +182,7 @@ export class CategoryRouter {
 
   /**
    * Selects the routing table for an operation.
+   *
    * @param operation Solid operation.
    * @returns Category table indexed by SurfaceCategory.
    */

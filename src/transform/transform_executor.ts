@@ -3,8 +3,8 @@ import { GizmoAxis } from '../types/transform_mode.js';
 import { GridSnap } from './grid_snap.js';
 
 /**
- * Applies transform operations to selected objects.
- * Handles translation, rotation, and scale with optional snapping.
+ * Applies transform operations to selected objects. Handles translation,
+ * rotation, and scale with optional snapping.
  */
 export class TransformExecutor {
   private gridSnap: GridSnap;
@@ -12,6 +12,7 @@ export class TransformExecutor {
 
   /**
    * Creates a new transform executor with the given grid snap configuration.
+   *
    * @param gridSnap The grid snap settings for constraining transforms.
    */
   constructor(gridSnap: GridSnap) {
@@ -20,8 +21,10 @@ export class TransformExecutor {
   }
 
   /**
-   * Translates all objects by the given delta without snapping the delta itself.
-   * Moved axes snap so world-space bounds sit on the grid (not the pivot alone).
+   * Translates all objects by the given delta without snapping the delta
+   * itself. Moved axes snap so world-space bounds sit on the grid (not the
+   * pivot alone).
+   *
    * @param objects The meshes to translate.
    * @param delta The translation delta vector.
    */
@@ -34,9 +37,10 @@ export class TransformExecutor {
   }
 
   /**
-   * Sets absolute positions from initial positions plus a total delta.
-   * Snaps only axes that moved so unconstrained axes stay put.
-   * Snapping aligns mesh world bounds to the grid, not just the pivot.
+   * Sets absolute positions from initial positions plus a total delta. Snaps
+   * only axes that moved so unconstrained axes stay put. Snapping aligns mesh
+   * world bounds to the grid, not just the pivot.
+   *
    * @param objects The meshes to position.
    * @param initialPositions Map of mesh to pre-drag position.
    * @param totalDelta Accumulated unsnapped translation delta.
@@ -56,9 +60,10 @@ export class TransformExecutor {
 
   /**
    * Snaps moved translation axes so each world AABB min lands on the grid.
-   * Keeps odd-sized brushes (e.g. size 3.75 on a 0.25 grid) face-aligned:
-   * the pivot may sit on a half-cell while edges stay on grid lines.
-   * Falls back to pivot snapping when geometry bounds are unavailable.
+   * Keeps odd-sized brushes (e.g. size 3.75 on a 0.25 grid) face-aligned: the
+   * pivot may sit on a half-cell while edges stay on grid lines. Falls back to
+   * pivot snapping when geometry bounds are unavailable.
+   *
    * @param mesh The mesh whose position was just updated.
    * @param startPosition Pre-drag local position used to detect changed axes.
    */
@@ -78,6 +83,7 @@ export class TransformExecutor {
 
   /**
    * Returns whether a scalar axis value changed beyond a tiny epsilon.
+   *
    * @param current Current axis component.
    * @param start Start axis component.
    * @returns True when the axis should be snapped.
@@ -88,6 +94,7 @@ export class TransformExecutor {
 
   /**
    * Computes the world-space axis-aligned bounds of a mesh from its geometry.
+   *
    * @param mesh The mesh to measure.
    * @returns World AABB, or null when geometry has no usable bounds.
    */
@@ -106,6 +113,7 @@ export class TransformExecutor {
 
   /**
    * Applies per-axis corrections so world AABB mins snap to the grid.
+   *
    * @param mesh Mesh to adjust.
    * @param worldBox Current world AABB at the unsnapped position.
    * @param movedX Whether X should snap.
@@ -131,18 +139,15 @@ export class TransformExecutor {
   }
 
   /**
-   * Rotates all objects around a pivot point and updates each object's orientation.
+   * Rotates all objects around a pivot point and updates each object's
+   * orientation.
+   *
    * @param objects The meshes to rotate.
    * @param pivot The center point of rotation.
    * @param axis The rotation axis vector.
    * @param angle The rotation angle in radians.
    */
-  executeRotation(
-    objects: THREE.Mesh[],
-    pivot: THREE.Vector3,
-    axis: THREE.Vector3,
-    angle: number,
-  ): void {
+  executeRotation(objects: THREE.Mesh[], pivot: THREE.Vector3, axis: THREE.Vector3, angle: number): void {
     const normalizedAxis = axis.clone().normalize();
     const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(normalizedAxis, angle);
     objects.forEach((mesh) => {
@@ -152,6 +157,7 @@ export class TransformExecutor {
 
   /**
    * Applies absolute rotation from pre-drag state using a total angle.
+   *
    * @param objects The meshes to rotate.
    * @param initialPositions Map of mesh to pre-drag position.
    * @param initialQuaternions Map of mesh to pre-drag quaternion.
@@ -169,34 +175,21 @@ export class TransformExecutor {
   ): void {
     const snappedAngle = this.gridSnap.snapAngleRadians(totalAngle);
     const normalizedAxis = axis.clone().normalize();
-    const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(
-      normalizedAxis,
-      snappedAngle,
-    );
+    const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(normalizedAxis, snappedAngle);
     objects.forEach((mesh) => {
-      this.applyAbsoluteRotationToMesh(
-        mesh,
-        initialPositions,
-        initialQuaternions,
-        pivot,
-        rotationQuaternion,
-      );
+      this.applyAbsoluteRotationToMesh(mesh, initialPositions, initialQuaternions, pivot, rotationQuaternion);
     });
   }
 
   /**
    * Scales all objects along an axis relative to a pivot, updating mesh.scale.
+   *
    * @param objects The meshes to scale.
    * @param pivot The center point of scaling.
    * @param axis The scaling axis vector.
    * @param factor The multiplicative scale factor for this step.
    */
-  executeScale(
-    objects: THREE.Mesh[],
-    pivot: THREE.Vector3,
-    axis: THREE.Vector3,
-    factor: number,
-  ): void {
+  executeScale(objects: THREE.Mesh[], pivot: THREE.Vector3, axis: THREE.Vector3, factor: number): void {
     const normalizedAxis = axis.clone().normalize();
     const safeFactor = Math.max(0.01, factor);
     objects.forEach((mesh) => {
@@ -206,6 +199,7 @@ export class TransformExecutor {
 
   /**
    * Applies absolute scale from pre-drag state using a total factor.
+   *
    * @param objects The meshes to scale.
    * @param initialPositions Map of mesh to pre-drag position.
    * @param initialScales Map of mesh to pre-drag scale.
@@ -239,8 +233,9 @@ export class TransformExecutor {
   }
 
   /**
-   * Computes the center of the bounding box of all objects.
-   * Used as the default pivot point for transforms.
+   * Computes the center of the bounding box of all objects. Used as the default
+   * pivot point for transforms.
+   *
    * @param objects The meshes to compute the pivot for.
    * @returns The bounding box center point.
    */
@@ -256,6 +251,7 @@ export class TransformExecutor {
 
   /**
    * Returns the grid snap configuration.
+   *
    * @returns The GridSnap instance.
    */
   getGridSnap(): GridSnap {
@@ -264,15 +260,12 @@ export class TransformExecutor {
 
   /**
    * Rotates a single mesh around a pivot and updates its orientation.
+   *
    * @param mesh The mesh to rotate.
    * @param pivot The rotation pivot.
    * @param rotationQuaternion The rotation to apply.
    */
-  private rotateMeshAroundPivot(
-    mesh: THREE.Mesh,
-    pivot: THREE.Vector3,
-    rotationQuaternion: THREE.Quaternion,
-  ): void {
+  private rotateMeshAroundPivot(mesh: THREE.Mesh, pivot: THREE.Vector3, rotationQuaternion: THREE.Quaternion): void {
     const relativePos = mesh.position.clone().sub(pivot);
     relativePos.applyQuaternion(rotationQuaternion);
     mesh.position.copy(relativePos.add(pivot));
@@ -281,6 +274,7 @@ export class TransformExecutor {
 
   /**
    * Restores rotation from initial state plus total rotation quaternion.
+   *
    * @param mesh The mesh to update.
    * @param initialPositions Pre-drag positions.
    * @param initialQuaternions Pre-drag quaternions.
@@ -305,17 +299,13 @@ export class TransformExecutor {
 
   /**
    * Scales a mesh along an axis and moves it relative to the pivot.
+   *
    * @param mesh The mesh to scale.
    * @param pivot The scale pivot.
    * @param axis The normalized scale axis.
    * @param factor The multiplicative factor for this step.
    */
-  private scaleMeshAlongAxis(
-    mesh: THREE.Mesh,
-    pivot: THREE.Vector3,
-    axis: THREE.Vector3,
-    factor: number,
-  ): void {
+  private scaleMeshAlongAxis(mesh: THREE.Mesh, pivot: THREE.Vector3, axis: THREE.Vector3, factor: number): void {
     const relativePos = mesh.position.clone().sub(pivot);
     const projection = relativePos.dot(axis);
     const scaledRelative = relativePos
@@ -334,6 +324,7 @@ export class TransformExecutor {
 
   /**
    * Restores scale from initial state plus total factor along an axis.
+   *
    * @param mesh The mesh to update.
    * @param initialPositions Pre-drag positions.
    * @param initialScales Pre-drag scales.
@@ -367,15 +358,12 @@ export class TransformExecutor {
 
   /**
    * Multiplies one local scale component for a primary gizmo axis handle.
+   *
    * @param scale The scale vector to modify in place.
    * @param gizmoAxis Handle axis (X/Y/Z).
    * @param factor The multiplicative scale factor.
    */
-  private multiplyLocalScaleComponent(
-    scale: THREE.Vector3,
-    gizmoAxis: GizmoAxis,
-    factor: number,
-  ): void {
+  private multiplyLocalScaleComponent(scale: THREE.Vector3, gizmoAxis: GizmoAxis, factor: number): void {
     if (gizmoAxis === GizmoAxis.X) {
       scale.x = Math.max(0.01, scale.x * factor);
       return;

@@ -68,9 +68,7 @@ describe('FaceSelectionHighlight', () => {
     highlight.setSelectedFaces([{ mesh: testMesh, faceIndex: 0 }]);
     const meshes = getHighlightMeshes(highlight);
     const front = meshes.find((mesh) => mesh.renderOrder === GizmoVisualStyle.frontRenderOrder);
-    const occluded = meshes.find(
-      (mesh) => mesh.renderOrder === GizmoVisualStyle.occludedRenderOrder,
-    );
+    const occluded = meshes.find((mesh) => mesh.renderOrder === GizmoVisualStyle.occludedRenderOrder);
     expect(front).toBeDefined();
     expect(occluded).toBeDefined();
   });
@@ -146,6 +144,7 @@ describe('FaceSelectionHighlight', () => {
 
 /**
  * Creates a simple triangle geometry with 1 face.
+ *
  * @returns A buffer geometry with 3 vertices.
  */
 function createTestTriangleGeometry(): THREE.BufferGeometry {
@@ -157,6 +156,7 @@ function createTestTriangleGeometry(): THREE.BufferGeometry {
 
 /**
  * Creates a geometry with multiple faces.
+ *
  * @param faceCount The number of triangular faces.
  * @returns A buffer geometry with the requested number of faces.
  */
@@ -182,6 +182,7 @@ function createMultiFaceGeometry(faceCount: number): THREE.BufferGeometry {
 
 /**
  * Extracts all highlight pass meshes from a highlight instance.
+ *
  * @param highlight The highlight instance to inspect.
  * @returns An array of front and occluded mesh objects.
  */
@@ -202,6 +203,7 @@ function getHighlightMeshes(highlight: FaceSelectionHighlight): THREE.Mesh[] {
 
 /**
  * Collects unique materials used by active face highlight meshes.
+ *
  * @param highlight The highlight instance to inspect.
  * @returns Distinct basic materials from the highlight passes.
  */

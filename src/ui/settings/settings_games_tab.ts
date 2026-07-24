@@ -23,9 +23,7 @@ import {
 } from './settings_form_controls.js';
 import { SettingsCoordinateSpaceSection } from './settings_coordinate_space_section.js';
 
-/**
- * Games tab content: game profiles list and unit preset editors.
- */
+/** Games tab content: game profiles list and unit preset editors. */
 export class SettingsGamesTab {
   private readonly store: EditorSettingsStore;
   private readonly fileDialogs: FileDialogManager;
@@ -36,6 +34,7 @@ export class SettingsGamesTab {
 
   /**
    * Creates the Games tab panel.
+   *
    * @param store Settings store driving profile data.
    */
   constructor(store: EditorSettingsStore) {
@@ -51,15 +50,14 @@ export class SettingsGamesTab {
 
   /**
    * Returns the tab root element.
+   *
    * @returns Root element.
    */
   getElement(): HTMLElement {
     return this.root;
   }
 
-  /**
-   * Rebuilds profile list and active profile editor from the store.
-   */
+  /** Rebuilds profile list and active profile editor from the store. */
   rebuild(): void {
     this.listHost.replaceChildren();
     this.detailHost.replaceChildren();
@@ -67,9 +65,7 @@ export class SettingsGamesTab {
     this.buildActiveProfileEditor();
   }
 
-  /**
-   * Builds the outer Games tab layout.
-   */
+  /** Builds the outer Games tab layout. */
   private buildLayout(): void {
     this.root.style.display = 'flex';
     this.root.style.flexDirection = 'column';
@@ -82,6 +78,7 @@ export class SettingsGamesTab {
 
   /**
    * Builds the game-profile file and creation toolbar row.
+   *
    * @returns Toolbar element.
    */
   private buildToolbar(): HTMLElement {
@@ -108,9 +105,7 @@ export class SettingsGamesTab {
     return row;
   }
 
-  /**
-   * Saves the active profile as a portable JSON file.
-   */
+  /** Saves the active profile as a portable JSON file. */
   private async saveGameProfile(): Promise<void> {
     const profile = this.store.getActiveGameProfile();
     if (!profile) {
@@ -124,9 +119,7 @@ export class SettingsGamesTab {
     await this.fileDialogs.saveJSON(json, fileName);
   }
 
-  /**
-   * Loads a profile JSON file and adds it as the active profile.
-   */
+  /** Loads a profile JSON file and adds it as the active profile. */
   private async loadGameProfile(): Promise<void> {
     const json = await this.fileDialogs.loadJSON();
     if (!json) {
@@ -139,18 +132,14 @@ export class SettingsGamesTab {
     }
   }
 
-  /**
-   * Styles the profile list container.
-   */
+  /** Styles the profile list container. */
   private styleListHost(): void {
     this.listHost.style.display = 'flex';
     this.listHost.style.flexDirection = 'column';
     this.listHost.style.gap = '6px';
   }
 
-  /**
-   * Renders selectable profile rows.
-   */
+  /** Renders selectable profile rows. */
   private buildProfileList(): void {
     const snapshot = this.store.getSnapshot();
     snapshot.gameProfiles.forEach((profile) => {
@@ -160,6 +149,7 @@ export class SettingsGamesTab {
 
   /**
    * Creates one selectable profile list item.
+   *
    * @param profile Profile data.
    * @param activeId Active profile id.
    * @returns List item element.
@@ -179,6 +169,7 @@ export class SettingsGamesTab {
 
   /**
    * Applies list item chrome for active/inactive states.
+   *
    * @param item Button element.
    * @param isActive Whether the profile is selected.
    */
@@ -194,14 +185,10 @@ export class SettingsGamesTab {
     item.style.border = isActive
       ? `1px solid ${hexToRgb(Theme.selectionColor)}`
       : `1px solid ${Theme.inputBorderColor}`;
-    item.style.background = isActive
-      ? Theme.outlinerSelectedColor
-      : hexToRgb(Theme.buttonBackground);
+    item.style.background = isActive ? Theme.outlinerSelectedColor : hexToRgb(Theme.buttonBackground);
   }
 
-  /**
-   * Builds the unit and coordinate space editors for the active profile.
-   */
+  /** Builds the unit and coordinate space editors for the active profile. */
   private buildActiveProfileEditor(): void {
     const profile = this.store.getActiveGameProfile();
     if (!profile) {
@@ -214,6 +201,7 @@ export class SettingsGamesTab {
 
   /**
    * Builds the profile name / remove section.
+   *
    * @param profile Active profile.
    * @returns Section element.
    */
@@ -228,6 +216,7 @@ export class SettingsGamesTab {
 
   /**
    * Builds the unit preset category.
+   *
    * @param profile Active profile.
    * @returns Section element.
    */
@@ -240,6 +229,7 @@ export class SettingsGamesTab {
 
   /**
    * Creates the profile name field.
+   *
    * @param profile Active profile.
    * @returns Control row.
    */
@@ -252,6 +242,7 @@ export class SettingsGamesTab {
 
   /**
    * Creates the Imperial/Metric system dropdown.
+   *
    * @param profile Active profile.
    * @returns Control row.
    */
@@ -269,6 +260,7 @@ export class SettingsGamesTab {
 
   /**
    * Creates the length unit dropdown for the active system.
+   *
    * @param profile Active profile.
    * @returns Control row.
    */
@@ -287,6 +279,7 @@ export class SettingsGamesTab {
 
   /**
    * Applies a length unit change for the active measurement system.
+   *
    * @param profile Active profile.
    * @param value Selected unit value.
    */
@@ -304,6 +297,7 @@ export class SettingsGamesTab {
 
   /**
    * Creates a remove-profile action row.
+   *
    * @param profile Active profile.
    * @returns Control row.
    */

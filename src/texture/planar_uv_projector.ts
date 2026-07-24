@@ -1,15 +1,9 @@
 import * as THREE from 'three';
-import {
-  FaceTextureAlign,
-  FaceTextureMapping,
-  createDefaultFaceTextureMapping,
-} from './face_texture_mapping.js';
+import { FaceTextureAlign, FaceTextureMapping, createDefaultFaceTextureMapping } from './face_texture_mapping.js';
 import { getFaceTextureMaps } from './face_texture_storage.js';
 import { captureGeometrySourceIfNeeded } from './geometry_source.js';
 
-/**
- * Orthonormal U/V axes for planar projection in world space.
- */
+/** Orthonormal U/V axes for planar projection in world space. */
 export interface ProjectionBasis {
   uAxis: THREE.Vector3;
   vAxis: THREE.Vector3;
@@ -32,15 +26,14 @@ const scratchLocal = new THREE.Vector3();
 const scratchWorld = new THREE.Vector3();
 
 /**
- * Resolves the projection normal for a face from its geometric normal and align mode.
+ * Resolves the projection normal for a face from its geometric normal and align
+ * mode.
+ *
  * @param faceNormal Unit face normal in world space.
  * @param align Align preset.
  * @returns Unit projection normal.
  */
-export function resolveProjectionNormal(
-  faceNormal: THREE.Vector3,
-  align: FaceTextureAlign,
-): THREE.Vector3 {
+export function resolveProjectionNormal(faceNormal: THREE.Vector3, align: FaceTextureAlign): THREE.Vector3 {
   if (align === 'floor') return new THREE.Vector3(0, 1, 0);
   if (align === 'ceiling') return new THREE.Vector3(0, -1, 0);
   if (align === 'wall') return resolveWallNormal(faceNormal);
@@ -49,11 +42,12 @@ export function resolveProjectionNormal(
 }
 
 /**
- * Auto-align uses the true face normal (face-plane projection).
- * Projecting onto the face plane preserves texel aspect on cylinder sides,
- * ramps, and any non-axis-aligned brush face. Axis-aligned architecture still
- * tiles continuously because face normals match world axes there.
- * Explicit wall/floor/ceiling modes remain available for world-axis projection.
+ * Auto-align uses the true face normal (face-plane projection). Projecting onto
+ * the face plane preserves texel aspect on cylinder sides, ramps, and any
+ * non-axis-aligned brush face. Axis-aligned architecture still tiles
+ * continuously because face normals match world axes there. Explicit
+ * wall/floor/ceiling modes remain available for world-axis projection.
+ *
  * @param faceNormal Face normal in world space.
  * @returns Unit projection normal (face plane).
  */
@@ -63,6 +57,7 @@ function resolveAutoNormal(faceNormal: THREE.Vector3): THREE.Vector3 {
 
 /**
  * Picks the dominant horizontal projection normal for wall alignment.
+ *
  * @param faceNormal Face normal in world space.
  * @returns Unit wall normal (world X or Z).
  */
@@ -74,16 +69,14 @@ function resolveWallNormal(faceNormal: THREE.Vector3): THREE.Vector3 {
 }
 
 /**
- * Builds a right-handed U/V basis on the projection plane.
- * Walls use horizontal U and upward V; floors use X/Z-plane UVs.
+ * Builds a right-handed U/V basis on the projection plane. Walls use horizontal
+ * U and upward V; floors use X/Z-plane UVs.
+ *
  * @param projectionNormal Unit projection normal.
  * @param rotationDeg Rotation around the normal in degrees.
  * @returns Projection basis.
  */
-export function buildProjectionBasis(
-  projectionNormal: THREE.Vector3,
-  rotationDeg: number,
-): ProjectionBasis {
+export function buildProjectionBasis(projectionNormal: THREE.Vector3, rotationDeg: number): ProjectionBasis {
   const normal = projectionNormal.clone().normalize();
   const uAxis = pickStableUAxis(normal);
   const vAxis = new THREE.Vector3().crossVectors(normal, uAxis).normalize();
@@ -93,16 +86,14 @@ export function buildProjectionBasis(
 }
 
 /**
- * Resolves the UV projection basis for a face mapping.
- * Uses custom Source-style axes when both are present; otherwise align/rotation.
+ * Resolves the UV projection basis for a face mapping. Uses custom Source-style
+ * axes when both are present; otherwise align/rotation.
+ *
  * @param faceNormalWorld Face normal in world space.
  * @param mapping Face texture mapping.
  * @returns Projection basis in world space.
  */
-export function resolveProjectionBasis(
-  faceNormalWorld: THREE.Vector3,
-  mapping: FaceTextureMapping,
-): ProjectionBasis {
+export function resolveProjectionBasis(faceNormalWorld: THREE.Vector3, mapping: FaceTextureMapping): ProjectionBasis {
   if (mapping.customUAxis && mapping.customVAxis) {
     return buildCustomAxisBasis(faceNormalWorld, mapping.customUAxis, mapping.customVAxis);
   }
@@ -112,6 +103,7 @@ export function resolveProjectionBasis(
 
 /**
  * Builds a projection basis from explicit world U/V directions.
+ *
  * @param faceNormalWorld Face normal used when axes are degenerate.
  * @param customU Custom U axis components.
  * @param customV Custom V axis components.
@@ -134,8 +126,10 @@ function buildCustomAxisBasis(
 }
 
 /**
- * Chooses a stable U seed: world X on floors/ceilings, wall-horizontal on walls.
- * For walls, U = normalize(worldUp × normal) so texture runs sideways, not up.
+ * Chooses a stable U seed: world X on floors/ceilings, wall-horizontal on
+ * walls. For walls, U = normalize(worldUp × normal) so texture runs sideways,
+ * not up.
+ *
  * @param normal Projection normal.
  * @returns Unit U seed before orthonormalization.
  */
@@ -152,6 +146,7 @@ function pickStableUAxis(normal: THREE.Vector3): THREE.Vector3 {
 
 /**
  * Rotates U and V around the normal by the given degrees.
+ *
  * @param uAxis U axis (modified in place).
  * @param vAxis V axis (modified in place).
  * @param normal Rotation axis.
@@ -174,6 +169,7 @@ function applyRotationAroundNormal(
  * Projects a world position into UV using a basis and mapping params.
  * World-space meters map to UV tiles; fractional phase enables continuous
  * tiling across adjacent brushes (values need not lie in 0..1).
+ *
  * @param worldPos World-space vertex position.
  * @param basis Projection basis.
  * @param mapping Scale and offset.
@@ -193,6 +189,7 @@ export function projectWorldPositionToUv(
 
 /**
  * Ensures the geometry has a writable UV attribute matching vertex count.
+ *
  * @param geometry Buffer geometry to prepare.
  * @returns The UV attribute.
  */
@@ -213,6 +210,7 @@ export function ensureUvAttribute(geometry: THREE.BufferGeometry): THREE.BufferA
  * Converts indexed geometry to non-indexed so each triangle corner has a
  * private vertex. Required for correct multi-region UV seams on shared edges.
  * Preserves primitive identity via geometrySource userData for save/load.
+ *
  * @param mesh Mesh whose geometry may be replaced.
  */
 export function ensureUniqueTriangleVertices(mesh: THREE.Mesh): void {
@@ -228,14 +226,12 @@ export function ensureUniqueTriangleVertices(mesh: THREE.Mesh): void {
 
 /**
  * Computes the average world-space normal of the given triangle indices.
+ *
  * @param mesh Mesh providing geometry and world matrix.
  * @param triangleIndices Triangle indices to average.
  * @returns Unit world normal (defaults to +Y when empty).
  */
-export function computeRegionWorldNormal(
-  mesh: THREE.Mesh,
-  triangleIndices: number[],
-): THREE.Vector3 {
+export function computeRegionWorldNormal(mesh: THREE.Mesh, triangleIndices: number[]): THREE.Vector3 {
   mesh.updateMatrixWorld(true);
   const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
   const accumulator = new THREE.Vector3();
@@ -250,14 +246,12 @@ export function computeRegionWorldNormal(
 
 /**
  * Computes a local-space triangle normal from geometry.
+ *
  * @param geometry Mesh geometry.
  * @param faceIndex Triangle index.
  * @returns Local normal (not normalized if degenerate).
  */
-function computeLocalTriangleNormal(
-  geometry: THREE.BufferGeometry,
-  faceIndex: number,
-): THREE.Vector3 {
+function computeLocalTriangleNormal(geometry: THREE.BufferGeometry, faceIndex: number): THREE.Vector3 {
   const position = geometry.getAttribute('position');
   const index = geometry.getIndex();
   const ia = index ? index.getX(faceIndex * 3) : faceIndex * 3;
@@ -266,23 +260,17 @@ function computeLocalTriangleNormal(
   const a = scratchLocal.fromBufferAttribute(position, ia).clone();
   const b = new THREE.Vector3().fromBufferAttribute(position, ib);
   const c = new THREE.Vector3().fromBufferAttribute(position, ic);
-  return new THREE.Vector3()
-    .subVectors(b, a)
-    .cross(new THREE.Vector3().subVectors(c, a))
-    .normalize();
+  return new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)).normalize();
 }
 
 /**
  * Bakes planar UVs for one coplanar triangle region on a mesh.
+ *
  * @param mesh Target mesh.
  * @param triangleIndices Region triangles.
  * @param mapping Texture mapping parameters.
  */
-export function bakeFaceUVs(
-  mesh: THREE.Mesh,
-  triangleIndices: number[],
-  mapping: FaceTextureMapping,
-): void {
+export function bakeFaceUVs(mesh: THREE.Mesh, triangleIndices: number[], mapping: FaceTextureMapping): void {
   mesh.updateMatrixWorld(true);
   const faceNormal = computeRegionWorldNormal(mesh, triangleIndices);
   const basis = resolveProjectionBasis(faceNormal, mapping);
@@ -296,8 +284,9 @@ export function bakeFaceUVs(
 }
 
 /**
- * Writes UV for the three vertices of one triangle.
- * Always overwrites so later regions can own their corners after de-indexing.
+ * Writes UV for the three vertices of one triangle. Always overwrites so later
+ * regions can own their corners after de-indexing.
+ *
  * @param mesh Mesh for world transform.
  * @param faceIndex Triangle index.
  * @param index Optional index buffer.
@@ -325,8 +314,9 @@ function writeTriangleUvs(
 }
 
 /**
- * Bakes default auto-mapped UVs for every triangle on a mesh.
- * De-indexes first so shared edges between regions do not fight over UVs.
+ * Bakes default auto-mapped UVs for every triangle on a mesh. De-indexes first
+ * so shared edges between regions do not fight over UVs.
+ *
  * @param mesh Target mesh.
  * @param mapping Optional mapping override (defaults to auto 1 m).
  */
@@ -346,6 +336,7 @@ export function bakeAllFacesDefaultUVs(
 
 /**
  * Counts triangles in a buffer geometry.
+ *
  * @param geometry Geometry to inspect.
  * @returns Triangle count.
  */
@@ -358,6 +349,7 @@ export function countTriangles(geometry: THREE.BufferGeometry): number {
 
 /**
  * Splits every triangle on a mesh into coplanar regions.
+ *
  * @param mesh Mesh to analyze.
  * @returns Arrays of coplanar triangle indices.
  */
@@ -370,6 +362,7 @@ export function splitMeshIntoCoplanarRegions(mesh: THREE.Mesh): number[][] {
 
 /**
  * Splits triangle indices into coplanar regions using normals and plane tests.
+ *
  * @param mesh Mesh geometry owner.
  * @param triangleIndices Triangles to group.
  * @returns Arrays of coplanar triangle indices.
@@ -388,6 +381,7 @@ export function splitIntoCoplanarRegions(mesh: THREE.Mesh, triangleIndices: numb
 
 /**
  * Grows one coplanar region from a seed triangle.
+ *
  * @param mesh Mesh owner.
  * @param seed Seed triangle index.
  * @param remaining Unclaimed triangle indices.
@@ -415,6 +409,7 @@ function growCoplanarRegion(
 
 /**
  * Returns whether a triangle shares the seed plane.
+ *
  * @param geometry Geometry.
  * @param faceIndex Candidate triangle.
  * @param seedNormal Seed normal.
@@ -435,6 +430,7 @@ function isCoplanar(
 
 /**
  * Computes the centroid of a triangle in local space.
+ *
  * @param geometry Geometry.
  * @param faceIndex Triangle index.
  * @returns Local centroid.
@@ -457,6 +453,7 @@ function getTriangleCentroid(geometry: THREE.BufferGeometry, faceIndex: number):
 /**
  * Re-bakes all stored face texture maps on a mesh; fills gaps with defaults.
  * Ensures unique triangle vertices before multi-region bake.
+ *
  * @param mesh Target mesh.
  */
 export function rebakeStoredFaceTextureMaps(mesh: THREE.Mesh): void {
@@ -473,6 +470,7 @@ export function rebakeStoredFaceTextureMaps(mesh: THREE.Mesh): void {
 
 /**
  * Builds a lookup from triangle index to mapping for CSG export.
+ *
  * @param mesh Source mesh.
  * @returns Map of triangle index → mapping (defaults filled for unmapped).
  */

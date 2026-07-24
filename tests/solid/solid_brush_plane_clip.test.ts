@@ -9,9 +9,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { ClipSolidBrushCommand } from '../../src/commands/clip_solid_brush_command.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 
-/**
- * Unit tests for solid brush plane clipping used by the clip tool.
- */
+/** Unit tests for solid brush plane clipping used by the clip tool. */
 describe('SolidBrushPlaneClip', () => {
   it('clips a unit box keeping the positive X half as a valid solid', () => {
     const brush = SolidBrushFactory.createCenteredBox(2, 2, 2);

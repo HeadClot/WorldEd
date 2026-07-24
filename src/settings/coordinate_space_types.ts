@@ -1,6 +1,4 @@
-/**
- * Coordinate space axis and handedness types for game profiles.
- */
+/** Coordinate space axis and handedness types for game profiles. */
 
 /** Signed world axis used by up / right / forward basis vectors. */
 export type AxisDirection = '+x' | '-x' | '+y' | '-y' | '+z' | '-z';
@@ -11,9 +9,7 @@ export type Handedness = 'right' | 'left';
 /** Built-in engine coordinate space preset identifiers. */
 export type BuiltInCoordinateSpaceId = 'blender' | 'unity' | 'godot' | 'unreal';
 
-/**
- * Full coordinate space definition stored on a game profile or custom preset.
- */
+/** Full coordinate space definition stored on a game profile or custom preset. */
 export interface CoordinateSpaceDefinition {
   /** Built-in id or custom preset id. */
   presetId: string;
@@ -29,14 +25,7 @@ export interface CoordinateSpaceDefinition {
 }
 
 /** Ordered axis direction choices for dropdowns. */
-export const AXIS_DIRECTION_OPTIONS: readonly AxisDirection[] = Object.freeze([
-  '+x',
-  '-x',
-  '+y',
-  '-y',
-  '+z',
-  '-z',
-]);
+export const AXIS_DIRECTION_OPTIONS: readonly AxisDirection[] = Object.freeze(['+x', '-x', '+y', '-y', '+z', '-z']);
 
 /** Human-readable labels for axis directions. */
 export const AXIS_DIRECTION_LABELS: Readonly<Record<AxisDirection, string>> = Object.freeze({

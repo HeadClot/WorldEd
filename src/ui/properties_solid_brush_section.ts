@@ -4,9 +4,7 @@ import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidOperation, solidOperationLabel } from '../solid/types/solid_operation.js';
 
-/**
- * Handlers for solid-brush context controls in the inspector.
- */
+/** Handlers for solid-brush context controls in the inspector. */
 export interface SolidBrushPropertyHandlers {
   onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) => void;
   onBrushEdited: (meshes: THREE.Mesh[]) => void;
@@ -17,9 +15,7 @@ export interface SolidBrushPropertyHandlers {
   onMoveToLast: (meshes: THREE.Mesh[]) => void;
 }
 
-/**
- * Builds and updates the inspector Solid Brush section (CSG ops + add brush).
- */
+/** Builds and updates the inspector Solid Brush section (CSG ops + add brush). */
 export class PropertiesSolidBrushSection {
   private readonly theme: typeof Theme;
   private readonly section: HTMLElement;
@@ -31,6 +27,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Creates the solid brush section UI.
+   *
    * @param theme Editor theme.
    * @param createSectionContainer Factory for a section container element.
    * @param createSectionHeader Factory for a section header element.
@@ -57,6 +54,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Returns the section root element for mounting in the properties panel.
+   *
    * @returns Section element.
    */
   getElement(): HTMLElement {
@@ -65,6 +63,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Wires solid-brush operation and rebuild handlers.
+   *
    * @param handlers Brush property handlers, or null to clear.
    */
   setHandlers(handlers: SolidBrushPropertyHandlers | null): void {
@@ -73,6 +72,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Sets a provider for unlocked brush meshes in the current selection.
+   *
    * @param provider Returns editable brush meshes, or null to clear.
    */
   setEditableBrushMeshProvider(provider: (() => THREE.Mesh[]) | null): void {
@@ -81,6 +81,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Shows or hides the section and highlights the shared active operation.
+   *
    * @param objects Currently bound selection.
    */
   updateFromObjects(objects: THREE.Object3D[]): void {
@@ -100,22 +101,21 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Applies a CSG operation to the provided brush meshes.
+   *
    * @param brushMeshes Editable solid brush meshes.
    * @param operation Selected operation.
    * @param boundObjects Full selection used to refresh button state.
    */
-  applyOperation(
-    brushMeshes: THREE.Mesh[],
-    operation: SolidOperation,
-    boundObjects: THREE.Object3D[],
-  ): void {
+  applyOperation(brushMeshes: THREE.Mesh[], operation: SolidOperation, boundObjects: THREE.Object3D[]): void {
     if (!this.handlers || brushMeshes.length === 0) return;
     this.handlers.onSetOperation(brushMeshes, operation);
     this.updateFromObjects(boundObjects);
   }
 
   /**
-   * Notifies handlers that solid brushes were transform-edited in the inspector.
+   * Notifies handlers that solid brushes were transform-edited in the
+   * inspector.
+   *
    * @param objects Edited objects.
    */
   notifyBrushEdits(objects: THREE.Object3D[]): void {
@@ -125,15 +125,15 @@ export class PropertiesSolidBrushSection {
     this.handlers.onBrushEdited(meshes);
   }
 
-  /**
-   * Invokes the add-box-brush handler when configured.
-   */
+  /** Invokes the add-box-brush handler when configured. */
   requestAddBoxBrush(): void {
     this.handlers?.onAddBoxBrush();
   }
 
   /**
-   * Builds the section body with operation icons, order controls, and add-brush.
+   * Builds the section body with operation icons, order controls, and
+   * add-brush.
+   *
    * @returns Content element.
    */
   private createContent(): HTMLElement {
@@ -150,6 +150,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Builds To First / To Last CSG order buttons.
+   *
    * @returns Button row element.
    */
   private createOrderButtons(): HTMLElement {
@@ -162,25 +163,20 @@ export class PropertiesSolidBrushSection {
       ),
     );
     row.appendChild(
-      this.createTextActionButton('To Last', 'Move brush to last in CSG order', () =>
-        this.onMoveOrderClicked('last'),
-      ),
+      this.createTextActionButton('To Last', 'Move brush to last in CSG order', () => this.onMoveOrderClicked('last')),
     );
     return row;
   }
 
   /**
    * Creates a compact full-width text action button.
+   *
    * @param label Visible label.
    * @param title Tooltip / aria label.
    * @param onClick Click handler.
    * @returns Button element.
    */
-  private createTextActionButton(
-    label: string,
-    title: string,
-    onClick: () => void,
-  ): HTMLButtonElement {
+  private createTextActionButton(label: string, title: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = label;
@@ -201,6 +197,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Moves selected brushes to first or last evaluation order.
+   *
    * @param end Target end of the CSG list.
    */
   private onMoveOrderClicked(end: 'first' | 'last'): void {
@@ -213,6 +210,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Builds compact icon buttons for Additive / Subtractive / Intersecting.
+   *
    * @returns Button row element.
    */
   private createOperationButtons(): HTMLElement {
@@ -230,6 +228,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Returns metadata for CSG operation buttons.
+   *
    * @returns Operation button definitions.
    */
   private operationButtonDefs(): Array<{
@@ -258,16 +257,13 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Creates one CSG operation button.
+   *
    * @param operation CSG operation.
    * @param icon SVG markup.
    * @param title Accessible title.
    * @returns Configured button.
    */
-  private createOperationButton(
-    operation: SolidOperation,
-    icon: string,
-    title: string,
-  ): HTMLButtonElement {
+  private createOperationButton(operation: SolidOperation, icon: string, title: string): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.title = title;
@@ -290,6 +286,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Applies a CSG operation to editable selected brush meshes.
+   *
    * @param operation Selected operation.
    */
   private onOperationClicked(operation: SolidOperation): void {
@@ -299,6 +296,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Builds the add-box-brush action button.
+   *
    * @returns Button element.
    */
   private createAddBoxBrushButton(): HTMLButtonElement {
@@ -321,6 +319,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Returns inline SVG markup for a solid CSG operation icon.
+   *
    * @param kind Operation visual kind.
    * @returns SVG HTML string.
    */
@@ -336,18 +335,19 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Collects solid brush meshes from a selection list.
+   *
    * @param objects Selected objects.
    * @returns Brush preview meshes.
    */
   private collectBrushMeshes(objects: THREE.Object3D[]): THREE.Mesh[] {
     return objects.filter(
-      (object): object is THREE.Mesh =>
-        object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object),
+      (object): object is THREE.Mesh => object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object),
     );
   }
 
   /**
    * Returns whether the selection is inside a solid model context.
+   *
    * @param objects Selected objects.
    * @returns True when solid brush UI should show.
    */
@@ -360,9 +360,7 @@ export class PropertiesSolidBrushSection {
     );
   }
 
-  /**
-   * Dims operation buttons when no brush is selected.
-   */
+  /** Dims operation buttons when no brush is selected. */
   private dimOperationButtons(): void {
     this.operationButtons.forEach((button) => {
       button.style.outline = 'none';
@@ -372,6 +370,7 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Highlights the shared CSG operation across selected brushes.
+   *
    * @param brushMeshes Selected brush meshes.
    */
   private highlightSharedOperation(brushMeshes: THREE.Mesh[]): void {
@@ -383,9 +382,7 @@ export class PropertiesSolidBrushSection {
     this.operationButtons.forEach((button, operation) => {
       const active = shared && operation === operations[0];
       button.style.outline = active ? `1px solid ${this.hexToRgb(Theme.selectionColor)}` : 'none';
-      button.style.background = active
-        ? this.hexToRgb(Theme.buttonHoverColor)
-        : this.hexToRgb(Theme.buttonBackground);
+      button.style.background = active ? this.hexToRgb(Theme.buttonHoverColor) : this.hexToRgb(Theme.buttonBackground);
       button.style.opacity = '1';
     });
   }

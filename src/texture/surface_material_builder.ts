@@ -12,20 +12,20 @@ import { CONTENT_METALNESS, CONTENT_ROUGHNESS } from '../materials/content_mater
  */
 const TRIANGLE_SOURCES_USERDATA_KEY = 'solidTriangleSources';
 
-/**
- * Options for rebuildSurfaceMaterials.
- */
+/** Options for rebuildSurfaceMaterials. */
 export interface RebuildSurfaceMaterialsOptions {
   /**
    * When true, never permutes triangle buffers. Groups follow current order
-   * (may produce more draw calls). Required for solid result partial mesh patches.
+   * (may produce more draw calls). Required for solid result partial mesh
+   * patches.
    */
   preserveTriangleOrder?: boolean;
 }
 
 /**
- * Rebuilds mesh materials and geometry groups from stored face texture maps.
- * By default triangles are sorted by material so each texture is one draw call.
+ * Rebuilds mesh materials and geometry groups from stored face texture maps. By
+ * default triangles are sorted by material so each texture is one draw call.
+ *
  * @param mesh Content mesh to update.
  * @param cache Optional texture map cache (defaults to shared).
  * @param colorHex Optional tint; defaults to current material color.
@@ -42,17 +42,13 @@ export function rebuildSurfaceMaterials(
   if (triangleCount === 0) return;
   const perTriangle = buildPerTriangleTextureIds(mesh, triangleCount);
   const materialSlots = collectUniqueTextureIds(perTriangle);
-  const materials = materialSlots.map((textureId) =>
-    createSurfaceMaterial(color, cache.resolve(textureId)),
-  );
+  const materials = materialSlots.map((textureId) => createSurfaceMaterial(color, cache.resolve(textureId)));
   applyMaterialLayout(mesh, perTriangle, materialSlots, options.preserveTriangleOrder === true);
   disposeOwnedMaterials(mesh);
   mesh.material = materials.length === 1 ? materials[0] : materials;
 }
 
-/**
- * Region input for solid-result material rebuild (avoids map clone thrash).
- */
+/** Region input for solid-result material rebuild (avoids map clone thrash). */
 export interface SolidResultTextureRegion {
   /** Triangle indices in the result mesh. */
   triangleIndices: number[];
@@ -61,8 +57,10 @@ export interface SolidResultTextureRegion {
 }
 
 /**
- * Rebuilds solid result materials from surface regions without cloning map tables.
- * Uses a compact slot array and run-length groups (critical for large VMF meshes).
+ * Rebuilds solid result materials from surface regions without cloning map
+ * tables. Uses a compact slot array and run-length groups (critical for large
+ * VMF meshes).
+ *
  * @param mesh Solid result mesh.
  * @param regions Surface regions with texture ids.
  * @param cache Optional texture map cache.
@@ -93,15 +91,14 @@ export function rebuildSolidResultMaterials(
   if (materialSlots.length > 1) {
     applySlotRunGroups(mesh.geometry, slotPerTriangle, materialSlots.length);
   }
-  const materials = materialSlots.map((textureId) =>
-    createSurfaceMaterial(color, cache.resolve(textureId)),
-  );
+  const materials = materialSlots.map((textureId) => createSurfaceMaterial(color, cache.resolve(textureId)));
   disposeOwnedMaterials(mesh);
   mesh.material = materials.length === 1 ? materials[0] : materials;
 }
 
 /**
  * Collects unique texture ids from solid regions in first-seen order.
+ *
  * @param regions Solid texture regions.
  * @returns Unique texture id list.
  */
@@ -119,15 +116,12 @@ function collectRegionTextureIds(regions: readonly SolidResultTextureRegion[]): 
 
 /**
  * Writes merged geometry groups from per-triangle material slot indices.
+ *
  * @param geometry Target geometry.
  * @param slotPerTriangle Material slot per triangle.
  * @param slotCount Number of material slots.
  */
-function applySlotRunGroups(
-  geometry: THREE.BufferGeometry,
-  slotPerTriangle: Uint16Array,
-  slotCount: number,
-): void {
+function applySlotRunGroups(geometry: THREE.BufferGeometry, slotPerTriangle: Uint16Array, slotCount: number): void {
   void slotCount;
   let runStart = 0;
   while (runStart < slotPerTriangle.length) {
@@ -143,6 +137,7 @@ function applySlotRunGroups(
 
 /**
  * Sorts triangles by material and writes compact geometry groups.
+ *
  * @param mesh Content mesh.
  * @param perTriangle Texture id per original triangle index.
  * @param materialSlots Ordered unique texture ids.
@@ -174,6 +169,7 @@ function applyMaterialLayout(
 
 /**
  * Builds a per-triangle texture id table from stored maps.
+ *
  * @param mesh Mesh with optional faceTextureMaps.
  * @param triangleCount Number of triangles.
  * @returns Texture id per triangle index.
@@ -197,6 +193,7 @@ function buildPerTriangleTextureIds(mesh: THREE.Mesh, triangleCount: number): st
 
 /**
  * Collects unique texture ids in first-seen order.
+ *
  * @param perTriangle Per-triangle texture ids.
  * @returns Unique id list.
  */
@@ -213,6 +210,7 @@ function collectUniqueTextureIds(perTriangle: string[]): string[] {
 
 /**
  * Builds a stable triangle order grouped by material slot.
+ *
  * @param perTriangle Texture id per triangle.
  * @param materialSlots Ordered unique texture ids.
  * @returns New-order list of original triangle indices.
@@ -234,6 +232,7 @@ function buildMaterialSortedOrder(perTriangle: string[], materialSlots: string[]
 
 /**
  * Returns whether an order is already 0..n-1.
+ *
  * @param order Triangle permutation.
  * @returns True when no reordering is required.
  */
@@ -246,6 +245,7 @@ function isIdentityOrder(order: number[]): boolean {
 
 /**
  * Reorders triangle vertex data so material slots become contiguous.
+ *
  * @param geometry Mesh geometry (indexed or non-indexed).
  * @param order New-order list of original triangle indices.
  */
@@ -260,6 +260,7 @@ function reorderGeometryTriangles(geometry: THREE.BufferGeometry, order: number[
 
 /**
  * Reorders an indexed geometry's index buffer by triangle order.
+ *
  * @param geometry Indexed geometry.
  * @param order New-order list of original triangle indices.
  */
@@ -281,6 +282,7 @@ function reorderIndexedTriangles(geometry: THREE.BufferGeometry, order: number[]
 
 /**
  * Reorders non-indexed attribute buffers by triangle order.
+ *
  * @param geometry Non-indexed geometry.
  * @param order New-order list of original triangle indices.
  */
@@ -295,6 +297,7 @@ function reorderNonIndexedTriangles(geometry: THREE.BufferGeometry, order: numbe
 
 /**
  * Builds a reordered copy of a buffer attribute for triangle permutation.
+ *
  * @param attribute Source attribute.
  * @param order New-order list of original triangle indices.
  * @returns New buffer attribute with reordered vertex triples.
@@ -316,6 +319,7 @@ function reorderAttributeByTriangles(
 
 /**
  * Copies one triangle's attribute components from old to new index.
+ *
  * @param source Source attribute array.
  * @param destination Destination attribute array.
  * @param oldTriangle Original triangle index.
@@ -342,6 +346,7 @@ function copyTriangleAttribute(
 
 /**
  * Remaps stored face texture map triangle indices after geometry reorder.
+ *
  * @param mesh Mesh owning face texture maps.
  * @param order New-order list of original triangle indices.
  */
@@ -361,6 +366,7 @@ function remapFaceTextureMaps(mesh: THREE.Mesh, order: number[]): void {
 
 /**
  * Remaps solid-model triangle source table after geometry reorder.
+ *
  * @param mesh Mesh that may store solidTriangleSources.
  * @param order New-order list of original triangle indices.
  */
@@ -372,6 +378,7 @@ function remapTriangleSources(mesh: THREE.Mesh, order: number[]): void {
 
 /**
  * Builds old-triangle-index → new-triangle-index lookup.
+ *
  * @param order New-order list of original triangle indices.
  * @returns Lookup table.
  */
@@ -385,6 +392,7 @@ function buildOldToNewMap(order: number[]): number[] {
 
 /**
  * Writes one contiguous geometry group per material slot.
+ *
  * @param geometry Mesh geometry.
  * @param sortedPerTriangle Texture ids after material sorting.
  * @param materialSlots Ordered unique texture ids.
@@ -413,8 +421,9 @@ function applyMergedGeometryGroups(
 }
 
 /**
- * Creates one surface material with the given map.
- * Front-face culling keeps large solid maps cheap to fill.
+ * Creates one surface material with the given map. Front-face culling keeps
+ * large solid maps cheap to fill.
+ *
  * @param color Hex tint.
  * @param map Diffuse map texture.
  * @returns MeshStandardMaterial.
@@ -432,6 +441,7 @@ function createSurfaceMaterial(color: number, map: THREE.Texture): THREE.MeshSta
 
 /**
  * Reads the first material color from a mesh.
+ *
  * @param mesh Mesh to inspect.
  * @returns Hex color.
  */
@@ -446,8 +456,9 @@ function extractMeshColor(mesh: THREE.Mesh): number {
 }
 
 /**
- * Disposes previous mesh materials without disposing shared texture maps.
- * Maps are detached first so TextureMapCache / checker stay alive for peers.
+ * Disposes previous mesh materials without disposing shared texture maps. Maps
+ * are detached first so TextureMapCache / checker stay alive for peers.
+ *
  * @param mesh Mesh whose materials will be replaced.
  */
 function disposeOwnedMaterials(mesh: THREE.Mesh): void {
@@ -461,6 +472,7 @@ function disposeOwnedMaterials(mesh: THREE.Mesh): void {
 
 /**
  * Clears map slots so Material.dispose cannot free shared textures.
+ *
  * @param material Material about to be disposed.
  */
 function detachSharedMaps(material: THREE.Material): void {
@@ -480,6 +492,7 @@ function detachSharedMaps(material: THREE.Material): void {
 
 /**
  * Returns a default mapping using the paint state's last texture when provided.
+ *
  * @param textureId Optional texture id override.
  * @returns New FaceTextureMapping.
  */

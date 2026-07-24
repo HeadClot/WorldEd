@@ -2,15 +2,13 @@ import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
 
 /**
- * Style injection and chrome helpers for the settings dialog.
- * Matches editor panels/toolbar: flat dark greys, orange selection accents.
+ * Style injection and chrome helpers for the settings dialog. Matches editor
+ * panels/toolbar: flat dark greys, orange selection accents.
  */
 
 const STYLE_ELEMENT_ID = 'aiworlded-settings-dialog-styles';
 
-/**
- * Ensures settings dialog animation styles exist once in the document.
- */
+/** Ensures settings dialog animation styles exist once in the document. */
 export function ensureSettingsDialogStyles(): void {
   if (document.getElementById(STYLE_ELEMENT_ID)) {
     return;
@@ -23,6 +21,7 @@ export function ensureSettingsDialogStyles(): void {
 
 /**
  * Builds CSS rules for settings dialog entrance animations and tabs.
+ *
  * @returns CSS text.
  */
 function buildSettingsDialogCss(): string {
@@ -52,6 +51,7 @@ function buildSettingsDialogCss(): string {
 
 /**
  * Applies full-viewport modal backdrop styles.
+ *
  * @param backdrop Backdrop element.
  */
 export function styleSettingsBackdrop(backdrop: HTMLElement): void {
@@ -68,6 +68,7 @@ export function styleSettingsBackdrop(backdrop: HTMLElement): void {
 
 /**
  * Applies chrome styles to the settings panel card.
+ *
  * @param panel Panel element.
  */
 export function styleSettingsPanel(panel: HTMLElement): void {
@@ -88,6 +89,7 @@ export function styleSettingsPanel(panel: HTMLElement): void {
 
 /**
  * Applies styles to the settings header bar.
+ *
  * @param header Header element.
  */
 export function styleSettingsHeader(header: HTMLElement): void {
@@ -102,6 +104,7 @@ export function styleSettingsHeader(header: HTMLElement): void {
 
 /**
  * Applies styles to the settings title.
+ *
  * @param title Title element.
  */
 export function styleSettingsTitle(title: HTMLElement): void {
@@ -116,6 +119,7 @@ export function styleSettingsTitle(title: HTMLElement): void {
 
 /**
  * Applies styles to the header close button.
+ *
  * @param closeButton Close button element.
  */
 export function styleSettingsCloseButton(closeButton: HTMLButtonElement): void {
@@ -133,15 +137,12 @@ export function styleSettingsCloseButton(closeButton: HTMLButtonElement): void {
   closeButton.style.fontSize = '16px';
   closeButton.style.lineHeight = '1';
   closeButton.style.fontFamily = Theme.uiFontFamily;
-  bindHoverBackground(
-    closeButton,
-    hexToRgb(Theme.buttonHoverColor),
-    hexToRgb(Theme.buttonBackground),
-  );
+  bindHoverBackground(closeButton, hexToRgb(Theme.buttonHoverColor), hexToRgb(Theme.buttonBackground));
 }
 
 /**
  * Applies styles to the horizontal tab bar.
+ *
  * @param tabBar Tab bar element.
  */
 export function styleSettingsTabBar(tabBar: HTMLElement): void {
@@ -157,6 +158,7 @@ export function styleSettingsTabBar(tabBar: HTMLElement): void {
 
 /**
  * Applies styles to one settings tab button.
+ *
  * @param tab Tab button element.
  */
 export function styleSettingsTabButton(tab: HTMLButtonElement): void {
@@ -178,6 +180,7 @@ export function styleSettingsTabButton(tab: HTMLButtonElement): void {
 
 /**
  * Applies styles to the scrollable tab content host.
+ *
  * @param content Content host element.
  */
 export function styleSettingsContent(content: HTMLElement): void {
@@ -191,6 +194,7 @@ export function styleSettingsContent(content: HTMLElement): void {
 
 /**
  * Builds the same subtle vertical gradient used by the main toolbar.
+ *
  * @returns CSS linear-gradient string.
  */
 function buildToolbarGradient(): string {
@@ -199,6 +203,7 @@ function buildToolbarGradient(): string {
 
 /**
  * Binds hover background feedback that skips selected tabs.
+ *
  * @param tab Tab button element.
  */
 function bindTabHover(tab: HTMLButtonElement): void {
@@ -220,6 +225,7 @@ function bindTabHover(tab: HTMLButtonElement): void {
 
 /**
  * Binds simple hover background swap for chrome buttons.
+ *
  * @param button Button element.
  * @param hoverColor Background while hovered.
  * @param idleColor Background at rest.

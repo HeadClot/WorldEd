@@ -1,25 +1,19 @@
-/**
- * Class names used by the texture browser stylesheet.
- */
+/** Class names used by the texture browser stylesheet. */
 export const TEXTURE_BROWSER_ROOT_CLASS = 'tb-browser-root';
 export const TEXTURE_BROWSER_GRID_CLASS = 'tb-browser-grid';
 export const TEXTURE_BROWSER_TILE_CLASS = 'tb-browser-tile';
 export const TEXTURE_BROWSER_THUMB_CLASS = 'tb-browser-thumb';
 export const TEXTURE_BROWSER_NAME_CLASS = 'tb-browser-name';
 
-/**
- * Style element id so the sheet is only injected once.
- */
+/** Style element id so the sheet is only injected once. */
 const TEXTURE_BROWSER_STYLE_ELEMENT_ID = 'tb-browser-stylesheet';
 
-/**
- * Minimum outer tile track size used by auto-fill columns (pixels).
- */
+/** Minimum outer tile track size used by auto-fill columns (pixels). */
 export const TEXTURE_BROWSER_MIN_TRACK_PX = 96;
 
 /**
- * Injects or refreshes texture browser rules.
- * Always writes the latest CSS so a stale sheet cannot linger after reloads.
+ * Injects or refreshes texture browser rules. Always writes the latest CSS so a
+ * stale sheet cannot linger after reloads.
  */
 export function ensureTextureBrowserStylesheet(): void {
   if (typeof document === 'undefined') return;
@@ -33,9 +27,10 @@ export function ensureTextureBrowserStylesheet(): void {
 }
 
 /**
- * Builds the CSS text for the texture browser grid and tiles.
- * Thumb height uses container query units (cqi) so grid row sizing
- * sees a real height — percentage padding does not, and collapses rows.
+ * Builds the CSS text for the texture browser grid and tiles. Thumb height uses
+ * container query units (cqi) so grid row sizing sees a real height —
+ * percentage padding does not, and collapses rows.
+ *
  * @returns Stylesheet source.
  */
 function buildTextureBrowserCss(): string {
@@ -44,6 +39,7 @@ function buildTextureBrowserCss(): string {
 
 /**
  * Builds grid container CSS for auto-fill texture tiles.
+ *
  * @returns CSS rules for the browser grid.
  */
 function buildGridCss(): string {
@@ -65,6 +61,7 @@ function buildGridCss(): string {
 
 /**
  * Builds CSS for individual texture tiles as flex columns.
+ *
  * @returns CSS rules for texture tiles.
  */
 function buildTileCss(): string {
@@ -85,6 +82,7 @@ function buildTileCss(): string {
 
 /**
  * Builds CSS for square texture thumbnails using container query height.
+ *
  * @returns CSS rules for thumbnail elements.
  */
 function buildThumbCss(): string {
@@ -108,6 +106,7 @@ function buildThumbCss(): string {
 
 /**
  * Builds CSS for texture name labels under each tile.
+ *
  * @returns CSS rules for name labels.
  */
 function buildNameCss(): string {

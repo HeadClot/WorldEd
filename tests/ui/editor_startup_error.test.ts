@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  getEditorStartupErrorMessage,
-  showEditorStartupError,
-} from '../../src/ui/editor_startup_error.js';
+import { getEditorStartupErrorMessage, showEditorStartupError } from '../../src/ui/editor_startup_error.js';
 
 describe('editor startup error', () => {
   it('should preserve an Error message for diagnostics', () => {

@@ -233,6 +233,7 @@ describe('SceneSerializer', () => {
 
 /**
  * Creates a box mesh at a given position with a standard material.
+ *
  * @param x X position.
  * @param y Y position.
  * @param z Z position.
@@ -248,6 +249,7 @@ function createBoxAtPosition(x: number, y: number, z: number): THREE.Mesh {
 
 /**
  * Creates a sphere mesh at a given position with a standard material.
+ *
  * @param radius The sphere radius.
  * @param x X position.
  * @param y Y position.
@@ -264,6 +266,7 @@ function createSphereAtPosition(radius: number, x: number, y: number, z: number)
 
 /**
  * Creates a cylinder mesh at a given position with a standard material.
+ *
  * @param x X position.
  * @param y Y position.
  * @param z Z position.
@@ -279,6 +282,7 @@ function createCylinderAtPosition(x: number, y: number, z: number): THREE.Mesh {
 
 /**
  * Creates a plane mesh at a given position with a standard material.
+ *
  * @param x X position.
  * @param y Y position.
  * @param z Z position.
@@ -294,16 +298,14 @@ function createPlaneAtPosition(x: number, y: number, z: number): THREE.Mesh {
 
 /**
  * Creates a mesh with plain BufferGeometry similar to CSG output.
+ *
  * @returns A mesh whose geometry is not a named primitive class.
  */
 function createCustomBufferMesh(): THREE.Mesh {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
     'position',
-    new THREE.Float32BufferAttribute(
-      [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0],
-      3,
-    ),
+    new THREE.Float32BufferAttribute([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0], 3),
   );
   geometry.computeVertexNormals();
   const material = new THREE.MeshStandardMaterial({ color: 0x4488ff });

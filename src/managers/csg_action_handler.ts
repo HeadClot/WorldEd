@@ -7,9 +7,9 @@ import { SolidModel } from '../solid/model/solid_model.js';
 import { SelectionManager } from './selection_manager.js';
 
 /**
- * Coordinates mesh CSG boolean actions from the toolbar menu.
- * Only regular content meshes are eligible — solid brushes and solid
- * model results use the solid-model CSG pipeline instead.
+ * Coordinates mesh CSG boolean actions from the toolbar menu. Only regular
+ * content meshes are eligible — solid brushes and solid model results use the
+ * solid-model CSG pipeline instead.
  */
 export class CsgActionHandler {
   private worldObject: THREE.Group;
@@ -23,15 +23,12 @@ export class CsgActionHandler {
 
   /**
    * Creates a CSG action handler.
+   *
    * @param worldObject The scene world root.
    * @param commandStack The undo stack.
    * @param selectionManager The selection manager.
    */
-  constructor(
-    worldObject: THREE.Group,
-    commandStack: CommandStack,
-    selectionManager: SelectionManager,
-  ) {
+  constructor(worldObject: THREE.Group, commandStack: CommandStack, selectionManager: SelectionManager) {
     this.worldObject = worldObject;
     this.commandStack = commandStack;
     this.selectionManager = selectionManager;
@@ -44,6 +41,7 @@ export class CsgActionHandler {
 
   /**
    * Sets the viewport sync callback.
+   *
    * @param callback The callback to invoke after CSG changes.
    */
   setSyncViewports(callback: () => void): void {
@@ -52,6 +50,7 @@ export class CsgActionHandler {
 
   /**
    * Sets the outliner refresh callback.
+   *
    * @param callback The callback to invoke after CSG changes.
    */
   setRefreshOutliner(callback: () => void): void {
@@ -60,6 +59,7 @@ export class CsgActionHandler {
 
   /**
    * Sets the status message callback.
+   *
    * @param callback The status callback.
    */
   setShowStatus(callback: (message: string) => void): void {
@@ -67,9 +67,10 @@ export class CsgActionHandler {
   }
 
   /**
-   * Returns whether mesh CSG can run on the current selection.
-   * Requires at least two regular content meshes and no solid brushes
-   * or solid model result meshes in the selection.
+   * Returns whether mesh CSG can run on the current selection. Requires at
+   * least two regular content meshes and no solid brushes or solid model result
+   * meshes in the selection.
+   *
    * @returns True when Union/Subtract/Intersect may run.
    */
   canRunMeshBoolean(): boolean {
@@ -79,8 +80,9 @@ export class CsgActionHandler {
   }
 
   /**
-   * Runs a boolean operation on the first two selected regular meshes.
-   * No-ops when the selection includes solid brushes or solid results.
+   * Runs a boolean operation on the first two selected regular meshes. No-ops
+   * when the selection includes solid brushes or solid results.
+   *
    * @param operation The CSG operation to run.
    */
   runBoolean(operation: CsgOperation): void {
@@ -100,6 +102,7 @@ export class CsgActionHandler {
 
   /**
    * Validates selection for mesh CSG and emits a status when invalid.
+   *
    * @param selected Current selection.
    * @returns True when mesh CSG may proceed.
    */
@@ -113,14 +116,13 @@ export class CsgActionHandler {
 
   /**
    * Rejects selections that include solid brushes or solid result meshes.
+   *
    * @param selected Current selection.
    * @returns False when solid content blocks mesh CSG.
    */
   private rejectSolidSelectionIfPresent(selected: THREE.Mesh[]): boolean {
     if (selected.some((mesh) => SolidBrushVisual.isBrushObject(mesh))) {
-      this.emitStatus(
-        'Mesh CSG is not available for solid brushes — use Solid Brush ops in Properties',
-      );
+      this.emitStatus('Mesh CSG is not available for solid brushes — use Solid Brush ops in Properties');
       return false;
     }
     if (selected.some((mesh) => SolidModel.isResultMesh(mesh))) {
@@ -132,6 +134,7 @@ export class CsgActionHandler {
 
   /**
    * Returns whether a mesh is a regular content object for mesh CSG.
+   *
    * @param mesh Candidate mesh.
    * @returns True when the mesh is not a solid brush or solid result.
    */
@@ -143,6 +146,7 @@ export class CsgActionHandler {
 
   /**
    * Pushes the boolean command and selects the result mesh.
+   *
    * @param meshA First source mesh.
    * @param meshB Second source mesh.
    * @param result Result mesh.
@@ -166,6 +170,7 @@ export class CsgActionHandler {
 
   /**
    * Emits a status message when a callback is registered.
+   *
    * @param message The message text.
    */
   private emitStatus(message: string): void {

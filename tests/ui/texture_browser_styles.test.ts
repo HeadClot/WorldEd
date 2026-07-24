@@ -43,6 +43,7 @@ describe('texture_browser_styles', () => {
 
 /**
  * Returns the body of the first CSS rule whose selector matches exactly.
+ *
  * @param css Full stylesheet text.
  * @param selector Selector including the leading dot.
  * @returns Rule body text without braces.

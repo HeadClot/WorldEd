@@ -1,5 +1,6 @@
 /**
  * Compares two release versions after removing an optional leading v.
+ *
  * @param firstVersion First version string.
  * @param secondVersion Second version string.
  * @returns Negative when first is older, zero when equal, positive when newer.
@@ -13,6 +14,7 @@ export function compareUpdateVersions(firstVersion: string, secondVersion: strin
 
 /**
  * Reports whether a release version is newer than the installed version.
+ *
  * @param installedVersion Current application version.
  * @param releaseVersion Version from GitHub Releases.
  * @returns True when the release is newer.
@@ -28,6 +30,7 @@ interface ParsedVersion {
 
 /**
  * Parses a strict three-part semantic version with an optional v prefix.
+ *
  * @param version Candidate version string.
  * @returns Parsed version or null when invalid.
  */
@@ -42,6 +45,7 @@ function parseVersion(version: string): ParsedVersion | null {
 
 /**
  * Compares the numeric portions of two parsed versions.
+ *
  * @param first First parsed version.
  * @param second Second parsed version.
  * @returns Numeric version ordering.
@@ -56,6 +60,7 @@ function compareNumericParts(first: ParsedVersion, second: ParsedVersion): numbe
 
 /**
  * Applies semantic-version stable-versus-prerelease ordering.
+ *
  * @param first First parsed version.
  * @param second Second parsed version.
  * @returns Prerelease ordering.

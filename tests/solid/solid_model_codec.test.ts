@@ -10,9 +10,7 @@ import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import { countTriangles } from '../../src/texture/planar_uv_projector.js';
 
-/**
- * Unit tests for solid model persistence with hierarchical brushes.
- */
+/** Unit tests for solid model persistence with hierarchical brushes. */
 describe('SolidModelCodec', () => {
   it('round-trips brushes through encode/decode', () => {
     const model = new SolidModel('CodecSolid');
@@ -133,9 +131,7 @@ describe('SolidModelCodec', () => {
     const restoredModel = SolidModel.fromObject(loadedRoot as THREE.Object3D);
     expect(restoredModel).toBeTruthy();
     const restoredMaps = getFaceTextureMaps(restoredModel!.getResultMesh());
-    const matching = restoredMaps.find(
-      (entryMap) => entryMap.mapping.textureId === 'folder/face_uv.png',
-    );
+    const matching = restoredMaps.find((entryMap) => entryMap.mapping.textureId === 'folder/face_uv.png');
     expect(matching).toBeDefined();
     expect(matching!.mapping.scaleU).toBeCloseTo(3);
     expect(matching!.mapping.offsetU).toBeCloseTo(0.5);

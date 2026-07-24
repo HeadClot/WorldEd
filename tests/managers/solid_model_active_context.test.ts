@@ -7,9 +7,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { DeleteSolidBrushesCommand } from '../../src/commands/delete_solid_brushes_command.js';
 
-/**
- * Lightweight panel stand-in for active-model resolution tests.
- */
+/** Lightweight panel stand-in for active-model resolution tests. */
 class MockSolidPanel {
   private model: SolidModel | null = null;
 
@@ -34,20 +32,13 @@ class MockSolidPanel {
   }
 }
 
-/**
- * Unit tests for remembering the active solid model after selection clears.
- */
+/** Unit tests for remembering the active solid model after selection clears. */
 describe('Solid model active context', () => {
   it('still adds a box brush after deleting the selected brush', () => {
     const world = new THREE.Group();
     const selection = new SelectionManager();
     const panel = new MockSolidPanel();
-    const controller = new SolidModelController(
-      world,
-      new CommandStack(16),
-      selection,
-      panel as never,
-    );
+    const controller = new SolidModelController(world, new CommandStack(16), selection, panel as never);
     const model = new SolidModel('ActiveCtx');
     world.add(model.root);
     const first = model.addBoxBrush(2, SolidOperation.Additive);

@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 import { buildPlaneFromPlacementPoints } from '../csg/csg_plane_from_points.js';
 
-/**
- * Interactive state for placing a 2–3 point clipping plane.
- */
+/** Interactive state for placing a 2–3 point clipping plane. */
 export class ClipPlaneTool {
   private active: boolean;
   private points: THREE.Vector3[];
@@ -11,9 +9,7 @@ export class ClipPlaneTool {
   private keepFront: boolean;
   private changeCallback: (() => void) | null;
 
-  /**
-   * Creates an inactive clip plane tool.
-   */
+  /** Creates an inactive clip plane tool. */
   constructor() {
     this.active = false;
     this.points = [];
@@ -24,6 +20,7 @@ export class ClipPlaneTool {
 
   /**
    * Registers a callback invoked when tool state changes.
+   *
    * @param callback Change listener.
    */
   setChangeCallback(callback: (() => void) | null): void {
@@ -32,24 +29,21 @@ export class ClipPlaneTool {
 
   /**
    * Returns whether the tool is active.
+   *
    * @returns True when placing or ready to commit.
    */
   isActive(): boolean {
     return this.active;
   }
 
-  /**
-   * Activates the tool and clears previous points.
-   */
+  /** Activates the tool and clears previous points. */
   activate(): void {
     this.active = true;
     this.clearPlacement();
     this.notifyChange();
   }
 
-  /**
-   * Deactivates the tool and clears placement state.
-   */
+  /** Deactivates the tool and clears placement state. */
   deactivate(): void {
     this.active = false;
     this.clearPlacement();
@@ -58,6 +52,7 @@ export class ClipPlaneTool {
 
   /**
    * Adds a world-space placement point (up to three).
+   *
    * @param point World point to add.
    * @returns True when the point was accepted.
    */
@@ -75,6 +70,7 @@ export class ClipPlaneTool {
 
   /**
    * Moves an existing placement point and rebuilds the plane.
+   *
    * @param index Zero-based point index.
    * @param point New world position.
    * @returns True when the point was updated.
@@ -89,8 +85,8 @@ export class ClipPlaneTool {
   }
 
   /**
-   * Flips which half-space is kept for clip operations.
-   * The stored plane is unchanged; only the keep side toggles.
+   * Flips which half-space is kept for clip operations. The stored plane is
+   * unchanged; only the keep side toggles.
    */
   flipKeepSide(): void {
     if (!this.active) return;
@@ -100,6 +96,7 @@ export class ClipPlaneTool {
 
   /**
    * Returns the current plane when at least two points are placed.
+   *
    * @returns Plane or null.
    */
   getPlane(): THREE.Plane | null {
@@ -108,6 +105,7 @@ export class ClipPlaneTool {
 
   /**
    * Returns whether clip/split can be committed.
+   *
    * @returns True when a valid plane exists.
    */
   isPlaneReady(): boolean {
@@ -116,6 +114,7 @@ export class ClipPlaneTool {
 
   /**
    * Returns whether the front half-space is currently the keep side.
+   *
    * @returns True when keep-front is selected.
    */
   getKeepFront(): boolean {
@@ -124,6 +123,7 @@ export class ClipPlaneTool {
 
   /**
    * Returns a copy of the placed points.
+   *
    * @returns Placement points.
    */
   getPoints(): THREE.Vector3[] {
@@ -132,6 +132,7 @@ export class ClipPlaneTool {
 
   /**
    * Returns a short status string for the UI.
+   *
    * @returns Human-readable status.
    */
   getStatusMessage(): string {
@@ -139,16 +140,14 @@ export class ClipPlaneTool {
     if (this.points.length === 0) return 'Click point 1 (mesh or grid)';
     if (this.points.length === 1) return 'Click point 2';
     if (this.points.length === 2) {
-      return this.plane
-        ? 'Plane ready (optional point 3) · Flip / Clip / Split'
-        : 'Need a valid second point';
+      return this.plane ? 'Plane ready (optional point 3) · Flip / Clip / Split' : 'Need a valid second point';
     }
     return this.plane ? '3-point plane ready · Flip / Clip / Split' : 'Invalid 3-point plane';
   }
 
   /**
-   * Clears points and plane while remaining active.
-   * Resets keep-front to the default (used when activating the tool).
+   * Clears points and plane while remaining active. Resets keep-front to the
+   * default (used when activating the tool).
    */
   clearPlacement(): void {
     this.points = [];
@@ -167,16 +166,12 @@ export class ClipPlaneTool {
     this.notifyChange();
   }
 
-  /**
-   * Rebuilds the plane from the current points.
-   */
+  /** Rebuilds the plane from the current points. */
   private rebuildPlane(): void {
     this.plane = buildPlaneFromPlacementPoints(this.points);
   }
 
-  /**
-   * Notifies listeners of state changes.
-   */
+  /** Notifies listeners of state changes. */
   private notifyChange(): void {
     if (this.changeCallback) {
       this.changeCallback();

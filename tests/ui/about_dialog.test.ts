@@ -130,6 +130,7 @@ describe('AboutDialog', () => {
 
 /**
  * Finds a button under a root whose text content matches exactly.
+ *
  * @param root Element tree to search.
  * @param label Exact button label.
  * @returns Matching button or null.

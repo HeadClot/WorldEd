@@ -83,6 +83,7 @@ describe('FaceSelectionRaycaster', () => {
 
 /**
  * Creates a mock canvas element with a defined bounding rect.
+ *
  * @param width The canvas width.
  * @param height The canvas height.
  * @returns A mock canvas element.
@@ -97,18 +98,14 @@ function createMockCanvas(width: number, height: number): HTMLElement {
 
 /**
  * Creates a mock canvas with offset in its bounding rect.
+ *
  * @param width The canvas width.
  * @param height The canvas height.
  * @param leftOffset The left offset.
  * @param topOffset The top offset.
  * @returns A mock canvas element.
  */
-function createMockCanvasWithOffset(
-  width: number,
-  height: number,
-  leftOffset: number,
-  topOffset: number,
-): HTMLElement {
+function createMockCanvasWithOffset(width: number, height: number, leftOffset: number, topOffset: number): HTMLElement {
   const canvas = document.createElement('canvas');
   Object.defineProperty(canvas, 'getBoundingClientRect', {
     value: () => ({ left: leftOffset, top: topOffset, width, height }),
@@ -118,6 +115,7 @@ function createMockCanvasWithOffset(
 
 /**
  * Creates a mock WebGL renderer for testing.
+ *
  * @param canvas The mock canvas element.
  * @returns A mock renderer object.
  */
@@ -129,6 +127,7 @@ function createMockRenderer(canvas: HTMLElement): THREE.WebGLRenderer {
 
 /**
  * Creates a test camera positioned at origin looking down negative Z.
+ *
  * @returns A configured perspective camera.
  */
 function createTestCamera(): THREE.PerspectiveCamera {
@@ -140,6 +139,7 @@ function createTestCamera(): THREE.PerspectiveCamera {
 
 /**
  * Creates a mock mouse event with specified coordinates.
+ *
  * @param clientX The horizontal client coordinate.
  * @param clientY The vertical client coordinate.
  * @returns A mock MouseEvent.
@@ -155,6 +155,7 @@ function createMockMouseEvent(clientX: number, clientY: number): MouseEvent {
 
 /**
  * Creates a mesh at a specific position with updated world matrix.
+ *
  * @param sizeX Width of the box along X.
  * @param sizeY Height of the box along Y.
  * @param sizeZ Depth of the box along Z.
@@ -171,10 +172,7 @@ function createMeshAt(
   posY: number,
   posZ: number,
 ): THREE.Mesh {
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(sizeX, sizeY, sizeZ),
-    new THREE.MeshBasicMaterial(),
-  );
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(sizeX, sizeY, sizeZ), new THREE.MeshBasicMaterial());
   mesh.position.set(posX, posY, posZ);
   mesh.updateMatrixWorld(true);
   return mesh;

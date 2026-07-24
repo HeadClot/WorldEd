@@ -5,8 +5,8 @@ import { GizmoHandle } from './gizmo_handle.js';
 import { OrientedBoundsData } from './oriented_bounds.js';
 
 /**
- * Mutable state for one transform gizmo drag session.
- * Shared by translate, rotate, scale, and bounds drag paths.
+ * Mutable state for one transform gizmo drag session. Shared by translate,
+ * rotate, scale, and bounds drag paths.
  */
 export class TransformDragSession {
   dragActive: boolean;
@@ -37,12 +37,13 @@ export class TransformDragSession {
   pointerDownClientX: number;
   /** Screen Y at bounds face pointer-down (for click vs drag). */
   pointerDownClientY: number;
-  /** True once the pointer moved past the click threshold during bounds face move. */
+  /**
+   * True once the pointer moved past the click threshold during bounds face
+   * move.
+   */
   boundsPointerMoved: boolean;
 
-  /**
-   * Creates an idle drag session with empty snapshots.
-   */
+  /** Creates an idle drag session with empty snapshots. */
   constructor() {
     this.dragActive = false;
     this.activeHandle = null;
@@ -75,6 +76,7 @@ export class TransformDragSession {
 
   /**
    * Captures pre-drag transforms for every selected mesh.
+   *
    * @param selectedObjects Meshes included in the drag.
    */
   snapshotPreDragState(selectedObjects: THREE.Mesh[]): void {
@@ -88,9 +90,7 @@ export class TransformDragSession {
     });
   }
 
-  /**
-   * Resets accumulators used while measuring drag distance and angle.
-   */
+  /** Resets accumulators used while measuring drag distance and angle. */
   resetDragAccumulator(): void {
     this.dragDeltaAccumulator.set(0, 0, 0);
     this.dragRotationAngle = 0;
@@ -98,9 +98,7 @@ export class TransformDragSession {
     this.initialDistanceAlongAxis = 1;
   }
 
-  /**
-   * Clears handle, bounds, and pointer samples after pointer-up.
-   */
+  /** Clears handle, bounds, and pointer samples after pointer-up. */
   clearInteractionTargets(): void {
     this.dragActive = false;
     this.activeHandle = null;

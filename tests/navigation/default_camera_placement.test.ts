@@ -7,27 +7,23 @@ import {
   getDefaultSideCameraPosition,
   getDefaultTopCameraPosition,
 } from '../../src/navigation/default_camera_placement.js';
-import {
-  DEFAULT_CUBE_CENTER_Y,
-  DEFAULT_PERSPECTIVE_CAMERA_OFFSET,
-} from '../../src/types/editor_config.js';
+import { DEFAULT_CUBE_CENTER_Y, DEFAULT_PERSPECTIVE_CAMERA_OFFSET } from '../../src/types/editor_config.js';
 
 /**
  * Projects a world point into orthographic camera view space.
+ *
  * @param camera The orthographic camera defining view space.
  * @param worldPoint The world-space point to project.
  * @returns View-space coordinates of the point.
  */
-function projectToViewSpace(
-  camera: THREE.OrthographicCamera,
-  worldPoint: THREE.Vector3,
-): THREE.Vector3 {
+function projectToViewSpace(camera: THREE.OrthographicCamera, worldPoint: THREE.Vector3): THREE.Vector3 {
   camera.updateMatrixWorld(true);
   return worldPoint.clone().applyMatrix4(camera.matrixWorldInverse);
 }
 
 /**
  * Builds a unit box matching the editor default cube placement.
+ *
  * @returns A mesh with size 1 centered above the ground plane.
  */
 function createDefaultCubeMesh(): THREE.Mesh {

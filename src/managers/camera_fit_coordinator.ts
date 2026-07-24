@@ -7,9 +7,7 @@ import { CameraAnimationConfig } from '../navigation/camera_animation_config.js'
 import { StatusBar } from '../ui/status_bar.js';
 import { KeyboardShortcutHandler } from './keyboard_shortcut_handler.js';
 
-/**
- * Coordinates fit-to-selection camera framing for one or all viewports.
- */
+/** Coordinates fit-to-selection camera framing for one or all viewports. */
 export class CameraFitCoordinator {
   private cameraFitController: CameraFitController;
   private cameraAnimationConfig: CameraAnimationConfig;
@@ -20,6 +18,7 @@ export class CameraFitCoordinator {
 
   /**
    * Creates a camera fit coordinator.
+   *
    * @param selectionManager Selection source for framing targets.
    * @param statusBar Status bar for fit feedback, or null.
    * @param getOrderedViewports Returns viewports in activation order.
@@ -41,6 +40,7 @@ export class CameraFitCoordinator {
 
   /**
    * Binds fit-to-selection keyboard shortcuts.
+   *
    * @param keyboardShortcutHandler Keyboard handler to register on.
    */
   bindKeyboardShortcuts(keyboardShortcutHandler: KeyboardShortcutHandler): void {
@@ -48,16 +48,12 @@ export class CameraFitCoordinator {
     keyboardShortcutHandler.setOnFitAllViewports(() => this.onFitAllViewports());
   }
 
-  /**
-   * Advances all active camera fit animations by one frame.
-   */
+  /** Advances all active camera fit animations by one frame. */
   updateAnimations(): void {
     this.cameraFitController.updateAnimations();
   }
 
-  /**
-   * Fits the currently active viewport to the selection (or whole scene).
-   */
+  /** Fits the currently active viewport to the selection (or whole scene). */
   onFitToSelection(): void {
     const viewport = this.getOrderedViewports()[this.getActiveViewportIndex()];
     if (!viewport) return;
@@ -66,21 +62,16 @@ export class CameraFitCoordinator {
 
   /**
    * Fits a single viewport camera to the current selection.
+   *
    * @param viewport The viewport whose camera should be fitted.
    */
   fitSpecificViewport(viewport: Viewport2D | Viewport3D): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
-    const count = this.cameraFitController.fitViewportToSelection(
-      viewport,
-      selected,
-      this.cameraAnimationConfig,
-    );
+    const count = this.cameraFitController.fitViewportToSelection(viewport, selected, this.cameraAnimationConfig);
     this.showFitFeedback(count);
   }
 
-  /**
-   * Fits all viewports to the current selection.
-   */
+  /** Fits all viewports to the current selection. */
   onFitAllViewports(): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     const count = this.cameraFitController.fitAllViewportsToSelection(
@@ -93,6 +84,7 @@ export class CameraFitCoordinator {
 
   /**
    * Displays the fit feedback message in the status bar.
+   *
    * @param count The number of objects that were framed.
    */
   private showFitFeedback(count: number): void {

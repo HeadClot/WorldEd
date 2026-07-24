@@ -4,6 +4,7 @@ import { ToolsPalette } from '../ui/tools_palette.js';
 
 /**
  * Updates tools-palette transform highlights and status bar mode text.
+ *
  * @param toolsPalette Floating tools palette that owns transform mode buttons.
  * @param statusBar Optional status bar for mode display.
  * @param mode Active transform mode.
@@ -19,6 +20,7 @@ export function applyTransformModeUi(
 
 /**
  * Writes the transform mode name into the status bar.
+ *
  * @param statusBar Status bar instance, or null when unavailable.
  * @param mode The active transform mode.
  */

@@ -5,9 +5,7 @@ import { SolidBrushValidator } from '../../src/solid/brush/solid_brush_validator
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 
-/**
- * Unit tests for arbitrary face-loop brush construction and hull previews.
- */
+/** Unit tests for arbitrary face-loop brush construction and hull previews. */
 describe('SolidBrushFactory.createFromFaceLoops', () => {
   it('rebuilds a box from its own face loops and validates topology', () => {
     const width = 1.5 + Math.random();

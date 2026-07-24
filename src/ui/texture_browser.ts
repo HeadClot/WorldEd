@@ -12,34 +12,22 @@ import {
   ensureTextureBrowserStylesheet,
 } from './texture_browser_styles.js';
 
-/**
- * Default outer width of the texture browser panel in pixels.
- */
+/** Default outer width of the texture browser panel in pixels. */
 export const TEXTURE_BROWSER_DEFAULT_WIDTH_PX = 480;
 
-/**
- * Default outer height of the texture browser panel in pixels.
- */
+/** Default outer height of the texture browser panel in pixels. */
 export const TEXTURE_BROWSER_DEFAULT_HEIGHT_PX = 560;
 
-/**
- * Minimum outer width when resizing the panel.
- */
+/** Minimum outer width when resizing the panel. */
 export const TEXTURE_BROWSER_MIN_WIDTH_PX = 280;
 
-/**
- * Minimum outer height when resizing the panel.
- */
+/** Minimum outer height when resizing the panel. */
 export const TEXTURE_BROWSER_MIN_HEIGHT_PX = 240;
 
-/**
- * @deprecated Use TEXTURE_BROWSER_MIN_THUMB_PX from texture_browser_layout.
- */
+/** @deprecated Use TEXTURE_BROWSER_MIN_THUMB_PX from texture_browser_layout. */
 export const TEXTURE_BROWSER_TILE_MIN_WIDTH_PX = TEXTURE_BROWSER_MIN_THUMB_PX;
 
-/**
- * Callbacks the texture browser panel uses for user actions.
- */
+/** Callbacks the texture browser panel uses for user actions. */
 export interface TextureBrowserHandlers {
   onOpenFolder: () => void;
   onSelectTexture: (entryId: string) => void;
@@ -71,15 +59,12 @@ export class TextureBrowser {
 
   /**
    * Creates a texture browser attached to the host element.
+   *
    * @param host Parent element (editor root).
    * @param handlers Open-folder and select callbacks.
    * @param defaultAnchor Element used for default open position.
    */
-  constructor(
-    host: HTMLElement,
-    handlers: TextureBrowserHandlers,
-    defaultAnchor: HTMLElement | null = null,
-  ) {
+  constructor(host: HTMLElement, handlers: TextureBrowserHandlers, defaultAnchor: HTMLElement | null = null) {
     ensureTextureBrowserStylesheet();
     this.host = host;
     this.handlers = handlers;
@@ -105,15 +90,14 @@ export class TextureBrowser {
 
   /**
    * Sets the element used for the default open position.
+   *
    * @param anchor Viewport or other container, or null for host.
    */
   setDefaultAnchor(anchor: HTMLElement | null): void {
     this.defaultAnchor = anchor;
   }
 
-  /**
-   * Shows the browser panel.
-   */
+  /** Shows the browser panel. */
   show(): void {
     if (this.isVisible) {
       FloatingPanelStack.bringToFront(this.root);
@@ -127,6 +111,7 @@ export class TextureBrowser {
 
   /**
    * Hides the browser panel.
+   *
    * @param _force Kept for call-site compatibility; always hides.
    */
   hide(_force: boolean = false): void {
@@ -135,9 +120,7 @@ export class TextureBrowser {
     this.root.style.display = 'none';
   }
 
-  /**
-   * Toggles panel visibility.
-   */
+  /** Toggles panel visibility. */
   toggle(): void {
     if (this.isVisible) {
       this.hide(true);
@@ -148,6 +131,7 @@ export class TextureBrowser {
 
   /**
    * Returns whether the panel is open.
+   *
    * @returns True when visible.
    */
   isOpen(): boolean {
@@ -156,6 +140,7 @@ export class TextureBrowser {
 
   /**
    * Returns the panel root element (for tests and layout introspection).
+   *
    * @returns Root HTML element.
    */
   getRootElement(): HTMLElement {
@@ -164,6 +149,7 @@ export class TextureBrowser {
 
   /**
    * Returns the scrollable grid element (for tests).
+   *
    * @returns Grid HTML element.
    */
   getGridElement(): HTMLElement {
@@ -172,15 +158,12 @@ export class TextureBrowser {
 
   /**
    * Rebuilds the grid from texture entries.
+   *
    * @param entries Textures to show.
    * @param selectedId Currently selected entry id, or null.
    * @param folderName Opened folder name, or null.
    */
-  setEntries(
-    entries: TextureBrowserEntry[],
-    selectedId: string | null,
-    folderName: string | null,
-  ): void {
+  setEntries(entries: TextureBrowserEntry[], selectedId: string | null, folderName: string | null): void {
     this.selectedId = selectedId;
     this.tileElements.clear();
     this.gridElement.replaceChildren();
@@ -195,6 +178,7 @@ export class TextureBrowser {
 
   /**
    * Updates which tile appears selected without rebuilding the grid.
+   *
    * @param selectedId Entry id to highlight, or null.
    */
   setSelectedId(selectedId: string | null): void {
@@ -206,15 +190,14 @@ export class TextureBrowser {
 
   /**
    * Sets a status message (loading / error / info).
+   *
    * @param message Status text.
    */
   setStatusMessage(message: string): void {
     this.statusLabel.textContent = message;
   }
 
-  /**
-   * Disposes the panel and removes it from the DOM.
-   */
+  /** Disposes the panel and removes it from the DOM. */
   dispose(): void {
     this.hide(true);
     this.tileElements.clear();
@@ -225,6 +208,7 @@ export class TextureBrowser {
 
   /**
    * Builds the root panel element.
+   *
    * @returns Styled root.
    */
   private buildRoot(): HTMLElement {
@@ -242,6 +226,7 @@ export class TextureBrowser {
 
   /**
    * Applies chrome styles to the floating panel.
+   *
    * @param root Panel root.
    */
   private styleRoot(root: HTMLElement): void {
@@ -265,6 +250,7 @@ export class TextureBrowser {
 
   /**
    * Raises this panel above other floating windows on interaction.
+   *
    * @param root Panel root element.
    */
   private bindBringToFrontOnPointer(root: HTMLElement): void {
@@ -275,6 +261,7 @@ export class TextureBrowser {
 
   /**
    * Builds the draggable title bar with close control.
+   *
    * @returns Title bar element.
    */
   private buildTitleBar(): HTMLElement {
@@ -307,6 +294,7 @@ export class TextureBrowser {
 
   /**
    * Builds the Open Folder toolbar row.
+   *
    * @returns Toolbar row element.
    */
   private buildToolbarRow(): HTMLElement {
@@ -330,6 +318,7 @@ export class TextureBrowser {
 
   /**
    * Applies shared flex row styles for chrome sections.
+   *
    * @param row Row element.
    */
   private styleChromeRow(row: HTMLElement): void {
@@ -342,6 +331,7 @@ export class TextureBrowser {
 
   /**
    * Builds the folder name label under the toolbar.
+   *
    * @returns Folder label element.
    */
   private buildFolderLabel(): HTMLElement {
@@ -359,6 +349,7 @@ export class TextureBrowser {
 
   /**
    * Builds the scrollable thumbnail grid container.
+   *
    * @returns Grid element.
    */
   private buildGrid(): HTMLElement {
@@ -373,6 +364,7 @@ export class TextureBrowser {
 
   /**
    * Builds the bottom status label.
+   *
    * @returns Status element.
    */
   private buildStatusLabel(): HTMLElement {
@@ -387,6 +379,7 @@ export class TextureBrowser {
 
   /**
    * Builds the southeast resize grip.
+   *
    * @returns Resize handle element.
    */
   private buildResizeHandle(): HTMLElement {
@@ -408,6 +401,7 @@ export class TextureBrowser {
 
   /**
    * Appends one texture tile to the grid.
+   *
    * @param entry Texture entry to display.
    */
   private appendTile(entry: TextureBrowserEntry): void {
@@ -419,6 +413,7 @@ export class TextureBrowser {
 
   /**
    * Creates a single thumbnail + name tile.
+   *
    * @param entry Texture entry.
    * @returns Tile element.
    */
@@ -449,6 +444,7 @@ export class TextureBrowser {
 
   /**
    * Creates a square preview using background-image (height from CSS).
+   *
    * @param entry Texture entry with object URL.
    * @returns Thumbnail element.
    */
@@ -465,6 +461,7 @@ export class TextureBrowser {
 
   /**
    * Creates the name label under a thumbnail.
+   *
    * @param displayName Texture display name.
    * @returns Name element.
    */
@@ -478,6 +475,7 @@ export class TextureBrowser {
 
   /**
    * Applies selected or idle border styles to a tile.
+   *
    * @param tile Tile element.
    * @param selected Whether the tile is selected.
    */
@@ -485,23 +483,20 @@ export class TextureBrowser {
     tile.style.border = selected
       ? `1px solid ${hexToRgb(Theme.selectionColor)}`
       : `1px solid ${Theme.inputBorderColor}`;
-    tile.style.background = selected
-      ? 'rgba(232, 106, 23, 0.22)'
-      : hexToRgb(Theme.buttonBackground);
+    tile.style.background = selected ? 'rgba(232, 106, 23, 0.22)' : hexToRgb(Theme.buttonBackground);
     tile.setAttribute('aria-selected', selected ? 'true' : 'false');
   }
 
   /**
    * Updates the folder path label.
+   *
    * @param folderName Folder name or null.
    */
   private updateFolderLabel(folderName: string | null): void {
     this.folderLabel.textContent = folderName ? `Folder: ${folderName}` : 'No folder open';
   }
 
-  /**
-   * Shows the empty-state message in the grid area.
-   */
+  /** Shows the empty-state message in the grid area. */
   private setEmptyState(): void {
     this.gridElement.replaceChildren();
     this.tileElements.clear();
@@ -522,6 +517,7 @@ export class TextureBrowser {
 
   /**
    * Styles a small title-bar button.
+   *
    * @param button Button element.
    */
   private styleSmallButton(button: HTMLButtonElement): void {
@@ -536,6 +532,7 @@ export class TextureBrowser {
 
   /**
    * Styles a primary action button.
+   *
    * @param button Button element.
    */
   private styleActionButton(button: HTMLButtonElement): void {
@@ -549,9 +546,7 @@ export class TextureBrowser {
     button.style.fontFamily = Theme.uiFontFamily;
   }
 
-  /**
-   * Positions the panel near the bottom-right of the default anchor.
-   */
+  /** Positions the panel near the bottom-right of the default anchor. */
   private positionDefault(): void {
     const paddingPx = 8;
     const panelWidthPx = TEXTURE_BROWSER_DEFAULT_WIDTH_PX;
@@ -569,6 +564,7 @@ export class TextureBrowser {
 
   /**
    * Enables dragging the panel from the title bar.
+   *
    * @param bar Title bar element.
    */
   private bindDrag(bar: HTMLElement): void {
@@ -581,6 +577,7 @@ export class TextureBrowser {
 
   /**
    * Starts a drag session from a pointer event.
+   *
    * @param event Pointer down event.
    */
   private beginDrag(event: PointerEvent): void {
@@ -601,6 +598,7 @@ export class TextureBrowser {
 
   /**
    * Moves the panel while dragging.
+   *
    * @param moveEvent Pointer move event.
    */
   private onDragMove(moveEvent: PointerEvent): void {
@@ -613,6 +611,7 @@ export class TextureBrowser {
 
   /**
    * Enables southeast resize from the handle.
+   *
    * @param handle Resize grip element.
    */
   private bindResize(handle: HTMLElement): void {
@@ -625,6 +624,7 @@ export class TextureBrowser {
 
   /**
    * Starts a resize session from a pointer event.
+   *
    * @param event Pointer down event on the resize handle.
    */
   private beginResize(event: PointerEvent): void {
@@ -647,6 +647,7 @@ export class TextureBrowser {
 
   /**
    * Updates panel size while resizing.
+   *
    * @param moveEvent Pointer move event.
    */
   private onResizeMove(moveEvent: PointerEvent): void {
@@ -661,6 +662,7 @@ export class TextureBrowser {
 
   /**
    * Converts bottom-anchored layout to top/left so drag/resize stay stable.
+   *
    * @param rect Current panel bounding rect.
    */
   private convertBottomToTopPosition(rect: DOMRect): void {

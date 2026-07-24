@@ -18,7 +18,9 @@ export class PrimitiveCreationTool {
 
   /**
    * Creates a new primitive creation tool for the given container.
-   * @param targetContainer The Three.js object into which primitives will be added.
+   *
+   * @param targetContainer The Three.js object into which primitives will be
+   *   added.
    */
   constructor(targetContainer: THREE.Object3D) {
     this.targetContainer = targetContainer;
@@ -31,6 +33,7 @@ export class PrimitiveCreationTool {
 
   /**
    * Creates a box primitive with the given dimensions.
+   *
    * @param width The width of the box along the X axis.
    * @param height The height of the box along the Y axis.
    * @param depth The depth of the box along the Z axis.
@@ -49,6 +52,7 @@ export class PrimitiveCreationTool {
 
   /**
    * Creates a sphere primitive with the given radius.
+   *
    * @param radius The radius of the sphere.
    * @param position Optional position for the sphere.
    * @returns The created mesh.
@@ -65,18 +69,14 @@ export class PrimitiveCreationTool {
 
   /**
    * Creates a cylinder primitive with the given dimensions.
+   *
    * @param radiusTop The top radius of the cylinder.
    * @param radiusBottom The bottom radius of the cylinder.
    * @param height The height of the cylinder.
    * @param position Optional position for the cylinder.
    * @returns The created mesh.
    */
-  createCylinder(
-    radiusTop: number,
-    radiusBottom: number,
-    height: number,
-    position?: THREE.Vector3,
-  ): THREE.Mesh {
+  createCylinder(radiusTop: number, radiusBottom: number, height: number, position?: THREE.Vector3): THREE.Mesh {
     this.cylinderCount++;
     const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 32);
     const mesh = this.buildMesh(geometry, `Cylinder${this.padNumber(this.cylinderCount)}`);
@@ -88,6 +88,7 @@ export class PrimitiveCreationTool {
 
   /**
    * Creates a plane primitive with the given dimensions.
+   *
    * @param width The width of the plane along the X axis.
    * @param height The height of the plane along the Z axis.
    * @param position Optional position for the plane.
@@ -106,6 +107,7 @@ export class PrimitiveCreationTool {
 
   /**
    * Returns the last primitive mesh created by this tool.
+   *
    * @returns The most recently created mesh, or null.
    */
   getLastCreatedObject(): THREE.Mesh | null {
@@ -114,21 +116,21 @@ export class PrimitiveCreationTool {
 
   /**
    * Returns the total count of objects created across all types.
+   *
    * @returns The cumulative count of created primitives.
    */
   getCreatedObjectCount(): number {
     return this.cubeCount + this.sphereCount + this.cylinderCount + this.planeCount;
   }
 
-  /**
-   * Disposes all resources held by this tool.
-   */
+  /** Disposes all resources held by this tool. */
   dispose(): void {
     this.lastCreated = null;
   }
 
   /**
    * Pads a number to a three-digit zero-padded string.
+   *
    * @param num The number to pad.
    * @returns A zero-padded string representation.
    */
@@ -138,6 +140,7 @@ export class PrimitiveCreationTool {
 
   /**
    * Builds a mesh with a standard material from geometry.
+   *
    * @param geometry The geometry for the mesh.
    * @param name The display name for the mesh.
    * @returns A configured Three.js mesh.
@@ -152,16 +155,14 @@ export class PrimitiveCreationTool {
   }
 
   /**
-   * Adds a decorative edge wireframe from the mesh's current geometry.
-   * Uses mesh.geometry so UV de-indexing is reflected in the outline.
+   * Adds a decorative edge wireframe from the mesh's current geometry. Uses
+   * mesh.geometry so UV de-indexing is reflected in the outline.
+   *
    * @param mesh The mesh to add wireframe edges to.
    */
   private addWireframe(mesh: THREE.Mesh): void {
     const edges = new THREE.EdgesGeometry(mesh.geometry, 1);
-    const line = new THREE.LineSegments(
-      edges,
-      new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor }),
-    );
+    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor }));
     line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
     mesh.add(line);
   }

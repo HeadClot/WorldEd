@@ -1,6 +1,6 @@
 /**
- * CSG operation applied when combining a solid brush into a solid model.
- * Order matches Sander-style routing tables: additive, subtractive, intersecting.
+ * CSG operation applied when combining a solid brush into a solid model. Order
+ * matches Sander-style routing tables: additive, subtractive, intersecting.
  */
 export enum SolidOperation {
   Additive = 0,
@@ -10,6 +10,7 @@ export enum SolidOperation {
 
 /**
  * Returns a short human-readable label for a solid operation.
+ *
  * @param operation Operation enum value.
  * @returns Display label for UI and status messages.
  */

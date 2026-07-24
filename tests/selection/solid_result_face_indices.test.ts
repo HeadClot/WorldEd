@@ -11,16 +11,15 @@ import { findConnectedCoplanarFaceIndices } from '../../src/selection/triangle_g
 import { FaceSelectionManager } from '../../src/selection/face_selection_manager.js';
 import { groupSelectionsIntoFaceRegions } from '../../src/selection/face_region_grouper.js';
 
-/**
- * Per-triangle solid source row used in tests.
- */
+/** Per-triangle solid source row used in tests. */
 interface SourceRow {
   brushId: string;
   surfaceIndex: number;
 }
 
 /**
- * Unit tests for solid-aware face selection (per brush face, not coplanar flood).
+ * Unit tests for solid-aware face selection (per brush face, not coplanar
+ * flood).
  */
 describe('solid result face indices', () => {
   it('keeps adjacent coplanar wall brushes as separate selectable faces', () => {
@@ -38,9 +37,7 @@ describe('solid result face indices', () => {
     const expandedIds = uniqueBrushIds(sources, expanded);
     expect(expandedIds.size).toBe(1);
     expect(expandedIds.has(leftId)).toBe(true);
-    expect(
-      expanded.every((index) => sources[index].surfaceIndex === sources[leftSeed].surfaceIndex),
-    ).toBe(true);
+    expect(expanded.every((index) => sources[index].surfaceIndex === sources[leftSeed].surfaceIndex)).toBe(true);
 
     const other = expandFaceSelectionIndices(result, rightSeed);
     expect(uniqueBrushIds(sources, other).has(rightId)).toBe(true);
@@ -107,9 +104,7 @@ describe('solid result face indices', () => {
 
   it('does not coplanar-flood when solid sources exist but seed row is missing', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = [
-      { brushId: 'only-zero', surfaceIndex: 0 },
-    ];
+    mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = [{ brushId: 'only-zero', surfaceIndex: 0 }];
     const expanded = expandFaceSelectionIndices(mesh, 5);
     expect(expanded).toEqual([5]);
   });
@@ -117,6 +112,7 @@ describe('solid result face indices', () => {
 
 /**
  * Builds two size-2 cubes that touch and share a coplanar front wall plane.
+ *
  * @returns Result mesh and brush ids.
  */
 function buildAdjacentWallBrushes(): {
@@ -141,8 +137,9 @@ function buildAdjacentWallBrushes(): {
 }
 
 /**
- * Builds two adjacent floor tiles with coplanar tops sharing an edge.
- * Models a carpet/detail pad next to a larger floor surface.
+ * Builds two adjacent floor tiles with coplanar tops sharing an edge. Models a
+ * carpet/detail pad next to a larger floor surface.
+ *
  * @returns Result mesh and brush ids.
  */
 function buildAdjacentFloorTiles(): {
@@ -168,6 +165,7 @@ function buildAdjacentFloorTiles(): {
 
 /**
  * Reads solid triangle sources from a result mesh.
+ *
  * @param mesh Solid result mesh.
  * @returns Source rows.
  */
@@ -179,6 +177,7 @@ function readSources(mesh: THREE.Mesh): SourceRow[] {
 
 /**
  * Finds any triangle seed belonging to a brush.
+ *
  * @param sources Source table.
  * @param brushId Target brush.
  * @returns Triangle index.
@@ -191,6 +190,7 @@ function findSeedForBrush(sources: SourceRow[], brushId: string): number {
 
 /**
  * Finds a top-facing (+Y) triangle seed for a brush when possible.
+ *
  * @param mesh Result mesh.
  * @param sources Source table.
  * @param brushId Target brush.
@@ -214,6 +214,7 @@ function findTopFaceSeed(mesh: THREE.Mesh, sources: SourceRow[], brushId: string
 
 /**
  * Collects unique brush ids for a set of triangle indices.
+ *
  * @param sources Source table.
  * @param indices Triangle indices.
  * @returns Set of brush ids.

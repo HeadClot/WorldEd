@@ -3,9 +3,8 @@ import { UndoCommand } from './undo_command.js';
 import { ObjectDuplicator } from '../managers/object_duplicator.js';
 
 /**
- * Undoable command for duplicating objects.
- * Execute runs the duplicator and adds clones to parent.
- * Undo removes clones and disposes their resources.
+ * Undoable command for duplicating objects. Execute runs the duplicator and
+ * adds clones to parent. Undo removes clones and disposes their resources.
  */
 export class DuplicateObjectsCommand implements UndoCommand {
   private sourceMeshes: THREE.Mesh[];
@@ -16,6 +15,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
 
   /**
    * Creates a new duplicate objects command.
+   *
    * @param sourceMeshes The meshes to duplicate.
    * @param parent The parent object to add clones to.
    * @param offset The positional offset for each clone.
@@ -28,9 +28,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Executes the duplication and adds clones to the parent.
-   */
+  /** Executes the duplication and adds clones to the parent. */
   execute(): void {
     if (this.executed) return;
     this.clonedMeshes = ObjectDuplicator.duplicate(this.sourceMeshes, this.offset);
@@ -40,9 +38,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Undoes the duplication by removing clones and disposing resources.
-   */
+  /** Undoes the duplication by removing clones and disposing resources. */
   undo(): void {
     if (!this.executed) return;
     this.clonedMeshes.forEach((clone) => {
@@ -57,6 +53,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
 
   /**
    * Disposes the geometry and material of a mesh and its children.
+   *
    * @param mesh The mesh whose resources should be disposed.
    */
   private disposeMeshResources(mesh: THREE.Mesh): void {
@@ -69,6 +66,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
 
   /**
    * Disposes resources of a child object such as LineSegments.
+   *
    * @param child The child object to dispose resources for.
    */
   private disposeChildResource(child: THREE.Object3D): void {
@@ -84,6 +82,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
 
   /**
    * Disposes a material or material array when present.
+   *
    * @param material Material, material array, or undefined.
    */
   private disposeMaterial(material: THREE.Material | THREE.Material[] | undefined): void {
@@ -97,6 +96,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
 
   /**
    * Returns a copy of the cloned meshes created during execution.
+   *
    * @returns The array of cloned mesh references.
    */
   getClonedMeshes(): THREE.Mesh[] {

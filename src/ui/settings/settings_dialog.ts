@@ -1,9 +1,5 @@
 import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
-import {
-  SETTINGS_TAB_LABELS,
-  SETTINGS_TAB_ORDER,
-  type SettingsTabId,
-} from '../../settings/settings_types.js';
+import { SETTINGS_TAB_LABELS, SETTINGS_TAB_ORDER, type SettingsTabId } from '../../settings/settings_types.js';
 import {
   ensureSettingsDialogStyles,
   styleSettingsBackdrop,
@@ -22,7 +18,8 @@ import { SettingsUpdaterTab } from './settings_updater_tab.js';
 import { SettingsViewTab } from './settings_view_tab.js';
 
 /**
- * Toggleable modal settings menu with Games, View, Mouse, Keyboard, and Update tabs.
+ * Toggleable modal settings menu with Games, View, Mouse, Keyboard, and Update
+ * tabs.
  */
 export class SettingsDialog {
   private readonly host: HTMLElement;
@@ -45,6 +42,7 @@ export class SettingsDialog {
 
   /**
    * Creates the settings dialog and mounts it under the host.
+   *
    * @param host Parent element owning the modal overlay.
    * @param store Shared editor settings store.
    */
@@ -72,9 +70,7 @@ export class SettingsDialog {
     this.showTab('games');
   }
 
-  /**
-   * Shows the settings dialog.
-   */
+  /** Shows the settings dialog. */
   show(): void {
     if (this.isDisposed || this.isVisible) {
       return;
@@ -86,9 +82,7 @@ export class SettingsDialog {
     document.addEventListener('keydown', this.boundKeyDown);
   }
 
-  /**
-   * Hides the settings dialog.
-   */
+  /** Hides the settings dialog. */
   hide(): void {
     if (!this.isVisible) {
       return;
@@ -98,9 +92,7 @@ export class SettingsDialog {
     document.removeEventListener('keydown', this.boundKeyDown);
   }
 
-  /**
-   * Toggles dialog visibility.
-   */
+  /** Toggles dialog visibility. */
   toggle(): void {
     if (this.isVisible) {
       this.hide();
@@ -111,6 +103,7 @@ export class SettingsDialog {
 
   /**
    * Returns whether the dialog is open.
+   *
    * @returns True when visible.
    */
   isOpen(): boolean {
@@ -119,6 +112,7 @@ export class SettingsDialog {
 
   /**
    * Returns the active tab id.
+   *
    * @returns Active tab identifier.
    */
   getActiveTabId(): SettingsTabId {
@@ -127,6 +121,7 @@ export class SettingsDialog {
 
   /**
    * Selects a settings tab by id.
+   *
    * @param tabId Tab to show.
    */
   showTab(tabId: SettingsTabId): void {
@@ -141,6 +136,7 @@ export class SettingsDialog {
 
   /**
    * Returns the backdrop element for tests.
+   *
    * @returns Backdrop overlay.
    */
   getBackdropElement(): HTMLElement {
@@ -149,6 +145,7 @@ export class SettingsDialog {
 
   /**
    * Returns the panel element for tests.
+   *
    * @returns Panel card.
    */
   getPanelElement(): HTMLElement {
@@ -157,15 +154,14 @@ export class SettingsDialog {
 
   /**
    * Returns the content host element for tests.
+   *
    * @returns Tab panel host.
    */
   getContentElement(): HTMLElement {
     return this.contentHost;
   }
 
-  /**
-   * Removes the dialog and clears subscriptions.
-   */
+  /** Removes the dialog and clears subscriptions. */
   dispose(): void {
     if (this.isDisposed) {
       return;
@@ -177,9 +173,7 @@ export class SettingsDialog {
     this.backdrop.remove();
   }
 
-  /**
-   * Builds the full dialog DOM tree.
-   */
+  /** Builds the full dialog DOM tree. */
   private buildDialog(): void {
     styleSettingsBackdrop(this.backdrop);
     this.backdrop.setAttribute('role', 'dialog');
@@ -198,6 +192,7 @@ export class SettingsDialog {
 
   /**
    * Builds the header with title and close control.
+   *
    * @returns Header element.
    */
   private buildHeader(): HTMLElement {
@@ -219,6 +214,7 @@ export class SettingsDialog {
 
   /**
    * Builds the tab bar buttons.
+   *
    * @returns Tab bar element.
    */
   private buildTabBar(): HTMLElement {
@@ -233,6 +229,7 @@ export class SettingsDialog {
 
   /**
    * Creates one tab button.
+   *
    * @param tabId Tab identifier.
    * @returns Tab button element.
    */
@@ -249,6 +246,7 @@ export class SettingsDialog {
 
   /**
    * Resolves the panel element for a tab id.
+   *
    * @param tabId Tab identifier.
    * @returns Panel root element.
    */
@@ -271,9 +269,7 @@ export class SettingsDialog {
     return this.gamesTab.getElement();
   }
 
-  /**
-   * Rebuilds the visible tab after store mutations.
-   */
+  /** Rebuilds the visible tab after store mutations. */
   private handleStoreChanged(): void {
     if (!this.isVisible) {
       this.gamesTab.rebuild();
@@ -286,9 +282,7 @@ export class SettingsDialog {
     this.refreshActiveTab();
   }
 
-  /**
-   * Rebuilds and re-shows the active tab contents.
-   */
+  /** Rebuilds and re-shows the active tab contents. */
   private refreshActiveTab(): void {
     this.gamesTab.rebuild();
     this.viewTab.rebuild();
@@ -300,6 +294,7 @@ export class SettingsDialog {
 
   /**
    * Closes on Escape.
+   *
    * @param event Keyboard event.
    */
   private handleKeyDown(event: KeyboardEvent): void {
@@ -311,6 +306,7 @@ export class SettingsDialog {
 
   /**
    * Closes when clicking the dimmed backdrop outside the panel.
+   *
    * @param event Pointer event.
    */
   private handleBackdropPointerDown(event: PointerEvent): void {
@@ -319,9 +315,7 @@ export class SettingsDialog {
     }
   }
 
-  /**
-   * Re-triggers entrance animations when reopening.
-   */
+  /** Re-triggers entrance animations when reopening. */
   private restartEntranceAnimation(): void {
     this.backdrop.classList.remove('settings-dialog-backdrop');
     this.panel.classList.remove('settings-dialog-panel');

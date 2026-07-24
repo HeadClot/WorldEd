@@ -155,10 +155,7 @@ describe('SceneJSON round-trip validation', () => {
   it('should round-trip buffer geometry type through deserializer', () => {
     const sourceGroup = new THREE.Group();
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3),
-    );
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3));
     geometry.computeVertexNormals();
     const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x123456 }));
     mesh.name = 'BufferMesh';
@@ -209,6 +206,7 @@ describe('SceneJSON round-trip validation', () => {
 
 /**
  * Creates a mesh with the specified geometry type.
+ *
  * @param geometryType The type of geometry to create.
  * @returns The created mesh.
  */

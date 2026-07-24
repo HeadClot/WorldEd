@@ -94,9 +94,7 @@ describe('BoundsGuideLines', () => {
   });
 
   it('should mark the occluded pass as a gizmo ghost', () => {
-    const occluded = guides
-      .getObject()
-      .children.find((child) => child.userData.isGizmoOccludedGhost === true);
+    const occluded = guides.getObject().children.find((child) => child.userData.isGizmoOccludedGhost === true);
     expect(occluded).toBeInstanceOf(THREE.LineSegments);
   });
 

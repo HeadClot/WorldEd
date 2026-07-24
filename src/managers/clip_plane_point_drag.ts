@@ -3,9 +3,7 @@ import { pointerEventToNdc } from '../utils/pointer_ndc.js';
 import { CLIP_MARKER_PICK_PIXELS } from './clip_plane_marker_style.js';
 import { GridSnap } from '../transform/grid_snap.js';
 
-/**
- * Screen-space picking and view-plane dragging for clip placement points.
- */
+/** Screen-space picking and view-plane dragging for clip placement points. */
 export class ClipPlanePointDrag {
   private raycaster: THREE.Raycaster;
   private ndc: THREE.Vector2;
@@ -16,6 +14,7 @@ export class ClipPlanePointDrag {
 
   /**
    * Creates a drag helper bound to snap settings.
+   *
    * @param gridSnap Shared grid snap configuration.
    */
   constructor(gridSnap: GridSnap) {
@@ -29,6 +28,7 @@ export class ClipPlanePointDrag {
 
   /**
    * Finds the placement point closest to the pointer within pick radius.
+   *
    * @param event Pointer event.
    * @param camera Viewport camera.
    * @param renderer Viewport renderer.
@@ -58,6 +58,7 @@ export class ClipPlanePointDrag {
 
   /**
    * Builds a view-aligned drag plane through the given world point.
+   *
    * @param point World point under the pointer.
    * @param camera Viewport camera.
    * @returns Plane for ray intersections during drag.
@@ -70,6 +71,7 @@ export class ClipPlanePointDrag {
 
   /**
    * Projects the pointer onto a drag plane and applies grid snap.
+   *
    * @param event Pointer event.
    * @param camera Viewport camera.
    * @param renderer Viewport renderer.
@@ -94,6 +96,7 @@ export class ClipPlanePointDrag {
 
   /**
    * Measures distance in CSS pixels between a world point and the pointer.
+   *
    * @param point World point.
    * @param camera Viewport camera.
    * @param rect Canvas bounding client rect.

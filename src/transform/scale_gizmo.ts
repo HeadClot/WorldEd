@@ -9,9 +9,7 @@ import {
   createGizmoOccludedMesh,
 } from './gizmo_visual_style.js';
 
-/**
- * Data stored alongside each scale handle for proper scene management.
- */
+/** Data stored alongside each scale handle for proper scene management. */
 interface ScaleData {
   group: THREE.Group;
   tipMesh: THREE.Mesh;
@@ -19,8 +17,8 @@ interface ScaleData {
 }
 
 /**
- * Creates the scale transform gizmo with stem and box tip for each axis.
- * Uses the same stem thickness and depth-aware materials as Move/Rotate.
+ * Creates the scale transform gizmo with stem and box tip for each axis. Uses
+ * the same stem thickness and depth-aware materials as Move/Rotate.
  */
 export class ScaleGizmo {
   private theme: typeof Theme;
@@ -29,6 +27,7 @@ export class ScaleGizmo {
 
   /**
    * Creates a new scale gizmo builder.
+   *
    * @param theme The theme containing gizmo color definitions.
    */
   constructor(theme: typeof Theme) {
@@ -39,6 +38,7 @@ export class ScaleGizmo {
 
   /**
    * Creates all 3 scale handles and returns them.
+   *
    * @returns An array of GizmoHandle instances for X, Y, Z axes.
    */
   createHandles(): GizmoHandle[] {
@@ -52,6 +52,7 @@ export class ScaleGizmo {
 
   /**
    * Returns all scene objects that need to be added to the gizmo group.
+   *
    * @returns An array of all Three.js objects created by this gizmo.
    */
   getAllSceneObjects(): THREE.Object3D[] {
@@ -60,9 +61,7 @@ export class ScaleGizmo {
     return objects;
   }
 
-  /**
-   * Disposes all geometries and materials created by this gizmo.
-   */
+  /** Disposes all geometries and materials created by this gizmo. */
   dispose(): void {
     this.scaleData.forEach((data) => this.disposeObject3D(data.group));
     this.scaleData = [];
@@ -71,6 +70,7 @@ export class ScaleGizmo {
 
   /**
    * Creates a single scale handle with a stem and box tip.
+   *
    * @param axis The gizmo axis for this handle.
    * @param color The hex color of the handle.
    * @param direction The unit direction vector for the handle orientation.
@@ -104,6 +104,7 @@ export class ScaleGizmo {
 
   /**
    * Creates a front-facing gizmo mesh with shared styling.
+   *
    * @param geometry Mesh geometry.
    * @param color Hex color.
    * @returns Configured front mesh.
@@ -116,6 +117,7 @@ export class ScaleGizmo {
 
   /**
    * Adds an occluded ghost mesh at the same local position as a front part.
+   *
    * @param group Parent group.
    * @param geometry Shared geometry.
    * @param color Hex color.
@@ -136,6 +138,7 @@ export class ScaleGizmo {
 
   /**
    * Stores the handle id on a mesh for raycast matching.
+   *
    * @param mesh The mesh to tag.
    * @param handleId The handle identifier.
    */
@@ -145,6 +148,7 @@ export class ScaleGizmo {
 
   /**
    * Aligns a group so its local Y axis points along the given direction.
+   *
    * @param group The group to rotate.
    * @param direction The target direction vector.
    */
@@ -157,6 +161,7 @@ export class ScaleGizmo {
 
   /**
    * Recursively disposes all geometries and materials of an object.
+   *
    * @param obj The object to dispose.
    */
   private disposeObject3D(obj: THREE.Object3D): void {
@@ -168,6 +173,7 @@ export class ScaleGizmo {
 
   /**
    * Disposes the geometry and material of a single mesh.
+   *
    * @param mesh The mesh to dispose.
    */
   private disposeMesh(mesh: THREE.Mesh): void {

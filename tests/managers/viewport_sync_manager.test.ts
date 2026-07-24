@@ -8,7 +8,9 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_edge_materials.js';
 
 /**
- * Creates a minimal Viewport2D mock with the methods required by ViewportSyncManager.
+ * Creates a minimal Viewport2D mock with the methods required by
+ * ViewportSyncManager.
+ *
  * @param scene The scene to associate with this viewport mock.
  * @returns A partial Viewport2D instance.
  */
@@ -20,7 +22,9 @@ function createViewport2DMock(scene: THREE.Scene): Viewport2D {
 }
 
 /**
- * Creates a minimal Viewport3D mock with the methods required by ViewportSyncManager.
+ * Creates a minimal Viewport3D mock with the methods required by
+ * ViewportSyncManager.
+ *
  * @param scene The scene to associate with this viewport mock.
  * @returns A partial Viewport3D instance.
  */
@@ -33,6 +37,7 @@ function createViewport3DMock(scene: THREE.Scene): Viewport3D {
 
 /**
  * Creates a world group with test child meshes at specified positions.
+ *
  * @param positions Array of position tuples for child meshes.
  * @returns The populated group.
  */
@@ -50,6 +55,7 @@ function createWorldGroupWithChildren(positions: [number, number, number][]): TH
 
 /**
  * Finds the first Group child in a scene (the viewport clone).
+ *
  * @param scene The scene to search.
  * @returns The first group child.
  */
@@ -229,6 +235,7 @@ describe('ViewportSyncManager', () => {
 
 /**
  * Hides every solid brush edge child on a brush mesh (3D distance cull).
+ *
  * @param brush Solid brush preview mesh.
  */
 function hideAllBrushEdges(brush: THREE.Mesh): void {
@@ -239,6 +246,7 @@ function hideAllBrushEdges(brush: THREE.Mesh): void {
 
 /**
  * Collects solid brush edge line children, including occluded passes.
+ *
  * @param mesh Brush preview mesh.
  * @returns Edge line segments.
  */

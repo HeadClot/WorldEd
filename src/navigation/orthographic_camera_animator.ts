@@ -4,8 +4,8 @@ import { CameraAnimationConfig } from './camera_animation_config.js';
 import { FrustumPlanes } from '../types/frustum_planes.js';
 
 /**
- * Smoothly animates an orthographic camera's frustum planes
- * to a target configuration using ease-out cubic interpolation.
+ * Smoothly animates an orthographic camera's frustum planes to a target
+ * configuration using ease-out cubic interpolation.
  */
 export class OrthographicCameraAnimator {
   private camera: THREE.OrthographicCamera;
@@ -21,9 +21,7 @@ export class OrthographicCameraAnimator {
   private duration: number;
   private animationActive: boolean;
 
-  /**
-   * Creates a new orthographic camera animator in an idle state.
-   */
+  /** Creates a new orthographic camera animator in an idle state. */
   constructor() {
     this.camera = null as unknown as THREE.OrthographicCamera;
     this.startLeft = 0;
@@ -41,6 +39,7 @@ export class OrthographicCameraAnimator {
 
   /**
    * Starts a new frustum animation to smoothly adjust camera frustum planes.
+   *
    * @param camera The orthographic camera to animate.
    * @param targetFrustum The target frustum plane values.
    * @param config Configuration controlling animation timing.
@@ -73,8 +72,9 @@ export class OrthographicCameraAnimator {
   }
 
   /**
-   * Advances the animation by one frame using the current time.
-   * Updates frustum planes and projection matrix if still in progress.
+   * Advances the animation by one frame using the current time. Updates frustum
+   * planes and projection matrix if still in progress.
+   *
    * @returns True if the animation is still running, false if complete.
    */
   update(): boolean {
@@ -92,8 +92,8 @@ export class OrthographicCameraAnimator {
   }
 
   /**
-   * Cancels the current animation and snaps the frustum
-   * to the interpolated state at the current progress.
+   * Cancels the current animation and snaps the frustum to the interpolated
+   * state at the current progress.
    */
   cancel(): void {
     if (!this.animationActive) return;
@@ -108,6 +108,7 @@ export class OrthographicCameraAnimator {
 
   /**
    * Checks whether an animation is currently in progress.
+   *
    * @returns True if the animator is actively animating.
    */
   isAnimating(): boolean {
@@ -116,6 +117,7 @@ export class OrthographicCameraAnimator {
 
   /**
    * Interpolates all four frustum planes between start and target.
+   *
    * @param t The normalized interpolation parameter.
    */
   private interpolateFrustumPlanes(t: number): void {
@@ -127,6 +129,7 @@ export class OrthographicCameraAnimator {
 
   /**
    * Performs linear interpolation between two numeric values.
+   *
    * @param a The start value.
    * @param b The end value.
    * @param t The interpolation parameter between 0 and 1.
@@ -136,9 +139,7 @@ export class OrthographicCameraAnimator {
     return a + (b - a) * t;
   }
 
-  /**
-   * Immediately sets the camera frustum to the target values.
-   */
+  /** Immediately sets the camera frustum to the target values. */
   private snapToTarget(): void {
     this.camera.left = this.targetLeft;
     this.camera.right = this.targetRight;

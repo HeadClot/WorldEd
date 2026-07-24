@@ -3,8 +3,9 @@ import { UndoCommand } from './undo_command.js';
 import { reparentSafely } from '../utils/hierarchy_utils.js';
 
 /**
- * Undoable command that reparents an object under a new parent in the hierarchy.
- * Preserves world transform so objects do not jump when moved in the outliner.
+ * Undoable command that reparents an object under a new parent in the
+ * hierarchy. Preserves world transform so objects do not jump when moved in the
+ * outliner.
  */
 export class ReparentCommand implements UndoCommand {
   private object: THREE.Object3D;
@@ -16,15 +17,12 @@ export class ReparentCommand implements UndoCommand {
 
   /**
    * Creates a reparent command.
+   *
    * @param object The object to move in the hierarchy.
    * @param newParent The destination parent.
    * @param insertBefore Optional sibling to insert before; null appends at end.
    */
-  constructor(
-    object: THREE.Object3D,
-    newParent: THREE.Object3D,
-    insertBefore: THREE.Object3D | null = null,
-  ) {
+  constructor(object: THREE.Object3D, newParent: THREE.Object3D, insertBefore: THREE.Object3D | null = null) {
     this.object = object;
     this.newParent = newParent;
     this.previousParent = object.parent;
@@ -33,9 +31,7 @@ export class ReparentCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Reparents the object under the new parent, preserving world transform.
-   */
+  /** Reparents the object under the new parent, preserving world transform. */
   execute(): void {
     if (this.executed) return;
     if (this.object === this.newParent) return;
@@ -43,9 +39,7 @@ export class ReparentCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores the object to its previous parent and sibling index.
-   */
+  /** Restores the object to its previous parent and sibling index. */
   undo(): void {
     if (!this.executed) return;
     if (!this.previousParent) {
@@ -60,6 +54,7 @@ export class ReparentCommand implements UndoCommand {
 
   /**
    * Returns a short description for status/debug display.
+   *
    * @returns Human-readable command name.
    */
   getDescription(): string {
@@ -68,6 +63,7 @@ export class ReparentCommand implements UndoCommand {
 
   /**
    * Reparents under a target parent, optionally inserting before a sibling.
+   *
    * @param parent The destination parent.
    * @param before Optional sibling to insert before.
    */
@@ -84,6 +80,7 @@ export class ReparentCommand implements UndoCommand {
 
   /**
    * Reparents while keeping the object's world transform stable.
+   *
    * @param parent The new parent object.
    * @returns True if reparenting succeeded.
    */
@@ -105,6 +102,7 @@ export class ReparentCommand implements UndoCommand {
 
   /**
    * Moves a child to a specific index within a parent.
+   *
    * @param parent The parent whose children array is reordered.
    * @param child The child to move.
    * @param index The destination index.
@@ -119,6 +117,7 @@ export class ReparentCommand implements UndoCommand {
 
   /**
    * Restores a child to a previous sibling index under a parent.
+   *
    * @param parent The parent object.
    * @param index The previous sibling index.
    */
@@ -128,6 +127,7 @@ export class ReparentCommand implements UndoCommand {
 
   /**
    * Finds the current sibling index of an object in its parent.
+   *
    * @param object The object to locate.
    * @returns The sibling index, or -1 if unparented.
    */

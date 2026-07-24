@@ -6,8 +6,8 @@ import {
 } from '../algorithm/solid_math_constants.js';
 
 /**
- * Plane stored as unit normal and offset (ax + by + cz + d = 0).
- * Positive half-space is outside the solid for outward-facing brush planes.
+ * Plane stored as unit normal and offset (ax + by + cz + d = 0). Positive
+ * half-space is outside the solid for outward-facing brush planes.
  */
 export class SolidPlane {
   readonly normal: THREE.Vector3;
@@ -15,6 +15,7 @@ export class SolidPlane {
 
   /**
    * Creates a plane from a normal and offset.
+   *
    * @param normal Plane normal (copied and normalized when finite).
    * @param offset Plane offset d in ax+by+cz+d=0 form.
    */
@@ -31,6 +32,7 @@ export class SolidPlane {
 
   /**
    * Builds a plane from three non-collinear points (right-hand winding).
+   *
    * @param a First point.
    * @param b Second point.
    * @param c Third point.
@@ -46,7 +48,9 @@ export class SolidPlane {
 
   /**
    * Builds a plane from Newell's method over a polygon ring.
-   * @param points Ordered polygon vertices (convex, CCW when viewed along normal).
+   *
+   * @param points Ordered polygon vertices (convex, CCW when viewed along
+   *   normal).
    * @returns Best-fit plane for the polygon.
    */
   static fromPolygon(points: THREE.Vector3[]): SolidPlane {
@@ -68,7 +72,9 @@ export class SolidPlane {
   }
 
   /**
-   * Signed distance from point to plane (positive = outside for outward normals).
+   * Signed distance from point to plane (positive = outside for outward
+   * normals).
+   *
    * @param point World or local point.
    * @returns Signed distance.
    */
@@ -78,6 +84,7 @@ export class SolidPlane {
 
   /**
    * Returns true when the point is strictly outside the plane half-space.
+   *
    * @param point Point to test.
    * @param epsilon Optional fat-plane width.
    * @returns True if outside.
@@ -88,6 +95,7 @@ export class SolidPlane {
 
   /**
    * Returns true when two planes are nearly coplanar and same orientation.
+   *
    * @param other Other plane.
    * @returns True when normals and offsets match within tolerances.
    */
@@ -99,6 +107,7 @@ export class SolidPlane {
 
   /**
    * Returns true when two planes are nearly coplanar and opposite orientation.
+   *
    * @param other Other plane.
    * @returns True when reverse-aligned.
    */
@@ -110,6 +119,7 @@ export class SolidPlane {
 
   /**
    * Transforms the plane by an affine matrix (for brush local → model space).
+   *
    * @param matrix Transform matrix.
    * @returns Transformed plane.
    */
@@ -124,6 +134,7 @@ export class SolidPlane {
 
   /**
    * Clones this plane.
+   *
    * @returns Independent copy.
    */
   clone(): SolidPlane {

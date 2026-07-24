@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Snapshot of an object's transform before a rotation operation.
- * Stores original position and quaternion so undo can restore both.
+ * Snapshot of an object's transform before a rotation operation. Stores
+ * original position and quaternion so undo can restore both.
  */
 export interface ObjectRotationSnapshot {
   object: THREE.Mesh;
@@ -12,8 +12,8 @@ export interface ObjectRotationSnapshot {
 }
 
 /**
- * Undoable command for rotate operations.
- * Stores original transforms and the rotation parameters for each object.
+ * Undoable command for rotate operations. Stores original transforms and the
+ * rotation parameters for each object.
  */
 export class RotateCommand implements UndoCommand {
   private snapshots: ObjectRotationSnapshot[];
@@ -23,26 +23,20 @@ export class RotateCommand implements UndoCommand {
 
   /**
    * Creates a new rotate command.
+   *
    * @param snapshots The rotation snapshots of all affected objects.
    * @param pivot The rotation pivot point.
    * @param axis The rotation axis vector.
    * @param angle The rotation angle in radians.
    */
-  constructor(
-    snapshots: ObjectRotationSnapshot[],
-    pivot: THREE.Vector3,
-    axis: THREE.Vector3,
-    angle: number,
-  ) {
+  constructor(snapshots: ObjectRotationSnapshot[], pivot: THREE.Vector3, axis: THREE.Vector3, angle: number) {
     this.snapshots = snapshots;
     this.pivot = pivot.clone();
     this.axis = axis.clone();
     this.angle = angle;
   }
 
-  /**
-   * Executes the rotation by applying orientation and orbit around the pivot.
-   */
+  /** Executes the rotation by applying orientation and orbit around the pivot. */
   execute(): void {
     const normalizedAxis = this.axis.clone().normalize();
     const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(normalizedAxis, this.angle);
@@ -51,9 +45,7 @@ export class RotateCommand implements UndoCommand {
     });
   }
 
-  /**
-   * Undoes the rotation by restoring original positions and orientations.
-   */
+  /** Undoes the rotation by restoring original positions and orientations. */
   undo(): void {
     this.snapshots.forEach((snapshot) => {
       snapshot.object.position.copy(snapshot.originalPosition);
@@ -62,14 +54,13 @@ export class RotateCommand implements UndoCommand {
   }
 
   /**
-   * Applies the stored rotation to a single snapshot target from its original state.
+   * Applies the stored rotation to a single snapshot target from its original
+   * state.
+   *
    * @param snapshot The object snapshot to rotate from original state.
    * @param rotationQuaternion The rotation quaternion to apply.
    */
-  private applyRotationToSnapshot(
-    snapshot: ObjectRotationSnapshot,
-    rotationQuaternion: THREE.Quaternion,
-  ): void {
+  private applyRotationToSnapshot(snapshot: ObjectRotationSnapshot, rotationQuaternion: THREE.Quaternion): void {
     const relativePos = snapshot.originalPosition.clone().sub(this.pivot);
     relativePos.applyQuaternion(rotationQuaternion);
     snapshot.object.position.copy(relativePos.add(this.pivot));

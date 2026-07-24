@@ -13,9 +13,9 @@ import { BoundsDragController } from './bounds_drag_controller.js';
 import { TransformCommandPusher } from './transform_command_pusher.js';
 
 /**
- * Handles the drag interaction cycle for transform gizmo operations.
- * Uses absolute transforms from a pre-drag snapshot so results stay stable.
- * Rotation uses axis-plane angle measurement; scale uses distance ratios.
+ * Handles the drag interaction cycle for transform gizmo operations. Uses
+ * absolute transforms from a pre-drag snapshot so results stay stable. Rotation
+ * uses axis-plane angle measurement; scale uses distance ratios.
  */
 export class TransformHandler {
   private transformGizmo: TransformGizmo;
@@ -27,10 +27,12 @@ export class TransformHandler {
 
   /**
    * Creates a new transform handler.
+   *
    * @param transformGizmo The gizmo orchestrator.
    * @param gizmoRaycaster The raycaster for handle picking.
    * @param transformExecutor The executor for applying transforms.
-   * @param transformConstraint The constraint math utility (kept for API stability).
+   * @param transformConstraint The constraint math utility (kept for API
+   *   stability).
    * @param commandStack Optional command stack for undo/redo support.
    */
   constructor(
@@ -50,25 +52,23 @@ export class TransformHandler {
       gizmoRaycaster,
       transformExecutor,
     );
-    this.commandPusher = new TransformCommandPusher(
-      this.session,
-      transformGizmo,
-      transformExecutor,
-      commandStack,
-    );
+    this.commandPusher = new TransformCommandPusher(this.session, transformGizmo, transformExecutor, commandStack);
   }
 
   /**
    * Sets texture lock settings used when resizing or scaling meshes.
-   * @param settings Shared texture lock settings, or null to disable lock rebake.
+   *
+   * @param settings Shared texture lock settings, or null to disable lock
+   *   rebake.
    */
   setTextureLockSettings(settings: TextureLockSettings | null): void {
     this.boundsDragController.setTextureLockSettings(settings);
   }
 
   /**
-   * Processes a pointer down event on the gizmo.
-   * Snapshots the pre-drag state of selected objects for undo support.
+   * Processes a pointer down event on the gizmo. Snapshots the pre-drag state
+   * of selected objects for undo support.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -88,15 +88,7 @@ export class TransformHandler {
   ): void {
     if (this.isMultiSelectModifierHeld(event)) return;
     if (this.transformGizmo.getMode() === TransformMode.BOUNDS) {
-      this.boundsDragController.beginPointerDown(
-        camera,
-        renderer,
-        event,
-        handles,
-        selectedObjects,
-        pivot,
-        gizmoGroup,
-      );
+      this.boundsDragController.beginPointerDown(camera, renderer, event, handles, selectedObjects, pivot, gizmoGroup);
       return;
     }
     const picked = this.gizmoRaycaster.pickHandle(handles, camera, renderer, event, gizmoGroup);
@@ -107,6 +99,7 @@ export class TransformHandler {
   /**
    * Returns true when the event is a multi-select click (Shift/Ctrl/Meta).
    * Those clicks must reach object selection rather than gizmo/bounds picks.
+   *
    * @param event The pointer event.
    * @returns True when multi-select modifiers are held.
    */
@@ -116,6 +109,7 @@ export class TransformHandler {
 
   /**
    * Starts a standard translate/rotate/scale handle drag.
+   *
    * @param picked The picked gizmo handle.
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
@@ -145,6 +139,7 @@ export class TransformHandler {
 
   /**
    * Processes a pointer move event during drag.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -182,17 +177,15 @@ export class TransformHandler {
   }
 
   /**
-   * Processes a pointer up event to end the drag.
-   * Bounds face presses without real movement are treated as selection clicks
-   * so nested objects remain reachable while bounds drag still works.
+   * Processes a pointer up event to end the drag. Bounds face presses without
+   * real movement are treated as selection clicks so nested objects remain
+   * reachable while bounds drag still works.
+   *
    * @param pivot The transform pivot point used during the drag.
    * @param selectedObjects The selected meshes that were transformed.
    * @returns True when the press should run object click-through selection.
    */
-  onPointerUp(
-    pivot: THREE.Vector3 = new THREE.Vector3(),
-    selectedObjects: THREE.Mesh[] = [],
-  ): boolean {
+  onPointerUp(pivot: THREE.Vector3 = new THREE.Vector3(), selectedObjects: THREE.Mesh[] = []): boolean {
     const selectionClick = this.isBoundsFaceClickWithoutDrag();
     if (selectionClick) {
       this.restoreMeshesFromSnapshot(selectedObjects);
@@ -206,8 +199,11 @@ export class TransformHandler {
   }
 
   /**
-   * Returns true for a bounds face press that never moved past the click threshold.
-   * @returns True when pointer-up should cycle object selection instead of commit.
+   * Returns true for a bounds face press that never moved past the click
+   * threshold.
+   *
+   * @returns True when pointer-up should cycle object selection instead of
+   *   commit.
    */
   private isBoundsFaceClickWithoutDrag(): boolean {
     if (!this.session.dragActive) return false;
@@ -217,7 +213,9 @@ export class TransformHandler {
   }
 
   /**
-   * Marks bounds face interaction as a drag once screen movement exceeds threshold.
+   * Marks bounds face interaction as a drag once screen movement exceeds
+   * threshold.
+   *
    * @param event The pointer move event.
    */
   private trackBoundsFacePointerMovement(event: MouseEvent): void {
@@ -233,6 +231,7 @@ export class TransformHandler {
 
   /**
    * Restores mesh transforms from the pre-drag snapshot (cancelled face click).
+   *
    * @param selectedObjects Meshes that may have been nudged during the press.
    */
   private restoreMeshesFromSnapshot(selectedObjects: THREE.Mesh[]): void {
@@ -248,6 +247,7 @@ export class TransformHandler {
 
   /**
    * Returns whether a drag operation is currently in progress.
+   *
    * @returns True if dragging is active.
    */
   isDragging(): boolean {
@@ -256,6 +256,7 @@ export class TransformHandler {
 
   /**
    * Returns the currently active gizmo axis.
+   *
    * @returns The active GizmoAxis, or null if not dragging.
    */
   getActiveAxis(): GizmoAxis | null {
@@ -264,6 +265,7 @@ export class TransformHandler {
 
   /**
    * Checks if the handler is currently busy with a drag.
+   *
    * @returns True if the handler should consume events.
    */
   isBusy(): boolean {
@@ -272,6 +274,7 @@ export class TransformHandler {
 
   /**
    * Captures the mode-specific start sample used during drag.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -299,6 +302,7 @@ export class TransformHandler {
 
   /**
    * Stores the initial plane intersection for translation.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -311,16 +315,12 @@ export class TransformHandler {
     pivot: THREE.Vector3,
   ): void {
     const plane = TransformProjectionMath.buildCameraPlane(camera, pivot);
-    this.session.initialMousePosition = this.gizmoRaycaster.projectMouseToPlane(
-      camera,
-      renderer,
-      event,
-      plane,
-    );
+    this.session.initialMousePosition = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
   }
 
   /**
    * Stores the initial direction or screen position for rotation.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -343,12 +343,7 @@ export class TransformHandler {
       return;
     }
     this.session.rotationPlane.setFromNormalAndCoplanarPoint(axis, pivot);
-    const hit = this.gizmoRaycaster.projectMouseToPlane(
-      camera,
-      renderer,
-      event,
-      this.session.rotationPlane,
-    );
+    const hit = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, this.session.rotationPlane);
     if (!hit) {
       this.session.useScreenSpaceRotation = true;
       return;
@@ -363,6 +358,7 @@ export class TransformHandler {
 
   /**
    * Stores the initial axis distance for scale ratio calculation.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -391,6 +387,7 @@ export class TransformHandler {
 
   /**
    * Applies translation from drag start using camera-plane mouse delta.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -409,15 +406,13 @@ export class TransformHandler {
     const totalDelta = currentMouse.clone().sub(this.session.initialMousePosition);
     const constrainedDelta = this.constrainDeltaToOrientedAxis(totalDelta, this.session.activeAxis);
     this.session.dragDeltaAccumulator.copy(constrainedDelta);
-    this.transformExecutor.applyAbsoluteTranslation(
-      objects,
-      this.session.initialPositions,
-      constrainedDelta,
-    );
+    this.transformExecutor.applyAbsoluteTranslation(objects, this.session.initialPositions, constrainedDelta);
   }
 
   /**
-   * Projects a world delta onto oriented gizmo axes (object-local when rotated).
+   * Projects a world delta onto oriented gizmo axes (object-local when
+   * rotated).
+   *
    * @param delta Full camera-plane mouse delta.
    * @param axis Active gizmo axis.
    * @returns Constrained world-space delta.
@@ -433,6 +428,7 @@ export class TransformHandler {
 
   /**
    * Applies rotation from drag start using axis-plane angle or screen space.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -463,6 +459,7 @@ export class TransformHandler {
 
   /**
    * Computes the signed rotation angle for the current pointer sample.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -478,12 +475,7 @@ export class TransformHandler {
     if (this.session.useScreenSpaceRotation || !this.session.initialRotationDirection) {
       return this.computeScreenSpaceRotationAngle(renderer, event);
     }
-    const hit = this.gizmoRaycaster.projectMouseToPlane(
-      camera,
-      renderer,
-      event,
-      this.session.rotationPlane,
-    );
+    const hit = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, this.session.rotationPlane);
     if (!hit) {
       return this.computeScreenSpaceRotationAngle(renderer, event);
     }
@@ -491,24 +483,18 @@ export class TransformHandler {
     if (currentDirection.lengthSq() < 1e-8) {
       return this.session.dragRotationAngle;
     }
-    return TransformConstraint.computeRotationAngle(
-      this.session.initialRotationDirection,
-      currentDirection,
-      axis,
-    );
+    return TransformConstraint.computeRotationAngle(this.session.initialRotationDirection, currentDirection, axis);
   }
 
   /**
-   * Computes rotation from horizontal/vertical screen mouse movement.
-   * Used when the rotation plane is edge-on to the camera.
+   * Computes rotation from horizontal/vertical screen mouse movement. Used when
+   * the rotation plane is edge-on to the camera.
+   *
    * @param renderer The viewport renderer.
    * @param event The pointer event.
    * @returns Signed rotation angle in radians.
    */
-  private computeScreenSpaceRotationAngle(
-    renderer: THREE.WebGLRenderer,
-    event: MouseEvent,
-  ): number {
+  private computeScreenSpaceRotationAngle(renderer: THREE.WebGLRenderer, event: MouseEvent): number {
     if (!this.session.initialScreenPosition) return 0;
     const current = TransformProjectionMath.getScreenPosition(renderer, event);
     const deltaX = current.x - this.session.initialScreenPosition.x;
@@ -518,6 +504,7 @@ export class TransformHandler {
 
   /**
    * Applies scale from drag start using signed distance ratio along the axis.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -538,10 +525,7 @@ export class TransformHandler {
       this.transformGizmo.getOrientation(),
     );
     const currentDistance = hit.clone().sub(this.session.dragPivot).dot(axis);
-    const factor = TransformConstraint.computeScaleFactor(
-      this.session.initialDistanceAlongAxis,
-      currentDistance,
-    );
+    const factor = TransformConstraint.computeScaleFactor(this.session.initialDistanceAlongAxis, currentDistance);
     this.session.dragScaleFactor = factor;
     this.transformExecutor.applyAbsoluteScale(
       objects,

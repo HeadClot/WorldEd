@@ -1,6 +1,6 @@
 /**
- * The axis restriction for alignment operations.
- * Determines which world axes will be affected by alignment.
+ * The axis restriction for alignment operations. Determines which world axes
+ * will be affected by alignment.
  */
 export enum AlignmentAxis {
   /** Restrict alignment to the X axis only. */

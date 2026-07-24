@@ -11,9 +11,7 @@ export class CameraFramer {
   private boundingVolumeComputer: BoundingVolumeComputer;
   private readonly cornerScratch: THREE.Vector3[];
 
-  /**
-   * Creates a new camera framer with a fresh bounding volume computer.
-   */
+  /** Creates a new camera framer with a fresh bounding volume computer. */
   constructor() {
     this.boundingVolumeComputer = new BoundingVolumeComputer();
     this.cornerScratch = this.createCornerScratchVectors();
@@ -21,6 +19,7 @@ export class CameraFramer {
 
   /**
    * Allocates eight vectors used when projecting box corners into camera space.
+   *
    * @returns An array of reusable corner vectors.
    */
   private createCornerScratchVectors(): THREE.Vector3[] {
@@ -28,10 +27,11 @@ export class CameraFramer {
   }
 
   /**
-   * Computes the target position and look-at point for a perspective camera
-   * so that the bounding sphere fits within the viewport.
-   * Preserves the camera's current world view direction: look-at is the sphere
-   * center and position is placed along that direction at the fit distance.
+   * Computes the target position and look-at point for a perspective camera so
+   * that the bounding sphere fits within the viewport. Preserves the camera's
+   * current world view direction: look-at is the sphere center and position is
+   * placed along that direction at the fit distance.
+   *
    * @param boundingSphere The sphere enclosing the target objects.
    * @param camera The perspective camera to position.
    * @param paddingFactor The multiplier for extra space around the sphere.
@@ -56,6 +56,7 @@ export class CameraFramer {
    * Computes the target orthographic frustum planes so that the bounding box
    * fits within the viewport with the given padding, in camera view space.
    * Preserves the current aspect ratio of the orthographic frustum.
+   *
    * @param boundingBox The axis-aligned bounding box of target objects.
    * @param camera The orthographic camera to adjust.
    * @param paddingFactor The multiplier for extra space around the box.
@@ -84,6 +85,7 @@ export class CameraFramer {
 
   /**
    * Projects a world-space bounding box into camera view space and measures it.
+   *
    * @param boundingBox The world-space axis-aligned box.
    * @param camera The orthographic camera defining view space.
    * @returns Center and size of the projected extents in view X/Y.
@@ -115,6 +117,7 @@ export class CameraFramer {
 
   /**
    * Writes the eight corners of a bounding box into the scratch array.
+   *
    * @param boundingBox The box whose corners are needed.
    */
   private fillBoxCorners(boundingBox: THREE.Box3): void {
@@ -132,6 +135,7 @@ export class CameraFramer {
 
   /**
    * Reads the aspect ratio of the current orthographic frustum.
+   *
    * @param camera The orthographic camera.
    * @returns Width over height, or 1 when the frustum is degenerate.
    */
@@ -143,8 +147,9 @@ export class CameraFramer {
   }
 
   /**
-   * Expands a content size so it fills the viewport without cropping,
-   * while matching the given aspect ratio.
+   * Expands a content size so it fills the viewport without cropping, while
+   * matching the given aspect ratio.
+   *
    * @param contentWidth Content width in view space.
    * @param contentHeight Content height in view space.
    * @param aspect Desired frustum aspect ratio (width / height).

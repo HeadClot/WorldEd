@@ -13,15 +13,9 @@ describe('ScaleCommand', () => {
   let factor: number;
 
   beforeEach(() => {
-    mesh1 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    mesh1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     mesh1.position.set(2, 0, 0);
-    mesh2 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    mesh2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     mesh2.position.set(0, 3, 0);
     snapshots = [
       {

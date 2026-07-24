@@ -3,12 +3,13 @@ import { SolidPlane } from '../brush/solid_plane.js';
 import { ConvexPolygonClipper } from './convex_polygon_clipper.js';
 
 /**
- * Splits a convex surface polygon by an arrangement of planes so each
- * resulting fragment has constant solid membership against those half-spaces.
+ * Splits a convex surface polygon by an arrangement of planes so each resulting
+ * fragment has constant solid membership against those half-spaces.
  */
 export class SurfaceFragmentSplitter {
   /**
    * Splits a polygon by every provided plane into atomic fragments.
+   *
    * @param polygon Source convex polygon.
    * @param planes Planes that may cut the polygon.
    * @returns List of non-empty convex fragments.
@@ -24,14 +25,12 @@ export class SurfaceFragmentSplitter {
 
   /**
    * Splits every fragment by a single plane into inside and outside pieces.
+   *
    * @param fragments Current fragments.
    * @param plane Clipping plane.
    * @returns Updated fragment list.
    */
-  private static splitFragmentsByPlane(
-    fragments: THREE.Vector3[][],
-    plane: SolidPlane,
-  ): THREE.Vector3[][] {
+  private static splitFragmentsByPlane(fragments: THREE.Vector3[][], plane: SolidPlane): THREE.Vector3[][] {
     const next: THREE.Vector3[][] = [];
     for (const fragment of fragments) {
       if (!this.planeLikelyCutsPolygon(fragment, plane)) {
@@ -47,6 +46,7 @@ export class SurfaceFragmentSplitter {
 
   /**
    * Quick reject when all vertices lie clearly on one side of a plane.
+   *
    * @param polygon Polygon vertices.
    * @param plane Candidate cut plane.
    * @returns True when the plane may cut the polygon.

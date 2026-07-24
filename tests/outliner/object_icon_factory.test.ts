@@ -32,10 +32,7 @@ describe('ObjectIconFactory.getIcon', () => {
   });
 
   it('should return cylinder icon for CylinderGeometry mesh', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(1, 1, 1, 8),
-      new THREE.MeshBasicMaterial(),
-    );
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshBasicMaterial());
     const icon = ObjectIconFactory.getIcon(mesh);
     expect(icon.character).toBe('⬡');
     expect(icon.color).toBe('#1abc9c');

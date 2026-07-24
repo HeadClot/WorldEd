@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EditorSettingsStore } from '../../src/settings/editor_settings_store.js';
-import {
-  GAME_PROFILE_INDEX_KEY,
-  GAME_PROFILE_STORAGE_PREFIX,
-} from '../../src/settings/game_profile_repository.js';
+import { GAME_PROFILE_INDEX_KEY, GAME_PROFILE_STORAGE_PREFIX } from '../../src/settings/game_profile_repository.js';
 import { MemorySettingsStorage } from '../../src/settings/settings_storage.js';
 import { parseGameProfileJson } from '../../src/settings/game_profile_json.js';
 
@@ -64,9 +61,7 @@ describe('EditorSettingsStore', () => {
 
     expect(imported.coordinateSpace.isCustom).toBe(true);
     expect(imported.coordinateSpace.presetId).not.toBe(custom.presetId);
-    expect(
-      store.setCustomCoordinateSpaceAxis(imported.coordinateSpace.presetId, 'forward', '-z'),
-    ).toBe(true);
+    expect(store.setCustomCoordinateSpaceAxis(imported.coordinateSpace.presetId, 'forward', '-z')).toBe(true);
     expect(store.getActiveGameProfile()!.coordinateSpace.handedness).toBe('right');
   });
 
@@ -242,6 +237,7 @@ describe('EditorSettingsStore', () => {
 
 /**
  * Creates a shortcut binding for store tests.
+ *
  * @param code KeyboardEvent.code value.
  * @returns Shortcut binding without modifiers.
  */

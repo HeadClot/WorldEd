@@ -5,9 +5,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { mapPreviewTriangleToBrushFace } from '../../src/solid/model/brush_preview_face_map.js';
 import { computeTriangleNormal } from '../../src/selection/triangle_geometry_utils.js';
 
-/**
- * Preview box triangles must map to wing-edge brush faces by normal, not tri/2.
- */
+/** Preview box triangles must map to wing-edge brush faces by normal, not tri/2. */
 describe('brush_preview_face_map', () => {
   it('maps each preview triangle to the brush face with the matching normal', () => {
     const model = new SolidModel('FaceMap');
@@ -20,10 +18,7 @@ describe('brush_preview_face_map', () => {
       expect(surfaceIndex).toBeGreaterThanOrEqual(0);
       expect(surfaceIndex).toBeLessThan(6);
       const triNormal = computeTriangleNormal(mesh.geometry, triangleIndex);
-      const solidNormal = triNormal
-        .clone()
-        .applyMatrix3(new THREE.Matrix3().getNormalMatrix(mesh.matrix))
-        .normalize();
+      const solidNormal = triNormal.clone().applyMatrix3(new THREE.Matrix3().getNormalMatrix(mesh.matrix)).normalize();
       const planeNormal = modelBrush.planes[surfaceIndex].normal;
       expect(planeNormal.dot(solidNormal)).toBeGreaterThan(0.9);
     }

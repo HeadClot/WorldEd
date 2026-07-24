@@ -13,35 +13,23 @@ import { createContentMaterial } from '../../materials/content_material_factory.
 import { DECORATIVE_EDGE_USERDATA_KEY, removeDecorativeEdges } from '../../utils/mesh_edge_sync.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
 import { Theme } from '../../theme.js';
-import {
-  FaceTextureMapping,
-  createDefaultFaceTextureMapping,
-} from '../../texture/face_texture_mapping.js';
-import {
-  getFaceTextureMaps,
-  setFaceTextureMapsShared,
-} from '../../texture/face_texture_storage.js';
+import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/face_texture_mapping.js';
+import { getFaceTextureMaps, setFaceTextureMapsShared } from '../../texture/face_texture_storage.js';
 import { rebuildSolidResultMaterials } from '../../texture/surface_material_builder.js';
 import { forBatchesAsync } from '../../utils/async_yield.js';
 
-/**
- * UserData key marking the solid model root group.
- */
+/** UserData key marking the solid model root group. */
 export const SOLID_MODEL_USERDATA_KEY = 'isSolidModel';
 
-/**
- * UserData key marking the compiled CSG result mesh under a solid model.
- */
+/** UserData key marking the compiled CSG result mesh under a solid model. */
 export const SOLID_MODEL_RESULT_USERDATA_KEY = 'isSolidModelResult';
 
-/**
- * UserData key storing per-triangle brush surface sources on the result mesh.
- */
+/** UserData key storing per-triangle brush surface sources on the result mesh. */
 export const SOLID_TRIANGLE_SOURCES_USERDATA_KEY = 'solidTriangleSources';
 
 /**
- * Registry of solid model roots (groups) to controller instances.
- * Kept off userData so Object3D.clone() remains safe.
+ * Registry of solid model roots (groups) to controller instances. Kept off
+ * userData so Object3D.clone() remains safe.
  */
 const solidModelRegistry = new WeakMap<THREE.Object3D, SolidModel>();
 
@@ -70,14 +58,15 @@ export class SolidModel {
   private interactiveGeometryCurrent: boolean;
   private lastSurfaceRegions: SolidSurfaceRegion[];
   /**
-   * When true, solid result UVs are baked in brush-local space (Tex Lock).
-   * When false, UVs are baked in world space.
+   * When true, solid result UVs are baked in brush-local space (Tex Lock). When
+   * false, UVs are baked in world space.
    */
   private uvStickToBrush: boolean;
   private static modelCounter = 0;
 
   /**
    * Creates a solid model group ready for the scene hierarchy.
+   *
    * @param name Optional display name.
    */
   constructor(name?: string) {
@@ -104,6 +93,7 @@ export class SolidModel {
 
   /**
    * Sets whether solid result UV bake sticks textures to each brush (Tex Lock).
+   *
    * @param enabled True for brush-local UV, false for world UV.
    */
   setUvStickToBrush(enabled: boolean): void {
@@ -119,6 +109,7 @@ export class SolidModel {
 
   /**
    * Back-compat alias used by older call sites that referred to mesh.
+   *
    * @returns Compiled result mesh.
    */
   get mesh(): THREE.Mesh {
@@ -126,8 +117,9 @@ export class SolidModel {
   }
 
   /**
-   * Returns whether an object is a solid model root group.
-   * Brush meshes and the result mesh do not match; use fromObject for those.
+   * Returns whether an object is a solid model root group. Brush meshes and the
+   * result mesh do not match; use fromObject for those.
+   *
    * @param object Candidate scene object.
    * @returns True only when the object itself is a solid model root.
    */
@@ -137,6 +129,7 @@ export class SolidModel {
 
   /**
    * Returns whether an object is the compiled result mesh of a solid model.
+   *
    * @param object Candidate object.
    * @returns True for result meshes.
    */
@@ -146,6 +139,7 @@ export class SolidModel {
 
   /**
    * Resolves the SolidModel for a root, brush, or result object.
+   *
    * @param object Candidate object.
    * @returns SolidModel or null.
    */
@@ -162,9 +156,10 @@ export class SolidModel {
   }
 
   /**
-   * Resyncs brush order from the scene graph and rebuilds every solid under a root.
-   * Call after outliner reparent when evaluation order must be fully recompiled.
-   * Prefer refreshAfterHistoryChange for undo/redo of transforms.
+   * Resyncs brush order from the scene graph and rebuilds every solid under a
+   * root. Call after outliner reparent when evaluation order must be fully
+   * recompiled. Prefer refreshAfterHistoryChange for undo/redo of transforms.
+   *
    * @param root Scene or world root to scan.
    */
   static rebuildAllUnder(root: THREE.Object3D): void {
@@ -176,9 +171,10 @@ export class SolidModel {
   }
 
   /**
-   * After undo/redo: only recompile solids that actually changed.
-   * Transform undos use partial CSG; brush-order changes force a full model rebuild.
+   * After undo/redo: only recompile solids that actually changed. Transform
+   * undos use partial CSG; brush-order changes force a full model rebuild.
    * Texture-only undos that already remeshed presentation are left alone.
+   *
    * @param root Scene or world root to scan.
    */
   static refreshAfterHistoryChange(root: THREE.Object3D): void {
@@ -189,6 +185,7 @@ export class SolidModel {
 
   /**
    * Collects registered solid models under a scene root.
+   *
    * @param root Scene or world root.
    * @returns Unique solid models.
    */
@@ -203,8 +200,8 @@ export class SolidModel {
   }
 
   /**
-   * Syncs mesh poses / brush order after an external edit (undo, redo).
-   * Full rebuild only when evaluation order changed; otherwise partial CSG.
+   * Syncs mesh poses / brush order after an external edit (undo, redo). Full
+   * rebuild only when evaluation order changed; otherwise partial CSG.
    */
   refreshAfterHistoryChange(): void {
     const previousOrder = this.compiler.getLastBrushOrder();
@@ -222,6 +219,7 @@ export class SolidModel {
 
   /**
    * Returns brush instances in tree order.
+   *
    * @returns Brush list copy.
    */
   getBrushes(): SolidBrushInstance[] {
@@ -230,6 +228,7 @@ export class SolidModel {
 
   /**
    * Returns the number of brushes.
+   *
    * @returns Brush count.
    */
   getBrushCount(): number {
@@ -238,6 +237,7 @@ export class SolidModel {
 
   /**
    * Finds a brush by id.
+   *
    * @param id Brush id.
    * @returns Brush or undefined.
    */
@@ -247,6 +247,7 @@ export class SolidModel {
 
   /**
    * Finds a brush by its scene mesh.
+   *
    * @param mesh Candidate mesh.
    * @returns Brush or undefined.
    */
@@ -256,6 +257,7 @@ export class SolidModel {
 
   /**
    * Returns the compiled result mesh.
+   *
    * @returns Result mesh.
    */
   getResultMesh(): THREE.Mesh {
@@ -264,14 +266,12 @@ export class SolidModel {
 
   /**
    * Adds a centered box brush as a selectable child mesh and rebuilds.
+   *
    * @param size Cube edge length.
    * @param operation CSG operation.
    * @returns Created brush instance.
    */
-  addBoxBrush(
-    size: number = 2,
-    operation: SolidOperation = SolidOperation.Additive,
-  ): SolidBrushInstance {
+  addBoxBrush(size: number = 2, operation: SolidOperation = SolidOperation.Additive): SolidBrushInstance {
     this.brushCounter += 1;
     const name = `Brush${this.padNumber(this.brushCounter)}`;
     const brush = SolidBrushFactory.createCenteredBox(size, size, size);
@@ -287,6 +287,7 @@ export class SolidModel {
 
   /**
    * Adds a prebuilt brush instance, creating a preview mesh when missing.
+   *
    * @param instance Brush instance to own.
    * @param previewSize Size used when creating a default box preview.
    */
@@ -299,15 +300,13 @@ export class SolidModel {
   /**
    * Adds many brush instances and optionally performs a single CSG rebuild.
    * Used by map importers to avoid rebuilding after every solid.
+   *
    * @param instances Brush instances to own (previews attached when missing).
    * @param previewSize Fallback box size when an instance has no mesh.
-   * @param rebuild When true, recompiles the result mesh once after all inserts.
+   * @param rebuild When true, recompiles the result mesh once after all
+   *   inserts.
    */
-  addBrushInstancesBatch(
-    instances: SolidBrushInstance[],
-    previewSize: number = 2,
-    rebuild: boolean = true,
-  ): void {
+  addBrushInstancesBatch(instances: SolidBrushInstance[], previewSize: number = 2, rebuild: boolean = true): void {
     for (const instance of instances) {
       this.registerBrushAt(instance, this.brushes.length, previewSize);
     }
@@ -319,15 +318,12 @@ export class SolidModel {
 
   /**
    * Inserts a brush at a list index and restores sibling order for CSG.
+   *
    * @param instance Brush instance to own.
    * @param listIndex Index in the brush evaluation list.
    * @param previewSize Size used when creating a default box preview.
    */
-  insertBrushInstance(
-    instance: SolidBrushInstance,
-    listIndex: number,
-    previewSize: number = 2,
-  ): void {
+  insertBrushInstance(instance: SolidBrushInstance, listIndex: number, previewSize: number = 2): void {
     this.registerBrushAt(instance, listIndex, previewSize);
     this.markDirty();
     this.rebuild(true);
@@ -335,8 +331,10 @@ export class SolidModel {
 
   /**
    * Removes a brush and its preview mesh, then rebuilds.
+   *
    * @param id Brush id.
-   * @param disposeResources When true, disposes preview GPU resources (default true).
+   * @param disposeResources When true, disposes preview GPU resources (default
+   *   true).
    * @returns True when removed.
    */
   removeBrush(id: string, disposeResources: boolean = true): boolean {
@@ -363,7 +361,9 @@ export class SolidModel {
   }
 
   /**
-   * Disposes GPU resources for a brush preview mesh (history drop / permanent delete).
+   * Disposes GPU resources for a brush preview mesh (history drop / permanent
+   * delete).
+   *
    * @param mesh Brush preview mesh.
    */
   disposeBrushMeshResources(mesh: THREE.Mesh): void {
@@ -371,8 +371,9 @@ export class SolidModel {
   }
 
   /**
-   * Updates a brush operation, restyles its preview, and rebuilds.
-   * Uses partial CSG (seed + touch peers only), never a full-map force rebuild.
+   * Updates a brush operation, restyles its preview, and rebuilds. Uses partial
+   * CSG (seed + touch peers only), never a full-map force rebuild.
+   *
    * @param id Brush id.
    * @param operation New operation.
    * @returns True when found.
@@ -392,18 +393,14 @@ export class SolidModel {
 
   /**
    * Updates brush transform data and the preview mesh, then rebuilds.
+   *
    * @param id Brush id.
    * @param position Optional position.
    * @param rotation Optional rotation.
    * @param scale Optional scale.
    * @returns True when found.
    */
-  setBrushTransform(
-    id: string,
-    position?: THREE.Vector3,
-    rotation?: THREE.Euler,
-    scale?: THREE.Vector3,
-  ): boolean {
+  setBrushTransform(id: string, position?: THREE.Vector3, rotation?: THREE.Euler, scale?: THREE.Vector3): boolean {
     const brush = this.findBrush(id);
     if (!brush) return false;
     if (position) brush.position.copy(position);
@@ -417,6 +414,7 @@ export class SolidModel {
 
   /**
    * Renames a brush and its preview mesh.
+   *
    * @param id Brush id.
    * @param name New name.
    * @returns True when found.
@@ -431,14 +429,13 @@ export class SolidModel {
 
   /**
    * Duplicates a brush inside this solid model at the same local transform.
+   *
    * @param id Source brush id.
-   * @param offset Optional position offset applied after cloning (default none).
+   * @param offset Optional position offset applied after cloning (default
+   *   none).
    * @returns The new brush instance, or null when the source is missing.
    */
-  duplicateBrush(
-    id: string,
-    offset: THREE.Vector3 = new THREE.Vector3(0, 0, 0),
-  ): SolidBrushInstance | null {
+  duplicateBrush(id: string, offset: THREE.Vector3 = new THREE.Vector3(0, 0, 0)): SolidBrushInstance | null {
     const source = this.findBrush(id);
     if (!source) return null;
     source.pullTransformFromMesh();
@@ -457,6 +454,7 @@ export class SolidModel {
 
   /**
    * Estimates a box preview edge length from brush local bounds.
+   *
    * @param source Brush to measure.
    * @returns Preview cube size.
    */
@@ -469,8 +467,9 @@ export class SolidModel {
   }
 
   /**
-   * Pulls transforms from all brush meshes (e.g. after gizmo edits).
-   * Marks only brushes whose transforms actually changed when order is stable.
+   * Pulls transforms from all brush meshes (e.g. after gizmo edits). Marks only
+   * brushes whose transforms actually changed when order is stable.
+   *
    * @param textureLockEnabled Whether Tex Lock should stick face UVs on move.
    */
   syncBrushesFromScene(textureLockEnabled: boolean = false): void {
@@ -490,14 +489,12 @@ export class SolidModel {
   /**
    * Live-drag sync: only inspect selected brush meshes for transform changes.
    * Avoids O(n) mesh compares across the whole solid on every pointer move.
+   *
    * @param selectedMeshes Meshes currently being transformed.
    * @param textureLockEnabled Whether Tex Lock should stick face UVs on move.
    * @returns True when at least one owned brush changed.
    */
-  syncSelectedBrushesFromScene(
-    selectedMeshes: readonly THREE.Mesh[],
-    textureLockEnabled: boolean = false,
-  ): boolean {
+  syncSelectedBrushesFromScene(selectedMeshes: readonly THREE.Mesh[], textureLockEnabled: boolean = false): boolean {
     const selectedSet = new Set(selectedMeshes);
     const changedIds: string[] = [];
     for (const brush of this.brushes) {
@@ -512,18 +509,17 @@ export class SolidModel {
   }
 
   /**
-   * Live-drag preparation: always pull selected brush transforms and mark dirty.
-   * Unlike syncSelectedBrushesFromScene, never skips when transforms already match
-   * the mesh — result geometry may still be from an older pose after a missed frame.
-   * When textureLockEnabled, face UV mappings stick to each brush (Tex Lock).
+   * Live-drag preparation: always pull selected brush transforms and mark
+   * dirty. Unlike syncSelectedBrushesFromScene, never skips when transforms
+   * already match the mesh — result geometry may still be from an older pose
+   * after a missed frame. When textureLockEnabled, face UV mappings stick to
+   * each brush (Tex Lock).
+   *
    * @param selectedMeshes Meshes currently being transformed.
    * @param textureLockEnabled Whether toolbar Tex Lock is on.
    * @returns True when this model owns at least one selected brush.
    */
-  prepareLiveBrushEdit(
-    selectedMeshes: readonly THREE.Mesh[],
-    textureLockEnabled: boolean = false,
-  ): boolean {
+  prepareLiveBrushEdit(selectedMeshes: readonly THREE.Mesh[], textureLockEnabled: boolean = false): boolean {
     const selectedSet = new Set(selectedMeshes);
     const dirtyIds: string[] = [];
     for (const brush of this.brushes) {
@@ -540,7 +536,9 @@ export class SolidModel {
   /**
    * Applies an outliner/scene visibility change for a brush under this model.
    * Hidden brushes leave the CSG evaluation set; showing them re-includes them.
-   * Uses partial dirty expansion so only the brush and its touch peers recompile.
+   * Uses partial dirty expansion so only the brush and its touch peers
+   * recompile.
+   *
    * @param object Brush mesh (or other child) whose visibility changed.
    * @returns True when a brush was found and the model was rebuilt.
    */
@@ -562,8 +560,9 @@ export class SolidModel {
   }
 
   /**
-   * Reorders the internal brush list to match outliner / scene-graph sibling order.
-   * CSG tree order follows this list (first = earliest in boolean evaluation).
+   * Reorders the internal brush list to match outliner / scene-graph sibling
+   * order. CSG tree order follows this list (first = earliest in boolean
+   * evaluation).
    */
   syncBrushOrderFromScene(): void {
     const ordered: SolidBrushInstance[] = [];
@@ -579,9 +578,7 @@ export class SolidModel {
     this.brushes = ordered;
   }
 
-  /**
-   * Marks the model for a full CSG rebuild of every brush.
-   */
+  /** Marks the model for a full CSG rebuild of every brush. */
   markDirty(): void {
     this.dirty = true;
     this.fullRebuildRequired = true;
@@ -590,9 +587,11 @@ export class SolidModel {
   }
 
   /**
-   * Marks specific brushes dirty for a partial CSG rebuild.
-   * Neighbor brushes that touch these are included automatically by the compiler.
-   * @param brushIds Brush instance ids that changed (transform, shape, op, texture).
+   * Marks specific brushes dirty for a partial CSG rebuild. Neighbor brushes
+   * that touch these are included automatically by the compiler.
+   *
+   * @param brushIds Brush instance ids that changed (transform, shape, op,
+   *   texture).
    */
   markBrushesDirty(brushIds: Iterable<string>): void {
     this.dirty = true;
@@ -604,6 +603,7 @@ export class SolidModel {
 
   /**
    * Rebuilds the compiled result mesh from current brush transforms.
+   *
    * @param force Rebuild even when not marked dirty.
    */
   rebuild(force: boolean = false): void {
@@ -619,13 +619,13 @@ export class SolidModel {
   }
 
   /**
-   * Finishes an interactive transform after selected brushes were prepared dirty.
-   * Recompiles whenever seeds are dirty or live geometry is not trusted current.
-   * Surface materials are scheduled on the next frame for responsiveness.
+   * Finishes an interactive transform after selected brushes were prepared
+   * dirty. Recompiles whenever seeds are dirty or live geometry is not trusted
+   * current. Surface materials are scheduled on the next frame for
+   * responsiveness.
    */
   finalizeAfterInteractiveEdit(): void {
-    const needsCompile =
-      this.fullRebuildRequired || this.dirtyBrushIds.size > 0 || !this.interactiveGeometryCurrent;
+    const needsCompile = this.fullRebuildRequired || this.dirtyBrushIds.size > 0 || !this.interactiveGeometryCurrent;
     if (needsCompile) {
       this.compileResultGeometry(false);
       this.interactiveGeometryCurrent = true;
@@ -636,8 +636,9 @@ export class SolidModel {
   }
 
   /**
-   * Async full rebuild that yields during CSG and mesh-chunk batches.
-   * Keeps the browser responsive for large VMF imports.
+   * Async full rebuild that yields during CSG and mesh-chunk batches. Keeps the
+   * browser responsive for large VMF imports.
+   *
    * @param onProgress Optional progress (0..1) and status label.
    */
   async rebuildAsync(onProgress?: (ratio: number, label: string) => void): Promise<void> {
@@ -647,20 +648,15 @@ export class SolidModel {
       brush.pullTransformFromMesh();
     }
     onProgress?.(0.05, 'Compiling solid CSG…');
-    await this.compiler.compileAsync(
-      this.brushes,
-      { forceFull: true, skipPolygonAssembly: true },
-      (ratio) => onProgress?.(0.05 + ratio * 0.55, 'Compiling solid CSG…'),
+    await this.compiler.compileAsync(this.brushes, { forceFull: true, skipPolygonAssembly: true }, (ratio) =>
+      onProgress?.(0.05 + ratio * 0.55, 'Compiling solid CSG…'),
     );
-    await this.rebuildDirtyMeshChunksAsync((ratio) =>
-      onProgress?.(0.6 + ratio * 0.3, 'Building result mesh…'),
-    );
+    await this.rebuildDirtyMeshChunksAsync((ratio) => onProgress?.(0.6 + ratio * 0.3, 'Building result mesh…'));
     const brushOrder = this.compiler.getLastBrushOrder();
     this.meshChunkCache.pruneToIds(new Set(brushOrder));
     this.writeResultFromChunks(brushOrder);
     this.lastSurfaceRegions = this.resultBuffer.getSurfaceRegions();
-    this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] =
-      this.resultBuffer.getTriangleSources();
+    this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = this.resultBuffer.getTriangleSources();
     this.clearDirtyTracking();
     if (this.hasResultGeometry()) {
       onProgress?.(0.95, 'Applying materials…');
@@ -674,9 +670,9 @@ export class SolidModel {
   }
 
   /**
-   * Live rebuild during interactive drag: partial CSG + chunk remesh.
-   * Only resyncs dirty brush meshes so large maps stay interactive.
-   * Reapplies surface materials so multi-texture draw ranges stay valid.
+   * Live rebuild during interactive drag: partial CSG + chunk remesh. Only
+   * resyncs dirty brush meshes so large maps stay interactive. Reapplies
+   * surface materials so multi-texture draw ranges stay valid.
    */
   rebuildLive(): void {
     if (this.dirtyBrushIds.size === 0 && !this.fullRebuildRequired) {
@@ -692,8 +688,9 @@ export class SolidModel {
   }
 
   /**
-   * Marks brushes dirty when their preview mesh pose no longer matches instance.
-   * Covers callers that move the mesh then call rebuildLive without prepareLive.
+   * Marks brushes dirty when their preview mesh pose no longer matches
+   * instance. Covers callers that move the mesh then call rebuildLive without
+   * prepareLive.
    */
   private markMeshesThatDriftedDirty(): void {
     for (const brush of this.brushes) {
@@ -711,7 +708,9 @@ export class SolidModel {
   /**
    * Moves brushes to the start of CSG evaluation order (first boolean operand).
    * Relative order among the moved brushes is preserved.
-   * @param brushIds Brush ids to move (scene selection order ignored; list order used).
+   *
+   * @param brushIds Brush ids to move (scene selection order ignored; list
+   *   order used).
    * @returns True when the evaluation order changed.
    */
   moveBrushesToFirst(brushIds: readonly string[]): boolean {
@@ -721,6 +720,7 @@ export class SolidModel {
   /**
    * Moves brushes to the end of CSG evaluation order (last boolean operand).
    * Relative order among the moved brushes is preserved.
+   *
    * @param brushIds Brush ids to move.
    * @returns True when the evaluation order changed.
    */
@@ -730,6 +730,7 @@ export class SolidModel {
 
   /**
    * Returns evaluation-list indices for the given brush ids.
+   *
    * @param brushIds Brush ids to look up.
    * @returns Parallel list of indices (-1 when missing).
    */
@@ -739,6 +740,7 @@ export class SolidModel {
 
   /**
    * Restores an explicit brush evaluation order and rebuilds CSG.
+   *
    * @param orderedBrushIds Full or partial ordered brush id list.
    * @returns True when any brush was reordered.
    */
@@ -769,8 +771,9 @@ export class SolidModel {
   }
 
   /**
-   * Sets the default surface texture for a whole brush and remeshes that brush only.
-   * Does not re-run CSG (geometry is unchanged).
+   * Sets the default surface texture for a whole brush and remeshes that brush
+   * only. Does not re-run CSG (geometry is unchanged).
+   *
    * @param brushId Brush id.
    * @param textureId Texture identity to apply to all faces of that brush.
    * @returns True when the brush was found.
@@ -784,6 +787,7 @@ export class SolidModel {
 
   /**
    * Sets one brush face texture and remeshes that brush only (no CSG).
+   *
    * @param brushId Brush id.
    * @param surfaceIndex Brush face index.
    * @param textureId Texture identity.
@@ -799,6 +803,7 @@ export class SolidModel {
   /**
    * Remeshes result presentation for brushes whose face mappings changed.
    * Updates polygon texture ids and mesh chunks only — never runs CSG.
+   *
    * @param brushIds Brushes that need UV/material refresh.
    * @returns True when at least one brush was refreshed.
    */
@@ -835,8 +840,7 @@ export class SolidModel {
       this.uploadResultBufferToMesh(true);
     }
     this.lastSurfaceRegions = this.resultBuffer.getSurfaceRegions();
-    this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] =
-      this.resultBuffer.getTriangleSources();
+    this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = this.resultBuffer.getTriangleSources();
     if (this.hasResultGeometry()) {
       this.applySurfaceLayoutToResult(true);
     }
@@ -847,6 +851,7 @@ export class SolidModel {
 
   /**
    * Syncs cached polygon texture ids from the brush's face mappings.
+   *
    * @param brushId Brush id.
    * @returns True when polygon cache exists and was updated.
    */
@@ -860,6 +865,7 @@ export class SolidModel {
 
   /**
    * Returns the result mesh for clone geometry propagation after live rebuild.
+   *
    * @returns Result mesh.
    */
   getResultMeshForSync(): THREE.Mesh {
@@ -868,6 +874,7 @@ export class SolidModel {
 
   /**
    * Exposes last CSG compile diagnostics for unit tests and profiling.
+   *
    * @returns Copy of compiler stats from the most recent compile.
    */
   getCompilerStatsForTesting(): {
@@ -881,6 +888,7 @@ export class SolidModel {
 
   /**
    * Exposes whether the last result mesh write was an in-place partial patch.
+   *
    * @returns True after a successful dirty-range patch.
    */
   wasLastResultWritePartialForTesting(): boolean {
@@ -888,8 +896,11 @@ export class SolidModel {
   }
 
   /**
-   * Pulls brush transforms, runs CSG, remeshes dirty brush chunks, patches result.
-   * @param liveDrag When true, only resyncs dirty brush meshes (no full order scan).
+   * Pulls brush transforms, runs CSG, remeshes dirty brush chunks, patches
+   * result.
+   *
+   * @param liveDrag When true, only resyncs dirty brush meshes (no full order
+   *   scan).
    */
   private compileResultGeometry(liveDrag: boolean = false): void {
     if (!liveDrag) {
@@ -908,15 +919,15 @@ export class SolidModel {
     this.meshChunkCache.pruneToIds(new Set(brushOrder));
     this.writeResultFromChunks(brushOrder);
     this.lastSurfaceRegions = this.resultBuffer.getSurfaceRegions();
-    this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] =
-      this.resultBuffer.getTriangleSources();
+    this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = this.resultBuffer.getTriangleSources();
     this.clearDirtyTracking();
   }
 
   /**
    * Patches dirty brush slices when layout is stable; otherwise rebuilds fully.
-   * Always restores any missing mesh chunks first so a prior UV-smear invalidation
-   * cannot drop most of the world on the next full assemble.
+   * Always restores any missing mesh chunks first so a prior UV-smear
+   * invalidation cannot drop most of the world on the next full assemble.
+   *
    * @param brushOrder Visible brush ids in evaluation order.
    */
   private writeResultFromChunks(brushOrder: string[]): void {
@@ -927,11 +938,7 @@ export class SolidModel {
       this.uploadResultBufferToMesh(true);
       return;
     }
-    const suffixRebuilt = this.resultBuffer.tryRebuildFromFirstChanged(
-      dirtyIds,
-      brushOrder,
-      this.meshChunkCache,
-    );
+    const suffixRebuilt = this.resultBuffer.tryRebuildFromFirstChanged(dirtyIds, brushOrder, this.meshChunkCache);
     if (!suffixRebuilt) {
       this.resultBuffer.rebuildFull(brushOrder, this.meshChunkCache);
     }
@@ -940,6 +947,7 @@ export class SolidModel {
 
   /**
    * Rebuilds any missing mesh chunks from cached CSG polygons.
+   *
    * @param brushOrder Brush ids that must have chunks before assemble.
    */
   private ensureMeshChunksForBrushOrder(brushOrder: readonly string[]): void {
@@ -954,6 +962,7 @@ export class SolidModel {
 
   /**
    * Uploads the segmented result buffer onto the result mesh geometry.
+   *
    * @param preferInPlace When true, keep existing geometry object if possible.
    */
   private uploadResultBufferToMesh(preferInPlace: boolean): void {
@@ -961,12 +970,14 @@ export class SolidModel {
       this.stripStaleDecorativeEdges(this.resultMesh);
     }
     this.resultBuffer.uploadToGeometry(this.resultMesh.geometry);
-    this.resultMesh.geometry.userData.solidMeshUpdateRanges =
-      this.resultBuffer.wasLastWritePartial() ? this.resultBuffer.getLastUpdateRanges() : [];
+    this.resultMesh.geometry.userData.solidMeshUpdateRanges = this.resultBuffer.wasLastWritePartial()
+      ? this.resultBuffer.getLastUpdateRanges()
+      : [];
   }
 
   /**
-   * Rebuilds triangulated UV-baked mesh chunks for brushes recompiled this pass.
+   * Rebuilds triangulated UV-baked mesh chunks for brushes recompiled this
+   * pass.
    */
   private rebuildDirtyMeshChunks(): void {
     this.resultMesh.updateMatrixWorld(true);
@@ -978,6 +989,7 @@ export class SolidModel {
 
   /**
    * Rebuilds dirty mesh chunks in batches with browser yields.
+   *
    * @param onProgress Optional 0..1 progress for the chunk phase.
    */
   private async rebuildDirtyMeshChunksAsync(onProgress?: (ratio: number) => void): Promise<void> {
@@ -998,6 +1010,7 @@ export class SolidModel {
 
   /**
    * Rebuilds one brush mesh chunk from cached CSG polygons.
+   *
    * @param brushId Brush instance id.
    * @param worldMatrix Result mesh world matrix for UV projection.
    */
@@ -1005,11 +1018,7 @@ export class SolidModel {
     const polygons = this.compiler.getCachedPolygons(brushId) ?? [];
     const brush = this.findBrush(brushId);
     const brushModelMatrix = brush
-      ? new THREE.Matrix4().compose(
-          brush.position,
-          new THREE.Quaternion().setFromEuler(brush.rotation),
-          brush.scale,
-        )
+      ? new THREE.Matrix4().compose(brush.position, new THREE.Quaternion().setFromEuler(brush.rotation), brush.scale)
       : new THREE.Matrix4();
     const chunk = this.chunkBuilder.build(
       polygons,
@@ -1018,10 +1027,8 @@ export class SolidModel {
         stickToBrush: this.uvStickToBrush,
         resultWorldMatrix: worldMatrix,
         brushModelMatrix,
-        resolveLocalFaceNormal: (surfaceIndex) =>
-          this.resolveBrushFaceLocalNormal(brush, surfaceIndex),
-        resolveModelFaceNormal: (surfaceIndex) =>
-          this.resolveBrushFaceModelNormal(brush, surfaceIndex),
+        resolveLocalFaceNormal: (surfaceIndex) => this.resolveBrushFaceLocalNormal(brush, surfaceIndex),
+        resolveModelFaceNormal: (surfaceIndex) => this.resolveBrushFaceModelNormal(brush, surfaceIndex),
       },
     );
     this.meshChunkCache.set(brushId, chunk);
@@ -1029,30 +1036,24 @@ export class SolidModel {
 
   /**
    * Brush-local face normal for brush-local UV projection.
+   *
    * @param brush Brush instance or undefined.
    * @param surfaceIndex Face index.
    * @returns Unit normal in brush local space.
    */
-  private resolveBrushFaceLocalNormal(
-    brush: SolidBrushInstance | undefined,
-    surfaceIndex: number,
-  ): THREE.Vector3 {
+  private resolveBrushFaceLocalNormal(brush: SolidBrushInstance | undefined, surfaceIndex: number): THREE.Vector3 {
     if (!brush) return new THREE.Vector3(0, 1, 0);
-    return (
-      brush.brush.planes[surfaceIndex]?.normal.clone().normalize() ?? new THREE.Vector3(0, 1, 0)
-    );
+    return brush.brush.planes[surfaceIndex]?.normal.clone().normalize() ?? new THREE.Vector3(0, 1, 0);
   }
 
   /**
    * Model-space brush face normal used for world UV projection.
+   *
    * @param brush Brush instance or undefined.
    * @param surfaceIndex Face index.
    * @returns Unit normal in solid model space.
    */
-  private resolveBrushFaceModelNormal(
-    brush: SolidBrushInstance | undefined,
-    surfaceIndex: number,
-  ): THREE.Vector3 {
+  private resolveBrushFaceModelNormal(brush: SolidBrushInstance | undefined, surfaceIndex: number): THREE.Vector3 {
     if (!brush) return new THREE.Vector3(0, 1, 0);
     const localNormal = brush.brush.planes[surfaceIndex]?.normal ?? new THREE.Vector3(0, 1, 0);
     const localMatrix = new THREE.Matrix4().compose(
@@ -1066,20 +1067,19 @@ export class SolidModel {
 
   /**
    * Resolves a face mapping for chunk UV bake.
+   *
    * @param brush Owning brush or undefined.
    * @param surfaceIndex Face index.
    * @returns Face texture mapping.
    */
-  private resolveBrushSurfaceMapping(
-    brush: SolidBrushInstance | undefined,
-    surfaceIndex: number,
-  ): FaceTextureMapping {
+  private resolveBrushSurfaceMapping(brush: SolidBrushInstance | undefined, surfaceIndex: number): FaceTextureMapping {
     if (brush) return brush.getSurfaceMapping(surfaceIndex);
     return createDefaultFaceTextureMapping(DEFAULT_CHECKER_TEXTURE_ID);
   }
 
   /**
    * Builds compiler options from the current dirty-tracking state.
+   *
    * @returns Partial or full compile options.
    */
   private buildCompileOptions(): {
@@ -1096,9 +1096,7 @@ export class SolidModel {
     };
   }
 
-  /**
-   * Clears dirty flags after a successful compile.
-   */
+  /** Clears dirty flags after a successful compile. */
   private clearDirtyTracking(): void {
     this.fullRebuildRequired = false;
     this.dirtyBrushIds.clear();
@@ -1106,6 +1104,7 @@ export class SolidModel {
 
   /**
    * Pulls mesh transforms and returns ids of brushes that actually changed.
+   *
    * @returns Brush ids whose transform or visibility changed.
    */
   private pullChangedBrushTransforms(textureLockEnabled: boolean = false): string[] {
@@ -1120,6 +1119,7 @@ export class SolidModel {
 
   /**
    * Pulls transforms from every brush mesh without dirty tracking.
+   *
    * @param textureLockEnabled Whether Tex Lock should stick face UVs.
    */
   private pullAllBrushTransforms(textureLockEnabled: boolean = false): void {
@@ -1130,14 +1130,12 @@ export class SolidModel {
 
   /**
    * Copies mesh transform into the brush when it differs from the stored one.
+   *
    * @param brush Brush instance to sync.
    * @param textureLockEnabled Whether Tex Lock should stick face UVs.
    * @returns True when any transform or visibility component changed.
    */
-  private pullTransformIfChanged(
-    brush: SolidBrushInstance,
-    textureLockEnabled: boolean = false,
-  ): boolean {
+  private pullTransformIfChanged(brush: SolidBrushInstance, textureLockEnabled: boolean = false): boolean {
     if (!brush.mesh) {
       brush.pullTransformFromMesh();
       return false;
@@ -1154,21 +1152,20 @@ export class SolidModel {
   }
 
   /**
-   * Pulls mesh transform into the brush.
-   * Result UVs stick via brush-local bake (uvStickToBrush), not offset rewrites.
+   * Pulls mesh transform into the brush. Result UVs stick via brush-local bake
+   * (uvStickToBrush), not offset rewrites.
+   *
    * @param brush Brush instance.
    * @param textureLockEnabled Reserved; UV stick mode is controlled separately.
    */
-  private pullBrushTransformWithOptionalTextureLock(
-    brush: SolidBrushInstance,
-    textureLockEnabled: boolean,
-  ): void {
+  private pullBrushTransformWithOptionalTextureLock(brush: SolidBrushInstance, textureLockEnabled: boolean): void {
     void textureLockEnabled;
     brush.pullTransformFromMesh();
   }
 
   /**
    * Live-drag pull: mesh pose only (no per-frame face-offset churn).
+   *
    * @param brush Brush instance.
    * @param textureLockEnabled Reserved; UV stick mode is controlled separately.
    */
@@ -1179,6 +1176,7 @@ export class SolidModel {
 
   /**
    * Compares two brush id sequences for equality.
+   *
    * @param before Previous ordered ids.
    * @param brushes Current brush list.
    * @returns True when order and membership match.
@@ -1193,6 +1191,7 @@ export class SolidModel {
 
   /**
    * Compares Euler rotations component-wise.
+   *
    * @param a First rotation.
    * @param b Second rotation.
    * @returns True when equal.
@@ -1202,10 +1201,11 @@ export class SolidModel {
   }
 
   /**
-   * Writes face maps and materials onto the result mesh.
-   * UVs are already baked into brush mesh chunks; this never reprojects them.
-   * Uses a solid-specific material path that does not clone every triangle index
-   * table (critical for large VMF maps during live drag and texture paint).
+   * Writes face maps and materials onto the result mesh. UVs are already baked
+   * into brush mesh chunks; this never reprojects them. Uses a solid-specific
+   * material path that does not clone every triangle index table (critical for
+   * large VMF maps during live drag and texture paint).
+   *
    * @param _forceMaterials Reserved; solid results always preserve order.
    */
   private applySurfaceLayoutToResult(_forceMaterials: boolean): void {
@@ -1235,6 +1235,7 @@ export class SolidModel {
 
   /**
    * Resolves the authored face mapping for one compiled surface region.
+   *
    * @param region Surface region with brush source identity.
    * @returns Mapping to bake onto the result mesh.
    */
@@ -1249,7 +1250,9 @@ export class SolidModel {
   }
 
   /**
-   * Captures default and per-face UV mappings for every brush (smear undo/redo).
+   * Captures default and per-face UV mappings for every brush (smear
+   * undo/redo).
+   *
    * @returns Snapshot list keyed by brush id.
    */
   captureBrushUvSnapshots(): Array<{
@@ -1266,6 +1269,7 @@ export class SolidModel {
 
   /**
    * Restores brush UV mappings from a smear undo/redo snapshot.
+   *
    * @param snapshots Brush UV snapshots previously captured.
    */
   restoreBrushUvSnapshots(
@@ -1285,7 +1289,8 @@ export class SolidModel {
   /**
    * Writes UV editor changes on the result mesh back onto owning brush faces.
    * Call after face-texture apply or UV smear so CSG rebuilds keep phase/scale.
-   * Rebakes only the affected brush mesh chunks (never drops the rest of the world).
+   * Rebakes only the affected brush mesh chunks (never drops the rest of the
+   * world).
    */
   syncAuthoredMappingsFromResultMesh(): void {
     const maps = getFaceTextureMaps(this.resultMesh);
@@ -1301,6 +1306,7 @@ export class SolidModel {
 
   /**
    * Collects unique brush ids referenced by result face maps.
+   *
    * @param maps Result face texture maps.
    * @param sources Per-triangle solid sources.
    * @returns Brush ids whose UV chunks should rebake.
@@ -1320,8 +1326,10 @@ export class SolidModel {
   }
 
   /**
-   * Rebuilds mesh chunks for specific brushes from cached polygons and current maps.
-   * When layout is stable, patches only those UV ranges into the result mesh.
+   * Rebuilds mesh chunks for specific brushes from cached polygons and current
+   * maps. When layout is stable, patches only those UV ranges into the result
+   * mesh.
+   *
    * @param brushIds Brushes whose chunks need UV rebake.
    */
   private rebakeMeshChunksForBrushes(brushIds: Set<string>): void {
@@ -1343,12 +1351,12 @@ export class SolidModel {
     }
     this.uploadResultBufferToMesh(patched);
     this.lastSurfaceRegions = this.resultBuffer.getSurfaceRegions();
-    this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] =
-      this.resultBuffer.getTriangleSources();
+    this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = this.resultBuffer.getTriangleSources();
   }
 
   /**
    * Applies one result-mesh mapping to the brush faces that own its triangles.
+   *
    * @param triangleIndices Result triangle indices for the region.
    * @param mapping Authored mapping from the UV editor or texture tools.
    * @param sources Per-triangle brush surface sources.
@@ -1373,6 +1381,7 @@ export class SolidModel {
 
   /**
    * Returns whether the result mesh has triangle geometry.
+   *
    * @returns True when a position attribute with vertices exists.
    */
   private hasResultGeometry(): boolean {
@@ -1380,9 +1389,7 @@ export class SolidModel {
     return !!position && position.count >= 3;
   }
 
-  /**
-   * Keeps the compiled mesh at local identity under the solid model root.
-   */
+  /** Keeps the compiled mesh at local identity under the solid model root. */
   private resetResultLocalTransform(): void {
     this.resultMesh.position.set(0, 0, 0);
     this.resultMesh.rotation.set(0, 0, 0);
@@ -1391,6 +1398,7 @@ export class SolidModel {
 
   /**
    * Creates the empty result mesh that receives compiled solid geometry.
+   *
    * @returns Result mesh child.
    */
   private createResultMesh(): THREE.Mesh {
@@ -1406,20 +1414,16 @@ export class SolidModel {
 
   /**
    * Replaces result buffer attributes with compiled triangle data.
+   *
    * @param positions Position floats.
    * @param normals Normal floats.
    * @param uvs Optional UV floats (2 components per vertex).
    */
-  private replaceResultGeometry(
-    positions: Float32Array,
-    normals: Float32Array,
-    uvs?: Float32Array,
-  ): void {
+  private replaceResultGeometry(positions: Float32Array, normals: Float32Array, uvs?: Float32Array): void {
     const oldGeometry = this.resultMesh.geometry;
     const geometry = new THREE.BufferGeometry();
     const safePositions = positions.length >= 9 ? positions : new Float32Array(0);
-    const safeNormals =
-      normals.length === safePositions.length ? normals : new Float32Array(safePositions.length);
+    const safeNormals = normals.length === safePositions.length ? normals : new Float32Array(safePositions.length);
     const safeUvs = this.buildSafeUvArray(safePositions.length / 3, uvs);
     geometry.setAttribute('position', new THREE.BufferAttribute(safePositions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(safeNormals, 3));
@@ -1435,6 +1439,7 @@ export class SolidModel {
 
   /**
    * Builds a UV array matching vertex count.
+   *
    * @param vertexCount Number of vertices.
    * @param uvs Optional source UVs.
    * @returns UV float array of length vertexCount * 2.
@@ -1447,12 +1452,11 @@ export class SolidModel {
 
   /**
    * Removes decorative edge children from a mesh.
+   *
    * @param mesh Mesh to clean.
    */
   private stripStaleDecorativeEdges(mesh: THREE.Mesh): void {
-    const stale = mesh.children.filter(
-      (child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true,
-    );
+    const stale = mesh.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true);
     for (const child of stale) {
       mesh.remove(child);
       if (child instanceof THREE.LineSegments) {
@@ -1463,8 +1467,9 @@ export class SolidModel {
   }
 
   /**
-   * Disposes geometry and materials for a removed brush mesh.
-   * Shared brush edge materials are retained for reuse.
+   * Disposes geometry and materials for a removed brush mesh. Shared brush edge
+   * materials are retained for reuse.
+   *
    * @param mesh Brush preview mesh.
    */
   private disposeMeshResources(mesh: THREE.Mesh): void {
@@ -1478,6 +1483,7 @@ export class SolidModel {
 
   /**
    * Disposes mesh-owned materials while leaving shared edge materials alive.
+   *
    * @param material Material or material array on a disposed mesh child.
    */
   private disposeOwnedMaterials(material: THREE.Material | THREE.Material[] | undefined): void {
@@ -1490,6 +1496,7 @@ export class SolidModel {
 
   /**
    * Disposes one material unless it is a shared brush edge material.
+   *
    * @param material Material to dispose.
    */
   private disposeOwnedMaterial(material: THREE.Material): void {
@@ -1499,15 +1506,12 @@ export class SolidModel {
 
   /**
    * Registers a brush at a list index, ensuring preview mesh and sibling order.
+   *
    * @param instance Brush instance to own.
    * @param listIndex Desired index in the evaluation list.
    * @param previewSize Default box preview edge length when mesh is missing.
    */
-  private registerBrushAt(
-    instance: SolidBrushInstance,
-    listIndex: number,
-    previewSize: number,
-  ): void {
+  private registerBrushAt(instance: SolidBrushInstance, listIndex: number, previewSize: number): void {
     if (this.findBrush(instance.id)) return;
     this.ensureBrushPreviewMesh(instance, previewSize);
     const clampedIndex = Math.max(0, Math.min(listIndex, this.brushes.length));
@@ -1518,6 +1522,7 @@ export class SolidModel {
   /**
    * Creates and attaches a hull preview matching the brush solid when missing.
    * Falls back to a sized box only when the brush topology is empty.
+   *
    * @param instance Brush instance.
    * @param previewSize Fallback box edge length when hull data is missing.
    */
@@ -1527,11 +1532,7 @@ export class SolidModel {
       return;
     }
     if (instance.brush.faces.length >= 4 && instance.brush.vertices.length >= 4) {
-      const hullPreview = SolidBrushVisual.createHullPreview(
-        instance.name,
-        instance.brush,
-        instance.operation,
-      );
+      const hullPreview = SolidBrushVisual.createHullPreview(instance.name, instance.brush, instance.operation);
       instance.attachMesh(hullPreview);
       return;
     }
@@ -1542,7 +1543,8 @@ export class SolidModel {
   }
 
   /**
-   * Reorders brush preview meshes under the root to match evaluation list order.
+   * Reorders brush preview meshes under the root to match evaluation list
+   * order.
    */
   private applyBrushMeshSiblingOrder(): void {
     for (const brush of this.brushes) {
@@ -1553,6 +1555,7 @@ export class SolidModel {
 
   /**
    * Moves listed brushes to the first or last evaluation slots and rebuilds.
+   *
    * @param brushIds Brushes to move (unknown ids ignored).
    * @param end Which end of the evaluation list to place them on.
    * @returns True when order changed.
@@ -1586,8 +1589,8 @@ export class SolidModel {
   }
 
   /**
-   * Applies surface materials on the next frame after interactive commit.
-   * CSG result meshes never use white content outline edges (brushes own edges).
+   * Applies surface materials on the next frame after interactive commit. CSG
+   * result meshes never use white content outline edges (brushes own edges).
    */
   private schedulePresentationRefresh(): void {
     const mesh = this.resultMesh;
@@ -1601,7 +1604,8 @@ export class SolidModel {
 
   /**
    * Ensures the solid result mesh has no content decorative outline edges.
-   * Brush volume helpers provide colored edges; result shows solid surfaces only.
+   * Brush volume helpers provide colored edges; result shows solid surfaces
+   * only.
    */
   private clearResultContentEdges(): void {
     removeDecorativeEdges(this.resultMesh);
@@ -1609,6 +1613,7 @@ export class SolidModel {
 
   /**
    * Allocates a unique brush id.
+   *
    * @returns Unique string id.
    */
   private allocateBrushId(): string {
@@ -1617,6 +1622,7 @@ export class SolidModel {
 
   /**
    * Pads a number to two digits.
+   *
    * @param value Number to pad.
    * @returns Zero-padded string.
    */

@@ -1,6 +1,4 @@
-/**
- * One texture listed in the texture browser grid.
- */
+/** One texture listed in the texture browser grid. */
 export interface TextureBrowserEntry {
   /** Stable unique id for selection (usually relative path). */
   id: string;
@@ -22,6 +20,7 @@ export interface TextureBrowserEntry {
 
 /**
  * Creates a browser entry from a File and relative path.
+ *
  * @param file Browser File from the folder scan.
  * @param relativePath Path relative to the opened root folder.
  * @returns Texture browser entry with a live object URL.
@@ -42,6 +41,7 @@ export function createTextureBrowserEntry(file: File, relativePath: string): Tex
 
 /**
  * Releases the object URL held by an entry.
+ *
  * @param entry Entry whose preview URL should be revoked.
  */
 export function revokeTextureBrowserEntry(entry: TextureBrowserEntry): void {
@@ -50,6 +50,7 @@ export function revokeTextureBrowserEntry(entry: TextureBrowserEntry): void {
 
 /**
  * Strips the last extension from a file name.
+ *
  * @param fileName File name.
  * @returns Stem without extension.
  */

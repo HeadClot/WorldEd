@@ -19,6 +19,7 @@ import { TransformMode } from '../types/transform_mode.js';
 
 /**
  * Builds camera fit and shading coordinators and wires their controls.
+ *
  * @param parts Viewport and selection dependencies.
  * @returns Camera and shading coordinators.
  */
@@ -60,6 +61,7 @@ export function setupCameraAndShadingCoordinators(parts: {
 
 /**
  * Builds the face selection and extrusion coordinator.
+ *
  * @param parts Scene and UI dependencies.
  * @param onSelectionModeUiChanged Called when face/object mode changes.
  * @returns Face mode coordinator.
@@ -102,6 +104,7 @@ export function setupFaceModeCoordinator(parts: {
 
 /**
  * Builds tools palette and clip plane tool wiring.
+ *
  * @param parts Clip tool dependencies.
  * @returns Clip handler and tools palette pair.
  */
@@ -160,6 +163,7 @@ export function setupToolsPaletteAndClipWiring(parts: {
 
 /**
  * Cancels clip mode and selects the object tool in the palette.
+ *
  * @param clipPlaneHandler Active clip handler.
  * @param toolsPaletteController Tools palette controller.
  */

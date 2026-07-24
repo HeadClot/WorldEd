@@ -28,8 +28,7 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
 interface DirectoryPickerOptions {
   id?: string;
   mode?: 'read' | 'readwrite';
-  startIn?:
-    'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos' | FileSystemHandle;
+  startIn?: 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos' | FileSystemHandle;
 }
 
 interface Window {

@@ -1,16 +1,14 @@
 import * as THREE from 'three';
 
-/**
- * Bounds entry stored in the uniform spatial grid.
- */
+/** Bounds entry stored in the uniform spatial grid. */
 export interface SpatialBoundsEntry {
   /** Axis-aligned bounds in model space. */
   bounds: THREE.Box3;
 }
 
 /**
- * Uniform grid over brush AABBs for near-linear point and overlap queries.
- * Used for CSG membership sampling and partial neighbor linking.
+ * Uniform grid over brush AABBs for near-linear point and overlap queries. Used
+ * for CSG membership sampling and partial neighbor linking.
  */
 export class BrushSpatialIndex {
   private readonly entries: SpatialBoundsEntry[];
@@ -20,6 +18,7 @@ export class BrushSpatialIndex {
 
   /**
    * Builds a spatial index over prepared brush bounds.
+   *
    * @param entries Bounds entries aligned with prepared brush indices.
    * @param pad Extra margin applied to bounds when binning and querying.
    */
@@ -34,6 +33,7 @@ export class BrushSpatialIndex {
 
   /**
    * Returns prepared indices whose padded bounds may contain the point.
+   *
    * @param point Sample point in model space.
    * @returns Candidate indices (unsorted, unique).
    */
@@ -58,7 +58,9 @@ export class BrushSpatialIndex {
   }
 
   /**
-   * Returns indices that overlap a query bounds (excluding the optional self index).
+   * Returns indices that overlap a query bounds (excluding the optional self
+   * index).
+   *
    * @param bounds Query bounds.
    * @param excludeIndex Optional index to skip.
    * @returns Overlapping candidate indices.
@@ -98,6 +100,7 @@ export class BrushSpatialIndex {
 
   /**
    * Linear point query for tiny scenes.
+   *
    * @param point Sample point.
    * @returns Matching indices.
    */
@@ -113,6 +116,7 @@ export class BrushSpatialIndex {
 
   /**
    * Linear bounds query for tiny scenes.
+   *
    * @param bounds Query bounds.
    * @param excludeIndex Index to skip.
    * @returns Matching indices.
@@ -130,6 +134,7 @@ export class BrushSpatialIndex {
 
   /**
    * Inserts one entry into every overlapped grid cell.
+   *
    * @param index Entry index.
    */
   private insertEntry(index: number): void {
@@ -154,6 +159,7 @@ export class BrushSpatialIndex {
 
   /**
    * Returns whether padded bounds contain a point.
+   *
    * @param bounds Brush bounds.
    * @param point Sample point.
    * @returns True when the point may lie inside the brush volume.
@@ -172,6 +178,7 @@ export class BrushSpatialIndex {
 
   /**
    * Returns whether two bounds overlap with pad.
+   *
    * @param a First bounds.
    * @param b Second bounds.
    * @returns True when they may touch or intersect.
@@ -190,6 +197,7 @@ export class BrushSpatialIndex {
 
   /**
    * Chooses a cell size from average brush extent.
+   *
    * @param entries Bounds entries.
    * @returns Positive cell edge length.
    */

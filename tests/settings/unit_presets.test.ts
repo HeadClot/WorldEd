@@ -8,12 +8,7 @@ import {
 
 describe('unit_presets', () => {
   it('should list metric length units', () => {
-    expect(getUnitOptionsForSystem('metric')).toEqual([
-      'millimeter',
-      'centimeter',
-      'meter',
-      'kilometer',
-    ]);
+    expect(getUnitOptionsForSystem('metric')).toEqual(['millimeter', 'centimeter', 'meter', 'kilometer']);
     expect(METRIC_UNIT_OPTIONS).toHaveLength(4);
   });
 

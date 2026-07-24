@@ -8,9 +8,7 @@ import { VmfHalfSpaceHullBuilder } from './vmf_half_space_hull.js';
 import { VmfSolid, VmfSolidSide } from './vmf_types.js';
 import { VmfUvConverter } from './vmf_uv_converter.js';
 
-/**
- * One imported brush with per-face texture mappings aligned to face order.
- */
+/** One imported brush with per-face texture mappings aligned to face order. */
 export interface VmfBuiltBrush {
   /** Convex solid brush in editor meters (Y-up), centered at local origin. */
   brush: SolidBrush;
@@ -24,15 +22,14 @@ export interface VmfBuiltBrush {
   materials: string[];
 }
 
-/**
- * Builds SolidBrush geometry from VMF solid sides via half-space equations.
- */
+/** Builds SolidBrush geometry from VMF solid sides via half-space equations. */
 export class VmfBrushFromSides {
   private readonly hullBuilder = new VmfHalfSpaceHullBuilder();
   private readonly uvConverter = new VmfUvConverter();
 
   /**
    * Converts one VMF solid into a convex editor brush.
+   *
    * @param solid Parsed VMF solid.
    * @param unitScale Inches to meters.
    * @returns Built brush with mappings, or null when the solid is degenerate.
@@ -42,15 +39,14 @@ export class VmfBrushFromSides {
     const planes = solid.sides.map((side) => this.sideToOutwardPlane(side, unitScale));
     const hull = this.hullBuilder.build(planes);
     if (!hull) return null;
-    const brush = SolidBrushFactory.createFromFaceLoops(
-      hull.faceLoops.map((loop) => loop.vertices),
-    );
+    const brush = SolidBrushFactory.createFromFaceLoops(hull.faceLoops.map((loop) => loop.vertices));
     if (!brush) return null;
     return this.packageBuiltBrush(solid, brush, planes, hull.faceLoops, unitScale);
   }
 
   /**
    * Attaches UV mappings and material names to a constructed brush.
+   *
    * @param solid Source VMF solid.
    * @param brush Constructed solid brush.
    * @param planes Outward planes in side order.
@@ -81,9 +77,10 @@ export class VmfBrushFromSides {
   }
 
   /**
-   * Translates brush vertices so the AABB center is at the origin.
-   * Leaves the solid in local space for transforms and CSG; caller stores
-   * the removed center as the instance world position.
+   * Translates brush vertices so the AABB center is at the origin. Leaves the
+   * solid in local space for transforms and CSG; caller stores the removed
+   * center as the instance world position.
+   *
    * @param brush Brush whose vertices are shifted in place.
    * @returns Former center in editor meters (pre-shift).
    */
@@ -99,6 +96,7 @@ export class VmfBrushFromSides {
 
   /**
    * Builds a face texture mapping for one hull face.
+   *
    * @param side Source solid side.
    * @param brush Constructed brush.
    * @param planes Side-order planes.
@@ -128,9 +126,10 @@ export class VmfBrushFromSides {
   }
 
   /**
-   * Builds an outward SolidPlane from three Source-space plane points.
-   * After Z-up→Y-up swizzle, Source winding yields an outward normal with
-   * a right-handed cross product.
+   * Builds an outward SolidPlane from three Source-space plane points. After
+   * Z-up→Y-up swizzle, Source winding yields an outward normal with a
+   * right-handed cross product.
+   *
    * @param side Solid side with plane points.
    * @param unitScale Inches to meters.
    * @returns Outward plane in editor space.

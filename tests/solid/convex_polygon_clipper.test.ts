@@ -3,9 +3,7 @@ import * as THREE from 'three';
 import { ConvexPolygonClipper } from '../../src/solid/algorithm/convex_polygon_clipper.js';
 import { SolidPlane } from '../../src/solid/brush/solid_plane.js';
 
-/**
- * Unit tests for convex polygon plane clipping used by solid CSG.
- */
+/** Unit tests for convex polygon plane clipping used by solid CSG. */
 describe('ConvexPolygonClipper', () => {
   it('clips a unit square by a mid plane keeping both halves', () => {
     const square = [

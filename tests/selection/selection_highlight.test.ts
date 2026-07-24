@@ -43,9 +43,7 @@ describe('SelectionHighlight', () => {
   it('should use the correct selection color for highlights', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
-    const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments,
-    ) as THREE.LineSegments;
+    const lineSegments = testMesh.children.find((child) => child instanceof THREE.LineSegments) as THREE.LineSegments;
     const material = lineSegments.material as THREE.LineBasicMaterial;
     expect(material.color.getHex()).toBe(Theme.selectionColor);
   });
@@ -54,9 +52,7 @@ describe('SelectionHighlight', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
     highlight.apply(testMesh);
-    const lineCount = testMesh.children.filter(
-      (child) => child instanceof THREE.LineSegments,
-    ).length;
+    const lineCount = testMesh.children.filter((child) => child instanceof THREE.LineSegments).length;
     expect(lineCount).toBe(1);
   });
 
@@ -131,9 +127,7 @@ describe('SelectionHighlight', () => {
     highlight.apply(testMesh);
     testMesh.position.set(4, 5, 6);
     highlight.syncTransforms();
-    const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments,
-    ) as THREE.LineSegments;
+    const lineSegments = testMesh.children.find((child) => child instanceof THREE.LineSegments) as THREE.LineSegments;
     expect(lineSegments.parent).toBe(testMesh);
     expect(lineSegments.position.x).toBe(0);
     expect(lineSegments.position.y).toBe(0);
@@ -143,9 +137,7 @@ describe('SelectionHighlight', () => {
   it('should follow mesh translation because outline is a child', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
-    const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments,
-    ) as THREE.LineSegments;
+    const lineSegments = testMesh.children.find((child) => child instanceof THREE.LineSegments) as THREE.LineSegments;
     testMesh.position.set(7, 8, 9);
     testMesh.updateMatrixWorld(true);
     const worldPos = new THREE.Vector3();

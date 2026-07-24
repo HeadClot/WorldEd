@@ -18,33 +18,25 @@ import { rebakeStoredFaceTextureMaps } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 
-/**
- * Snapshot of one mesh's texture state for undo.
- */
+/** Snapshot of one mesh's texture state for undo. */
 interface MeshTextureSnapshot {
   mesh: THREE.Mesh;
   maps: FaceTextureMapEntry[];
   uvArray: Float32Array | null;
 }
 
-/**
- * Options for applying face texture / UV changes.
- */
+/** Options for applying face texture / UV changes. */
 export interface ApplyFaceTextureCommandOptions {
   /**
-   * When true, resets UV params only and keeps each region's textureId.
-   * The mapping argument is ignored for texture identity.
+   * When true, resets UV params only and keeps each region's textureId. The
+   * mapping argument is ignored for texture identity.
    */
   resetUvOnly?: boolean;
-  /**
-   * When set, only the align preset is changed; scale/offset/rotation stay.
-   */
+  /** When set, only the align preset is changed; scale/offset/rotation stay. */
   alignOnly?: FaceTextureAlign;
 }
 
-/**
- * Undoable command that applies a face texture mapping to mesh regions.
- */
+/** Undoable command that applies a face texture mapping to mesh regions. */
 export class ApplyFaceTextureCommand implements UndoCommand {
   private targets: TextureApplyTarget[];
   private mapping: FaceTextureMapping;
@@ -55,6 +47,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
 
   /**
    * Creates a texture apply command.
+   *
    * @param targets Regions that will receive the mapping.
    * @param mapping Mapping parameters to apply (UV defaults when resetUvOnly).
    * @param options Optional apply behavior flags.
@@ -72,9 +65,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Applies the mapping and bakes UVs, capturing prior state for undo.
-   */
+  /** Applies the mapping and bakes UVs, capturing prior state for undo. */
   execute(): void {
     if (this.executed) return;
     this.beforeSnapshots = this.captureSnapshots();
@@ -89,9 +80,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores prior UV attributes and face texture maps.
-   */
+  /** Restores prior UV attributes and face texture maps. */
   undo(): void {
     if (!this.executed) return;
     this.beforeSnapshots.forEach((snapshot) => {
@@ -101,9 +90,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Pushes result-mesh UV edits back onto solid brush faces for rebuild/save.
-   */
+  /** Pushes result-mesh UV edits back onto solid brush faces for rebuild/save. */
   private syncSolidBrushMappingsFromTargets(): void {
     const models = new Set<SolidModel>();
     for (const target of this.targets) {
@@ -118,6 +105,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
 
   /**
    * Captures unique meshes referenced by targets.
+   *
    * @returns Snapshots for undo.
    */
   private captureSnapshots(): MeshTextureSnapshot[] {
@@ -132,6 +120,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
 
   /**
    * Snapshots maps and UV buffer for one mesh.
+   *
    * @param mesh Mesh to capture.
    * @returns Snapshot object.
    */
@@ -144,6 +133,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
 
   /**
    * Restores a mesh snapshot and refreshes UV needsUpdate.
+   *
    * @param snapshot Prior state.
    */
   private restoreSnapshot(snapshot: MeshTextureSnapshot): void {
@@ -158,6 +148,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
 
   /**
    * Writes a saved UV array back onto geometry.
+   *
    * @param mesh Target mesh.
    * @param uvArray Saved interleaved UVs.
    */

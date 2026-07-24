@@ -2,12 +2,13 @@ import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
 
 /**
- * Shared form control factories for the settings dialog.
- * Uses the same Theme tokens as properties panel and toolbar controls.
+ * Shared form control factories for the settings dialog. Uses the same Theme
+ * tokens as properties panel and toolbar controls.
  */
 
 /**
  * Creates a category section with a title and body stack.
+ *
  * @param title Category heading text.
  * @returns Section element and body container for controls.
  */
@@ -38,6 +39,7 @@ export function createSettingsCategory(title: string): {
 
 /**
  * Creates a labeled control row.
+ *
  * @param labelText Left-side label.
  * @param control Right-side control element.
  * @returns Row element.
@@ -62,6 +64,7 @@ export function createSettingsControlRow(labelText: string, control: HTMLElement
 
 /**
  * Creates a styled select dropdown.
+ *
  * @param options Value/label pairs.
  * @param selectedValue Currently selected value.
  * @param onChange Change handler receiving the new value.
@@ -87,6 +90,7 @@ export function createSettingsSelect(
 
 /**
  * Creates a styled range slider with a live value readout.
+ *
  * @param min Inclusive minimum.
  * @param max Inclusive maximum.
  * @param step Step increment.
@@ -131,6 +135,7 @@ export function createSettingsSlider(
 
 /**
  * Creates a compact primary action button.
+ *
  * @param label Button label.
  * @param onClick Click handler.
  * @returns Button element.
@@ -149,14 +154,12 @@ export function createSettingsButton(label: string, onClick: () => void): HTMLBu
 
 /**
  * Creates a secondary / muted action button matching editor chrome.
+ *
  * @param label Button label.
  * @param onClick Click handler.
  * @returns Button element.
  */
-export function createSettingsSecondaryButton(
-  label: string,
-  onClick: () => void,
-): HTMLButtonElement {
+export function createSettingsSecondaryButton(label: string, onClick: () => void): HTMLButtonElement {
   const button = createSettingsButton(label, onClick);
   button.style.background = hexToRgb(Theme.buttonBackground);
   button.style.color = Theme.buttonTextColor;
@@ -167,6 +170,7 @@ export function createSettingsSecondaryButton(
 
 /**
  * Creates a text input field.
+ *
  * @param value Current text.
  * @param ariaLabel Accessible name.
  * @param onChange Change handler for committed text.
@@ -188,6 +192,7 @@ export function createSettingsTextInput(
 
 /**
  * Styles a category heading like properties panel section titles.
+ *
  * @param heading Heading element.
  */
 function styleCategoryHeading(heading: HTMLElement): void {
@@ -202,6 +207,7 @@ function styleCategoryHeading(heading: HTMLElement): void {
 
 /**
  * Styles a field label.
+ *
  * @param label Label element.
  */
 function styleSettingsLabel(label: HTMLElement): void {
@@ -213,6 +219,7 @@ function styleSettingsLabel(label: HTMLElement): void {
 
 /**
  * Styles a select control using editor input tokens.
+ *
  * @param select Select element.
  */
 function styleSettingsSelect(select: HTMLSelectElement): void {
@@ -231,6 +238,7 @@ function styleSettingsSelect(select: HTMLSelectElement): void {
 
 /**
  * Styles a range slider.
+ *
  * @param slider Range input.
  */
 function styleSettingsSlider(slider: HTMLInputElement): void {
@@ -242,6 +250,7 @@ function styleSettingsSlider(slider: HTMLInputElement): void {
 
 /**
  * Styles a numeric readout next to a slider.
+ *
  * @param readout Readout element.
  */
 function styleSettingsReadout(readout: HTMLElement): void {
@@ -255,6 +264,7 @@ function styleSettingsReadout(readout: HTMLElement): void {
 
 /**
  * Styles a settings action button like toolbar/panel buttons.
+ *
  * @param button Button element.
  */
 function styleSettingsButton(button: HTMLButtonElement): void {
@@ -273,6 +283,7 @@ function styleSettingsButton(button: HTMLButtonElement): void {
 
 /**
  * Styles a text input using editor input tokens.
+ *
  * @param input Text input element.
  */
 function styleSettingsTextInput(input: HTMLInputElement): void {
@@ -290,6 +301,7 @@ function styleSettingsTextInput(input: HTMLInputElement): void {
 
 /**
  * Binds hover background feedback for a button.
+ *
  * @param button Button element.
  * @param hoverColor Hover background.
  * @param idleColor Resting background.

@@ -3,9 +3,7 @@ import * as THREE from 'three';
 import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
 import { SolidBrushValidator } from '../../src/solid/brush/solid_brush_validator.js';
 
-/**
- * Unit tests for convex solid brush construction and wing-edge validation.
- */
+/** Unit tests for convex solid brush construction and wing-edge validation. */
 describe('SolidBrushFactory', () => {
   it('creates a valid box brush with six faces and mutual twin edges', () => {
     const size = 3 + Math.random() * 2;

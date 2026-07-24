@@ -1,20 +1,17 @@
 import * as THREE from 'three';
 import { isEditorHelperObject } from '../utils/mesh_edge_sync.js';
 
-/**
- * Extra distance beyond content so near/far never clip silhouette edges.
- */
+/** Extra distance beyond content so near/far never clip silhouette edges. */
 const DEPTH_MARGIN = 8;
 
-/**
- * Minimum stand-off from the nearest content plane to the camera.
- */
+/** Minimum stand-off from the nearest content plane to the camera. */
 const MIN_STAND_OFF = 4;
 
 /**
  * Keeps orthographic content in front of the camera along the view axis.
- * Adjusts only position-along-view and near/far — never zoom (left/right/top/bottom)
- * or lateral pan. Side view can therefore see maps on both +X and -X.
+ * Adjusts only position-along-view and near/far — never zoom
+ * (left/right/top/bottom) or lateral pan. Side view can therefore see maps on
+ * both +X and -X.
  */
 export class OrthoDepthRanger {
   private static readonly viewDirection = new THREE.Vector3();
@@ -24,6 +21,7 @@ export class OrthoDepthRanger {
 
   /**
    * Updates an orthographic camera so all scene content lies within near/far.
+   *
    * @param camera Orthographic viewport camera.
    * @param scene Viewport scene containing content clones.
    */
@@ -35,6 +33,7 @@ export class OrthoDepthRanger {
 
   /**
    * Measures content extent along the camera look direction.
+   *
    * @param scene Scene to scan for content meshes.
    * @param camera Camera providing the view direction.
    * @returns Min/max of content position · viewDirection, or null when empty.
@@ -65,6 +64,7 @@ export class OrthoDepthRanger {
 
   /**
    * Expands depth range from a mesh world bounding box corners.
+   *
    * @param mesh Content mesh.
    * @param viewDirection Camera look direction.
    * @param includeDot Callback for each corner projection.
@@ -83,11 +83,7 @@ export class OrthoDepthRanger {
     for (let ix = 0; ix < 2; ix++) {
       for (let iy = 0; iy < 2; iy++) {
         for (let iz = 0; iz < 2; iz++) {
-          this.corner.set(
-            ix === 0 ? min.x : max.x,
-            iy === 0 ? min.y : max.y,
-            iz === 0 ? min.z : max.z,
-          );
+          this.corner.set(ix === 0 ? min.x : max.x, iy === 0 ? min.y : max.y, iz === 0 ? min.z : max.z);
           includeDot(this.corner.dot(viewDirection));
         }
       }
@@ -96,15 +92,12 @@ export class OrthoDepthRanger {
 
   /**
    * Slides the camera along its look axis and sets near/far to cover content.
+   *
    * @param camera Orthographic camera to update.
    * @param minDot Minimum content · viewDirection.
    * @param maxDot Maximum content · viewDirection.
    */
-  private static applyDepthRange(
-    camera: THREE.OrthographicCamera,
-    minDot: number,
-    maxDot: number,
-  ): void {
+  private static applyDepthRange(camera: THREE.OrthographicCamera, minDot: number, maxDot: number): void {
     camera.getWorldDirection(this.viewDirection);
     const depth = Math.max(maxDot - minDot, 0.001);
     const standOff = Math.max(MIN_STAND_OFF, depth * 0.05);
@@ -120,6 +113,7 @@ export class OrthoDepthRanger {
 
   /**
    * Returns true for viewport infrastructure that must not drive depth.
+   *
    * @param object Candidate object.
    * @returns True when object is grid or gizmo related.
    */

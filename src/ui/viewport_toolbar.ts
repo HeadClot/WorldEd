@@ -3,8 +3,8 @@ import { ShadingMode } from '../types/shading_mode.js';
 import { ToolbarIcons } from './toolbar_icons.js';
 
 /**
- * Compact toolbar overlaid at the top of a single viewport.
- * Provides per-viewport shading modes and a Fit action.
+ * Compact toolbar overlaid at the top of a single viewport. Provides
+ * per-viewport shading modes and a Fit action.
  */
 export class ViewportToolbar {
   private container: HTMLElement;
@@ -18,15 +18,12 @@ export class ViewportToolbar {
 
   /**
    * Creates a viewport toolbar and appends it to the given parent.
+   *
    * @param parentElement The viewport container element.
    * @param titleText The viewport display name shown on the left.
    * @param initialMode The shading mode to highlight initially.
    */
-  constructor(
-    parentElement: HTMLElement,
-    titleText: string,
-    initialMode: ShadingMode = ShadingMode.SOLID,
-  ) {
+  constructor(parentElement: HTMLElement, titleText: string, initialMode: ShadingMode = ShadingMode.SOLID) {
     this.container = document.createElement('div');
     this.titleElement = document.createElement('span');
     this.buttonRow = document.createElement('div');
@@ -48,6 +45,7 @@ export class ViewportToolbar {
 
   /**
    * Registers the callback invoked when a shading mode button is pressed.
+   *
    * @param callback The shading mode change handler.
    */
   setOnShadingMode(callback: (mode: ShadingMode) => void): void {
@@ -56,6 +54,7 @@ export class ViewportToolbar {
 
   /**
    * Registers the callback invoked when the Fit button is pressed.
+   *
    * @param callback The fit action handler.
    */
   setOnFit(callback: () => void): void {
@@ -64,6 +63,7 @@ export class ViewportToolbar {
 
   /**
    * Updates which shading mode button appears selected.
+   *
    * @param mode The mode to mark as active.
    */
   setActiveShadingMode(mode: ShadingMode): void {
@@ -75,6 +75,7 @@ export class ViewportToolbar {
 
   /**
    * Returns the currently highlighted shading mode.
+   *
    * @returns The active ShadingMode value.
    */
   getActiveShadingMode(): ShadingMode {
@@ -83,6 +84,7 @@ export class ViewportToolbar {
 
   /**
    * Returns the root toolbar element.
+   *
    * @returns The toolbar container element.
    */
   getElement(): HTMLElement {
@@ -91,6 +93,7 @@ export class ViewportToolbar {
 
   /**
    * Returns the Fit button element for tests and focus management.
+   *
    * @returns The Fit toolbar button.
    */
   getFitButton(): HTMLButtonElement {
@@ -99,6 +102,7 @@ export class ViewportToolbar {
 
   /**
    * Returns the shading mode button for the given mode.
+   *
    * @param mode The shading mode whose button is requested.
    * @returns The button element, or undefined if missing.
    */
@@ -106,9 +110,7 @@ export class ViewportToolbar {
     return this.shadingButtons.get(mode);
   }
 
-  /**
-   * Removes the toolbar from the DOM.
-   */
+  /** Removes the toolbar from the DOM. */
   dispose(): void {
     if (this.container.parentNode) {
       this.container.parentNode.removeChild(this.container);
@@ -118,6 +120,7 @@ export class ViewportToolbar {
 
   /**
    * Builds the viewport title label on the left side of the bar.
+   *
    * @param titleText The text to display.
    */
   private buildTitle(titleText: string): void {
@@ -133,9 +136,7 @@ export class ViewportToolbar {
     this.titleElement.style.padding = '0 4px';
   }
 
-  /**
-   * Creates the shading mode button group.
-   */
+  /** Creates the shading mode button group. */
   private buildControls(): void {
     this.buttonRow.style.display = 'flex';
     this.buttonRow.style.alignItems = 'center';
@@ -148,6 +149,7 @@ export class ViewportToolbar {
 
   /**
    * Adds one shading mode toggle button.
+   *
    * @param mode The shading mode this button activates.
    * @param tooltip Accessible label and tooltip text.
    * @param iconSvg SVG markup for the button face.
@@ -165,6 +167,7 @@ export class ViewportToolbar {
 
   /**
    * Creates the Fit action button.
+   *
    * @returns The configured Fit button.
    */
   private createFitButton(): HTMLButtonElement {
@@ -178,6 +181,7 @@ export class ViewportToolbar {
 
   /**
    * Creates a compact square icon button.
+   *
    * @param tooltip The title/aria label for the button.
    * @param iconSvg SVG icon markup.
    * @returns The styled button element.
@@ -204,6 +208,7 @@ export class ViewportToolbar {
 
   /**
    * Applies shared visual styles to an icon button.
+   *
    * @param button The button to style.
    */
   private applyButtonBaseStyles(button: HTMLButtonElement): void {
@@ -223,6 +228,7 @@ export class ViewportToolbar {
 
   /**
    * Toggles the active visual state of a shading button.
+   *
    * @param button The button to update.
    * @param active Whether the button should appear selected.
    */
@@ -241,6 +247,7 @@ export class ViewportToolbar {
 
   /**
    * Creates a thin vertical separator between control groups.
+   *
    * @returns The separator element.
    */
   private createSeparator(): HTMLElement {
@@ -253,9 +260,7 @@ export class ViewportToolbar {
     return separator;
   }
 
-  /**
-   * Applies layout styles for the toolbar strip.
-   */
+  /** Applies layout styles for the toolbar strip. */
   private applyContainerStyles(): void {
     this.container.classList.add('editor-viewport-toolbar');
     this.container.style.position = 'absolute';
@@ -277,6 +282,7 @@ export class ViewportToolbar {
 
   /**
    * Converts a hex color number to an rgba CSS string.
+   *
    * @param hex The hex color value.
    * @param alpha Optional alpha channel from 0 to 1.
    * @returns An rgba CSS color string.

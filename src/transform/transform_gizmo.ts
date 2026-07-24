@@ -9,10 +9,10 @@ import { BoundsGizmo } from './bounds_gizmo.js';
 import { OrientedBoundsBuilder, OrientedBoundsData } from './oriented_bounds.js';
 
 /**
- * Main orchestrator for the transform gizmo.
- * Manages mode switching, handle creation, and active state.
- * Builds handles once on the master group, then clones into each viewport group
- * so handleIds stay consistent across all viewports.
+ * Main orchestrator for the transform gizmo. Manages mode switching, handle
+ * creation, and active state. Builds handles once on the master group, then
+ * clones into each viewport group so handleIds stay consistent across all
+ * viewports.
  */
 export class TransformGizmo {
   private theme: typeof Theme;
@@ -30,6 +30,7 @@ export class TransformGizmo {
 
   /**
    * Creates a new transform gizmo.
+   *
    * @param theme The theme containing gizmo color definitions.
    */
   constructor(theme: typeof Theme) {
@@ -52,6 +53,7 @@ export class TransformGizmo {
 
   /**
    * Sets the transform mode and rebuilds handles.
+   *
    * @param mode The new transform mode.
    */
   setMode(mode: TransformMode): void {
@@ -62,8 +64,8 @@ export class TransformGizmo {
   }
 
   /**
-   * Resets master and viewport gizmo group transforms to identity.
-   * Prevents leftover pivot scale from other modes from skewing Bounds.
+   * Resets master and viewport gizmo group transforms to identity. Prevents
+   * leftover pivot scale from other modes from skewing Bounds.
    */
   private resetHandleGroupTransform(): void {
     this.handleGroup.position.set(0, 0, 0);
@@ -78,6 +80,7 @@ export class TransformGizmo {
 
   /**
    * Returns the current transform mode.
+   *
    * @returns The active TransformMode enum value.
    */
   getMode(): TransformMode {
@@ -86,6 +89,7 @@ export class TransformGizmo {
 
   /**
    * Returns the Three.js group containing all gizmo handles.
+   *
    * @returns The handle group to add to a viewport scene.
    */
   getHandleGroup(): THREE.Group {
@@ -93,8 +97,9 @@ export class TransformGizmo {
   }
 
   /**
-   * Creates a fresh clone of the handle group for a specific viewport.
-   * Each viewport must have its own group to avoid Three.js parent conflicts.
+   * Creates a fresh clone of the handle group for a specific viewport. Each
+   * viewport must have its own group to avoid Three.js parent conflicts.
+   *
    * @returns A new Three.js group with cloned gizmo children.
    */
   getHandleGroupClone(): THREE.Group {
@@ -106,6 +111,7 @@ export class TransformGizmo {
 
   /**
    * Returns the current array of gizmo handles.
+   *
    * @returns All active GizmoHandle instances.
    */
   getHandles(): GizmoHandle[] {
@@ -114,6 +120,7 @@ export class TransformGizmo {
 
   /**
    * Sets which handle is currently active (being dragged).
+   *
    * @param handle The handle to activate, or null to clear.
    */
   setActiveHandle(handle: GizmoHandle | null): void {
@@ -126,6 +133,7 @@ export class TransformGizmo {
 
   /**
    * Checks if a specific handle is currently active.
+   *
    * @param handle The handle to check.
    * @returns True if the handle is active.
    */
@@ -135,6 +143,7 @@ export class TransformGizmo {
 
   /**
    * Returns the currently active handle.
+   *
    * @returns The active handle, or null.
    */
   getActiveHandle(): GizmoHandle | null {
@@ -143,6 +152,7 @@ export class TransformGizmo {
 
   /**
    * Updates the gizmo pivot position on the master group and all clones.
+   *
    * @param pivot The new pivot point in world space.
    */
   setPivot(pivot: THREE.Vector3): void {
@@ -154,8 +164,9 @@ export class TransformGizmo {
   }
 
   /**
-   * Orients translate/rotate/scale handles in world space.
-   * Bounds mode owns its own orientation from the OBB.
+   * Orients translate/rotate/scale handles in world space. Bounds mode owns its
+   * own orientation from the OBB.
+   *
    * @param orientation World-space rotation for the handle group.
    */
   setOrientation(orientation: THREE.Quaternion): void {
@@ -168,6 +179,7 @@ export class TransformGizmo {
 
   /**
    * Returns the current handle-group orientation (local axes in world space).
+   *
    * @returns Quaternion of the master handle group.
    */
   getOrientation(): THREE.Quaternion {
@@ -176,6 +188,7 @@ export class TransformGizmo {
 
   /**
    * Rebuilds Bounds gizmo pose from the current selection.
+   *
    * @param meshes Selected meshes defining the OBB.
    * @param camera Optional camera used to size resize handles.
    */
@@ -190,6 +203,7 @@ export class TransformGizmo {
 
   /**
    * Returns the current oriented bounds shown by the Bounds gizmo.
+   *
    * @returns Bounds data, or null.
    */
   getCurrentBounds(): OrientedBoundsData | null {
@@ -198,6 +212,7 @@ export class TransformGizmo {
 
   /**
    * Shows or hides bounds corner guide lines in all viewports.
+   *
    * @param visible Whether the guide lines should be drawn.
    */
   setBoundsGuideLinesVisible(visible: boolean): void {
@@ -207,6 +222,7 @@ export class TransformGizmo {
 
   /**
    * Shows or hides the gizmo in all viewports.
+   *
    * @param visible Whether the gizmo should be visible.
    */
   setVisible(visible: boolean): void {
@@ -218,8 +234,9 @@ export class TransformGizmo {
   }
 
   /**
-   * Scales gizmo groups so handles stay readable at camera distance.
-   * No-op in Bounds mode where size comes from the selection OBB.
+   * Scales gizmo groups so handles stay readable at camera distance. No-op in
+   * Bounds mode where size comes from the selection OBB.
+   *
    * @param camera The active camera used to estimate distance.
    * @param targetScale Multiplier applied after distance compensation.
    */
@@ -233,9 +250,7 @@ export class TransformGizmo {
     });
   }
 
-  /**
-   * Disposes all gizmo resources including viewport group clones.
-   */
+  /** Disposes all gizmo resources including viewport group clones. */
   dispose(): void {
     this.translateGizmo.dispose();
     this.rotateGizmo.dispose();
@@ -250,6 +265,7 @@ export class TransformGizmo {
 
   /**
    * Disposes the geometry and materials of all meshes in a group.
+   *
    * @param group The group whose meshes should be disposed.
    */
   private disposeGroup(group: THREE.Group): void {
@@ -262,6 +278,7 @@ export class TransformGizmo {
 
   /**
    * Disposes the geometry and material of a single mesh.
+   *
    * @param mesh The mesh to dispose.
    */
   private disposeMeshResources(mesh: THREE.Mesh): void {
@@ -276,7 +293,9 @@ export class TransformGizmo {
   }
 
   /**
-   * Clears the master group and rebuilds handles once, then mirrors into clones.
+   * Clears the master group and rebuilds handles once, then mirrors into
+   * clones.
+   *
    * @param mode The mode to build handles for.
    */
   private buildHandlesForMode(mode: TransformMode): void {
@@ -288,9 +307,7 @@ export class TransformGizmo {
     });
   }
 
-  /**
-   * Removes all children from the handle group.
-   */
+  /** Removes all children from the handle group. */
   private clearGroup(): void {
     while (this.handleGroup.children.length > 0) {
       const child = this.handleGroup.children[0];
@@ -301,6 +318,7 @@ export class TransformGizmo {
 
   /**
    * Removes all children from a viewport-specific group clone.
+   *
    * @param group The viewport group to clear.
    */
   private clearViewportGroup(group: THREE.Group): void {
@@ -312,6 +330,7 @@ export class TransformGizmo {
 
   /**
    * Creates handles once and populates the master group.
+   *
    * @param mode The transform mode to populate for.
    */
   private populateMasterGroup(mode: TransformMode): void {
@@ -343,6 +362,7 @@ export class TransformGizmo {
 
   /**
    * Clones master group children into a viewport group, preserving handleIds.
+   *
    * @param group The viewport group to populate.
    */
   private copyMasterIntoGroup(group: THREE.Group): void {
@@ -358,6 +378,7 @@ export class TransformGizmo {
 
   /**
    * Builds a new viewport group by cloning the current master contents.
+   *
    * @returns A new group ready for a viewport scene.
    */
   private cloneHandleGroupContents(): THREE.Group {
@@ -367,9 +388,7 @@ export class TransformGizmo {
     return clone;
   }
 
-  /**
-   * Copies master world pose into all viewport clones after bounds update.
-   */
+  /** Copies master world pose into all viewport clones after bounds update. */
   private syncMasterTransformToClones(): void {
     this.viewportGroups.forEach((group) => {
       this.clearViewportGroup(group);
@@ -378,28 +397,22 @@ export class TransformGizmo {
   }
 
   /**
-   * Chooses a handle cube size from the selection OBB only.
-   * Camera distance is intentionally ignored: one shared bounds gizmo is
-   * mirrored into every viewport, so 3D-camera scaling would inflate handles
-   * in orthographic 2D views when the perspective camera is far away.
+   * Chooses a handle cube size from the selection OBB only. Camera distance is
+   * intentionally ignored: one shared bounds gizmo is mirrored into every
+   * viewport, so 3D-camera scaling would inflate handles in orthographic 2D
+   * views when the perspective camera is far away.
+   *
    * @param bounds Current OBB, or null.
    * @param _camera Unused; kept for call-site compatibility.
    * @returns World-space handle size.
    */
-  private computeBoundsHandleSize(
-    bounds: OrientedBoundsData | null,
-    _camera: THREE.Camera | null,
-  ): number {
-    const minHalf = bounds
-      ? Math.min(bounds.halfExtents.x, bounds.halfExtents.y, bounds.halfExtents.z)
-      : 0.5;
+  private computeBoundsHandleSize(bounds: OrientedBoundsData | null, _camera: THREE.Camera | null): number {
+    const minHalf = bounds ? Math.min(bounds.halfExtents.x, bounds.halfExtents.y, bounds.halfExtents.z) : 0.5;
     const size = Math.max(0.08, minHalf * 0.18);
     return Math.min(size, 0.45);
   }
 
-  /**
-   * Removes the active highlight from any previously active handle.
-   */
+  /** Removes the active highlight from any previously active handle. */
   private clearActiveHighlight(): void {
     if (this.activeHandle) {
       this.activeHandle.setHoverColor(false);
@@ -408,6 +421,7 @@ export class TransformGizmo {
 
   /**
    * Applies the hover/active highlight to a handle.
+   *
    * @param handle The handle to highlight.
    */
   private applyActiveHighlight(handle: GizmoHandle): void {

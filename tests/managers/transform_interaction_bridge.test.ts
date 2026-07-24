@@ -13,9 +13,7 @@ import { GridSnap } from '../../src/transform/grid_snap.js';
 import { CommandStack } from '../../src/commands/command_stack.js';
 import { Viewport3D } from '../../src/viewports/viewport_3d.js';
 
-/**
- * Minimal viewport stand-in used to drive transform bridge events.
- */
+/** Minimal viewport stand-in used to drive transform bridge events. */
 class MockViewport {
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
@@ -23,6 +21,7 @@ class MockViewport {
 
   /**
    * Creates a mock viewport with a bounds-capable gizmo group.
+   *
    * @param gizmoGroup Visible gizmo group used for pick interactability.
    */
   constructor(gizmoGroup: THREE.Group) {
@@ -145,12 +144,11 @@ describe('TransformInteractionBridge', () => {
 
   /**
    * Builds a bridge with shared test fixtures.
+   *
    * @param isInteractionEnabled Optional gate for transform picks.
    * @returns Configured TransformInteractionBridge.
    */
-  function createBridge(
-    isInteractionEnabled: (() => boolean) | undefined,
-  ): TransformInteractionBridge {
+  function createBridge(isInteractionEnabled: (() => boolean) | undefined): TransformInteractionBridge {
     return new TransformInteractionBridge({
       selectionManager,
       selectionVisualController: {

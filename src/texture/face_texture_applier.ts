@@ -7,11 +7,7 @@ import {
   cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
 } from './face_texture_mapping.js';
-import {
-  upsertFaceTextureMap,
-  getFaceTextureMaps,
-  setFaceTextureMaps,
-} from './face_texture_storage.js';
+import { upsertFaceTextureMap, getFaceTextureMaps, setFaceTextureMaps } from './face_texture_storage.js';
 import {
   bakeFaceUVs,
   bakeAllFacesDefaultUVs,
@@ -24,9 +20,7 @@ import { rebuildSurfaceMaterials } from './surface_material_builder.js';
 import { getTexturePaintState } from './texture_paint_state.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from './texture_id.js';
 
-/**
- * Describes one mesh region that will receive a texture mapping update.
- */
+/** Describes one mesh region that will receive a texture mapping update. */
 export interface TextureApplyTarget {
   mesh: THREE.Mesh;
   triangleIndices: number[];
@@ -35,6 +29,7 @@ export interface TextureApplyTarget {
 
 /**
  * Builds apply targets from face selections (coplanar regions).
+ *
  * @param selections Current face selection entries.
  * @returns Targets ready for mapping updates.
  */
@@ -49,6 +44,7 @@ export function buildTargetsFromFaceSelection(selections: FaceSelection[]): Text
 
 /**
  * Builds apply targets covering every triangle on each mesh.
+ *
  * @param meshes Selected content meshes.
  * @returns One target per coplanar region across all meshes.
  */
@@ -68,16 +64,14 @@ export function buildTargetsFromMeshes(meshes: THREE.Mesh[]): TextureApplyTarget
 }
 
 /**
- * Finds a stored mapping for a triangle region.
- * Prefers exact triangle-set match, then a covering entry, then any overlap.
+ * Finds a stored mapping for a triangle region. Prefers exact triangle-set
+ * match, then a covering entry, then any overlap.
+ *
  * @param mesh Mesh to search.
  * @param triangleIndices Region indices.
  * @returns Existing mapping or null.
  */
-function findExistingMapping(
-  mesh: THREE.Mesh,
-  triangleIndices: number[],
-): FaceTextureMapping | null {
+function findExistingMapping(mesh: THREE.Mesh, triangleIndices: number[]): FaceTextureMapping | null {
   const sorted = triangleIndices.slice().sort((a, b) => a - b);
   const key = sorted.join(',');
   const indexSet = new Set(sorted);
@@ -104,6 +98,7 @@ function findExistingMapping(
 
 /**
  * Returns whether every target triangle appears in the entry.
+ *
  * @param sortedTarget Sorted target triangle indices.
  * @param entryIndices Entry triangle indices.
  * @returns True when the entry covers the whole target region.
@@ -114,7 +109,9 @@ function regionFullyCoveredByEntry(sortedTarget: number[], entryIndices: number[
 }
 
 /**
- * Resolves the effective mapping for a target (live storage, then snapshot, then default).
+ * Resolves the effective mapping for a target (live storage, then snapshot,
+ * then default).
+ *
  * @param target Apply target.
  * @returns Mapping to edit.
  */
@@ -130,13 +127,11 @@ export function resolveTargetMapping(target: TextureApplyTarget): FaceTextureMap
 /**
  * Applies UV editor fields to each target while preserving each region's
  * textureId (and any omitted identity). Bakes UVs afterward.
+ *
  * @param targets Regions to update.
  * @param mapping Mapping parameters to write.
  */
-export function applyMappingToTargets(
-  targets: TextureApplyTarget[],
-  mapping: FaceTextureMapping,
-): void {
+export function applyMappingToTargets(targets: TextureApplyTarget[], mapping: FaceTextureMapping): void {
   const meshes = new Set<THREE.Mesh>();
   targets.forEach((target) => {
     const fullMapping = mergeMappingPreservingTexture(target, mapping);
@@ -148,9 +143,10 @@ export function applyMappingToTargets(
 }
 
 /**
- * Assigns a texture id without rebaking UVs.
- * Projection params and the baked UV buffer stay untouched so cylinder unwrap
- * and per-face offsets survive paint operations.
+ * Assigns a texture id without rebaking UVs. Projection params and the baked UV
+ * buffer stay untouched so cylinder unwrap and per-face offsets survive paint
+ * operations.
+ *
  * @param targets Regions to update.
  * @param textureId Texture identity to apply.
  */
@@ -166,6 +162,7 @@ export function applyTextureIdToTargets(targets: TextureApplyTarget[], textureId
 
 /**
  * Sets only the align preset on targets, keeping scale/offset/rotation/texture.
+ *
  * @param targets Regions to update.
  * @param align Align preset.
  */
@@ -182,10 +179,11 @@ export function applyAlignToTargets(targets: TextureApplyTarget[], align: FaceTe
 }
 
 /**
- * Resets UV projection to smart defaults while keeping texture ids.
- * Restores face-plane auto projection (scale 1, rotation 0). When every
- * triangle of a cylinder is included, re-applies circumferential U unwrap
- * so the shell matches create-time layout.
+ * Resets UV projection to smart defaults while keeping texture ids. Restores
+ * face-plane auto projection (scale 1, rotation 0). When every triangle of a
+ * cylinder is included, re-applies circumferential U unwrap so the shell
+ * matches create-time layout.
+ *
  * @param targets Regions to reset.
  */
 export function resetUvParamsOnTargets(targets: TextureApplyTarget[]): void {
@@ -213,6 +211,7 @@ export function resetUvParamsOnTargets(targets: TextureApplyTarget[]): void {
 
 /**
  * Returns whether the targets include every triangle on the mesh.
+ *
  * @param mesh Mesh to test.
  * @param meshTargets Targets belonging to that mesh.
  * @returns True when the whole surface is covered.
@@ -227,15 +226,12 @@ function targetsCoverEntireMesh(mesh: THREE.Mesh, meshTargets: TextureApplyTarge
 
 /**
  * Patches textureId on stored entries that overlap a region (no UV rewrite).
+ *
  * @param mesh Mesh owning face maps.
  * @param triangleIndices Region triangles.
  * @param textureId New texture identity.
  */
-function patchTextureIdOnRegion(
-  mesh: THREE.Mesh,
-  triangleIndices: number[],
-  textureId: string,
-): void {
+function patchTextureIdOnRegion(mesh: THREE.Mesh, triangleIndices: number[], textureId: string): void {
   const indexSet = new Set(triangleIndices);
   const entries = getFaceTextureMaps(mesh);
   let hitCount = 0;
@@ -256,6 +252,7 @@ function patchTextureIdOnRegion(
 
 /**
  * Re-applies geometry-specific UV layout (cylinder unwrap) after a reset.
+ *
  * @param mesh Mesh whose face maps were reset to defaults.
  */
 function restoreGeometryAwareUvDefaults(mesh: THREE.Mesh): void {
@@ -276,15 +273,12 @@ export function resetTargetsToDefault(targets: TextureApplyTarget[]): void {
 /**
  * Initializes default UVs, face maps, and surface materials on a content mesh.
  * Uses the last painted texture id when available.
+ *
  * @param mesh Mesh to prepare.
  * @param textureId Optional texture id override.
  * @param align Optional projection align override (e.g. floor for terrain).
  */
-export function initializeMeshTextureUVs(
-  mesh: THREE.Mesh,
-  textureId?: string,
-  align?: FaceTextureAlign,
-): void {
+export function initializeMeshTextureUVs(mesh: THREE.Mesh, textureId?: string, align?: FaceTextureAlign): void {
   captureGeometrySourceIfNeeded(mesh);
   const paintId = textureId ?? getTexturePaintState().getLastTextureId();
   const mapping = createDefaultFaceTextureMapping(paintId);
@@ -294,9 +288,7 @@ export function initializeMeshTextureUVs(
   const triangleCount = countTriangles(mesh.geometry);
   const allIndices: number[] = [];
   for (let i = 0; i < triangleCount; i++) allIndices.push(i);
-  const targets = buildTargetsFromFaceSelection(
-    allIndices.map((faceIndex) => ({ mesh, faceIndex })),
-  );
+  const targets = buildTargetsFromFaceSelection(allIndices.map((faceIndex) => ({ mesh, faceIndex })));
   if (targets.length === 0) {
     bakeAllFacesDefaultUVs(mesh, mapping);
     rebuildSurfaceMaterials(mesh);
@@ -315,6 +307,7 @@ export function initializeMeshTextureUVs(
 
 /**
  * Reads a common mapping across targets when all values match.
+ *
  * @param targets Selection targets.
  * @returns Shared mapping, or null when mixed / empty.
  */
@@ -330,6 +323,7 @@ export function getCommonMapping(targets: TextureApplyTarget[]): FaceTextureMapp
 
 /**
  * Compares two mappings for equality.
+ *
  * @param a First mapping.
  * @param b Second mapping.
  * @returns True when all fields match.
@@ -347,15 +341,14 @@ function mappingsEqual(a: FaceTextureMapping, b: FaceTextureMapping): boolean {
 }
 
 /**
- * Merges UV params from mapping onto the target, keeping textureId when omitted.
+ * Merges UV params from mapping onto the target, keeping textureId when
+ * omitted.
+ *
  * @param target Region being updated.
  * @param mapping Incoming mapping (may omit textureId).
  * @returns Complete mapping with textureId.
  */
-function mergeMappingPreservingTexture(
-  target: TextureApplyTarget,
-  mapping: FaceTextureMapping,
-): FaceTextureMapping {
+function mergeMappingPreservingTexture(target: TextureApplyTarget, mapping: FaceTextureMapping): FaceTextureMapping {
   const clone = cloneFaceTextureMapping(mapping);
   if (!mapping.textureId) {
     clone.textureId = resolveTargetMapping(target).textureId;

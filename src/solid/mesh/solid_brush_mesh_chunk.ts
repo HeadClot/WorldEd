@@ -1,9 +1,6 @@
 import * as THREE from 'three';
 import { FaceTextureMapping } from '../../texture/face_texture_mapping.js';
-import {
-  projectWorldPositionToUv,
-  resolveProjectionBasis,
-} from '../../texture/planar_uv_projector.js';
+import { projectWorldPositionToUv, resolveProjectionBasis } from '../../texture/planar_uv_projector.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
 import { SolidCompiledPolygon } from '../algorithm/solid_compiled_polygon.js';
 import { SurfaceTriangulator } from '../algorithm/surface_triangulator.js';
@@ -30,13 +27,11 @@ export interface SolidBrushMeshChunk {
   triangleSources: SolidTriangleSource[];
 }
 
-/**
- * Options controlling how solid chunk UVs are projected.
- */
+/** Options controlling how solid chunk UVs are projected. */
 export interface SolidChunkUvBakeOptions {
   /**
-   * When true, project in brush-local space so textures stick to the brush
-   * (Tex Lock). When false, project in world space (textures stay in the world).
+   * When true, project in brush-local space so textures stick to the brush (Tex
+   * Lock). When false, project in world space (textures stay in the world).
    */
   stickToBrush: boolean;
   /** Solid-model → world matrix of the result mesh. */
@@ -47,20 +42,18 @@ export interface SolidChunkUvBakeOptions {
    */
   brushModelMatrix?: THREE.Matrix4;
   /**
-   * Brush face normal in brush-local space (for local UV basis).
-   * Falls back to the shaded polygon normal when omitted.
+   * Brush face normal in brush-local space (for local UV basis). Falls back to
+   * the shaded polygon normal when omitted.
    */
   resolveLocalFaceNormal?: (surfaceIndex: number) => THREE.Vector3;
   /**
-   * Brush face normal in solid-model space (for world UV basis).
-   * Falls back to the shaded polygon normal when omitted.
+   * Brush face normal in solid-model space (for world UV basis). Falls back to
+   * the shaded polygon normal when omitted.
    */
   resolveModelFaceNormal?: (surfaceIndex: number) => THREE.Vector3;
 }
 
-/**
- * Builds and holds UV bake scratch state for chunk construction.
- */
+/** Builds and holds UV bake scratch state for chunk construction. */
 export class SolidBrushMeshChunkBuilder {
   private readonly scratchPoint = new THREE.Vector3();
   private readonly scratchNormal = new THREE.Vector3();
@@ -69,6 +62,7 @@ export class SolidBrushMeshChunkBuilder {
 
   /**
    * Triangulates polygons and bakes planar UVs into a reusable brush chunk.
+   *
    * @param polygons Compiled polygons for one brush.
    * @param resolveMapping Maps surface index to authored face mapping.
    * @param uvOptions World vs brush-local UV projection controls.
@@ -118,6 +112,7 @@ export class SolidBrushMeshChunkBuilder {
 
   /**
    * Counts non-indexed vertices produced by fan triangulation.
+   *
    * @param polygons Input polygons.
    * @returns Vertex count.
    */
@@ -132,6 +127,7 @@ export class SolidBrushMeshChunkBuilder {
 
   /**
    * Writes one polygon's triangles into the chunk buffers.
+   *
    * @param polygon Source polygon.
    * @param resolveMapping Face mapping resolver.
    * @param uvOptions UV projection options.
@@ -192,6 +188,7 @@ export class SolidBrushMeshChunkBuilder {
 
   /**
    * Builds a UV projection basis in the space used for projection.
+   *
    * @param polygon Source polygon.
    * @param mapping Face mapping.
    * @param uvOptions UV options.
@@ -203,8 +200,7 @@ export class SolidBrushMeshChunkBuilder {
     uvOptions: SolidChunkUvBakeOptions,
   ): ReturnType<typeof resolveProjectionBasis> {
     if (uvOptions.stickToBrush) {
-      const localNormal =
-        uvOptions.resolveLocalFaceNormal?.(polygon.surfaceIndex) ?? polygon.normal;
+      const localNormal = uvOptions.resolveLocalFaceNormal?.(polygon.surfaceIndex) ?? polygon.normal;
       this.scratchNormal.copy(localNormal).normalize();
       return resolveProjectionBasis(this.scratchNormal, mapping);
     }
@@ -216,6 +212,7 @@ export class SolidBrushMeshChunkBuilder {
 
   /**
    * Writes one triangle's three corners into the buffers.
+   *
    * @param polygon Source polygon.
    * @param cornerIndices Three local vertex indices into the polygon.
    * @param mapping UV mapping.
@@ -255,6 +252,7 @@ export class SolidBrushMeshChunkBuilder {
 
   /**
    * Projects one vertex into the UV buffer.
+   *
    * @param modelVertex Vertex in solid model space.
    * @param mapping Face mapping.
    * @param basis Projection basis.

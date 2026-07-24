@@ -1,13 +1,12 @@
 import * as THREE from 'three';
 
-/**
- * Epsilon used when testing collinear or parallel point sets.
- */
+/** Epsilon used when testing collinear or parallel point sets. */
 const PLANE_POINT_EPSILON = 1e-8;
 
 /**
- * Builds a vertical clipping plane through two world points.
- * The plane contains both points and is parallel to world up when possible.
+ * Builds a vertical clipping plane through two world points. The plane contains
+ * both points and is parallel to world up when possible.
+ *
  * @param pointA First world-space point on the plane.
  * @param pointB Second world-space point on the plane.
  * @param worldUp Preferred up axis (defaults to +Y).
@@ -28,6 +27,7 @@ export function buildVerticalPlaneFromTwoPoints(
 
 /**
  * Builds an arbitrary plane from three non-collinear world points.
+ *
  * @param pointA First point on the plane.
  * @param pointB Second point on the plane.
  * @param pointC Third point on the plane.
@@ -49,8 +49,9 @@ export function buildPlaneFromThreePoints(
 }
 
 /**
- * Builds a plane from two or three placement points.
- * Two points use a vertical plane; three points use a free orientation.
+ * Builds a plane from two or three placement points. Two points use a vertical
+ * plane; three points use a free orientation.
+ *
  * @param points Ordered world points (length 2 or 3).
  * @param worldUp Up axis for the two-point vertical case.
  * @returns A plane, or null when the set is invalid.
@@ -70,6 +71,7 @@ export function buildPlaneFromPlacementPoints(
 
 /**
  * Returns a plane with inverted normal and constant (swaps half-spaces).
+ *
  * @param plane The source plane.
  * @returns A new flipped plane.
  */
@@ -78,8 +80,9 @@ export function flipPlane(plane: THREE.Plane): THREE.Plane {
 }
 
 /**
- * Converts a Three.js plane to the CSG clipper form n·x = constant.
- * Three.js stores n·x + constant = 0, so CSG constant is -plane.constant.
+ * Converts a Three.js plane to the CSG clipper form n·x = constant. Three.js
+ * stores n·x + constant = 0, so CSG constant is -plane.constant.
+ *
  * @param plane The Three.js plane.
  * @returns Normal and plane constant for CsgClipper.
  */
@@ -92,6 +95,7 @@ export function planeToCsgForm(plane: THREE.Plane): { normal: THREE.Vector3; con
 
 /**
  * Chooses a normal for a vertical plane containing the given edge.
+ *
  * @param edge Direction between the two placement points.
  * @param worldUp Preferred world up axis.
  * @returns Unnormalized normal, or zero if fully degenerate.
@@ -107,6 +111,7 @@ function computeVerticalPlaneNormal(edge: THREE.Vector3, worldUp: THREE.Vector3)
 
 /**
  * Picks a fallback axis when edge is nearly parallel to world up.
+ *
  * @param edge Edge direction.
  * @returns A unit axis not parallel to the edge.
  */

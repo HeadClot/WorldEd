@@ -6,9 +6,7 @@ import { ClipPlaneTool } from './clip_plane_tool.js';
 import { ClipPlaneHandler } from './clip_plane_handler.js';
 import { SelectionManager } from './selection_manager.js';
 
-/**
- * Dependencies for coordinating the Tools palette with editor modes.
- */
+/** Dependencies for coordinating the Tools palette with editor modes. */
 export interface ToolsPaletteControllerDependencies {
   toolsPalette: ToolsPalette;
   faceExtrusionController: FaceExtrusionController;
@@ -18,15 +16,14 @@ export interface ToolsPaletteControllerDependencies {
   showStatusMessage: (message: string) => void;
 }
 
-/**
- * Keeps the Tools palette, face mode, and clip tool mutually exclusive.
- */
+/** Keeps the Tools palette, face mode, and clip tool mutually exclusive. */
 export class ToolsPaletteController {
   private deps: ToolsPaletteControllerDependencies;
   private activeTool: EditorToolId;
 
   /**
    * Creates a tools palette controller.
+   *
    * @param deps Shared tool systems.
    */
   constructor(deps: ToolsPaletteControllerDependencies) {
@@ -38,6 +35,7 @@ export class ToolsPaletteController {
 
   /**
    * Returns the active interactive tool.
+   *
    * @returns Current EditorToolId.
    */
   getActiveTool(): EditorToolId {
@@ -46,6 +44,7 @@ export class ToolsPaletteController {
 
   /**
    * Returns whether the clip plane tool is the active tool.
+   *
    * @returns True when clip mode is live.
    */
   isClipToolActive(): boolean {
@@ -54,6 +53,7 @@ export class ToolsPaletteController {
 
   /**
    * Activates a tool from the palette or shortcuts.
+   *
    * @param toolId Tool to activate.
    */
   selectTool(toolId: EditorToolId): void {
@@ -70,6 +70,7 @@ export class ToolsPaletteController {
 
   /**
    * Syncs palette highlight when selection mode changes externally (Tab).
+   *
    * @param mode New selection mode.
    */
   onExternalSelectionModeChanged(mode: SelectionMode): void {
@@ -81,9 +82,7 @@ export class ToolsPaletteController {
     this.refreshPaletteContext();
   }
 
-  /**
-   * Refreshes palette status and clip button enablement.
-   */
+  /** Refreshes palette status and clip button enablement. */
   refreshPaletteContext(): void {
     this.deps.toolsPalette.setActiveTool(this.activeTool);
     if (this.activeTool === EditorToolId.CLIP_PLANE) {
@@ -99,9 +98,7 @@ export class ToolsPaletteController {
     this.deps.toolsPalette.setContextStatus('Transform modes · select objects in the viewport');
   }
 
-  /**
-   * Activates object selection mode.
-   */
+  /** Activates object selection mode. */
   private activateObjectTool(): void {
     this.deps.clipPlaneTool.deactivate();
     this.deps.faceExtrusionController.setSelectionMode(SelectionMode.OBJECT);
@@ -111,9 +108,7 @@ export class ToolsPaletteController {
     this.deps.showStatusMessage('Object select');
   }
 
-  /**
-   * Activates face selection mode.
-   */
+  /** Activates face selection mode. */
   private activateFaceTool(): void {
     this.deps.clipPlaneTool.deactivate();
     this.deps.faceExtrusionController.setSelectionMode(SelectionMode.FACE);
@@ -123,9 +118,7 @@ export class ToolsPaletteController {
     this.deps.showStatusMessage('Face select');
   }
 
-  /**
-   * Activates the clip plane tool when a mesh is selected.
-   */
+  /** Activates the clip plane tool when a mesh is selected. */
   private activateClipTool(): void {
     const selected = this.deps.selectionManager.getAllSelectedObjectsAsArray();
     if (selected.length === 0) {

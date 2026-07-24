@@ -1,9 +1,7 @@
 import type { CoordinateSpaceDefinition } from './coordinate_space_types.js';
 import type { ImperialUnit, MetricUnit, UnitSystem } from './unit_presets.js';
 
-/**
- * Settings dialog tab identifiers.
- */
+/** Settings dialog tab identifiers. */
 export type SettingsTabId = 'games' | 'view' | 'mouse' | 'keyboard' | 'update';
 
 /** Ordered settings tabs shown in the dialog. */
@@ -25,8 +23,8 @@ export const SETTINGS_TAB_LABELS: Readonly<Record<SettingsTabId, string>> = Obje
 });
 
 /**
- * UI theme preference for the editor chrome and viewports.
- * System follows the OS color scheme.
+ * UI theme preference for the editor chrome and viewports. System follows the
+ * OS color scheme.
  */
 export type UiThemePreference = 'system' | 'light' | 'dark';
 
@@ -34,9 +32,7 @@ export type UiThemePreference = 'system' | 'light' | 'dark';
 export type ViewportPaneCount = 1 | 2 | 3 | 4;
 
 /** Ordered viewport pane count options shown in View preferences. */
-export const VIEWPORT_PANE_COUNT_OPTIONS: readonly ViewportPaneCount[] = Object.freeze([
-  1, 2, 3, 4,
-]);
+export const VIEWPORT_PANE_COUNT_OPTIONS: readonly ViewportPaneCount[] = Object.freeze([1, 2, 3, 4]);
 
 /** Theme preference labels for dropdowns. */
 export const UI_THEME_LABELS: Readonly<Record<UiThemePreference, string>> = Object.freeze({
@@ -46,15 +42,9 @@ export const UI_THEME_LABELS: Readonly<Record<UiThemePreference, string>> = Obje
 });
 
 /** Ordered theme options. */
-export const UI_THEME_OPTIONS: readonly UiThemePreference[] = Object.freeze([
-  'system',
-  'light',
-  'dark',
-]);
+export const UI_THEME_OPTIONS: readonly UiThemePreference[] = Object.freeze(['system', 'light', 'dark']);
 
-/**
- * Serializable game profile stored as one JSON document per profile.
- */
+/** Serializable game profile stored as one JSON document per profile. */
 export interface GameProfile {
   id: string;
   name: string;
@@ -65,9 +55,7 @@ export interface GameProfile {
   coordinateSpace: CoordinateSpaceDefinition;
 }
 
-/**
- * View tab preferences for UI, material browser, and fonts.
- */
+/** View tab preferences for UI, material browser, and fonts. */
 export interface ViewSettings {
   theme: UiThemePreference;
   /** Viewport texture/material brightness percent (0–200). */
@@ -149,9 +137,7 @@ export interface KeyboardShortcut {
 /** Keyboard event codes assigned to editor actions. */
 export type KeyboardShortcutSettings = Record<KeyboardShortcutAction, KeyboardShortcut>;
 
-/**
- * Full editor settings snapshot persisted by the settings store.
- */
+/** Full editor settings snapshot persisted by the settings store. */
 export interface EditorSettingsSnapshot {
   activeGameProfileId: string | null;
   gameProfiles: GameProfile[];
@@ -175,9 +161,7 @@ export const MOUSE_MOVE_SPEED_MIN = 1;
 /** Inclusive maximum 3D fly movement speed. */
 export const MOUSE_MOVE_SPEED_MAX = 20;
 
-/**
- * Material browser icon size choices as percent strings for dropdowns.
- */
+/** Material browser icon size choices as percent strings for dropdowns. */
 export const MATERIAL_BROWSER_ICON_SIZE_OPTIONS: readonly number[] = Object.freeze([
   25, 50, 75, 100, 125, 150, 175, 200, 250, 300,
 ]);
@@ -196,6 +180,7 @@ export const BRIGHTNESS_MAX = 200;
 
 /**
  * Builds the ordered list of renderer font sizes for dropdowns.
+ *
  * @returns Integer sizes from 8 through 72.
  */
 export function buildRendererFontSizeOptions(): number[] {

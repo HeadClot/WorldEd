@@ -16,7 +16,8 @@ import { WindowPointerDragSession } from '../utils/window_pointer_drag_session.j
 import { SelectionClickThrough } from '../selection/selection_click_through.js';
 
 /**
- * Dependencies required to route viewport pointer events into the transform gizmo.
+ * Dependencies required to route viewport pointer events into the transform
+ * gizmo.
  */
 export interface TransformInteractionDependencies {
   selectionManager: SelectionManager;
@@ -31,33 +32,33 @@ export interface TransformInteractionDependencies {
   worldObject: THREE.Group;
   viewport3D: Viewport3D;
   getUserSnapEnabled: () => boolean;
-  /**
-   * Returns true when gizmo handles should follow object-local axes.
-   */
+  /** Returns true when gizmo handles should follow object-local axes. */
   isTransformSpaceLocal: () => boolean;
   syncPrimitivesToViewports: () => void;
   /**
    * Optional hook after a transform drag commits (solid CSG rebuild, etc.).
    * Return true when the handler fully synced solid results and the bridge
    * should skip a full viewport reclone (large-map pointer-up hang).
+   *
    * @param meshes Meshes that were transformed.
    */
   onTransformsCommitted?: (meshes: THREE.Mesh[]) => boolean | void;
   /**
    * Optional hook during transform drag for live solid CSG preview.
+   *
    * @param meshes Meshes currently being transformed.
    */
   onTransformsLive?: (meshes: THREE.Mesh[]) => void;
   /**
-   * When false, gizmo/bounds picks are ignored so other tools (face select)
-   * can receive pointer events. Defaults to always enabled when omitted.
+   * When false, gizmo/bounds picks are ignored so other tools (face select) can
+   * receive pointer events. Defaults to always enabled when omitted.
    */
   isInteractionEnabled?: () => boolean;
 }
 
 /**
- * Bridges viewport pointer events to the transform handler and keeps
- * clone positions, selection visuals, and properties in sync during drag.
+ * Bridges viewport pointer events to the transform handler and keeps clone
+ * positions, selection visuals, and properties in sync during drag.
  */
 export class TransformInteractionBridge {
   private deps: TransformInteractionDependencies;
@@ -68,6 +69,7 @@ export class TransformInteractionBridge {
 
   /**
    * Creates a transform interaction bridge.
+   *
    * @param deps Shared editor systems used during gizmo interaction.
    */
   constructor(deps: TransformInteractionDependencies) {
@@ -80,6 +82,7 @@ export class TransformInteractionBridge {
 
   /**
    * Wires transform callbacks on all viewports.
+   *
    * @param viewports Viewports that can drive the transform gizmo.
    */
   wireViewports(viewports: Array<Viewport3D | Viewport2D>): void {
@@ -90,6 +93,7 @@ export class TransformInteractionBridge {
 
   /**
    * Handles a transform event from a viewport.
+   *
    * @param event The pointer event.
    * @param viewport The viewport that received the event.
    * @returns True if the event was consumed by the transform handler.
@@ -114,9 +118,10 @@ export class TransformInteractionBridge {
   }
 
   /**
-   * Skips starting new gizmo picks when transform interaction is disabled
-   * (for example while face selection mode is active). Ongoing drags still
-   * receive move and up events so they can finish cleanly.
+   * Skips starting new gizmo picks when transform interaction is disabled (for
+   * example while face selection mode is active). Ongoing drags still receive
+   * move and up events so they can finish cleanly.
+   *
    * @returns True when the event must not begin a new transform interaction.
    */
   private shouldSkipDisabledInteraction(): boolean {
@@ -127,6 +132,7 @@ export class TransformInteractionBridge {
 
   /**
    * Returns whether the viewport gizmo is visible and should receive picks.
+   *
    * @param viewport The viewport whose gizmo group is checked.
    * @returns True when the gizmo group exists and is visible.
    */
@@ -139,6 +145,7 @@ export class TransformInteractionBridge {
   /**
    * On pointer-down with multi-select modifiers, skip gizmo/bounds picks so
    * object selection can hit meshes behind the bounds volume.
+   *
    * @param event The pointer event being dispatched.
    * @returns True when the gizmo must not consume this event.
    */
@@ -150,6 +157,7 @@ export class TransformInteractionBridge {
 
   /**
    * Checks whether the transform gizmo has active handles.
+   *
    * @returns True if handles exist and are non-empty.
    */
   private hasGizmoHandles(): boolean {
@@ -158,6 +166,7 @@ export class TransformInteractionBridge {
 
   /**
    * Gathers viewport and selection data for transform event dispatch.
+   *
    * @param viewport The viewport providing camera and renderer.
    * @returns An object containing transform event parameters.
    */
@@ -171,14 +180,13 @@ export class TransformInteractionBridge {
       camera: viewport.getCamera(),
       renderer: viewport.getRenderer(),
       handles: this.deps.transformGizmo.getHandles(),
-      selectedObjects: filterUnlockedObjects(
-        this.deps.selectionManager.getAllSelectedObjectsAsArray(),
-      ),
+      selectedObjects: filterUnlockedObjects(this.deps.selectionManager.getAllSelectedObjectsAsArray()),
     };
   }
 
   /**
    * Dispatches a transform event to the appropriate handler method.
+   *
    * @param eventType The pointer event type string.
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
@@ -199,15 +207,7 @@ export class TransformInteractionBridge {
     viewport: Viewport3D | Viewport2D,
   ): boolean {
     if (eventType === 'pointerdown') {
-      return this.beginTransformPointerDown(
-        camera,
-        renderer,
-        event,
-        handles,
-        selectedObjects,
-        gizmoGroup,
-        viewport,
-      );
+      return this.beginTransformPointerDown(camera, renderer, event, handles, selectedObjects, gizmoGroup, viewport);
     }
     if (eventType === 'pointermove') {
       return this.handleTransformPointerMove(camera, renderer, event);
@@ -221,6 +221,7 @@ export class TransformInteractionBridge {
   /**
    * Starts a gizmo/bounds drag and captures window move/up so release outside
    * the canvas still ends the drag.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointerdown event.
@@ -257,8 +258,9 @@ export class TransformInteractionBridge {
   }
 
   /**
-   * Routes subsequent move/up events through the originating viewport even
-   * when the pointer leaves the canvas (toolbar, side panels, etc.).
+   * Routes subsequent move/up events through the originating viewport even when
+   * the pointer leaves the canvas (toolbar, side panels, etc.).
+   *
    * @param viewport The viewport that started the drag.
    */
   private attachWindowDragCapture(viewport: Viewport3D | Viewport2D): void {
@@ -271,34 +273,26 @@ export class TransformInteractionBridge {
 
   /**
    * Applies a window-level pointermove using the viewport that began the drag.
+   *
    * @param event The window pointermove event.
    */
   private onWindowDragMove(event: PointerEvent): void {
     if (!this.activeDragViewport) return;
-    this.handleTransformPointerMove(
-      this.activeDragViewport.getCamera(),
-      this.activeDragViewport.getRenderer(),
-      event,
-    );
+    this.handleTransformPointerMove(this.activeDragViewport.getCamera(), this.activeDragViewport.getRenderer(), event);
   }
 
   /**
    * Handles the pointer move phase of a transform drag.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
    * @returns True if the event was consumed.
    */
-  private handleTransformPointerMove(
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
-    event: MouseEvent,
-  ): boolean {
+  private handleTransformPointerMove(camera: THREE.Camera, renderer: THREE.WebGLRenderer, event: MouseEvent): boolean {
     if (!this.deps.transformHandler.isDragging()) return false;
     const pivot = this.computeCurrentPivot();
-    const selected = filterUnlockedObjects(
-      Array.from(this.deps.selectionManager.getSelectedObjects()),
-    );
+    const selected = filterUnlockedObjects(Array.from(this.deps.selectionManager.getSelectedObjects()));
     this.updateSnapFromShiftKey();
     this.deps.transformHandler.onPointerMove(camera, renderer, event, pivot, selected);
     this.deps.viewportSyncManager.syncClonePositionsToWorldObject(this.deps.worldObject);
@@ -312,8 +306,9 @@ export class TransformInteractionBridge {
   }
 
   /**
-   * Resolves gizmo orientation from transform space and selection.
-   * Global (or multi-select) uses world axes; Local uses the object's rotation.
+   * Resolves gizmo orientation from transform space and selection. Global (or
+   * multi-select) uses world axes; Local uses the object's rotation.
+   *
    * @param selected Selected meshes.
    * @returns World quaternion for transform handles.
    */
@@ -328,9 +323,10 @@ export class TransformInteractionBridge {
   }
 
   /**
-   * Handles the pointer up phase of a transform drag.
-   * Clears window capture so later viewport moves do not resume the drag.
-   * Bounds face clicks without movement cycle nested object selection.
+   * Handles the pointer up phase of a transform drag. Clears window capture so
+   * later viewport moves do not resume the drag. Bounds face clicks without
+   * movement cycle nested object selection.
+   *
    * @returns True if the event was consumed.
    */
   private handleTransformPointerUp(): boolean {
@@ -339,9 +335,7 @@ export class TransformInteractionBridge {
       return false;
     }
     const pivot = this.computeCurrentPivot();
-    const selectedObjects = filterUnlockedObjects(
-      this.deps.selectionManager.getAllSelectedObjectsAsArray(),
-    );
+    const selectedObjects = filterUnlockedObjects(this.deps.selectionManager.getAllSelectedObjectsAsArray());
     const selectionClick = this.deps.transformHandler.onPointerUp(pivot, selectedObjects);
     const clickEvent = this.pendingSelectionClickEvent;
     const clickViewport = this.pendingSelectionClickViewport;
@@ -356,6 +350,7 @@ export class TransformInteractionBridge {
 
   /**
    * Commits a completed transform drag (viewport sync, gizmo refresh).
+   *
    * @param selectedObjects Meshes that were transformed.
    */
   private commitTransformAfterDrag(selectedObjects: THREE.Mesh[]): void {
@@ -372,13 +367,11 @@ export class TransformInteractionBridge {
 
   /**
    * Applies click-through selection after a bounds face press with no drag.
+   *
    * @param event The original pointerdown event used for picking.
    * @param viewport The viewport that received the press.
    */
-  private applyBoundsFaceSelectionClick(
-    event: MouseEvent | null,
-    viewport: Viewport3D | Viewport2D | null,
-  ): void {
+  private applyBoundsFaceSelectionClick(event: MouseEvent | null, viewport: Viewport3D | Viewport2D | null): void {
     if (!event || !viewport) return;
     if (typeof viewport.getObjectPickStack !== 'function') return;
     const stack = viewport.getObjectPickStack(event);
@@ -387,9 +380,7 @@ export class TransformInteractionBridge {
     this.deps.selectionManager.selectFromClick(picked, false, false);
   }
 
-  /**
-   * Drops window-level drag listeners and the originating viewport reference.
-   */
+  /** Drops window-level drag listeners and the originating viewport reference. */
   private clearWindowDragCapture(): void {
     this.windowDragSession.end();
     this.activeDragViewport = null;
@@ -397,16 +388,14 @@ export class TransformInteractionBridge {
     this.pendingSelectionClickViewport = null;
   }
 
-  /**
-   * Pushes live object transforms into the properties inspector.
-   */
+  /** Pushes live object transforms into the properties inspector. */
   private refreshPropertiesPanelTransform(): void {
     this.deps.propertiesPanel.refreshBoundObject();
   }
 
   /**
-   * Temporarily disables snap while Shift is held (precision mode).
-   * Restores the user snap preference when Shift is released.
+   * Temporarily disables snap while Shift is held (precision mode). Restores
+   * the user snap preference when Shift is released.
    */
   private updateSnapFromShiftKey(): void {
     if (this.deps.inputManager.isShiftDown()) {
@@ -418,6 +407,7 @@ export class TransformInteractionBridge {
 
   /**
    * Computes the current pivot point from selected objects.
+   *
    * @returns The pivot vector for transform operations.
    */
   private computeCurrentPivot(): THREE.Vector3 {

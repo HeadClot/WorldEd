@@ -124,8 +124,7 @@ describe('CameraFramer', () => {
       const width = target.right - target.left;
       const height = target.top - target.bottom;
       const aspect =
-        (orthographicCamera.right - orthographicCamera.left) /
-        (orthographicCamera.top - orthographicCamera.bottom);
+        (orthographicCamera.right - orthographicCamera.left) / (orthographicCamera.top - orthographicCamera.bottom);
       expect(width / height).toBeCloseTo(aspect);
       expect(width).toBeGreaterThanOrEqual(4 - 1e-6);
       expect(height).toBeGreaterThanOrEqual(2 - 1e-6);
@@ -184,14 +183,7 @@ describe('CameraFramer', () => {
   });
 });
 
-function createBoxMesh(
-  width: number,
-  height: number,
-  depth: number,
-  px: number,
-  py: number,
-  pz: number,
-): THREE.Mesh {
+function createBoxMesh(width: number, height: number, depth: number, px: number, py: number, pz: number): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(width, height, depth);
   const material = new THREE.MeshStandardMaterial({ color: 0x888888 });
   const mesh = new THREE.Mesh(geometry, material);

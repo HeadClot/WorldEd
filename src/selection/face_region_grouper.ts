@@ -2,18 +2,17 @@ import * as THREE from 'three';
 import { FaceSelection } from './face_selection_manager.js';
 import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
 
-/**
- * A distinct coplanar face region on a single mesh, ready for extrusion.
- */
+/** A distinct coplanar face region on a single mesh, ready for extrusion. */
 export interface FaceRegion {
   mesh: THREE.Mesh;
   faceIndices: number[];
 }
 
 /**
- * Groups selected face triangles into independent face regions.
- * Solid results keep one region per brush face; ordinary meshes use coplanar units.
- * Each region becomes one convex prism when extruded.
+ * Groups selected face triangles into independent face regions. Solid results
+ * keep one region per brush face; ordinary meshes use coplanar units. Each
+ * region becomes one convex prism when extruded.
+ *
  * @param selections The current face selection entries.
  * @returns Ordered face regions (stable per mesh, then by seed face index).
  */
@@ -32,6 +31,7 @@ export function groupSelectionsIntoFaceRegions(selections: FaceSelection[]): Fac
 
 /**
  * Buckets face selections by their owning mesh.
+ *
  * @param selections Face selection entries.
  * @returns Map from mesh to selected triangle indices.
  */
@@ -52,7 +52,9 @@ function groupSelectionsByMesh(selections: FaceSelection[]): Map<THREE.Mesh, num
 
 /**
  * Splits selected triangle indices on one mesh into selectable face regions.
- * Uses solid brush-surface identity when present; otherwise connected coplanar.
+ * Uses solid brush-surface identity when present; otherwise connected
+ * coplanar.
+ *
  * @param mesh The mesh owning the faces.
  * @param faceIndices Selected triangle indices on that mesh.
  * @returns Arrays of triangle indices, one region each.

@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TextureBrowserController } from '../../src/managers/texture_browser_controller.js';
 import { TextureBrowser } from '../../src/ui/texture_browser.js';
 import { TextureLibrary } from '../../src/texture/texture_library.js';
-import {
-  LocalDirectoryAccess,
-  PickedDirectoryListing,
-} from '../../src/texture/local_directory_access.js';
+import { LocalDirectoryAccess, PickedDirectoryListing } from '../../src/texture/local_directory_access.js';
 import { mockObjectUrlApis } from '../texture/object_url_test_utils.js';
 
 describe('TextureBrowserController', () => {
@@ -164,6 +161,7 @@ describe('TextureBrowserController', () => {
 
 /**
  * Creates a mock LocalDirectoryAccess that returns a fixed listing.
+ *
  * @param listing Listing or null for cancel.
  * @returns Mock access implementation.
  */

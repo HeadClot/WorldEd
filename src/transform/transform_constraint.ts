@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import { GizmoAxis } from '../types/transform_mode.js';
 
 /**
- * Pure math class for computing constrained transforms.
- * All methods are static and operate on Three.js vector types.
+ * Pure math class for computing constrained transforms. All methods are static
+ * and operate on Three.js vector types.
  */
 export class TransformConstraint {
   /**
-   * Constrains a translation delta to a single axis.
-   * Zeroes out the components not on the specified axis.
+   * Constrains a translation delta to a single axis. Zeroes out the components
+   * not on the specified axis.
+   *
    * @param delta The original translation delta vector.
    * @param axis The axis to constrain translation to.
    * @returns A new vector with only the constrained axis component.
@@ -22,8 +23,9 @@ export class TransformConstraint {
   }
 
   /**
-   * Constrains a translation delta to a plane.
-   * Zeroes out the component perpendicular to the specified plane.
+   * Constrains a translation delta to a plane. Zeroes out the component
+   * perpendicular to the specified plane.
+   *
    * @param delta The original translation delta vector.
    * @param plane The plane to constrain translation to.
    * @returns A new vector with only the plane components.
@@ -46,18 +48,15 @@ export class TransformConstraint {
   }
 
   /**
-   * Computes the signed rotation angle between two direction vectors.
-   * Uses the cross product dot the axis to determine sign.
+   * Computes the signed rotation angle between two direction vectors. Uses the
+   * cross product dot the axis to determine sign.
+   *
    * @param initialDir The initial direction vector before rotation.
    * @param currentDir The current direction vector during rotation.
    * @param axis The rotation axis (must be normalized).
    * @returns The signed rotation angle in radians.
    */
-  static computeRotationAngle(
-    initialDir: THREE.Vector3,
-    currentDir: THREE.Vector3,
-    axis: THREE.Vector3,
-  ): number {
+  static computeRotationAngle(initialDir: THREE.Vector3, currentDir: THREE.Vector3, axis: THREE.Vector3): number {
     const normalizedInitial = initialDir.clone().normalize();
     const normalizedCurrent = currentDir.clone().normalize();
     const dot = normalizedInitial.dot(normalizedCurrent);
@@ -69,6 +68,7 @@ export class TransformConstraint {
 
   /**
    * Computes a uniform scale factor from initial and current distances.
+   *
    * @param initialDistance The reference distance before scaling.
    * @param currentDistance The current distance during scaling.
    * @returns The scale factor, clamped to a minimum of 0.01.

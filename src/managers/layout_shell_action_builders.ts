@@ -10,9 +10,7 @@ import { SnapSettingsController } from './snap_settings_controller.js';
 import { buildOutlinerActions, buildToolbarActions } from './layout_action_factories.js';
 import { OutlinerPanel } from '../ui/outliner_panel.js';
 
-/**
- * Layout surface used to build outliner and toolbar shell actions.
- */
+/** Layout surface used to build outliner and toolbar shell actions. */
 export interface LayoutShellActionSource {
   selectionManager: SelectionManager;
   commandStack: CommandStack;
@@ -52,6 +50,7 @@ export interface LayoutShellActionSource {
 
 /**
  * Builds outliner action callbacks for the shell builder.
+ *
  * @param source Layout manager surface.
  * @returns Outliner action callback bundle.
  */
@@ -71,6 +70,7 @@ export function createOutlinerShellActions(source: LayoutShellActionSource) {
 
 /**
  * Builds toolbar action callbacks for the shell builder.
+ *
  * @param source Layout manager surface.
  * @returns Toolbar action callback bundle.
  */

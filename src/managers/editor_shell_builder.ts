@@ -16,7 +16,8 @@ import { ObjectActionHandler } from './object_action_handler.js';
 import { isObjectOrAncestorLocked, toggleObjectLocked } from '../utils/object_lock.js';
 
 /**
- * Callbacks the shell builder needs from the layout manager for outliner actions.
+ * Callbacks the shell builder needs from the layout manager for outliner
+ * actions.
  */
 export interface EditorShellOutlinerActions {
   onDuplicateFromOutliner: (obj: THREE.Object3D) => void;
@@ -32,9 +33,7 @@ export interface EditorShellOutlinerActions {
   showStatusMessage: (message: string) => void;
 }
 
-/**
- * Toolbar action callbacks bound when toolbar buttons are created.
- */
+/** Toolbar action callbacks bound when toolbar buttons are created. */
 export interface EditorToolbarActions {
   onAddCube: () => void;
   onAddSphere: () => void;
@@ -77,9 +76,7 @@ export interface EditorToolbarActions {
   isTransformSpaceLocal: () => boolean;
 }
 
-/**
- * Result of building the main editor shell DOM structure.
- */
+/** Result of building the main editor shell DOM structure. */
 export interface EditorShellElements {
   toolbarContainer: HTMLElement;
   mainLayout: HTMLElement;
@@ -92,11 +89,13 @@ export interface EditorShellElements {
 }
 
 /**
- * Builds the editor DOM shell: toolbar, viewport grid, outliner, properties, status bar.
+ * Builds the editor DOM shell: toolbar, viewport grid, outliner, properties,
+ * status bar.
  */
 export class EditorShellBuilder {
   /**
    * Builds and appends the full editor shell under the given container.
+   *
    * @param editorContainer Root DOM element for the editor UI.
    * @param selectionManager Shared selection manager.
    * @param worldObject Root scene hierarchy group.
@@ -132,12 +131,7 @@ export class EditorShellBuilder {
       hierarchyReparentHandler,
       outlinerActions,
     );
-    const propertiesPanel = this.createPropertiesPanel(
-      mainLayout,
-      selectionManager,
-      commandStack,
-      textureLock,
-    );
+    const propertiesPanel = this.createPropertiesPanel(mainLayout, selectionManager, commandStack, textureLock);
     const statusBar = this.createStatusBar(toolbarContainer, gridSnap, commandStack);
     return {
       toolbarContainer,
@@ -153,6 +147,7 @@ export class EditorShellBuilder {
 
   /**
    * Creates and styles the root toolbar container element.
+   *
    * @param editorContainer Root editor container.
    * @returns The toolbar container element.
    */
@@ -167,7 +162,9 @@ export class EditorShellBuilder {
   }
 
   /**
-   * Creates and styles the main layout element that holds viewports and outliner.
+   * Creates and styles the main layout element that holds viewports and
+   * outliner.
+   *
    * @param toolbarContainer Parent flex column.
    * @returns The main layout element.
    */
@@ -182,6 +179,7 @@ export class EditorShellBuilder {
 
   /**
    * Creates and styles the viewport grid area element.
+   *
    * @param mainLayout Parent main layout.
    * @returns The viewport area element.
    */
@@ -203,6 +201,7 @@ export class EditorShellBuilder {
 
   /**
    * Creates viewport container elements for each grid area.
+   *
    * @param viewportArea Parent grid container.
    * @returns Containers ordered top, front, side, perspective.
    */
@@ -217,6 +216,7 @@ export class EditorShellBuilder {
 
   /**
    * Creates a viewport container element for a grid area.
+   *
    * @param viewportArea Parent grid container.
    * @param area The grid area name for the viewport.
    * @returns The created container element.
@@ -232,6 +232,7 @@ export class EditorShellBuilder {
 
   /**
    * Creates the outliner panel and registers context callbacks.
+   *
    * @param mainLayout Parent layout.
    * @param selectionManager Shared selection manager.
    * @param worldObject Root hierarchy group.
@@ -253,24 +254,19 @@ export class EditorShellBuilder {
     );
     outlinerPanel.setGroupCallback((objects) => outlinerActions.onGroupFromOutliner(objects));
     outlinerPanel.setUngroupCallback((group) => outlinerActions.onUngroupFromOutliner(group));
-    outlinerPanel.setRenameCallback((obj, newName) =>
-      outlinerActions.onRenameFromOutliner(obj, newName),
-    );
-    outlinerPanel.setVisibilityCallback((obj) =>
-      outlinerActions.onToggleVisibilityFromOutliner(obj),
-    );
+    outlinerPanel.setRenameCallback((obj, newName) => outlinerActions.onRenameFromOutliner(obj, newName));
+    outlinerPanel.setVisibilityCallback((obj) => outlinerActions.onToggleVisibilityFromOutliner(obj));
     outlinerPanel.setLockCallback((obj) => outlinerActions.onToggleLockFromOutliner(obj));
     hierarchyReparentHandler.setSyncViewports(() => outlinerActions.syncViewports());
     hierarchyReparentHandler.setRefreshOutliner(() => outlinerActions.refreshOutliner());
     hierarchyReparentHandler.setShowStatus((message) => outlinerActions.showStatusMessage(message));
-    outlinerPanel.setReparentCallback((dragged, target) =>
-      outlinerActions.reparentFromDrop(dragged, target),
-    );
+    outlinerPanel.setReparentCallback((dragged, target) => outlinerActions.reparentFromDrop(dragged, target));
     return outlinerPanel;
   }
 
   /**
    * Creates the properties panel and wires command stack and texture lock.
+   *
    * @param mainLayout Parent layout.
    * @param selectionManager Shared selection manager.
    * @param commandStack Undo stack for property edits.
@@ -291,16 +287,13 @@ export class EditorShellBuilder {
 
   /**
    * Creates the status bar and binds command stack updates to it.
+   *
    * @param toolbarContainer Parent flex column.
    * @param gridSnap Snap source for initial status values.
    * @param commandStack Undo stack for count updates.
    * @returns Configured StatusBar.
    */
-  private createStatusBar(
-    toolbarContainer: HTMLElement,
-    gridSnap: GridSnap,
-    commandStack: CommandStack,
-  ): StatusBar {
+  private createStatusBar(toolbarContainer: HTMLElement, gridSnap: GridSnap, commandStack: CommandStack): StatusBar {
     const statusBar = new StatusBar(toolbarContainer, Theme);
     statusBar.setUndoRedoCounts(0, 0);
     statusBar.setTransformMode('Bounds');
@@ -315,6 +308,7 @@ export class EditorShellBuilder {
   /**
    * Creates the modern top toolbar: menus, history, snap, and panel toggles.
    * Transform modes live in the Tools palette (object-select context).
+   *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
@@ -328,6 +322,7 @@ export class EditorShellBuilder {
 
   /**
    * Adds primary menu dropdowns (File, Edit, Add, CSG, Align).
+   *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
@@ -378,6 +373,7 @@ export class EditorShellBuilder {
 
   /**
    * Adds undo/redo icon controls.
+   *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
@@ -389,29 +385,23 @@ export class EditorShellBuilder {
 
   /**
    * Adds one-click primitive creation icons (faster than the Add menu).
+   *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
   private addPrimitiveControls(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addSeparator();
     toolbar.addIconButton('Add Cube', ToolbarIcons.primitiveCube(), () => actions.onAddCube());
-    toolbar.addIconButton('Add Sphere', ToolbarIcons.primitiveSphere(), () =>
-      actions.onAddSphere(),
-    );
-    toolbar.addIconButton('Add Cylinder', ToolbarIcons.primitiveCylinder(), () =>
-      actions.onAddCylinder(),
-    );
+    toolbar.addIconButton('Add Sphere', ToolbarIcons.primitiveSphere(), () => actions.onAddSphere());
+    toolbar.addIconButton('Add Cylinder', ToolbarIcons.primitiveCylinder(), () => actions.onAddCylinder());
     toolbar.addIconButton('Add Plane', ToolbarIcons.primitivePlane(), () => actions.onAddPlane());
-    toolbar.addIconButton('Add Terrain', ToolbarIcons.primitiveTerrain(), () =>
-      actions.onAddTerrain(),
-    );
-    toolbar.addIconButton('Add Solid Model', ToolbarIcons.solidModel(), () =>
-      actions.onAddSolidModel(),
-    );
+    toolbar.addIconButton('Add Terrain', ToolbarIcons.primitiveTerrain(), () => actions.onAddTerrain());
+    toolbar.addIconButton('Add Solid Model', ToolbarIcons.solidModel(), () => actions.onAddSolidModel());
   }
 
   /**
    * Adds snap, transform-space, and texture-lock controls.
+   *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
@@ -422,10 +412,8 @@ export class EditorShellBuilder {
     toolbar.addButton('−', () => actions.onSnapIntervalBackward()).title = 'Decrease snap interval';
     toolbar.addButton('+', () => actions.onSnapIntervalForward()).title = 'Increase snap interval';
     toolbar.addSeparator();
-    toolbar.addButton('Global', () => actions.onSetTransformSpaceGlobal()).title =
-      'Gizmo axes: world (global)';
-    toolbar.addButton('Local', () => actions.onSetTransformSpaceLocal()).title =
-      'Gizmo axes: object local';
+    toolbar.addButton('Global', () => actions.onSetTransformSpaceGlobal()).title = 'Gizmo axes: world (global)';
+    toolbar.addButton('Local', () => actions.onSetTransformSpaceLocal()).title = 'Gizmo axes: object local';
     this.applyTransformSpaceButtonState(toolbar, actions.isTransformSpaceLocal());
     toolbar.addSeparator();
     toolbar.addButton('Tex Lock', () => actions.onToggleTextureLock());
@@ -434,6 +422,7 @@ export class EditorShellBuilder {
 
   /**
    * Highlights Global or Local according to the current transform space.
+   *
    * @param toolbar Toolbar with Global/Local buttons.
    * @param isLocal Whether local space is active.
    */
@@ -444,22 +433,17 @@ export class EditorShellBuilder {
 
   /**
    * Adds floating panel toggle icons (UV, textures, tools) and About.
+   *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
   private addPanelToggleControls(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addSeparator();
     toolbar.addIconButton('UV Editor', ToolbarIcons.uvEditor(), () => actions.onToggleUvEditor());
-    toolbar.addIconButton('Texture Browser', ToolbarIcons.textureBrowser(), () =>
-      actions.onToggleTextureBrowser(),
-    );
+    toolbar.addIconButton('Texture Browser', ToolbarIcons.textureBrowser(), () => actions.onToggleTextureBrowser());
     toolbar.addIconButton('Tools', ToolbarIcons.toolsPanel(), () => actions.onToggleToolsPalette());
-    toolbar.addIconButton('Solid Model', ToolbarIcons.solidModel(), () =>
-      actions.onToggleSolidModelPanel(),
-    );
-    toolbar.addIconButton('Settings', ToolbarIcons.settings(), () =>
-      actions.onToggleSettingsDialog(),
-    );
+    toolbar.addIconButton('Solid Model', ToolbarIcons.solidModel(), () => actions.onToggleSolidModelPanel());
+    toolbar.addIconButton('Settings', ToolbarIcons.settings(), () => actions.onToggleSettingsDialog());
     toolbar.addSeparator();
     toolbar.addIconButton('About', ToolbarIcons.about(), () => actions.onOpenAboutDialog());
   }
@@ -467,6 +451,7 @@ export class EditorShellBuilder {
 
 /**
  * Applies outliner rename via command stack.
+ *
  * @param commandStack Undo stack.
  * @param obj Object to rename.
  * @param newName Requested name.
@@ -486,6 +471,7 @@ export function applyOutlinerRename(
 
 /**
  * Toggles outliner lock state on an object and refreshes the tree.
+ *
  * @param obj Object whose lock flag toggles.
  * @param refreshOutliner Callback after toggle.
  * @param showStatusMessage Optional status feedback.
@@ -506,8 +492,9 @@ export function applyOutlinerLockToggle(
 }
 
 /**
- * Applies outliner visibility toggle via command stack.
- * Solid brushes also leave/re-enter CSG evaluation inside the command.
+ * Applies outliner visibility toggle via command stack. Solid brushes also
+ * leave/re-enter CSG evaluation inside the command.
+ *
  * @param commandStack Undo stack.
  * @param obj Object whose visibility toggles.
  * @param refreshOutliner Callback after toggle.
@@ -526,6 +513,7 @@ export function applyOutlinerVisibilityToggle(
 
 /**
  * Handles Duplicate from the outliner context menu.
+ *
  * @param obj Hierarchy object to duplicate.
  * @param selectionManager Selection manager.
  * @param objectActionHandler Object action handler.

@@ -11,25 +11,17 @@ describe('BufferGeometryCodec', () => {
 
   it('should round-trip positions for a simple triangle', () => {
     const source = new THREE.BufferGeometry();
-    source.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3),
-    );
+    source.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3));
     source.computeVertexNormals();
     const encoded = codec.encode(source);
     const decoded = codec.decode(encoded);
-    const decodedPositions = Array.from(
-      decoded.getAttribute('position').array as ArrayLike<number>,
-    );
+    const decodedPositions = Array.from(decoded.getAttribute('position').array as ArrayLike<number>);
     expect(decodedPositions).toEqual([0, 0, 0, 1, 0, 0, 0, 1, 0]);
   });
 
   it('should preserve index buffers', () => {
     const source = new THREE.BufferGeometry();
-    source.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0], 3),
-    );
+    source.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0], 3));
     source.setIndex([0, 1, 2, 0, 2, 3]);
     const encoded = codec.encode(source);
     expect(encoded.index).toEqual([0, 1, 2, 0, 2, 3]);

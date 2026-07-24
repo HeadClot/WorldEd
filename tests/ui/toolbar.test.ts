@@ -65,9 +65,7 @@ describe('Toolbar', () => {
     toolbar.addSeparator();
     toolbar.addButton('After', () => {});
     const toolbarElement = container.children[0] as HTMLElement;
-    const separatorCount = Array.from(toolbarElement.children).filter(
-      (child) => child.tagName === 'DIV',
-    ).length;
+    const separatorCount = Array.from(toolbarElement.children).filter((child) => child.tagName === 'DIV').length;
     expect(separatorCount).toBe(1);
   });
 

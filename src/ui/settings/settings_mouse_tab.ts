@@ -6,11 +6,7 @@ import {
   MOUSE_MOVE_SPEED_MIN,
   type MouseSettings,
 } from '../../settings/settings_types.js';
-import {
-  createSettingsCategory,
-  createSettingsControlRow,
-  createSettingsSlider,
-} from './settings_form_controls.js';
+import { createSettingsCategory, createSettingsControlRow, createSettingsSlider } from './settings_form_controls.js';
 
 /** Mouse navigation preferences for look, pan, and movement. */
 export class SettingsMouseTab {
@@ -19,6 +15,7 @@ export class SettingsMouseTab {
 
   /**
    * Creates the Mouse tab content.
+   *
    * @param store Settings store that persists mouse preferences.
    */
   constructor(store: EditorSettingsStore) {
@@ -31,6 +28,7 @@ export class SettingsMouseTab {
 
   /**
    * Returns the tab root element.
+   *
    * @returns Tab content root.
    */
   getElement(): HTMLElement {
@@ -49,80 +47,52 @@ export class SettingsMouseTab {
 
   /**
    * Builds Mouse Look controls.
+   *
    * @param settings Current mouse preferences.
    * @returns Look category section.
    */
   private buildLookCategory(settings: MouseSettings): HTMLElement {
     const { section, body } = createSettingsCategory('Mouse Look');
+    body.appendChild(this.createSensitivityRow('look-sensitivity', settings.lookSensitivity, 'lookSensitivity'));
     body.appendChild(
-      this.createSensitivityRow('look-sensitivity', settings.lookSensitivity, 'lookSensitivity'),
+      this.createCheckboxRow('Invert X axis', 'look-invert-x-axis', settings.lookInvertXAxis, 'lookInvertXAxis'),
     );
     body.appendChild(
-      this.createCheckboxRow(
-        'Invert X axis',
-        'look-invert-x-axis',
-        settings.lookInvertXAxis,
-        'lookInvertXAxis',
-      ),
-    );
-    body.appendChild(
-      this.createCheckboxRow(
-        'Invert Y axis',
-        'look-invert-y-axis',
-        settings.lookInvertYAxis,
-        'lookInvertYAxis',
-      ),
+      this.createCheckboxRow('Invert Y axis', 'look-invert-y-axis', settings.lookInvertYAxis, 'lookInvertYAxis'),
     );
     return section;
   }
 
   /**
    * Builds Mouse Pan controls.
+   *
    * @param settings Current mouse preferences.
    * @returns Pan category section.
    */
   private buildPanCategory(settings: MouseSettings): HTMLElement {
     const { section, body } = createSettingsCategory('Mouse Pan');
+    body.appendChild(this.createSensitivityRow('pan-sensitivity', settings.panSensitivity, 'panSensitivity'));
     body.appendChild(
-      this.createSensitivityRow('pan-sensitivity', settings.panSensitivity, 'panSensitivity'),
+      this.createCheckboxRow('Invert X axis', 'pan-invert-x-axis', settings.panInvertXAxis, 'panInvertXAxis'),
     );
     body.appendChild(
-      this.createCheckboxRow(
-        'Invert X axis',
-        'pan-invert-x-axis',
-        settings.panInvertXAxis,
-        'panInvertXAxis',
-      ),
-    );
-    body.appendChild(
-      this.createCheckboxRow(
-        'Invert Y axis',
-        'pan-invert-y-axis',
-        settings.panInvertYAxis,
-        'panInvertYAxis',
-      ),
+      this.createCheckboxRow('Invert Y axis', 'pan-invert-y-axis', settings.panInvertYAxis, 'panInvertYAxis'),
     );
     return section;
   }
 
   /**
    * Builds Mouse Move controls.
+   *
    * @param settings Current mouse preferences.
    * @returns Move category section.
    */
   private buildMoveCategory(settings: MouseSettings): HTMLElement {
     const { section, body } = createSettingsCategory('Mouse Move');
     body.appendChild(this.createSpeedRow(settings.moveSpeed));
+    body.appendChild(this.createSensitivityRow('move-sensitivity', settings.moveSensitivity, 'moveSensitivity'));
     body.appendChild(
-      this.createSensitivityRow('move-sensitivity', settings.moveSensitivity, 'moveSensitivity'),
-    );
-    body.appendChild(
-      this.createCheckboxRow(
-        'Invert mouse wheel',
-        'invert-mouse-wheel',
-        settings.invertMouseWheel,
-        'invertMouseWheel',
-      ),
+      this.createCheckboxRow('Invert mouse wheel', 'invert-mouse-wheel', settings.invertMouseWheel, 'invertMouseWheel'),
     );
     body.appendChild(
       this.createCheckboxRow(
@@ -153,17 +123,13 @@ export class SettingsMouseTab {
 
   /**
    * Creates the 3D fly movement speed slider row.
+   *
    * @param value Current movement speed.
    * @returns Movement speed control row.
    */
   private createSpeedRow(value: number): HTMLElement {
-    const slider = createSettingsSlider(
-      MOUSE_MOVE_SPEED_MIN,
-      MOUSE_MOVE_SPEED_MAX,
-      1,
-      value,
-      String,
-      (nextValue) => this.store.updateMouseSettings({ moveSpeed: nextValue }),
+    const slider = createSettingsSlider(MOUSE_MOVE_SPEED_MIN, MOUSE_MOVE_SPEED_MAX, 1, value, String, (nextValue) =>
+      this.store.updateMouseSettings({ moveSpeed: nextValue }),
     );
     const input = slider.querySelector('input') as HTMLInputElement;
     input.dataset.settingsField = 'move-speed';
@@ -172,23 +138,15 @@ export class SettingsMouseTab {
 
   /**
    * Creates one sensitivity slider row.
+   *
    * @param fieldId Stable test identifier.
    * @param value Current slider value.
    * @param settingKey Mouse preference updated by the slider.
    * @returns Sensitivity control row.
    */
-  private createSensitivityRow(
-    fieldId: string,
-    value: number,
-    settingKey: keyof MouseSettings,
-  ): HTMLElement {
-    const slider = createSettingsSlider(
-      MOUSE_SENSITIVITY_MIN,
-      MOUSE_SENSITIVITY_MAX,
-      1,
-      value,
-      String,
-      (nextValue) => this.store.updateMouseSettings({ [settingKey]: nextValue }),
+  private createSensitivityRow(fieldId: string, value: number, settingKey: keyof MouseSettings): HTMLElement {
+    const slider = createSettingsSlider(MOUSE_SENSITIVITY_MIN, MOUSE_SENSITIVITY_MAX, 1, value, String, (nextValue) =>
+      this.store.updateMouseSettings({ [settingKey]: nextValue }),
     );
     const input = slider.querySelector('input') as HTMLInputElement;
     input.dataset.settingsField = fieldId;
@@ -197,6 +155,7 @@ export class SettingsMouseTab {
 
   /**
    * Creates a boolean preference checkbox row.
+   *
    * @param label Label displayed for the preference.
    * @param fieldId Stable test identifier.
    * @param checked Current checked state.
@@ -213,9 +172,7 @@ export class SettingsMouseTab {
     checkbox.type = 'checkbox';
     checkbox.checked = checked;
     checkbox.dataset.settingsField = fieldId;
-    checkbox.addEventListener('change', () =>
-      this.store.updateMouseSettings({ [settingKey]: checkbox.checked }),
-    );
+    checkbox.addEventListener('change', () => this.store.updateMouseSettings({ [settingKey]: checkbox.checked }));
     return createSettingsControlRow(label, checkbox);
   }
 }

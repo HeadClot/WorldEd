@@ -9,9 +9,7 @@ import { SolidPlane } from '../../../src/solid/brush/solid_plane.js';
 import { VMF_INCHES_TO_METERS } from '../../../src/io/vmf/vmf_coordinates.js';
 import { buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 
-/**
- * Unit tests for half-space hull math and VMF brush construction.
- */
+/** Unit tests for half-space hull math and VMF brush construction. */
 describe('VmfBrushFromSides / half-space hull', () => {
   it('builds a valid convex box from three-plane intersections', () => {
     const size = 2 + Math.random() * 3;
@@ -28,9 +26,7 @@ describe('VmfBrushFromSides / half-space hull', () => {
     expect(hull).not.toBeNull();
     expect(hull!.vertices.length).toBe(8);
     expect(hull!.faceLoops.length).toBe(6);
-    const brush = SolidBrushFactory.createFromFaceLoops(
-      hull!.faceLoops.map((loop) => loop.vertices),
-    );
+    const brush = SolidBrushFactory.createFromFaceLoops(hull!.faceLoops.map((loop) => loop.vertices));
     expect(brush).not.toBeNull();
     const validation = SolidBrushValidator.validate(brush!);
     expect(validation.valid).toBe(true);

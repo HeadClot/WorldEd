@@ -34,12 +34,7 @@ describe('ToolsPaletteController', () => {
     });
     const scene = new THREE.Scene();
     const world = new THREE.Group();
-    faceController = new FaceExtrusionController(
-      scene,
-      new CommandStack(8),
-      new GridSnap(false, 1),
-      world,
-    );
+    faceController = new FaceExtrusionController(scene, new CommandStack(8), new GridSnap(false, 1), world);
     clipTool = new ClipPlaneTool();
     selectionManager = new SelectionManager();
     showStatus = vi.fn();

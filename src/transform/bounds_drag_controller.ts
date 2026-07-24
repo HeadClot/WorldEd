@@ -15,9 +15,7 @@ import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 import { TransformDragSession } from './transform_drag_session.js';
 import { TransformProjectionMath } from './transform_projection_math.js';
 
-/**
- * Handles Bounds mode face-move and one-sided resize drag interactions.
- */
+/** Handles Bounds mode face-move and one-sided resize drag interactions. */
 export class BoundsDragController {
   private session: TransformDragSession;
   private transformGizmo: TransformGizmo;
@@ -28,6 +26,7 @@ export class BoundsDragController {
 
   /**
    * Creates a bounds drag controller bound to a shared drag session.
+   *
    * @param session Shared drag session state.
    * @param transformGizmo The gizmo orchestrator.
    * @param gizmoRaycaster Raycaster for handle and plane projection.
@@ -49,6 +48,7 @@ export class BoundsDragController {
 
   /**
    * Sets texture lock settings used when resizing meshes.
+   *
    * @param settings Shared texture lock settings, or null to disable rebake.
    */
   setTextureLockSettings(settings: TextureLockSettings | null): void {
@@ -57,6 +57,7 @@ export class BoundsDragController {
 
   /**
    * Starts Bounds interaction: resize handle first, then face-plane move.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -74,9 +75,7 @@ export class BoundsDragController {
     pivot: THREE.Vector3,
     gizmoGroup: THREE.Group,
   ): void {
-    if (
-      this.tryBeginResizeDrag(camera, renderer, event, handles, selectedObjects, pivot, gizmoGroup)
-    ) {
+    if (this.tryBeginResizeDrag(camera, renderer, event, handles, selectedObjects, pivot, gizmoGroup)) {
       return;
     }
     this.beginFaceMoveDrag(camera, renderer, event, selectedObjects, pivot, gizmoGroup);
@@ -84,17 +83,13 @@ export class BoundsDragController {
 
   /**
    * Dispatches Bounds sub-mode drag updates.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
    * @param objects Selected meshes.
    */
-  handleMove(
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
-    event: MouseEvent,
-    objects: THREE.Mesh[],
-  ): void {
+  handleMove(camera: THREE.Camera, renderer: THREE.WebGLRenderer, event: MouseEvent, objects: THREE.Mesh[]): void {
     if (this.session.isBoundsFaceMove) {
       this.handleFaceTranslate(camera, renderer, event, objects);
       return;
@@ -106,6 +101,7 @@ export class BoundsDragController {
 
   /**
    * Starts a one-sided bounds resize when a face handle is hit.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -148,6 +144,7 @@ export class BoundsDragController {
 
   /**
    * Starts a face-plane translation when a bounds face is hit.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -183,6 +180,7 @@ export class BoundsDragController {
 
   /**
    * Translates selection on the picked bounds face plane.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -195,24 +193,16 @@ export class BoundsDragController {
     objects: THREE.Mesh[],
   ): void {
     if (!this.session.initialMousePosition) return;
-    const current = this.gizmoRaycaster.projectMouseToPlane(
-      camera,
-      renderer,
-      event,
-      this.session.boundsMovePlane,
-    );
+    const current = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, this.session.boundsMovePlane);
     if (!current) return;
     const totalDelta = current.clone().sub(this.session.initialMousePosition);
     this.session.dragDeltaAccumulator.copy(totalDelta);
-    this.transformExecutor.applyAbsoluteTranslation(
-      objects,
-      this.session.initialPositions,
-      totalDelta,
-    );
+    this.transformExecutor.applyAbsoluteTranslation(objects, this.session.initialPositions, totalDelta);
   }
 
   /**
    * Applies one-sided resize along the active bounds face normal.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -224,17 +214,10 @@ export class BoundsDragController {
     event: MouseEvent,
     objects: THREE.Mesh[],
   ): void {
-    if (
-      !this.session.initialMousePosition ||
-      !this.session.activeBoundsFace ||
-      !this.session.startBounds
-    ) {
+    if (!this.session.initialMousePosition || !this.session.activeBoundsFace || !this.session.startBounds) {
       return;
     }
-    const plane = TransformProjectionMath.buildCameraPlane(
-      camera,
-      this.session.initialMousePosition,
-    );
+    const plane = TransformProjectionMath.buildCameraPlane(camera, this.session.initialMousePosition);
     const current = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
     if (!current) return;
     const outward = this.getActiveFaceWorldNormal();
@@ -253,6 +236,7 @@ export class BoundsDragController {
 
   /**
    * Projects the active face center at drag start onto its outward normal.
+   *
    * @param outward Unit outward normal for the active face.
    * @returns Scalar face coordinate along the normal, or 0 when unavailable.
    */
@@ -265,6 +249,7 @@ export class BoundsDragController {
 
   /**
    * Returns the half-extent along the axis of a bounds face.
+   *
    * @param bounds Oriented bounds at drag start.
    * @param face The face being resized.
    * @returns Half-extent along that face's axis.
@@ -281,6 +266,7 @@ export class BoundsDragController {
 
   /**
    * Writes absolute one-sided resize results onto all selected objects.
+   *
    * @param objects Selected meshes.
    * @param deltaAlongNormal Snapped face displacement.
    */
@@ -314,6 +300,7 @@ export class BoundsDragController {
 
   /**
    * Re-bakes world planar UVs when texture lock is enabled.
+   *
    * @param objects Meshes whose scale or bounds just changed.
    */
   rebakeLockedTextures(objects: THREE.Mesh[]): void {
@@ -322,6 +309,7 @@ export class BoundsDragController {
 
   /**
    * Reads the bounds face id stored on a handle mesh.
+   *
    * @param handle The gizmo handle.
    * @returns Bounds face, or null.
    */
@@ -333,6 +321,7 @@ export class BoundsDragController {
 
   /**
    * Stores the initial mouse sample for a bounds resize drag.
+   *
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @param event The pointer event.
@@ -350,16 +339,12 @@ export class BoundsDragController {
     const half = this.getFaceHalfExtent(bounds, face);
     const faceCenter = bounds.center.clone().addScaledVector(outward, half);
     const plane = TransformProjectionMath.buildCameraPlane(camera, faceCenter);
-    this.session.initialMousePosition = this.gizmoRaycaster.projectMouseToPlane(
-      camera,
-      renderer,
-      event,
-      plane,
-    );
+    this.session.initialMousePosition = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
   }
 
   /**
    * Returns the outward world normal for the active bounds face.
+   *
    * @returns Normalized world normal.
    */
   private getActiveFaceWorldNormal(): THREE.Vector3 {
@@ -371,6 +356,7 @@ export class BoundsDragController {
 
   /**
    * Computes a face outward normal in world space.
+   *
    * @param bounds Oriented bounds.
    * @param face Face identifier.
    * @returns Normalized world normal.
@@ -388,6 +374,7 @@ export class BoundsDragController {
 
   /**
    * Clones oriented bounds data.
+   *
    * @param bounds Source bounds.
    * @returns Independent copy.
    */

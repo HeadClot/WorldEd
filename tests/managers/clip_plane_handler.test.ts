@@ -57,10 +57,7 @@ describe('ClipPlaneHandler preview after scene load', () => {
     clipPlaneTool.addPoint(new THREE.Vector3(3, 0, 0));
     handler.getPreview().syncFromTool(clipPlaneTool);
     const previewRoot = handler.getPreview().getRoot();
-    const contentMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial(),
-    );
+    const contentMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     worldObject.add(contentMesh);
     const deserializer = new SceneDeserializer();
     const sceneData: SceneJSON = { version: 1, objects: [] };
@@ -73,8 +70,9 @@ describe('ClipPlaneHandler preview after scene load', () => {
 });
 
 /**
- * Removes every world child without the deserializer preserve path.
- * Simulates a broken clear that detaches the clip preview.
+ * Removes every world child without the deserializer preserve path. Simulates a
+ * broken clear that detaches the clip preview.
+ *
  * @param worldObject World root group.
  */
 function forceRemoveAllWorldChildren(worldObject: THREE.Group): void {

@@ -48,18 +48,14 @@ describe('pointerEventToNdc', () => {
 
 /**
  * Creates a mock HTMLElement with a fixed getBoundingClientRect result.
+ *
  * @param left Rect left edge.
  * @param top Rect top edge.
  * @param width Rect width.
  * @param height Rect height.
  * @returns A mock element usable with pointerEventToNdc.
  */
-function createElementWithRect(
-  left: number,
-  top: number,
-  width: number,
-  height: number,
-): HTMLElement {
+function createElementWithRect(left: number, top: number, width: number, height: number): HTMLElement {
   const element = document.createElement('div');
   Object.defineProperty(element, 'getBoundingClientRect', {
     value: () => ({ left, top, width, height, right: left + width, bottom: top + height }),
@@ -69,6 +65,7 @@ function createElementWithRect(
 
 /**
  * Creates a mouse event at client coordinates.
+ *
  * @param clientX Horizontal client position.
  * @param clientY Vertical client position.
  * @returns A MouseEvent for testing.

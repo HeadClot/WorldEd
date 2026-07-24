@@ -7,9 +7,7 @@ import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/selection_
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 
-/**
- * Minimal viewport stand-in with a scene for selection outline tests.
- */
+/** Minimal viewport stand-in with a scene for selection outline tests. */
 class MockViewport {
   private scene: THREE.Scene;
   private selectionManager: SelectionManager | null;
@@ -36,6 +34,7 @@ class MockViewport {
 
 /**
  * Builds a viewport sync stub that reports world meshes for hull fill sync.
+ *
  * @param worldMeshes Authoritative selectable meshes.
  * @returns Partial ViewportSyncManager used by the controller.
  */
@@ -71,9 +70,7 @@ describe('SelectionVisualController', () => {
 
   it('should apply selection outline to the world mesh on selection', () => {
     selectionManager.selectObject(mesh);
-    const hasOutline = mesh.children.some(
-      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
-    );
+    const hasOutline = mesh.children.some((child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true);
     expect(hasOutline).toBe(true);
   });
 
@@ -91,18 +88,14 @@ describe('SelectionVisualController', () => {
   it('should reapply outlines after viewport clone rebuild', () => {
     selectionManager.selectObject(mesh);
     controller.reapplyAfterViewportSync();
-    const hasOutline = mesh.children.some(
-      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
-    );
+    const hasOutline = mesh.children.some((child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true);
     expect(hasOutline).toBe(true);
   });
 
   it('should clear outlines when selection is cleared', () => {
     selectionManager.selectObject(mesh);
     selectionManager.clearSelection();
-    const hasOutline = mesh.children.some(
-      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
-    );
+    const hasOutline = mesh.children.some((child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true);
     expect(hasOutline).toBe(false);
   });
 

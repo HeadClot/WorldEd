@@ -1,8 +1,8 @@
 import { vi } from 'vitest';
 
 /**
- * Ensures URL.createObjectURL / revokeObjectURL exist so vi.spyOn can wrap them.
- * jsdom often omits these APIs.
+ * Ensures URL.createObjectURL / revokeObjectURL exist so vi.spyOn can wrap
+ * them. jsdom often omits these APIs.
  */
 export function ensureObjectUrlApis(): void {
   if (typeof URL.createObjectURL !== 'function') {
@@ -23,6 +23,7 @@ export function ensureObjectUrlApis(): void {
 
 /**
  * Installs sequential blob: URLs for createObjectURL and a no-op revoke.
+ *
  * @param prefix Prefix for generated blob URLs.
  * @returns Spy handles for assertions.
  */

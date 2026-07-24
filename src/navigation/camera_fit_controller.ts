@@ -14,8 +14,8 @@ export interface FitViewport {
 }
 
 /**
- * Orchestrates camera fit-to-selection across multiple viewports.
- * Computes bounding volumes, frames, and delegates to appropriate animators.
+ * Orchestrates camera fit-to-selection across multiple viewports. Computes
+ * bounding volumes, frames, and delegates to appropriate animators.
  */
 export class CameraFitController {
   private boundingVolumeComputer: BoundingVolumeComputer;
@@ -24,9 +24,7 @@ export class CameraFitController {
   private activeOrthographicAnimations: OrthographicCameraAnimator[];
   private config: CameraAnimationConfig;
 
-  /**
-   * Creates a new camera fit controller with default configuration.
-   */
+  /** Creates a new camera fit controller with default configuration. */
   constructor() {
     this.boundingVolumeComputer = new BoundingVolumeComputer();
     this.cameraFramer = new CameraFramer();
@@ -37,6 +35,7 @@ export class CameraFitController {
 
   /**
    * Returns the shared animation configuration instance.
+   *
    * @returns The CameraAnimationConfig used by this controller.
    */
   getConfig(): CameraAnimationConfig {
@@ -44,18 +43,15 @@ export class CameraFitController {
   }
 
   /**
-   * Fits a single viewport camera to frame the given meshes.
-   * Falls back to all objects in the scene if the mesh array is empty.
+   * Fits a single viewport camera to frame the given meshes. Falls back to all
+   * objects in the scene if the mesh array is empty.
+   *
    * @param viewport The viewport whose camera should be fitted.
    * @param meshes The meshes to frame, or empty array for scene fallback.
    * @param config The animation configuration to use.
    * @returns The count of objects that were framed.
    */
-  fitViewportToSelection(
-    viewport: FitViewport,
-    meshes: THREE.Mesh[],
-    config: CameraAnimationConfig,
-  ): number {
+  fitViewportToSelection(viewport: FitViewport, meshes: THREE.Mesh[], config: CameraAnimationConfig): number {
     this.config = config;
     const targetMeshes = this.resolveTargetMeshes(viewport, meshes);
     const camera = viewport.getCamera();
@@ -70,16 +66,13 @@ export class CameraFitController {
 
   /**
    * Fits all viewports to frame the same set of meshes.
+   *
    * @param viewports The viewports whose cameras should be fitted.
    * @param meshes The meshes to frame, or empty array for scene fallback.
    * @param config The animation configuration to use.
    * @returns The total count of objects framed across all viewports.
    */
-  fitAllViewportsToSelection(
-    viewports: FitViewport[],
-    meshes: THREE.Mesh[],
-    config: CameraAnimationConfig,
-  ): number {
+  fitAllViewportsToSelection(viewports: FitViewport[], meshes: THREE.Mesh[], config: CameraAnimationConfig): number {
     this.config = config;
     let totalCount = 0;
     viewports.forEach((viewport) => {
@@ -90,8 +83,8 @@ export class CameraFitController {
   }
 
   /**
-   * Advances all active camera animations by one frame.
-   * Must be called from the render loop.
+   * Advances all active camera animations by one frame. Must be called from the
+   * render loop.
    */
   updateAnimations(): void {
     this.perspectiveAnimator.update();
@@ -99,8 +92,9 @@ export class CameraFitController {
   }
 
   /**
-   * Resolves the target meshes to frame. Falls back to all objects
-   * in the viewport's scene when no meshes are provided.
+   * Resolves the target meshes to frame. Falls back to all objects in the
+   * viewport's scene when no meshes are provided.
+   *
    * @param viewport The viewport to query for scene objects.
    * @param meshes The provided mesh array.
    * @returns The resolved mesh array to frame.
@@ -112,6 +106,7 @@ export class CameraFitController {
 
   /**
    * Collects all mesh objects from the viewport's scene.
+   *
    * @param viewport The viewport whose scene to traverse.
    * @returns An array of all meshes found in the scene.
    */
@@ -130,6 +125,7 @@ export class CameraFitController {
 
   /**
    * Fits a perspective camera to frame the given meshes.
+   *
    * @param camera The perspective camera to animate.
    * @param meshes The meshes to frame.
    */
@@ -139,16 +135,12 @@ export class CameraFitController {
     const boundingSphere = this.boundingVolumeComputer.computeBoundingSphere(boundingBox);
     const padding = this.config.getPaddingFactor();
     const target = this.cameraFramer.computePerspectiveTarget(boundingSphere, camera, padding);
-    this.perspectiveAnimator.animateToTarget(
-      camera,
-      target.targetPosition,
-      target.targetLookAt,
-      this.config,
-    );
+    this.perspectiveAnimator.animateToTarget(camera, target.targetPosition, target.targetLookAt, this.config);
   }
 
   /**
    * Fits an orthographic camera to frame the given meshes.
+   *
    * @param camera The orthographic camera to animate.
    * @param meshes The meshes to frame.
    */
@@ -164,15 +156,14 @@ export class CameraFitController {
 
   /**
    * Creates a fresh orthographic camera animator instance.
+   *
    * @returns A new OrthographicCameraAnimator.
    */
   private createOrthographicAnimator(): OrthographicCameraAnimator {
     return new OrthographicCameraAnimator();
   }
 
-  /**
-   * Advances all active orthographic animations and removes completed ones.
-   */
+  /** Advances all active orthographic animations and removes completed ones. */
   private updateOrthographicAnimations(): void {
     const completed: OrthographicCameraAnimator[] = [];
     this.activeOrthographicAnimations.forEach((animator) => {

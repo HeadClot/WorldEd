@@ -9,7 +9,9 @@ import { SolidUpdateSetBuilder } from '../../src/solid/algorithm/solid_update_se
 import { BrushOverlapGraph } from '../../src/solid/algorithm/brush_overlap_graph.js';
 
 /**
- * Builds a solid brush instance from a box with optional transform and operation.
+ * Builds a solid brush instance from a box with optional transform and
+ * operation.
+ *
  * @param id Brush id.
  * @param size Box edge length.
  * @param operation CSG operation.
@@ -30,6 +32,7 @@ function makeBoxBrush(
 
 /**
  * Builds many non-overlapping additive boxes on a grid.
+ *
  * @param count Number of boxes.
  * @param spacing Center-to-center spacing (must exceed size).
  * @param size Box edge length.
@@ -55,6 +58,7 @@ function makeGridBrushes(count: number, spacing: number, size: number): SolidBru
 
 /**
  * Sorts polygons into a stable comparison key list.
+ *
  * @param polygons Compiled polygons.
  * @returns Sorted string keys for equality checks.
  */
@@ -80,9 +84,7 @@ function polygonSignature(polygons: SolidCompiledPolygon[]): string[] {
     .sort();
 }
 
-/**
- * Unit tests for partial solid CSG updates and touch-set expansion.
- */
+/** Unit tests for partial solid CSG updates and touch-set expansion. */
 describe('SolidCsgCompiler partial updates', () => {
   it('recompiles only the moved brush among many non-overlapping solids', () => {
     const brushes = makeGridBrushes(64, 4, 2);
@@ -129,12 +131,7 @@ describe('SolidCsgCompiler partial updates', () => {
   it('matches full rebuild after subtractive carve moves between targets', () => {
     const baseA = makeBoxBrush('base-a', 4, SolidOperation.Additive, new THREE.Vector3(-3, 0, 0));
     const baseB = makeBoxBrush('base-b', 4, SolidOperation.Additive, new THREE.Vector3(3, 0, 0));
-    const cutter = makeBoxBrush(
-      'cutter',
-      2,
-      SolidOperation.Subtractive,
-      new THREE.Vector3(-3, 0, 0),
-    );
+    const cutter = makeBoxBrush('cutter', 2, SolidOperation.Subtractive, new THREE.Vector3(-3, 0, 0));
     const brushes = [baseA, baseB, cutter];
     const compiler = new SolidCsgCompiler();
     compiler.compile(brushes, { forceFull: true });
@@ -161,9 +158,7 @@ describe('SolidCsgCompiler partial updates', () => {
   });
 });
 
-/**
- * Unit tests for touch-set expansion used by partial updates.
- */
+/** Unit tests for touch-set expansion used by partial updates. */
 describe('SolidUpdateSetBuilder', () => {
   it('includes previous and current touch peers of seed brushes', () => {
     const updateSet = SolidUpdateSetBuilder.build(
@@ -189,9 +184,7 @@ describe('SolidUpdateSetBuilder', () => {
   });
 });
 
-/**
- * Unit tests for grid-accelerated overlap adjacency.
- */
+/** Unit tests for grid-accelerated overlap adjacency. */
 describe('BrushOverlapGraph', () => {
   it('finds the same overlaps as pairwise for a sparse grid', () => {
     const entries = [];

@@ -70,10 +70,7 @@ describe('TransformHandler', () => {
   });
 
   it('should accept pivot parameter in onPointerDown without errors', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     const handles = gizmo.getHandles();
     const pivot = new THREE.Vector3(1, 2, 3);
     const mockCanvas = {
@@ -221,7 +218,9 @@ describe('TransformHandler', () => {
 });
 
 /**
- * Builds a bounds-mode pick environment with a centered mesh and viewport gizmo clone.
+ * Builds a bounds-mode pick environment with a centered mesh and viewport gizmo
+ * clone.
+ *
  * @param gizmo The transform gizmo under test.
  * @returns Camera, renderer, handles, and group for pointer-down tests.
  */

@@ -10,57 +10,56 @@ import { AXIS_DIRECTION_OPTIONS } from './coordinate_space_types.js';
 export const DEFAULT_COORDINATE_SPACE_ID: BuiltInCoordinateSpaceId = 'godot';
 
 /**
- * Built-in engine coordinate space presets.
- * Blender: Z-up, right-handed (Up +Z, Right +X, Forward +Y).
- * Unity: Y-up, left-handed (Up +Y, Right +X, Forward +Z).
- * Godot: Y-up, right-handed (Up +Y, Right +X, Forward -Z).
- * Unreal Engine: Z-up, left-handed (Up +Z, Right +Y, Forward +X).
+ * Built-in engine coordinate space presets. Blender: Z-up, right-handed (Up +Z,
+ * Right +X, Forward +Y). Unity: Y-up, left-handed (Up +Y, Right +X, Forward
+ * +Z). Godot: Y-up, right-handed (Up +Y, Right +X, Forward -Z). Unreal Engine:
+ * Z-up, left-handed (Up +Z, Right +Y, Forward +X).
  *
  * Note: Blender's front orthographic camera looks toward -Y, so a character
  * facing the front camera has object forward +Y.
  */
-export const BUILT_IN_COORDINATE_SPACE_PRESETS: readonly CoordinateSpaceDefinition[] =
-  Object.freeze([
-    Object.freeze({
-      presetId: 'blender',
-      name: 'Blender',
-      handedness: 'right',
-      up: '+z',
-      right: '+x',
-      forward: '+y',
-      isCustom: false,
-    }),
-    Object.freeze({
-      presetId: 'unity',
-      name: 'Unity',
-      handedness: 'left',
-      up: '+y',
-      right: '+x',
-      forward: '+z',
-      isCustom: false,
-    }),
-    Object.freeze({
-      presetId: 'godot',
-      name: 'Godot',
-      handedness: 'right',
-      up: '+y',
-      right: '+x',
-      forward: '-z',
-      isCustom: false,
-    }),
-    Object.freeze({
-      presetId: 'unreal',
-      name: 'Unreal Engine',
-      handedness: 'left',
-      up: '+z',
-      right: '+y',
-      forward: '+x',
-      isCustom: false,
-    }),
-  ]);
+export const BUILT_IN_COORDINATE_SPACE_PRESETS: readonly CoordinateSpaceDefinition[] = Object.freeze([
+  Object.freeze({
+    presetId: 'blender',
+    name: 'Blender',
+    handedness: 'right',
+    up: '+z',
+    right: '+x',
+    forward: '+y',
+    isCustom: false,
+  }),
+  Object.freeze({
+    presetId: 'unity',
+    name: 'Unity',
+    handedness: 'left',
+    up: '+y',
+    right: '+x',
+    forward: '+z',
+    isCustom: false,
+  }),
+  Object.freeze({
+    presetId: 'godot',
+    name: 'Godot',
+    handedness: 'right',
+    up: '+y',
+    right: '+x',
+    forward: '-z',
+    isCustom: false,
+  }),
+  Object.freeze({
+    presetId: 'unreal',
+    name: 'Unreal Engine',
+    handedness: 'left',
+    up: '+z',
+    right: '+y',
+    forward: '+x',
+    isCustom: false,
+  }),
+]);
 
 /**
  * Returns a cloned built-in preset by id.
+ *
  * @param presetId Built-in preset identifier.
  * @returns Cloned definition or null when unknown.
  */
@@ -71,6 +70,7 @@ export function getBuiltInCoordinateSpace(presetId: string): CoordinateSpaceDefi
 
 /**
  * Returns the default coordinate space definition for new profiles.
+ *
  * @returns Cloned Godot / OpenGL-style definition.
  */
 export function createDefaultCoordinateSpace(): CoordinateSpaceDefinition {
@@ -79,6 +79,7 @@ export function createDefaultCoordinateSpace(): CoordinateSpaceDefinition {
 
 /**
  * Deep-clones a coordinate space definition.
+ *
  * @param space Source definition.
  * @returns Independent clone.
  */
@@ -96,6 +97,7 @@ export function cloneCoordinateSpace(space: CoordinateSpaceDefinition): Coordina
 
 /**
  * Builds a short human-readable summary of a coordinate space.
+ *
  * @param space Coordinate space definition.
  * @returns Summary string for UI labels.
  */
@@ -106,6 +108,7 @@ export function formatCoordinateSpaceSummary(space: CoordinateSpaceDefinition): 
 
 /**
  * Formats an axis direction for display.
+ *
  * @param axis Axis direction.
  * @returns Uppercase signed axis label.
  */
@@ -114,19 +117,17 @@ export function formatAxis(axis: AxisDirection): string {
 }
 
 /**
- * Derives handedness from up / right / forward axes via the scalar triple product.
- * In engine conventions, forward = right × up is left-handed (Unity),
+ * Derives handedness from up / right / forward axes via the scalar triple
+ * product. In engine conventions, forward = right × up is left-handed (Unity),
  * while forward = -(right × up) is right-handed (OpenGL / Godot / Blender).
+ *
  * @param up Up axis.
  * @param right Right axis.
  * @param forward Forward axis.
- * @returns Handedness, or null when axes are invalid (not an orthonormal basis).
+ * @returns Handedness, or null when axes are invalid (not an orthonormal
+ *   basis).
  */
-export function deriveHandedness(
-  up: AxisDirection,
-  right: AxisDirection,
-  forward: AxisDirection,
-): Handedness | null {
+export function deriveHandedness(up: AxisDirection, right: AxisDirection, forward: AxisDirection): Handedness | null {
   const upVec = axisToVector(up);
   const rightVec = axisToVector(right);
   const forwardVec = axisToVector(forward);
@@ -146,21 +147,19 @@ export function deriveHandedness(
 
 /**
  * Validates that three axis directions form a proper coordinate basis.
+ *
  * @param up Up axis.
  * @param right Right axis.
  * @param forward Forward axis.
  * @returns True when axes are mutually perpendicular and non-collinear pairs.
  */
-export function areValidCoordinateAxes(
-  up: AxisDirection,
-  right: AxisDirection,
-  forward: AxisDirection,
-): boolean {
+export function areValidCoordinateAxes(up: AxisDirection, right: AxisDirection, forward: AxisDirection): boolean {
   return deriveHandedness(up, right, forward) !== null;
 }
 
 /**
  * Checks whether a value is a known axis direction token.
+ *
  * @param value Candidate value.
  * @returns True when value is a valid AxisDirection.
  */
@@ -170,6 +169,7 @@ export function isAxisDirection(value: unknown): value is AxisDirection {
 
 /**
  * Checks whether a value is a known handedness token.
+ *
  * @param value Candidate value.
  * @returns True when value is right or left.
  */
@@ -181,6 +181,7 @@ export function isHandedness(value: unknown): value is Handedness {
  * Parses and validates a coordinate space object from JSON. Handedness is
  * always re-derived from the three axes, normalizing legacy profiles whose
  * stored handedness did not match their basis.
+ *
  * @param value Candidate object.
  * @returns Cloned definition.
  * @throws Error when invalid.
@@ -221,8 +222,9 @@ export function parseCoordinateSpaceDefinition(value: unknown): CoordinateSpaceD
 
 /**
  * Converts an axis direction to a unit vector triple.
+ *
  * @param axis Axis direction.
- * @returns [x, y, z] components.
+ * @returns {undefined} X, y, z components.
  */
 function axisToVector(axis: AxisDirection): [number, number, number] {
   switch (axis) {
@@ -243,6 +245,7 @@ function axisToVector(axis: AxisDirection): [number, number, number] {
 
 /**
  * Returns true when the three vectors are mutually orthogonal unit axes.
+ *
  * @param a First vector.
  * @param b Second vector.
  * @param c Third vector.
@@ -253,15 +256,12 @@ function areAxesOrthogonal(
   b: [number, number, number],
   c: [number, number, number],
 ): boolean {
-  return (
-    Math.abs(dotProduct(a, b)) < 1e-9 &&
-    Math.abs(dotProduct(a, c)) < 1e-9 &&
-    Math.abs(dotProduct(b, c)) < 1e-9
-  );
+  return Math.abs(dotProduct(a, b)) < 1e-9 && Math.abs(dotProduct(a, c)) < 1e-9 && Math.abs(dotProduct(b, c)) < 1e-9;
 }
 
 /**
  * Dot product of two 3D vectors.
+ *
  * @param a First vector.
  * @param b Second vector.
  * @returns Scalar product.
@@ -272,19 +272,18 @@ function dotProduct(a: [number, number, number], b: [number, number, number]): n
 
 /**
  * Cross product of two 3D vectors.
+ *
  * @param a First vector.
  * @param b Second vector.
- * @returns a × b.
+ * @returns A × b.
  */
-function crossProduct(
-  a: [number, number, number],
-  b: [number, number, number],
-): [number, number, number] {
+function crossProduct(a: [number, number, number], b: [number, number, number]): [number, number, number] {
   return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
 /**
  * Ensures a field is a non-empty string.
+ *
  * @param value Candidate value.
  * @param fieldName Field label for errors.
  */

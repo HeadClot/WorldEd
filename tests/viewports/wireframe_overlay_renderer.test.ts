@@ -12,14 +12,8 @@ describe('WireframeOverlayRenderer', () => {
   beforeEach(() => {
     scene = new THREE.Scene();
     renderer = new WireframeOverlayRenderer(scene);
-    meshA = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xff0000 }),
-    );
-    meshB = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
-    );
+    meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+    meshB = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
     scene.add(meshA);
     scene.add(meshB);
   });

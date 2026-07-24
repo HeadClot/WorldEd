@@ -147,6 +147,7 @@ describe('FaceSelectionManager', () => {
 
 /**
  * Creates a simple triangle geometry on the XZ plane facing up.
+ *
  * @returns A buffer geometry with 3 vertices forming one triangle.
  */
 function createTriangleOnXZPlane(): THREE.BufferGeometry {

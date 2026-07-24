@@ -7,6 +7,7 @@ import {
 
 /**
  * Reads face texture map entries from mesh userData.
+ *
  * @param mesh Mesh to read.
  * @returns Cloned entries array (never the live reference).
  */
@@ -18,19 +19,19 @@ export function getFaceTextureMaps(mesh: THREE.Mesh): FaceTextureMapEntry[] {
 
 /**
  * Writes face texture map entries onto mesh userData.
+ *
  * @param mesh Target mesh.
  * @param entries Mapping table to store (cloned).
  */
 export function setFaceTextureMaps(mesh: THREE.Mesh, entries: FaceTextureMapEntry[]): void {
-  mesh.userData[FACE_TEXTURE_MAPS_USERDATA_KEY] = entries.map((entry) =>
-    cloneFaceTextureMapEntry(entry),
-  );
+  mesh.userData[FACE_TEXTURE_MAPS_USERDATA_KEY] = entries.map((entry) => cloneFaceTextureMapEntry(entry));
 }
 
 /**
  * Stores face texture map entries without deep-cloning triangle index arrays.
- * Use for solid result meshes rebuilt every frame from region tables.
- * Callers must not mutate the stored arrays after writing.
+ * Use for solid result meshes rebuilt every frame from region tables. Callers
+ * must not mutate the stored arrays after writing.
+ *
  * @param mesh Target mesh.
  * @param entries Mapping table to store by reference.
  */
@@ -40,6 +41,7 @@ export function setFaceTextureMapsShared(mesh: THREE.Mesh, entries: FaceTextureM
 
 /**
  * Clears all stored face texture maps on a mesh.
+ *
  * @param mesh Target mesh.
  */
 export function clearFaceTextureMaps(mesh: THREE.Mesh): void {
@@ -48,6 +50,7 @@ export function clearFaceTextureMaps(mesh: THREE.Mesh): void {
 
 /**
  * Upserts a mapping entry for a triangle region, replacing overlaps.
+ *
  * @param mesh Mesh owning the maps.
  * @param triangleIndices Region triangle indices.
  * @param mapping Mapping to store.

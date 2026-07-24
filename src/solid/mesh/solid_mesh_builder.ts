@@ -2,28 +2,20 @@ import * as THREE from 'three';
 import { SolidCompiledPolygon } from '../algorithm/solid_csg_compiler.js';
 import { SurfaceTriangulator } from '../algorithm/surface_triangulator.js';
 import { createContentMaterial } from '../../materials/content_material_factory.js';
-import {
-  DECORATIVE_EDGE_USERDATA_KEY,
-  enableFlatShadingOnMesh,
-} from '../../utils/mesh_edge_sync.js';
+import { DECORATIVE_EDGE_USERDATA_KEY, enableFlatShadingOnMesh } from '../../utils/mesh_edge_sync.js';
 import { Theme } from '../../theme.js';
 
-/**
- * Builds Three.js meshes from compiled solid surface polygons.
- */
+/** Builds Three.js meshes from compiled solid surface polygons. */
 export class SolidMeshBuilder {
   /**
    * Creates a render mesh from compiled solid polygons.
+   *
    * @param polygons Compiled surface polygons.
    * @param name Mesh name.
    * @param color Optional mesh color.
    * @returns Mesh, or null when there is no geometry.
    */
-  static buildMesh(
-    polygons: SolidCompiledPolygon[],
-    name: string,
-    color: number = Theme.boxColor,
-  ): THREE.Mesh | null {
+  static buildMesh(polygons: SolidCompiledPolygon[], name: string, color: number = Theme.boxColor): THREE.Mesh | null {
     if (polygons.length === 0) return null;
     const arrays = SurfaceTriangulator.buildMeshArrays(polygons);
     if (arrays.triangleCount === 0) return null;
@@ -40,6 +32,7 @@ export class SolidMeshBuilder {
 
   /**
    * Creates a wireframe-only preview mesh for a single brush hull.
+   *
    * @param points Unique vertices of the brush hull.
    * @param edgePairs Pairs of vertex indices forming edges.
    * @param name Mesh name.
@@ -72,6 +65,7 @@ export class SolidMeshBuilder {
 
   /**
    * Attaches decorative edge wireframe to a content mesh.
+   *
    * @param mesh Target mesh.
    */
   private static attachWireframe(mesh: THREE.Mesh): void {

@@ -5,9 +5,7 @@ import { AssignSolidFaceTextureCommand } from '../../src/commands/assign_solid_f
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 
-/**
- * Face-mode solid textures paint individual brush surfaces into the CSG result.
- */
+/** Face-mode solid textures paint individual brush surfaces into the CSG result. */
 describe('Solid face texture assignment', () => {
   it('paints one brush face without changing other faces', () => {
     const model = new SolidModel('FaceTex');

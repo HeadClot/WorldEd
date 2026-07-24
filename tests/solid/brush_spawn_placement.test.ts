@@ -1,13 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  computeBrushSpawnPosition,
-  snapPositionToGrid,
-} from '../../src/solid/model/brush_spawn_placement.js';
+import { computeBrushSpawnPosition, snapPositionToGrid } from '../../src/solid/model/brush_spawn_placement.js';
 
-/**
- * Unit tests for camera-front, grid-aligned brush spawn placement.
- */
+/** Unit tests for camera-front, grid-aligned brush spawn placement. */
 describe('brush_spawn_placement', () => {
   it('places a brush ahead of the camera along the view forward', () => {
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);

@@ -5,22 +5,19 @@ import {
   getVertexPosition,
 } from '../selection/triangle_geometry_utils.js';
 import { Theme } from '../theme.js';
-import {
-  enableFlatShadingOnMesh,
-  prepareFlatShadedGeometry,
-  rebuildDecorativeEdges,
-} from '../utils/mesh_edge_sync.js';
+import { enableFlatShadingOnMesh, prepareFlatShadedGeometry, rebuildDecorativeEdges } from '../utils/mesh_edge_sync.js';
 import { createContentMaterial } from '../materials/content_material_factory.js';
 import { initializeMeshTextureUVs } from '../texture/face_texture_applier.js';
 
 /**
- * Builds a new convex prism mesh by extruding a coplanar face polygon.
- * The source mesh is never modified. Because the face is convex and extrusion
- * is along a single normal, the resulting solid is always convex.
+ * Builds a new convex prism mesh by extruding a coplanar face polygon. The
+ * source mesh is never modified. Because the face is convex and extrusion is
+ * along a single normal, the resulting solid is always convex.
  */
 
 /**
  * Creates a convex prism mesh from selected coplanar face triangles.
+ *
  * @param sourceMesh The mesh that owns the face (used for world transform).
  * @param faceIndices Coplanar triangle indices of the face region.
  * @param distance Positive extrude distance along the face normal.
@@ -55,6 +52,7 @@ export function createConvexPrismFromFace(
 
 /**
  * Collects unique face vertices transformed into world space.
+ *
  * @param sourceMesh The source mesh.
  * @param faceIndices Selected triangle indices.
  * @returns Unique world-space points on the face.
@@ -78,6 +76,7 @@ function collectWorldFacePolygon(sourceMesh: THREE.Mesh, faceIndices: number[]):
 
 /**
  * Computes the face normal in world space.
+ *
  * @param sourceMesh The source mesh.
  * @param faceIndex Any triangle on the face.
  * @returns Normalized world-space normal.
@@ -90,14 +89,13 @@ function computeWorldFaceNormal(sourceMesh: THREE.Mesh, faceIndex: number): THRE
 
 /**
  * Orders coplanar points into a convex polygon winding around the normal.
+ *
  * @param points Unique coplanar points.
  * @param normal Face normal defining outward orientation.
- * @returns Convex polygon vertices in counter-clockwise order when viewed along normal.
+ * @returns Convex polygon vertices in counter-clockwise order when viewed along
+ *   normal.
  */
-export function orderConvexPolygon(
-  points: THREE.Vector3[],
-  normal: THREE.Vector3,
-): THREE.Vector3[] {
+export function orderConvexPolygon(points: THREE.Vector3[], normal: THREE.Vector3): THREE.Vector3[] {
   if (points.length <= 3) return points.slice();
   const centroid = computeCentroid(points);
   const basis = buildPlaneBasis(normal);
@@ -112,8 +110,9 @@ export function orderConvexPolygon(
 }
 
 /**
- * Builds a prism BufferGeometry from a base polygon and extrusion.
- * Geometry is in world coordinates before centering.
+ * Builds a prism BufferGeometry from a base polygon and extrusion. Geometry is
+ * in world coordinates before centering.
+ *
  * @param basePolygon Ordered base polygon in world space.
  * @param normal Extrusion direction.
  * @param distance Signed extrusion distance.
@@ -139,6 +138,7 @@ function buildPrismGeometry(
 
 /**
  * Appends a fan-triangulated polygon cap.
+ *
  * @param polygon Ordered polygon vertices.
  * @param normal Face normal for winding.
  * @param outward Whether this is the extruded outward cap.
@@ -168,6 +168,7 @@ function appendPolygonCap(
 
 /**
  * Appends side walls between base and top polygons.
+ *
  * @param basePolygon Ordered base ring.
  * @param topPolygon Ordered top ring.
  * @param positions Flat position array.
@@ -194,8 +195,9 @@ function appendPrismSides(
 }
 
 /**
- * Creates a flat-shaded mesh without edge children.
- * Decorative edges are added after geometry centering.
+ * Creates a flat-shaded mesh without edge children. Decorative edges are added
+ * after geometry centering.
+ *
  * @param geometry The prism geometry.
  * @param objectName Mesh name.
  * @returns Configured mesh.
@@ -212,6 +214,7 @@ function buildPrismMesh(geometry: THREE.BufferGeometry, objectName: string): THR
 /**
  * Centers geometry at the origin and moves the mesh to the previous center.
  * Does not touch child outlines — rebuild those after this call.
+ *
  * @param mesh The mesh to center.
  */
 function centerMeshAtGeometryOrigin(mesh: THREE.Mesh): void {
@@ -227,6 +230,7 @@ function centerMeshAtGeometryOrigin(mesh: THREE.Mesh): void {
 
 /**
  * Averages a list of points.
+ *
  * @param points The points to average.
  * @returns Centroid vector.
  */
@@ -238,12 +242,12 @@ function computeCentroid(points: THREE.Vector3[]): THREE.Vector3 {
 
 /**
  * Builds a 2D basis on the plane perpendicular to a normal.
+ *
  * @param normal Unit plane normal.
  * @returns Orthogonal x/y axes on the plane.
  */
 function buildPlaneBasis(normal: THREE.Vector3): { xAxis: THREE.Vector3; yAxis: THREE.Vector3 } {
-  const reference =
-    Math.abs(normal.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+  const reference = Math.abs(normal.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
   const xAxis = new THREE.Vector3().crossVectors(reference, normal).normalize();
   const yAxis = new THREE.Vector3().crossVectors(normal, xAxis).normalize();
   return { xAxis, yAxis };
@@ -251,6 +255,7 @@ function buildPlaneBasis(normal: THREE.Vector3): { xAxis: THREE.Vector3; yAxis: 
 
 /**
  * Quantizes a point for unique keying of nearly identical vertices.
+ *
  * @param point The point to quantize.
  * @returns A string key.
  */

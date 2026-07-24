@@ -3,18 +3,13 @@ import { VmfSolidImporter } from '../../src/io/vmf/vmf_solid_importer.js';
 import { yieldToBrowser } from '../../src/utils/async_yield.js';
 import { buildAxisAlignedWorldSolidVmf } from './vmf/vmf_test_solids.js';
 
-/**
- * Unit tests for async VMF import progress and yield behavior.
- */
+/** Unit tests for async VMF import progress and yield behavior. */
 describe('VmfSolidImporter async', () => {
   it('reports progress from parse through rebuild', async () => {
     const importer = new VmfSolidImporter();
     const labels: string[] = [];
     const ratios: number[] = [];
-    const source = buildAxisAlignedWorldSolidVmf(
-      { x: -32, y: -32, z: -32 },
-      { x: 32, y: 32, z: 32 },
-    );
+    const source = buildAxisAlignedWorldSolidVmf({ x: -32, y: -32, z: -32 }, { x: 32, y: 32, z: 32 });
     const result = await importer.importFromTextAsync(source, {
       modelName: 'ProgressTest',
       rebuild: true,

@@ -35,19 +35,15 @@ export class Viewport2D extends BaseViewport {
   private shadingController: ViewportShadingController;
 
   /**
-   * Creates a new 2D orthographic viewport.
-   * Defaults to wireframe shading: decorative white outlines only (no fill).
+   * Creates a new 2D orthographic viewport. Defaults to wireframe shading:
+   * decorative white outlines only (no fill).
+   *
    * @param container The DOM element that will contain this viewport.
    * @param name The display name shown in the viewport toolbar.
    * @param plane The grid plane orientation for this viewport.
    * @param cameraPosition The camera position for the orthographic view.
    */
-  constructor(
-    container: HTMLElement,
-    name: string,
-    plane: GridPlane,
-    cameraPosition: THREE.Vector3,
-  ) {
+  constructor(container: HTMLElement, name: string, plane: GridPlane, cameraPosition: THREE.Vector3) {
     super(container, name, ShadingMode.WIREFRAME);
     this.gridPlane = plane;
     this.grids = new Grids(50, 50, plane, 'orthographic');
@@ -60,9 +56,7 @@ export class Viewport2D extends BaseViewport {
     this.shadingController.setShadingMode(ShadingMode.WIREFRAME);
   }
 
-  /**
-   * Initializes the mutable state properties of this viewport.
-   */
+  /** Initializes the mutable state properties of this viewport. */
   private initializeState(): void {
     this.selectableObjects = [];
     this.selectionManager = null;
@@ -76,6 +70,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the world group reference for object collection.
+   *
    * @param group The world group containing scene objects.
    */
   setWorldGroup(group: THREE.Group): void {
@@ -84,6 +79,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Collects all selectable meshes from the world group.
+   *
    * @returns An array of selectable mesh objects.
    */
   collectSelectableObjects(): THREE.Mesh[] {
@@ -99,6 +95,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the selection manager for this viewport.
+   *
    * @param manager The selection manager instance.
    */
   setSelectionManager(manager: SelectionManager): void {
@@ -107,6 +104,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the selection highlight for this viewport.
+   *
    * @param highlight The selection highlight instance.
    */
   setSelectionHighlight(highlight: SelectionHighlight): void {
@@ -115,6 +113,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the selectable objects for raycasting.
+   *
    * @param objects The meshes to make selectable.
    */
   setSelectableObjects(objects: THREE.Mesh[]): void {
@@ -123,6 +122,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Returns the current selectable objects array.
+   *
    * @returns The array of selectable meshes.
    */
   getSelectableObjects(): THREE.Mesh[] {
@@ -130,8 +130,9 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Sets the gizmo group to be rendered in this viewport.
-   * Removes any previously set gizmo group to avoid duplicates.
+   * Sets the gizmo group to be rendered in this viewport. Removes any
+   * previously set gizmo group to avoid duplicates.
+   *
    * @param group The Three.js group containing gizmo handles.
    */
   setGizmoGroup(group: THREE.Group): void {
@@ -144,6 +145,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Returns the gizmo group for this viewport.
+   *
    * @returns The gizmo group, or null if not set.
    */
   getGizmoGroup(): THREE.Group | null {
@@ -152,6 +154,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the callback to handle transform gizmo pointer events.
+   *
    * @param callback The transform event handler function.
    */
   setTransformCallback(callback: TransformCallback): void {
@@ -160,6 +163,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the callback to handle face selection pointer events.
+   *
    * @param callback The face selection event handler function.
    */
   setFaceSelectionCallback(callback: (event: MouseEvent) => boolean): void {
@@ -168,6 +172,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the callback to handle clip plane tool pointer events.
+   *
    * @param callback The clip plane event handler function.
    */
   setClipPlaneCallback(callback: (event: MouseEvent) => boolean): void {
@@ -176,15 +181,14 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the callback that remaps raycast hits to world meshes.
+   *
    * @param callback The mesh resolve function, or null to disable remapping.
    */
   setMeshResolveCallback(callback: MeshResolveCallback | null): void {
     this.meshResolveCallback = callback;
   }
 
-  /**
-   * Configures pointer event listeners for selection and transform.
-   */
+  /** Configures pointer event listeners for selection and transform. */
   private setupClickSelection(): void {
     this.renderer.domElement.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
@@ -204,8 +208,9 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Handles a mouse click to select or deselect objects.
-   * Plain clicks cycle through overlapping meshes; Shift adds; Ctrl/Meta toggles.
+   * Handles a mouse click to select or deselect objects. Plain clicks cycle
+   * through overlapping meshes; Shift adds; Ctrl/Meta toggles.
+   *
    * @param event The pointer event from the click.
    */
   private handleObjectSelection(event: MouseEvent): void {
@@ -224,44 +229,37 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Builds the near-to-far world-mesh pick stack under the pointer.
-   * Used for click-through selection and for bounds/gizmo skip decisions.
+   * Builds the near-to-far world-mesh pick stack under the pointer. Used for
+   * click-through selection and for bounds/gizmo skip decisions.
+   *
    * @param event The pointer event providing screen coordinates.
    * @returns Unique world meshes ordered closest to farthest.
    */
   getObjectPickStack(event: MouseEvent): THREE.Mesh[] {
     const objects = this.getEffectiveSelectableObjects();
     if (objects.length === 0) return [];
-    const intersections = this.raycaster.castIntersections(
-      this.camera,
-      this.renderer,
-      event,
-      objects,
-    );
-    return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) =>
-      this.resolveClickedMesh(mesh),
-    );
+    const intersections = this.raycaster.castIntersections(this.camera, this.renderer, event, objects);
+    return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) => this.resolveClickedMesh(mesh));
   }
 
   /**
    * Chooses the mesh for a click: frontmost for multi-select, cycle for plain.
+   *
    * @param stack Unique world meshes ordered near-to-far.
    * @param additive True when Shift is held.
    * @param toggle True when Ctrl/Meta is held.
    * @returns Mesh to apply selection to, or null.
    */
-  private resolvePickFromStack(
-    stack: THREE.Mesh[],
-    additive: boolean,
-    toggle: boolean,
-  ): THREE.Mesh | null {
+  private resolvePickFromStack(stack: THREE.Mesh[], additive: boolean, toggle: boolean): THREE.Mesh | null {
     if (stack.length === 0 || !this.selectionManager) return null;
     if (additive || toggle) return stack[0];
     return SelectionClickThrough.pickFromStack(stack, this.selectionManager);
   }
 
   /**
-   * Returns selectable meshes, falling back to world group traversal when empty.
+   * Returns selectable meshes, falling back to world group traversal when
+   * empty.
+   *
    * @returns Meshes available for raycasting.
    */
   private getEffectiveSelectableObjects(): THREE.Mesh[] {
@@ -271,6 +269,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Remaps a raycast hit to the authoritative world mesh when possible.
+   *
    * @param clicked The mesh returned by the raycaster.
    * @returns The mesh that should enter the selection set.
    */
@@ -282,8 +281,9 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Builds the orthographic camera with the default startup zoom level.
-   * Sets a stable up vector per plane so top-down lookAt is not degenerate.
+   * Builds the orthographic camera with the default startup zoom level. Sets a
+   * stable up vector per plane so top-down lookAt is not degenerate.
+   *
    * @param position World-space camera position for this orthographic plane.
    * @param plane Grid plane for this viewport.
    * @returns A configured orthographic camera looking at the default focus.
@@ -301,6 +301,7 @@ export class Viewport2D extends BaseViewport {
   /**
    * Chooses a camera up vector that is never parallel to the look direction.
    * Top (XZ) looks down -Y, so world +Y cannot be used as up.
+   *
    * @param camera Orthographic camera to configure.
    * @param plane Viewport grid plane.
    */
@@ -312,16 +313,15 @@ export class Viewport2D extends BaseViewport {
     camera.up.set(0, 1, 0);
   }
 
-  /**
-   * Attaches orthographic pan and wheel-zoom handling to the canvas.
-   */
+  /** Attaches orthographic pan and wheel-zoom handling to the canvas. */
   private setupPanHandler(): void {
     new OrthoPanHandler(this.renderer.domElement, this.camera, (factor) => this.zoom(factor));
   }
 
   /**
-   * Zooms the orthographic frustum about its view-space center.
-   * Factor is clamped so half-height stays within safe min/max extents.
+   * Zooms the orthographic frustum about its view-space center. Factor is
+   * clamped so half-height stays within safe min/max extents.
+   *
    * @param factor Multiplier for frustum size (greater than 1 zooms out).
    */
   private zoom(factor: number): void {
@@ -341,6 +341,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Resizes the renderer and restores the default orthographic framing.
+   *
    * @param width Viewport width in CSS pixels.
    * @param height Viewport height in CSS pixels.
    */
@@ -356,9 +357,9 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Updates depth range, grids, and renders the orthographic scene.
-   * Depth ranging keeps all content in front of the camera (any ±X for side)
-   * without changing zoom or lateral pan.
+   * Updates depth range, grids, and renders the orthographic scene. Depth
+   * ranging keeps all content in front of the camera (any ±X for side) without
+   * changing zoom or lateral pan.
    */
   render(): void {
     OrthoDepthRanger.update(this.camera, this.scene);
@@ -368,6 +369,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Returns the orthographic camera for this viewport.
+   *
    * @returns The orthographic camera instance.
    */
   getCamera(): THREE.OrthographicCamera {
@@ -376,6 +378,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Returns the current orthographic frustum plane values.
+   *
    * @returns An object with left, right, top, and bottom frustum values.
    */
   getCameraFrustum(): FrustumPlanes {
@@ -389,6 +392,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Returns the shading controller for this viewport.
+   *
    * @returns The ViewportShadingController instance.
    */
   getShadingController(): ViewportShadingController {
@@ -397,6 +401,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Sets the shading mode for this viewport and updates the toolbar highlight.
+   *
    * @param mode The shading mode to apply.
    */
   setShadingMode(mode: ShadingMode): void {
@@ -406,6 +411,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Returns the current shading mode of this viewport.
+   *
    * @returns The current ShadingMode value.
    */
   getShadingMode(): ShadingMode {
@@ -414,6 +420,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Updates the shading controller overlay with current meshes.
+   *
    * @param meshes The meshes to generate wireframe overlays for.
    */
   updateShadingMeshes(meshes: THREE.Mesh[]): void {
@@ -422,6 +429,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Returns the grid system for this viewport.
+   *
    * @returns The Grids instance.
    */
   getGrid(): Grids {
@@ -430,6 +438,7 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Legacy accessor used by older grid update call sites.
+   *
    * @returns The grid system (supports setSnapInterval).
    */
   getGridHelper(): Grids {

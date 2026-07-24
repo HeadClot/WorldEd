@@ -14,15 +14,13 @@ import { SolidModelCodec } from '../solid/io/solid_model_codec.js';
 import { SerializedSolidModel } from '../solid/io/solid_model_codec.js';
 
 /**
- * Reconstructs a Three.js scene graph from serialized JSON data.
- * Performs two passes: object creation and parent-child resolution.
+ * Reconstructs a Three.js scene graph from serialized JSON data. Performs two
+ * passes: object creation and parent-child resolution.
  */
 export class SceneDeserializer {
   private bufferGeometryCodec: BufferGeometryCodec;
 
-  /**
-   * Creates a deserializer with a buffer geometry codec for custom meshes.
-   */
+  /** Creates a deserializer with a buffer geometry codec for custom meshes. */
   constructor() {
     this.bufferGeometryCodec = new BufferGeometryCodec();
   }
@@ -30,6 +28,7 @@ export class SceneDeserializer {
   /**
    * Deserializes scene data into Three.js objects and adds them to the group.
    * Clears existing children before loading.
+   *
    * @param data The serialized scene JSON.
    * @param worldGroup The target group to populate with deserialized objects.
    * @returns Array of top-level objects that were created.
@@ -45,8 +44,9 @@ export class SceneDeserializer {
   }
 
   /**
-   * Removes and disposes scene content children of the world group.
-   * Editor helpers (clip plane preview) stay attached so tools remain visible.
+   * Removes and disposes scene content children of the world group. Editor
+   * helpers (clip plane preview) stay attached so tools remain visible.
+   *
    * @param worldGroup The group to clear.
    */
   private disposeExistingChildren(worldGroup: THREE.Group): void {
@@ -60,6 +60,7 @@ export class SceneDeserializer {
 
   /**
    * Returns true for non-content editor objects that must survive scene load.
+   *
    * @param object Candidate world child.
    * @returns True when the object should not be cleared.
    */
@@ -69,6 +70,7 @@ export class SceneDeserializer {
 
   /**
    * Recursively disposes a Three.js object and its children.
+   *
    * @param object The object to dispose.
    */
   private disposeObject(object: THREE.Object3D): void {
@@ -81,6 +83,7 @@ export class SceneDeserializer {
 
   /**
    * Disposes geometry and material of a mesh.
+   *
    * @param mesh The mesh to dispose resources for.
    */
   private disposeMesh(mesh: THREE.Mesh): void {
@@ -98,13 +101,11 @@ export class SceneDeserializer {
 
   /**
    * First pass: creates all Three.js objects from entries and stores in map.
+   *
    * @param entries The serialized object entries.
    * @param objectMap The map to populate with created objects.
    */
-  private createObjectsFromEntries(
-    entries: ObjectEntry[],
-    objectMap: Map<string, THREE.Object3D>,
-  ): void {
+  private createObjectsFromEntries(entries: ObjectEntry[], objectMap: Map<string, THREE.Object3D>): void {
     entries.forEach((entry) => {
       const object = this.createObjectFromEntry(entry);
       objectMap.set(entry.uuid, object);
@@ -113,6 +114,7 @@ export class SceneDeserializer {
 
   /**
    * Creates a single Three.js object from an ObjectEntry.
+   *
    * @param entry The serialized entry data.
    * @returns The created Three.js object.
    */
@@ -128,6 +130,7 @@ export class SceneDeserializer {
 
   /**
    * Creates a mesh object from entry data including geometry and material.
+   *
    * @param entry The serialized mesh entry.
    * @returns A configured Three.js mesh.
    */
@@ -142,7 +145,9 @@ export class SceneDeserializer {
   }
 
   /**
-   * Restores a solid model group from brush snapshot data and rebuilds geometry.
+   * Restores a solid model group from brush snapshot data and rebuilds
+   * geometry.
+   *
    * @param entry Serialized entry with solidModel payload.
    * @returns Solid model root group with transforms applied.
    */
@@ -157,6 +162,7 @@ export class SceneDeserializer {
 
   /**
    * Restores face texture maps and ensures UVs are baked for display.
+   *
    * @param mesh Loaded mesh.
    * @param entry Serialized entry.
    */
@@ -180,6 +186,7 @@ export class SceneDeserializer {
 
   /**
    * Creates a group object from entry data.
+   *
    * @param entry The serialized group entry.
    * @returns A configured Three.js group.
    */
@@ -191,6 +198,7 @@ export class SceneDeserializer {
 
   /**
    * Reconstructs geometry from serialized type and parameters or buffer data.
+   *
    * @param entry The entry containing geometry data.
    * @returns A new geometry instance.
    */
@@ -206,14 +214,13 @@ export class SceneDeserializer {
   }
 
   /**
-   * Rebuilds a custom BufferGeometry from stored vertex arrays.
-   * Falls back to a unit box when the payload is missing or empty.
+   * Rebuilds a custom BufferGeometry from stored vertex arrays. Falls back to a
+   * unit box when the payload is missing or empty.
+   *
    * @param geometryData Optional encoded buffer geometry.
    * @returns A reconstructed BufferGeometry.
    */
-  private reconstructBufferGeometry(
-    geometryData: BufferGeometryData | undefined,
-  ): THREE.BufferGeometry {
+  private reconstructBufferGeometry(geometryData: BufferGeometryData | undefined): THREE.BufferGeometry {
     if (!geometryData || geometryData.position.length < 9) {
       return new THREE.BoxGeometry(1, 1, 1);
     }
@@ -222,6 +229,7 @@ export class SceneDeserializer {
 
   /**
    * Builds a geometry instance from a type string and parameter record.
+   *
    * @param geometryType The geometry type identifier.
    * @param params The constructor parameters.
    * @returns A new geometry instance.
@@ -239,6 +247,7 @@ export class SceneDeserializer {
 
   /**
    * Constructs a box geometry from parameters.
+   *
    * @param params The parameter record.
    * @returns A box geometry instance.
    */
@@ -251,6 +260,7 @@ export class SceneDeserializer {
 
   /**
    * Constructs a sphere geometry from parameters.
+   *
    * @param params The parameter record.
    * @returns A sphere geometry instance.
    */
@@ -263,6 +273,7 @@ export class SceneDeserializer {
 
   /**
    * Constructs a cylinder geometry from parameters.
+   *
    * @param params The parameter record.
    * @returns A cylinder geometry instance.
    */
@@ -276,6 +287,7 @@ export class SceneDeserializer {
 
   /**
    * Constructs a plane geometry from parameters.
+   *
    * @param params The parameter record.
    * @returns A plane geometry instance.
    */
@@ -287,6 +299,7 @@ export class SceneDeserializer {
 
   /**
    * Reconstructs material from serialized color data.
+   *
    * @param entry The entry containing material data.
    * @returns A configured mesh material.
    */
@@ -299,8 +312,9 @@ export class SceneDeserializer {
   }
 
   /**
-   * Applies transform data from entry to a mesh.
-   * Serialized rotation already includes plane orientation when saved.
+   * Applies transform data from entry to a mesh. Serialized rotation already
+   * includes plane orientation when saved.
+   *
    * @param mesh The target mesh.
    * @param entry The source entry.
    */
@@ -310,6 +324,7 @@ export class SceneDeserializer {
 
   /**
    * Applies transform data from entry to any Three.js object.
+   *
    * @param object The target object.
    * @param entry The source entry.
    */
@@ -324,13 +339,11 @@ export class SceneDeserializer {
 
   /**
    * Second pass: resolves parent-child hierarchy using UUID lookups.
+   *
    * @param entries The serialized entries.
    * @param objectMap The map of created objects keyed by UUID.
    */
-  private resolveParentChildRelationships(
-    entries: ObjectEntry[],
-    objectMap: Map<string, THREE.Object3D>,
-  ): void {
+  private resolveParentChildRelationships(entries: ObjectEntry[], objectMap: Map<string, THREE.Object3D>): void {
     entries.forEach((entry) => {
       if (entry.parentId) {
         const parent = objectMap.get(entry.parentId);
@@ -344,14 +357,12 @@ export class SceneDeserializer {
 
   /**
    * Attaches top-level objects to the world group.
+   *
    * @param worldGroup The target group.
    * @param objectMap The map of created objects.
    * @returns Array of objects added to the group.
    */
-  private attachToGroup(
-    worldGroup: THREE.Group,
-    objectMap: Map<string, THREE.Object3D>,
-  ): THREE.Object3D[] {
+  private attachToGroup(worldGroup: THREE.Group, objectMap: Map<string, THREE.Object3D>): THREE.Object3D[] {
     const topLevelObjects: THREE.Object3D[] = [];
     const attachedUuids = new Set<string>();
 

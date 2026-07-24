@@ -10,17 +10,12 @@ import {
 import { getFaceTextureMaps, upsertFaceTextureMap } from '../texture/face_texture_storage.js';
 import { bakeFaceUVs, ensureUniqueTriangleVertices } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
-import {
-  cloneSmearSourceMapping,
-  transferUvMappingAcrossFaces,
-} from '../texture/uv_smear_transfer.js';
+import { cloneSmearSourceMapping, transferUvMappingAcrossFaces } from '../texture/uv_smear_transfer.js';
 import { getTexturePaintState } from '../texture/texture_paint_state.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/texture_id.js';
 import { SolidModel, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../solid/model/solid_model.js';
 
-/**
- * Source face seed for continuous UV smear.
- */
+/** Source face seed for continuous UV smear. */
 interface SmearSourceSeed {
   mesh: THREE.Mesh;
   triangleIndices: number[];
@@ -28,9 +23,9 @@ interface SmearSourceSeed {
 }
 
 /**
- * Applies continuous UV layout from face to face while the user drags.
- * Hold the smear modifier (G) and paint across surfaces so textures match
- * at shared edges (arches, corridors, multi-face walls).
+ * Applies continuous UV layout from face to face while the user drags. Hold the
+ * smear modifier (G) and paint across surfaces so textures match at shared
+ * edges (arches, corridors, multi-face walls).
  */
 export class UvSmearController {
   private commandStack: CommandStack;
@@ -42,6 +37,7 @@ export class UvSmearController {
 
   /**
    * Creates a UV smear controller.
+   *
    * @param commandStack Undo stack for completed strokes.
    */
   constructor(commandStack: CommandStack) {
@@ -55,6 +51,7 @@ export class UvSmearController {
 
   /**
    * Returns whether a smear stroke is currently in progress.
+   *
    * @returns True while the user is mid-stroke.
    */
   isActive(): boolean {
@@ -63,6 +60,7 @@ export class UvSmearController {
 
   /**
    * Begins a smear stroke (first face under the cursor).
+   *
    * @param mesh Hit mesh.
    * @param faceIndex Hit triangle index.
    */
@@ -77,6 +75,7 @@ export class UvSmearController {
 
   /**
    * Continues a smear stroke onto another face under the cursor.
+   *
    * @param mesh Hit mesh.
    * @param faceIndex Hit triangle index.
    */
@@ -88,9 +87,7 @@ export class UvSmearController {
     this.paintFace(mesh, faceIndex);
   }
 
-  /**
-   * Ends the stroke and commits one undoable command when anything changed.
-   */
+  /** Ends the stroke and commits one undoable command when anything changed. */
   endStroke(): void {
     if (!this.isStrokeActive) return;
     this.isStrokeActive = false;
@@ -112,8 +109,8 @@ export class UvSmearController {
   }
 
   /**
-   * Cancels an in-progress stroke without committing undo history.
-   * Live changes remain; caller may undo separately if needed.
+   * Cancels an in-progress stroke without committing undo history. Live changes
+   * remain; caller may undo separately if needed.
    */
   cancelStroke(): void {
     this.isStrokeActive = false;
@@ -122,7 +119,9 @@ export class UvSmearController {
 
   /**
    * Paints continuous UVs onto the selectable face unit containing faceIndex.
-   * Solid results stay on one brush face so carpet/detail brushes stay isolated.
+   * Solid results stay on one brush face so carpet/detail brushes stay
+   * isolated.
+   *
    * @param mesh Hit mesh.
    * @param faceIndex Seed triangle.
    */
@@ -151,6 +150,7 @@ export class UvSmearController {
 
   /**
    * Builds the mapping for a region: seed from existing maps, or transfer.
+   *
    * @param mesh Destination mesh.
    * @param triangleIndices Destination region.
    * @param seedFaceIndex Original hit triangle (for partial map lookup).
@@ -164,10 +164,7 @@ export class UvSmearController {
     if (!this.sourceSeed) {
       return this.readOrCreateSeedMapping(mesh, triangleIndices, seedFaceIndex);
     }
-    if (
-      this.sourceSeed.mesh === mesh &&
-      regionKeysEqual(this.sourceSeed.triangleIndices, triangleIndices)
-    ) {
+    if (this.sourceSeed.mesh === mesh && regionKeysEqual(this.sourceSeed.triangleIndices, triangleIndices)) {
       return cloneFaceTextureMapping(this.sourceSeed.mapping);
     }
     return transferUvMappingAcrossFaces(
@@ -180,8 +177,10 @@ export class UvSmearController {
   }
 
   /**
-   * Reads an existing face map for the region, or a covering entry / solid source.
-   * Avoids falling back to default 1m scale which visually shrinks VMF textures.
+   * Reads an existing face map for the region, or a covering entry / solid
+   * source. Avoids falling back to default 1m scale which visually shrinks VMF
+   * textures.
+   *
    * @param mesh Mesh owner.
    * @param triangleIndices Region triangles.
    * @param seedFaceIndex Hit triangle index.
@@ -201,8 +200,9 @@ export class UvSmearController {
   }
 
   /**
-   * Writes result-mesh UV maps back onto solid brush faces so CSG rebuilds
-   * keep smear/paint phase and scale.
+   * Writes result-mesh UV maps back onto solid brush faces so CSG rebuilds keep
+   * smear/paint phase and scale.
+   *
    * @param mesh Mesh that may be a solid model result.
    */
   private syncSolidBrushMappings(mesh: THREE.Mesh): void {
@@ -214,6 +214,7 @@ export class UvSmearController {
 
   /**
    * Stores a before-snapshot the first time a mesh is modified in this stroke.
+   *
    * @param mesh Mesh about to be edited.
    */
   private captureBeforeIfNeeded(mesh: THREE.Mesh): void {
@@ -221,9 +222,7 @@ export class UvSmearController {
     this.beforeByMeshId.set(mesh.uuid, SmearUvStrokeCommand.captureMesh(mesh));
   }
 
-  /**
-   * Clears stroke bookkeeping without touching the scene.
-   */
+  /** Clears stroke bookkeeping without touching the scene. */
   private resetStrokeState(): void {
     this.sourceSeed = null;
     this.lastRegionKey = null;
@@ -234,6 +233,7 @@ export class UvSmearController {
 
 /**
  * Builds a stable key for a mesh region.
+ *
  * @param mesh Mesh owner.
  * @param triangleIndices Sorted-capable triangle list.
  * @returns Key string.
@@ -248,6 +248,7 @@ function buildRegionKey(mesh: THREE.Mesh, triangleIndices: number[]): string {
 
 /**
  * Compares two triangle index lists as sets.
+ *
  * @param a First list.
  * @param b Second list.
  * @returns True when equal as sets.
@@ -266,9 +267,10 @@ function regionKeysEqual(a: number[], b: number[]): boolean {
 }
 
 /**
- * Finds the best stored mapping for a smear seed region.
- * Prefers exact triangle-set match, then any entry covering the seed triangle,
- * then any entry overlapping the region.
+ * Finds the best stored mapping for a smear seed region. Prefers exact
+ * triangle-set match, then any entry covering the seed triangle, then any entry
+ * overlapping the region.
+ *
  * @param mesh Mesh owner.
  * @param triangleIndices Region triangles.
  * @param seedFaceIndex Hit triangle index.
@@ -308,6 +310,7 @@ function findBestRegionMapping(
 
 /**
  * Reads the authored solid-brush face mapping for a result-mesh triangle.
+ *
  * @param mesh Candidate solid result mesh.
  * @param triangleIndex Result triangle index.
  * @returns Brush face mapping or null.

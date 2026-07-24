@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { BoundsFace } from '../types/bounds_face.js';
 
 /**
- * Oriented bounding box used by the Bounds tool.
- * Center and orientation are in world space; half extents are along local axes.
+ * Oriented bounding box used by the Bounds tool. Center and orientation are in
+ * world space; half extents are along local axes.
  */
 export interface OrientedBoundsData {
   center: THREE.Vector3;
@@ -12,9 +12,9 @@ export interface OrientedBoundsData {
 }
 
 /**
- * Builds oriented bounds for selected meshes.
- * A single mesh uses its local geometry AABB transformed by the mesh pose.
- * Multiple meshes use a shared world-axis-aligned AABB of the selection.
+ * Builds oriented bounds for selected meshes. A single mesh uses its local
+ * geometry AABB transformed by the mesh pose. Multiple meshes use a shared
+ * world-axis-aligned AABB of the selection.
  */
 export class OrientedBoundsBuilder {
   private readonly temporaryBox: THREE.Box3;
@@ -22,9 +22,7 @@ export class OrientedBoundsBuilder {
   private readonly temporarySize: THREE.Vector3;
   private readonly temporaryScale: THREE.Vector3;
 
-  /**
-   * Creates a new oriented bounds builder with reusable scratch vectors.
-   */
+  /** Creates a new oriented bounds builder with reusable scratch vectors. */
   constructor() {
     this.temporaryBox = new THREE.Box3();
     this.temporaryCenter = new THREE.Vector3();
@@ -34,6 +32,7 @@ export class OrientedBoundsBuilder {
 
   /**
    * Computes oriented bounds for the given selection.
+   *
    * @param meshes The selected meshes.
    * @returns Oriented bounds data, or null when the selection is empty.
    */
@@ -47,8 +46,9 @@ export class OrientedBoundsBuilder {
   }
 
   /**
-   * Keeps only meshes that still have usable geometry.
-   * Guards against disposed meshes or non-content objects in selection.
+   * Keeps only meshes that still have usable geometry. Guards against disposed
+   * meshes or non-content objects in selection.
+   *
    * @param meshes Candidate meshes.
    * @returns Meshes safe to measure.
    */
@@ -60,6 +60,7 @@ export class OrientedBoundsBuilder {
 
   /**
    * Returns the outward unit normal of a face in world space.
+   *
    * @param bounds The oriented bounds.
    * @param face The face whose normal is requested.
    * @returns A new world-space normal vector.
@@ -71,6 +72,7 @@ export class OrientedBoundsBuilder {
 
   /**
    * Returns the world-space center point of a bounds face.
+   *
    * @param bounds The oriented bounds.
    * @param face The face whose center is requested.
    * @returns A new world-space face center.
@@ -83,6 +85,7 @@ export class OrientedBoundsBuilder {
 
   /**
    * Builds OBB data from one mesh using geometry AABB and world pose.
+   *
    * @param mesh The mesh to measure.
    * @returns Oriented bounds for the mesh.
    */
@@ -105,6 +108,7 @@ export class OrientedBoundsBuilder {
 
   /**
    * Builds a world-axis-aligned box enclosing every mesh.
+   *
    * @param meshes The meshes to union.
    * @returns Axis-aligned oriented bounds (identity rotation).
    */
@@ -125,6 +129,7 @@ export class OrientedBoundsBuilder {
 
   /**
    * Computes the local-space AABB of a mesh geometry only (ignores children).
+   *
    * @param mesh The mesh whose geometry is measured.
    * @returns A local bounding box.
    */
@@ -144,6 +149,7 @@ export class OrientedBoundsBuilder {
 
   /**
    * Creates a default 1x1x1 local box centered at the origin.
+   *
    * @returns Fallback local AABB.
    */
   private createUnitLocalBox(): THREE.Box3 {
@@ -153,6 +159,7 @@ export class OrientedBoundsBuilder {
 
 /**
  * Returns the local-space outward normal for a bounds face.
+ *
  * @param face The bounds face.
  * @returns A new unit vector in local bounds space.
  */
@@ -167,6 +174,7 @@ export function getBoundsFaceLocalNormal(face: BoundsFace): THREE.Vector3 {
 
 /**
  * Returns the half-extent along the axis of a bounds face.
+ *
  * @param halfExtents The full half-extent vector.
  * @param face The face to query.
  * @returns Half size along that face's axis.
@@ -183,15 +191,9 @@ export function getBoundsFaceHalfExtent(halfExtents: THREE.Vector3, face: Bounds
 
 /**
  * Returns every bounds face enum value.
+ *
  * @returns An array of all six faces.
  */
 export function getAllBoundsFaces(): BoundsFace[] {
-  return [
-    BoundsFace.POS_X,
-    BoundsFace.NEG_X,
-    BoundsFace.POS_Y,
-    BoundsFace.NEG_Y,
-    BoundsFace.POS_Z,
-    BoundsFace.NEG_Z,
-  ];
+  return [BoundsFace.POS_X, BoundsFace.NEG_X, BoundsFace.POS_Y, BoundsFace.NEG_Y, BoundsFace.POS_Z, BoundsFace.NEG_Z];
 }

@@ -4,9 +4,7 @@ import { SceneRaycaster } from '../../src/selection/scene_raycaster.js';
 import { SelectionClickThrough } from '../../src/selection/selection_click_through.js';
 import { SelectionManager } from '../../src/managers/selection_manager.js';
 
-/**
- * Integration-style tests for multi-hit raycasting and click-through picks.
- */
+/** Integration-style tests for multi-hit raycasting and click-through picks. */
 describe('SceneRaycaster click-through', () => {
   let raycaster: SceneRaycaster;
 
@@ -47,6 +45,7 @@ describe('SceneRaycaster click-through', () => {
 
 /**
  * Creates a mock canvas with fixed client bounds.
+ *
  * @returns Canvas element stand-in.
  */
 function createCanvas(): HTMLElement {
@@ -59,6 +58,7 @@ function createCanvas(): HTMLElement {
 
 /**
  * Creates a mock WebGL renderer for testing.
+ *
  * @param canvas The mock canvas element.
  * @returns A mock renderer object.
  */
@@ -70,6 +70,7 @@ function createMockRenderer(canvas: HTMLElement): THREE.WebGLRenderer {
 
 /**
  * Creates a test camera positioned at origin looking down negative Z.
+ *
  * @returns A configured perspective camera.
  */
 function createTestCamera(): THREE.PerspectiveCamera {
@@ -82,6 +83,7 @@ function createTestCamera(): THREE.PerspectiveCamera {
 
 /**
  * Creates a mesh at a specific position with updated world matrix.
+ *
  * @param sizeX Width of the box along X.
  * @param sizeY Height of the box along Y.
  * @param sizeZ Depth of the box along Z.
@@ -98,10 +100,7 @@ function createMeshAt(
   posY: number,
   posZ: number,
 ): THREE.Mesh {
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(sizeX, sizeY, sizeZ),
-    new THREE.MeshBasicMaterial(),
-  );
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(sizeX, sizeY, sizeZ), new THREE.MeshBasicMaterial());
   mesh.position.set(posX, posY, posZ);
   mesh.updateMatrixWorld(true);
   return mesh;
@@ -109,6 +108,7 @@ function createMeshAt(
 
 /**
  * Creates a mock mouse event with specified coordinates.
+ *
  * @param clientX The horizontal client coordinate.
  * @param clientY The vertical client coordinate.
  * @returns A mock MouseEvent.

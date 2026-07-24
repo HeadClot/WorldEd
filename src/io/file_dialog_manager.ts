@@ -1,21 +1,20 @@
 /**
- * Browser file system access helpers for save and load operations.
- * Gracefully handles browsers without File System Access API support.
+ * Browser file system access helpers for save and load operations. Gracefully
+ * handles browsers without File System Access API support.
  */
 
 /**
  * Checks whether the File System Access API is available.
+ *
  * @returns True if showSaveFilePicker or showOpenFilePicker exist.
  */
 function isFileSystemAccessAvailable(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    ('showSaveFilePicker' in window || 'showOpenFilePicker' in window)
-  );
+  return typeof window !== 'undefined' && ('showSaveFilePicker' in window || 'showOpenFilePicker' in window);
 }
 
 /**
  * Creates a Blob from a text string with the given MIME type.
+ *
  * @param content The text content.
  * @param mimeType The MIME type for the blob.
  * @returns The created Blob.
@@ -26,6 +25,7 @@ function createTextBlob(content: string, mimeType: string): Blob {
 
 /**
  * Creates a Blob from an ArrayBuffer.
+ *
  * @param buffer The binary buffer.
  * @param mimeType The MIME type for the blob.
  * @returns The created Blob.
@@ -36,6 +36,7 @@ function createBinaryBlob(buffer: ArrayBuffer, mimeType: string): Blob {
 
 /**
  * Triggers a download by creating and clicking a temporary anchor element.
+ *
  * @param blob The blob to download.
  * @param filename The suggested filename for the download.
  */
@@ -53,6 +54,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 
 /**
  * Reads a File object as text using FileReader.
+ *
  * @param file The file to read.
  * @returns A promise resolving to the file text content.
  */
@@ -66,13 +68,14 @@ function readFileAsText(file: File): Promise<string> {
 }
 
 /**
- * Manages browser file save and load dialog operations.
- * Falls back to download-based saving when File System Access API is unavailable.
+ * Manages browser file save and load dialog operations. Falls back to
+ * download-based saving when File System Access API is unavailable.
  */
 export class FileDialogManager {
   /**
-   * Opens a save dialog for JSON data and writes the file.
-   * Falls back to download anchor when API is unavailable.
+   * Opens a save dialog for JSON data and writes the file. Falls back to
+   * download anchor when API is unavailable.
+   *
    * @param data The JSON string to save.
    * @param suggestedName The suggested filename for the save dialog.
    * @returns A promise resolving to the filename, or null on failure.
@@ -85,8 +88,9 @@ export class FileDialogManager {
   }
 
   /**
-   * Opens a file dialog for JSON loading and reads the file.
-   * Falls back to legacy file input when API is unavailable.
+   * Opens a file dialog for JSON loading and reads the file. Falls back to
+   * legacy file input when API is unavailable.
+   *
    * @returns A promise resolving to the JSON string, or null on failure.
    */
   async loadJSON(): Promise<string | null> {
@@ -98,9 +102,11 @@ export class FileDialogManager {
 
   /**
    * Opens a file dialog for a text file and returns contents plus filename.
+   *
    * @param accept Comma-separated accept string (e.g. ".vmf,text/plain").
    * @param description Human-readable type label for the picker.
-   * @param extensions Extension list for the File System Access API (e.g. [".vmf"]).
+   * @param extensions Extension list for the File System Access API (e.g.
+   *   [".vmf"]).
    * @returns Loaded text and filename, or null when cancelled/failed.
    */
   async loadTextFile(
@@ -115,8 +121,9 @@ export class FileDialogManager {
   }
 
   /**
-   * Opens a save dialog for binary data and writes the file.
-   * Falls back to download anchor when API is unavailable.
+   * Opens a save dialog for binary data and writes the file. Falls back to
+   * download anchor when API is unavailable.
+   *
    * @param buffer The ArrayBuffer to save.
    * @param suggestedName The suggested filename for the save dialog.
    * @returns A promise resolving to the filename, or null on failure.
@@ -130,6 +137,7 @@ export class FileDialogManager {
 
   /**
    * Saves JSON using the File System Access API.
+   *
    * @param data The JSON string to save.
    * @param suggestedName The suggested filename.
    * @returns The filename or null on failure.
@@ -159,6 +167,7 @@ export class FileDialogManager {
 
   /**
    * Loads JSON using the File System Access API.
+   *
    * @returns The JSON string or null on failure.
    */
   private async loadJSONWithAPI(): Promise<string | null> {
@@ -183,14 +192,12 @@ export class FileDialogManager {
 
   /**
    * Saves binary data using the File System Access API.
+   *
    * @param buffer The ArrayBuffer to save.
    * @param suggestedName The suggested filename.
    * @returns The filename or null on failure.
    */
-  private async saveBinaryWithAPI(
-    buffer: ArrayBuffer,
-    suggestedName: string,
-  ): Promise<string | null> {
+  private async saveBinaryWithAPI(buffer: ArrayBuffer, suggestedName: string): Promise<string | null> {
     if (!('showSaveFilePicker' in window)) {
       return null;
     }
@@ -215,6 +222,7 @@ export class FileDialogManager {
 
   /**
    * Saves JSON using fallback download mechanism.
+   *
    * @param data The JSON string to save.
    * @param suggestedName The suggested filename.
    * @returns The filename or null on failure.
@@ -231,6 +239,7 @@ export class FileDialogManager {
 
   /**
    * Loads JSON using fallback file input mechanism.
+   *
    * @returns The JSON string or null on failure.
    */
   private loadJSONFallback(): Promise<string | null> {
@@ -239,6 +248,7 @@ export class FileDialogManager {
 
   /**
    * Loads a text file using the File System Access API.
+   *
    * @param description Type description for the picker.
    * @param extensions File extensions including the dot.
    * @returns Text and filename, or null.
@@ -269,6 +279,7 @@ export class FileDialogManager {
 
   /**
    * Loads a text file using a legacy file input element.
+   *
    * @param accept Accept attribute for the input.
    * @returns Text and filename, or null.
    */
@@ -288,6 +299,7 @@ export class FileDialogManager {
 
   /**
    * Processes a text file chosen through the fallback input.
+   *
    * @param input The file input element.
    * @param resolve Promise resolve callback.
    */
@@ -307,6 +319,7 @@ export class FileDialogManager {
 
   /**
    * Saves binary data using fallback download mechanism.
+   *
    * @param buffer The ArrayBuffer to save.
    * @param suggestedName The suggested filename.
    * @returns The filename or null on failure.

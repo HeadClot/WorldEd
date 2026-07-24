@@ -3,9 +3,7 @@ import { Viewport2D } from '../viewports/viewport_2d.js';
 import { CameraFitCoordinator } from './camera_fit_coordinator.js';
 import { ClipPlaneHandler } from './clip_plane_handler.js';
 
-/**
- * Owns the editor animation frame loop and resize disconnect helpers.
- */
+/** Owns the editor animation frame loop and resize disconnect helpers. */
 export class LayoutRenderLoop {
   private isRunning: boolean;
   private isDisposed: boolean;
@@ -20,9 +18,7 @@ export class LayoutRenderLoop {
   private clipPlaneHandler: ClipPlaneHandler | null;
   private onBeforeRender: (() => void) | null;
 
-  /**
-   * Creates an idle render loop.
-   */
+  /** Creates an idle render loop. */
   constructor() {
     this.isRunning = false;
     this.isDisposed = false;
@@ -40,6 +36,7 @@ export class LayoutRenderLoop {
 
   /**
    * Binds viewports and coordinators used each frame.
+   *
    * @param parts Live layout subsystems for the render path.
    */
   bind(parts: {
@@ -62,6 +59,7 @@ export class LayoutRenderLoop {
 
   /**
    * Updates the clip handler used for preview scale each frame.
+   *
    * @param handler Clip plane handler or null.
    */
   setClipPlaneHandler(handler: ClipPlaneHandler | null): void {
@@ -70,6 +68,7 @@ export class LayoutRenderLoop {
 
   /**
    * Watches viewport elements and invokes a resize callback.
+   *
    * @param viewports Viewport root elements.
    * @param onResize Resize handler.
    */
@@ -80,9 +79,7 @@ export class LayoutRenderLoop {
     viewports.forEach((viewport) => this.resizeObserver?.observe(viewport));
   }
 
-  /**
-   * Starts the continuous render loop.
-   */
+  /** Starts the continuous render loop. */
   start(): void {
     if (this.isRunning || this.isDisposed) return;
     this.isRunning = true;
@@ -90,9 +87,7 @@ export class LayoutRenderLoop {
     this.scheduleNextFrame();
   }
 
-  /**
-   * Stops the render loop without disposing resources.
-   */
+  /** Stops the render loop without disposing resources. */
   stop(): void {
     this.isRunning = false;
     if (this.animationFrameId !== null) {
@@ -101,9 +96,7 @@ export class LayoutRenderLoop {
     }
   }
 
-  /**
-   * Stops the loop and disconnects resize observation.
-   */
+  /** Stops the loop and disconnects resize observation. */
   dispose(): void {
     if (this.isDisposed) return;
     this.isDisposed = true;
@@ -113,22 +106,19 @@ export class LayoutRenderLoop {
 
   /**
    * Returns whether the loop has been disposed.
+   *
    * @returns True when disposed.
    */
   getIsDisposed(): boolean {
     return this.isDisposed;
   }
 
-  /**
-   * Schedules the next animation frame while running.
-   */
+  /** Schedules the next animation frame while running. */
   private scheduleNextFrame(): void {
     this.animationFrameId = requestAnimationFrame(() => this.onAnimationFrame());
   }
 
-  /**
-   * Advances one frame of viewport updates and rendering.
-   */
+  /** Advances one frame of viewport updates and rendering. */
   private onAnimationFrame(): void {
     if (!this.isRunning || this.isDisposed || !this.viewport3D) {
       this.animationFrameId = null;
@@ -148,9 +138,7 @@ export class LayoutRenderLoop {
     this.scheduleNextFrame();
   }
 
-  /**
-   * Disconnects the viewport resize observer when present.
-   */
+  /** Disconnects the viewport resize observer when present. */
   private disconnectResizeObserver(): void {
     if (!this.resizeObserver) return;
     this.resizeObserver.disconnect();

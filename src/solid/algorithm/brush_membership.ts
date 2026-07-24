@@ -4,12 +4,11 @@ import { SolidPlane } from '../brush/solid_plane.js';
 import { SurfaceCategory } from '../types/surface_category.js';
 import { SOLID_FAT_PLANE_EPSILON } from './solid_math_constants.js';
 
-/**
- * Classifies points and polygons against convex solid brushes.
- */
+/** Classifies points and polygons against convex solid brushes. */
 export class BrushMembership {
   /**
    * Returns true when a point is inside or on the boundary of a brush.
+   *
    * @param point Point in the same space as brush planes.
    * @param planes Outward planes of the brush.
    * @param epsilon Fat-plane tolerance.
@@ -28,6 +27,7 @@ export class BrushMembership {
 
   /**
    * Returns true when a point is strictly outside at least one plane.
+   *
    * @param point Point to test.
    * @param planes Outward planes.
    * @param epsilon Fat-plane tolerance.
@@ -43,16 +43,13 @@ export class BrushMembership {
 
   /**
    * Classifies a point against a brush, detecting coplanar alignment.
+   *
    * @param point Point in brush space.
    * @param brush Brush geometry.
    * @param surfaceNormal Optional surface normal for aligned detection.
    * @returns Surface category relative to the brush volume.
    */
-  static classifyPoint(
-    point: THREE.Vector3,
-    brush: SolidBrush,
-    surfaceNormal?: THREE.Vector3,
-  ): SurfaceCategory {
+  static classifyPoint(point: THREE.Vector3, brush: SolidBrush, surfaceNormal?: THREE.Vector3): SurfaceCategory {
     let minAbsDistance = Number.POSITIVE_INFINITY;
     let closestPlane: SolidPlane | null = null;
     for (const plane of brush.planes) {
@@ -76,22 +73,20 @@ export class BrushMembership {
 
   /**
    * Classifies a polygon relative to a brush using its centroid and normal.
+   *
    * @param polygon Convex polygon vertices.
    * @param brush Brush geometry in the same space.
    * @param surfaceNormal Polygon plane normal.
    * @returns Category of the polygon relative to the brush.
    */
-  static classifyPolygon(
-    polygon: THREE.Vector3[],
-    brush: SolidBrush,
-    surfaceNormal: THREE.Vector3,
-  ): SurfaceCategory {
+  static classifyPolygon(polygon: THREE.Vector3[], brush: SolidBrush, surfaceNormal: THREE.Vector3): SurfaceCategory {
     const centroid = this.polygonCentroid(polygon);
     return this.classifyPoint(centroid, brush, surfaceNormal);
   }
 
   /**
    * Computes the arithmetic centroid of a polygon.
+   *
    * @param polygon Vertex list.
    * @returns Centroid point.
    */

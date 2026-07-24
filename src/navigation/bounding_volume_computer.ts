@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 
 /**
- * Computes bounding volumes from arrays of scene meshes.
- * Used for camera framing and spatial queries.
+ * Computes bounding volumes from arrays of scene meshes. Used for camera
+ * framing and spatial queries.
  */
 export class BoundingVolumeComputer {
   /**
-   * Computes a tight axis-aligned bounding box from a set of meshes.
-   * Accounts for each mesh's world-space transformation.
+   * Computes a tight axis-aligned bounding box from a set of meshes. Accounts
+   * for each mesh's world-space transformation.
+   *
    * @param meshes The array of meshes to measure.
    * @returns A Box3 enclosing all meshes in world space.
    */
@@ -26,6 +27,7 @@ export class BoundingVolumeComputer {
 
   /**
    * Computes the smallest sphere that fully encloses the given bounding box.
+   *
    * @param boundingBox The axis-aligned bounding box.
    * @returns A Sphere centered on the box center with sufficient radius.
    */
@@ -38,6 +40,7 @@ export class BoundingVolumeComputer {
 
   /**
    * Extracts the center point from a bounding box.
+   *
    * @param boundingBox The axis-aligned bounding box.
    * @returns The center vector of the bounding box.
    */
@@ -49,6 +52,7 @@ export class BoundingVolumeComputer {
 
   /**
    * Computes the radius required for a sphere to fully enclose a bounding box.
+   *
    * @param boundingBox The axis-aligned bounding box.
    * @returns The minimum enclosing sphere radius.
    */

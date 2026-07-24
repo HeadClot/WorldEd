@@ -1,9 +1,7 @@
 import { Theme } from '../theme.js';
 import { hexToRgb } from '../utils/color_utils.js';
 
-/**
- * A single item in a context menu.
- */
+/** A single item in a context menu. */
 export interface ContextMenuItem {
   /** The display label for the menu item. */
   label: string;
@@ -16,9 +14,8 @@ export interface ContextMenuItem {
 }
 
 /**
- * Floating context menu component.
- * Displays a list of items at a specified position.
- * Auto-hides after selection, outside click, or Escape key.
+ * Floating context menu component. Displays a list of items at a specified
+ * position. Auto-hides after selection, outside click, or Escape key.
  */
 export class ContextMenu {
   private menuElement: HTMLElement;
@@ -29,6 +26,7 @@ export class ContextMenu {
 
   /**
    * Creates a new context menu component.
+   *
    * @param container The parent DOM element to attach the menu to.
    * @param items The menu items to display.
    */
@@ -44,6 +42,7 @@ export class ContextMenu {
 
   /**
    * Shows the menu at the specified screen coordinates.
+   *
    * @param x The horizontal screen position.
    * @param y The vertical screen position.
    */
@@ -57,9 +56,7 @@ export class ContextMenu {
     document.addEventListener('keydown', this.keydownListener);
   }
 
-  /**
-   * Hides the menu and removes global event listeners.
-   */
+  /** Hides the menu and removes global event listeners. */
   hide(): void {
     if (!this.isVisible) return;
     this.isVisible = false;
@@ -68,9 +65,7 @@ export class ContextMenu {
     document.removeEventListener('keydown', this.keydownListener);
   }
 
-  /**
-   * Disposes the menu and removes it from the DOM.
-   */
+  /** Disposes the menu and removes it from the DOM. */
   dispose(): void {
     this.hide();
     if (this.menuElement.parentNode) {
@@ -80,6 +75,7 @@ export class ContextMenu {
 
   /**
    * Creates the root menu DOM element with styles.
+   *
    * @returns The styled menu container element.
    */
   private createMenuElement(): HTMLElement {
@@ -99,9 +95,7 @@ export class ContextMenu {
     return el;
   }
 
-  /**
-   * Renders all menu items into the menu element.
-   */
+  /** Renders all menu items into the menu element. */
   private renderItems(): void {
     this.items.forEach((item) => {
       const itemElement = this.createItemElement(item);
@@ -111,6 +105,7 @@ export class ContextMenu {
 
   /**
    * Creates a single clickable menu item element.
+   *
    * @param item The context menu item data.
    * @returns The styled and event-bound DOM element.
    */
@@ -130,6 +125,7 @@ export class ContextMenu {
 
   /**
    * Returns the text color for a menu item based on its state.
+   *
    * @param item The context menu item.
    * @returns The CSS color string for the item text.
    */
@@ -142,6 +138,7 @@ export class ContextMenu {
 
   /**
    * Binds mouse events to a menu item element.
+   *
    * @param item The context menu item data.
    * @param el The DOM element to bind events to.
    */
@@ -164,6 +161,7 @@ export class ContextMenu {
 
   /**
    * Handles mouse clicks outside the menu area.
+   *
    * @param event The mouse event to inspect.
    */
   private onOutsideClick(event: MouseEvent): void {
@@ -174,6 +172,7 @@ export class ContextMenu {
 
   /**
    * Handles keyboard events to detect Escape key presses.
+   *
    * @param event The keyboard event to inspect.
    */
   private onKeyDown(event: KeyboardEvent): void {

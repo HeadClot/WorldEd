@@ -7,11 +7,11 @@ import {
 } from './gizmo_visual_style.js';
 
 /**
- * Draws RGB axis guide rays from each corner of an oriented bounds box.
- * Solid color at the corner fades toward a transparent tip, matching
- * classic brush editor construction guides.
- * Uses the same front/occluded dual-pass as move and rotate gizmos so
- * segments that enter existing geometry draw semi-transparent.
+ * Draws RGB axis guide rays from each corner of an oriented bounds box. Solid
+ * color at the corner fades toward a transparent tip, matching classic brush
+ * editor construction guides. Uses the same front/occluded dual-pass as move
+ * and rotate gizmos so segments that enter existing geometry draw
+ * semi-transparent.
  */
 export class BoundsGuideLines {
   private rootGroup: THREE.Group;
@@ -28,6 +28,7 @@ export class BoundsGuideLines {
 
   /**
    * Creates guide-line geometry using theme axis colors.
+   *
    * @param theme Theme providing gizmo axis colors.
    * @param fixedGuideLength Constant outward ray length in world units.
    */
@@ -48,6 +49,7 @@ export class BoundsGuideLines {
 
   /**
    * Builds the front LineSegments with standard gizmo depth testing.
+   *
    * @returns Configured front line object.
    */
   private createFrontLineSegments(): THREE.LineSegments {
@@ -60,6 +62,7 @@ export class BoundsGuideLines {
 
   /**
    * Builds the occluded ghost LineSegments sharing the front geometry.
+   *
    * @returns Configured occluded line object.
    */
   private createOccludedLineSegments(): THREE.LineSegments {
@@ -73,6 +76,7 @@ export class BoundsGuideLines {
 
   /**
    * Builds the parent group containing front and occluded line passes.
+   *
    * @returns Root group for parenting under the bounds gizmo.
    */
   private createRootGroup(): THREE.Group {
@@ -85,9 +89,7 @@ export class BoundsGuideLines {
     return group;
   }
 
-  /**
-   * Allocates zero-length buffers until the first bounds update.
-   */
+  /** Allocates zero-length buffers until the first bounds update. */
   private allocateEmptyGeometry(): void {
     this.geometry.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
     this.geometry.setAttribute('color', new THREE.Float32BufferAttribute([], 3));
@@ -95,6 +97,7 @@ export class BoundsGuideLines {
 
   /**
    * Returns the root group to parent under the bounds gizmo root.
+   *
    * @returns The guide lines group containing front and occluded passes.
    */
   getObject(): THREE.Group {
@@ -103,6 +106,7 @@ export class BoundsGuideLines {
 
   /**
    * Returns the shared guide-line geometry for inspection and tests.
+   *
    * @returns The buffer geometry used by both line passes.
    */
   getGeometry(): THREE.BufferGeometry {
@@ -111,6 +115,7 @@ export class BoundsGuideLines {
 
   /**
    * Shows or hides the guide lines.
+   *
    * @param visible Whether the lines should be drawn.
    */
   setVisible(visible: boolean): void {
@@ -119,6 +124,7 @@ export class BoundsGuideLines {
 
   /**
    * Returns whether the guide lines are currently visible.
+   *
    * @returns True when visible.
    */
   isVisible(): boolean {
@@ -126,9 +132,10 @@ export class BoundsGuideLines {
   }
 
   /**
-   * Rebuilds guide rays for the given local half extents.
-   * Ray length is fixed and does not scale with object size.
-   * Lines are authored in local bounds space (origin at box center).
+   * Rebuilds guide rays for the given local half extents. Ray length is fixed
+   * and does not scale with object size. Lines are authored in local bounds
+   * space (origin at box center).
+   *
    * @param halfExtents Local half extents of the oriented bounds.
    */
   updateFromHalfExtents(halfExtents: THREE.Vector3): void {
@@ -140,27 +147,16 @@ export class BoundsGuideLines {
 
   /**
    * Appends outward X/Y/Z rays for every box corner.
+   *
    * @param positions Position component accumulator.
    * @param colors Color component accumulator.
    * @param halfExtents Local half extents.
    */
-  private appendAllCornerGuides(
-    positions: number[],
-    colors: number[],
-    halfExtents: THREE.Vector3,
-  ): void {
+  private appendAllCornerGuides(positions: number[], colors: number[], halfExtents: THREE.Vector3): void {
     this.cornerSigns.forEach((signX) => {
       this.cornerSigns.forEach((signY) => {
         this.cornerSigns.forEach((signZ) => {
-          this.appendCornerAxisRays(
-            positions,
-            colors,
-            halfExtents,
-            this.fixedGuideLength,
-            signX,
-            signY,
-            signZ,
-          );
+          this.appendCornerAxisRays(positions, colors, halfExtents, this.fixedGuideLength, signX, signY, signZ);
         });
       });
     });
@@ -168,6 +164,7 @@ export class BoundsGuideLines {
 
   /**
    * Appends three outward axis rays for one corner.
+   *
    * @param positions Position component accumulator.
    * @param colors Color component accumulator.
    * @param halfExtents Local half extents.
@@ -225,6 +222,7 @@ export class BoundsGuideLines {
 
   /**
    * Appends one colored ray with a solid start and faded tip.
+   *
    * @param positions Position component accumulator.
    * @param colors Color component accumulator.
    * @param ax Start X.
@@ -253,6 +251,7 @@ export class BoundsGuideLines {
 
   /**
    * Pushes a full-intensity RGB triple.
+   *
    * @param colors Color component accumulator.
    * @param color Source color.
    */
@@ -262,6 +261,7 @@ export class BoundsGuideLines {
 
   /**
    * Pushes a dimmed RGB triple that reads as a transparent tip on dark UI.
+   *
    * @param colors Color component accumulator.
    * @param color Source color.
    */
@@ -272,6 +272,7 @@ export class BoundsGuideLines {
 
   /**
    * Writes position and color arrays into the line geometry.
+   *
    * @param positions Flat position components.
    * @param colors Flat color components.
    */
@@ -283,6 +284,7 @@ export class BoundsGuideLines {
 
   /**
    * Returns the number of line segments currently stored.
+   *
    * @returns Segment count (two vertices per segment).
    */
   getSegmentCount(): number {
@@ -291,9 +293,7 @@ export class BoundsGuideLines {
     return Math.floor(position.count / 2);
   }
 
-  /**
-   * Disposes GPU resources held by the guide lines.
-   */
+  /** Disposes GPU resources held by the guide lines. */
   dispose(): void {
     this.geometry.dispose();
     this.frontMaterial.dispose();

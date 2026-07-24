@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  GITHUB_LATEST_RELEASE_URL,
-  GitHubReleaseClient,
-} from '../../src/updater/github_release_client.js';
+import { GITHUB_LATEST_RELEASE_URL, GitHubReleaseClient } from '../../src/updater/github_release_client.js';
 
 describe('GitHubReleaseClient', () => {
   it('requests the latest release endpoint and normalizes release assets', async () => {
@@ -42,6 +39,7 @@ describe('GitHubReleaseClient', () => {
 
 /**
  * Creates the small response surface used by the release client.
+ *
  * @param status HTTP status returned by the fake request.
  * @param payload JSON payload returned by the fake request.
  * @returns Minimal response object.

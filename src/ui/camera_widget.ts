@@ -1,13 +1,10 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
-import {
-  createEditorWebGLCanvas,
-  getEditorWebGLRendererOptions,
-} from '../viewports/webgl_renderer_options.js';
+import { createEditorWebGLCanvas, getEditorWebGLRendererOptions } from '../viewports/webgl_renderer_options.js';
 
 /**
- * Renders three colored arrows (X=red, Y=green, Z=blue) in the top-right
- * corner of the 3D viewport, mirroring the camera's current orientation.
+ * Renders three colored arrows (X=red, Y=green, Z=blue) in the top-right corner
+ * of the 3D viewport, mirroring the camera's current orientation.
  */
 export class CameraWidget {
   private widgetRenderer: THREE.WebGLRenderer;
@@ -27,6 +24,7 @@ export class CameraWidget {
 
   /**
    * Creates a new camera orientation widget.
+   *
    * @param container The viewport container to overlay the widget onto.
    */
   constructor(container: HTMLElement) {
@@ -57,9 +55,7 @@ export class CameraWidget {
     this.attachToContainer(container);
   }
 
-  /**
-   * Creates the three axis arrows and adds them to the widget scene.
-   */
+  /** Creates the three axis arrows and adds them to the widget scene. */
   private createArrows(): void {
     this.arrowX = this.buildArrow(new THREE.Vector3(1, 0, 0), Theme.widgetXAxisColor);
     this.arrowGroup.add(this.arrowX);
@@ -73,6 +69,7 @@ export class CameraWidget {
 
   /**
    * Builds an ArrowHelper with consistent sizing.
+   *
    * @param direction The axis direction for the arrow.
    * @param color The hex color for the arrow shaft and head.
    * @returns A configured ArrowHelper instance.
@@ -90,6 +87,7 @@ export class CameraWidget {
 
   /**
    * Attaches the widget canvas to the viewport container as an overlay.
+   *
    * @param container The parent viewport container element.
    */
   private attachToContainer(container: HTMLElement): void {
@@ -105,8 +103,9 @@ export class CameraWidget {
   }
 
   /**
-   * Updates the widget camera to match the main camera's orientation,
-   * then renders the widget.
+   * Updates the widget camera to match the main camera's orientation, then
+   * renders the widget.
+   *
    * @param camera The main camera to mirror.
    */
   update(camera: THREE.Camera): void {
@@ -119,6 +118,7 @@ export class CameraWidget {
 
   /**
    * Returns the canvas DOM element for the widget.
+   *
    * @returns The HTML canvas element.
    */
   getCanvasElement(): HTMLCanvasElement {
@@ -127,6 +127,7 @@ export class CameraWidget {
 
   /**
    * Returns the widget's Three.js scene.
+   *
    * @returns The scene containing the axis arrows.
    */
   getScene(): THREE.Scene {
@@ -135,6 +136,7 @@ export class CameraWidget {
 
   /**
    * Returns the X axis arrow helper.
+   *
    * @returns The red (X) ArrowHelper.
    */
   getArrowX(): THREE.ArrowHelper {
@@ -143,6 +145,7 @@ export class CameraWidget {
 
   /**
    * Returns the Y axis arrow helper.
+   *
    * @returns The green (Y) ArrowHelper.
    */
   getArrowY(): THREE.ArrowHelper {
@@ -151,15 +154,14 @@ export class CameraWidget {
 
   /**
    * Returns the Z axis arrow helper.
+   *
    * @returns The blue (Z) ArrowHelper.
    */
   getArrowZ(): THREE.ArrowHelper {
     return this.arrowZ;
   }
 
-  /**
-   * Disposes all Three.js resources and removes the canvas from the DOM.
-   */
+  /** Disposes all Three.js resources and removes the canvas from the DOM. */
   dispose(): void {
     this.widgetScene.remove(this.arrowX);
     this.widgetScene.remove(this.arrowY);

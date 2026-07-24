@@ -7,33 +7,29 @@ import {
 } from '../selection/triangle_geometry_utils.js';
 
 /**
- * Helper geometry utilities retained for tests and average-normal math.
- * Real editor extrusion lives in convex_face_prism.ts and creates a new solid.
+ * Helper geometry utilities retained for tests and average-normal math. Real
+ * editor extrusion lives in convex_face_prism.ts and creates a new solid.
  */
 
 /**
  * Computes the normal vector of a single triangle face.
+ *
  * @param geometry The buffer geometry containing vertex positions.
  * @param faceIndex The triangle index to compute the normal for.
  * @returns The normalized face normal vector.
  */
-export function computeFaceNormal(
-  geometry: THREE.BufferGeometry,
-  faceIndex: number,
-): THREE.Vector3 {
+export function computeFaceNormal(geometry: THREE.BufferGeometry, faceIndex: number): THREE.Vector3 {
   return computeTriangleNormal(geometry, faceIndex);
 }
 
 /**
  * Computes the average normal across multiple face indices.
+ *
  * @param geometry The buffer geometry containing vertex positions.
  * @param faceIndices The array of triangle indices to average.
  * @returns The normalized average normal vector.
  */
-export function computeAverageNormals(
-  geometry: THREE.BufferGeometry,
-  faceIndices: number[],
-): THREE.Vector3 {
+export function computeAverageNormals(geometry: THREE.BufferGeometry, faceIndices: number[]): THREE.Vector3 {
   const accumulator = new THREE.Vector3();
   faceIndices.forEach((faceIndex) => {
     accumulator.add(computeFaceNormal(geometry, faceIndex));
@@ -46,19 +42,18 @@ export function computeAverageNormals(
 
 /**
  * Collects all unique vertex indices referenced by the given face indices.
+ *
  * @param geometry The buffer geometry containing vertex data.
  * @param faceIndices The array of triangle indices.
  * @returns A sorted array of unique vertex indices.
  */
-export function getUniqueVertexIndicesForFaces(
-  geometry: THREE.BufferGeometry,
-  faceIndices: number[],
-): number[] {
+export function getUniqueVertexIndicesForFaces(geometry: THREE.BufferGeometry, faceIndices: number[]): number[] {
   return collectUniqueVertices(geometry, faceIndices);
 }
 
 /**
  * Displaces selected face vertices along a normal (legacy pure math helper).
+ *
  * @param geometry The source buffer geometry.
  * @param faceIndices The triangle indices to extrude.
  * @param displacement The extrusion distance along the normal.
@@ -96,27 +91,23 @@ export function extrudeVertexPositions(
 
 /**
  * Returns the three vertex indices of a face for external callers.
+ *
  * @param geometry The buffer geometry.
  * @param faceIndex The triangle index.
  * @returns The three position-attribute indices.
  */
-export function getFaceVertexIndices(
-  geometry: THREE.BufferGeometry,
-  faceIndex: number,
-): [number, number, number] {
+export function getFaceVertexIndices(geometry: THREE.BufferGeometry, faceIndex: number): [number, number, number] {
   return getTriangleVertexIndices(geometry, faceIndex);
 }
 
 /**
  * Splits vertices that are shared between selected and non-selected faces.
+ *
  * @param geometry The source buffer geometry.
  * @param faceIndices The triangle indices being extruded.
  * @returns A new geometry with shared vertices duplicated.
  */
-export function splitSharedVertices(
-  geometry: THREE.BufferGeometry,
-  faceIndices: number[],
-): THREE.BufferGeometry {
+export function splitSharedVertices(geometry: THREE.BufferGeometry, faceIndices: number[]): THREE.BufferGeometry {
   const sourcePositions = geometry.getAttribute('position');
   const selectedVertices = getUniqueVertexIndicesForFaces(geometry, faceIndices);
   const selectedSet = new Set(selectedVertices);
@@ -124,25 +115,19 @@ export function splitSharedVertices(
   const faceCount = Math.floor(vertexCount / 3);
   const selectedFacesSet = new Set(faceIndices);
   const vertexToFaces = buildVertexToFaceMap(vertexCount, faceCount);
-  const sharedVertexMap = identifySharedVertices(
-    selectedSet,
-    vertexToFaces,
-    selectedFacesSet,
-    vertexCount,
-  );
+  const sharedVertexMap = identifySharedVertices(selectedSet, vertexToFaces, selectedFacesSet, vertexCount);
   return buildSplitGeometry(geometry, vertexCount, sharedVertexMap);
 }
 
 /**
  * Merges vertices that are within a threshold distance of each other.
+ *
  * @param geometry The source geometry to merge vertices in.
- * @param threshold The maximum distance for vertices to be considered coincident.
+ * @param threshold The maximum distance for vertices to be considered
+ *   coincident.
  * @returns A new geometry with coincident vertices merged.
  */
-export function mergeCoincidentVertices(
-  geometry: THREE.BufferGeometry,
-  threshold: number,
-): THREE.BufferGeometry {
+export function mergeCoincidentVertices(geometry: THREE.BufferGeometry, threshold: number): THREE.BufferGeometry {
   const positions = geometry.getAttribute('position') as THREE.BufferAttribute;
   const vertexCount = positions.count;
   const mergeMap = buildMergeMap(positions, vertexCount, threshold);
@@ -153,7 +138,9 @@ export function mergeCoincidentVertices(
 }
 
 /**
- * Builds a map of each vertex to the face indices that reference it (non-indexed).
+ * Builds a map of each vertex to the face indices that reference it
+ * (non-indexed).
+ *
  * @param vertexCount Total vertex count.
  * @param faceCount Number of triangular faces.
  * @returns Map from vertex index to face indices.
@@ -174,6 +161,7 @@ function buildVertexToFaceMap(vertexCount: number, faceCount: number): Map<numbe
 
 /**
  * Identifies shared vertices and maps them to new duplicate indices.
+ *
  * @param selectedSet Vertices belonging to selected faces.
  * @param vertexToFaces Map of vertex to face indices.
  * @param selectedFacesSet Selected face indices.
@@ -201,6 +189,7 @@ function identifySharedVertices(
 
 /**
  * Builds a new geometry with split vertices for shared vertex indices.
+ *
  * @param geometry Source geometry.
  * @param vertexCount Original vertex count.
  * @param sharedVertexMap Shared vertex mapping.
@@ -212,8 +201,7 @@ function buildSplitGeometry(
   sharedVertexMap: Map<number, number>,
 ): THREE.BufferGeometry {
   const sourcePositions = geometry.getAttribute('position');
-  const maxIndex =
-    sharedVertexMap.size > 0 ? Math.max(...Array.from(sharedVertexMap.values())) : vertexCount - 1;
+  const maxIndex = sharedVertexMap.size > 0 ? Math.max(...Array.from(sharedVertexMap.values())) : vertexCount - 1;
   const newVertexCount = maxIndex + 1;
   const newPositions = new Float32Array(newVertexCount * 3);
   for (let i = 0; i < vertexCount; i++) {
@@ -233,16 +221,13 @@ function buildSplitGeometry(
 
 /**
  * Builds a merge map for coincident vertices.
+ *
  * @param positions Position attribute.
  * @param vertexCount Total vertex count.
  * @param threshold Distance threshold for merging.
  * @returns Map from source vertex index to target vertex index.
  */
-function buildMergeMap(
-  positions: THREE.BufferAttribute,
-  vertexCount: number,
-  threshold: number,
-): Map<number, number> {
+function buildMergeMap(positions: THREE.BufferAttribute, vertexCount: number, threshold: number): Map<number, number> {
   const mergeMap = new Map<number, number>();
   const processed = new Set<number>();
   for (let i = 0; i < vertexCount; i++) {
@@ -262,6 +247,7 @@ function buildMergeMap(
 
 /**
  * Applies a merge map to a positions array.
+ *
  * @param positions Source position attribute.
  * @param vertexCount Total vertex count.
  * @param mergeMap Mapping of vertices to merge.
@@ -283,16 +269,13 @@ function applyMergeMap(
 
 /**
  * Computes the Euclidean distance between two vertices.
+ *
  * @param positions Position attribute.
  * @param indexA First vertex index.
  * @param indexB Second vertex index.
  * @returns Distance between the vertices.
  */
-function measureVertexDistance(
-  positions: THREE.BufferAttribute,
-  indexA: number,
-  indexB: number,
-): number {
+function measureVertexDistance(positions: THREE.BufferAttribute, indexA: number, indexB: number): number {
   const vA = getVertexPosition(positions, indexA);
   const vB = getVertexPosition(positions, indexB);
   return vA.distanceTo(vB);

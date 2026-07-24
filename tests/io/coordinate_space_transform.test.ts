@@ -24,9 +24,7 @@ describe('coordinate_space_transform', () => {
   it('should build identity rotation for the Godot / editor preset', () => {
     const godot = getBuiltInCoordinateSpace('godot')!;
     const rotation = buildCoordinateRotation(godot);
-    expect(normalizeZeroSign(rotation.elements)).toEqual(
-      normalizeZeroSign(new THREE.Matrix3().elements),
-    );
+    expect(normalizeZeroSign(rotation.elements)).toEqual(normalizeZeroSign(new THREE.Matrix3().elements));
   });
 
   it('should map editor +Y up to Blender +Z up via a 90deg X rotation', () => {
@@ -98,9 +96,7 @@ describe('coordinate_space_transform', () => {
   it('should return identity transform for a default Godot meter profile', () => {
     const profile = createDefaultGameProfile('p-godot', 'Godot');
     const matrix = buildExportRootTransform(profile);
-    expect(normalizeZeroSign(matrix.elements)).toEqual(
-      normalizeZeroSign(new THREE.Matrix4().elements),
-    );
+    expect(normalizeZeroSign(matrix.elements)).toEqual(normalizeZeroSign(new THREE.Matrix4().elements));
   });
 
   it('should bake unit scale and Blender rotation into one Matrix4', () => {
@@ -139,15 +135,14 @@ describe('coordinate_space_transform', () => {
 
   it('should not add a reflection when stored handedness matches the axes', () => {
     const blender = getBuiltInCoordinateSpace('blender')!;
-    expect(
-      new THREE.Matrix4().setFromMatrix3(buildCoordinateRotation(blender)).determinant(),
-    ).toBeGreaterThan(0);
+    expect(new THREE.Matrix4().setFromMatrix3(buildCoordinateRotation(blender)).determinant()).toBeGreaterThan(0);
   });
 });
 
 /**
  * Normalizes negative-zero entries so equality comparisons ignore the
  * signed-zero artifacts produced by Three.js' negate() helpers.
+ *
  * @param elements Matrix or vector elements.
  * @returns New array with -0 replaced by 0.
  */

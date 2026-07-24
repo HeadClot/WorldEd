@@ -36,6 +36,7 @@ export class StandaloneUpdateService {
 
   /**
    * Creates an updater for the current app environment.
+   *
    * @param options Optional API client, host bridge, platform, and version.
    */
   constructor(options: StandaloneUpdateServiceOptions = {}) {
@@ -47,6 +48,7 @@ export class StandaloneUpdateService {
 
   /**
    * Returns whether the standalone shell can install an update.
+   *
    * @returns True when a replace-and-restart host bridge exists.
    */
   isStandaloneBuild(): boolean {
@@ -55,6 +57,7 @@ export class StandaloneUpdateService {
 
   /**
    * Returns the version embedded in the running application.
+   *
    * @returns Installed application version.
    */
   getCurrentVersion(): string {
@@ -63,6 +66,7 @@ export class StandaloneUpdateService {
 
   /**
    * Checks GitHub for a newer compatible executable release.
+   *
    * @returns Update status for the current build.
    */
   async checkForUpdates(): Promise<UpdateCheckResult> {
@@ -78,6 +82,7 @@ export class StandaloneUpdateService {
 
   /**
    * Installs a checked update through the standalone shell.
+   *
    * @param result Successful update result returned by checkForUpdates.
    * @throws Error when the result cannot be installed.
    */
@@ -96,22 +101,16 @@ export class StandaloneUpdateService {
 
   /**
    * Builds the result for a valid or empty GitHub release response.
+   *
    * @param release Normalized GitHub release or null when none is published.
    * @returns Update status derived from the release.
    */
   private createReleaseResult(release: GitHubRelease | null): UpdateCheckResult {
-    if (!release)
-      return this.createResult('no-release', 'No published releases are available yet.');
+    if (!release) return this.createResult('no-release', 'No published releases are available yet.');
     const asset = selectStandaloneUpdateAsset(release.assets, this.platform);
-    if (!asset)
-      return this.createResult(
-        'no-compatible-asset',
-        'The latest release has no compatible executable.',
-      );
+    if (!asset) return this.createResult('no-compatible-asset', 'The latest release has no compatible executable.');
     const latestRelease = this.createUpdateRelease(release, asset);
-    const status = isNewerUpdateVersion(this.currentVersion, latestRelease.version)
-      ? 'update-available'
-      : 'up-to-date';
+    const status = isNewerUpdateVersion(this.currentVersion, latestRelease.version) ? 'update-available' : 'up-to-date';
     return { status, currentVersion: this.currentVersion, latestRelease };
   }
 
@@ -154,14 +153,12 @@ export class StandaloneUpdateService {
 
   /**
    * Creates the release data used by the UI and host bridge.
+   *
    * @param release Normalized GitHub release.
    * @param asset Selected executable asset.
    * @returns Release data safe for UI and host use.
    */
-  private createUpdateRelease(
-    release: GitHubRelease,
-    asset: GitHubReleaseAsset,
-  ): StandaloneUpdateRelease {
+  private createUpdateRelease(release: GitHubRelease, asset: GitHubReleaseAsset): StandaloneUpdateRelease {
     return {
       version: release.tagName,
       title: release.title,
@@ -173,6 +170,7 @@ export class StandaloneUpdateService {
 
   /**
    * Creates a status result with the installed version.
+   *
    * @param status Status to expose to the UI.
    * @param message Optional user-facing detail.
    * @returns Status result.
@@ -183,6 +181,7 @@ export class StandaloneUpdateService {
 
   /**
    * Converts an unknown request failure into a user-facing status.
+   *
    * @param error Unknown failure returned by the release client.
    * @returns Error status result.
    */

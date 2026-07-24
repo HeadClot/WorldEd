@@ -7,8 +7,9 @@ import { setFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../src/solid/model/solid_model.js';
 
 /**
- * Regression: UV smear used to drop mesh chunks for every mapped brush; the next
- * CSG full assemble then only rebuilt dirty chunks and deleted most of the world.
+ * Regression: UV smear used to drop mesh chunks for every mapped brush; the
+ * next CSG full assemble then only rebuilt dirty chunks and deleted most of the
+ * world.
  */
 describe('Solid mesh chunk ensure after mapping sync', () => {
   it('keeps all brushes in the result after smear sync then moving one brush', () => {

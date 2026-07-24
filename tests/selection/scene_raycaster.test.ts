@@ -102,10 +102,7 @@ describe('SceneRaycaster', () => {
     });
     const renderer = createMockRenderer(canvas);
     const camera = createTestCamera();
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      new THREE.MeshBasicMaterial({ side: THREE.FrontSide }),
-    );
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ side: THREE.FrontSide }));
     plane.position.set(0, 0, 0);
     plane.rotation.y = Math.PI;
     plane.updateMatrixWorld(true);
@@ -132,6 +129,7 @@ describe('SceneRaycaster', () => {
 
 /**
  * Creates a mesh at a specific position with updated world matrix.
+ *
  * @param sizeX Width of the box along X.
  * @param sizeY Height of the box along Y.
  * @param sizeZ Depth of the box along Z.
@@ -148,10 +146,7 @@ function createMeshAt(
   posY: number,
   posZ: number,
 ): THREE.Mesh {
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(sizeX, sizeY, sizeZ),
-    new THREE.MeshBasicMaterial(),
-  );
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(sizeX, sizeY, sizeZ), new THREE.MeshBasicMaterial());
   mesh.position.set(posX, posY, posZ);
   mesh.updateMatrixWorld(true);
   return mesh;
@@ -159,6 +154,7 @@ function createMeshAt(
 
 /**
  * Creates a mock WebGL renderer for testing.
+ *
  * @param canvas The mock canvas element.
  * @returns A mock renderer object.
  */
@@ -170,6 +166,7 @@ function createMockRenderer(canvas: HTMLElement): THREE.WebGLRenderer {
 
 /**
  * Creates a test camera positioned at origin looking down negative Z.
+ *
  * @returns A configured perspective camera.
  */
 function createTestCamera(): THREE.PerspectiveCamera {
@@ -181,6 +178,7 @@ function createTestCamera(): THREE.PerspectiveCamera {
 
 /**
  * Creates a mock mouse event with specified coordinates.
+ *
  * @param clientX The horizontal client coordinate.
  * @param clientY The vertical client coordinate.
  * @returns A mock MouseEvent.

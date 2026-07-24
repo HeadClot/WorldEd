@@ -4,8 +4,9 @@ import { DEFAULT_CHECKER_DISPLAY_NAME, DEFAULT_CHECKER_TEXTURE_ID } from './text
 let checkerPreviewUrl: string | null = null;
 
 /**
- * Returns a synthetic browser entry for the built-in checker.
- * Preview URL is stable for the session and must not be revoked by the library.
+ * Returns a synthetic browser entry for the built-in checker. Preview URL is
+ * stable for the session and must not be revoked by the library.
+ *
  * @returns Texture browser entry for the checker.
  */
 export function getDefaultCheckerBrowserEntry(): TextureBrowserEntry {
@@ -23,6 +24,7 @@ export function getDefaultCheckerBrowserEntry(): TextureBrowserEntry {
 
 /**
  * Returns whether an entry is the built-in checker (not a folder file).
+ *
  * @param entry Entry to test.
  * @returns True for the synthetic checker entry.
  */
@@ -32,6 +34,7 @@ export function isBuiltinCheckerEntry(entry: TextureBrowserEntry): boolean {
 
 /**
  * Builds or reuses a small checker data-URL for browser previews.
+ *
  * @returns Preview URL string.
  */
 function getOrCreateCheckerPreviewUrl(): string {
@@ -42,7 +45,8 @@ function getOrCreateCheckerPreviewUrl(): string {
 
 /**
  * Paints a tiny checker into a data URL (no object URL to revoke).
- * @returns data:image/png URL, or empty transparent pixel on failure.
+ *
+ * @returns Data:image/png URL, or empty transparent pixel on failure.
  */
 function buildCheckerDataUrl(): string {
   const size = 64;
@@ -65,6 +69,7 @@ function buildCheckerDataUrl(): string {
 
 /**
  * Creates a placeholder File for the synthetic checker entry.
+ *
  * @returns Empty PNG File.
  */
 function createPlaceholderCheckerFile(): File {

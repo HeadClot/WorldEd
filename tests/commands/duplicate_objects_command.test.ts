@@ -143,6 +143,7 @@ describe('DuplicateObjectsCommand', () => {
 
 /**
  * Creates a box mesh with wireframe edges for testing.
+ *
  * @param name The mesh display name.
  * @param position The mesh position vector.
  * @returns The configured box mesh.
@@ -161,6 +162,7 @@ function createBoxMesh(name: string, position: THREE.Vector3): THREE.Mesh {
 
 /**
  * Creates a sphere mesh for testing.
+ *
  * @param name The mesh display name.
  * @param position The mesh position vector.
  * @returns The configured sphere mesh.

@@ -11,9 +11,7 @@ import {
 } from '../../src/solid/model/solid_brush_edge_materials.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 
-/**
- * Unit tests for shared distance-faded brush edge materials.
- */
+/** Unit tests for shared distance-faded brush edge materials. */
 describe('SolidBrushEdgeMaterials', () => {
   it('reuses one front material instance per operation', () => {
     const first = SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Additive);

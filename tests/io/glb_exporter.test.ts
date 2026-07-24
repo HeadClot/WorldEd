@@ -24,10 +24,7 @@ describe('GlbExporter', () => {
   });
 
   it('should produce non-empty ArrayBuffer for a single mesh', async () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     worldGroup.add(mesh);
     const buffer = await exporter.export(worldGroup);
     expect(buffer).toBeInstanceOf(ArrayBuffer);
@@ -43,10 +40,7 @@ describe('GlbExporter', () => {
   });
 
   it('should produce larger buffer for multiple meshes', async () => {
-    const mesh1 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    const mesh1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     const mesh2 = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
       new THREE.MeshStandardMaterial({ color: 0x888888 }),
@@ -65,10 +59,7 @@ describe('GlbExporter', () => {
   it('should export scene with groups as valid binary', async () => {
     const group = new THREE.Group();
     group.name = 'TestGroup';
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     group.add(mesh);
     worldGroup.add(group);
     const buffer = await exporter.export(worldGroup);
@@ -80,10 +71,7 @@ describe('GlbExporter', () => {
   });
 
   it('should export plane geometry correctly', async () => {
-    const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     mesh.rotation.x = -Math.PI / 2;
     worldGroup.add(mesh);
     const buffer = await exporter.export(worldGroup);
@@ -96,9 +84,7 @@ describe('GlbExporter', () => {
     model.addBoxBrush(2, SolidOperation.Additive);
     model.addBoxBrush(1, SolidOperation.Subtractive);
     worldGroup.add(model.root);
-    const liveBrushCount = model.root.children.filter((child) =>
-      SolidBrushVisual.isBrushObject(child),
-    ).length;
+    const liveBrushCount = model.root.children.filter((child) => SolidBrushVisual.isBrushObject(child)).length;
     expect(liveBrushCount).toBeGreaterThanOrEqual(2);
     const filtered = buildExportScene(worldGroup);
     const exportMeshes: THREE.Mesh[] = [];
@@ -126,10 +112,7 @@ describe('GlbExporter', () => {
     const profile = createDefaultGameProfile('p-blender-cm', 'Blender cm');
     profile.metricUnit = 'centimeter';
     profile.coordinateSpace = getBuiltInCoordinateSpace('blender')!;
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     worldGroup.add(mesh);
     const buffer = await exporter.export(worldGroup, profile);
     expect(buffer).toBeInstanceOf(ArrayBuffer);
@@ -143,10 +126,7 @@ describe('GlbExporter', () => {
     const profile = createDefaultGameProfile('p-blender-cm', 'Blender cm');
     profile.metricUnit = 'centimeter';
     profile.coordinateSpace = getBuiltInCoordinateSpace('blender')!;
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     worldGroup.add(mesh);
     const originalParent = mesh.parent;
     await exporter.export(worldGroup, profile);
@@ -157,36 +137,31 @@ describe('GlbExporter', () => {
     ['Unity', createLeftHandedProfile('unity')],
     ['Unreal Engine', createLeftHandedProfile('unreal')],
     ['custom', createCustomLeftHandedProfile()],
-  ])(
-    'should round-trip %s geometry with reflected positions normals and winding',
-    async (_name, profile) => {
-      const sourceMesh = createNamedTriangleMesh();
-      const sourcePositions = readTrianglePositions(sourceMesh);
-      const sourceNormal = readFirstNormal(sourceMesh);
-      worldGroup.add(sourceMesh);
+  ])('should round-trip %s geometry with reflected positions normals and winding', async (_name, profile) => {
+    const sourceMesh = createNamedTriangleMesh();
+    const sourcePositions = readTrianglePositions(sourceMesh);
+    const sourceNormal = readFirstNormal(sourceMesh);
+    worldGroup.add(sourceMesh);
 
-      const buffer = await exporter.export(worldGroup, profile);
-      const exportedMesh = await loadNamedMesh(buffer, sourceMesh.name);
-      const exportedPositions = readTrianglePositions(exportedMesh);
-      const expectedTransform = buildExportRootTransform(profile);
-      const expectedPositions = transformPositions(sourcePositions, expectedTransform);
-      const expectedNormal = transformNormal(sourceNormal, expectedTransform);
-      const exportedNormal = transformNormal(
-        readFirstNormal(exportedMesh),
-        exportedMesh.matrixWorld,
-      );
+    const buffer = await exporter.export(worldGroup, profile);
+    const exportedMesh = await loadNamedMesh(buffer, sourceMesh.name);
+    const exportedPositions = readTrianglePositions(exportedMesh);
+    const expectedTransform = buildExportRootTransform(profile);
+    const expectedPositions = transformPositions(sourcePositions, expectedTransform);
+    const expectedNormal = transformNormal(sourceNormal, expectedTransform);
+    const exportedNormal = transformNormal(readFirstNormal(exportedMesh), exportedMesh.matrixWorld);
 
-      expectVectorsToMatch(exportedPositions, expectedPositions);
-      expect(readFirstNormal(exportedMesh)).toEqual(sourceNormal);
-      expect(exportedMesh.matrixWorld.determinant()).toBeLessThan(0);
-      expect(exportedNormal.dot(expectedNormal)).toBeCloseTo(1, 6);
-      expect(getTriangleNormal(exportedPositions).dot(exportedNormal)).toBeCloseTo(-1, 6);
-    },
-  );
+    expectVectorsToMatch(exportedPositions, expectedPositions);
+    expect(readFirstNormal(exportedMesh)).toEqual(sourceNormal);
+    expect(exportedMesh.matrixWorld.determinant()).toBeLessThan(0);
+    expect(exportedNormal.dot(expectedNormal)).toBeCloseTo(1, 6);
+    expect(getTriangleNormal(exportedPositions).dot(exportedNormal)).toBeCloseTo(-1, 6);
+  });
 });
 
 /**
  * Creates a meter-based profile for one built-in left-handed coordinate space.
+ *
  * @param presetId Built-in left-handed preset identifier.
  * @returns Game profile using the requested coordinate space.
  */
@@ -198,6 +173,7 @@ function createLeftHandedProfile(presetId: 'unity' | 'unreal'): GameProfile {
 
 /**
  * Creates a custom left-handed profile whose axes define its handedness.
+ *
  * @returns Game profile using a custom left-handed coordinate space.
  */
 function createCustomLeftHandedProfile(): GameProfile {
@@ -215,14 +191,12 @@ function createCustomLeftHandedProfile(): GameProfile {
 
 /**
  * Creates a named, indexed triangle with a computed normal.
+ *
  * @returns Source mesh used to verify GLB coordinate conversion.
  */
 function createNamedTriangleMesh(): THREE.Mesh {
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    'position',
-    new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 1], 3),
-  );
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 1], 3));
   geometry.setIndex([0, 1, 2]);
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial());
@@ -232,6 +206,7 @@ function createNamedTriangleMesh(): THREE.Mesh {
 
 /**
  * Loads a GLB buffer and returns its named mesh with current world matrices.
+ *
  * @param buffer Binary GLB data.
  * @param meshName Name of the mesh to locate.
  * @returns Loaded mesh.
@@ -253,6 +228,7 @@ function loadNamedMesh(buffer: ArrayBuffer, meshName: string): Promise<THREE.Mes
 
 /**
  * Finds a mesh by name within an object hierarchy.
+ *
  * @param root Root object to search.
  * @param meshName Expected mesh name.
  * @returns Matching mesh, or null when absent.
@@ -269,6 +245,7 @@ function findNamedMesh(root: THREE.Object3D, meshName: string): THREE.Mesh | nul
 
 /**
  * Reads the three local triangle positions and converts them to world space.
+ *
  * @param mesh Mesh containing the indexed triangle.
  * @returns World-space positions in index order.
  */
@@ -284,6 +261,7 @@ function readTrianglePositions(mesh: THREE.Mesh): THREE.Vector3[] {
 
 /**
  * Reads and normalizes the first vertex normal from a mesh.
+ *
  * @param mesh Mesh containing a normal attribute.
  * @returns First local-space vertex normal.
  */
@@ -294,6 +272,7 @@ function readFirstNormal(mesh: THREE.Mesh): THREE.Vector3 {
 
 /**
  * Applies a coordinate transform to source positions.
+ *
  * @param positions Source positions.
  * @param transform Coordinate transform.
  * @returns Transformed positions.
@@ -304,6 +283,7 @@ function transformPositions(positions: THREE.Vector3[], transform: THREE.Matrix4
 
 /**
  * Transforms a normal using the inverse-transpose of a coordinate transform.
+ *
  * @param normal Source normal.
  * @param transform Coordinate transform.
  * @returns Normalized transformed normal.
@@ -315,19 +295,17 @@ function transformNormal(normal: THREE.Vector3, transform: THREE.Matrix4): THREE
 
 /**
  * Calculates a normalized geometric normal from a triangle's winding order.
+ *
  * @param positions Triangle positions in winding order.
  * @returns Normalized geometric normal.
  */
 function getTriangleNormal(positions: THREE.Vector3[]): THREE.Vector3 {
-  return positions[1]
-    .clone()
-    .sub(positions[0])
-    .cross(positions[2].clone().sub(positions[0]))
-    .normalize();
+  return positions[1].clone().sub(positions[0]).cross(positions[2].clone().sub(positions[0])).normalize();
 }
 
 /**
  * Verifies matching vector arrays to floating-point precision.
+ *
  * @param actual Actual vectors.
  * @param expected Expected vectors.
  */

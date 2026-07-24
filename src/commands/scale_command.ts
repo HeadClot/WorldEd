@@ -3,8 +3,8 @@ import { UndoCommand } from './undo_command.js';
 import { GizmoAxis } from '../types/transform_mode.js';
 
 /**
- * Snapshot of an object's transform before a scale operation.
- * Stores original position and scale so undo can restore both.
+ * Snapshot of an object's transform before a scale operation. Stores original
+ * position and scale so undo can restore both.
  */
 export interface ObjectScaleSnapshot {
   object: THREE.Mesh;
@@ -13,8 +13,8 @@ export interface ObjectScaleSnapshot {
 }
 
 /**
- * Undoable command for scale operations.
- * Stores original transforms and the scaling parameters for each object.
+ * Undoable command for scale operations. Stores original transforms and the
+ * scaling parameters for each object.
  */
 export class ScaleCommand implements UndoCommand {
   private snapshots: ObjectScaleSnapshot[];
@@ -25,6 +25,7 @@ export class ScaleCommand implements UndoCommand {
 
   /**
    * Creates a new scale command.
+   *
    * @param snapshots The scale snapshots of all affected objects.
    * @param pivot The scale pivot point.
    * @param axis The scaling axis vector in world space.
@@ -45,9 +46,7 @@ export class ScaleCommand implements UndoCommand {
     this.gizmoAxis = gizmoAxis;
   }
 
-  /**
-   * Executes the scaling by applying factor to positions and mesh scales.
-   */
+  /** Executes the scaling by applying factor to positions and mesh scales. */
   execute(): void {
     const normalizedAxis = this.axis.clone().normalize();
     const safeFactor = Math.max(0.01, this.factor);
@@ -56,9 +55,7 @@ export class ScaleCommand implements UndoCommand {
     });
   }
 
-  /**
-   * Undoes the scaling by restoring original positions and scales.
-   */
+  /** Undoes the scaling by restoring original positions and scales. */
   undo(): void {
     this.snapshots.forEach((snapshot) => {
       snapshot.object.position.copy(snapshot.originalPosition);
@@ -68,15 +65,12 @@ export class ScaleCommand implements UndoCommand {
 
   /**
    * Applies absolute scale to a snapshot target from its original state.
+   *
    * @param snapshot The object snapshot to scale from original state.
    * @param axis The normalized world-space scale axis.
    * @param factor The total scale factor.
    */
-  private applyScaleToSnapshot(
-    snapshot: ObjectScaleSnapshot,
-    axis: THREE.Vector3,
-    factor: number,
-  ): void {
+  private applyScaleToSnapshot(snapshot: ObjectScaleSnapshot, axis: THREE.Vector3, factor: number): void {
     const relativePos = snapshot.originalPosition.clone().sub(this.pivot);
     const projection = relativePos.dot(axis);
     const scaledRelative = relativePos
@@ -90,6 +84,7 @@ export class ScaleCommand implements UndoCommand {
 
   /**
    * Multiplies the local scale component for the active gizmo axis.
+   *
    * @param scale Scale vector modified in place.
    * @param factor Multiplicative factor.
    */

@@ -9,23 +9,17 @@ import {
   CLIP_MARKER_MIN_SCALE,
 } from './clip_plane_marker_style.js';
 
-/**
- * UserData key for clip preview objects so shading/picking can ignore them.
- */
+/** UserData key for clip preview objects so shading/picking can ignore them. */
 export const CLIP_PREVIEW_USERDATA_KEY = 'isClipPlanePreview';
 
-/**
- * Renders placement markers and a translucent cutting plane for the clip tool.
- */
+/** Renders placement markers and a translucent cutting plane for the clip tool. */
 export class ClipPlanePreview {
   private root: THREE.Group;
   private markerGroups: THREE.Group[];
   private planeMesh: THREE.Mesh | null;
   private arrowHelper: THREE.ArrowHelper | null;
 
-  /**
-   * Creates a preview group that should be added to the world or scene.
-   */
+  /** Creates a preview group that should be added to the world or scene. */
   constructor() {
     this.root = new THREE.Group();
     this.root.name = 'clip_plane_preview';
@@ -37,6 +31,7 @@ export class ClipPlanePreview {
 
   /**
    * Returns the root group to attach to a scene.
+   *
    * @returns Preview root group.
    */
   getRoot(): THREE.Group {
@@ -45,6 +40,7 @@ export class ClipPlanePreview {
 
   /**
    * Syncs preview visuals from the clip tool state.
+   *
    * @param tool Clip plane tool providing points and plane.
    */
   syncFromTool(tool: ClipPlaneTool): void {
@@ -61,6 +57,7 @@ export class ClipPlanePreview {
 
   /**
    * Scales markers for consistent on-screen size relative to a camera.
+   *
    * @param camera Active viewport camera.
    */
   updateMarkerScalesForCamera(camera: THREE.Camera): void {
@@ -70,17 +67,13 @@ export class ClipPlanePreview {
     });
   }
 
-  /**
-   * Removes all preview children and disposes resources.
-   */
+  /** Removes all preview children and disposes resources. */
   dispose(): void {
     this.clearVisuals();
     this.root.parent?.remove(this.root);
   }
 
-  /**
-   * Clears markers, plane, and arrow.
-   */
+  /** Clears markers, plane, and arrow. */
   private clearVisuals(): void {
     while (this.root.children.length > 0) {
       const child = this.root.children[0];
@@ -94,6 +87,7 @@ export class ClipPlanePreview {
 
   /**
    * Adds a solid yellow marker at a placement point.
+   *
    * @param point World point.
    * @param index Placement point index for drag identification.
    */
@@ -110,6 +104,7 @@ export class ClipPlanePreview {
 
   /**
    * Builds a solid yellow sphere for a clip placement point.
+   *
    * @returns Marker mesh.
    */
   private createMarkerMesh(): THREE.Mesh {
@@ -126,6 +121,7 @@ export class ClipPlanePreview {
 
   /**
    * Computes a screen-stable scale factor for markers.
+   *
    * @param camera Active camera.
    * @returns Clamped scale multiplier.
    */
@@ -145,6 +141,7 @@ export class ClipPlanePreview {
 
   /**
    * Adds a translucent plane mesh centered on placement points.
+   *
    * @param plane Cutting plane.
    * @param points Placement points for sizing.
    */
@@ -167,6 +164,7 @@ export class ClipPlanePreview {
 
   /**
    * Orients and positions the plane mesh to match the cutting plane.
+   *
    * @param mesh Plane mesh.
    * @param plane Cutting plane.
    * @param points Placement points for center.
@@ -183,6 +181,7 @@ export class ClipPlanePreview {
 
   /**
    * Adds an arrow showing the keep half-space direction.
+   *
    * @param plane Cutting plane (normal points toward front).
    * @param points Placement points for origin.
    * @param keepFront Whether the front half-space is kept.
@@ -193,14 +192,7 @@ export class ClipPlanePreview {
     const direction = plane.normal.clone().normalize();
     if (!keepFront) direction.negate();
     const length = Math.max(0.35, this.estimatePlaneSize(points) * 0.18);
-    const arrow = new THREE.ArrowHelper(
-      direction,
-      origin,
-      length,
-      Theme.selectionColor,
-      length * 0.22,
-      length * 0.12,
-    );
+    const arrow = new THREE.ArrowHelper(direction, origin, length, Theme.selectionColor, length * 0.22, length * 0.12);
     arrow.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
     this.root.add(arrow);
     this.arrowHelper = arrow;
@@ -208,6 +200,7 @@ export class ClipPlanePreview {
 
   /**
    * Estimates a readable plane disc size from placement points.
+   *
    * @param points Placement points.
    * @returns Plane width/height.
    */
@@ -224,6 +217,7 @@ export class ClipPlanePreview {
 
   /**
    * Averages placement points.
+   *
    * @param points Points to average.
    * @returns Centroid.
    */
@@ -236,6 +230,7 @@ export class ClipPlanePreview {
 
   /**
    * Disposes geometries and materials on a preview object.
+   *
    * @param object Object to dispose.
    */
   private disposeObject(object: THREE.Object3D): void {

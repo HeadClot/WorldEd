@@ -6,9 +6,7 @@ import { SelectionMode } from '../../src/types/selection_mode.js';
 import { CommandStack } from '../../src/commands/command_stack.js';
 import { GridSnap } from '../../src/transform/grid_snap.js';
 
-/**
- * Minimal viewport stand-in for face mode coordinator wiring.
- */
+/** Minimal viewport stand-in for face mode coordinator wiring. */
 class MockViewport {
   private camera: THREE.PerspectiveCamera;
   private renderer: { domElement: HTMLCanvasElement };

@@ -2,12 +2,11 @@ import * as THREE from 'three';
 import { getDebugCheckerTexture } from '../texture/debug_texture_factory.js';
 import { initializeMeshTextureUVs } from '../texture/face_texture_applier.js';
 
-/**
- * Generates simple procedural heightmap terrain meshes for blocking levels.
- */
+/** Generates simple procedural heightmap terrain meshes for blocking levels. */
 export class TerrainGenerator {
   /**
    * Creates a terrain mesh with a heightfield on a subdivided plane.
+   *
    * @param width World width of the terrain.
    * @param depth World depth of the terrain.
    * @param segments Subdivision count along each axis.
@@ -15,13 +14,7 @@ export class TerrainGenerator {
    * @param seed Deterministic seed for the height pattern.
    * @returns A terrain mesh centered at the origin on XZ.
    */
-  createTerrain(
-    width: number,
-    depth: number,
-    segments: number,
-    heightScale: number,
-    seed: number,
-  ): THREE.Mesh {
+  createTerrain(width: number, depth: number, segments: number, heightScale: number, seed: number): THREE.Mesh {
     const geometry = new THREE.PlaneGeometry(width, depth, segments, segments);
     geometry.rotateX(-Math.PI / 2);
     this.applyHeightfield(geometry, segments, heightScale, seed);
@@ -44,17 +37,13 @@ export class TerrainGenerator {
 
   /**
    * Applies a deterministic height pattern to plane vertices.
+   *
    * @param geometry The plane geometry to modify.
    * @param segments Subdivision count.
    * @param heightScale Peak height multiplier.
    * @param seed Deterministic seed.
    */
-  private applyHeightfield(
-    geometry: THREE.PlaneGeometry,
-    segments: number,
-    heightScale: number,
-    seed: number,
-  ): void {
+  private applyHeightfield(geometry: THREE.PlaneGeometry, segments: number, heightScale: number, seed: number): void {
     const position = geometry.getAttribute('position');
     for (let index = 0; index < position.count; index++) {
       const x = position.getX(index);
@@ -67,6 +56,7 @@ export class TerrainGenerator {
 
   /**
    * Samples a smooth layered height value at a world XZ location.
+   *
    * @param x World X coordinate.
    * @param z World Z coordinate.
    * @param heightScale Peak height multiplier.

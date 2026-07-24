@@ -4,9 +4,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 
-/**
- * Unit tests for hierarchical solid models with brush children.
- */
+/** Unit tests for hierarchical solid models with brush children. */
 describe('SolidModel', () => {
   it('creates a group root with result mesh and registry lookup', () => {
     const model = new SolidModel('TestSolid');

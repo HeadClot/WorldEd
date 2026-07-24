@@ -44,13 +44,7 @@ describe('FlyingCamera', () => {
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-    const flyingCamera = new FlyingCamera(
-      canvas,
-      camera,
-      mockInputManager as any,
-      Math.PI / 4,
-      Math.PI / 6,
-    );
+    const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, Math.PI / 4, Math.PI / 6);
     const forward = flyingCamera.getForwardDirection();
     expect(forward.length()).toBeCloseTo(1, 3);
   });
@@ -307,9 +301,7 @@ describe('FlyingCamera', () => {
     const initialPos = camera.position.clone();
 
     for (let i = 0; i < steps; i++) {
-      canvas.dispatchEvent(
-        new PointerEvent('pointermove', { movementX: smallStep, movementY: 0, pointerId: 1 }),
-      );
+      canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: smallStep, movementY: 0, pointerId: 1 }));
     }
 
     const totalDistanceAfterSmallSteps = camera.position.distanceTo(initialPos);
@@ -321,9 +313,7 @@ describe('FlyingCamera', () => {
 
     // Simulate one large movement equal to the sum of small steps
     const largeDelta = smallStep * steps;
-    canvas.dispatchEvent(
-      new PointerEvent('pointermove', { movementX: largeDelta, movementY: 0, pointerId: 1 }),
-    );
+    canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: largeDelta, movementY: 0, pointerId: 1 }));
 
     const totalDistanceAfterLargeStep = camera.position.distanceTo(initialPos);
 
@@ -346,15 +336,11 @@ describe('FlyingCamera', () => {
     };
     const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
     canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, pointerId: 1 }));
-    canvas.dispatchEvent(
-      new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }),
-    );
+    canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }));
     const yawAfterMove = flyingCamera.getYaw();
     document.pointerLockElement = null;
     document.dispatchEvent(new Event('pointerlockchange'));
-    canvas.dispatchEvent(
-      new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }),
-    );
+    canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }));
     expect(flyingCamera.getYaw()).toBe(yawAfterMove);
   });
 

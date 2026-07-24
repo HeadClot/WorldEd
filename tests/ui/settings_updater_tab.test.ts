@@ -22,9 +22,7 @@ describe('SettingsUpdaterTab', () => {
       store,
       new StandaloneUpdateService({ bridge: { installUpdate: () => undefined } }),
     );
-    const toggle = tab
-      .getElement()
-      .querySelector<HTMLInputElement>('[data-settings-field="auto-updater"]');
+    const toggle = tab.getElement().querySelector<HTMLInputElement>('[data-settings-field="auto-updater"]');
 
     expect(toggle?.checked).toBe(false);
     expect(toggle?.getAttribute('role')).toBe('switch');

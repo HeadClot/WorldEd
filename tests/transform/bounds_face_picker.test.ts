@@ -35,6 +35,7 @@ describe('BoundsFacePicker', () => {
 
 /**
  * Builds camera, renderer, and bounds gizmo group for face picking.
+ *
  * @returns Fixtures for BoundsFacePicker tests.
  */
 function createPickerSetup(): {
@@ -66,6 +67,7 @@ function createPickerSetup(): {
 
 /**
  * Creates a pointer event at the canvas center.
+ *
  * @returns A MouseEvent at NDC origin.
  */
 function createCenterEvent(): MouseEvent {

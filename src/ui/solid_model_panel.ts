@@ -3,15 +3,14 @@ import { hexToRgb } from '../utils/color_utils.js';
 import { FloatingPanelStack } from './floating_panel_stack.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 
-/**
- * Callbacks for the slim solid model tools panel.
- */
+/** Callbacks for the slim solid model tools panel. */
 export interface SolidModelPanelHandlers {
   onAddBoxBrush: () => void;
 }
 
 /**
- * Floating panel for solid-model tools (add brush). Brush properties live in the inspector.
+ * Floating panel for solid-model tools (add brush). Brush properties live in
+ * the inspector.
  */
 export class SolidModelPanel {
   private root: HTMLElement;
@@ -28,15 +27,12 @@ export class SolidModelPanel {
 
   /**
    * Creates a solid model tools panel.
+   *
    * @param host Parent element (editor root).
    * @param handlers Tool action callbacks.
    * @param defaultAnchor Element used for default open position.
    */
-  constructor(
-    host: HTMLElement,
-    handlers: SolidModelPanelHandlers,
-    defaultAnchor: HTMLElement | null = null,
-  ) {
+  constructor(host: HTMLElement, handlers: SolidModelPanelHandlers, defaultAnchor: HTMLElement | null = null) {
     this.host = host;
     this.handlers = handlers;
     this.defaultAnchor = defaultAnchor;
@@ -53,6 +49,7 @@ export class SolidModelPanel {
 
   /**
    * Sets the default anchor for panel placement.
+   *
    * @param anchor Anchor element or null.
    */
   setDefaultAnchor(anchor: HTMLElement | null): void {
@@ -61,6 +58,7 @@ export class SolidModelPanel {
 
   /**
    * Binds the panel to a solid model for status display.
+   *
    * @param model Solid model or null.
    */
   setModel(model: SolidModel | null): void {
@@ -70,15 +68,14 @@ export class SolidModelPanel {
 
   /**
    * Returns the bound solid model.
+   *
    * @returns Current model or null.
    */
   getModel(): SolidModel | null {
     return this.model;
   }
 
-  /**
-   * Updates title and status from the bound model.
-   */
+  /** Updates title and status from the bound model. */
   refresh(): void {
     if (!this.model) {
       this.titleLabel.textContent = 'Solid Model';
@@ -90,9 +87,7 @@ export class SolidModelPanel {
     this.statusLabel.textContent = `${count} brush${count === 1 ? '' : 'es'} — edit ops in Inspector`;
   }
 
-  /**
-   * Shows the panel.
-   */
+  /** Shows the panel. */
   show(): void {
     if (this.isVisible) {
       FloatingPanelStack.bringToFront(this.root);
@@ -104,18 +99,14 @@ export class SolidModelPanel {
     FloatingPanelStack.bringToFront(this.root);
   }
 
-  /**
-   * Hides the panel.
-   */
+  /** Hides the panel. */
   hide(): void {
     if (!this.isVisible) return;
     this.isVisible = false;
     this.root.style.display = 'none';
   }
 
-  /**
-   * Toggles panel visibility.
-   */
+  /** Toggles panel visibility. */
   toggle(): void {
     if (this.isVisible) {
       this.hide();
@@ -126,15 +117,14 @@ export class SolidModelPanel {
 
   /**
    * Returns whether the panel is open.
+   *
    * @returns True when visible.
    */
   isOpen(): boolean {
     return this.isVisible;
   }
 
-  /**
-   * Removes the panel from the DOM.
-   */
+  /** Removes the panel from the DOM. */
   dispose(): void {
     this.hide();
     this.root.remove();
@@ -142,6 +132,7 @@ export class SolidModelPanel {
 
   /**
    * Builds the root panel element.
+   *
    * @returns Styled root.
    */
   private buildRoot(): HTMLElement {
@@ -155,6 +146,7 @@ export class SolidModelPanel {
 
   /**
    * Applies chrome styles to the floating panel.
+   *
    * @param root Panel root.
    */
   private styleRoot(root: HTMLElement): void {
@@ -175,6 +167,7 @@ export class SolidModelPanel {
 
   /**
    * Builds the draggable title bar.
+   *
    * @returns Title bar element.
    */
   private buildTitleBar(): HTMLElement {
@@ -207,6 +200,7 @@ export class SolidModelPanel {
 
   /**
    * Builds the add-brush toolbar row.
+   *
    * @returns Toolbar element.
    */
   private buildToolbar(): HTMLElement {
@@ -226,6 +220,7 @@ export class SolidModelPanel {
 
   /**
    * Builds the status line.
+   *
    * @returns Status element.
    */
   private buildStatus(): HTMLElement {
@@ -238,6 +233,7 @@ export class SolidModelPanel {
 
   /**
    * Styles a compact panel button.
+   *
    * @param button Button element.
    */
   private styleButton(button: HTMLButtonElement): void {
@@ -251,9 +247,7 @@ export class SolidModelPanel {
     button.style.fontFamily = Theme.uiFontFamily;
   }
 
-  /**
-   * Positions the panel near the default anchor.
-   */
+  /** Positions the panel near the default anchor. */
   private positionDefault(): void {
     const anchor = this.defaultAnchor ?? this.host;
     const rect = anchor.getBoundingClientRect();
@@ -263,6 +257,7 @@ export class SolidModelPanel {
 
   /**
    * Binds title-bar dragging.
+   *
    * @param bar Title bar element.
    */
   private bindDrag(bar: HTMLElement): void {

@@ -20,9 +20,7 @@ describe('TranslateGizmo', () => {
     const handles = gizmo.createHandles();
     const planeHandles = handles.filter(
       (h) =>
-        h.getAxis() === GizmoAxis.XY_PLANE ||
-        h.getAxis() === GizmoAxis.YZ_PLANE ||
-        h.getAxis() === GizmoAxis.XZ_PLANE,
+        h.getAxis() === GizmoAxis.XY_PLANE || h.getAxis() === GizmoAxis.YZ_PLANE || h.getAxis() === GizmoAxis.XZ_PLANE,
     );
     expect(planeHandles.length).toBe(0);
   });

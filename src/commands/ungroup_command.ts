@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Snapshot capturing a child of a group before ungrouping.
- * Children are restored in snapshot order on undo.
+ * Snapshot capturing a child of a group before ungrouping. Children are
+ * restored in snapshot order on undo.
  */
 export interface UngroupChildSnapshot {
   /** The child object that was in the group. */
@@ -11,8 +11,8 @@ export interface UngroupChildSnapshot {
 }
 
 /**
- * Undoable command for ungrouping a group object.
- * Execute reparents children to the group's parent; undo restores the group.
+ * Undoable command for ungrouping a group object. Execute reparents children to
+ * the group's parent; undo restores the group.
  */
 export class UngroupCommand implements UndoCommand {
   private group: THREE.Group;
@@ -23,6 +23,7 @@ export class UngroupCommand implements UndoCommand {
 
   /**
    * Creates a new ungroup command for the specified group.
+   *
    * @param group The group object to ungroup.
    */
   constructor(group: THREE.Group) {
@@ -33,9 +34,7 @@ export class UngroupCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Executes the ungroup by moving children to the group's original parent.
-   */
+  /** Executes the ungroup by moving children to the group's original parent. */
   execute(): void {
     if (this.executed) return;
     const childrenToRemove: THREE.Object3D[] = [];
@@ -54,9 +53,7 @@ export class UngroupCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Undoes the ungroup by restoring children to the group and re-adding it.
-   */
+  /** Undoes the ungroup by restoring children to the group and re-adding it. */
   undo(): void {
     if (!this.executed) return;
     this.childSnapshots.forEach((snapshot) => {
@@ -77,6 +74,7 @@ export class UngroupCommand implements UndoCommand {
 
   /**
    * Returns the group object associated with this command.
+   *
    * @returns The Three.js Group being ungrouped.
    */
   getGroup(): THREE.Group {
@@ -85,6 +83,7 @@ export class UngroupCommand implements UndoCommand {
 
   /**
    * Builds snapshots for each child of the group.
+   *
    * @param group The group whose children should be snapshotted.
    * @returns An array of child state snapshots.
    */

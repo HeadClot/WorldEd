@@ -7,14 +7,9 @@ import {
   lockFaceMappingForBrushTransform,
   lockSolidBrushTexturesToTransform,
 } from '../../src/texture/solid_brush_texture_lock.js';
-import {
-  projectWorldPositionToUv,
-  resolveProjectionBasis,
-} from '../../src/texture/planar_uv_projector.js';
+import { projectWorldPositionToUv, resolveProjectionBasis } from '../../src/texture/planar_uv_projector.js';
 
-/**
- * Texture lock must keep solid-brush face UVs glued when brushes translate.
- */
+/** Texture lock must keep solid-brush face UVs glued when brushes translate. */
 describe('solid brush texture lock', () => {
   it('keeps result UV stuck to the brush under Tex Lock after translation', () => {
     const model = new SolidModel('LockTranslate');
@@ -28,10 +23,7 @@ describe('solid brush texture lock', () => {
     mapping.offsetV = -0.1;
     brush.setFaceMapping(0, mapping);
     model.rebuild(true);
-    const uvBefore = sampleResultMeshUvNear(
-      model.getResultMeshForSync(),
-      new THREE.Vector3(0, 1, 0),
-    );
+    const uvBefore = sampleResultMeshUvNear(model.getResultMeshForSync(), new THREE.Vector3(0, 1, 0));
 
     const mesh = brush.mesh!;
     mesh.position.x += 1.5;
@@ -76,10 +68,7 @@ describe('solid brush texture lock', () => {
     mapping.offsetV = 0.4;
     brush.setFaceMapping(0, mapping);
     model.rebuild(true);
-    const uvBefore = sampleResultMeshUvNear(
-      model.getResultMeshForSync(),
-      new THREE.Vector3(0, 1, 0),
-    );
+    const uvBefore = sampleResultMeshUvNear(model.getResultMeshForSync(), new THREE.Vector3(0, 1, 0));
 
     const mesh = brush.mesh!;
     for (let step = 0; step < 8; step++) {
@@ -108,10 +97,7 @@ describe('solid brush texture lock', () => {
     mapping.align = 'face';
     brush.setFaceMapping(0, mapping);
     model.rebuild(true);
-    const uvBefore = sampleResultMeshUvNear(
-      model.getResultMeshForSync(),
-      new THREE.Vector3(0, 1, 0),
-    );
+    const uvBefore = sampleResultMeshUvNear(model.getResultMeshForSync(), new THREE.Vector3(0, 1, 0));
 
     const mesh = brush.mesh!;
     mesh.position.x += 2;
@@ -120,16 +106,14 @@ describe('solid brush texture lock', () => {
     model.prepareLiveBrushEdit([mesh], false);
     model.rebuild(true);
 
-    const uvAfter = sampleResultMeshUvNear(
-      model.getResultMeshForSync(),
-      new THREE.Vector3(2, 1, 0),
-    );
+    const uvAfter = sampleResultMeshUvNear(model.getResultMeshForSync(), new THREE.Vector3(2, 1, 0));
     expect(Math.abs(uvAfter.u - uvBefore.u)).toBeGreaterThan(0.5);
   });
 });
 
 /**
  * Samples projected UV for a brush face at a local point.
+ *
  * @param brush Brush instance.
  * @param faceIndex Face index.
  * @param localPoint Local sample point.
@@ -162,6 +146,7 @@ function sampleBrushFaceUv(
 
 /**
  * Centroid of a brush face in local space.
+ *
  * @param solidBrush Brush geometry.
  * @param face Face record.
  * @returns Centroid.
@@ -182,14 +167,12 @@ function faceLocalCentroid(
 
 /**
  * Samples the UV attribute of the nearest result-mesh vertex to a world point.
+ *
  * @param mesh Compiled solid result mesh.
  * @param worldPoint Query point near a surface.
  * @returns UV at the closest vertex.
  */
-function sampleResultMeshUvNear(
-  mesh: THREE.Mesh,
-  worldPoint: THREE.Vector3,
-): { u: number; v: number } {
+function sampleResultMeshUvNear(mesh: THREE.Mesh, worldPoint: THREE.Vector3): { u: number; v: number } {
   mesh.updateMatrixWorld(true);
   const inverse = mesh.matrixWorld.clone().invert();
   const localQuery = worldPoint.clone().applyMatrix4(inverse);

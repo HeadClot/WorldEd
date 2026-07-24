@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 /**
- * Shared visual constants for Move, Rotate, and Scale gizmos.
- * Keeps stem thickness, tip sizes, and material behavior consistent.
+ * Shared visual constants for Move, Rotate, and Scale gizmos. Keeps stem
+ * thickness, tip sizes, and material behavior consistent.
  */
 export const GizmoVisualStyle = {
   /** Cylinder radius used by move stems, scale stems, and rotate ring tubes. */
@@ -30,8 +30,10 @@ export const GizmoVisualStyle = {
 } as const;
 
 /**
- * Creates the solid front-facing gizmo material with depth testing.
- * Parts behind scene objects fail the depth test and are not drawn with this material.
+ * Creates the solid front-facing gizmo material with depth testing. Parts
+ * behind scene objects fail the depth test and are not drawn with this
+ * material.
+ *
  * @param color Hex color for the material.
  * @returns Configured MeshBasicMaterial.
  */
@@ -49,8 +51,10 @@ export function createGizmoFrontMaterial(color: number): THREE.MeshBasicMaterial
 }
 
 /**
- * Creates a ghost material that only draws where the gizmo is behind scene geometry.
- * Produces the semi-transparent "see through object" look for occluded parts.
+ * Creates a ghost material that only draws where the gizmo is behind scene
+ * geometry. Produces the semi-transparent "see through object" look for
+ * occluded parts.
+ *
  * @param color Hex color for the material.
  * @returns Configured MeshBasicMaterial.
  */
@@ -69,16 +73,13 @@ export function createGizmoOccludedMaterial(color: number): THREE.MeshBasicMater
 
 /**
  * Builds a semi-transparent ghost mesh that shares geometry with a front mesh.
+ *
  * @param geometry Shared geometry instance.
  * @param color Hex color matching the front mesh.
  * @param handleId Optional handle id copied onto the ghost for picking.
  * @returns The occluded ghost mesh.
  */
-export function createGizmoOccludedMesh(
-  geometry: THREE.BufferGeometry,
-  color: number,
-  handleId?: number,
-): THREE.Mesh {
+export function createGizmoOccludedMesh(geometry: THREE.BufferGeometry, color: number, handleId?: number): THREE.Mesh {
   const mesh = new THREE.Mesh(geometry, createGizmoOccludedMaterial(color));
   mesh.renderOrder = GizmoVisualStyle.occludedRenderOrder;
   mesh.userData.isGizmoOccludedGhost = true;
@@ -90,6 +91,7 @@ export function createGizmoOccludedMesh(
 
 /**
  * Applies the standard front render order to a gizmo mesh.
+ *
  * @param mesh The front mesh to configure.
  */
 export function applyGizmoFrontRenderOrder(mesh: THREE.Mesh): void {
@@ -99,6 +101,7 @@ export function applyGizmoFrontRenderOrder(mesh: THREE.Mesh): void {
 /**
  * Creates a front-facing vertex-colored line material with depth testing.
  * Segments behind scene geometry fail the depth test and are not drawn.
+ *
  * @returns Configured line material for unoccluded gizmo lines.
  */
 export function createGizmoFrontLineMaterial(): THREE.LineBasicMaterial {
@@ -115,8 +118,9 @@ export function createGizmoFrontLineMaterial(): THREE.LineBasicMaterial {
 }
 
 /**
- * Creates a ghost line material that only draws behind scene geometry.
- * Produces the semi-transparent "see through object" look for occluded lines.
+ * Creates a ghost line material that only draws behind scene geometry. Produces
+ * the semi-transparent "see through object" look for occluded lines.
+ *
  * @returns Configured line material for occluded gizmo lines.
  */
 export function createGizmoOccludedLineMaterial(): THREE.LineBasicMaterial {

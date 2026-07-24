@@ -6,9 +6,7 @@ import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidBrushPlaneClip } from '../solid/brush/solid_brush_plane_clip.js';
 
-/**
- * Undoable clip of one solid brush by a world-space plane.
- */
+/** Undoable clip of one solid brush by a world-space plane. */
 export class ClipSolidBrushCommand implements UndoCommand {
   private readonly model: SolidModel;
   private readonly brushId: string;
@@ -19,6 +17,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
 
   /**
    * Creates a solid brush clip command.
+   *
    * @param model Owning solid model.
    * @param brushId Brush instance id.
    * @param worldPlane World-space clip plane.
@@ -33,19 +32,13 @@ export class ClipSolidBrushCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Applies the clip to the brush and rebuilds the solid model.
-   */
+  /** Applies the clip to the brush and rebuilds the solid model. */
   execute(): void {
     if (this.executed) return;
     const instance = this.model.findBrush(this.brushId);
     if (!instance) return;
     const localPlane = this.worldPlaneToLocal(instance, this.worldPlane);
-    const clipped = SolidBrushPlaneClip.clipKeepThreeHalfSpace(
-      instance.brush,
-      localPlane,
-      this.keepFront,
-    );
+    const clipped = SolidBrushPlaneClip.clipKeepThreeHalfSpace(instance.brush, localPlane, this.keepFront);
     if (!clipped) return;
     this.previousBrush = instance.brush.clone();
     this.applyBrushGeometry(instance, clipped);
@@ -54,9 +47,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores the previous brush geometry.
-   */
+  /** Restores the previous brush geometry. */
   undo(): void {
     if (!this.executed || !this.previousBrush) return;
     const instance = this.model.findBrush(this.brushId);
@@ -70,6 +61,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
 
   /**
    * Returns whether the last execute produced a clipped brush.
+   *
    * @returns True when geometry changed.
    */
   didClip(): boolean {
@@ -78,6 +70,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
 
   /**
    * Transforms a world plane into brush local space.
+   *
    * @param instance Brush instance with mesh transform.
    * @param worldPlane World plane.
    * @returns Local Three.js plane.
@@ -91,6 +84,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
 
   /**
    * Replaces brush topology and rebuilds the hull preview mesh in place.
+   *
    * @param instance Brush instance.
    * @param brush New local topology.
    */
@@ -100,11 +94,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
     const previous = instance.mesh;
     const parent = previous.parent;
     const siblingIndex = parent ? parent.children.indexOf(previous) : 0;
-    const replacement = SolidBrushVisual.createHullPreview(
-      instance.name,
-      brush,
-      instance.operation,
-    );
+    const replacement = SolidBrushVisual.createHullPreview(instance.name, brush, instance.operation);
     replacement.position.copy(previous.position);
     replacement.rotation.copy(previous.rotation);
     replacement.scale.copy(previous.scale);
@@ -119,6 +109,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
 
   /**
    * Moves a child to a specific sibling index under its parent.
+   *
    * @param parent Parent object.
    * @param child Child to reorder.
    * @param index Desired sibling index.
@@ -132,6 +123,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
 
   /**
    * Disposes geometry and materials of a mesh tree.
+   *
    * @param root Root object.
    */
   private disposeMeshTree(root: THREE.Object3D): void {

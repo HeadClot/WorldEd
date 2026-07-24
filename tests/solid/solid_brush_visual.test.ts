@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
-import {
-  SolidBrushVisual,
-  SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY,
-} from '../../src/solid/model/solid_brush_visual.js';
+import { SolidBrushVisual, SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_visual.js';
 import {
   SolidBrushEdgeMaterials,
   BRUSH_EDGE_FADE_NEAR,
@@ -12,14 +9,9 @@ import {
 } from '../../src/solid/model/solid_brush_edge_materials.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_edge_materials.js';
-import {
-  rebuildDecorativeEdges,
-  usesContentDecorativeEdges,
-} from '../../src/utils/mesh_edge_sync.js';
+import { rebuildDecorativeEdges, usesContentDecorativeEdges } from '../../src/utils/mesh_edge_sync.js';
 
-/**
- * Unit tests for solid brush preview visuals (outline-only vs selected fill).
- */
+/** Unit tests for solid brush preview visuals (outline-only vs selected fill). */
 describe('SolidBrushVisual', () => {
   it('creates box previews that are outline-only by default', () => {
     const size = 1.5 + Math.random();
@@ -41,29 +33,19 @@ describe('SolidBrushVisual', () => {
     const mesh = SolidBrushVisual.createHullPreview('Hull', brush, SolidOperation.Subtractive);
     const edges = collectDecorativeEdges(mesh);
     expect(edges).toHaveLength(2);
-    const front = edges.find(
-      (edge) => edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] !== true,
-    );
-    const occluded = edges.find(
-      (edge) => edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true,
-    );
+    const front = edges.find((edge) => edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] !== true);
+    const occluded = edges.find((edge) => edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true);
     expect(front).toBeDefined();
     expect(occluded).toBeDefined();
-    expect(front!.material).toBe(
-      SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Subtractive),
-    );
-    expect(occluded!.material).toBe(
-      SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Subtractive),
-    );
+    expect(front!.material).toBe(SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Subtractive));
+    expect(occluded!.material).toBe(SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Subtractive));
     const frontMaterial = front!.material as THREE.ShaderMaterial;
     const occludedMaterial = occluded!.material as THREE.ShaderMaterial;
     expect(frontMaterial.depthFunc).toBe(THREE.LessEqualDepth);
     expect(occludedMaterial.depthFunc).toBe(THREE.GreaterDepth);
     expect(frontMaterial.uniforms.fadeNear.value).toBe(BRUSH_EDGE_FADE_NEAR);
     expect(frontMaterial.uniforms.fadeFar.value).toBe(BRUSH_EDGE_FADE_FAR);
-    expect(occludedMaterial.uniforms.opacity.value).toBeLessThan(
-      frontMaterial.uniforms.opacity.value,
-    );
+    expect(occludedMaterial.uniforms.opacity.value).toBeLessThan(frontMaterial.uniforms.opacity.value);
     disposeBrushPreview(mesh);
   });
 
@@ -136,6 +118,7 @@ describe('SolidBrushVisual', () => {
 
 /**
  * Collects decorative edge LineSegments under a brush preview.
+ *
  * @param mesh Brush preview mesh.
  * @returns Decorative edge children.
  */
@@ -148,6 +131,7 @@ function collectDecorativeEdges(mesh: THREE.Mesh): THREE.LineSegments[] {
 
 /**
  * Disposes geometry and owned materials for a brush preview mesh.
+ *
  * @param mesh Brush preview created by SolidBrushVisual.
  */
 function disposeBrushPreview(mesh: THREE.Mesh): void {

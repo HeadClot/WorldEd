@@ -3,8 +3,8 @@ import { UndoCommand } from './undo_command.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 
 /**
- * Undoable command for toggling the visibility of a Three.js object.
- * Solid brushes also leave or re-enter CSG evaluation via partial rebuild.
+ * Undoable command for toggling the visibility of a Three.js object. Solid
+ * brushes also leave or re-enter CSG evaluation via partial rebuild.
  */
 export class ToggleVisibilityCommand implements UndoCommand {
   private object: THREE.Object3D;
@@ -14,6 +14,7 @@ export class ToggleVisibilityCommand implements UndoCommand {
 
   /**
    * Creates a new toggle visibility command for the specified object.
+   *
    * @param object The Three.js object whose visibility to toggle.
    */
   constructor(object: THREE.Object3D) {
@@ -23,9 +24,7 @@ export class ToggleVisibilityCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Executes the visibility toggle by setting the new visibility state.
-   */
+  /** Executes the visibility toggle by setting the new visibility state. */
   execute(): void {
     if (this.executed) return;
     this.object.visible = this.newVisibility;
@@ -33,9 +32,7 @@ export class ToggleVisibilityCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Undoes the toggle by restoring the object's previous visibility state.
-   */
+  /** Undoes the toggle by restoring the object's previous visibility state. */
   undo(): void {
     this.object.visible = this.previousVisibility;
     this.syncSolidBrushCsgVisibility();
@@ -54,6 +51,7 @@ export class ToggleVisibilityCommand implements UndoCommand {
 
   /**
    * Returns the new visibility state set by this command.
+   *
    * @returns True if the object is made visible, false otherwise.
    */
   getNewVisibility(): boolean {

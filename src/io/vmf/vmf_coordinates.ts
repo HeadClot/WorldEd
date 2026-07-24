@@ -2,14 +2,15 @@ import * as THREE from 'three';
 import { VmfVector3 } from './vmf_types.js';
 
 /**
- * Source hammer units (inches) to editor meters.
- * Matches common Source importers: 32 units = 1 meter.
+ * Source hammer units (inches) to editor meters. Matches common Source
+ * importers: 32 units = 1 meter.
  */
 export const VMF_INCHES_TO_METERS = 1 / 32;
 
 /**
- * Converts a Source Engine Z-up point into Three.js Y-up space.
- * Source (x, y, z) maps to Three (x, z, y); values stay in inches until scaled.
+ * Converts a Source Engine Z-up point into Three.js Y-up space. Source (x, y,
+ * z) maps to Three (x, z, y); values stay in inches until scaled.
+ *
  * @param source Source-space vector.
  * @returns Three-space vector in inches.
  */
@@ -18,23 +19,22 @@ export function swizzleSourceToThree(source: VmfVector3): THREE.Vector3 {
 }
 
 /**
- * Converts and scales a Source point into editor meters (Y-up).
- * Preserves absolute Hammer world coordinates (no recentering). Maps often sit
- * far from the origin because they were authored that way in Valve's tools.
+ * Converts and scales a Source point into editor meters (Y-up). Preserves
+ * absolute Hammer world coordinates (no recentering). Maps often sit far from
+ * the origin because they were authored that way in Valve's tools.
+ *
  * @param source Source-space vector in inches.
  * @param unitScale Inches-to-meters factor (default 1/32).
  * @returns Three-space point in meters.
  */
-export function sourcePointToEditorMeters(
-  source: VmfVector3,
-  unitScale: number = VMF_INCHES_TO_METERS,
-): THREE.Vector3 {
+export function sourcePointToEditorMeters(source: VmfVector3, unitScale: number = VMF_INCHES_TO_METERS): THREE.Vector3 {
   return swizzleSourceToThree(source).multiplyScalar(unitScale);
 }
 
 /**
- * Swizzles a free Source direction (normals, UV axes) into Three Y-up.
- * Does not apply unit scale (directions stay unit-length when source was).
+ * Swizzles a free Source direction (normals, UV axes) into Three Y-up. Does not
+ * apply unit scale (directions stay unit-length when source was).
+ *
  * @param source Source-space direction.
  * @returns Three-space direction.
  */
@@ -44,6 +44,7 @@ export function swizzleSourceDirectionToThree(source: VmfVector3): THREE.Vector3
 
 /**
  * Swizzles a THREE direction that still uses Source axis order.
+ *
  * @param x Source X component.
  * @param y Source Y component.
  * @param z Source Z component.

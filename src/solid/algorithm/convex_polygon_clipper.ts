@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { SolidPlane } from '../brush/solid_plane.js';
 import { SOLID_FAT_PLANE_EPSILON } from './solid_math_constants.js';
 
-/**
- * Result of clipping a convex polygon against a plane.
- */
+/** Result of clipping a convex polygon against a plane. */
 export interface PolygonClipResult {
   /** Portion of the polygon on the negative / inside side of the plane. */
   inside: THREE.Vector3[];
@@ -13,12 +11,13 @@ export interface PolygonClipResult {
 }
 
 /**
- * Clips convex polygons against planes using Sutherland–Hodgman.
- * Used by Sander-style solid CSG for face fragmentation (not the editor BSP soup).
+ * Clips convex polygons against planes using Sutherland–Hodgman. Used by
+ * Sander-style solid CSG for face fragmentation (not the editor BSP soup).
  */
 export class ConvexPolygonClipper {
   /**
    * Clips a convex polygon by a plane, producing inside and outside pieces.
+   *
    * @param polygon Ordered convex polygon vertices.
    * @param plane Clipping plane (positive = outside).
    * @param epsilon Plane thickness for coplanar points.
@@ -62,6 +61,7 @@ export class ConvexPolygonClipper {
 
   /**
    * Keeps only the portion of a polygon inside all planes of a convex solid.
+   *
    * @param polygon Source convex polygon.
    * @param planes Outward planes of the solid.
    * @returns Clipped polygon inside the solid, or empty if none.
@@ -77,6 +77,7 @@ export class ConvexPolygonClipper {
 
   /**
    * Emits clip vertices for one polygon edge into inside/outside rings.
+   *
    * @param current Edge start.
    * @param next Edge end.
    * @param currentDistance Signed distance of start.
@@ -106,13 +107,7 @@ export class ConvexPolygonClipper {
       outside.push(next.clone());
       return;
     }
-    const intersection = this.intersectSegmentPlane(
-      current,
-      next,
-      currentDistance,
-      nextDistance,
-      plane,
-    );
+    const intersection = this.intersectSegmentPlane(current, next, currentDistance, nextDistance, plane);
     if (currentInside) {
       inside.push(intersection.clone());
       outside.push(intersection.clone());
@@ -126,6 +121,7 @@ export class ConvexPolygonClipper {
 
   /**
    * Intersects a segment with a plane using precomputed distances.
+   *
    * @param a Segment start.
    * @param b Segment end.
    * @param distanceA Distance of a.
@@ -148,6 +144,7 @@ export class ConvexPolygonClipper {
 
   /**
    * Removes consecutive duplicate vertices from a polygon ring.
+   *
    * @param ring Polygon vertices.
    * @returns Cleaned ring (may be empty).
    */

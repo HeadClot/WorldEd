@@ -2,12 +2,11 @@ import * as THREE from 'three';
 import { GizmoAxis } from '../types/transform_mode.js';
 import { TransformConstraint } from './transform_constraint.js';
 
-/**
- * Projection and axis helpers used by transform drag interactions.
- */
+/** Projection and axis helpers used by transform drag interactions. */
 export class TransformProjectionMath {
   /**
    * Builds a projection plane through the pivot facing the camera.
+   *
    * @param camera The viewport camera.
    * @param pivot The transform pivot point.
    * @returns A plane perpendicular to the camera's view direction.
@@ -21,6 +20,7 @@ export class TransformProjectionMath {
    * Computes the camera's local forward direction (-Z after camera.quaternion).
    * Uses the camera's local quaternion, not world orientation; nested parents
    * are not applied. Viewport cameras in this editor are scene roots.
+   *
    * @param camera The camera to query.
    * @returns Normalized local-space forward direction.
    */
@@ -32,6 +32,7 @@ export class TransformProjectionMath {
 
   /**
    * Returns true when the rotation axis is nearly edge-on to the camera.
+   *
    * @param camera The viewport camera.
    * @param axis The rotation axis.
    * @returns True if axis-plane projection would be unstable.
@@ -43,6 +44,7 @@ export class TransformProjectionMath {
 
   /**
    * Converts a mouse event into normalized screen coordinates [0,1].
+   *
    * @param renderer The viewport renderer.
    * @param event The pointer event.
    * @returns Normalized screen position.
@@ -56,6 +58,7 @@ export class TransformProjectionMath {
 
   /**
    * Constrains a delta to the active axis or plane.
+   *
    * @param delta The original delta vector.
    * @param axis The gizmo axis to constrain to.
    * @returns The constrained delta vector.
@@ -69,6 +72,7 @@ export class TransformProjectionMath {
 
   /**
    * Converts a gizmo axis enum to a Three.js direction vector.
+   *
    * @param axis The gizmo axis.
    * @returns A unit direction vector for the axis in gizmo-local space.
    */
@@ -83,8 +87,10 @@ export class TransformProjectionMath {
 
   /**
    * Converts a gizmo axis to a world-space direction using handle orientation.
+   *
    * @param axis The gizmo axis.
-   * @param orientation World orientation of the gizmo (object-local for single select).
+   * @param orientation World orientation of the gizmo (object-local for single
+   *   select).
    * @returns Unit world direction.
    */
   static axisToWorldVector(axis: GizmoAxis, orientation: THREE.Quaternion): THREE.Vector3 {

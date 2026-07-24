@@ -1,17 +1,16 @@
 /**
  * Callback invoked when the inline rename is confirmed.
+ *
  * @param newName The new name the user entered.
  */
 export type RenameConfirmCallback = (newName: string) => void;
 
-/**
- * Callback invoked when the inline rename is cancelled.
- */
+/** Callback invoked when the inline rename is cancelled. */
 export type RenameCancelCallback = () => void;
 
 /**
- * Inline text input component for renaming objects in the outliner.
- * Replaces a text label with an editable input on double-click.
+ * Inline text input component for renaming objects in the outliner. Replaces a
+ * text label with an editable input on double-click.
  */
 export class InlineRenameInput {
   private inputElement: HTMLInputElement;
@@ -25,6 +24,7 @@ export class InlineRenameInput {
 
   /**
    * Creates a new inline rename input component.
+   *
    * @param parentElement The parent DOM element that contains the text span.
    * @param textSpan The span element displaying the current name.
    * @param originalText The current name of the object.
@@ -42,6 +42,7 @@ export class InlineRenameInput {
 
   /**
    * Sets the callback invoked when the rename is confirmed with Enter.
+   *
    * @param callback The confirmation callback function.
    */
   setConfirmCallback(callback: RenameConfirmCallback): void {
@@ -50,15 +51,14 @@ export class InlineRenameInput {
 
   /**
    * Sets the callback invoked when the rename is cancelled with Escape.
+   *
    * @param callback The cancellation callback function.
    */
   setCancelCallback(callback: RenameCancelCallback): void {
     this.cancelCallback = callback;
   }
 
-  /**
-   * Activates the inline rename by replacing the text span with an input.
-   */
+  /** Activates the inline rename by replacing the text span with an input. */
   activate(): void {
     if (this.isDisposed) return;
     this.isFinishing = false;
@@ -70,6 +70,7 @@ export class InlineRenameInput {
 
   /**
    * Deactivates the inline rename and restores the text span.
+   *
    * @param newText The text to restore (either the confirmed or original name).
    */
   deactivate(newText: string): void {
@@ -80,8 +81,8 @@ export class InlineRenameInput {
   }
 
   /**
-   * Confirms the rename operation with the entered text.
-   * Safe if Enter and blur both fire for the same commit.
+   * Confirms the rename operation with the entered text. Safe if Enter and blur
+   * both fire for the same commit.
    */
   confirmRename(): void {
     if (this.isDisposed || this.isFinishing) return;
@@ -94,8 +95,8 @@ export class InlineRenameInput {
   }
 
   /**
-   * Cancels the rename operation and restores the original name.
-   * Safe if Escape and blur both fire for the same cancel.
+   * Cancels the rename operation and restores the original name. Safe if Escape
+   * and blur both fire for the same cancel.
    */
   cancelRename(): void {
     if (this.isDisposed || this.isFinishing) return;
@@ -106,9 +107,7 @@ export class InlineRenameInput {
     }
   }
 
-  /**
-   * Disposes the inline rename input component.
-   */
+  /** Disposes the inline rename input component. */
   dispose(): void {
     this.isDisposed = true;
     this.isFinishing = true;
@@ -117,9 +116,7 @@ export class InlineRenameInput {
     this.cancelCallback = null;
   }
 
-  /**
-   * Detaches the input from the DOM without assuming its current parent.
-   */
+  /** Detaches the input from the DOM without assuming its current parent. */
   private detachInputElement(): void {
     if (this.inputElement.parentNode) {
       this.inputElement.remove();
@@ -128,6 +125,7 @@ export class InlineRenameInput {
 
   /**
    * Creates the styled text input element for inline editing.
+   *
    * @returns The configured HTML input element.
    */
   private createInputElement(): HTMLInputElement {
@@ -149,6 +147,7 @@ export class InlineRenameInput {
 
   /**
    * Binds keyboard and blur events for rename commit/cancel.
+   *
    * @param input The input element to bind events to.
    */
   private bindInputElementEvents(input: HTMLInputElement): void {

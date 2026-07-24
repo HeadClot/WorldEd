@@ -7,6 +7,7 @@ import { SolidBrush } from '../brush/solid_brush.js';
 export class BrushShapeFingerprint {
   /**
    * Computes a shape fingerprint for a local-space brush.
+   *
    * @param brush Local brush geometry.
    * @returns Stable string fingerprint for equality checks.
    */
@@ -32,6 +33,7 @@ export class BrushShapeFingerprint {
 
   /**
    * Formats a vertex for inclusion in a fingerprint.
+   *
    * @param vertex Vertex position.
    * @returns Compact coordinate string.
    */

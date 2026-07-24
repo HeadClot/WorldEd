@@ -13,19 +13,19 @@ import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/texture_id.js';
 
 /**
  * Callback for status messages shown in the editor status bar.
+ *
  * @param message Status text.
  */
 export type TextureBrowserStatusCallback = (message: string) => void;
 
 /**
  * Callback when the user selects a texture in the browser.
+ *
  * @param entry Selected entry, or null when cleared.
  */
 export type TextureBrowserSelectionCallback = (entry: TextureBrowserEntry | null) => void;
 
-/**
- * Dependencies for the texture browser controller.
- */
+/** Dependencies for the texture browser controller. */
 export interface TextureBrowserControllerDependencies {
   browser: TextureBrowser;
   library?: TextureLibrary;
@@ -33,9 +33,7 @@ export interface TextureBrowserControllerDependencies {
   directoryAccess?: LocalDirectoryAccess;
 }
 
-/**
- * Coordinates folder open, library updates, and browser UI refresh.
- */
+/** Coordinates folder open, library updates, and browser UI refresh. */
 export class TextureBrowserController {
   private browser: TextureBrowser;
   private library: TextureLibrary;
@@ -47,6 +45,7 @@ export class TextureBrowserController {
 
   /**
    * Creates a texture browser controller.
+   *
    * @param deps Browser panel and optional overrides for tests.
    */
   constructor(deps: TextureBrowserControllerDependencies) {
@@ -67,6 +66,7 @@ export class TextureBrowserController {
 
   /**
    * Registers a status message callback.
+   *
    * @param callback Status handler, or null.
    */
   setStatusCallback(callback: TextureBrowserStatusCallback | null): void {
@@ -75,6 +75,7 @@ export class TextureBrowserController {
 
   /**
    * Registers a selection change callback.
+   *
    * @param callback Selection handler, or null.
    */
   setSelectionCallback(callback: TextureBrowserSelectionCallback | null): void {
@@ -83,6 +84,7 @@ export class TextureBrowserController {
 
   /**
    * Returns the texture library instance.
+   *
    * @returns Library catalog.
    */
   getLibrary(): TextureLibrary {
@@ -91,15 +93,14 @@ export class TextureBrowserController {
 
   /**
    * Returns whether a folder open is currently in progress.
+   *
    * @returns True while loading.
    */
   getIsLoading(): boolean {
     return this.isLoading;
   }
 
-  /**
-   * Opens a local folder picker and loads image textures into the library.
-   */
+  /** Opens a local folder picker and loads image textures into the library. */
   async openFolder(): Promise<void> {
     if (this.isLoading) return;
     if (!this.directoryAccess.isSupported()) {
@@ -117,6 +118,7 @@ export class TextureBrowserController {
 
   /**
    * Selects a texture by id and notifies listeners.
+   *
    * @param entryId Entry id from the grid.
    */
   selectTexture(entryId: string): void {
@@ -127,20 +129,12 @@ export class TextureBrowserController {
     this.selectionCallback?.(entry);
   }
 
-  /**
-   * Refreshes the browser UI from the current library state.
-   */
+  /** Refreshes the browser UI from the current library state. */
   refreshBrowserUi(): void {
-    this.browser.setEntries(
-      this.library.getEntries(),
-      this.library.getSelectedId(),
-      this.library.getFolderName(),
-    );
+    this.browser.setEntries(this.library.getEntries(), this.library.getSelectedId(), this.library.getFolderName());
   }
 
-  /**
-   * Releases library resources (object URLs).
-   */
+  /** Releases library resources (object URLs). */
   dispose(): void {
     this.library.clear();
     getTextureMapCache().setLibrary(null);
@@ -149,16 +143,12 @@ export class TextureBrowserController {
     this.selectionCallback = null;
   }
 
-  /**
-   * Runs the directory picker and applies the scan result.
-   */
+  /** Runs the directory picker and applies the scan result. */
   private async loadFromDirectoryPicker(): Promise<void> {
     const listing = await this.directoryAccess.pickDirectoryAndListFiles();
     if (!listing) {
       this.browser.setStatusMessage(
-        this.library.getEntryCount() > 0
-          ? `${this.library.getEntryCount()} texture(s)`
-          : 'Folder open cancelled',
+        this.library.getEntryCount() > 0 ? `${this.library.getEntryCount()} texture(s)` : 'Folder open cancelled',
       );
       return;
     }
@@ -167,6 +157,7 @@ export class TextureBrowserController {
 
   /**
    * Scans a listing into the library and refreshes the UI.
+   *
    * @param listing Picked directory listing.
    */
   private applyListing(listing: PickedDirectoryListing): void {
@@ -180,6 +171,7 @@ export class TextureBrowserController {
 
   /**
    * Reports load summary to the status bar and browser footer.
+   *
    * @param textureCount Number of images loaded.
    * @param skippedCount Non-image files skipped.
    */
@@ -190,9 +182,7 @@ export class TextureBrowserController {
     this.statusCallback?.(message);
   }
 
-  /**
-   * Reports that folder access is not available in this browser.
-   */
+  /** Reports that folder access is not available in this browser. */
   private reportUnsupported(): void {
     const message = 'Folder access is not supported in this browser';
     this.browser.setStatusMessage(message);

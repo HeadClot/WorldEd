@@ -1,28 +1,26 @@
 import * as THREE from 'three';
-import {
-  FaceTextureMapping,
-  createDefaultFaceTextureMapping,
-} from '../../texture/face_texture_mapping.js';
+import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/face_texture_mapping.js';
 import { VMF_INCHES_TO_METERS, swizzleSourceComponentsToThree } from './vmf_coordinates.js';
 import { VmfTextureAxis } from './vmf_types.js';
 import { materialNameToTextureId } from './vmf_material_policy.js';
 
 /**
- * Default texture size used when VMT/VTF dimensions are unknown.
- * Half-Life 2 materials are commonly 512²; UV phase remains correct for any
- * power-of-two size that matches the eventual loaded texture.
+ * Default texture size used when VMT/VTF dimensions are unknown. Half-Life 2
+ * materials are commonly 512²; UV phase remains correct for any power-of-two
+ * size that matches the eventual loaded texture.
  */
 export const VMF_DEFAULT_TEXTURE_SIZE = 512;
 
 /**
- * Converts Hammer U/V axes into a face texture mapping.
- * Stores exact swizzled world axes for Source-accurate projection, plus scale
- * and offset in the editor's meters-per-tile / meter-offset convention.
- * V is flipped to match Source (and Chisel) texture orientation.
+ * Converts Hammer U/V axes into a face texture mapping. Stores exact swizzled
+ * world axes for Source-accurate projection, plus scale and offset in the
+ * editor's meters-per-tile / meter-offset convention. V is flipped to match
+ * Source (and Chisel) texture orientation.
  */
 export class VmfUvConverter {
   /**
    * Builds a face mapping from one side's U/V axes and material name.
+   *
    * @param materialName VMF material path.
    * @param uAxis Hammer U axis.
    * @param vAxis Hammer V axis.
@@ -60,6 +58,7 @@ export class VmfUvConverter {
 
   /**
    * Swizzles a Hammer axis direction into editor Y-up and normalizes it.
+   *
    * @param axis Hammer texture axis.
    * @returns Unit direction in editor space, or zero when degenerate.
    */
@@ -72,28 +71,27 @@ export class VmfUvConverter {
   }
 
   /**
-   * World meters covered by one full texture tile along a VMF axis.
-   * Hammer: u = (dot(pos_in, axis) / scale + translation) / textureSize.
-   * In meters: scaleU = textureSize * scale * unitScale.
+   * World meters covered by one full texture tile along a VMF axis. Hammer: u =
+   * (dot(pos_in, axis) / scale + translation) / textureSize. In meters: scaleU
+   * = textureSize * scale * unitScale.
+   *
    * @param axis Hammer texture axis.
    * @param textureSize Texels along that UV dimension.
    * @param unitScale Inches to meters.
    * @returns Positive scale in meters per tile.
    */
-  private axisToMetersPerTile(
-    axis: VmfTextureAxis,
-    textureSize: number,
-    unitScale: number,
-  ): number {
+  private axisToMetersPerTile(axis: VmfTextureAxis, textureSize: number, unitScale: number): number {
     const scale = axis.scale === 0 ? 0.25 : Math.abs(axis.scale);
     const meters = textureSize * scale * unitScale;
     return meters > 1e-8 ? meters : 1;
   }
 
   /**
-   * Converts Hammer texel translation into a meter offset for projectWorldPositionToUv.
-   * With u = (dot(pos, û) - offsetU) / scaleU and scaleU = texSize * scale * unit,
-   * offsetU = -translation * scale * unitScale matches Hammer phase.
+   * Converts Hammer texel translation into a meter offset for
+   * projectWorldPositionToUv. With u = (dot(pos, û) - offsetU) / scaleU and
+   * scaleU = texSize * scale * unit, offsetU = -translation * scale * unitScale
+   * matches Hammer phase.
+   *
    * @param axis Hammer texture axis.
    * @param unitScale Inches to meters.
    * @returns Offset in meters.

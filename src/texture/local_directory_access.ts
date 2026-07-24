@@ -1,44 +1,42 @@
-/**
- * A single file discovered under a user-picked directory.
- */
+/** A single file discovered under a user-picked directory. */
 export interface PickedDirectoryFile {
   name: string;
   relativePath: string;
   file: File;
 }
 
-/**
- * Result of a successful directory pick and enumeration.
- */
+/** Result of a successful directory pick and enumeration. */
 export interface PickedDirectoryListing {
   folderName: string;
   files: PickedDirectoryFile[];
 }
 
 /**
- * Abstraction over browser folder selection APIs.
- * Implementations may use File System Access API or webkitdirectory.
+ * Abstraction over browser folder selection APIs. Implementations may use File
+ * System Access API or webkitdirectory.
  */
 export interface LocalDirectoryAccess {
   /**
    * Returns whether any folder-pick strategy is available.
+   *
    * @returns True when the environment can open a folder.
    */
   isSupported(): boolean;
 
   /**
-   * Opens a folder picker and lists files (non-recursive or recursive per impl).
+   * Opens a folder picker and lists files (non-recursive or recursive per
+   * impl).
+   *
    * @returns Listing, or null when the user cancels.
    */
   pickDirectoryAndListFiles(): Promise<PickedDirectoryListing | null>;
 }
 
-/**
- * Chromium File System Access API directory picker with recursive walk.
- */
+/** Chromium File System Access API directory picker with recursive walk. */
 export class FileSystemAccessDirectoryAccess implements LocalDirectoryAccess {
   /**
    * Returns whether showDirectoryPicker exists on window.
+   *
    * @returns True in supporting browsers.
    */
   isSupported(): boolean {
@@ -47,6 +45,7 @@ export class FileSystemAccessDirectoryAccess implements LocalDirectoryAccess {
 
   /**
    * Shows the native directory picker and walks all nested files.
+   *
    * @returns Listing or null on cancel / missing API.
    */
   async pickDirectoryAndListFiles(): Promise<PickedDirectoryListing | null> {
@@ -61,12 +60,11 @@ export class FileSystemAccessDirectoryAccess implements LocalDirectoryAccess {
   }
 }
 
-/**
- * Fallback using a hidden input with the webkitdirectory attribute.
- */
+/** Fallback using a hidden input with the webkitdirectory attribute. */
 export class WebkitDirectoryInputAccess implements LocalDirectoryAccess {
   /**
    * Returns whether a file input can be created in this environment.
+   *
    * @returns True when document is available (browser DOM); false in Node/SSR.
    */
   isSupported(): boolean {
@@ -75,6 +73,7 @@ export class WebkitDirectoryInputAccess implements LocalDirectoryAccess {
 
   /**
    * Opens a folder file input and maps selected FileList entries.
+   *
    * @returns Listing or null when cancelled / empty.
    */
   pickDirectoryAndListFiles(): Promise<PickedDirectoryListing | null> {
@@ -103,16 +102,12 @@ export class WebkitDirectoryInputAccess implements LocalDirectoryAccess {
   }
 }
 
-/**
- * Prefers File System Access API, then falls back to webkitdirectory.
- */
+/** Prefers File System Access API, then falls back to webkitdirectory. */
 export class BrowserLocalDirectoryAccess implements LocalDirectoryAccess {
   private primary: FileSystemAccessDirectoryAccess;
   private fallback: WebkitDirectoryInputAccess;
 
-  /**
-   * Creates a composite directory access helper.
-   */
+  /** Creates a composite directory access helper. */
   constructor() {
     this.primary = new FileSystemAccessDirectoryAccess();
     this.fallback = new WebkitDirectoryInputAccess();
@@ -120,6 +115,7 @@ export class BrowserLocalDirectoryAccess implements LocalDirectoryAccess {
 
   /**
    * Returns true when either strategy can open a folder.
+   *
    * @returns Support flag.
    */
   isSupported(): boolean {
@@ -128,6 +124,7 @@ export class BrowserLocalDirectoryAccess implements LocalDirectoryAccess {
 
   /**
    * Picks a directory using the best available strategy.
+   *
    * @returns Listing or null on cancel.
    */
   async pickDirectoryAndListFiles(): Promise<PickedDirectoryListing | null> {
@@ -140,6 +137,7 @@ export class BrowserLocalDirectoryAccess implements LocalDirectoryAccess {
 
 /**
  * Recursively collects files under a directory handle.
+ *
  * @param directoryHandle Root or nested directory handle.
  * @param pathPrefix Relative path prefix for nested entries.
  * @returns Flat list of files with relative paths.
@@ -158,10 +156,7 @@ export async function collectFilesFromDirectoryHandle(
       continue;
     }
     if (handle.kind === 'directory') {
-      const nested = await collectFilesFromDirectoryHandle(
-        handle as FileSystemDirectoryHandle,
-        relativePath,
-      );
+      const nested = await collectFilesFromDirectoryHandle(handle as FileSystemDirectoryHandle, relativePath);
       results.push(...nested);
     }
   }
@@ -170,6 +165,7 @@ export async function collectFilesFromDirectoryHandle(
 
 /**
  * Builds a listing from a FileList produced by webkitdirectory.
+ *
  * @param fileList Selected files, or null.
  * @returns Listing with folder name derived from the first path, or null.
  */
@@ -191,6 +187,7 @@ export function buildListingFromFileList(fileList: FileList | null): PickedDirec
 
 /**
  * Resolves the relative path for a webkitdirectory File.
+ *
  * @param file File with optional webkitRelativePath.
  * @returns Relative path string.
  */
@@ -202,6 +199,7 @@ function resolveRelativePath(file: File): string {
 
 /**
  * Extracts the top-level folder name from a relative path.
+ *
  * @param relativePath Path such as "MyTextures/brick.png".
  * @returns First path segment, or "Folder".
  */

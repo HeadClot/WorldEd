@@ -5,11 +5,13 @@ import { DECORATIVE_EDGE_USERDATA_KEY, isSolidBrushEdge } from '../utils/mesh_ed
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
 
 /**
- * Builds a temporary scene graph for GLB/export that contains only game content:
- * regular meshes/groups and solid-model CSG result meshes.
- * Excludes brush hull helpers, selection outlines, decorative edges, and clip previews.
+ * Builds a temporary scene graph for GLB/export that contains only game
+ * content: regular meshes/groups and solid-model CSG result meshes. Excludes
+ * brush hull helpers, selection outlines, decorative edges, and clip previews.
+ *
  * @param worldGroup Live editor world root.
- * @returns A detached group safe to pass to GLTFExporter (does not mutate the live scene).
+ * @returns A detached group safe to pass to GLTFExporter (does not mutate the
+ *   live scene).
  */
 export function buildExportScene(worldGroup: THREE.Group): THREE.Group {
   const exportRoot = new THREE.Group();
@@ -22,7 +24,9 @@ export function buildExportScene(worldGroup: THREE.Group): THREE.Group {
 }
 
 /**
- * Clones one scene object for export, or returns null when it should be omitted.
+ * Clones one scene object for export, or returns null when it should be
+ * omitted.
+ *
  * @param object Live scene object.
  * @returns Detached export clone, or null to skip.
  */
@@ -42,6 +46,7 @@ function cloneObjectForExport(object: THREE.Object3D): THREE.Object3D | null {
 
 /**
  * Returns whether an object is editor-internal and must not appear in exports.
+ *
  * @param object Candidate object.
  * @returns True when the object should be omitted.
  */
@@ -63,6 +68,7 @@ export function shouldOmitFromExport(object: THREE.Object3D): boolean {
 
 /**
  * Clones a solid model as a group containing only the compiled CSG result mesh.
+ *
  * @param solidRoot Solid model root group.
  * @returns Export group with result mesh, or null when no result exists.
  */
@@ -79,6 +85,7 @@ function cloneSolidModelForExport(solidRoot: THREE.Object3D): THREE.Group | null
 
 /**
  * Finds the CSG result mesh under a solid model root.
+ *
  * @param solidRoot Solid model root.
  * @returns Result mesh or null.
  */
@@ -93,6 +100,7 @@ function findSolidResultMesh(solidRoot: THREE.Object3D): THREE.Mesh | null {
 
 /**
  * Clones a hierarchy group, keeping only exportable descendants.
+ *
  * @param group Live group.
  * @returns Export group, or null when empty after filtering.
  */
@@ -112,9 +120,10 @@ function cloneGroupForExport(group: THREE.Group): THREE.Group | null {
 }
 
 /**
- * Clones a content mesh without editor helper children.
- * Geometry is shared; materials are cloned and canvas debug maps stripped so
- * export stays small and does not embed editor checker textures.
+ * Clones a content mesh without editor helper children. Geometry is shared;
+ * materials are cloned and canvas debug maps stripped so export stays small and
+ * does not embed editor checker textures.
+ *
  * @param mesh Live content or solid result mesh.
  * @returns Mesh clone without helper children.
  */
@@ -129,12 +138,11 @@ function cloneContentMeshForExport(mesh: THREE.Mesh): THREE.Mesh {
 
 /**
  * Clones materials for export and drops non-image canvas maps.
+ *
  * @param material Live mesh material or material array.
  * @returns Export-safe material(s).
  */
-function cloneMaterialsForExport(
-  material: THREE.Material | THREE.Material[],
-): THREE.Material | THREE.Material[] {
+function cloneMaterialsForExport(material: THREE.Material | THREE.Material[]): THREE.Material | THREE.Material[] {
   if (Array.isArray(material)) {
     return material.map((entry) => cloneOneMaterialForExport(entry));
   }
@@ -143,6 +151,7 @@ function cloneMaterialsForExport(
 
 /**
  * Clones one material and clears CanvasTexture maps used by the editor checker.
+ *
  * @param material Live material.
  * @returns Cloned material safe for GLTFExporter.
  */
@@ -160,6 +169,7 @@ function cloneOneMaterialForExport(material: THREE.Material): THREE.Material {
 
 /**
  * Copies local transform and visibility from source to target.
+ *
  * @param source Live object.
  * @param target Export object.
  */

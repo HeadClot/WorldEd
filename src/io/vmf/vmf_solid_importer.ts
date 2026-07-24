@@ -9,9 +9,7 @@ import { VmfParser } from './vmf_parser.js';
 import { VmfEntity, VmfSolid, VmfWorld } from './vmf_types.js';
 import { forBatchesAsync, yieldToBrowser } from '../../utils/async_yield.js';
 
-/**
- * Options controlling VMF → solid model import.
- */
+/** Options controlling VMF → solid model import. */
 export interface VmfImportOptions {
   /** Inches to meters (default 1/32). */
   unitScale?: number;
@@ -22,20 +20,18 @@ export interface VmfImportOptions {
   /** When true, skip tools volume brushes (triggers, skip, etc.). */
   skipVolumeMaterials?: boolean;
   /**
-   * When true (default), recompiles the solid CSG result after import.
-   * Disable for very large maps and call model.rebuild() when ready.
+   * When true (default), recompiles the solid CSG result after import. Disable
+   * for very large maps and call model.rebuild() when ready.
    */
   rebuild?: boolean;
   /**
-   * Optional progress callback (0..1, status label). Used by async import
-   * so the browser can paint a progress bar between batches.
+   * Optional progress callback (0..1, status label). Used by async import so
+   * the browser can paint a progress bar between batches.
    */
   onProgress?: (ratio: number, label: string) => void;
 }
 
-/**
- * Summary of a completed VMF import.
- */
+/** Summary of a completed VMF import. */
 export interface VmfImportResult {
   /** Solid model containing all imported brushes. */
   model: SolidModel;
@@ -47,9 +43,7 @@ export interface VmfImportResult {
   skyName: string;
 }
 
-/**
- * Entity classnames that never contribute geometry to the solid model.
- */
+/** Entity classnames that never contribute geometry to the solid model. */
 const SKIPPED_ENTITY_CLASSNAMES = new Set([
   'func_areaportal',
   'func_areaportalwindow',
@@ -69,15 +63,14 @@ const SKIPPED_ENTITY_CLASSNAMES = new Set([
   'func_viscluster',
 ]);
 
-/**
- * Imports Source Engine 2006 VMF maps into a solid model of convex brushes.
- */
+/** Imports Source Engine 2006 VMF maps into a solid model of convex brushes. */
 export class VmfSolidImporter {
   private readonly parser = new VmfParser();
   private readonly brushBuilder = new VmfBrushFromSides();
 
   /**
    * Parses VMF text and builds a solid model with all importable brushes.
+   *
    * @param source VMF file contents.
    * @param options Import options.
    * @returns Import result with model and counts.
@@ -90,14 +83,12 @@ export class VmfSolidImporter {
   /**
    * Async import that yields between brush batches and CSG rebuild so the UI
    * can update a progress bar without freezing the browser.
+   *
    * @param source VMF file contents.
    * @param options Import options (including onProgress).
    * @returns Import result with model and counts.
    */
-  async importFromTextAsync(
-    source: string,
-    options: VmfImportOptions = {},
-  ): Promise<VmfImportResult> {
+  async importFromTextAsync(source: string, options: VmfImportOptions = {}): Promise<VmfImportResult> {
     const report = options.onProgress ?? (() => undefined);
     report(0.02, 'Parsing VMF…');
     await yieldToBrowser();
@@ -109,6 +100,7 @@ export class VmfSolidImporter {
 
   /**
    * Builds a solid model from an already-parsed VMF world.
+   *
    * @param world Parsed world document.
    * @param options Import options.
    * @returns Import result with model and counts.
@@ -119,12 +111,7 @@ export class VmfSolidImporter {
     const includeEntities = options.includeEntitySolids !== false;
     const model = new SolidModel(options.modelName ?? this.defaultModelName(world));
     const collected = this.collectSolids(world, includeEntities);
-    const built = this.buildAllInstances(
-      collected.solids,
-      unitScale,
-      skipVolumes,
-      collected.skippedCount,
-    );
+    const built = this.buildAllInstances(collected.solids, unitScale, skipVolumes, collected.skippedCount);
     model.addBrushInstancesBatch(built.instances, 2, options.rebuild !== false);
     return {
       model,
@@ -136,14 +123,12 @@ export class VmfSolidImporter {
 
   /**
    * Async world import with batched brush construction and progressive CSG.
+   *
    * @param world Parsed world document.
    * @param options Import options.
    * @returns Import result with model and counts.
    */
-  async importWorldAsync(
-    world: VmfWorld,
-    options: VmfImportOptions = {},
-  ): Promise<VmfImportResult> {
+  async importWorldAsync(world: VmfWorld, options: VmfImportOptions = {}): Promise<VmfImportResult> {
     const report = options.onProgress ?? (() => undefined);
     const unitScale = options.unitScale ?? VMF_INCHES_TO_METERS;
     const skipVolumes = options.skipVolumeMaterials !== false;
@@ -173,6 +158,7 @@ export class VmfSolidImporter {
 
   /**
    * Converts every collected solid into brush instances.
+   *
    * @param solids Solids to attempt.
    * @param unitScale Unit scale.
    * @param skipVolumes Whether tools volumes are skipped.
@@ -206,6 +192,7 @@ export class VmfSolidImporter {
 
   /**
    * Converts solids in batches, yielding so the UI can paint progress.
+   *
    * @param solids Solids to attempt.
    * @param unitScale Unit scale.
    * @param skipVolumes Whether tools volumes are skipped.
@@ -243,26 +230,20 @@ export class VmfSolidImporter {
         }
       },
       (ratio) =>
-        onProgress?.(
-          ratio,
-          `Building brushes ${Math.min(solids.length, Math.round(ratio * total))}/${solids.length}`,
-        ),
+        onProgress?.(ratio, `Building brushes ${Math.min(solids.length, Math.round(ratio * total))}/${solids.length}`),
     );
     return { instances, imported, skipped };
   }
 
   /**
    * Attempts to convert one solid, applying material skip policy.
+   *
    * @param solid Source solid.
    * @param unitScale Unit scale.
    * @param skipVolumes Whether to skip tools volume materials.
    * @returns Built brush or null.
    */
-  private tryBuildSolid(
-    solid: VmfSolid,
-    unitScale: number,
-    skipVolumes: boolean,
-  ): VmfBuiltBrush | null {
+  private tryBuildSolid(solid: VmfSolid, unitScale: number, skipVolumes: boolean): VmfBuiltBrush | null {
     if (solid.sides.length === 0) return null;
     if (skipVolumes && isSkippedVolumeMaterial(solid.sides[0].material)) {
       return null;
@@ -272,13 +253,13 @@ export class VmfSolidImporter {
 
   /**
    * Creates a named brush instance with UV mappings from a built solid.
+   *
    * @param built Built brush data.
    * @param ordinal 1-based brush index for naming.
    * @returns Solid brush instance with hull preview mesh.
    */
   private createInstance(built: VmfBuiltBrush, ordinal: number): SolidBrushInstance {
-    const name =
-      built.solidId >= 0 ? `Solid ${built.solidId}` : `Solid ${String(ordinal).padStart(2, '0')}`;
+    const name = built.solidId >= 0 ? `Solid ${built.solidId}` : `Solid ${String(ordinal).padStart(2, '0')}`;
     const id = `vmf-solid-${built.solidId}-${ordinal}`;
     const instance = new SolidBrushInstance(id, name, built.brush, SolidOperation.Additive);
     instance.position.copy(built.worldCenter);
@@ -292,14 +273,12 @@ export class VmfSolidImporter {
 
   /**
    * Collects world solids and optional entity solids for import.
+   *
    * @param world Parsed world.
    * @param includeEntities Whether entity brushwork is included.
    * @returns Solids to attempt plus count of policy-skipped entity solids.
    */
-  private collectSolids(
-    world: VmfWorld,
-    includeEntities: boolean,
-  ): { solids: VmfSolid[]; skippedCount: number } {
+  private collectSolids(world: VmfWorld, includeEntities: boolean): { solids: VmfSolid[]; skippedCount: number } {
     const solids = world.solids.slice();
     if (!includeEntities) {
       return { solids, skippedCount: this.countAllEntitySolids(world) };
@@ -319,6 +298,7 @@ export class VmfSolidImporter {
 
   /**
    * Counts every solid nested under entities.
+   *
    * @param world Parsed world.
    * @returns Entity solid count.
    */
@@ -332,6 +312,7 @@ export class VmfSolidImporter {
 
   /**
    * Returns true when the entity classname is excluded from brush import.
+   *
    * @param entity Entity record.
    * @returns True when all of its solids should be ignored.
    */
@@ -341,6 +322,7 @@ export class VmfSolidImporter {
 
   /**
    * Builds a default solid model name from world metadata.
+   *
    * @param world Parsed world.
    * @returns Display name.
    */

@@ -16,15 +16,14 @@ export class AlignmentController {
     AlignmentAxis.Z,
   ];
 
-  /**
-   * Creates a new alignment controller with axis restriction set to ALL.
-   */
+  /** Creates a new alignment controller with axis restriction set to ALL. */
   constructor() {
     this.currentAxis = AlignmentAxis.ALL;
   }
 
   /**
    * Returns the currently active axis restriction.
+   *
    * @returns The current alignment axis setting.
    */
   getAxisRestriction(): AlignmentAxis {
@@ -33,6 +32,7 @@ export class AlignmentController {
 
   /**
    * Cycles the axis restriction through ALL -> X -> Y -> Z -> ALL.
+   *
    * @returns The new axis restriction after cycling.
    */
   cycleAxisRestriction(): AlignmentAxis {
@@ -44,6 +44,7 @@ export class AlignmentController {
 
   /**
    * Aligns selected objects to world origin (0, 0, 0) on the restricted axes.
+   *
    * @param objects The meshes to align.
    * @param axis The axis restriction to apply.
    * @param commandStack The command stack to push the undoable command onto.
@@ -57,7 +58,9 @@ export class AlignmentController {
   }
 
   /**
-   * Aligns the bounding-box center of selected objects to the nearest grid cell.
+   * Aligns the bounding-box center of selected objects to the nearest grid
+   * cell.
+   *
    * @param objects The meshes to align.
    * @param axis The axis restriction to apply.
    * @param snapInterval The grid snap interval.
@@ -77,18 +80,15 @@ export class AlignmentController {
   }
 
   /**
-   * Aligns source objects' bounding box edges to the target object's bounding box edges.
+   * Aligns source objects' bounding box edges to the target object's bounding
+   * box edges.
+   *
    * @param sources The meshes to align.
    * @param target The reference mesh to align against.
    * @param axis The axis restriction to apply.
    * @param commandStack The command stack to push the undoable command onto.
    */
-  alignToObject(
-    sources: THREE.Mesh[],
-    target: THREE.Mesh,
-    axis: AlignmentAxis,
-    commandStack: CommandStack,
-  ): void {
+  alignToObject(sources: THREE.Mesh[], target: THREE.Mesh, axis: AlignmentAxis, commandStack: CommandStack): void {
     if (sources.length === 0) return;
     const snapshots = this.buildSnapshots(sources);
     const targetPositions = this.computeObjectTargets(sources, target, axis);
@@ -98,6 +98,7 @@ export class AlignmentController {
 
   /**
    * Creates position snapshots for undo support.
+   *
    * @param objects The meshes to snapshot.
    * @returns An array of alignment snapshots.
    */
@@ -110,14 +111,12 @@ export class AlignmentController {
 
   /**
    * Computes target positions that align each object to world origin.
+   *
    * @param objects The meshes to compute targets for.
    * @param axis The axis restriction.
    * @returns A map from each mesh to its target position.
    */
-  private computeOriginTargets(
-    objects: THREE.Mesh[],
-    axis: AlignmentAxis,
-  ): Map<THREE.Mesh, THREE.Vector3> {
+  private computeOriginTargets(objects: THREE.Mesh[], axis: AlignmentAxis): Map<THREE.Mesh, THREE.Vector3> {
     const targets = new Map<THREE.Mesh, THREE.Vector3>();
     objects.forEach((mesh) => {
       const box = this.getWorldBoundingBox(mesh);
@@ -131,7 +130,9 @@ export class AlignmentController {
   }
 
   /**
-   * Computes target positions that align each object's center to the nearest grid cell.
+   * Computes target positions that align each object's center to the nearest
+   * grid cell.
+   *
    * @param objects The meshes to compute targets for.
    * @param axis The axis restriction.
    * @param snapInterval The grid interval.
@@ -155,7 +156,9 @@ export class AlignmentController {
   }
 
   /**
-   * Computes target positions that align each source's bounding box min to the target's min.
+   * Computes target positions that align each source's bounding box min to the
+   * target's min.
+   *
    * @param sources The source meshes.
    * @param target The reference target mesh.
    * @param axis The axis restriction.
@@ -184,6 +187,7 @@ export class AlignmentController {
 
   /**
    * Gets the world-space bounding box of a mesh.
+   *
    * @param mesh The mesh to measure.
    * @returns The world-space Box3.
    */
@@ -195,6 +199,7 @@ export class AlignmentController {
 
   /**
    * Computes the center point of a bounding box.
+   *
    * @param box The bounding box.
    * @returns The center vector.
    */
@@ -206,6 +211,7 @@ export class AlignmentController {
 
   /**
    * Aligns a position to world origin on the specified axes.
+   *
    * @param center The original position.
    * @param axis The axis restriction.
    * @returns The origin-aligned position.
@@ -220,16 +226,13 @@ export class AlignmentController {
 
   /**
    * Snaps a position to the nearest grid cell on the specified axes.
+   *
    * @param center The original position.
    * @param axis The axis restriction.
    * @param snapInterval The grid interval.
    * @returns The snapped position.
    */
-  private snapToGrid(
-    center: THREE.Vector3,
-    axis: AlignmentAxis,
-    snapInterval: number,
-  ): THREE.Vector3 {
+  private snapToGrid(center: THREE.Vector3, axis: AlignmentAxis, snapInterval: number): THREE.Vector3 {
     const result = center.clone();
     if (axis === AlignmentAxis.ALL || axis === AlignmentAxis.X) {
       result.x = Math.round(result.x / snapInterval) * snapInterval;
@@ -245,19 +248,18 @@ export class AlignmentController {
 
   /**
    * Computes the positional offset needed to move from center to target center.
+   *
    * @param currentCenter The current bounding-box center.
    * @param targetCenter The desired bounding-box center.
    * @returns The position offset vector.
    */
-  private computePositionOffset(
-    currentCenter: THREE.Vector3,
-    targetCenter: THREE.Vector3,
-  ): THREE.Vector3 {
+  private computePositionOffset(currentCenter: THREE.Vector3, targetCenter: THREE.Vector3): THREE.Vector3 {
     return targetCenter.clone().sub(currentCenter);
   }
 
   /**
    * Applies an offset to a mesh's current position.
+   *
    * @param mesh The mesh to move.
    * @param offset The displacement to apply.
    * @returns The final position.
@@ -268,6 +270,7 @@ export class AlignmentController {
 
   /**
    * Computes the alignment delta between two bounding-box minimums.
+   *
    * @param sourceMin The source box minimum.
    * @param targetMin The target box minimum.
    * @param axis The axis restriction.

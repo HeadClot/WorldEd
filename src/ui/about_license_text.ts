@@ -1,6 +1,6 @@
 /**
- * Combined third-party MIT license text shown in the About dialog.
- * Source projects: Chisel, RealtimeCSG, and SabreCSG (reference inspiration only).
+ * Combined third-party MIT license text shown in the About dialog. Source
+ * projects: Chisel, RealtimeCSG, and SabreCSG (reference inspiration only).
  */
 
 const CHISEL_LICENSE = `MIT License
@@ -71,6 +71,7 @@ SOFTWARE.`;
 
 /**
  * Returns the full third-party license block for the About dialog textbox.
+ *
  * @returns Combined MIT license text for credited CSG editors.
  */
 export function getAboutLicenseText(): string {
@@ -86,12 +87,8 @@ export function getAboutLicenseText(): string {
   ].join('\n');
 }
 
-/**
- * Discord invite URL for Henry's Tools community server.
- */
+/** Discord invite URL for Henry's Tools community server. */
 export const HENRYS_TOOLS_DISCORD_URL = 'https://discord.gg/sKEvrBwHtq';
 
-/**
- * Display name of this editor project.
- */
+/** Display name of this editor project. */
 export const PROJECT_DISPLAY_NAME = 'AI World Editor';

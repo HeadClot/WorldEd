@@ -197,9 +197,7 @@ describe('mergeCoincidentVertices', () => {
   it('should return geometry with same vertex count', () => {
     const geometry = createTriangleOnXYPlane();
     const newGeometry = mergeCoincidentVertices(geometry, 0.1);
-    expect(newGeometry.getAttribute('position').count).toBe(
-      geometry.getAttribute('position').count,
-    );
+    expect(newGeometry.getAttribute('position').count).toBe(geometry.getAttribute('position').count);
   });
 });
 
@@ -209,6 +207,7 @@ describe('mergeCoincidentVertices', () => {
 
 /**
  * Creates a single triangle on the XY plane.
+ *
  * @returns A buffer geometry with 3 vertices.
  */
 function createTriangleOnXYPlane(): THREE.BufferGeometry {
@@ -220,6 +219,7 @@ function createTriangleOnXYPlane(): THREE.BufferGeometry {
 
 /**
  * Creates a single triangle on the XZ plane.
+ *
  * @returns A buffer geometry with 3 vertices.
  */
 function createTriangleOnXZPlane(): THREE.BufferGeometry {
@@ -231,6 +231,7 @@ function createTriangleOnXZPlane(): THREE.BufferGeometry {
 
 /**
  * Creates multiple parallel triangles on the XY plane.
+ *
  * @param count The number of faces to create.
  * @returns A buffer geometry with count faces.
  */
@@ -255,7 +256,9 @@ function createMultiFaceParallelGeometry(count: number): THREE.BufferGeometry {
 }
 
 /**
- * Creates two triangles sharing one vertex (vertex index 2 and 3 are same position).
+ * Creates two triangles sharing one vertex (vertex index 2 and 3 are same
+ * position).
+ *
  * @returns A buffer geometry with 6 vertices where vertices 2 and 3 coincide.
  */
 function createSharedVertexGeometry(): THREE.BufferGeometry {
@@ -267,6 +270,7 @@ function createSharedVertexGeometry(): THREE.BufferGeometry {
 
 /**
  * Creates geometry with two nearly coincident vertices.
+ *
  * @returns A buffer geometry with 6 vertices where 2 pairs are close together.
  */
 function createCoincidentVertexGeometry(): THREE.BufferGeometry {
@@ -278,6 +282,7 @@ function createCoincidentVertexGeometry(): THREE.BufferGeometry {
 
 /**
  * Creates geometry with well-separated vertices.
+ *
  * @returns A buffer geometry with 6 vertices far apart.
  */
 function createDistantVertexGeometry(): THREE.BufferGeometry {

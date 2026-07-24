@@ -37,14 +37,17 @@ const PANE_LAYOUTS: Readonly<Record<ViewportPaneCount, PaneLayoutDefinition>> = 
 };
 
 /**
- * Applies the selected viewport arrangement while retaining all viewport instances.
+ * Applies the selected viewport arrangement while retaining all viewport
+ * instances.
  */
 export class ViewportPaneLayout {
   private readonly viewportArea: HTMLElement;
   private readonly viewports: readonly HTMLElement[];
 
   /**
-   * Creates a layout controller for viewport containers ordered top, front, side, perspective.
+   * Creates a layout controller for viewport containers ordered top, front,
+   * side, perspective.
+   *
    * @param viewportArea Grid element that hosts the viewport containers.
    * @param viewports Viewport containers ordered top, front, side, perspective.
    */
@@ -55,6 +58,7 @@ export class ViewportPaneLayout {
 
   /**
    * Applies the requested visible-pane layout.
+   *
    * @param paneCount Number of panes to display.
    */
   apply(paneCount: ViewportPaneCount): void {
@@ -65,6 +69,7 @@ export class ViewportPaneLayout {
 
   /**
    * Updates the grid dimensions and named areas.
+   *
    * @param definition Layout definition to apply.
    */
   private applyGridDefinition(definition: PaneLayoutDefinition): void {
@@ -75,6 +80,7 @@ export class ViewportPaneLayout {
 
   /**
    * Shows only containers included by the selected layout.
+   *
    * @param visibleSlots Slot names that should remain visible.
    */
   private applyViewportVisibility(visibleSlots: readonly ViewportSlot[]): void {
@@ -85,6 +91,7 @@ export class ViewportPaneLayout {
 
   /**
    * Resolves a viewport container index to its grid slot name.
+   *
    * @param index Viewport container index.
    * @returns Corresponding named grid slot.
    */

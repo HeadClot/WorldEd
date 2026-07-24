@@ -4,6 +4,7 @@ import { SetColorCommand } from '../../src/commands/set_color_command.js';
 
 /**
  * Builds a mesh with a standard material at the given color.
+ *
  * @param colorHex Initial material color.
  * @returns A mesh ready for color command tests.
  */
@@ -14,6 +15,7 @@ function createColoredMesh(colorHex: number): THREE.Mesh {
 
 /**
  * Reads the material color hex from a mesh.
+ *
  * @param mesh Mesh with a color-bearing material.
  * @returns Color hex value.
  */

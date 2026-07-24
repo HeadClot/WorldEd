@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { CsgMeshBuilder } from '../../src/csg/csg_mesh_builder.js';
-import {
-  collectPlaneIntersectionPoints,
-  buildPlaneCapPolygon,
-} from '../../src/csg/csg_plane_cap.js';
+import { collectPlaneIntersectionPoints, buildPlaneCapPolygon } from '../../src/csg/csg_plane_cap.js';
 import { planeToCsgForm } from '../../src/csg/csg_plane_from_points.js';
 
 describe('csg_plane_cap', () => {
@@ -42,6 +39,7 @@ describe('csg_plane_cap', () => {
 
 /**
  * Creates a 2×2×2 box centered at the origin.
+ *
  * @returns A mesh ready for world-space CSG extraction.
  */
 function createUnitBoxMesh(): THREE.Mesh {

@@ -1,15 +1,13 @@
 /**
- * Configuration values controlling camera fit animation behavior.
- * Provides defaults and getters/setters for runtime tuning.
+ * Configuration values controlling camera fit animation behavior. Provides
+ * defaults and getters/setters for runtime tuning.
  */
 export class CameraAnimationConfig {
   private durationMs: number;
   private paddingFactor: number;
   private animationEnabled: boolean;
 
-  /**
-   * Creates a new animation config with default values.
-   */
+  /** Creates a new animation config with default values. */
   constructor() {
     this.durationMs = 300;
     this.paddingFactor = 1.5;
@@ -18,6 +16,7 @@ export class CameraAnimationConfig {
 
   /**
    * Returns the animation duration in milliseconds.
+   *
    * @returns The duration value.
    */
   getDurationMs(): number {
@@ -26,6 +25,7 @@ export class CameraAnimationConfig {
 
   /**
    * Sets the animation duration in milliseconds.
+   *
    * @param durationMs The new duration value (must be non-negative).
    */
   setDurationMs(durationMs: number): void {
@@ -34,6 +34,7 @@ export class CameraAnimationConfig {
 
   /**
    * Returns the padding factor applied around the bounding volume.
+   *
    * @returns The padding factor value.
    */
   getPaddingFactor(): number {
@@ -42,6 +43,7 @@ export class CameraAnimationConfig {
 
   /**
    * Sets the padding factor applied around the bounding volume.
+   *
    * @param paddingFactor The new padding factor value (must be positive).
    */
   setPaddingFactor(paddingFactor: number): void {
@@ -50,6 +52,7 @@ export class CameraAnimationConfig {
 
   /**
    * Checks whether animation is currently enabled.
+   *
    * @returns True if animations are enabled.
    */
   isAnimationEnabled(): boolean {
@@ -57,8 +60,9 @@ export class CameraAnimationConfig {
   }
 
   /**
-   * Enables or disables smooth camera animation.
-   * When disabled, cameras snap instantly to target.
+   * Enables or disables smooth camera animation. When disabled, cameras snap
+   * instantly to target.
+   *
    * @param enabled Whether animation should be enabled.
    */
   setAnimationEnabled(enabled: boolean): void {

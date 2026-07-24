@@ -2,35 +2,31 @@ import * as THREE from 'three';
 import { SceneJSON, ObjectEntry, GeometryType } from './io_types.js';
 import { BufferGeometryCodec } from './buffer_geometry_codec.js';
 import { getFaceTextureMaps } from '../texture/face_texture_storage.js';
-import {
-  resolveGeometrySourceParams,
-  resolveGeometrySourceType,
-} from '../texture/geometry_source.js';
+import { resolveGeometrySourceParams, resolveGeometrySourceType } from '../texture/geometry_source.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidModelCodec } from '../solid/io/solid_model_codec.js';
 
 /**
- * Schema version for serialized scene files.
- * Version 3 adds face texture maps and optional buffer UV channels.
+ * Schema version for serialized scene files. Version 3 adds face texture maps
+ * and optional buffer UV channels.
  */
 const SCHEMA_VERSION = 3;
 
 /**
- * Serializes a Three.js scene graph into a JSON-compatible structure.
- * Walks the object hierarchy and records geometry, transform, and hierarchy data.
+ * Serializes a Three.js scene graph into a JSON-compatible structure. Walks the
+ * object hierarchy and records geometry, transform, and hierarchy data.
  */
 export class SceneSerializer {
   private bufferGeometryCodec: BufferGeometryCodec;
 
-  /**
-   * Creates a serializer with a buffer geometry codec for custom meshes.
-   */
+  /** Creates a serializer with a buffer geometry codec for custom meshes. */
   constructor() {
     this.bufferGeometryCodec = new BufferGeometryCodec();
   }
 
   /**
    * Serializes all children of the given group into SceneJSON.
+   *
    * @param worldGroup The root group containing the scene objects.
    * @returns A SceneJSON object representing the full scene state.
    */
@@ -45,6 +41,7 @@ export class SceneSerializer {
 
   /**
    * Recursively collects object entries from the group hierarchy.
+   *
    * @param object The current object being processed.
    * @param entries The accumulating array of object entries.
    */
@@ -63,8 +60,9 @@ export class SceneSerializer {
   }
 
   /**
-   * Returns whether a child should appear in the scene file.
-   * Skips decorative edges, overlays, and other non-content objects.
+   * Returns whether a child should appear in the scene file. Skips decorative
+   * edges, overlays, and other non-content objects.
+   *
    * @param child The candidate child object.
    * @returns True for meshes and groups that represent scene content.
    */
@@ -77,6 +75,7 @@ export class SceneSerializer {
 
   /**
    * Creates an ObjectEntry for a single child object.
+   *
    * @param child The child object to serialize.
    * @param parentId The UUID of the parent container.
    * @returns A populated ObjectEntry.
@@ -96,6 +95,7 @@ export class SceneSerializer {
 
   /**
    * Builds the base entry fields shared by all object types.
+   *
    * @param object The Three.js object to extract data from.
    * @param parentId The UUID of the parent group.
    * @returns A partially filled ObjectEntry.
@@ -116,6 +116,7 @@ export class SceneSerializer {
 
   /**
    * Creates an Euler rotation from the object's current rotation.
+   *
    * @param object The object to extract rotation from.
    * @returns An Euler instance in XYZ order.
    */
@@ -125,6 +126,7 @@ export class SceneSerializer {
 
   /**
    * Extracts position data as a plain object.
+   *
    * @param object The object to extract position from.
    * @returns An object with x, y, z properties.
    */
@@ -138,6 +140,7 @@ export class SceneSerializer {
 
   /**
    * Extracts rotation data as a plain object.
+   *
    * @param euler The Euler rotation to extract.
    * @returns An object with x, y, z properties.
    */
@@ -151,6 +154,7 @@ export class SceneSerializer {
 
   /**
    * Extracts scale data as a plain object.
+   *
    * @param object The object to extract scale from.
    * @returns An object with x, y, z properties.
    */
@@ -164,6 +168,7 @@ export class SceneSerializer {
 
   /**
    * Adds mesh-specific data to a base entry.
+   *
    * @param mesh The mesh object to extract data from.
    * @param entry The base entry to enrich.
    * @returns The entry with geometry and material data populated.
@@ -183,6 +188,7 @@ export class SceneSerializer {
 
   /**
    * Attaches solid-model brush data when the object is a solid model root.
+   *
    * @param object Source object (solid model group).
    * @param entry Entry to enrich.
    */
@@ -195,6 +201,7 @@ export class SceneSerializer {
 
   /**
    * Serializes face texture mapping tables when present.
+   *
    * @param mesh Source mesh.
    * @param entry Entry to enrich.
    */
@@ -206,6 +213,7 @@ export class SceneSerializer {
 
   /**
    * Adds group-specific data to a base entry.
+   *
    * @param entry The base entry to mark as a group.
    * @returns The entry with type explicitly set to group.
    */
@@ -215,8 +223,9 @@ export class SceneSerializer {
   }
 
   /**
-   * Detects the geometry type from a Three.js geometry instance.
-   * Unknown / custom geometry is stored as buffer vertex data.
+   * Detects the geometry type from a Three.js geometry instance. Unknown /
+   * custom geometry is stored as buffer vertex data.
+   *
    * @param geometry The geometry to inspect.
    * @returns A string identifying the geometry type.
    */
@@ -225,21 +234,20 @@ export class SceneSerializer {
   }
 
   /**
-   * Extracts constructor parameters from a primitive geometry instance.
-   * Uses stamped geometrySource when the buffer was expanded for UVs.
+   * Extracts constructor parameters from a primitive geometry instance. Uses
+   * stamped geometrySource when the buffer was expanded for UVs.
+   *
    * @param geometry The geometry to extract parameters from.
    * @param _geometryType The detected geometry type.
    * @returns A record of parameter names to numeric values.
    */
-  private extractGeometryParams(
-    geometry: THREE.BufferGeometry,
-    _geometryType: GeometryType,
-  ): Record<string, number> {
+  private extractGeometryParams(geometry: THREE.BufferGeometry, _geometryType: GeometryType): Record<string, number> {
     return resolveGeometrySourceParams(geometry);
   }
 
   /**
    * Extracts the material color from a mesh.
+   *
    * @param mesh The mesh to inspect.
    * @returns The material color as a hex number, or zero if unavailable.
    */

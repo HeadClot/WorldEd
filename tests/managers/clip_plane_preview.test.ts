@@ -51,9 +51,7 @@ describe('ClipPlanePreview', () => {
     camera.position.set(0, 0, 10);
     camera.updateMatrixWorld(true);
     preview.updateMarkerScalesForCamera(camera);
-    const group = preview
-      .getRoot()
-      .children.find((child) => child instanceof THREE.Group) as THREE.Group;
+    const group = preview.getRoot().children.find((child) => child instanceof THREE.Group) as THREE.Group;
     expect(group.scale.x).toBeGreaterThan(0);
     expect(group.scale.x).toBeLessThan(5);
   });

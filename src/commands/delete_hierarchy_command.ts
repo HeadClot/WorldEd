@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
-/**
- * Snapshot of a hierarchy node removed from the scene.
- */
+/** Snapshot of a hierarchy node removed from the scene. */
 export interface HierarchyDeleteSnapshot {
   object: THREE.Object3D;
   parent: THREE.Object3D | null;
@@ -20,7 +18,9 @@ export class DeleteHierarchyCommand implements UndoCommand {
 
   /**
    * Creates a hierarchy delete command.
-   * @param objects Root objects to remove (already collapsed to hierarchy roots).
+   *
+   * @param objects Root objects to remove (already collapsed to hierarchy
+   *   roots).
    */
   constructor(objects: THREE.Object3D[]) {
     this.snapshots = objects.map((object) => ({
@@ -31,9 +31,7 @@ export class DeleteHierarchyCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Removes each object from its parent.
-   */
+  /** Removes each object from its parent. */
   execute(): void {
     if (this.executed) return;
     this.snapshots.forEach((snapshot) => {
@@ -44,9 +42,7 @@ export class DeleteHierarchyCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores each object to its original parent and sibling index.
-   */
+  /** Restores each object to its original parent and sibling index. */
   undo(): void {
     if (!this.executed) return;
     this.snapshots.forEach((snapshot) => {

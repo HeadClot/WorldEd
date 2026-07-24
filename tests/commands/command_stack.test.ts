@@ -2,9 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { UndoCommand } from '../../src/commands/undo_command.js';
 import { CommandStack, CommandStackChangedCallback } from '../../src/commands/command_stack.js';
 
-/**
- * A test command that tracks whether execute/undo was called.
- */
+/** A test command that tracks whether execute/undo was called. */
 class TestCommand implements UndoCommand {
   private executeCount = 0;
   private undoCount = 0;
@@ -35,9 +33,7 @@ class TestCommand implements UndoCommand {
   }
 }
 
-/**
- * A test command that also tracks dispose calls for resource cleanup.
- */
+/** A test command that also tracks dispose calls for resource cleanup. */
 class DisposableTestCommand extends TestCommand {
   private disposeCount = 0;
 

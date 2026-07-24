@@ -4,15 +4,13 @@ import { CreatePrimitiveCommand } from '../commands/create_primitive_command.js'
 import { CommandStack } from '../commands/command_stack.js';
 import { SelectionManager } from './selection_manager.js';
 
-/**
- * Callback invoked after a primitive is created and added to the scene.
- */
+/** Callback invoked after a primitive is created and added to the scene. */
 export type PrimitiveCreatedCallback = () => void;
 
 /**
- * Handles toolbar button actions for creating primitive objects.
- * Delegates primitive creation to the PrimitiveCreationTool and manages
- * command stacking, viewport sync, and selection updates.
+ * Handles toolbar button actions for creating primitive objects. Delegates
+ * primitive creation to the PrimitiveCreationTool and manages command stacking,
+ * viewport sync, and selection updates.
  */
 export class PrimitiveCreationHandler {
   private primitiveTool: PrimitiveCreationTool;
@@ -23,6 +21,7 @@ export class PrimitiveCreationHandler {
 
   /**
    * Creates a new primitive creation handler.
+   *
    * @param primitiveTool The tool that creates primitive meshes.
    * @param worldObject The root group that receives new primitives.
    * @param commandStack The command stack for undo support.
@@ -43,15 +42,14 @@ export class PrimitiveCreationHandler {
 
   /**
    * Sets the callback invoked after any primitive is created.
+   *
    * @param callback The function to call after primitive creation.
    */
   setOnPrimitiveCreated(callback: PrimitiveCreatedCallback | null): void {
     this.onPrimitiveCreated = callback;
   }
 
-  /**
-   * Creates a cube primitive and registers it with the command stack.
-   */
+  /** Creates a cube primitive and registers it with the command stack. */
   createCube(): void {
     this.createPrimitive(
       () => this.primitiveTool.createBox(1, 1, 1),
@@ -61,9 +59,7 @@ export class PrimitiveCreationHandler {
     );
   }
 
-  /**
-   * Creates a sphere primitive and registers it with the command stack.
-   */
+  /** Creates a sphere primitive and registers it with the command stack. */
   createSphere(): void {
     this.createPrimitive(
       () => this.primitiveTool.createSphere(0.5),
@@ -73,9 +69,7 @@ export class PrimitiveCreationHandler {
     );
   }
 
-  /**
-   * Creates a cylinder primitive and registers it with the command stack.
-   */
+  /** Creates a cylinder primitive and registers it with the command stack. */
   createCylinder(): void {
     this.createPrimitive(
       () => this.primitiveTool.createCylinder(0.5, 0.5, 1),
@@ -85,9 +79,7 @@ export class PrimitiveCreationHandler {
     );
   }
 
-  /**
-   * Creates a plane primitive and registers it with the command stack.
-   */
+  /** Creates a plane primitive and registers it with the command stack. */
   createPlane(): void {
     this.createPrimitive(
       () => this.primitiveTool.createPlane(2, 2),
@@ -97,6 +89,7 @@ export class PrimitiveCreationHandler {
 
   /**
    * Generic primitive creation flow with post-creation configuration.
+   *
    * @param factory Function that creates the primitive mesh.
    * @param configure Function that configures the created mesh.
    */
@@ -109,9 +102,7 @@ export class PrimitiveCreationHandler {
     this.selectionManager.selectObject(mesh);
   }
 
-  /**
-   * Triggers the viewport sync and outliner refresh after primitive creation.
-   */
+  /** Triggers the viewport sync and outliner refresh after primitive creation. */
   private onPrimitiveCreatedCallback(): void {
     if (this.onPrimitiveCreated) {
       this.onPrimitiveCreated();

@@ -5,7 +5,8 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 
 /**
- * Solid result UVs must be baked per coplanar face, not one projection for the whole cube.
+ * Solid result UVs must be baked per coplanar face, not one projection for the
+ * whole cube.
  */
 describe('Solid result UV projection', () => {
   it('creates one face map region per cube side (six coplanar groups)', () => {

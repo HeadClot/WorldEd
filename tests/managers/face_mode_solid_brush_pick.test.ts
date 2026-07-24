@@ -8,9 +8,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 
-/**
- * Minimal viewport stand-in for face mode coordinator wiring.
- */
+/** Minimal viewport stand-in for face mode coordinator wiring. */
 class MockViewport {
   private camera: THREE.PerspectiveCamera;
   private renderer: { domElement: HTMLCanvasElement };
@@ -39,9 +37,7 @@ class MockViewport {
   }
 }
 
-/**
- * Face mode must not pick solid brush volume helpers (esp. subtractive hulls).
- */
+/** Face mode must not pick solid brush volume helpers (esp. subtractive hulls). */
 describe('Face mode excludes solid brush helpers', () => {
   let worldObject: THREE.Group;
   let coordinator: FaceModeCoordinator;

@@ -28,6 +28,7 @@ export class SettingsUpdaterTab {
 
   /**
    * Creates the updater tab.
+   *
    * @param store Shared settings store for the automatic-check preference.
    * @param service Release service used to check and install updates.
    */
@@ -52,6 +53,7 @@ export class SettingsUpdaterTab {
 
   /**
    * Returns the updater tab root.
+   *
    * @returns Root panel element.
    */
   getElement(): HTMLElement {
@@ -140,8 +142,7 @@ export class SettingsUpdaterTab {
 
   /** Renders the state shown by a normal browser build. */
   private renderBrowserMessage(): void {
-    this.detailLabel.textContent =
-      'Automatic installation is available only in standalone executable builds.';
+    this.detailLabel.textContent = 'Automatic installation is available only in standalone executable builds.';
     this.actionHost.replaceChildren(this.createReleasePageLink());
   }
 
@@ -165,20 +166,17 @@ export class SettingsUpdaterTab {
   /** Renders the initial standalone state. */
   private renderReadyState(): void {
     this.detailLabel.textContent = 'Checks the configured release channel for a newer executable.';
-    this.actionHost.replaceChildren(
-      createSettingsButton('Check for updates', () => void this.checkForUpdates()),
-    );
+    this.actionHost.replaceChildren(createSettingsButton('Check for updates', () => void this.checkForUpdates()));
   }
 
   /**
    * Creates actions appropriate for a completed result.
+   *
    * @param result Completed updater result.
    * @returns Action controls for the result.
    */
   private createResultActions(result: UpdateCheckResult): HTMLElement[] {
-    const actions: HTMLElement[] = [
-      createSettingsSecondaryButton('Check again', () => void this.checkForUpdates()),
-    ];
+    const actions: HTMLElement[] = [createSettingsSecondaryButton('Check again', () => void this.checkForUpdates())];
     if (result.status === 'update-available') actions.unshift(this.createInstallButton());
     return actions;
   }
@@ -197,39 +195,37 @@ export class SettingsUpdaterTab {
       await this.service.installUpdate(this.lastResult);
       this.detailLabel.textContent = 'Update installed. Restarting…';
     } catch (error) {
-      this.detailLabel.textContent =
-        error instanceof Error ? error.message : 'The update could not be installed.';
+      this.detailLabel.textContent = error instanceof Error ? error.message : 'The update could not be installed.';
       this.renderResultActionsAfterInstallFailure();
     }
   }
 
   /** Restores retry controls when installation fails. */
   private renderResultActionsAfterInstallFailure(): void {
-    if (this.lastResult)
-      this.actionHost.replaceChildren(...this.createResultActions(this.lastResult));
+    if (this.lastResult) this.actionHost.replaceChildren(...this.createResultActions(this.lastResult));
   }
 
   /**
    * Converts a result status into concise UI text.
+   *
    * @param result Updater result to describe.
    * @returns Concise status text.
    */
   private describeResult(result: UpdateCheckResult): string {
-    if (result.status === 'update-available')
-      return `Version ${result.latestRelease?.version} is ready to install.`;
+    if (result.status === 'update-available') return `Version ${result.latestRelease?.version} is ready to install.`;
     return result.message ?? this.describeKnownStatus(result);
   }
 
   /**
    * Describes statuses that do not carry a server message.
+   *
    * @param result Updater result to describe.
    * @returns Known status text.
    */
   private describeKnownStatus(result: UpdateCheckResult): string {
     if (result.status === 'up-to-date') return 'You are using the latest compatible release.';
     if (result.status === 'no-release') return 'No published releases are available yet.';
-    if (result.status === 'no-compatible-asset')
-      return 'The latest release has no compatible executable.';
+    if (result.status === 'no-compatible-asset') return 'The latest release has no compatible executable.';
     return 'The release check failed.';
   }
 

@@ -8,9 +8,10 @@
  */
 export class SolidUpdateSetBuilder {
   /**
-   * Expands seed dirty brush ids into the full recompile set.
-   * Includes brushes that previously touched a seed and brushes that touch a
-   * seed under the current overlap graph (direct neighbors only).
+   * Expands seed dirty brush ids into the full recompile set. Includes brushes
+   * that previously touched a seed and brushes that touch a seed under the
+   * current overlap graph (direct neighbors only).
+   *
    * @param seedDirtyIds Brushes known to have changed.
    * @param preparedBrushIds All visible brush ids in tree order.
    * @param currentTouchIdsByBrushId Current overlap peers keyed by brush id.
@@ -37,6 +38,7 @@ export class SolidUpdateSetBuilder {
 
   /**
    * Adds peer ids into the update set when defined.
+   *
    * @param updateSet Accumulator set.
    * @param peerIds Optional peer list.
    */

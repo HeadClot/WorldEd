@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Undoable command that creates one or more convex prism objects from face extrudes.
- * Source meshes are never modified — each extrude spawns a new solid.
+ * Undoable command that creates one or more convex prism objects from face
+ * extrudes. Source meshes are never modified — each extrude spawns a new
+ * solid.
  */
 export class ExtrudeFacesCommand implements UndoCommand {
   private createdMeshes: THREE.Mesh[];
@@ -12,6 +13,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
 
   /**
    * Creates a command that parents newly built extrusion meshes.
+   *
    * @param createdMeshes The convex prism meshes produced by the extrude.
    * @param parent The scene root or group that will own the new meshes.
    */
@@ -21,9 +23,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
     this.isDisposed = false;
   }
 
-  /**
-   * Adds every extruded mesh to the parent if not already present.
-   */
+  /** Adds every extruded mesh to the parent if not already present. */
   execute(): void {
     if (this.isDisposed) return;
     this.createdMeshes.forEach((mesh) => {
@@ -32,9 +32,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
     });
   }
 
-  /**
-   * Removes every extruded mesh from the scene without disposing resources.
-   */
+  /** Removes every extruded mesh from the scene without disposing resources. */
   undo(): void {
     if (this.isDisposed) return;
     this.createdMeshes.forEach((mesh) => {
@@ -46,6 +44,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
 
   /**
    * Returns all meshes created by this extrude.
+   *
    * @returns The new convex prism meshes.
    */
   getCreatedMeshes(): THREE.Mesh[] {
@@ -54,6 +53,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
 
   /**
    * Returns the first created mesh, if any (compatibility helper).
+   *
    * @returns The first mesh, or null.
    */
   getCreatedMesh(): THREE.Mesh | null {
@@ -61,7 +61,8 @@ export class ExtrudeFacesCommand implements UndoCommand {
   }
 
   /**
-   * Disposes geometry and materials of all created meshes when permanently dropped.
+   * Disposes geometry and materials of all created meshes when permanently
+   * dropped.
    */
   dispose(): void {
     if (this.isDisposed) return;
@@ -72,6 +73,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
 
   /**
    * Removes and disposes a single created mesh.
+   *
    * @param mesh The mesh to dispose.
    */
   private disposeMesh(mesh: THREE.Mesh): void {
@@ -91,6 +93,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
 
   /**
    * Disposes a material or material array.
+   *
    * @param material Material(s) to dispose.
    */
   private disposeMaterial(material: THREE.Material | THREE.Material[]): void {

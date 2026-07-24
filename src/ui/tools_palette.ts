@@ -5,9 +5,7 @@ import { EditorToolId } from '../types/editor_tool_id.js';
 import { TransformMode } from '../types/transform_mode.js';
 import { FloatingPanelStack } from './floating_panel_stack.js';
 
-/**
- * Callbacks the Tools palette uses for tool activation and context actions.
- */
+/** Callbacks the Tools palette uses for tool activation and context actions. */
 export interface ToolsPaletteHandlers {
   onSelectTool: (toolId: EditorToolId) => void;
   onTransformMode: (mode: TransformMode) => void;
@@ -19,8 +17,9 @@ export interface ToolsPaletteHandlers {
 }
 
 /**
- * Floating tool palette with context-sensitive actions per active tool.
- * Object mode shows transform modes; face mode shows UV/extrude; clip shows cut actions.
+ * Floating tool palette with context-sensitive actions per active tool. Object
+ * mode shows transform modes; face mode shows UV/extrude; clip shows cut
+ * actions.
  */
 export class ToolsPalette {
   private root: HTMLElement;
@@ -47,15 +46,12 @@ export class ToolsPalette {
 
   /**
    * Creates a tools palette attached to the host element.
+   *
    * @param host Parent element (editor root).
    * @param handlers Tool and context action callbacks.
    * @param defaultAnchor Element whose top-left is the default panel position.
    */
-  constructor(
-    host: HTMLElement,
-    handlers: ToolsPaletteHandlers,
-    defaultAnchor: HTMLElement | null = null,
-  ) {
+  constructor(host: HTMLElement, handlers: ToolsPaletteHandlers, defaultAnchor: HTMLElement | null = null) {
     this.host = host;
     this.handlers = handlers;
     this.defaultAnchor = defaultAnchor;
@@ -86,15 +82,14 @@ export class ToolsPalette {
 
   /**
    * Sets the element used for the default open position.
+   *
    * @param anchor Viewport or other container element, or null for host.
    */
   setDefaultAnchor(anchor: HTMLElement | null): void {
     this.defaultAnchor = anchor;
   }
 
-  /**
-   * Shows the palette at the default anchor (top-left of the 3D viewport).
-   */
+  /** Shows the palette at the default anchor (top-left of the 3D viewport). */
   show(): void {
     if (this.isVisible) {
       FloatingPanelStack.bringToFront(this.root);
@@ -108,6 +103,7 @@ export class ToolsPalette {
 
   /**
    * Hides the palette.
+   *
    * @param _force Kept for call-site compatibility; always hides.
    */
   hide(_force: boolean = false): void {
@@ -116,9 +112,7 @@ export class ToolsPalette {
     this.root.style.display = 'none';
   }
 
-  /**
-   * Toggles visibility.
-   */
+  /** Toggles visibility. */
   toggle(): void {
     if (this.isVisible) {
       this.hide(true);
@@ -129,6 +123,7 @@ export class ToolsPalette {
 
   /**
    * Returns whether the panel is visible.
+   *
    * @returns True when open.
    */
   isOpen(): boolean {
@@ -137,6 +132,7 @@ export class ToolsPalette {
 
   /**
    * Returns the currently active tool id.
+   *
    * @returns Active EditorToolId.
    */
   getActiveTool(): EditorToolId {
@@ -145,6 +141,7 @@ export class ToolsPalette {
 
   /**
    * Returns the highlighted transform mode.
+   *
    * @returns Active TransformMode.
    */
   getActiveTransformMode(): TransformMode {
@@ -153,6 +150,7 @@ export class ToolsPalette {
 
   /**
    * Updates which tool icon appears selected and swaps the context panel.
+   *
    * @param toolId Tool to highlight.
    */
   setActiveTool(toolId: EditorToolId): void {
@@ -167,6 +165,7 @@ export class ToolsPalette {
 
   /**
    * Highlights the active transform mode among object-context buttons.
+   *
    * @param mode Transform mode to mark active.
    */
   setActiveTransformMode(mode: TransformMode): void {
@@ -178,6 +177,7 @@ export class ToolsPalette {
 
   /**
    * Updates the contextual status line under the tool strip.
+   *
    * @param message Status text.
    */
   setContextStatus(message: string): void {
@@ -186,6 +186,7 @@ export class ToolsPalette {
 
   /**
    * Enables or disables clip action buttons when a plane is ready.
+   *
    * @param enabled Whether Flip/Clip/Split can be pressed.
    */
   setClipActionsEnabled(enabled: boolean): void {
@@ -198,9 +199,7 @@ export class ToolsPalette {
     this.splitButton.style.opacity = opacity;
   }
 
-  /**
-   * Disposes the palette and removes it from the DOM.
-   */
+  /** Disposes the palette and removes it from the DOM. */
   dispose(): void {
     this.hide(true);
     this.root.remove();
@@ -208,6 +207,7 @@ export class ToolsPalette {
 
   /**
    * Builds the root panel element.
+   *
    * @returns Styled root.
    */
   private buildRoot(): HTMLElement {
@@ -221,6 +221,7 @@ export class ToolsPalette {
 
   /**
    * Applies chrome styles to the floating panel.
+   *
    * @param root Panel root.
    */
   private styleRoot(root: HTMLElement): void {
@@ -240,7 +241,9 @@ export class ToolsPalette {
   }
 
   /**
-   * Raises this panel above other floating windows when the user interacts with it.
+   * Raises this panel above other floating windows when the user interacts with
+   * it.
+   *
    * @param root Panel root element.
    */
   private bindBringToFrontOnPointer(root: HTMLElement): void {
@@ -251,6 +254,7 @@ export class ToolsPalette {
 
   /**
    * Builds the draggable title bar with close control.
+   *
    * @returns Title bar element.
    */
   private buildTitleBar(): HTMLElement {
@@ -285,6 +289,7 @@ export class ToolsPalette {
 
   /**
    * Builds the primary tool mode grid (always visible).
+   *
    * @returns Grid element.
    */
   private buildToolGrid(): HTMLElement {
@@ -301,17 +306,13 @@ export class ToolsPalette {
 
   /**
    * Adds one primary tool button to the grid.
+   *
    * @param grid Parent grid.
    * @param toolId Tool identifier.
    * @param title Tooltip label.
    * @param svgIcon SVG markup.
    */
-  private addToolButton(
-    grid: HTMLElement,
-    toolId: EditorToolId,
-    title: string,
-    svgIcon: string,
-  ): void {
+  private addToolButton(grid: HTMLElement, toolId: EditorToolId, title: string, svgIcon: string): void {
     const button = this.createIconActionButton(title, svgIcon, () => {
       this.handlers.onSelectTool(toolId);
     });
@@ -322,6 +323,7 @@ export class ToolsPalette {
 
   /**
    * Builds the contextual section that swaps content per tool.
+   *
    * @returns Context section element.
    */
   private buildContextSection(): HTMLElement {
@@ -346,9 +348,7 @@ export class ToolsPalette {
     return section;
   }
 
-  /**
-   * Builds object-select context: Bounds / Move / Rotate / Scale.
-   */
+  /** Builds object-select context: Bounds / Move / Rotate / Scale. */
   private buildObjectContext(): void {
     this.styleContextPanel(this.objectContext, 'object');
     const row = document.createElement('div');
@@ -362,9 +362,7 @@ export class ToolsPalette {
     this.objectContext.appendChild(row);
   }
 
-  /**
-   * Builds face-select context: UV Editor and Extrude.
-   */
+  /** Builds face-select context: UV Editor and Extrude. */
   private buildFaceContext(): void {
     this.styleContextPanel(this.faceContext, 'face');
     const row = document.createElement('div');
@@ -384,9 +382,7 @@ export class ToolsPalette {
     this.faceContext.appendChild(row);
   }
 
-  /**
-   * Builds clip-plane context: Flip / Clip / Split.
-   */
+  /** Builds clip-plane context: Flip / Clip / Split. */
   private buildClipContext(): void {
     this.styleContextPanel(this.clipContext, 'clip');
     const row = document.createElement('div');
@@ -409,6 +405,7 @@ export class ToolsPalette {
 
   /**
    * Applies shared layout styles to a context panel container.
+   *
    * @param panel Context panel element.
    * @param contextName Stable data attribute used by tests and tooling.
    */
@@ -421,6 +418,7 @@ export class ToolsPalette {
 
   /**
    * Shows only the context panel matching the active tool.
+   *
    * @param toolId Active tool id.
    */
   private updateContextVisibility(toolId: EditorToolId): void {
@@ -431,17 +429,13 @@ export class ToolsPalette {
 
   /**
    * Adds a transform mode icon button to the object context row.
+   *
    * @param row Parent row.
    * @param mode Transform mode.
    * @param title Tooltip including shortcut.
    * @param svgIcon Icon markup.
    */
-  private addTransformButton(
-    row: HTMLElement,
-    mode: TransformMode,
-    title: string,
-    svgIcon: string,
-  ): void {
+  private addTransformButton(row: HTMLElement, mode: TransformMode, title: string, svgIcon: string): void {
     const button = this.createIconActionButton(title, svgIcon, () => {
       this.handlers.onTransformMode(mode);
     });
@@ -452,16 +446,13 @@ export class ToolsPalette {
 
   /**
    * Creates a square icon action button used in tool strips.
+   *
    * @param title Accessible name and tooltip.
    * @param svgIcon SVG markup.
    * @param onClick Click handler.
    * @returns Configured button.
    */
-  private createIconActionButton(
-    title: string,
-    svgIcon: string,
-    onClick: () => void,
-  ): HTMLButtonElement {
+  private createIconActionButton(title: string, svgIcon: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.title = title;
@@ -483,6 +474,7 @@ export class ToolsPalette {
 
   /**
    * Creates a labeled text action button for context panels.
+   *
    * @param label Visible label.
    * @param onClick Click handler.
    * @returns Configured button.
@@ -495,6 +487,7 @@ export class ToolsPalette {
 
   /**
    * Styles a tool or transform button active or idle state.
+   *
    * @param button Button element.
    * @param active Whether the control is selected.
    */
@@ -502,23 +495,18 @@ export class ToolsPalette {
     button.style.border = active
       ? `1px solid ${hexToRgb(Theme.selectionColor)}`
       : `1px solid ${Theme.inputBorderColor}`;
-    button.style.background = active
-      ? 'rgba(232, 106, 23, 0.28)'
-      : hexToRgb(Theme.buttonBackground);
+    button.style.background = active ? 'rgba(232, 106, 23, 0.28)' : hexToRgb(Theme.buttonBackground);
     button.style.color = Theme.buttonTextColor;
   }
 
   /**
    * Configures a contextual text action button.
+   *
    * @param button Button element.
    * @param label Visible label.
    * @param onClick Click handler.
    */
-  private configureActionButton(
-    button: HTMLButtonElement,
-    label: string,
-    onClick: () => void,
-  ): void {
+  private configureActionButton(button: HTMLButtonElement, label: string, onClick: () => void): void {
     button.type = 'button';
     button.textContent = label;
     button.style.flex = '1';
@@ -538,6 +526,7 @@ export class ToolsPalette {
 
   /**
    * Formats the context header for a tool.
+   *
    * @param toolId Active tool.
    * @returns Display title.
    */
@@ -549,6 +538,7 @@ export class ToolsPalette {
 
   /**
    * Formats shortcut hints for a tool.
+   *
    * @param toolId Active tool.
    * @returns Hint text.
    */
@@ -564,6 +554,7 @@ export class ToolsPalette {
 
   /**
    * Applies muted label styles used for headers and status lines.
+   *
    * @param label Label element.
    * @param emphasize Whether to use stronger weight and color.
    */
@@ -577,6 +568,7 @@ export class ToolsPalette {
 
   /**
    * Styles a small title-bar button.
+   *
    * @param button Button element.
    */
   private styleSmallButton(button: HTMLButtonElement): void {
@@ -606,6 +598,7 @@ export class ToolsPalette {
 
   /**
    * Binds title-bar drag movement.
+   *
    * @param bar Title bar element.
    */
   private bindDrag(bar: HTMLElement): void {

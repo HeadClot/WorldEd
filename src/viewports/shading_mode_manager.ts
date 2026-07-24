@@ -4,26 +4,22 @@ import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlig
 import { BOUNDS_FACE_USERDATA_KEY } from '../types/bounds_face.js';
 import { SOLID_BRUSH_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 
-/**
- * Content-material snapshot for one mesh (supports multi-material arrays).
- */
+/** Content-material snapshot for one mesh (supports multi-material arrays). */
 interface MaterialSnapshot {
   materials: THREE.Material | THREE.Material[];
   wireframeFlags: boolean | boolean[];
 }
 
-/**
- * Group names used by editor gizmos that must never receive shading overrides.
- */
+/** Group names used by editor gizmos that must never receive shading overrides. */
 const EXEMPT_GROUP_NAMES = new Set(['transform_gizmo', 'transform_gizmo_viewport', 'bounds_gizmo']);
 
 /**
- * Manages material overrides for viewport shading modes.
- * Content materials (including per-object textures) are the source of truth.
- * Snapshots are refreshed from live meshes while in SOLID so texture rebuilds
- * are never overwritten by stale pre-texture material references.
- * FLAT mode shows unlit albedo (color × map) at full brightness — no lighting.
- * WIREFRAME mode hides surface fill so only decorative edge outlines remain.
+ * Manages material overrides for viewport shading modes. Content materials
+ * (including per-object textures) are the source of truth. Snapshots are
+ * refreshed from live meshes while in SOLID so texture rebuilds are never
+ * overwritten by stale pre-texture material references. FLAT mode shows unlit
+ * albedo (color × map) at full brightness — no lighting. WIREFRAME mode hides
+ * surface fill so only decorative edge outlines remain.
  */
 export class ShadingModeManager {
   private viewportScene: THREE.Scene;
@@ -33,6 +29,7 @@ export class ShadingModeManager {
 
   /**
    * Creates a new shading mode manager for the given scene.
+   *
    * @param viewportScene The Three.js scene to manage shading for.
    */
   constructor(viewportScene: THREE.Scene) {
@@ -43,10 +40,10 @@ export class ShadingModeManager {
   }
 
   /**
-   * Captures content materials from the scene.
-   * In SOLID mode, always refreshes snapshots from live meshes so texture
-   * assignment and material rebuilds stick across shading refreshes.
-   * In override modes, only adds snapshots for meshes not yet recorded.
+   * Captures content materials from the scene. In SOLID mode, always refreshes
+   * snapshots from live meshes so texture assignment and material rebuilds
+   * stick across shading refreshes. In override modes, only adds snapshots for
+   * meshes not yet recorded.
    */
   snapshotMaterials(): void {
     const meshes = this.collectContentMeshes();
@@ -63,6 +60,7 @@ export class ShadingModeManager {
 
   /**
    * Applies the specified shading mode to content meshes in the viewport scene.
+   *
    * @param mode The shading mode to apply.
    */
   setMode(mode: ShadingMode): void {
@@ -78,7 +76,9 @@ export class ShadingModeManager {
   }
 
   /**
-   * Returns true when an object is an editor helper that must keep its own materials.
+   * Returns true when an object is an editor helper that must keep its own
+   * materials.
+   *
    * @param object The object to inspect.
    * @returns True when shading modes must ignore this object.
    */
@@ -88,9 +88,7 @@ export class ShadingModeManager {
     return this.isDescendantOfExemptGroup(object);
   }
 
-  /**
-   * Cleans up resources held by this manager.
-   */
+  /** Cleans up resources held by this manager. */
   dispose(): void {
     this.restoreContentMaterials();
     this.ownedOverrideMaterials.clear();
@@ -99,6 +97,7 @@ export class ShadingModeManager {
 
   /**
    * Collects content meshes only, excluding editor helpers and gizmos.
+   *
    * @returns An array of meshes that participate in shading modes.
    */
   private collectContentMeshes(): THREE.Mesh[] {
@@ -113,6 +112,7 @@ export class ShadingModeManager {
 
   /**
    * Checks userData flags used by gizmos, selection, and overlays.
+   *
    * @param object The object to inspect.
    * @returns True when a known helper flag is present.
    */
@@ -136,6 +136,7 @@ export class ShadingModeManager {
    * Checks object names used by bounds gizmo parts and transform/bounds roots.
    * Matches bounds handle/face/wireframe names and EXEMPT_GROUP_NAMES
    * (transform_gizmo, transform_gizmo_viewport, bounds_gizmo).
+   *
    * @param name The object name.
    * @returns True when the name marks an editor helper.
    */
@@ -149,6 +150,7 @@ export class ShadingModeManager {
 
   /**
    * Walks parents looking for a transform or bounds gizmo root.
+   *
    * @param object The starting object.
    * @returns True when any ancestor is an exempt gizmo group.
    */
@@ -163,6 +165,7 @@ export class ShadingModeManager {
 
   /**
    * Stores the mesh's current materials as its content snapshot.
+   *
    * @param mesh Mesh to capture.
    */
   private captureContentSnapshot(mesh: THREE.Mesh): void {
@@ -182,9 +185,7 @@ export class ShadingModeManager {
     });
   }
 
-  /**
-   * Restores every snapshotted mesh to its content materials.
-   */
+  /** Restores every snapshotted mesh to its content materials. */
   private restoreContentMaterials(): void {
     this.disposeOwnedOverrideMaterials();
     this.materialSnapshots.forEach((snapshot, meshUuid) => {
@@ -196,6 +197,7 @@ export class ShadingModeManager {
 
   /**
    * Finds a mesh in the viewport scene by its UUID.
+   *
    * @param uuid The mesh UUID to search for.
    * @returns The mesh if found, or null otherwise.
    */
@@ -211,6 +213,7 @@ export class ShadingModeManager {
 
   /**
    * Restores a mesh to its content material and wireframe flags.
+   *
    * @param mesh The mesh to restore.
    * @param snapshot The content material snapshot.
    */
@@ -234,20 +237,18 @@ export class ShadingModeManager {
     const meshes = this.collectContentMeshes();
     meshes.forEach((mesh) => {
       const contentMaterials = this.getContentMaterialsForMesh(mesh);
-      const outlineOnlyMaterials = contentMaterials.map((source) =>
-        this.createOutlineOnlySurfaceMaterial(source),
-      );
+      const outlineOnlyMaterials = contentMaterials.map((source) => this.createOutlineOnlySurfaceMaterial(source));
       outlineOnlyMaterials.forEach((material) => {
         this.ownedOverrideMaterials.add(material);
       });
-      mesh.material =
-        outlineOnlyMaterials.length === 1 ? outlineOnlyMaterials[0] : outlineOnlyMaterials;
+      mesh.material = outlineOnlyMaterials.length === 1 ? outlineOnlyMaterials[0] : outlineOnlyMaterials;
     });
   }
 
   /**
-   * Builds a surface material that contributes depth but no color.
-   * Decorative edge LineSegments on the mesh provide the visible outlines.
+   * Builds a surface material that contributes depth but no color. Decorative
+   * edge LineSegments on the mesh provide the visible outlines.
+   *
    * @param source Content material used only for side/culling settings.
    * @returns MeshBasicMaterial with color writes disabled.
    */
@@ -271,9 +272,7 @@ export class ShadingModeManager {
     const meshes = this.collectContentMeshes();
     meshes.forEach((mesh) => {
       const contentMaterials = this.getContentMaterialsForMesh(mesh);
-      const flatMaterials = contentMaterials.map((source) =>
-        this.createUnlitAlbedoMaterial(source),
-      );
+      const flatMaterials = contentMaterials.map((source) => this.createUnlitAlbedoMaterial(source));
       flatMaterials.forEach((material) => {
         this.ownedOverrideMaterials.add(material);
       });
@@ -283,6 +282,7 @@ export class ShadingModeManager {
 
   /**
    * Resolves content materials for a mesh (snapshot preferred, else live).
+   *
    * @param mesh Mesh to inspect.
    * @returns Content material list.
    */
@@ -298,6 +298,7 @@ export class ShadingModeManager {
 
   /**
    * Builds an unlit material that shows the source albedo at full brightness.
+   *
    * @param source Content material to mirror.
    * @returns MeshBasicMaterial with color and map from source.
    */
@@ -313,9 +314,7 @@ export class ShadingModeManager {
     });
   }
 
-  /**
-   * Disposes override materials created for FLAT or WIREFRAME modes.
-   */
+  /** Disposes override materials created for FLAT or WIREFRAME modes. */
   private disposeOwnedOverrideMaterials(): void {
     this.ownedOverrideMaterials.forEach((material) => {
       if ('map' in material) {
@@ -329,6 +328,7 @@ export class ShadingModeManager {
 
 /**
  * Reads a material color hex when present.
+ *
  * @param material Material to inspect.
  * @returns Color hex, default white.
  */
@@ -341,6 +341,7 @@ function readMaterialColorHex(material: THREE.Material): number {
 
 /**
  * Reads a material diffuse map when present.
+ *
  * @param material Material to inspect.
  * @returns Texture or null.
  */

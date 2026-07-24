@@ -2,17 +2,12 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 import { SolidBrushEdgeFader } from '../../src/solid/model/solid_brush_edge_fader.js';
-import {
-  BRUSH_EDGE_FADE_FAR,
-  BRUSH_EDGE_FADE_NEAR,
-} from '../../src/solid/model/solid_brush_edge_materials.js';
+import { BRUSH_EDGE_FADE_FAR, BRUSH_EDGE_FADE_NEAR } from '../../src/solid/model/solid_brush_edge_materials.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_edge_materials.js';
 import { SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_visual.js';
 
-/**
- * Unit tests for perspective brush edge distance culling.
- */
+/** Unit tests for perspective brush edge distance culling. */
 describe('SolidBrushEdgeFader', () => {
   it('hides edge passes for brushes beyond the fade distance', () => {
     const root = new THREE.Group();
@@ -64,6 +59,7 @@ describe('SolidBrushEdgeFader', () => {
 
 /**
  * Collects decorative edge line children of a brush mesh.
+ *
  * @param mesh Brush preview mesh.
  * @returns Edge line segments.
  */
@@ -76,26 +72,24 @@ function collectEdges(mesh: THREE.Mesh): THREE.LineSegments[] {
 
 /**
  * Finds the front (non-occluded) edge pass on a brush.
+ *
  * @param mesh Brush preview mesh.
  * @returns Front edge line segments.
  */
 function findFrontEdge(mesh: THREE.Mesh): THREE.LineSegments {
-  const edge = collectEdges(mesh).find(
-    (child) => child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] !== true,
-  );
+  const edge = collectEdges(mesh).find((child) => child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] !== true);
   if (!edge) throw new Error('missing front edge');
   return edge;
 }
 
 /**
  * Finds the occluded edge pass on a brush.
+ *
  * @param mesh Brush preview mesh.
  * @returns Occluded edge line segments.
  */
 function findOccludedEdge(mesh: THREE.Mesh): THREE.LineSegments {
-  const edge = collectEdges(mesh).find(
-    (child) => child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true,
-  );
+  const edge = collectEdges(mesh).find((child) => child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true);
   if (!edge) throw new Error('missing occluded edge');
   return edge;
 }

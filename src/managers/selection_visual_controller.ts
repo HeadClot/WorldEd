@@ -9,9 +9,9 @@ import { Viewport2D } from '../viewports/viewport_2d.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 
 /**
- * Owns selection outline instances across all viewports.
- * Keeps orange outlines glued to meshes during live transforms and after clone rebuilds.
- * Also toggles solid-brush hull fills so only selected brushes draw translucent volumes.
+ * Owns selection outline instances across all viewports. Keeps orange outlines
+ * glued to meshes during live transforms and after clone rebuilds. Also toggles
+ * solid-brush hull fills so only selected brushes draw translucent volumes.
  */
 export class SelectionVisualController {
   private selectionManager: SelectionManager;
@@ -21,6 +21,7 @@ export class SelectionVisualController {
 
   /**
    * Creates a selection visual controller.
+   *
    * @param selectionManager The shared selection state.
    * @param viewportSyncManager Used to find 2D clone meshes for a world mesh.
    */
@@ -32,7 +33,9 @@ export class SelectionVisualController {
   }
 
   /**
-   * Creates highlight instances for each viewport and wires selection change updates.
+   * Creates highlight instances for each viewport and wires selection change
+   * updates.
+   *
    * @param viewports All editor viewports that need selection outlines.
    */
   wireViewports(viewports: Array<Viewport3D | Viewport2D>): void {
@@ -46,16 +49,16 @@ export class SelectionVisualController {
   }
 
   /**
-   * Stores shading controllers so wireframe overlays can sync during transforms.
+   * Stores shading controllers so wireframe overlays can sync during
+   * transforms.
+   *
    * @param controllers Per-viewport shading controllers.
    */
   setShadingControllers(controllers: ViewportShadingController[]): void {
     this.shadingControllers = controllers;
   }
 
-  /**
-   * Rebuilds selection outlines for the current selection set.
-   */
+  /** Rebuilds selection outlines for the current selection set. */
   refreshFromSelection(): void {
     this.clearAllHighlights();
     const selected = this.selectionManager.getSelectedObjects();
@@ -63,32 +66,26 @@ export class SelectionVisualController {
     this.syncSolidBrushHullFills();
   }
 
-  /**
-   * Re-applies outlines after 2D viewport clones are rebuilt.
-   */
+  /** Re-applies outlines after 2D viewport clones are rebuilt. */
   reapplyAfterViewportSync(): void {
     this.refreshFromSelection();
   }
 
   /**
-   * Rebuilds outline geometry for every currently highlighted mesh.
-   * Call after extrude/CSG so orange edges match the new mesh shape.
+   * Rebuilds outline geometry for every currently highlighted mesh. Call after
+   * extrude/CSG so orange edges match the new mesh shape.
    */
   rebuildHighlightGeometries(): void {
     this.selectionHighlights.forEach((highlight) => highlight.rebuildGeometries());
   }
 
-  /**
-   * Keeps outlines and shading wireframes glued to meshes during live drag.
-   */
+  /** Keeps outlines and shading wireframes glued to meshes during live drag. */
   syncDuringTransform(): void {
     this.selectionHighlights.forEach((highlight) => highlight.syncTransforms());
     this.shadingControllers.forEach((controller) => controller.syncOverlayTransforms());
   }
 
-  /**
-   * Disposes all highlight resources.
-   */
+  /** Disposes all highlight resources. */
   dispose(): void {
     this.selectionHighlights.forEach((highlight) => highlight.dispose());
     this.selectionHighlights = [];
@@ -96,6 +93,7 @@ export class SelectionVisualController {
 
   /**
    * Highlights a world mesh and every matching 2D clone.
+   *
    * @param mesh The world mesh to outline.
    */
   private highlightMeshAndClones(mesh: THREE.Mesh): void {
@@ -106,8 +104,9 @@ export class SelectionVisualController {
   }
 
   /**
-   * Applies a highlight only in the viewport scene that owns this mesh.
-   * Each mesh gets at most one orange outline child (not one per viewport).
+   * Applies a highlight only in the viewport scene that owns this mesh. Each
+   * mesh gets at most one orange outline child (not one per viewport).
+   *
    * @param mesh The mesh to highlight.
    */
   private applyHighlightToMesh(mesh: THREE.Mesh): void {
@@ -116,16 +115,15 @@ export class SelectionVisualController {
     });
   }
 
-  /**
-   * Clears outlines from every highlight instance.
-   */
+  /** Clears outlines from every highlight instance. */
   private clearAllHighlights(): void {
     this.selectionHighlights.forEach((highlight) => highlight.clearAll());
   }
 
   /**
-   * Shows translucent brush hulls only for selected solid brushes (world + clones).
-   * Unselected brushes keep operation-colored outlines without filled volumes.
+   * Shows translucent brush hulls only for selected solid brushes (world +
+   * clones). Unselected brushes keep operation-colored outlines without filled
+   * volumes.
    */
   private syncSolidBrushHullFills(): void {
     const selected = this.selectionManager.getSelectedObjects();
@@ -138,6 +136,7 @@ export class SelectionVisualController {
 
   /**
    * Applies hull fill visibility to a world brush mesh and its 2D clones.
+   *
    * @param worldMesh Authoritative brush preview mesh.
    * @param fillVisible Whether the translucent volume should be drawn.
    */

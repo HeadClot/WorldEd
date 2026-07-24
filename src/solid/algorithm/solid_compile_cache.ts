@@ -3,9 +3,7 @@ import { SolidBrush } from '../brush/solid_brush.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { SolidCompiledPolygon } from './solid_compiled_polygon.js';
 
-/**
- * Cached model-space brush geometry reused between partial compiles.
- */
+/** Cached model-space brush geometry reused between partial compiles. */
 export interface CachedPreparedBrush {
   /** Model-space brush clone. */
   brush: SolidBrush;
@@ -35,9 +33,7 @@ export class SolidCompileCache {
   private readonly preparedByBrushId = new Map<string, CachedPreparedBrush>();
   private lastBrushOrder: string[] = [];
 
-  /**
-   * Clears every cached entry (full rebuild baseline).
-   */
+  /** Clears every cached entry (full rebuild baseline). */
   clear(): void {
     this.polygonsByBrushId.clear();
     this.touchIdsByBrushId.clear();
@@ -47,6 +43,7 @@ export class SolidCompileCache {
 
   /**
    * Returns whether every listed brush has compiled polygon output cached.
+   *
    * @param brushIds Brush instance ids in tree order.
    * @returns True when all ids have polygon cache entries.
    */
@@ -59,6 +56,7 @@ export class SolidCompileCache {
 
   /**
    * Returns cached compiled polygons for a brush.
+   *
    * @param brushId Brush instance id.
    * @returns Polygon list or undefined when missing.
    */
@@ -68,6 +66,7 @@ export class SolidCompileCache {
 
   /**
    * Stores compiled polygons for a brush.
+   *
    * @param brushId Brush instance id.
    * @param polygons Final surface polygons for that brush.
    */
@@ -77,6 +76,7 @@ export class SolidCompileCache {
 
   /**
    * Returns previously overlapping peer brush ids.
+   *
    * @param brushId Brush instance id.
    * @returns Peer ids (empty when unknown).
    */
@@ -86,6 +86,7 @@ export class SolidCompileCache {
 
   /**
    * Stores the set of peer brushes that currently overlap a brush.
+   *
    * @param brushId Brush instance id.
    * @param peerIds Overlapping peer instance ids.
    */
@@ -95,6 +96,7 @@ export class SolidCompileCache {
 
   /**
    * Returns cached prepared model-space geometry.
+   *
    * @param brushId Brush instance id.
    * @returns Prepared snapshot or undefined.
    */
@@ -104,6 +106,7 @@ export class SolidCompileCache {
 
   /**
    * Stores prepared model-space geometry for reuse.
+   *
    * @param brushId Brush instance id.
    * @param prepared Prepared snapshot.
    */
@@ -113,6 +116,7 @@ export class SolidCompileCache {
 
   /**
    * Drops all cache entries for one brush (removal or full invalidation).
+   *
    * @param brushId Brush instance id to drop.
    */
   removeBrush(brushId: string): void {
@@ -123,6 +127,7 @@ export class SolidCompileCache {
 
   /**
    * Removes cache entries for brushes no longer present in the model.
+   *
    * @param activeIds Set of brush ids still in the model.
    */
   pruneToIds(activeIds: Set<string>): void {
@@ -133,6 +138,7 @@ export class SolidCompileCache {
 
   /**
    * Returns the brush evaluation order from the last successful compile.
+   *
    * @returns Ordered brush ids.
    */
   getLastBrushOrder(): string[] {
@@ -141,6 +147,7 @@ export class SolidCompileCache {
 
   /**
    * Records brush evaluation order after a compile.
+   *
    * @param order Ordered brush ids.
    */
   setLastBrushOrder(order: string[]): void {
@@ -149,6 +156,7 @@ export class SolidCompileCache {
 
   /**
    * Returns whether the given order matches the last compiled order.
+   *
    * @param order Candidate ordered brush ids.
    * @returns True when sequences are identical.
    */
@@ -162,6 +170,7 @@ export class SolidCompileCache {
 
   /**
    * Deletes map keys that are not in the active set.
+   *
    * @param map Map to prune.
    * @param activeIds Retained keys.
    */

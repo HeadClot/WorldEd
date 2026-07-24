@@ -154,6 +154,7 @@ describe('FaceExtrusionController', () => {
 
 /**
  * Creates a simple box mesh for testing.
+ *
  * @returns A mesh with a box geometry.
  */
 function createTestMesh(): THREE.Mesh {
@@ -162,6 +163,7 @@ function createTestMesh(): THREE.Mesh {
 
 /**
  * Creates a minimal mock pointer event.
+ *
  * @param x The x coordinate.
  * @param y The y coordinate.
  * @returns A mock MouseEvent object.
@@ -178,6 +180,7 @@ function createMockPointerEvent(x: number, y: number): MouseEvent {
 
 /**
  * Creates a minimal mock WebGL renderer for testing.
+ *
  * @returns A mock renderer with required methods.
  */
 function createMockRenderer(): THREE.WebGLRenderer {

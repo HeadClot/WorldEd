@@ -10,16 +10,10 @@ describe('AlignCommand', () => {
   let targets: Map<THREE.Mesh, THREE.Vector3>;
 
   beforeEach(() => {
-    mesh1 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    mesh1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     mesh1.position.set(1, 2, 3);
 
-    mesh2 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    mesh2 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     mesh2.position.set(4, 5, 6);
 
     snapshots = [

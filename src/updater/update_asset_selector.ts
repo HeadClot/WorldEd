@@ -2,6 +2,7 @@ import type { GitHubReleaseAsset, StandalonePlatform } from './update_types.js';
 
 /**
  * Selects the best executable asset for a standalone platform.
+ *
  * @param assets Release assets returned by GitHub.
  * @param platform Current standalone platform.
  * @returns Best matching executable asset, or null when none exists.
@@ -16,6 +17,7 @@ export function selectStandaloneUpdateAsset(
 
 /**
  * Checks the platform-specific executable extension and name.
+ *
  * @param asset Candidate release asset.
  * @param platform Current standalone platform.
  * @returns True when the asset can target the platform.
@@ -29,6 +31,7 @@ function isPlatformAsset(asset: GitHubReleaseAsset, platform: StandalonePlatform
 
 /**
  * Checks supported executable/archive extensions for one platform.
+ *
  * @param name Lowercase asset name.
  * @param platform Current standalone platform.
  * @returns True when the extension is supported.
@@ -41,6 +44,7 @@ function isExecutableName(name: string, platform: StandalonePlatform): boolean {
 
 /**
  * Checks whether a release asset identifies its intended platform.
+ *
  * @param name Lowercase asset name.
  * @param platform Current standalone platform.
  * @returns True when a platform marker matches.
@@ -56,6 +60,7 @@ function hasPlatformMarker(name: string, platform: StandalonePlatform): boolean 
 
 /**
  * Rejects source bundles and checksum files that share archive extensions.
+ *
  * @param name Lowercase asset name.
  * @returns True when the asset is not installable.
  */
@@ -65,40 +70,30 @@ function isNonInstallableArchive(name: string): boolean {
 
 /**
  * Checks whether an asset explicitly targets a different supported platform.
+ *
  * @param name Lowercase asset name.
  * @returns True when any platform marker is present.
  */
 function hasAnyPlatformMarker(name: string): boolean {
-  return [
-    'windows',
-    'win',
-    'win32',
-    'win64',
-    'macos',
-    'mac',
-    'darwin',
-    'osx',
-    'linux',
-    'ubuntu',
-    'appimage',
-  ].some((marker) => name.includes(marker));
+  return ['windows', 'win', 'win32', 'win64', 'macos', 'mac', 'darwin', 'osx', 'linux', 'ubuntu', 'appimage'].some(
+    (marker) => name.includes(marker),
+  );
 }
 
 /**
  * Prefers installers and native image formats over generic archives.
+ *
  * @param firstAsset First candidate asset.
  * @param secondAsset Second candidate asset.
  * @returns Sort ordering with the preferred asset first.
  */
-function compareAssetPreference(
-  firstAsset: GitHubReleaseAsset,
-  secondAsset: GitHubReleaseAsset,
-): number {
+function compareAssetPreference(firstAsset: GitHubReleaseAsset, secondAsset: GitHubReleaseAsset): number {
   return assetPreference(secondAsset) - assetPreference(firstAsset);
 }
 
 /**
  * Gives stable preference to assets that can be installed directly.
+ *
  * @param asset Candidate release asset.
  * @returns Preference score.
  */

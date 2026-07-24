@@ -1,18 +1,14 @@
 import * as THREE from 'three';
 
-/**
- * Default rotation snap step in degrees when snapping is enabled.
- */
+/** Default rotation snap step in degrees when snapping is enabled. */
 export const DEFAULT_ROTATION_SNAP_DEGREES = 15;
 
-/**
- * Default scale snap step for scale factors (e.g. 0.1 = 10% increments).
- */
+/** Default scale snap step for scale factors (e.g. 0.1 = 10% increments). */
 export const DEFAULT_SCALE_SNAP_INTERVAL = 0.1;
 
 /**
- * Grid snapping state and operations for translate, rotate, and scale.
- * Rounds values to the nearest snap interval for precise placement.
+ * Grid snapping state and operations for translate, rotate, and scale. Rounds
+ * values to the nearest snap interval for precise placement.
  */
 export class GridSnap {
   private snapEnabled: boolean;
@@ -22,6 +18,7 @@ export class GridSnap {
 
   /**
    * Creates a new grid snap configuration.
+   *
    * @param snapEnabled Whether snapping is initially enabled.
    * @param snapInterval The grid interval for translation snap.
    * @param rotationSnapDegrees Angle step in degrees for rotation snap.
@@ -41,6 +38,7 @@ export class GridSnap {
 
   /**
    * Snaps a single value to the nearest grid interval.
+   *
    * @param value The value to snap.
    * @returns The snapped value, or the original if snapping is disabled.
    */
@@ -52,6 +50,7 @@ export class GridSnap {
 
   /**
    * Snaps all components of a Vector3 in place.
+   *
    * @param vector The vector to snap (modified in place).
    */
   snapVector3(vector: THREE.Vector3): void {
@@ -62,8 +61,9 @@ export class GridSnap {
   }
 
   /**
-   * Snaps only the axes that changed relative to a start position.
-   * Prevents X-axis drags from jumping Y/Z onto the grid unexpectedly.
+   * Snaps only the axes that changed relative to a start position. Prevents
+   * X-axis drags from jumping Y/Z onto the grid unexpectedly.
+   *
    * @param vector The current position to snap in place.
    * @param startPosition The pre-drag position used to detect changed axes.
    */
@@ -83,6 +83,7 @@ export class GridSnap {
 
   /**
    * Snaps a rotation angle in radians to the configured degree step.
+   *
    * @param angleRadians The unsnapped rotation angle.
    * @returns The snapped angle in radians, or the original if snap is off.
    */
@@ -95,6 +96,7 @@ export class GridSnap {
 
   /**
    * Snaps a scale factor to the nearest scale snap interval.
+   *
    * @param factor The unsnapped scale factor.
    * @returns The snapped factor, clamped to a minimum of 0.01.
    */
@@ -108,6 +110,7 @@ export class GridSnap {
 
   /**
    * Returns whether snapping is currently enabled.
+   *
    * @returns True if snapping is enabled.
    */
   isEnabled(): boolean {
@@ -116,6 +119,7 @@ export class GridSnap {
 
   /**
    * Enables or disables all snapping modes.
+   *
    * @param enabled Whether snapping should be enabled.
    */
   setEnabled(enabled: boolean): void {
@@ -124,6 +128,7 @@ export class GridSnap {
 
   /**
    * Returns the current translation snap interval.
+   *
    * @returns The snap interval value.
    */
   getInterval(): number {
@@ -132,6 +137,7 @@ export class GridSnap {
 
   /**
    * Sets a new translation snap interval.
+   *
    * @param interval The new grid interval value.
    */
   setInterval(interval: number): void {
@@ -140,6 +146,7 @@ export class GridSnap {
 
   /**
    * Returns the rotation snap step in degrees.
+   *
    * @returns Rotation snap degrees.
    */
   getRotationSnapDegrees(): number {
@@ -148,6 +155,7 @@ export class GridSnap {
 
   /**
    * Sets the rotation snap step in degrees.
+   *
    * @param degrees The new rotation snap step.
    */
   setRotationSnapDegrees(degrees: number): void {
@@ -156,6 +164,7 @@ export class GridSnap {
 
   /**
    * Returns the scale factor snap interval.
+   *
    * @returns Scale snap interval.
    */
   getScaleSnapInterval(): number {
@@ -164,6 +173,7 @@ export class GridSnap {
 
   /**
    * Sets the scale factor snap interval.
+   *
    * @param interval The new scale snap step.
    */
   setScaleSnapInterval(interval: number): void {

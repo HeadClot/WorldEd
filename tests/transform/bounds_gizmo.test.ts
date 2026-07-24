@@ -81,6 +81,7 @@ describe('BoundsGizmo', () => {
 
 /**
  * Builds simple axis-aligned bounds for gizmo tests.
+ *
  * @param center World center.
  * @param halfExtents Local half extents.
  * @returns Oriented bounds data.

@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 import { restoreObjectAtIndex } from '../utils/hierarchy_utils.js';
 
-/**
- * Undoable command that replaces two source meshes with a CSG result mesh.
- */
+/** Undoable command that replaces two source meshes with a CSG result mesh. */
 export class CsgBooleanCommand implements UndoCommand {
   private meshA: THREE.Mesh;
   private meshB: THREE.Mesh;
@@ -18,17 +16,13 @@ export class CsgBooleanCommand implements UndoCommand {
 
   /**
    * Creates a CSG boolean command.
+   *
    * @param meshA The first source mesh.
    * @param meshB The second source mesh.
    * @param resultMesh The CSG result mesh to insert.
    * @param worldGroup The world root used when parents are missing.
    */
-  constructor(
-    meshA: THREE.Mesh,
-    meshB: THREE.Mesh,
-    resultMesh: THREE.Mesh,
-    worldGroup: THREE.Group,
-  ) {
+  constructor(meshA: THREE.Mesh, meshB: THREE.Mesh, resultMesh: THREE.Mesh, worldGroup: THREE.Group) {
     this.meshA = meshA;
     this.meshB = meshB;
     this.resultMesh = resultMesh;
@@ -40,9 +34,7 @@ export class CsgBooleanCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Removes the source meshes and inserts the result mesh.
-   */
+  /** Removes the source meshes and inserts the result mesh. */
   execute(): void {
     if (this.executed) return;
     this.parentA?.remove(this.meshA);
@@ -52,9 +44,7 @@ export class CsgBooleanCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores the source meshes and removes the result mesh.
-   */
+  /** Restores the source meshes and removes the result mesh. */
   undo(): void {
     if (!this.executed) return;
     this.resultMesh.parent?.remove(this.resultMesh);
@@ -65,6 +55,7 @@ export class CsgBooleanCommand implements UndoCommand {
 
   /**
    * Returns the resulting CSG mesh.
+   *
    * @returns The result mesh.
    */
   getResultMesh(): THREE.Mesh {

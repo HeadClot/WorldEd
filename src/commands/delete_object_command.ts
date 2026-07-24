@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Complete state snapshot of a mesh captured before deletion.
- * Contains all information needed to fully restore the mesh.
+ * Complete state snapshot of a mesh captured before deletion. Contains all
+ * information needed to fully restore the mesh.
  */
 export interface DeleteSnapshot {
   mesh: THREE.Mesh;
@@ -18,8 +18,8 @@ export interface DeleteSnapshot {
 }
 
 /**
- * Undoable command for deleting objects.
- * Execute removes meshes from their parents; undo restores them.
+ * Undoable command for deleting objects. Execute removes meshes from their
+ * parents; undo restores them.
  */
 export class DeleteObjectCommand implements UndoCommand {
   private snapshots: DeleteSnapshot[];
@@ -27,6 +27,7 @@ export class DeleteObjectCommand implements UndoCommand {
 
   /**
    * Creates a new delete object command.
+   *
    * @param snapshots The state snapshots of all objects to delete.
    */
   constructor(snapshots: DeleteSnapshot[]) {
@@ -34,9 +35,7 @@ export class DeleteObjectCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Executes the deletion by removing all meshes from their parents.
-   */
+  /** Executes the deletion by removing all meshes from their parents. */
   execute(): void {
     if (this.executed) return;
     this.snapshots.forEach((snapshot) => {
@@ -47,9 +46,7 @@ export class DeleteObjectCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Undoes the deletion by restoring all meshes to their original state.
-   */
+  /** Undoes the deletion by restoring all meshes to their original state. */
   undo(): void {
     if (!this.executed) return;
     this.snapshots.forEach((snapshot) => {

@@ -116,14 +116,8 @@ describe('PropertiesPanel', () => {
   });
 
   it('should apply material color to all selected meshes', () => {
-    const meshA = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xff0000 }),
-    );
-    const meshB = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
-    );
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
     panel.bindObjects([meshA, meshB]);
     const panelElement = container.children[0] as HTMLElement;
     const colorInput = panelElement.querySelector('input[type="color"]') as HTMLInputElement;

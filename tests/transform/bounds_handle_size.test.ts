@@ -29,6 +29,7 @@ describe('bounds handle size vs camera distance', () => {
 
 /**
  * Reads a representative bounds handle mesh scale from the gizmo master group.
+ *
  * @param gizmo Transform gizmo after bounds update.
  * @returns Uniform scale of the first bounds handle mesh, or 0.
  */

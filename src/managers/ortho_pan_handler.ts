@@ -3,13 +3,14 @@ import { blurActiveFormField } from '../utils/dom_focus.js';
 
 /**
  * Invoked when the user scrolls to zoom an orthographic viewport.
+ *
  * @param factor Multiplier applied to frustum size (greater than 1 zooms out).
  */
 type ZoomCallback = (factor: number) => void;
 
 /**
- * Right-button pan and wheel zoom for orthographic 2D viewports.
- * Uses pointer lock while the secondary button is held for continuous pan.
+ * Right-button pan and wheel zoom for orthographic 2D viewports. Uses pointer
+ * lock while the secondary button is held for continuous pan.
  */
 export class OrthoPanHandler {
   private isPanning: boolean;
@@ -23,6 +24,7 @@ export class OrthoPanHandler {
 
   /**
    * Creates a pan/zoom handler bound to a canvas and orthographic camera.
+   *
    * @param canvas Canvas element that receives pointer and wheel events.
    * @param camera Orthographic camera whose position and frustum are updated.
    * @param zoomCallback Invoked with a zoom factor on wheel events.
@@ -39,9 +41,7 @@ export class OrthoPanHandler {
     this.bindEvents();
   }
 
-  /**
-   * Registers canvas and document listeners for pan, zoom, and pointer lock.
-   */
+  /** Registers canvas and document listeners for pan, zoom, and pointer lock. */
   private bindEvents(): void {
     this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
     this.canvas.addEventListener('pointerdown', (event) => this.onPointerDown(event));
@@ -54,6 +54,7 @@ export class OrthoPanHandler {
 
   /**
    * Starts panning when the secondary mouse button is pressed.
+   *
    * @param event Pointer down event from the canvas.
    */
   private onPointerDown(event: PointerEvent): void {
@@ -67,6 +68,7 @@ export class OrthoPanHandler {
 
   /**
    * Applies camera pan while the secondary button drag is active.
+   *
    * @param event Pointer move event with movement deltas.
    */
   private onPointerMove(event: PointerEvent): void {
@@ -76,6 +78,7 @@ export class OrthoPanHandler {
 
   /**
    * Ends panning when the secondary button is released.
+   *
    * @param event Pointer up event from the canvas.
    */
   private onPointerUp(event: PointerEvent): void {
@@ -87,9 +90,7 @@ export class OrthoPanHandler {
     }
   }
 
-  /**
-   * Tracks pointer-lock state changes for continuous pan.
-   */
+  /** Tracks pointer-lock state changes for continuous pan. */
   private onPointerLockChange(): void {
     if (document.pointerLockElement === this.canvas) {
       this.isPointerLocked = true;
@@ -99,25 +100,19 @@ export class OrthoPanHandler {
     }
   }
 
-  /**
-   * Clears pointer-lock state when the lock request fails.
-   */
+  /** Clears pointer-lock state when the lock request fails. */
   private onPointerLockError(): void {
     this.isPointerLocked = false;
   }
 
-  /**
-   * Requests pointer lock on the canvas when supported.
-   */
+  /** Requests pointer lock on the canvas when supported. */
   private tryRequestPointerLock(): void {
     if (typeof this.canvas.requestPointerLock === 'function') {
       this.canvas.requestPointerLock();
     }
   }
 
-  /**
-   * Releases pointer lock when supported.
-   */
+  /** Releases pointer lock when supported. */
   private tryExitPointerLock(): void {
     if (typeof document.exitPointerLock === 'function') {
       document.exitPointerLock();
@@ -126,6 +121,7 @@ export class OrthoPanHandler {
 
   /**
    * Converts wheel deltas into orthographic zoom factors.
+   *
    * @param event Wheel event from the canvas.
    */
   private onWheel(event: WheelEvent): void {
@@ -136,6 +132,7 @@ export class OrthoPanHandler {
 
   /**
    * Pans the camera in view space from screen-pixel movement.
+   *
    * @param screenDeltaX Horizontal pointer movement in CSS pixels.
    * @param screenDeltaY Vertical pointer movement in CSS pixels.
    */

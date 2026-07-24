@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Undoable command for creating a primitive mesh.
- * Execute adds the mesh to its parent; undo removes it without disposing.
- * Resources are preserved so that redo can re-add the mesh.
+ * Undoable command for creating a primitive mesh. Execute adds the mesh to its
+ * parent; undo removes it without disposing. Resources are preserved so that
+ * redo can re-add the mesh.
  */
 export class CreatePrimitiveCommand implements UndoCommand {
   private mesh: THREE.Mesh;
@@ -12,6 +12,7 @@ export class CreatePrimitiveCommand implements UndoCommand {
 
   /**
    * Creates a new create primitive command.
+   *
    * @param mesh The mesh to be added to the parent.
    * @param parent The parent object to which the mesh will be added.
    */
@@ -21,8 +22,8 @@ export class CreatePrimitiveCommand implements UndoCommand {
   }
 
   /**
-   * Executes the command by adding the mesh to the parent.
-   * No-op if the mesh is already a child of the parent.
+   * Executes the command by adding the mesh to the parent. No-op if the mesh is
+   * already a child of the parent.
    */
   execute(): void {
     if (this.mesh.parent) return;
@@ -30,8 +31,8 @@ export class CreatePrimitiveCommand implements UndoCommand {
   }
 
   /**
-   * Undoes the command by removing the mesh from its parent.
-   * Does not dispose geometry or material so redo remains possible.
+   * Undoes the command by removing the mesh from its parent. Does not dispose
+   * geometry or material so redo remains possible.
    */
   undo(): void {
     if (this.mesh.parent) {

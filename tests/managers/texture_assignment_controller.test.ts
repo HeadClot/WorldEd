@@ -15,10 +15,7 @@ import {
   TexturePaintState,
   getTexturePaintState,
 } from '../../src/texture/texture_paint_state.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 import { createTextureBrowserEntry } from '../../src/texture/texture_browser_entry.js';
 import { mockObjectUrlApis } from '../texture/object_url_test_utils.js';
 
@@ -38,12 +35,7 @@ describe('TextureAssignmentController', () => {
     world = new THREE.Group();
     selection = new SelectionManager();
     commandStack = new CommandStack(64);
-    faceController = new FaceExtrusionController(
-      scene,
-      commandStack,
-      new GridSnap(false, 1),
-      world,
-    );
+    faceController = new FaceExtrusionController(scene, commandStack, new GridSnap(false, 1), world);
     controller = new TextureAssignmentController(selection, faceController, commandStack);
   });
 
@@ -69,10 +61,7 @@ describe('TextureAssignmentController', () => {
     initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);
     world.add(mesh);
     selection.selectObject(mesh);
-    const entry = createTextureBrowserEntry(
-      new File(['x'], 'rock.png', { type: 'image/png' }),
-      'rock.png',
-    );
+    const entry = createTextureBrowserEntry(new File(['x'], 'rock.png', { type: 'image/png' }), 'rock.png');
     controller.onTextureSelected(entry);
     expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe('rock.png');
     expect(commandStack.getUndoCount()).toBe(1);

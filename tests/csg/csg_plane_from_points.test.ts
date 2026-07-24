@@ -45,11 +45,7 @@ describe('csg_plane_from_points', () => {
   });
 
   it('should prefer three-point plane when three points are provided', () => {
-    const points = [
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(1, 0, 0),
-      new THREE.Vector3(0, 0, 1),
-    ];
+    const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1)];
     const plane = buildPlaneFromPlacementPoints(points);
     expect(plane).not.toBeNull();
     points.forEach((point) => {
@@ -66,10 +62,7 @@ describe('csg_plane_from_points', () => {
 
   it('should convert Three.js plane to CSG n·x = c form', () => {
     const point = new THREE.Vector3(2, 0, 0);
-    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-      new THREE.Vector3(1, 0, 0),
-      point,
-    );
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(new THREE.Vector3(1, 0, 0), point);
     const csg = planeToCsgForm(plane);
     expect(csg.normal.x).toBeCloseTo(1);
     expect(csg.constant).toBeCloseTo(2);

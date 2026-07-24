@@ -6,9 +6,7 @@ import { SelectionManager } from '../../src/managers/selection_manager.js';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 
-/**
- * Unit tests for expanding ancestors and scrolling to scene selection.
- */
+/** Unit tests for expanding ancestors and scrolling to scene selection. */
 describe('Outliner reveal selection', () => {
   let container: HTMLElement;
   let root: THREE.Group;

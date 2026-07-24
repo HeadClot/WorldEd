@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 /**
- * Directional key light locked to a camera so illumination always comes
- * from the current view direction (headlight).
+ * Directional key light locked to a camera so illumination always comes from
+ * the current view direction (headlight).
  */
 export class CameraHeadlight {
   private light: THREE.DirectionalLight;
@@ -10,6 +10,7 @@ export class CameraHeadlight {
 
   /**
    * Creates a directional light that will be attached to a camera.
+   *
    * @param color The light color as a hex number.
    * @param intensity The light intensity.
    */
@@ -31,6 +32,7 @@ export class CameraHeadlight {
   /**
    * Parents the light and its target under the camera so they follow rotation.
    * Adds the camera to the scene when it is not already in the graph.
+   *
    * @param scene The scene that owns the camera and light hierarchy.
    * @param camera The camera the light should follow.
    */
@@ -45,9 +47,7 @@ export class CameraHeadlight {
     this.configureLocalHeadlightPose();
   }
 
-  /**
-   * Removes the light from the previously attached camera if any.
-   */
+  /** Removes the light from the previously attached camera if any. */
   private detachFromCurrentCamera(): void {
     if (!this.camera) return;
     this.camera.remove(this.light);
@@ -57,6 +57,7 @@ export class CameraHeadlight {
 
   /**
    * Returns the directional light instance.
+   *
    * @returns The Three.js directional light.
    */
   getLight(): THREE.DirectionalLight {
@@ -65,6 +66,7 @@ export class CameraHeadlight {
 
   /**
    * Returns the world-space direction the light currently shines toward.
+   *
    * @returns A normalized direction vector from light to target.
    */
   getWorldShineDirection(): THREE.Vector3 {

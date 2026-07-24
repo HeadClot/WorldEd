@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
 
-/**
- * One coplanar surface region with triangle indices and texture identity.
- */
+/** One coplanar surface region with triangle indices and texture identity. */
 export interface SolidSurfaceRegion {
   /** Triangle indices in the non-indexed mesh buffer. */
   triangleIndices: number[];
@@ -15,21 +13,18 @@ export interface SolidSurfaceRegion {
   surfaceIndex: number;
 }
 
-/**
- * Maps one result triangle back to its brush surface (for face-mode paint).
- */
+/** Maps one result triangle back to its brush surface (for face-mode paint). */
 export interface SolidTriangleSource {
   brushId: string;
   surfaceIndex: number;
   textureId: string;
 }
 
-/**
- * Fan-triangulates convex polygons into triangle index lists.
- */
+/** Fan-triangulates convex polygons into triangle index lists. */
 export class SurfaceTriangulator {
   /**
    * Triangulates a convex polygon in vertex-array order.
+   *
    * @param vertexCount Number of vertices in the polygon.
    * @returns Triangle indices as flat [i0,i1,i2, ...] relative to the polygon.
    */
@@ -44,6 +39,7 @@ export class SurfaceTriangulator {
 
   /**
    * Fan-triangulates a convex vertex loop into local index triples.
+   *
    * @param vertices Ordered convex polygon vertices.
    * @returns One [i0, i1, i2] triple per triangle.
    */
@@ -58,7 +54,9 @@ export class SurfaceTriangulator {
 
   /**
    * Builds interleaved position/normal arrays and per-face surface regions.
-   * Each input polygon becomes one coplanar UV region (never merges cube sides).
+   * Each input polygon becomes one coplanar UV region (never merges cube
+   * sides).
+   *
    * @param polygons Polygons with vertices, normals, and optional texture ids.
    * @returns Buffer data, triangle count, texture ids, and coplanar regions.
    */

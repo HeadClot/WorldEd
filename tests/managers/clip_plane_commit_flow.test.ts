@@ -8,6 +8,7 @@ import { GridSnap } from '../../src/transform/grid_snap.js';
 
 /**
  * Builds a unit box mesh parented under the world for clip tests.
+ *
  * @param world World root.
  * @returns Mesh ready to clip.
  */
@@ -19,6 +20,7 @@ function addBoxMesh(world: THREE.Group): THREE.Mesh {
 
 /**
  * Places a vertical cut plane through the origin on the active tool.
+ *
  * @param tool Clip plane tool.
  */
 function placeVerticalPlane(tool: ClipPlaneTool): void {
@@ -28,9 +30,7 @@ function placeVerticalPlane(tool: ClipPlaneTool): void {
   expect(tool.isPlaneReady()).toBe(true);
 }
 
-/**
- * Unit tests for continuous clip/split workflow after commit.
- */
+/** Unit tests for continuous clip/split workflow after commit. */
 describe('ClipPlaneHandler continuous commit flow', () => {
   let worldObject: THREE.Group;
   let clipPlaneTool: ClipPlaneTool;

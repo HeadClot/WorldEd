@@ -8,14 +8,8 @@ import {
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { computeRegionWorldNormal } from '../../src/texture/planar_uv_projector.js';
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
-import {
-  setTexturePaintStateForTests,
-  TexturePaintState,
-} from '../../src/texture/texture_paint_state.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/texture_paint_state.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 
 describe('texture assign preserves cylinder UVs', () => {
   beforeEach(() => {
@@ -29,10 +23,7 @@ describe('texture assign preserves cylinder UVs', () => {
   });
 
   it('should keep cylinder side offsetU when assigning a texture id', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.5, 0.5, 1, 8),
-      createContentMaterial(0x888888),
-    );
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 8), createContentMaterial(0x888888));
     mesh.position.set(0, 0.5, 0);
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh);
@@ -59,10 +50,7 @@ describe('texture assign preserves cylinder UVs', () => {
 
   it('should keep sequential U unwrap after texture assign', () => {
     const segments = 8;
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(1, 1, 2, segments),
-      createContentMaterial(0x888888),
-    );
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 2, segments), createContentMaterial(0x888888));
     mesh.position.set(0, 1, 0);
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh);
@@ -80,10 +68,7 @@ describe('texture assign preserves cylinder UVs', () => {
   });
 
   it('should not rewrite UV buffer when only the texture id changes', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.5, 0.5, 1, 12),
-      createContentMaterial(0x888888),
-    );
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 12), createContentMaterial(0x888888));
     mesh.position.set(1, 0.5, -2);
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh);
@@ -98,8 +83,9 @@ describe('texture assign preserves cylinder UVs', () => {
 
 /**
  * Side-face offsetU values sorted by triangle key for stable compare.
+ *
  * @param mesh Mesh with face maps.
- * @returns offsetU list.
+ * @returns OffsetU list.
  */
 function sideOffsets(mesh: THREE.Mesh): number[] {
   return getFaceTextureMaps(mesh)
@@ -113,6 +99,7 @@ function sideOffsets(mesh: THREE.Mesh): number[] {
 
 /**
  * Captures full UV buffer as numbers.
+ *
  * @param mesh Mesh with UVs.
  * @returns Flat UV array.
  */
@@ -123,8 +110,9 @@ function captureUv(mesh: THREE.Mesh): number[] {
 
 /**
  * U ranges for cylinder sides.
+ *
  * @param mesh Mesh with baked UVs.
- * @returns min/max U per side.
+ * @returns Min/max U per side.
  */
 function sideURanges(mesh: THREE.Mesh): Array<{ minU: number; maxU: number }> {
   const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;

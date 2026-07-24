@@ -9,24 +9,28 @@ import { collapseToHierarchyRoots } from '../utils/hierarchy_selection.js';
 
 /**
  * Callback type for context menu actions on outliner items.
+ *
  * @param obj The Three.js object associated with the context menu action.
  */
 export type OutlinerContextCallback = (obj: THREE.Object3D) => void;
 
 /**
  * Callback type for group action from context menu.
+ *
  * @param objects The objects to group together.
  */
 export type OutlinerGroupCallback = (objects: THREE.Object3D[]) => void;
 
 /**
  * Callback type for ungroup action from context menu.
+ *
  * @param group The group object to ungroup.
  */
 export type OutlinerUngroupCallback = (group: THREE.Group) => void;
 
 /**
  * Callback type for rename action from context menu.
+ *
  * @param obj The object to rename.
  * @param newName The new name to assign.
  */
@@ -34,30 +38,30 @@ export type OutlinerRenameCallback = (obj: THREE.Object3D, newName: string) => v
 
 /**
  * Callback type for visibility toggle from context menu.
+ *
  * @param obj The object whose visibility should toggle.
  */
 export type OutlinerVisibilityCallback = (obj: THREE.Object3D) => void;
 
 /**
  * Callback type for lock toggle from the outliner tree.
+ *
  * @param obj The object whose lock state should toggle.
  */
 export type OutlinerLockCallback = (obj: THREE.Object3D) => void;
 
 /**
  * Callback type for hierarchy reparent via drag-and-drop.
+ *
  * @param dragged The object being moved.
  * @param dropTarget The object that received the drop.
  */
-export type OutlinerReparentCallback = (
-  dragged: THREE.Object3D,
-  dropTarget: THREE.Object3D,
-) => void;
+export type OutlinerReparentCallback = (dragged: THREE.Object3D, dropTarget: THREE.Object3D) => void;
 
 /**
- * Hierarchical scene object panel with tree rendering.
- * Displays scene objects as a collapsible tree with type icons,
- * visibility toggles, inline rename, and context menu support.
+ * Hierarchical scene object panel with tree rendering. Displays scene objects
+ * as a collapsible tree with type icons, visibility toggles, inline rename, and
+ * context menu support.
  */
 export class OutlinerPanel {
   private container: HTMLElement;
@@ -79,6 +83,7 @@ export class OutlinerPanel {
 
   /**
    * Creates a new outliner panel bound to a selection manager and scene root.
+   *
    * @param container The parent DOM element to append the panel into.
    * @param selectionManager The selection manager for tracking selection state.
    * @param root The root Three.js object representing the scene hierarchy.
@@ -107,8 +112,9 @@ export class OutlinerPanel {
   }
 
   /**
-   * Returns hierarchy nodes to group (outermost selected outliner rows).
-   * Falls back to mesh selection when hierarchy selection is empty.
+   * Returns hierarchy nodes to group (outermost selected outliner rows). Falls
+   * back to mesh selection when hierarchy selection is empty.
+   *
    * @returns Objects to pass into GroupCommand.
    */
   getObjectsForGrouping(): THREE.Object3D[] {
@@ -120,6 +126,7 @@ export class OutlinerPanel {
 
   /**
    * Registers the callback for duplicate context menu actions.
+   *
    * @param callback The function to call on duplicate.
    */
   setDuplicateCallback(callback: OutlinerContextCallback | null): void {
@@ -128,6 +135,7 @@ export class OutlinerPanel {
 
   /**
    * Registers the callback for delete context menu actions.
+   *
    * @param callback The function to call on delete.
    */
   setDeleteCallback(callback: OutlinerContextCallback | null): void {
@@ -136,6 +144,7 @@ export class OutlinerPanel {
 
   /**
    * Registers the callback for group context menu actions.
+   *
    * @param callback The function to call on group.
    */
   setGroupCallback(callback: OutlinerGroupCallback | null): void {
@@ -144,6 +153,7 @@ export class OutlinerPanel {
 
   /**
    * Registers the callback for ungroup context menu actions.
+   *
    * @param callback The function to call on ungroup.
    */
   setUngroupCallback(callback: OutlinerUngroupCallback | null): void {
@@ -152,6 +162,7 @@ export class OutlinerPanel {
 
   /**
    * Registers the callback for rename actions.
+   *
    * @param callback The function to call on rename.
    */
   setRenameCallback(callback: OutlinerRenameCallback | null): void {
@@ -160,6 +171,7 @@ export class OutlinerPanel {
 
   /**
    * Registers the callback for visibility toggle actions.
+   *
    * @param callback The function to call on visibility toggle.
    */
   setVisibilityCallback(callback: OutlinerVisibilityCallback | null): void {
@@ -168,6 +180,7 @@ export class OutlinerPanel {
 
   /**
    * Registers the callback for lock toggle actions.
+   *
    * @param callback The function to call on lock toggle.
    */
   setLockCallback(callback: OutlinerLockCallback | null): void {
@@ -176,6 +189,7 @@ export class OutlinerPanel {
 
   /**
    * Registers the callback for hierarchy drag-and-drop reparent actions.
+   *
    * @param callback The function to call when an item is dropped on another.
    */
   setReparentCallback(callback: OutlinerReparentCallback | null): void {
@@ -184,19 +198,18 @@ export class OutlinerPanel {
 
   /**
    * Maintains backward compatibility for legacy context callback registration.
+   *
    * @param onDuplicate The callback invoked when Duplicate is selected.
    * @param onDelete The callback invoked when Delete is selected.
    */
-  setContextCallbacks(
-    onDuplicate: OutlinerContextCallback | null,
-    onDelete: OutlinerContextCallback | null,
-  ): void {
+  setContextCallbacks(onDuplicate: OutlinerContextCallback | null, onDelete: OutlinerContextCallback | null): void {
     this.duplicateCallback = onDuplicate;
     this.deleteCallback = onDelete;
   }
 
   /**
    * Refreshes the outliner tree to match the current scene hierarchy.
+   *
    * @param _sceneObjects Deprecated parameter, kept for backward compatibility.
    */
   refresh(_sceneObjects?: THREE.Mesh[]): void {
@@ -206,20 +219,13 @@ export class OutlinerPanel {
     }
   }
 
-  /**
-   * Updates row highlight state without rebuilding the tree.
-   */
+  /** Updates row highlight state without rebuilding the tree. */
   private refreshSelectionOnly(): void {
     if (this.isDisposed || !this.tree) return;
-    this.tree.updateSelectionStates(
-      this.selectionManager.getSelectedObjects(),
-      this.hierarchySelection,
-    );
+    this.tree.updateSelectionStates(this.selectionManager.getSelectedObjects(), this.hierarchySelection);
   }
 
-  /**
-   * Disposes the panel and removes it from the DOM.
-   */
+  /** Disposes the panel and removes it from the DOM. */
   dispose(): void {
     this.isDisposed = true;
     if (this.contextMenu) {
@@ -235,9 +241,7 @@ export class OutlinerPanel {
     }
   }
 
-  /**
-   * Applies styles to the outliner container.
-   */
+  /** Applies styles to the outliner container. */
   private applyContainerStyles(): void {
     this.container.classList.add('editor-outliner-panel');
     this.container.style.display = 'flex';
@@ -253,9 +257,7 @@ export class OutlinerPanel {
     this.container.style.userSelect = 'none';
   }
 
-  /**
-   * Instantiates and configures the outliner tree component.
-   */
+  /** Instantiates and configures the outliner tree component. */
   private createTree(): void {
     this.tree = new OutlinerTree(this.container, this.root);
     this.tree.onSelectObject((obj, event) => this.onSelectObject(obj, event));
@@ -270,6 +272,7 @@ export class OutlinerPanel {
    * Handles object selection from the tree view with multi-select modifiers.
    * Tracks hierarchy nodes (meshes and groups) for grouping, and syncs mesh
    * selection so viewports/gizmos still highlight content meshes.
+   *
    * @param obj The Three.js object that was selected.
    * @param event Optional mouse event providing Shift/Ctrl state.
    */
@@ -287,6 +290,7 @@ export class OutlinerPanel {
 
   /**
    * Updates hierarchy multi-selection from an outliner row click.
+   *
    * @param obj Clicked hierarchy object.
    * @param additive Shift-add mode.
    * @param toggle Ctrl/Meta toggle mode.
@@ -309,7 +313,8 @@ export class OutlinerPanel {
   }
 
   /**
-   * Pushes mesh selection derived from hierarchy selection into SelectionManager.
+   * Pushes mesh selection derived from hierarchy selection into
+   * SelectionManager.
    */
   private syncMeshSelectionFromHierarchy(): void {
     const meshes: THREE.Mesh[] = [];
@@ -323,8 +328,9 @@ export class OutlinerPanel {
   }
 
   /**
-   * Keeps hierarchy selection in sync when the viewport or tools change mesh selection.
-   * Expands groups and scrolls to the last selected object for viewport picks.
+   * Keeps hierarchy selection in sync when the viewport or tools change mesh
+   * selection. Expands groups and scrolls to the last selected object for
+   * viewport picks.
    */
   private onMeshSelectionChanged(): void {
     if (this.isDisposed) return;
@@ -337,7 +343,8 @@ export class OutlinerPanel {
   }
 
   /**
-   * Expands ancestors of the last selected mesh and scrolls its outliner row into view.
+   * Expands ancestors of the last selected mesh and scrolls its outliner row
+   * into view.
    */
   private revealLastSelectionInTree(): void {
     if (!this.tree) return;
@@ -346,15 +353,12 @@ export class OutlinerPanel {
       this.refreshSelectionOnly();
       return;
     }
-    this.tree.revealObject(
-      focus,
-      this.selectionManager.getSelectedObjects(),
-      this.hierarchySelection,
-    );
+    this.tree.revealObject(focus, this.selectionManager.getSelectedObjects(), this.hierarchySelection);
   }
 
   /**
    * Forwards hierarchy reparent requests to the registered callback.
+   *
    * @param dragged The object being dragged.
    * @param dropTarget The drop target object.
    */
@@ -366,6 +370,7 @@ export class OutlinerPanel {
 
   /**
    * Handles rename from the tree view inline editor.
+   *
    * @param obj The object to rename.
    * @param newName The new name to assign.
    */
@@ -377,6 +382,7 @@ export class OutlinerPanel {
 
   /**
    * Handles visibility toggle from the tree view.
+   *
    * @param obj The object whose visibility should toggle.
    */
   private onToggleVisibility(obj: THREE.Object3D): void {
@@ -389,6 +395,7 @@ export class OutlinerPanel {
 
   /**
    * Handles lock toggle from the tree view.
+   *
    * @param obj The object whose lock state should toggle.
    */
   private onToggleLock(obj: THREE.Object3D): void {
@@ -399,6 +406,7 @@ export class OutlinerPanel {
 
   /**
    * Shows the right-click context menu for a specific object.
+   *
    * @param obj The Three.js object for the context menu.
    * @param x The horizontal screen coordinate.
    * @param y The vertical screen coordinate.
@@ -422,6 +430,7 @@ export class OutlinerPanel {
 
   /**
    * Builds the array of context menu items for an object.
+   *
    * @param obj The object for which to build menu items.
    * @returns An array of context menu item configurations.
    */
@@ -437,6 +446,7 @@ export class OutlinerPanel {
 
   /**
    * Builds the edit section of context menu items.
+   *
    * @param obj The object for which to build edit menu items.
    * @returns An array of edit-related menu items.
    */
@@ -459,6 +469,7 @@ export class OutlinerPanel {
 
   /**
    * Builds the grouping section of context menu items.
+   *
    * @param obj The object for which to build group menu items.
    * @returns An array of group-related menu items.
    */
@@ -481,6 +492,7 @@ export class OutlinerPanel {
 
   /**
    * Builds the visibility toggle menu item.
+   *
    * @param obj The object for which to build the visibility menu item.
    * @returns The visibility toggle menu item configuration.
    */
@@ -493,6 +505,7 @@ export class OutlinerPanel {
 
   /**
    * Builds a separator menu item for the context menu.
+   *
    * @returns A separator menu item configuration.
    */
   private buildSeparatorItem(): ContextMenuItem {
@@ -504,6 +517,7 @@ export class OutlinerPanel {
 
   /**
    * Handles the group action from the context menu.
+   *
    * @param obj The object to include in the new group.
    */
   private onGroup(obj: THREE.Object3D): void {

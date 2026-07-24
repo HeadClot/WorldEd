@@ -4,9 +4,7 @@ import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidBrushInstance } from '../solid/model/solid_brush_instance.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 
-/**
- * Snapshot of a solid brush removed for undo restore.
- */
+/** Snapshot of a solid brush removed for undo restore. */
 interface SolidBrushDeleteSnapshot {
   model: SolidModel;
   instance: SolidBrushInstance;
@@ -14,8 +12,8 @@ interface SolidBrushDeleteSnapshot {
 }
 
 /**
- * Undoable deletion of solid brushes that unregisters them from their solid model
- * and rebuilds CSG so they leave the compiled mesh.
+ * Undoable deletion of solid brushes that unregisters them from their solid
+ * model and rebuilds CSG so they leave the compiled mesh.
  */
 export class DeleteSolidBrushesCommand implements UndoCommand {
   private readonly brushMeshes: THREE.Mesh[];
@@ -24,6 +22,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
 
   /**
    * Creates a solid-brush delete command.
+   *
    * @param brushMeshes Solid brush preview meshes to remove.
    */
   constructor(brushMeshes: THREE.Mesh[]) {
@@ -32,9 +31,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
     this.executed = false;
   }
 
-  /**
-   * Removes each brush from its solid model and rebuilds CSG without the brush.
-   */
+  /** Removes each brush from its solid model and rebuilds CSG without the brush. */
   execute(): void {
     if (this.executed) return;
     this.snapshots = this.captureSnapshots();
@@ -43,9 +40,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
     this.executed = true;
   }
 
-  /**
-   * Restores removed brushes at their original list indices and rebuilds.
-   */
+  /** Restores removed brushes at their original list indices and rebuilds. */
   undo(): void {
     if (!this.executed) return;
     const ordered = this.snapshots.slice().sort((left, right) => left.listIndex - right.listIndex);
@@ -70,6 +65,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
 
   /**
    * Filters meshes to solid brush previews only.
+   *
    * @param meshes Candidate meshes.
    * @returns Solid brush meshes.
    */
@@ -79,6 +75,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
 
   /**
    * Captures brush ownership snapshots for the meshes still registered.
+   *
    * @returns Snapshot list in capture order.
    */
   private captureSnapshots(): SolidBrushDeleteSnapshot[] {
@@ -92,6 +89,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
 
   /**
    * Captures one brush mesh if it still belongs to a solid model.
+   *
    * @param mesh Brush preview mesh.
    * @returns Snapshot or null when the brush is missing.
    */
@@ -106,9 +104,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
     return { model, instance: brush, listIndex };
   }
 
-  /**
-   * Removes all captured brushes without disposing mesh resources.
-   */
+  /** Removes all captured brushes without disposing mesh resources. */
   private removeCapturedBrushes(): void {
     for (const snapshot of this.snapshots) {
       snapshot.model.removeBrush(snapshot.instance.id, false);
@@ -117,6 +113,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
 
   /**
    * Re-inserts one deleted brush at its original evaluation index.
+   *
    * @param snapshot Delete snapshot to restore.
    */
   private restoreSnapshot(snapshot: SolidBrushDeleteSnapshot): void {
@@ -125,9 +122,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
     snapshot.model.insertBrushInstance(snapshot.instance, snapshot.listIndex);
   }
 
-  /**
-   * Rebuilds every solid model touched by the current snapshots.
-   */
+  /** Rebuilds every solid model touched by the current snapshots. */
   private rebuildAffectedModels(): void {
     const models = new Set(this.snapshots.map((entry) => entry.model));
     for (const model of models) {

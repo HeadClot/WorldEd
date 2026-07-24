@@ -1,8 +1,7 @@
 import type { GitHubRelease, GitHubReleaseAsset } from './update_types.js';
 
 /** GitHub Releases API endpoint for the AiWorldEd repository. */
-export const GITHUB_LATEST_RELEASE_URL =
-  'https://api.github.com/repos/Henry00IS/AiWorldEd/releases/latest';
+export const GITHUB_LATEST_RELEASE_URL = 'https://api.github.com/repos/Henry00IS/AiWorldEd/releases/latest';
 
 /** Public release page used when no executable host bridge is available. */
 export const GITHUB_RELEASES_PAGE_URL = 'https://github.com/Henry00IS/AiWorldEd/releases';
@@ -13,6 +12,7 @@ export class GitHubReleaseClient {
 
   /**
    * Creates a GitHub release client.
+   *
    * @param request Fetch implementation used for API requests.
    */
   constructor(request: typeof fetch = fetch) {
@@ -21,6 +21,7 @@ export class GitHubReleaseClient {
 
   /**
    * Fetches the latest published release.
+   *
    * @returns Normalized latest release data.
    * @throws Error when GitHub cannot provide a valid release response.
    */
@@ -36,6 +37,7 @@ export class GitHubReleaseClient {
 
 /**
  * Converts the GitHub API shape into the updater's smaller release shape.
+ *
  * @param payload Unknown GitHub JSON response.
  * @returns Normalized release.
  * @throws Error when the payload lacks a release tag.
@@ -47,8 +49,7 @@ function parseReleasePayload(payload: unknown): GitHubRelease {
   return {
     tagName: payload.tag_name,
     title: typeof payload.name === 'string' && payload.name ? payload.name : payload.tag_name,
-    releasePageUrl:
-      typeof payload.html_url === 'string' ? payload.html_url : GITHUB_RELEASES_PAGE_URL,
+    releasePageUrl: typeof payload.html_url === 'string' ? payload.html_url : GITHUB_RELEASES_PAGE_URL,
     notes: typeof payload.body === 'string' ? payload.body : '',
     assets: parseAssets(payload.assets),
   };
@@ -56,6 +57,7 @@ function parseReleasePayload(payload: unknown): GitHubRelease {
 
 /**
  * Parses only valid downloadable asset entries from a GitHub response.
+ *
  * @param value Unknown assets property.
  * @returns Valid release assets.
  */
@@ -66,6 +68,7 @@ function parseAssets(value: unknown): GitHubReleaseAsset[] {
 
 /**
  * Parses one release asset or discards it when required fields are absent.
+ *
  * @param value Unknown asset value.
  * @returns One valid asset or an empty list.
  */
@@ -83,6 +86,7 @@ function parseAsset(value: unknown): GitHubReleaseAsset[] {
 
 /**
  * Narrows unknown JSON values to object records.
+ *
  * @param value Unknown JSON value.
  * @returns True for non-null object records.
  */

@@ -7,14 +7,15 @@ import { SolidOperation } from '../solid/types/solid_operation.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_edge_materials.js';
 
 /**
- * Pure utility for deep-cloning meshes.
- * Handles geometry, material, and content decorative edges.
- * Solid brush meshes keep operation-colored brush edges only (no white outlines).
- * Never copies selection outlines or shading wireframe overlays.
+ * Pure utility for deep-cloning meshes. Handles geometry, material, and content
+ * decorative edges. Solid brush meshes keep operation-colored brush edges only
+ * (no white outlines). Never copies selection outlines or shading wireframe
+ * overlays.
  */
 export class ObjectDuplicator {
   /**
    * Deep clones an array of meshes with positional offset.
+   *
    * @param meshes The source meshes to duplicate.
    * @param offset The vector offset to apply to each clone's position.
    * @returns An array of new meshes, NOT added to any parent.
@@ -32,6 +33,7 @@ export class ObjectDuplicator {
 
   /**
    * Computes the next duplicate name for an original mesh name.
+   *
    * @param originalName The name of the original mesh.
    * @returns A new name with _copy or incremented suffix.
    */
@@ -54,6 +56,7 @@ export class ObjectDuplicator {
 
   /**
    * Deep clones a single mesh with geometry, material, and decorative edges.
+   *
    * @param mesh The source mesh to clone.
    * @returns A new independent mesh with cloned resources.
    */
@@ -72,7 +75,9 @@ export class ObjectDuplicator {
   }
 
   /**
-   * Copies structural userData markers needed for solid brush / result identity.
+   * Copies structural userData markers needed for solid brush / result
+   * identity.
+   *
    * @param source Source mesh.
    * @param target Cloned mesh.
    */
@@ -85,13 +90,13 @@ export class ObjectDuplicator {
       if (typeof operation === 'string') {
         target.userData.solidBrushOperation = operation;
       }
-      target.userData.solidBrushHullFillVisible =
-        source.userData.solidBrushHullFillVisible === true;
+      target.userData.solidBrushHullFillVisible = source.userData.solidBrushHullFillVisible === true;
     }
   }
 
   /**
    * Copies face texture map tables so duplicates keep independent assignments.
+   *
    * @param source Source mesh.
    * @param target Cloned mesh.
    */
@@ -103,12 +108,11 @@ export class ObjectDuplicator {
 
   /**
    * Clones a material or material array.
+   *
    * @param material The source material(s).
    * @returns Cloned material instance(s).
    */
-  private static cloneMaterial(
-    material: THREE.Material | THREE.Material[],
-  ): THREE.Material | THREE.Material[] {
+  private static cloneMaterial(material: THREE.Material | THREE.Material[]): THREE.Material | THREE.Material[] {
     if (Array.isArray(material)) {
       return material.map((entry) => entry.clone());
     }
@@ -116,7 +120,9 @@ export class ObjectDuplicator {
   }
 
   /**
-   * Recreates the correct edge helpers for content meshes or solid brush previews.
+   * Recreates the correct edge helpers for content meshes or solid brush
+   * previews.
+   *
    * @param source The original mesh.
    * @param target The cloned mesh.
    */
@@ -137,6 +143,7 @@ export class ObjectDuplicator {
   /**
    * Returns whether the source mesh carries content outline edges to preserve.
    * Ignores selection/wireframe overlays and solid brush edge helpers.
+   *
    * @param source Source mesh.
    * @returns True when content outline edges should be rebuilt on the clone.
    */
@@ -151,6 +158,7 @@ export class ObjectDuplicator {
 
   /**
    * Reads CSG operation stored on a brush mesh.
+   *
    * @param mesh Brush preview mesh.
    * @returns Operation for edge tint.
    */
@@ -162,7 +170,9 @@ export class ObjectDuplicator {
   }
 
   /**
-   * Returns true for selection outlines and wireframe overlays that must not clone.
+   * Returns true for selection outlines and wireframe overlays that must not
+   * clone.
+   *
    * @param line The line object to test.
    * @returns True if the line is an editor-only overlay.
    */
@@ -175,6 +185,7 @@ export class ObjectDuplicator {
 
   /**
    * Extracts the numeric copy suffix from a name string.
+   *
    * @param name The name string to inspect.
    * @returns The suffix number, or zero if none found.
    */

@@ -12,6 +12,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 
 /**
  * Builds a positioned additive box brush.
+ *
  * @param id Brush id.
  * @param size Edge length.
  * @param position Center position.
@@ -26,6 +27,7 @@ function makeBox(id: string, size: number, position: THREE.Vector3): SolidBrushI
 
 /**
  * Rebuilds mesh chunks for the given brush ids from compiler caches.
+ *
  * @param compiler Compiler with polygon cache.
  * @param chunkCache Destination chunk cache.
  * @param builder Chunk builder.
@@ -41,18 +43,15 @@ function rebuildChunks(
   for (const brushId of brushIds) {
     chunkCache.set(
       brushId,
-      builder.build(
-        compiler.getCachedPolygons(brushId) ?? [],
-        () => createDefaultFaceTextureMapping(),
-        { stickToBrush: false, resultWorldMatrix: identity },
-      ),
+      builder.build(compiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceTextureMapping(), {
+        stickToBrush: false,
+        resultWorldMatrix: identity,
+      }),
     );
   }
 }
 
-/**
- * Unit tests for segmented solid result buffers and dirty-range patches.
- */
+/** Unit tests for segmented solid result buffers and dirty-range patches. */
 describe('SolidResultBuffer', () => {
   it('patches only dirty brush slices when vertex counts stay stable', () => {
     const brushes = [
@@ -131,9 +130,7 @@ describe('SolidResultBuffer', () => {
     compiler.compile(brushes, { forceFull: true, skipPolygonAssembly: true });
     rebuildChunks(compiler, chunkCache, builder, compiler.getLastUpdateBrushIds());
     buffer.rebuildFull(compiler.getLastBrushOrder(), chunkCache);
-    const prefixA = Array.from(
-      buffer.getTriangleSources().filter((source) => source.brushId === 'a'),
-    );
+    const prefixA = Array.from(buffer.getTriangleSources().filter((source) => source.brushId === 'a'));
 
     brushes[2].position.copy(brushes[3].position);
     compiler.compile(brushes, {

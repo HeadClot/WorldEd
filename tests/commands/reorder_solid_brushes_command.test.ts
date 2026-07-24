@@ -4,9 +4,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { ReorderSolidBrushesCommand } from '../../src/commands/reorder_solid_brushes_command.js';
 import { CommandStack } from '../../src/commands/command_stack.js';
 
-/**
- * Unit tests for moving solid brushes to first/last CSG order.
- */
+/** Unit tests for moving solid brushes to first/last CSG order. */
 describe('ReorderSolidBrushesCommand', () => {
   it('moves a brush to first and restores order on undo', () => {
     const model = new SolidModel('OrderFirst');

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 /**
  * Recursively collects all descendants of an object, including nested children.
+ *
  * @param obj The root object whose descendants should be collected.
  * @returns An array of all descendant Three.js objects.
  */
@@ -13,6 +14,7 @@ export function getDescendants(obj: THREE.Object3D): THREE.Object3D[] {
 
 /**
  * Recursively appends all descendants to the accumulator array.
+ *
  * @param obj The current object to inspect.
  * @param result The accumulator array receiving descendants.
  */
@@ -25,6 +27,7 @@ function collectDescendants(obj: THREE.Object3D, result: THREE.Object3D[]): void
 
 /**
  * Returns the chain of ancestor objects from immediate parent to root.
+ *
  * @param obj The object whose ancestors should be collected.
  * @returns An array of ancestor objects starting from the immediate parent.
  */
@@ -40,6 +43,7 @@ export function getAncestors(obj: THREE.Object3D): THREE.Object3D[] {
 
 /**
  * Searches the object hierarchy for an object by name.
+ *
  * @param root The root object to start searching from.
  * @param name The name to search for.
  * @returns The matching object, or null if not found.
@@ -55,6 +59,7 @@ export function findByName(root: THREE.Object3D, name: string): THREE.Object3D |
 
 /**
  * Safely reparents a child to a new parent without creating cycles.
+ *
  * @param child The object to reparent.
  * @param newParent The new parent object.
  * @returns True if reparenting succeeded, false if it would create a cycle.
@@ -72,6 +77,7 @@ export function reparentSafely(child: THREE.Object3D, newParent: THREE.Object3D)
 
 /**
  * Checks whether a candidate object is a descendant of the ancestor.
+ *
  * @param candidate The object to check.
  * @param ancestor The potential ancestor object.
  * @returns True if candidate is a descendant of ancestor.
@@ -87,6 +93,7 @@ export function isDescendantOf(candidate: THREE.Object3D, ancestor: THREE.Object
 
 /**
  * Collects every mesh under an object, including the object when it is a mesh.
+ *
  * @param root Object to traverse.
  * @returns Mesh list for viewport selection sync.
  */
@@ -105,6 +112,7 @@ export function collectMeshesUnder(root: THREE.Object3D): THREE.Mesh[] {
 
 /**
  * Collects all meshes from an object and its descendants.
+ *
  * @param root The root object to traverse.
  * @returns An array of all Three.js Mesh objects found.
  */
@@ -120,6 +128,7 @@ export function getAllMeshes(root: THREE.Object3D): THREE.Mesh[] {
 
 /**
  * Collects all top-level children that are groups from the root.
+ *
  * @param root The root object to inspect.
  * @returns An array of direct group children.
  */
@@ -135,6 +144,7 @@ export function getGroupChildren(root: THREE.Object3D): THREE.Group[] {
 
 /**
  * Collects all top-level children that are meshes from the root.
+ *
  * @param root The root object to inspect.
  * @returns An array of direct mesh children.
  */
@@ -150,6 +160,7 @@ export function getMeshChildren(root: THREE.Object3D): THREE.Mesh[] {
 
 /**
  * Returns the depth level of an object relative to a given root.
+ *
  * @param obj The object whose depth should be calculated.
  * @param root The root object to measure depth from.
  * @returns The number of ancestor levels between obj and root.
@@ -165,8 +176,9 @@ export function getDepth(obj: THREE.Object3D, root: THREE.Object3D): number {
 }
 
 /**
- * Restores an object under a parent at a specific sibling index.
- * Falls back to fallbackParent when parent is null.
+ * Restores an object under a parent at a specific sibling index. Falls back to
+ * fallbackParent when parent is null.
+ *
  * @param object The object to restore into the hierarchy.
  * @param parent Preferred parent, or null to use fallbackParent.
  * @param index Desired sibling index under the chosen parent.

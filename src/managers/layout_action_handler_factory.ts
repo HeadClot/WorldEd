@@ -9,9 +9,7 @@ import { GridSnap } from '../transform/grid_snap.js';
 import { StatusBar } from '../ui/status_bar.js';
 import { AlignmentAxis } from '../types/alignment_axis.js';
 
-/**
- * Callbacks shared by object, CSG, and alignment action handlers.
- */
+/** Callbacks shared by object, CSG, and alignment action handlers. */
 export interface ActionHandlerSharedCallbacks {
   syncViewports: () => void;
   refreshOutliner: () => void;
@@ -22,6 +20,7 @@ export interface ActionHandlerSharedCallbacks {
 
 /**
  * Creates and wires object, CSG, and alignment action handlers.
+ *
  * @param worldObject Root scene hierarchy group.
  * @param commandStack Undo/redo stack.
  * @param selectionManager Shared selection manager.
@@ -51,13 +50,11 @@ export function createWiredActionHandlers(
 
 /**
  * Binds object-action handler callbacks.
+ *
  * @param handler Object action handler.
  * @param callbacks Shared callbacks.
  */
-function bindObjectActionCallbacks(
-  handler: ObjectActionHandler,
-  callbacks: ActionHandlerSharedCallbacks,
-): void {
+function bindObjectActionCallbacks(handler: ObjectActionHandler, callbacks: ActionHandlerSharedCallbacks): void {
   handler.setSyncViewports(callbacks.syncViewports);
   handler.setRefreshOutliner(callbacks.refreshOutliner);
   handler.setShowStatusMessage(callbacks.showStatusMessage);
@@ -65,13 +62,11 @@ function bindObjectActionCallbacks(
 
 /**
  * Binds CSG action handler callbacks.
+ *
  * @param handler CSG action handler.
  * @param callbacks Shared callbacks.
  */
-function bindCsgActionCallbacks(
-  handler: CsgActionHandler,
-  callbacks: ActionHandlerSharedCallbacks,
-): void {
+function bindCsgActionCallbacks(handler: CsgActionHandler, callbacks: ActionHandlerSharedCallbacks): void {
   handler.setSyncViewports(callbacks.syncViewports);
   handler.setRefreshOutliner(callbacks.refreshOutliner);
   handler.setShowStatus(callbacks.showStatusMessage);
@@ -79,6 +74,7 @@ function bindCsgActionCallbacks(
 
 /**
  * Creates an alignment handler with a fresh alignment controller.
+ *
  * @param commandStack Undo/redo stack.
  * @param selectionManager Shared selection manager.
  * @param gridSnap Grid snap settings.
@@ -94,13 +90,11 @@ function createAlignmentHandler(
 
 /**
  * Binds alignment handler callbacks and optional status bar.
+ *
  * @param handler Alignment handler.
  * @param callbacks Shared callbacks including status bar.
  */
-function bindAlignmentCallbacks(
-  handler: AlignmentHandler,
-  callbacks: ActionHandlerSharedCallbacks,
-): void {
+function bindAlignmentCallbacks(handler: AlignmentHandler, callbacks: ActionHandlerSharedCallbacks): void {
   handler.setSyncViewports(callbacks.syncViewports);
   handler.setOnAxisRestriction(callbacks.onAxisRestrictionChanged);
   if (callbacks.statusBar) {

@@ -7,9 +7,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import { setFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 
-/**
- * Unit tests for UV smear undo/redo including solid brush mapping restore.
- */
+/** Unit tests for UV smear undo/redo including solid brush mapping restore. */
 describe('SmearUvStrokeCommand', () => {
   it('undo restores solid brush face mappings after a live smear stroke', () => {
     const model = new SolidModel('SmearUndo');

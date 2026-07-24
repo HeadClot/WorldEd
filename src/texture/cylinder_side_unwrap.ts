@@ -1,11 +1,7 @@
 import * as THREE from 'three';
 import { FaceTextureMapEntry } from './face_texture_mapping.js';
 import { getGeometrySource } from './geometry_source.js';
-import {
-  buildProjectionBasis,
-  computeRegionWorldNormal,
-  resolveProjectionNormal,
-} from './planar_uv_projector.js';
+import { buildProjectionBasis, computeRegionWorldNormal, resolveProjectionNormal } from './planar_uv_projector.js';
 
 /** Wall-like sides: normals nearly horizontal. */
 const SIDE_NORMAL_Y_MAX = 0.35;
@@ -14,17 +10,15 @@ const scratchLocal = new THREE.Vector3();
 const scratchWorld = new THREE.Vector3();
 
 /**
- * Applies circumferential U offsets to cylinder side faces.
- * Each side keeps face-plane projection (no squash) and U ranges are laid
- * end-to-end around the shell so the texture unwraps instead of repeating.
- * Caps (top/bottom) are left unchanged.
+ * Applies circumferential U offsets to cylinder side faces. Each side keeps
+ * face-plane projection (no squash) and U ranges are laid end-to-end around the
+ * shell so the texture unwraps instead of repeating. Caps (top/bottom) are left
+ * unchanged.
+ *
  * @param mesh Mesh whose geometry source may be a cylinder.
  * @param entries Face texture map entries to mutate in place.
  */
-export function applyCylinderSideUnwrapOffsets(
-  mesh: THREE.Mesh,
-  entries: FaceTextureMapEntry[],
-): void {
+export function applyCylinderSideUnwrapOffsets(mesh: THREE.Mesh, entries: FaceTextureMapEntry[]): void {
   if (!isCylinderMesh(mesh)) return;
   mesh.updateMatrixWorld(true);
   const sideEntries = collectSortedSideEntries(mesh, entries);
@@ -34,6 +28,7 @@ export function applyCylinderSideUnwrapOffsets(
 
 /**
  * Returns whether the mesh is stamped or typed as a cylinder.
+ *
  * @param mesh Mesh to inspect.
  * @returns True for cylinder primitives.
  */
@@ -45,15 +40,14 @@ function isCylinderMesh(mesh: THREE.Mesh): boolean {
 
 /**
  * Collects side-face entries sorted by normal angle around Y in the XZ plane.
- * Order uses atan2(normal.x, normal.z); inverted (inward) normals reverse order.
+ * Order uses atan2(normal.x, normal.z); inverted (inward) normals reverse
+ * order.
+ *
  * @param mesh Mesh providing world normals.
  * @param entries All face map entries.
  * @returns Side entries sorted by XZ normal angle around Y.
  */
-function collectSortedSideEntries(
-  mesh: THREE.Mesh,
-  entries: FaceTextureMapEntry[],
-): FaceTextureMapEntry[] {
+function collectSortedSideEntries(mesh: THREE.Mesh, entries: FaceTextureMapEntry[]): FaceTextureMapEntry[] {
   const sides = entries.filter((entry) => {
     const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
     return Math.abs(normal.y) <= SIDE_NORMAL_Y_MAX;
@@ -69,6 +63,7 @@ function collectSortedSideEntries(
 /**
  * Writes sequential offsetU values so side U ranges tile around the cylinder.
  * Offsets U by cumulative side length so faces unwrap end-to-end.
+ *
  * @param mesh Mesh for vertex transforms.
  * @param sideEntries Side faces in angular order.
  */
@@ -86,6 +81,7 @@ function assignSequentialUOffsets(mesh: THREE.Mesh, sideEntries: FaceTextureMapE
 
 /**
  * Measures the physical U extent of a face under face-plane projection.
+ *
  * @param mesh Mesh owner.
  * @param entry Face region and mapping.
  * @returns World-meters span along the face U axis.
@@ -98,6 +94,7 @@ function measureFacePlaneUSpan(mesh: THREE.Mesh, entry: FaceTextureMapEntry): nu
 
 /**
  * Minimum world position dot the face U axis (raw, before offset).
+ *
  * @param mesh Mesh owner.
  * @param entry Face region and mapping.
  * @returns Minimum U dot product.
@@ -110,6 +107,7 @@ function measureFacePlaneMinUDot(mesh: THREE.Mesh, entry: FaceTextureMapEntry): 
 
 /**
  * Collects raw U dots for every vertex in a face region.
+ *
  * @param mesh Mesh owner.
  * @param entry Face region and mapping.
  * @returns Dot products along the face U axis.

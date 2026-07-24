@@ -45,10 +45,7 @@ describe('TransformHandler undo/redo', () => {
   });
 
   it('should onPointerDown not produce a command without a handle pick', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     const handles = gizmo.getHandles();
     const mockCanvas = {
       getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),

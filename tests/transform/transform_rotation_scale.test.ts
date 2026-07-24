@@ -58,14 +58,7 @@ describe('TransformExecutor scale snapping', () => {
     const scales = new Map<THREE.Mesh, THREE.Vector3>();
     initials.set(mesh, mesh.position.clone());
     scales.set(mesh, mesh.scale.clone());
-    executor.applyAbsoluteScale(
-      [mesh],
-      initials,
-      scales,
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(1, 0, 0),
-      1.24,
-    );
+    executor.applyAbsoluteScale([mesh], initials, scales, new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), 1.24);
     expect(mesh.scale.x).toBeCloseTo(1.2);
   });
 
@@ -77,14 +70,7 @@ describe('TransformExecutor scale snapping', () => {
     const scales = new Map<THREE.Mesh, THREE.Vector3>();
     initials.set(mesh, mesh.position.clone());
     scales.set(mesh, mesh.scale.clone());
-    executor.applyAbsoluteScale(
-      [mesh],
-      initials,
-      scales,
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(1, 0, 0),
-      1.37,
-    );
+    executor.applyAbsoluteScale([mesh], initials, scales, new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), 1.37);
     expect(mesh.scale.x).toBeCloseTo(1.37);
   });
 });

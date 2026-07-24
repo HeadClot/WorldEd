@@ -12,6 +12,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 
 /**
  * Builds a box brush instance at a position.
+ *
  * @param id Brush id.
  * @param size Edge length.
  * @param position Optional position.
@@ -24,9 +25,7 @@ function makeBox(id: string, size: number, position?: THREE.Vector3): SolidBrush
   return instance;
 }
 
-/**
- * Unit tests for per-brush mesh chunks and incremental result assembly.
- */
+/** Unit tests for per-brush mesh chunks and incremental result assembly. */
 describe('Solid mesh chunk cache', () => {
   it('rebuilds only dirty brush chunks while assembly matches full remesh', () => {
     const brushes = [
@@ -60,11 +59,10 @@ describe('Solid mesh chunk cache', () => {
     for (const brushId of updatedIds) {
       cache.set(
         brushId,
-        builder.build(
-          compiler.getCachedPolygons(brushId) ?? [],
-          () => createDefaultFaceTextureMapping(),
-          { stickToBrush: false, resultWorldMatrix: identity },
-        ),
+        builder.build(compiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceTextureMapping(), {
+          stickToBrush: false,
+          resultWorldMatrix: identity,
+        }),
       );
     }
     const partial = SolidResultAssembler.assemble(compiler.getLastBrushOrder(), cache);
@@ -74,11 +72,10 @@ describe('Solid mesh chunk cache', () => {
     for (const brushId of fullCompiler.getLastUpdateBrushIds()) {
       fullCache.set(
         brushId,
-        builder.build(
-          fullCompiler.getCachedPolygons(brushId) ?? [],
-          () => createDefaultFaceTextureMapping(),
-          { stickToBrush: false, resultWorldMatrix: identity },
-        ),
+        builder.build(fullCompiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceTextureMapping(), {
+          stickToBrush: false,
+          resultWorldMatrix: identity,
+        }),
       );
     }
     const full = SolidResultAssembler.assemble(fullCompiler.getLastBrushOrder(), fullCache);

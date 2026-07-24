@@ -7,9 +7,7 @@ import { StatusBar } from '../ui/status_bar.js';
 import { ShadingMode } from '../types/shading_mode.js';
 import { ViewportShadingController } from '../viewports/viewport_shading_controller.js';
 
-/**
- * Coordinates per-viewport shading modes, toolbars, and keyboard shortcuts.
- */
+/** Coordinates per-viewport shading modes, toolbars, and keyboard shortcuts. */
 export class ShadingModeCoordinator {
   private viewport2DTop: Viewport2D;
   private viewport2DFront: Viewport2D;
@@ -24,6 +22,7 @@ export class ShadingModeCoordinator {
 
   /**
    * Creates shading mode coordination state. Call wireControls to bind UI.
+   *
    * @param viewport2DTop Top orthographic viewport.
    * @param viewport2DFront Front orthographic viewport.
    * @param viewport2DSide Side orthographic viewport.
@@ -51,15 +50,13 @@ export class ShadingModeCoordinator {
     this.activeViewportIndex = 3;
     this.shadingControllers = this.collectShadingControllers();
     this.selectionVisualController.setShadingControllers(this.shadingControllers);
-    this.shadingModeHandler = new ShadingModeHandler(
-      this.shadingControllers,
-      this.activeViewportIndex,
-      this.statusBar,
-    );
+    this.shadingModeHandler = new ShadingModeHandler(this.shadingControllers, this.activeViewportIndex, this.statusBar);
   }
 
   /**
-   * Binds shading keyboard shortcuts, activation tracking, and viewport toolbars.
+   * Binds shading keyboard shortcuts, activation tracking, and viewport
+   * toolbars.
+   *
    * @param keyboardShortcutHandler Keyboard handler for shading keys.
    * @param onFitViewport Callback when a viewport Fit button is pressed.
    */
@@ -76,6 +73,7 @@ export class ShadingModeCoordinator {
 
   /**
    * Returns the active viewport index (0 top, 1 front, 2 side, 3 perspective).
+   *
    * @returns Active viewport index.
    */
   getActiveViewportIndex(): number {
@@ -84,15 +82,14 @@ export class ShadingModeCoordinator {
 
   /**
    * Returns viewports in activation-index order: Top, Front, Side, Perspective.
+   *
    * @returns The ordered viewport array.
    */
   getOrderedViewports(): Array<Viewport2D | Viewport3D> {
     return [this.viewport2DTop, this.viewport2DFront, this.viewport2DSide, this.viewport3D];
   }
 
-  /**
-   * Updates the wireframe overlay meshes for all viewports.
-   */
+  /** Updates the wireframe overlay meshes for all viewports. */
   updateShadingMeshes(): void {
     this.viewport2DTop.updateShadingMeshes(this.viewport2DTop.collectSelectableObjects());
     this.viewport2DFront.updateShadingMeshes(this.viewport2DFront.collectSelectableObjects());
@@ -102,6 +99,7 @@ export class ShadingModeCoordinator {
 
   /**
    * Collects shading controllers from all viewports.
+   *
    * @returns An array of ViewportShadingController instances.
    */
   private collectShadingControllers(): ViewportShadingController[] {
@@ -113,9 +111,7 @@ export class ShadingModeCoordinator {
     ];
   }
 
-  /**
-   * Binds pointer down events to track the active viewport.
-   */
+  /** Binds pointer down events to track the active viewport. */
   private bindViewportActivation(): void {
     this.viewportElements.forEach((el, index) => {
       el.addEventListener('pointerdown', () => {
@@ -128,6 +124,7 @@ export class ShadingModeCoordinator {
 
   /**
    * Wires shading and Fit actions on each viewport overlay toolbar.
+   *
    * @param onFitViewport Callback when Fit is pressed for a viewport.
    */
   private bindViewportToolbars(onFitViewport: (viewport: Viewport2D | Viewport3D) => void): void {
@@ -145,9 +142,7 @@ export class ShadingModeCoordinator {
     });
   }
 
-  /**
-   * Writes the active viewport's shading mode into the status bar.
-   */
+  /** Writes the active viewport's shading mode into the status bar. */
   private syncStatusBarShadingMode(): void {
     if (!this.statusBar) return;
     const mode = this.shadingModeHandler.getActiveMode();
@@ -156,7 +151,9 @@ export class ShadingModeCoordinator {
   }
 
   /**
-   * Handles shading mode changes from keyboard shortcuts for the active viewport.
+   * Handles shading mode changes from keyboard shortcuts for the active
+   * viewport.
+   *
    * @param mode The shading mode to apply.
    */
   private onShadingMode(mode: ShadingMode): void {

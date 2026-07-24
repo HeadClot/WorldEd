@@ -2,54 +2,43 @@ import * as THREE from 'three';
 import { SolidOperation } from '../types/solid_operation.js';
 
 /**
- * UserData flag marking a shared brush edge material (must not be disposed per mesh).
+ * UserData flag marking a shared brush edge material (must not be disposed per
+ * mesh).
  */
 export const BRUSH_EDGE_SHARED_MATERIAL_KEY = 'isSharedBrushEdgeMaterial';
 
 /**
- * UserData flag marking operation-colored dual-pass edges on solid brush previews.
- * Distinct from content decorative edges (white Theme.boxEdgeColor outlines).
+ * UserData flag marking operation-colored dual-pass edges on solid brush
+ * previews. Distinct from content decorative edges (white Theme.boxEdgeColor
+ * outlines).
  */
 export const SOLID_BRUSH_EDGE_USERDATA_KEY = 'isSolidBrushEdge';
 
-/**
- * UserData flag marking materials that support distance fade uniforms.
- */
+/** UserData flag marking materials that support distance fade uniforms. */
 export const BRUSH_EDGE_DISTANCE_FADE_KEY = 'brushEdgeDistanceFade';
 
-/**
- * Distance where brush edges begin fading out in the perspective viewport.
- */
+/** Distance where brush edges begin fading out in the perspective viewport. */
 export const BRUSH_EDGE_FADE_NEAR = 28;
 
 /**
- * Distance where brush edges are fully faded and culled in the perspective viewport.
+ * Distance where brush edges are fully faded and culled in the perspective
+ * viewport.
  */
 export const BRUSH_EDGE_FADE_FAR = 85;
 
-/**
- * Front-pass opacity for unoccluded brush edges.
- */
+/** Front-pass opacity for unoccluded brush edges. */
 export const BRUSH_EDGE_FRONT_OPACITY = 0.88;
 
-/**
- * Occluded-pass opacity for edges behind solid geometry (dim ghost).
- */
+/** Occluded-pass opacity for edges behind solid geometry (dim ghost). */
 export const BRUSH_EDGE_OCCLUDED_OPACITY = 0.14;
 
-/**
- * Near/far values that effectively disable distance fade (2D clones, tests).
- */
+/** Near/far values that effectively disable distance fade (2D clones, tests). */
 const FADE_DISABLED_NEAR = 1e7;
 
-/**
- * Far plane for disabled distance fade.
- */
+/** Far plane for disabled distance fade. */
 const FADE_DISABLED_FAR = 1e8;
 
-/**
- * Vertex shader: projects line verts and computes distance fade factor.
- */
+/** Vertex shader: projects line verts and computes distance fade factor. */
 const EDGE_VERTEX_SHADER = `
   uniform float fadeNear;
   uniform float fadeFar;
@@ -64,7 +53,8 @@ const EDGE_VERTEX_SHADER = `
 `;
 
 /**
- * Fragment shader: multiplies operation color by distance fade and base opacity.
+ * Fragment shader: multiplies operation color by distance fade and base
+ * opacity.
  */
 const EDGE_FRAGMENT_SHADER = `
   uniform vec3 diffuse;
@@ -88,34 +78,27 @@ export class SolidBrushEdgeMaterials {
 
   /**
    * Returns the shared front-pass edge material for a CSG operation.
+   *
    * @param operation Brush CSG operation.
    * @returns Shared front edge material.
    */
   static getFrontMaterial(operation: SolidOperation): THREE.ShaderMaterial {
-    return this.getOrCreate(
-      this.frontByOperation,
-      operation,
-      BRUSH_EDGE_FRONT_OPACITY,
-      THREE.LessEqualDepth,
-    );
+    return this.getOrCreate(this.frontByOperation, operation, BRUSH_EDGE_FRONT_OPACITY, THREE.LessEqualDepth);
   }
 
   /**
    * Returns the shared occluded-pass edge material for a CSG operation.
+   *
    * @param operation Brush CSG operation.
    * @returns Shared occluded edge material.
    */
   static getOccludedMaterial(operation: SolidOperation): THREE.ShaderMaterial {
-    return this.getOrCreate(
-      this.occludedByOperation,
-      operation,
-      BRUSH_EDGE_OCCLUDED_OPACITY,
-      THREE.GreaterDepth,
-    );
+    return this.getOrCreate(this.occludedByOperation, operation, BRUSH_EDGE_OCCLUDED_OPACITY, THREE.GreaterDepth);
   }
 
   /**
    * Returns whether a material is a shared brush edge material.
+   *
    * @param material Candidate material.
    * @returns True when dispose paths must skip this material.
    */
@@ -125,6 +108,7 @@ export class SolidBrushEdgeMaterials {
 
   /**
    * Disables distance fade on a material (used for 2D viewport clones).
+   *
    * @param material Line material after clone.
    */
   static disableDistanceFade(material: THREE.Material): void {
@@ -140,6 +124,7 @@ export class SolidBrushEdgeMaterials {
    * Prepares a cloned brush edge material for orthographic 2D viewports.
    * Disables distance fade and depth testing so outlines stay visible from
    * every axis (side/top/front) even when solid result depth would hide them.
+   *
    * @param material Line material after clone.
    */
   static prepareForOrthoClone(material: THREE.Material): void {
@@ -153,6 +138,7 @@ export class SolidBrushEdgeMaterials {
 
   /**
    * Preview edge color for a CSG operation.
+   *
    * @param operation Solid operation.
    * @returns Hex color.
    */
@@ -164,6 +150,7 @@ export class SolidBrushEdgeMaterials {
 
   /**
    * Gets or creates a shared edge material for an operation and depth mode.
+   *
    * @param cache Material map keyed by operation.
    * @param operation CSG operation.
    * @param opacity Base opacity before distance fade.
@@ -185,6 +172,7 @@ export class SolidBrushEdgeMaterials {
 
   /**
    * Builds one shared distance-faded edge material.
+   *
    * @param operation CSG operation for tint.
    * @param opacity Base opacity.
    * @param depthFunc Depth function for front or occluded pass.

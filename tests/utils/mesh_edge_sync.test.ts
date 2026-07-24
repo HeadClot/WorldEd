@@ -20,9 +20,7 @@ describe('mesh_edge_sync', () => {
 
   it('should create a decorative edge child from current geometry', () => {
     rebuildDecorativeEdges(mesh);
-    const edges = mesh.children.filter(
-      (child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true,
-    );
+    const edges = mesh.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true);
     expect(edges.length).toBe(1);
   });
 
@@ -31,9 +29,7 @@ describe('mesh_edge_sync', () => {
     const first = mesh.children[0] as THREE.LineSegments;
     mesh.geometry = new THREE.BoxGeometry(2, 2, 2);
     rebuildDecorativeEdges(mesh);
-    const edges = mesh.children.filter(
-      (child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true,
-    );
+    const edges = mesh.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true);
     expect(edges.length).toBe(1);
     expect(edges[0]).not.toBe(first);
   });
@@ -46,18 +42,14 @@ describe('mesh_edge_sync', () => {
     highlight.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] = true;
     mesh.add(highlight);
     rebuildDecorativeEdges(mesh);
-    const stillThere = mesh.children.some(
-      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
-    );
+    const stillThere = mesh.children.some((child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true);
     expect(stillThere).toBe(true);
   });
 
   it('should remove decorative edges on request', () => {
     rebuildDecorativeEdges(mesh);
     removeDecorativeEdges(mesh);
-    const edges = mesh.children.filter(
-      (child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true,
-    );
+    const edges = mesh.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true);
     expect(edges.length).toBe(0);
   });
 
@@ -86,19 +78,13 @@ describe('mesh_edge_sync', () => {
     brush.add(brushEdge);
     expect(usesContentDecorativeEdges(brush)).toBe(false);
     rebuildDecorativeEdges(brush);
-    expect(
-      brush.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true),
-    ).toHaveLength(0);
-    expect(
-      brush.children.filter((child) => child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true),
-    ).toHaveLength(1);
+    expect(brush.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true)).toHaveLength(0);
+    expect(brush.children.filter((child) => child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true)).toHaveLength(1);
 
     const result = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
     result.userData.isSolidModelResult = true;
     expect(usesContentDecorativeEdges(result)).toBe(false);
     rebuildDecorativeEdges(result);
-    expect(
-      result.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true),
-    ).toHaveLength(0);
+    expect(result.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true)).toHaveLength(0);
   });
 });

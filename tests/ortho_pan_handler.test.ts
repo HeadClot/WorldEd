@@ -20,16 +20,10 @@ describe('OrthoPanHandler', () => {
     canvas.addEventListener('pointermove', () => {
       moveHandled++;
     });
-    canvas.dispatchEvent(
-      new PointerEvent('pointerdown', { button: 2, offsetX: 0, offsetY: 0, pointerId: 1 }),
-    );
-    canvas.dispatchEvent(
-      new PointerEvent('pointermove', { button: 0, offsetX: 100, offsetY: 100, pointerId: 1 }),
-    );
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, offsetX: 0, offsetY: 0, pointerId: 1 }));
+    canvas.dispatchEvent(new PointerEvent('pointermove', { button: 0, offsetX: 100, offsetY: 100, pointerId: 1 }));
     expect(moveHandled).toBe(1);
-    canvas.dispatchEvent(
-      new PointerEvent('pointerup', { button: 2, offsetX: 100, offsetY: 100, pointerId: 1 }),
-    );
+    canvas.dispatchEvent(new PointerEvent('pointerup', { button: 2, offsetX: 100, offsetY: 100, pointerId: 1 }));
   });
 
   it('should trigger zoom callback on wheel event', () => {
@@ -84,16 +78,12 @@ describe('OrthoPanHandler', () => {
     new OrthoPanHandler(canvas, camera, zoomCallback);
     canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, pointerId: 1 }));
     const initialPosition = camera.position.clone();
-    canvas.dispatchEvent(
-      new PointerEvent('pointermove', { movementX: 10, movementY: 0, pointerId: 1 }),
-    );
+    canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 10, movementY: 0, pointerId: 1 }));
     expect(camera.position.distanceTo(initialPosition)).toBeGreaterThan(0.001);
     document.pointerLockElement = null;
     document.dispatchEvent(new Event('pointerlockchange'));
     const positionAfterLockLoss = camera.position.clone();
-    canvas.dispatchEvent(
-      new PointerEvent('pointermove', { movementX: 10, movementY: 0, pointerId: 1 }),
-    );
+    canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 10, movementY: 0, pointerId: 1 }));
     expect(camera.position.distanceTo(positionAfterLockLoss)).toBeLessThan(0.001);
   });
 });

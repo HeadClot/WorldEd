@@ -3,14 +3,9 @@ import * as THREE from 'three';
 import { rebuildSurfaceMaterials } from '../../src/texture/surface_material_builder.js';
 import { setFaceTextureMaps, getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
-import {
-  setTextureMapCacheForTests,
-  TextureMapCache,
-} from '../../src/texture/texture_map_cache.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
 
-/**
- * Unit tests for multi-material batching on content meshes.
- */
+/** Unit tests for multi-material batching on content meshes. */
 describe('rebuildSurfaceMaterials', () => {
   beforeEach(() => {
     setTextureMapCacheForTests(new TextureMapCache());
@@ -83,6 +78,7 @@ describe('rebuildSurfaceMaterials', () => {
 
 /**
  * Builds a non-indexed mesh with the requested triangle count.
+ *
  * @param triangleCount Number of triangles.
  * @returns Mesh with position attribute only.
  */

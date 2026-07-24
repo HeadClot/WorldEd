@@ -14,9 +14,7 @@ import { StatusBar } from '../ui/status_bar.js';
 import { FaceModeCoordinator } from './face_mode_coordinator.js';
 import { SelectionMode } from '../types/selection_mode.js';
 
-/**
- * Subsystems exposed for unit tests of the layout manager.
- */
+/** Subsystems exposed for unit tests of the layout manager. */
 export interface LayoutTestComponents {
   viewport3D: Viewport3D;
   viewport2DTop: Viewport2D;
@@ -39,6 +37,7 @@ export interface LayoutTestComponents {
 
 /**
  * Builds the testing component bag from live layout subsystems.
+ *
  * @param parts Live layout references.
  * @returns Object suitable for getComponentsForTesting.
  */

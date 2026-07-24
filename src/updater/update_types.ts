@@ -35,13 +35,7 @@ export interface StandaloneUpdateRelease {
 
 /** Result state returned after checking GitHub Releases. */
 export type UpdateCheckStatus =
-  | 'unsupported'
-  | 'checking'
-  | 'no-release'
-  | 'no-compatible-asset'
-  | 'up-to-date'
-  | 'update-available'
-  | 'error';
+  'unsupported' | 'checking' | 'no-release' | 'no-compatible-asset' | 'up-to-date' | 'update-available' | 'error';
 
 /** Complete result of an updater check. */
 export interface UpdateCheckResult {

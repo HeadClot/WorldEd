@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Snapshot of a mesh's position before an alignment operation.
- * Used to restore the original position on undo.
+ * Snapshot of a mesh's position before an alignment operation. Used to restore
+ * the original position on undo.
  */
 export interface ObjectAlignSnapshot {
   mesh: THREE.Mesh;
@@ -11,8 +11,8 @@ export interface ObjectAlignSnapshot {
 }
 
 /**
- * Undoable command for alignment operations.
- * Stores original positions and the target positions for each mesh.
+ * Undoable command for alignment operations. Stores original positions and the
+ * target positions for each mesh.
  */
 export class AlignCommand implements UndoCommand {
   private snapshots: ObjectAlignSnapshot[];
@@ -20,6 +20,7 @@ export class AlignCommand implements UndoCommand {
 
   /**
    * Creates a new align command.
+   *
    * @param snapshots The position snapshots of all affected meshes.
    * @param targetPositions The target position for each mesh after alignment.
    */
@@ -28,9 +29,7 @@ export class AlignCommand implements UndoCommand {
     this.targetPositions = targetPositions;
   }
 
-  /**
-   * Executes the alignment by moving each mesh to its target position.
-   */
+  /** Executes the alignment by moving each mesh to its target position. */
   execute(): void {
     this.snapshots.forEach((snapshot) => {
       const target = this.targetPositions.get(snapshot.mesh);
@@ -40,9 +39,7 @@ export class AlignCommand implements UndoCommand {
     });
   }
 
-  /**
-   * Undoes the alignment by restoring each mesh to its original position.
-   */
+  /** Undoes the alignment by restoring each mesh to its original position. */
   undo(): void {
     this.snapshots.forEach((snapshot) => {
       snapshot.mesh.position.copy(snapshot.originalPosition);

@@ -1,9 +1,5 @@
 import { createDefaultGameProfile } from './settings_defaults.js';
-import {
-  buildGameProfileFileName,
-  parseGameProfileJson,
-  serializeGameProfileToJson,
-} from './game_profile_json.js';
+import { buildGameProfileFileName, parseGameProfileJson, serializeGameProfileToJson } from './game_profile_json.js';
 import type { GameProfile } from './settings_types.js';
 import type { SettingsStorage } from './settings_storage.js';
 
@@ -13,22 +9,19 @@ export const GAME_PROFILE_STORAGE_PREFIX = 'aiworlded.game_profile.';
 /** Storage key for the ordered profile id index and active selection. */
 export const GAME_PROFILE_INDEX_KEY = 'aiworlded.game_profiles.index';
 
-/**
- * Index document listing profile ids and the active profile.
- */
+/** Index document listing profile ids and the active profile. */
 interface GameProfileIndexDocument {
   activeGameProfileId: string | null;
   profileIds: string[];
 }
 
-/**
- * Loads and saves one JSON document per game profile via settings storage.
- */
+/** Loads and saves one JSON document per game profile via settings storage. */
 export class GameProfileRepository {
   private readonly storage: SettingsStorage;
 
   /**
    * Creates a repository bound to a settings storage backend.
+   *
    * @param storage Key-value storage implementation.
    */
   constructor(storage: SettingsStorage) {
@@ -36,8 +29,9 @@ export class GameProfileRepository {
   }
 
   /**
-   * Loads all profiles and the active profile id from storage.
-   * Seeds a default profile when storage is empty.
+   * Loads all profiles and the active profile id from storage. Seeds a default
+   * profile when storage is empty.
+   *
    * @returns Profiles and active id.
    */
   loadAll(): { profiles: GameProfile[]; activeGameProfileId: string | null } {
@@ -51,8 +45,9 @@ export class GameProfileRepository {
   }
 
   /**
-   * Persists the full profile list and active selection.
-   * Writes one JSON blob per profile and refreshes the index.
+   * Persists the full profile list and active selection. Writes one JSON blob
+   * per profile and refreshes the index.
+   *
    * @param profiles Profiles to save.
    * @param activeGameProfileId Active profile id.
    */
@@ -65,6 +60,7 @@ export class GameProfileRepository {
 
   /**
    * Saves a single profile as its own JSON document.
+   *
    * @param profile Profile to persist.
    */
   saveProfile(profile: GameProfile): void {
@@ -74,6 +70,7 @@ export class GameProfileRepository {
 
   /**
    * Returns the JSON file contents for a profile.
+   *
    * @param profile Profile to export.
    * @returns Pretty-printed JSON string.
    */
@@ -83,6 +80,7 @@ export class GameProfileRepository {
 
   /**
    * Returns the suggested `.json` filename for a profile.
+   *
    * @param profile Profile to name.
    * @returns Filename ending in `.json`.
    */
@@ -92,6 +90,7 @@ export class GameProfileRepository {
 
   /**
    * Parses a profile from JSON file text.
+   *
    * @param jsonText File contents.
    * @returns Parsed profile.
    */
@@ -101,6 +100,7 @@ export class GameProfileRepository {
 
   /**
    * Builds the storage key for a profile id.
+   *
    * @param profileId Profile identifier.
    * @returns Storage key.
    */
@@ -110,6 +110,7 @@ export class GameProfileRepository {
 
   /**
    * Reads the profile index document from storage.
+   *
    * @returns Index with empty lists when missing or invalid.
    */
   private readIndex(): GameProfileIndexDocument {
@@ -122,6 +123,7 @@ export class GameProfileRepository {
 
   /**
    * Parses an index JSON string with safe fallbacks.
+   *
    * @param raw JSON text.
    * @returns Normalized index document.
    */
@@ -131,8 +133,7 @@ export class GameProfileRepository {
       const profileIds = Array.isArray(parsed.profileIds)
         ? parsed.profileIds.filter((id) => typeof id === 'string')
         : [];
-      const active =
-        typeof parsed.activeGameProfileId === 'string' ? parsed.activeGameProfileId : null;
+      const active = typeof parsed.activeGameProfileId === 'string' ? parsed.activeGameProfileId : null;
       return { activeGameProfileId: active, profileIds };
     } catch {
       return { activeGameProfileId: null, profileIds: [] };
@@ -141,6 +142,7 @@ export class GameProfileRepository {
 
   /**
    * Loads profile documents referenced by the index.
+   *
    * @param index Profile index.
    * @returns Successfully loaded profiles in index order.
    */
@@ -157,6 +159,7 @@ export class GameProfileRepository {
 
   /**
    * Attempts to load one profile JSON document.
+   *
    * @param profileId Profile identifier.
    * @returns Profile or null when missing/invalid.
    */
@@ -174,6 +177,7 @@ export class GameProfileRepository {
 
   /**
    * Writes the index document for the current profile list.
+   *
    * @param profiles Profiles being saved.
    * @param activeGameProfileId Active profile id.
    */
@@ -187,6 +191,7 @@ export class GameProfileRepository {
 
   /**
    * Removes storage keys for profiles no longer in the list.
+   *
    * @param previousIds Prior index ids.
    * @param profiles Current profiles.
    */
@@ -201,6 +206,7 @@ export class GameProfileRepository {
 
   /**
    * Creates and persists a default profile when storage is empty.
+   *
    * @returns Seeded profiles and active id.
    */
   private seedDefaultProfile(): {
@@ -214,15 +220,13 @@ export class GameProfileRepository {
 
   /**
    * Picks a valid active id from the index or the first profile.
+   *
    * @param index Loaded index.
    * @param profiles Loaded profiles.
    * @returns Active profile id.
    */
   private resolveActiveId(index: GameProfileIndexDocument, profiles: GameProfile[]): string | null {
-    if (
-      index.activeGameProfileId &&
-      profiles.some((profile) => profile.id === index.activeGameProfileId)
-    ) {
+    if (index.activeGameProfileId && profiles.some((profile) => profile.id === index.activeGameProfileId)) {
       return index.activeGameProfileId;
     }
     return profiles[0]?.id ?? null;
@@ -231,6 +235,7 @@ export class GameProfileRepository {
 
 /**
  * Creates a unique profile identifier.
+ *
  * @returns New profile id string.
  */
 export function createProfileId(): string {

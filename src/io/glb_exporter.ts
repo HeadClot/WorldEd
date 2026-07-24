@@ -5,15 +5,16 @@ import type { GameProfile } from '../settings/settings_types.js';
 import { buildExportRootTransform } from './coordinate_space_transform.js';
 
 /**
- * Exports a Three.js scene group to binary GLB format.
- * Filters out solid brush helpers, selection overlays, and other editor
- * internals so the file contains only final content geometry. When a profile
- * is supplied, its unit scale and coordinate space conversion are applied to
- * a temporary export root before invoking GLTFExporter.
+ * Exports a Three.js scene group to binary GLB format. Filters out solid brush
+ * helpers, selection overlays, and other editor internals so the file contains
+ * only final content geometry. When a profile is supplied, its unit scale and
+ * coordinate space conversion are applied to a temporary export root before
+ * invoking GLTFExporter.
  */
 export class GlbExporter {
   /**
    * Exports the given group to a GLB binary buffer.
+   *
    * @param worldGroup The live editor world root to export.
    * @param profile Active game profile, or null to skip the conversion.
    * @returns A promise resolving to the GLB ArrayBuffer.
@@ -28,6 +29,7 @@ export class GlbExporter {
   /**
    * Builds a filtered export graph and applies the optional profile transform.
    * The original world group remains untouched.
+   *
    * @param worldGroup The original scene root.
    * @param profile Active game profile, or null.
    * @returns A wrapped group ready for GLTFExporter.
@@ -48,6 +50,7 @@ export class GlbExporter {
 
   /**
    * Executes the GLTFExporter callback and resolves the promise.
+   *
    * @param exportRoot The group to export.
    * @param resolve The promise resolve function.
    * @param reject The promise reject function.
@@ -68,13 +71,11 @@ export class GlbExporter {
 
   /**
    * Handles successful export by resolving with the result buffer.
+   *
    * @param result The export result, expected to be an ArrayBuffer.
    * @param resolve The promise resolve function.
    */
-  private onExportSuccess(
-    result: ArrayBuffer | object,
-    resolve: (buffer: ArrayBuffer) => void,
-  ): void {
+  private onExportSuccess(result: ArrayBuffer | object, resolve: (buffer: ArrayBuffer) => void): void {
     if (result instanceof ArrayBuffer) {
       resolve(result);
       return;
@@ -84,6 +85,7 @@ export class GlbExporter {
 
   /**
    * Handles export errors by rejecting with the error message.
+   *
    * @param error The error thrown by GLTFExporter.
    * @param reject The promise reject function.
    */

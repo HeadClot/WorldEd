@@ -14,9 +14,7 @@ import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 /** Keyboard code that enables continuous UV smear while held. */
 const UV_SMEAR_KEY_CODE = 'KeyG';
 
-/**
- * Dependencies required to coordinate face selection and extrusion UI.
- */
+/** Dependencies required to coordinate face selection and extrusion UI. */
 export interface FaceModeCoordinatorDependencies {
   viewport3D: Viewport3D;
   viewport2DTop: Viewport2D;
@@ -35,9 +33,7 @@ export interface FaceModeCoordinatorDependencies {
   onSelectionModeUiChanged?: (mode: SelectionMode) => void;
 }
 
-/**
- * Coordinates face selection mode, drag-paint, UV smear, and extrusion UI.
- */
+/** Coordinates face selection mode, drag-paint, UV smear, and extrusion UI. */
 export class FaceModeCoordinator {
   private deps: FaceModeCoordinatorDependencies;
   private faceExtrusionController: FaceExtrusionController;
@@ -50,6 +46,7 @@ export class FaceModeCoordinator {
 
   /**
    * Creates a face mode coordinator and wires viewport/face callbacks.
+   *
    * @param deps Shared editor systems used by face mode.
    */
   constructor(deps: FaceModeCoordinatorDependencies) {
@@ -68,6 +65,7 @@ export class FaceModeCoordinator {
 
   /**
    * Returns the face extrusion controller owned by this coordinator.
+   *
    * @returns The FaceExtrusionController instance.
    */
   getFaceExtrusionController(): FaceExtrusionController {
@@ -76,6 +74,7 @@ export class FaceModeCoordinator {
 
   /**
    * Returns the current selection mode.
+   *
    * @returns The active SelectionMode value.
    */
   getSelectionMode(): SelectionMode {
@@ -83,15 +82,13 @@ export class FaceModeCoordinator {
   }
 
   /**
-   * Extrudes currently selected faces by the default snap distance.
-   * Switches to face mode feedback when nothing is selected.
+   * Extrudes currently selected faces by the default snap distance. Switches to
+   * face mode feedback when nothing is selected.
    */
   onExtrudeFaces(): void {
     if (this.faceExtrusionController.getSelectionMode() !== SelectionMode.FACE) {
       this.faceExtrusionController.setSelectionMode(SelectionMode.FACE);
-      this.deps.showStatusMessage(
-        'Face mode: drag faces to select, hold G to smear UVs, Extrude (Shift+E)',
-      );
+      this.deps.showStatusMessage('Face mode: drag faces to select, hold G to smear UVs, Extrude (Shift+E)');
       return;
     }
     if (this.faceExtrusionController.getSelectedFaceCount() === 0) {
@@ -121,7 +118,8 @@ export class FaceModeCoordinator {
   /**
    * Updates the available meshes for face selection from the world object.
    * Solid brush volume helpers are excluded so only CSG result (and regular)
-   * surfaces can be face-selected; invisible subtractive hulls never block picks.
+   * surfaces can be face-selected; invisible subtractive hulls never block
+   * picks.
    */
   updateFaceSelectionMeshes(): void {
     const meshes: THREE.Mesh[] = [];
@@ -135,6 +133,7 @@ export class FaceModeCoordinator {
 
   /**
    * Returns meshes currently allowed for face picking (for tests).
+   *
    * @returns Face-pickable mesh list.
    */
   getFacePickableMeshesForTesting(): THREE.Mesh[] {
@@ -143,6 +142,7 @@ export class FaceModeCoordinator {
 
   /**
    * Creates a new face extrusion controller for the 3D viewport.
+   *
    * @returns A configured FaceExtrusionController instance.
    */
   private createFaceExtrusionController(): FaceExtrusionController {
@@ -154,22 +154,14 @@ export class FaceModeCoordinator {
     );
   }
 
-  /**
-   * Binds callbacks between the face controller and keyboard shortcuts.
-   */
+  /** Binds callbacks between the face controller and keyboard shortcuts. */
   private bindFaceSelectionCallbacks(): void {
-    this.faceExtrusionController.setModeChangedCallback((mode) =>
-      this.onSelectionModeChanged(mode),
-    );
-    this.deps.keyboardShortcutHandler.setOnSelectionModeToggle((mode) =>
-      this.onSelectionModeToggle(mode),
-    );
+    this.faceExtrusionController.setModeChangedCallback((mode) => this.onSelectionModeChanged(mode));
+    this.deps.keyboardShortcutHandler.setOnSelectionModeToggle((mode) => this.onSelectionModeToggle(mode));
     this.deps.keyboardShortcutHandler.setOnExtrudeFaces(() => this.onExtrudeFaces());
   }
 
-  /**
-   * Wires face selection callbacks to all viewports.
-   */
+  /** Wires face selection callbacks to all viewports. */
   private bindViewportFaceCallbacks(): void {
     const viewports = [
       this.deps.viewport3D,
@@ -183,8 +175,9 @@ export class FaceModeCoordinator {
   }
 
   /**
-   * Handles face selection pointer down events from any viewport.
-   * Starts window-level drag listeners for multi-face paint and UV smear.
+   * Handles face selection pointer down events from any viewport. Starts
+   * window-level drag listeners for multi-face paint and UV smear.
+   *
    * @param event The pointer event.
    * @param viewport The viewport that received the event.
    * @returns True if the event was consumed by face selection.
@@ -213,6 +206,7 @@ export class FaceModeCoordinator {
 
   /**
    * Registers window listeners so face drag continues outside the canvas.
+   *
    * @param viewport Viewport that started the drag.
    */
   private beginWindowDragTracking(viewport: Viewport3D | Viewport2D): void {
@@ -229,9 +223,7 @@ export class FaceModeCoordinator {
     window.addEventListener('pointercancel', this.windowPointerUpListener);
   }
 
-  /**
-   * Removes window drag listeners.
-   */
+  /** Removes window drag listeners. */
   private endWindowDragTracking(): void {
     if (this.windowPointerMoveListener) {
       window.removeEventListener('pointermove', this.windowPointerMoveListener);
@@ -246,7 +238,9 @@ export class FaceModeCoordinator {
   }
 
   /**
-   * Continues face selection drag and optional UV smear while the button is held.
+   * Continues face selection drag and optional UV smear while the button is
+   * held.
+   *
    * @param event Window pointer move event.
    */
   private onWindowPointerMove(event: PointerEvent): void {
@@ -275,9 +269,7 @@ export class FaceModeCoordinator {
     this.updateSelectionModeStatus();
   }
 
-  /**
-   * Ends face drag-paint and commits any UV smear stroke.
-   */
+  /** Ends face drag-paint and commits any UV smear stroke. */
   private onWindowPointerUp(): void {
     this.faceExtrusionController.onPointerUp();
     if (this.isSmearStrokeLive) {
@@ -292,6 +284,7 @@ export class FaceModeCoordinator {
 
   /**
    * Returns whether the UV smear modifier key is currently held.
+   *
    * @returns True while KeyG is down.
    */
   private isUvSmearKeyHeld(): boolean {
@@ -300,6 +293,7 @@ export class FaceModeCoordinator {
 
   /**
    * Handles selection mode toggle from keyboard shortcut or tools palette.
+   *
    * @param mode The new selection mode to activate.
    */
   private onSelectionModeToggle(mode: SelectionMode): void {
@@ -308,6 +302,7 @@ export class FaceModeCoordinator {
 
   /**
    * Handles selection mode change notifications from the controller.
+   *
    * @param mode The new selection mode.
    */
   private onSelectionModeChanged(mode: SelectionMode): void {
@@ -324,20 +319,16 @@ export class FaceModeCoordinator {
 
   /**
    * Activates face-only picking: clears object selection so transform tools
-   * (bounds/move/rotate/scale) deactivate, then shows face-mode guidance.
-   * Face pick works on any mesh, so object selection is not needed here.
+   * (bounds/move/rotate/scale) deactivate, then shows face-mode guidance. Face
+   * pick works on any mesh, so object selection is not needed here.
    */
   private enterFaceSelectionMode(): void {
     this.deps.selectionManager.clearSelection();
     this.updateFaceSelectionMeshes();
-    this.deps.showStatusMessage(
-      'Face mode: drag to select faces · hold G and drag to smear UVs · Extrude / Shift+E',
-    );
+    this.deps.showStatusMessage('Face mode: drag to select faces · hold G and drag to smear UVs · Extrude / Shift+E');
   }
 
-  /**
-   * Updates the status bar to reflect the current selection mode.
-   */
+  /** Updates the status bar to reflect the current selection mode. */
   private updateSelectionModeStatus(): void {
     if (!this.deps.statusBar) return;
     const mode = this.faceExtrusionController.getSelectionMode();
@@ -347,6 +338,7 @@ export class FaceModeCoordinator {
 
   /**
    * Converts a selection mode enum value to its display string.
+   *
    * @param mode The selection mode to format.
    * @returns The display name of the selection mode.
    */

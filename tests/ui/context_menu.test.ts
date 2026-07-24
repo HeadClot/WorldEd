@@ -77,9 +77,7 @@ describe('ContextMenu', () => {
 
   it('should not invoke callback for disabled items', () => {
     const disabledCallback = vi.fn();
-    const disabledItems: ContextMenuItem[] = [
-      { label: 'Disabled Item', callback: disabledCallback, disabled: true },
-    ];
+    const disabledItems: ContextMenuItem[] = [{ label: 'Disabled Item', callback: disabledCallback, disabled: true }];
     const disabledMenu = new ContextMenu(container, disabledItems);
     disabledMenu.show(100, 100);
     const menuEl = container.children[1] as HTMLElement;

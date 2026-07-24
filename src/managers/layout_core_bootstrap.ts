@@ -15,14 +15,9 @@ import { CommandStack } from '../commands/command_stack.js';
 import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 import { ClipPlaneTool } from './clip_plane_tool.js';
 import { TerrainGenerator } from '../terrain/terrain_generator.js';
-import {
-  DEFAULT_COMMAND_STACK_MAX_SIZE,
-  DEFAULT_GRID_SNAP_INTERVAL,
-} from '../types/editor_config.js';
+import { DEFAULT_COMMAND_STACK_MAX_SIZE, DEFAULT_GRID_SNAP_INTERVAL } from '../types/editor_config.js';
 
-/**
- * Core editor services created before the DOM shell exists.
- */
+/** Core editor services created before the DOM shell exists. */
 export interface LayoutCoreSystems {
   inputManager: InputManager;
   worldObject: THREE.Group;
@@ -50,6 +45,7 @@ export interface LayoutCoreSystems {
 
 /**
  * Constructs core managers that do not depend on DOM layout.
+ *
  * @returns Bundle of core editor services and runtime flags.
  */
 export function createLayoutCoreSystems(): LayoutCoreSystems {
@@ -70,6 +66,7 @@ export function createLayoutCoreSystems(): LayoutCoreSystems {
 
 /**
  * Creates runtime loop flags shared by the layout manager.
+ *
  * @returns Runtime state fields for core systems.
  */
 function createRuntimeState(): Pick<
@@ -88,6 +85,7 @@ function createRuntimeState(): Pick<
 
 /**
  * Creates world root, selection, primitive tool, and hierarchy services.
+ *
  * @param worldObject Scene root group.
  * @param commandStack Shared undo stack.
  * @returns Scene hierarchy service fields.
@@ -95,10 +93,7 @@ function createRuntimeState(): Pick<
 function createSceneRootServices(
   worldObject: THREE.Group,
   commandStack: CommandStack,
-): Pick<
-  LayoutCoreSystems,
-  'worldObject' | 'selectionManager' | 'primitiveTool' | 'hierarchyReparentHandler'
-> {
+): Pick<LayoutCoreSystems, 'worldObject' | 'selectionManager' | 'primitiveTool' | 'hierarchyReparentHandler'> {
   return {
     worldObject,
     selectionManager: new SelectionManager(),
@@ -109,6 +104,7 @@ function createSceneRootServices(
 
 /**
  * Creates grid snap, command stack, and transform gizmo services.
+ *
  * @returns Snap and transform subsystem bundle.
  */
 function createSnapAndTransformStack(): Pick<

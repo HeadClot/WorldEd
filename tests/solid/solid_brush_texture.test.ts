@@ -7,9 +7,7 @@ import { AssignSolidBrushTextureCommand } from '../../src/commands/assign_solid_
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
 
-/**
- * Per-brush surface textures bake into the CSG result, never helper previews.
- */
+/** Per-brush surface textures bake into the CSG result, never helper previews. */
 describe('Solid brush surface textures', () => {
   it('stores texture on the brush and bakes it into the result mesh only', () => {
     const model = new SolidModel('TexSolid');

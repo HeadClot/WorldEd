@@ -11,19 +11,21 @@ import { GridSnap } from '../transform/grid_snap.js';
 
 /**
  * Callback for selection mode changes.
+ *
  * @param mode The new selection mode.
  */
 export type SelectionModeCallback = (mode: SelectionMode) => void;
 
 /**
  * Callback for face selection set changes.
+ *
  * @param faces The current face selection entries.
  */
 export type FaceSelectionChangedListener = (faces: FaceSelection[]) => void;
 
 /**
- * Central controller for face selection and extrusion operations.
- * Extrusion creates a new convex prism object; source meshes stay unchanged.
+ * Central controller for face selection and extrusion operations. Extrusion
+ * creates a new convex prism object; source meshes stay unchanged.
  */
 export class FaceExtrusionController {
   private selectionManager: FaceSelectionManager;
@@ -43,17 +45,14 @@ export class FaceExtrusionController {
 
   /**
    * Creates a new face extrusion controller.
+   *
    * @param scene The Three.js scene for highlight rendering.
    * @param commandStack The command stack for undo/redo.
-   * @param gridSnap The grid snap configuration for snapping extrusion distances.
+   * @param gridSnap The grid snap configuration for snapping extrusion
+   *   distances.
    * @param worldRoot The parent group for newly created extrusion meshes.
    */
-  constructor(
-    scene: THREE.Scene,
-    commandStack: CommandStack,
-    gridSnap: GridSnap,
-    worldRoot: THREE.Object3D,
-  ) {
+  constructor(scene: THREE.Scene, commandStack: CommandStack, gridSnap: GridSnap, worldRoot: THREE.Object3D) {
     this.selectionManager = new FaceSelectionManager();
     this.raycaster = new FaceSelectionRaycaster();
     this.highlight = new FaceSelectionHighlight(scene);
@@ -71,17 +70,14 @@ export class FaceExtrusionController {
     this.bindSelectionChangeCallback();
   }
 
-  /**
-   * Binds the internal selection change callback to update highlights.
-   */
+  /** Binds the internal selection change callback to update highlights. */
   private bindSelectionChangeCallback(): void {
-    this.selectionManager.setSelectionChangedCallback((faces) =>
-      this.onFaceSelectionChanged(faces),
-    );
+    this.selectionManager.setSelectionChangedCallback((faces) => this.onFaceSelectionChanged(faces));
   }
 
   /**
    * Registers a listener for face selection changes (highlights stay internal).
+   *
    * @param callback Invoked with the current face list, or null to clear.
    */
   setFaceSelectionChangedCallback(callback: FaceSelectionChangedListener | null): void {
@@ -90,6 +86,7 @@ export class FaceExtrusionController {
 
   /**
    * Handles face selection changes by updating visual highlights.
+   *
    * @param faces The new set of selected faces.
    */
   private onFaceSelectionChanged(faces: FaceSelection[]): void {
@@ -103,6 +100,7 @@ export class FaceExtrusionController {
 
   /**
    * Sets the current selection mode.
+   *
    * @param mode The selection mode to activate.
    */
   setSelectionMode(mode: SelectionMode): void {
@@ -116,6 +114,7 @@ export class FaceExtrusionController {
 
   /**
    * Returns the current selection mode.
+   *
    * @returns The active selection mode.
    */
   getSelectionMode(): SelectionMode {
@@ -124,15 +123,14 @@ export class FaceExtrusionController {
 
   /**
    * Registers a callback for selection mode changes.
+   *
    * @param callback The function to call when mode changes.
    */
   setModeChangedCallback(callback: SelectionModeCallback): void {
     this.modeChangedCallback = callback;
   }
 
-  /**
-   * Notifies the mode change callback of a mode transition.
-   */
+  /** Notifies the mode change callback of a mode transition. */
   private notifyModeChange(): void {
     if (this.modeChangedCallback) {
       this.modeChangedCallback(this.currentMode);
@@ -141,6 +139,7 @@ export class FaceExtrusionController {
 
   /**
    * Updates the available meshes for face picking.
+   *
    * @param meshes The meshes in the scene.
    */
   setAvailableMeshes(meshes: THREE.Mesh[]): void {
@@ -149,6 +148,7 @@ export class FaceExtrusionController {
 
   /**
    * Returns the current face-pick mesh list (for tests).
+   *
    * @returns Available meshes array.
    */
   getAvailableMeshesForTesting(): THREE.Mesh[] {
@@ -156,8 +156,9 @@ export class FaceExtrusionController {
   }
 
   /**
-   * Processes a pointer down event for face selection.
-   * Starts a drag-paint session so holding and moving selects more faces.
+   * Processes a pointer down event for face selection. Starts a drag-paint
+   * session so holding and moving selects more faces.
+   *
    * @param event The pointer event.
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
@@ -179,8 +180,9 @@ export class FaceExtrusionController {
   }
 
   /**
-   * Continues face drag-paint while the pointer moves with the button held.
-   * New faces under the cursor are added to the selection.
+   * Continues face drag-paint while the pointer moves with the button held. New
+   * faces under the cursor are added to the selection.
+   *
    * @param event The pointer event.
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
@@ -195,9 +197,7 @@ export class FaceExtrusionController {
     return true;
   }
 
-  /**
-   * Ends a face drag-paint session.
-   */
+  /** Ends a face drag-paint session. */
   onPointerUp(): void {
     this.isFaceDragActive = false;
     this.lastDragRegionKey = null;
@@ -205,6 +205,7 @@ export class FaceExtrusionController {
 
   /**
    * Returns whether a face drag-paint session is active.
+   *
    * @returns True while dragging to select faces.
    */
   isDraggingFaces(): boolean {
@@ -213,32 +214,26 @@ export class FaceExtrusionController {
 
   /**
    * Picks a face at the pointer without changing selection (for smear tools).
+   *
    * @param event The pointer event.
    * @param camera The viewport camera.
    * @param renderer The viewport renderer.
    * @returns Pick result or null.
    */
-  pickFaceAtPointer(
-    event: MouseEvent,
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
-  ): FacePickResult | null {
+  pickFaceAtPointer(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): FacePickResult | null {
     if (this.currentMode !== SelectionMode.FACE) return null;
     return this.raycaster.pickFace(event, camera, renderer, this.availableMeshes);
   }
 
   /**
-   * Selects the face unit for a pick, optionally additive while dragging.
-   * Solid results expand only within one brush face; ordinary meshes use coplanar.
+   * Selects the face unit for a pick, optionally additive while dragging. Solid
+   * results expand only within one brush face; ordinary meshes use coplanar.
+   *
    * @param result The raycast pick result.
    * @param addToSelection Whether to add to existing selection.
    * @param skipIfSameRegion When true, ignores repeats of the last drag region.
    */
-  private paintSelectFace(
-    result: FacePickResult,
-    addToSelection: boolean,
-    skipIfSameRegion: boolean,
-  ): void {
+  private paintSelectFace(result: FacePickResult, addToSelection: boolean, skipIfSameRegion: boolean): void {
     const regionKey = `${result.mesh.uuid}:${result.faceIndex}`;
     if (skipIfSameRegion && regionKey === this.lastDragRegionKey) return;
     this.lastDragRegionKey = regionKey;
@@ -247,6 +242,7 @@ export class FaceExtrusionController {
 
   /**
    * Returns the current set of selected faces.
+   *
    * @returns The face selection array.
    */
   getSelectedFaces(): FaceSelection[] {
@@ -255,6 +251,7 @@ export class FaceExtrusionController {
 
   /**
    * Returns the count of selected faces.
+   *
    * @returns The number of selected faces.
    */
   getSelectedFaceCount(): number {
@@ -263,6 +260,7 @@ export class FaceExtrusionController {
 
   /**
    * Programmatically selects a face on a mesh. Useful for testing.
+   *
    * @param mesh The mesh containing the face.
    * @param faceIndex The triangle index to select.
    * @param addToSelection Whether to add to existing selection.
@@ -272,7 +270,9 @@ export class FaceExtrusionController {
   }
 
   /**
-   * Extrudes selected faces by the current snap interval (or 1.0 if snap is off).
+   * Extrudes selected faces by the current snap interval (or 1.0 if snap is
+   * off).
+   *
    * @returns Newly created convex prism meshes (one per face region).
    */
   extrudeSelectedFacesByDefaultDistance(): THREE.Mesh[] {
@@ -282,6 +282,7 @@ export class FaceExtrusionController {
 
   /**
    * Chooses a sensible default extrude distance from snap settings.
+   *
    * @returns Positive extrude distance.
    */
   private resolveDefaultExtrudeDistance(): number {
@@ -292,8 +293,9 @@ export class FaceExtrusionController {
   }
 
   /**
-   * Creates one new convex prism per distinct selected face region.
-   * Source meshes are never modified.
+   * Creates one new convex prism per distinct selected face region. Source
+   * meshes are never modified.
+   *
    * @param displacement The extrusion distance along each face normal.
    * @returns The new meshes (empty if nothing could be extruded).
    */
@@ -307,12 +309,7 @@ export class FaceExtrusionController {
     regions.forEach((region) => {
       this.extrudeCounter += 1;
       const objectName = `Extrude${String(this.extrudeCounter).padStart(3, '0')}`;
-      const prism = createConvexPrismFromFace(
-        region.mesh,
-        region.faceIndices,
-        safeDistance,
-        objectName,
-      );
+      const prism = createConvexPrismFromFace(region.mesh, region.faceIndices, safeDistance, objectName);
       if (prism) {
         createdMeshes.push(prism);
       }
@@ -327,6 +324,7 @@ export class FaceExtrusionController {
 
   /**
    * Returns meshes created by the most recent extrude.
+   *
    * @returns The last extruded meshes.
    */
   getLastCreatedMeshes(): THREE.Mesh[] {
@@ -335,6 +333,7 @@ export class FaceExtrusionController {
 
   /**
    * Returns the first mesh from the most recent extrude, if any.
+   *
    * @returns The first extruded mesh, or null.
    */
   getLastCreatedMesh(): THREE.Mesh | null {
@@ -343,13 +342,12 @@ export class FaceExtrusionController {
 
   /**
    * Resolves a usable extrude distance from the requested value and snap state.
+   *
    * @param displacement Requested displacement.
    * @returns Non-zero extrude distance.
    */
   private resolveSafeDistance(displacement: number): number {
-    const snappedDisplacement = this.gridSnap.isEnabled()
-      ? this.gridSnap.snapValue(displacement)
-      : displacement;
+    const snappedDisplacement = this.gridSnap.isEnabled() ? this.gridSnap.snapValue(displacement) : displacement;
     if (Math.abs(snappedDisplacement) < 1e-8) {
       return this.resolveDefaultExtrudeDistance();
     }
@@ -357,17 +355,15 @@ export class FaceExtrusionController {
   }
 
   /**
-   * Clears face selection and recent extrude bookkeeping.
-   * Safe to call when the scene graph is replaced (load) or reset.
+   * Clears face selection and recent extrude bookkeeping. Safe to call when the
+   * scene graph is replaced (load) or reset.
    */
   clearFaceSelection(): void {
     this.selectionManager.deselectAll();
     this.lastCreatedMeshes = [];
   }
 
-  /**
-   * Disposes all internal resources.
-   */
+  /** Disposes all internal resources. */
   dispose(): void {
     this.highlight?.dispose();
     this.highlight = null;

@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Snapshot of an object's position before a transform operation.
- * Optional finalPosition records the post-drag snapped result.
+ * Snapshot of an object's position before a transform operation. Optional
+ * finalPosition records the post-drag snapped result.
  */
 export interface ObjectTransformSnapshot {
   object: THREE.Mesh;
@@ -12,9 +12,9 @@ export interface ObjectTransformSnapshot {
 }
 
 /**
- * Undoable command for translate (move) operations.
- * Prefers explicit final positions so grid snapping is preserved on drag end.
- * Falls back to a shared delta when final positions are not provided.
+ * Undoable command for translate (move) operations. Prefers explicit final
+ * positions so grid snapping is preserved on drag end. Falls back to a shared
+ * delta when final positions are not provided.
  */
 export class TranslateCommand implements UndoCommand {
   private snapshots: ObjectTransformSnapshot[];
@@ -22,6 +22,7 @@ export class TranslateCommand implements UndoCommand {
 
   /**
    * Creates a new translate command.
+   *
    * @param snapshots The position snapshots of all affected objects.
    * @param delta Fallback translation delta when finalPosition is absent.
    */
@@ -30,9 +31,7 @@ export class TranslateCommand implements UndoCommand {
     this.delta = delta.clone();
   }
 
-  /**
-   * Applies the final (or delta-derived) positions to each object.
-   */
+  /** Applies the final (or delta-derived) positions to each object. */
   execute(): void {
     this.snapshots.forEach((snapshot) => {
       if (snapshot.finalPosition) {
@@ -43,9 +42,7 @@ export class TranslateCommand implements UndoCommand {
     });
   }
 
-  /**
-   * Restores each object to its pre-drag position.
-   */
+  /** Restores each object to its pre-drag position. */
   undo(): void {
     this.snapshots.forEach((snapshot) => {
       snapshot.object.position.copy(snapshot.position);

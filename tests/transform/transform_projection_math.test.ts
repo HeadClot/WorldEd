@@ -6,6 +6,7 @@ import { TransformProjectionMath } from '../../src/transform/transform_projectio
 describe('TransformProjectionMath', () => {
   /**
    * Builds a camera looking down -Z at the origin for projection tests.
+   *
    * @returns A perspective camera with a known orientation.
    */
   function createForwardCamera(): THREE.PerspectiveCamera {

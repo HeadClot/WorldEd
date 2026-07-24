@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { StandaloneUpdateService } from '../../src/updater/standalone_update_service.js';
-import type {
-  GitHubRelease,
-  StandaloneUpdateInstallRequest,
-} from '../../src/updater/update_types.js';
+import type { GitHubRelease, StandaloneUpdateInstallRequest } from '../../src/updater/update_types.js';
 
 describe('StandaloneUpdateService', () => {
   it('finds and installs a newer compatible executable through the host bridge', async () => {
@@ -77,6 +74,7 @@ describe('StandaloneUpdateService', () => {
 
 /**
  * Creates an updater with a deterministic release response and host bridge.
+ *
  * @param release Release returned by the fake client.
  * @param bridgeOptions Platform and install callback settings.
  * @returns Configured updater service.
@@ -101,6 +99,7 @@ function createService(
 
 /**
  * Creates a release with an asset URL tied to the supplied asset name.
+ *
  * @param version Release tag.
  * @param assetName Executable asset name.
  * @returns Release metadata.

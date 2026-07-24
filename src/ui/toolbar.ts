@@ -1,23 +1,21 @@
 import { Theme } from '../theme.js';
 
-/**
- * One entry in a toolbar dropdown menu.
- */
+/** One entry in a toolbar dropdown menu. */
 export interface ToolbarDropdownItem {
   /** Visible menu label. */
   label: string;
   /** Invoked when the enabled item is clicked. */
   onClick: () => void;
   /**
-   * Optional live enablement check evaluated when the menu opens.
-   * When omitted or true, the item is clickable.
+   * Optional live enablement check evaluated when the menu opens. When omitted
+   * or true, the item is clickable.
    */
   isEnabled?: () => boolean;
 }
 
 /**
- * Horizontal application toolbar with a compact, modern dark chrome.
- * Supports text buttons, icon buttons, dropdown menus, and active states.
+ * Horizontal application toolbar with a compact, modern dark chrome. Supports
+ * text buttons, icon buttons, dropdown menus, and active states.
  */
 export class Toolbar {
   private container: HTMLElement;
@@ -27,6 +25,7 @@ export class Toolbar {
 
   /**
    * Creates a new toolbar and appends it to the given container.
+   *
    * @param container The parent DOM element to append the toolbar into.
    */
   constructor(container: HTMLElement) {
@@ -44,6 +43,7 @@ export class Toolbar {
 
   /**
    * Adds a text button to the toolbar with a label and click handler.
+   *
    * @param label The text displayed on the button.
    * @param onClick The callback invoked when the button is clicked.
    * @returns The created button element.
@@ -62,6 +62,7 @@ export class Toolbar {
 
   /**
    * Adds a compact icon-only button with a tooltip label.
+   *
    * @param label Accessible name and tooltip text.
    * @param iconSvg Inline SVG markup for the icon.
    * @param onClick Click handler.
@@ -82,6 +83,7 @@ export class Toolbar {
 
   /**
    * Adds a dropdown menu with multiple actions under a single header button.
+   *
    * @param label The dropdown header label.
    * @param items The menu item labels, handlers, and optional enablement.
    * @returns The header button element.
@@ -108,9 +110,7 @@ export class Toolbar {
     return button;
   }
 
-  /**
-   * Adds a visual separator between toolbar groups.
-   */
+  /** Adds a visual separator between toolbar groups. */
   addSeparator(): void {
     const separator = document.createElement('div');
     this.applySeparatorStyles(separator);
@@ -119,6 +119,7 @@ export class Toolbar {
 
   /**
    * Sets whether a specific button should appear active (selected).
+   *
    * @param index The button index in the toolbar.
    * @param active Whether the button should be highlighted as active.
    */
@@ -128,7 +129,9 @@ export class Toolbar {
   }
 
   /**
-   * Finds the first button whose label or aria-label starts with the given text.
+   * Finds the first button whose label or aria-label starts with the given
+   * text.
+   *
    * @param labelPrefix The button label prefix to match.
    * @param active Whether the button should appear active.
    */
@@ -140,6 +143,7 @@ export class Toolbar {
 
   /**
    * Returns the total number of buttons in the toolbar.
+   *
    * @returns The button count.
    */
   getButtonCount(): number {
@@ -148,6 +152,7 @@ export class Toolbar {
 
   /**
    * Returns the index of the first button whose label starts with the prefix.
+   *
    * @param labelPrefix The label prefix to search for.
    * @returns The button index, or -1 if not found.
    */
@@ -155,9 +160,7 @@ export class Toolbar {
     return this.buttons.findIndex((entry) => this.buttonMatchesPrefix(entry, labelPrefix));
   }
 
-  /**
-   * Disposes the toolbar by removing it from the DOM.
-   */
+  /** Disposes the toolbar by removing it from the DOM. */
   dispose(): void {
     if (this.container.parentNode) {
       this.container.parentNode.removeChild(this.container);
@@ -167,9 +170,7 @@ export class Toolbar {
     this.dropdownItemBindings.clear();
   }
 
-  /**
-   * Applies the toolbar container styles as a single compact strip.
-   */
+  /** Applies the toolbar container styles as a single compact strip. */
   private applyStyles(): void {
     const start = this.hexToRgba(Theme.toolbarBackground);
     const end = this.hexToRgba(Theme.toolbarBackgroundEnd);
@@ -192,6 +193,7 @@ export class Toolbar {
 
   /**
    * Applies styles to individual toolbar buttons.
+   *
    * @param button The button element to style.
    * @param iconOnly Whether the button is an icon-only control.
    */
@@ -231,6 +233,7 @@ export class Toolbar {
 
   /**
    * Appends a subtle dropdown caret to a menu header button.
+   *
    * @param button Dropdown header button.
    */
   private appendDropdownCaret(button: HTMLButtonElement): void {
@@ -244,6 +247,7 @@ export class Toolbar {
 
   /**
    * Applies selected/unselected visuals to a toolbar button.
+   *
    * @param button The button to update.
    * @param active Whether the button is selected.
    */
@@ -264,6 +268,7 @@ export class Toolbar {
 
   /**
    * Applies styles to separator elements.
+   *
    * @param separator The separator element to style.
    */
   private applySeparatorStyles(separator: HTMLElement): void {
@@ -276,6 +281,7 @@ export class Toolbar {
 
   /**
    * Creates a dropdown menu panel for the given items.
+   *
    * @param items The menu items to render.
    * @returns The menu container element.
    */
@@ -302,6 +308,7 @@ export class Toolbar {
 
   /**
    * Applies layout styles to a dropdown menu panel.
+   *
    * @param menu Menu panel element.
    */
   private styleDropdownMenuPanel(menu: HTMLElement): void {
@@ -320,6 +327,7 @@ export class Toolbar {
 
   /**
    * Styles a dropdown menu entry as a full-width list row.
+   *
    * @param entry Menu item button.
    */
   private applyMenuItemStyles(entry: HTMLButtonElement): void {
@@ -347,6 +355,7 @@ export class Toolbar {
 
   /**
    * Toggles a dropdown menu open or closed.
+   *
    * @param menu The menu element to toggle.
    */
   private toggleDropdownMenu(menu: HTMLElement): void {
@@ -362,6 +371,7 @@ export class Toolbar {
 
   /**
    * Re-evaluates isEnabled for each item when a dropdown opens.
+   *
    * @param menu Dropdown menu panel.
    */
   private refreshDropdownEnabledState(menu: HTMLElement): void {
@@ -378,6 +388,7 @@ export class Toolbar {
 
   /**
    * Applies enabled/disabled visuals to one dropdown entry.
+   *
    * @param entry Menu item button.
    * @param enabled Whether the item can be activated.
    */
@@ -388,9 +399,7 @@ export class Toolbar {
     entry.style.color = enabled ? Theme.buttonTextColor : '#666666';
   }
 
-  /**
-   * Closes the currently open dropdown menu if any.
-   */
+  /** Closes the currently open dropdown menu if any. */
   private closeOpenMenu(): void {
     if (!this.openMenu) return;
     this.openMenu.style.display = 'none';
@@ -399,6 +408,7 @@ export class Toolbar {
 
   /**
    * Closes dropdowns when the user clicks outside the toolbar.
+   *
    * @param event The document pointer event.
    */
   private handleDocumentPointerDown(event: Event): void {
@@ -410,6 +420,7 @@ export class Toolbar {
 
   /**
    * Finds a toolbar button by label or aria-label prefix.
+   *
    * @param labelPrefix Prefix to match.
    * @returns Matching button or undefined.
    */
@@ -418,7 +429,9 @@ export class Toolbar {
   }
 
   /**
-   * Returns whether a button's visible label or aria-label starts with the prefix.
+   * Returns whether a button's visible label or aria-label starts with the
+   * prefix.
+   *
    * @param button Button to inspect.
    * @param labelPrefix Prefix to match.
    * @returns True when the button matches.
@@ -432,6 +445,7 @@ export class Toolbar {
 
   /**
    * Converts a hex color number to an rgb CSS string.
+   *
    * @param hex The hex color value.
    * @returns An rgb CSS color string.
    */

@@ -64,6 +64,7 @@ describe('CsgPlaneSplit', () => {
 
 /**
  * Creates a box mesh centered at the origin.
+ *
  * @param width Box width.
  * @param height Box height.
  * @param depth Box depth.
@@ -77,6 +78,7 @@ function createBoxMesh(width: number, height: number, depth: number): THREE.Mesh
 
 /**
  * Builds a plane through the mesh world bounds center with the given normal.
+ *
  * @param mesh Source mesh.
  * @param normal Plane normal.
  * @returns Cutting plane.
@@ -88,6 +90,7 @@ function midPlaneThroughMesh(mesh: THREE.Mesh, normal: THREE.Vector3): THREE.Pla
 
 /**
  * Computes the world-space bounding-box center of a mesh.
+ *
  * @param mesh Mesh to measure.
  * @returns Center point.
  */
@@ -99,6 +102,7 @@ function computeWorldBoundsCenter(mesh: THREE.Mesh): THREE.Vector3 {
 
 /**
  * Counts triangles in a mesh geometry.
+ *
  * @param mesh Mesh to inspect.
  * @returns Triangle count.
  */

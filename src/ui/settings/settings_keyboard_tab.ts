@@ -1,13 +1,6 @@
 import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
-import type {
-  KeyboardShortcutAction,
-  KeyboardShortcutSettings,
-} from '../../settings/settings_types.js';
-import {
-  createSettingsCategory,
-  createSettingsControlRow,
-  createSettingsTextInput,
-} from './settings_form_controls.js';
+import type { KeyboardShortcutAction, KeyboardShortcutSettings } from '../../settings/settings_types.js';
+import { createSettingsCategory, createSettingsControlRow, createSettingsTextInput } from './settings_form_controls.js';
 
 /** Keyboard settings rows shown in their editor order. */
 const PRIMARY_SHORTCUT_ROWS: ReadonlyArray<readonly [KeyboardShortcutAction, string]> = [
@@ -58,15 +51,14 @@ const CLIP_SHORTCUT_ROWS: ReadonlyArray<readonly [KeyboardShortcutAction, string
   ['clip_split', 'Split Clip'],
 ];
 
-/**
- * Keyboard tab content for rebinding primary editor actions.
- */
+/** Keyboard tab content for rebinding primary editor actions. */
 export class SettingsKeyboardTab {
   private readonly store: EditorSettingsStore;
   private readonly root: HTMLElement;
 
   /**
    * Creates the Keyboard tab panel.
+   *
    * @param store Shared settings store for persisted shortcuts.
    */
   constructor(store: EditorSettingsStore) {
@@ -79,6 +71,7 @@ export class SettingsKeyboardTab {
 
   /**
    * Returns the tab root element.
+   *
    * @returns Root panel element.
    */
   getElement(): HTMLElement {
@@ -98,6 +91,7 @@ export class SettingsKeyboardTab {
 
   /**
    * Builds one category from shortcut rows.
+   *
    * @param title Category heading.
    * @param rows Shortcut actions and labels.
    * @param settings Current configured shortcuts.
@@ -109,14 +103,13 @@ export class SettingsKeyboardTab {
     settings: KeyboardShortcutSettings,
   ): HTMLElement {
     const { section, body } = createSettingsCategory(title);
-    rows.forEach(([action, label]) =>
-      body.appendChild(this.createShortcutRow(action, label, settings)),
-    );
+    rows.forEach(([action, label]) => body.appendChild(this.createShortcutRow(action, label, settings)));
     return section;
   }
 
   /**
    * Creates a key-capture field for one editor action.
+   *
    * @param action Action receiving the shortcut.
    * @param label Display label for the action.
    * @param settings Current configured shortcuts.
@@ -140,6 +133,7 @@ export class SettingsKeyboardTab {
 
   /**
    * Stores a captured key and prevents it from reaching editor shortcuts.
+   *
    * @param event Keyboard event from a shortcut field.
    * @param action Action that receives the captured shortcut.
    */
@@ -159,12 +153,11 @@ export class SettingsKeyboardTab {
 
 /**
  * Converts a shortcut binding to a short UI label.
+ *
  * @param shortcut Configured key and modifiers.
  * @returns User-facing shortcut label.
  */
-function formatKeyboardShortcut(
-  shortcut: KeyboardShortcutSettings[keyof KeyboardShortcutSettings],
-): string {
+function formatKeyboardShortcut(shortcut: KeyboardShortcutSettings[keyof KeyboardShortcutSettings]): string {
   const modifiers = [
     shortcut.ctrl ? 'Ctrl' : '',
     shortcut.shift ? 'Shift' : '',
@@ -176,6 +169,7 @@ function formatKeyboardShortcut(
 
 /**
  * Converts a KeyboardEvent.code value to a short UI label.
+ *
  * @param code Keyboard event code.
  * @returns User-facing key label.
  */
@@ -188,6 +182,7 @@ function formatKeyboardCode(code: string): string {
 
 /**
  * Returns whether a code represents a modifier-only key.
+ *
  * @param code Keyboard event code.
  * @returns True when it cannot form a primary shortcut alone.
  */

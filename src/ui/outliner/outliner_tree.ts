@@ -8,6 +8,7 @@ import { hexToRgb } from '../../utils/color_utils.js';
 
 /**
  * Callback type for tree-level selection events.
+ *
  * @param obj The Three.js object that was selected.
  * @param event The mouse event that triggered selection (for modifiers).
  */
@@ -15,6 +16,7 @@ export type TreeSelectCallback = (obj: THREE.Object3D, event?: MouseEvent) => vo
 
 /**
  * Callback type for hierarchy reparent drop events.
+ *
  * @param dragged The object being dragged.
  * @param dropTarget The object that received the drop.
  */
@@ -22,18 +24,21 @@ export type TreeReparentCallback = (dragged: THREE.Object3D, dropTarget: THREE.O
 
 /**
  * Callback type for tree-level visibility toggle events.
+ *
  * @param obj The Three.js object whose visibility toggled.
  */
 export type TreeVisibilityCallback = (obj: THREE.Object3D) => void;
 
 /**
  * Callback type for tree-level lock toggle events.
+ *
  * @param obj The Three.js object whose lock state toggled.
  */
 export type TreeLockCallback = (obj: THREE.Object3D) => void;
 
 /**
  * Callback type for tree-level rename events.
+ *
  * @param obj The Three.js object being renamed.
  * @param newName The new name entered by the user.
  */
@@ -41,6 +46,7 @@ export type TreeRenameCallback = (obj: THREE.Object3D, newName: string) => void;
 
 /**
  * Callback type for tree-level context menu requests.
+ *
  * @param obj The Three.js object for the context menu.
  * @param x The horizontal screen coordinate.
  * @param y The vertical screen coordinate.
@@ -48,8 +54,8 @@ export type TreeRenameCallback = (obj: THREE.Object3D, newName: string) => void;
 export type TreeContextMenuCallback = (obj: THREE.Object3D, x: number, y: number) => void;
 
 /**
- * Tree view component that renders a hierarchical outliner.
- * Manages expand/collapse state, search filtering, and item synchronization.
+ * Tree view component that renders a hierarchical outliner. Manages
+ * expand/collapse state, search filtering, and item synchronization.
  */
 export class OutlinerTree {
   private container: HTMLElement;
@@ -72,6 +78,7 @@ export class OutlinerTree {
 
   /**
    * Creates a new outliner tree bound to a root Three.js object.
+   *
    * @param container The parent DOM element to append the tree into.
    * @param root The root Three.js object representing the scene hierarchy.
    */
@@ -102,6 +109,7 @@ export class OutlinerTree {
 
   /**
    * Returns the root Three.js object this tree is bound to.
+   *
    * @returns The root object.
    */
   getRoot(): THREE.Object3D {
@@ -110,6 +118,7 @@ export class OutlinerTree {
 
   /**
    * Registers the callback for selection events.
+   *
    * @param callback The function to call on item selection.
    */
   onSelectObject(callback: TreeSelectCallback): void {
@@ -118,6 +127,7 @@ export class OutlinerTree {
 
   /**
    * Registers the callback for visibility toggle events.
+   *
    * @param callback The function to call on visibility toggle.
    */
   onToggleVisibility(callback: TreeVisibilityCallback): void {
@@ -126,6 +136,7 @@ export class OutlinerTree {
 
   /**
    * Registers the callback for lock toggle events.
+   *
    * @param callback The function to call on lock toggle.
    */
   onToggleLock(callback: TreeLockCallback): void {
@@ -134,6 +145,7 @@ export class OutlinerTree {
 
   /**
    * Registers the callback for rename events.
+   *
    * @param callback The function to call on rename completion.
    */
   onRenameObject(callback: TreeRenameCallback): void {
@@ -142,6 +154,7 @@ export class OutlinerTree {
 
   /**
    * Registers the callback for context menu events.
+   *
    * @param callback The function to call on context menu trigger.
    */
   onContextMenu(callback: TreeContextMenuCallback): void {
@@ -150,6 +163,7 @@ export class OutlinerTree {
 
   /**
    * Registers the callback for hierarchy reparent drop events.
+   *
    * @param callback The function to call when an item is dropped onto another.
    */
   onReparentObject(callback: TreeReparentCallback): void {
@@ -158,13 +172,12 @@ export class OutlinerTree {
 
   /**
    * Refreshes the tree to match the current scene hierarchy.
+   *
    * @param selectedObjects The set of currently selected meshes.
-   * @param hierarchySelection Optional hierarchy nodes selected in the outliner.
+   * @param hierarchySelection Optional hierarchy nodes selected in the
+   *   outliner.
    */
-  refresh(
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D> = new Set(),
-  ): void {
+  refresh(selectedObjects: Set<THREE.Mesh>, hierarchySelection: Set<THREE.Object3D> = new Set()): void {
     if (this.isDisposed) return;
     this.lastSelectedObjects = selectedObjects;
     this.lastHierarchySelection = hierarchySelection;
@@ -173,15 +186,13 @@ export class OutlinerTree {
   }
 
   /**
-   * Updates selection highlighting without rebuilding the tree.
-   * Preserves inline rename and open row DOM.
+   * Updates selection highlighting without rebuilding the tree. Preserves
+   * inline rename and open row DOM.
+   *
    * @param selectedObjects Currently selected meshes.
    * @param hierarchySelection Hierarchy nodes selected in the outliner.
    */
-  updateSelectionStates(
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): void {
+  updateSelectionStates(selectedObjects: Set<THREE.Mesh>, hierarchySelection: Set<THREE.Object3D>): void {
     if (this.isDisposed) return;
     this.lastSelectedObjects = selectedObjects;
     this.lastHierarchySelection = hierarchySelection;
@@ -191,8 +202,10 @@ export class OutlinerTree {
   }
 
   /**
-   * Expands ancestor groups, refreshes if needed, and scrolls to the object row.
-   * Used when viewport/tool selection changes so the outliner shows the pick.
+   * Expands ancestor groups, refreshes if needed, and scrolls to the object
+   * row. Used when viewport/tool selection changes so the outliner shows the
+   * pick.
+   *
    * @param focusObject Mesh or hierarchy node to reveal.
    * @param selectedObjects Currently selected meshes.
    * @param hierarchySelection Hierarchy nodes selected in the outliner.
@@ -214,6 +227,7 @@ export class OutlinerTree {
 
   /**
    * Expands every ancestor of an object up to (and including) the tree root.
+   *
    * @param obj Object whose ancestors should be expanded.
    * @returns True when the expanded set changed.
    */
@@ -237,6 +251,7 @@ export class OutlinerTree {
 
   /**
    * Scrolls the tree so the row for an object is visible.
+   *
    * @param obj Object whose outliner row should scroll into view.
    */
   scrollToObject(obj: THREE.Object3D): void {
@@ -250,6 +265,7 @@ export class OutlinerTree {
 
   /**
    * Toggles the expanded state of an object in the tree.
+   *
    * @param obj The Three.js object to toggle.
    */
   toggleExpand(obj: THREE.Object3D): void {
@@ -264,15 +280,14 @@ export class OutlinerTree {
 
   /**
    * Returns the currently active search query string.
+   *
    * @returns The search query.
    */
   getSearchQuery(): string {
     return this.searchQuery;
   }
 
-  /**
-   * Disposes the tree and removes all DOM elements.
-   */
+  /** Disposes the tree and removes all DOM elements. */
   dispose(): void {
     this.isDisposed = true;
     this.clearItems();
@@ -284,9 +299,7 @@ export class OutlinerTree {
     }
   }
 
-  /**
-   * Builds and styles the search input element.
-   */
+  /** Builds and styles the search input element. */
   private buildSearchBar(): void {
     this.searchElement.type = 'text';
     this.searchElement.placeholder = 'Search...';
@@ -308,18 +321,14 @@ export class OutlinerTree {
     });
   }
 
-  /**
-   * Builds and styles the tree container element.
-   */
+  /** Builds and styles the tree container element. */
   private buildTreeContainer(): void {
     this.treeElement.style.flex = '1';
     this.treeElement.style.overflowY = 'auto';
     this.treeElement.style.padding = '4px';
   }
 
-  /**
-   * Removes all existing items from the DOM and clears state maps.
-   */
+  /** Removes all existing items from the DOM and clears state maps. */
   private clearItems(): void {
     this.itemMap.forEach((item) => {
       item.dispose();
@@ -330,6 +339,7 @@ export class OutlinerTree {
 
   /**
    * Recursively renders all children of a parent into the tree.
+   *
    * @param parent The parent Three.js object.
    * @param depth The current indentation depth level.
    * @param targetContainer The DOM element to append child items into.
@@ -361,8 +371,9 @@ export class OutlinerTree {
   }
 
   /**
-   * Returns hierarchy children that are real content, not editor helpers.
-   * Hides decorative edges, selection outlines, and similar internals.
+   * Returns hierarchy children that are real content, not editor helpers. Hides
+   * decorative edges, selection outlines, and similar internals.
+   *
    * @param parent Parent object.
    * @returns Content children only.
    */
@@ -372,6 +383,7 @@ export class OutlinerTree {
 
   /**
    * Checks whether an object passes the current search filter.
+   *
    * @param obj The object to test.
    * @param query The lowercase search query string.
    * @returns True if the object matches or has matching descendants.
@@ -385,7 +397,9 @@ export class OutlinerTree {
   }
 
   /**
-   * Applies the selection highlight to an item based on mesh and hierarchy selection.
+   * Applies the selection highlight to an item based on mesh and hierarchy
+   * selection.
+   *
    * @param item The outliner item to update.
    * @param obj The Three.js object associated with the item.
    * @param selectedObjects The set of selected meshes.
@@ -401,8 +415,9 @@ export class OutlinerTree {
   }
 
   /**
-   * Computes whether a hierarchy row should appear selected.
-   * Empty groups are selected only via hierarchy selection.
+   * Computes whether a hierarchy row should appear selected. Empty groups are
+   * selected only via hierarchy selection.
+   *
    * @param obj Row object.
    * @param selectedObjects Selected meshes.
    * @param hierarchySelection Outliner hierarchy selection.
@@ -425,6 +440,7 @@ export class OutlinerTree {
 
   /**
    * Applies the expanded state to an item based on the expanded set.
+   *
    * @param item The outliner item to update.
    * @param obj The Three.js object associated with the item.
    */
@@ -434,6 +450,7 @@ export class OutlinerTree {
 
   /**
    * Applies the visibility state to an item from the object's visible property.
+   *
    * @param item The outliner item to update.
    * @param obj The Three.js object associated with the item.
    */
@@ -443,6 +460,7 @@ export class OutlinerTree {
 
   /**
    * Applies the lock state to an item from the object's lock userData.
+   *
    * @param item The outliner item to update.
    * @param obj The Three.js object associated with the item.
    */
@@ -452,6 +470,7 @@ export class OutlinerTree {
 
   /**
    * Binds all callback handlers to an outliner item.
+   *
    * @param item The item to bind callbacks to.
    */
   private bindItemCallbacks(item: OutlinerItem): void {
@@ -493,6 +512,7 @@ export class OutlinerTree {
 
   /**
    * Completes a drag-and-drop reparent when a valid drop target is hit.
+   *
    * @param target The object that received the drop.
    */
   private handleItemDrop(target: THREE.Object3D): void {
@@ -510,6 +530,7 @@ export class OutlinerTree {
 
   /**
    * Creates an empty set for mesh selection.
+   *
    * @returns An empty set of Three.js Mesh objects.
    */
   private buildEmptySelectionSet(): Set<THREE.Mesh> {

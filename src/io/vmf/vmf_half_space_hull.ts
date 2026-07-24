@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { SolidPlane } from '../../solid/brush/solid_plane.js';
 import { SOLID_FAT_PLANE_EPSILON } from '../../solid/algorithm/solid_math_constants.js';
 
-/**
- * Face loop produced by half-space hull construction.
- */
+/** Face loop produced by half-space hull construction. */
 export interface HalfSpaceFaceLoop {
   /** Index of the defining outward plane. */
   planeIndex: number;
@@ -12,9 +10,7 @@ export interface HalfSpaceFaceLoop {
   vertices: THREE.Vector3[];
 }
 
-/**
- * Result of building a convex polyhedron from outward half-spaces.
- */
+/** Result of building a convex polyhedron from outward half-spaces. */
 export interface HalfSpaceHull {
   /** Unique welded vertices of the hull. */
   vertices: THREE.Vector3[];
@@ -33,8 +29,10 @@ const PARALLEL_DENOM_EPSILON = 1e-10;
 export class VmfHalfSpaceHullBuilder {
   /**
    * Constructs a bounded convex polyhedron from outward SolidPlanes.
+   *
    * @param planes Outward unit planes (solid lies where signedDistance <= 0).
-   * @returns Hull with welded vertices and face loops, or null if unbounded/empty.
+   * @returns Hull with welded vertices and face loops, or null if
+   *   unbounded/empty.
    */
   build(planes: SolidPlane[]): HalfSpaceHull | null {
     if (planes.length < 4) return null;
@@ -49,6 +47,7 @@ export class VmfHalfSpaceHullBuilder {
 
   /**
    * Finds all triple-plane intersections that lie inside every half-space.
+   *
    * @param planes Outward planes.
    * @returns Candidate hull vertices (may contain near-duplicates).
    */
@@ -71,6 +70,7 @@ export class VmfHalfSpaceHullBuilder {
 
   /**
    * Solves the intersection of three planes n·x + d = 0.
+   *
    * @param a First plane.
    * @param b Second plane.
    * @param c Third plane.
@@ -95,6 +95,7 @@ export class VmfHalfSpaceHullBuilder {
 
   /**
    * Returns true when the point is not strictly outside any plane.
+   *
    * @param point Candidate vertex.
    * @param planes Outward planes.
    * @returns True when inside or on the convex solid.
@@ -110,6 +111,7 @@ export class VmfHalfSpaceHullBuilder {
 
   /**
    * Welds near-duplicate vertices into a unique list.
+   *
    * @param points Raw intersection points.
    * @returns Deduplicated vertices.
    */
@@ -125,6 +127,7 @@ export class VmfHalfSpaceHullBuilder {
 
   /**
    * Finds an existing welded vertex near the candidate.
+   *
    * @param welded Existing unique vertices.
    * @param point Candidate.
    * @returns Matching vertex or null.
@@ -139,7 +142,9 @@ export class VmfHalfSpaceHullBuilder {
   }
 
   /**
-   * Builds one ordered polygon per plane that has at least three on-plane verts.
+   * Builds one ordered polygon per plane that has at least three on-plane
+   * verts.
+   *
    * @param planes Outward planes.
    * @param vertices Welded hull vertices.
    * @returns Face loops with stable plane indices.
@@ -148,9 +153,7 @@ export class VmfHalfSpaceHullBuilder {
     const loops: HalfSpaceFaceLoop[] = [];
     for (let planeIndex = 0; planeIndex < planes.length; planeIndex++) {
       const plane = planes[planeIndex];
-      const onPlane = vertices.filter(
-        (vertex) => Math.abs(plane.signedDistance(vertex)) <= SOLID_FAT_PLANE_EPSILON,
-      );
+      const onPlane = vertices.filter((vertex) => Math.abs(plane.signedDistance(vertex)) <= SOLID_FAT_PLANE_EPSILON);
       if (onPlane.length < 3) continue;
       const ordered = this.orderPolygonOnPlane(onPlane, plane);
       if (ordered.length < 3) continue;
@@ -160,8 +163,9 @@ export class VmfHalfSpaceHullBuilder {
   }
 
   /**
-   * Orders coplanar points counter-clockwise around their centroid when
-   * viewed along the outward plane normal.
+   * Orders coplanar points counter-clockwise around their centroid when viewed
+   * along the outward plane normal.
+   *
    * @param points Coplanar points (at least three).
    * @param plane Face plane with outward normal.
    * @returns Ordered polygon ring.
@@ -180,6 +184,7 @@ export class VmfHalfSpaceHullBuilder {
 
   /**
    * Average of the given points.
+   *
    * @param points Point list.
    * @returns Centroid.
    */
@@ -193,6 +198,7 @@ export class VmfHalfSpaceHullBuilder {
 
   /**
    * Builds an orthonormal tangent frame for angular sorting on a plane.
+   *
    * @param normal Unit plane normal.
    * @returns Tangent U and bitangent V.
    */

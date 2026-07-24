@@ -14,24 +14,18 @@ import { ShadingMode } from '../types/shading_mode.js';
 import { CameraHeadlight } from './camera_headlight.js';
 import { blurActiveFormField } from '../utils/dom_focus.js';
 import { isEditorHelperObject } from '../utils/mesh_edge_sync.js';
-import {
-  getDefaultPerspectiveCameraPosition,
-  getDefaultSceneFocus,
-} from '../navigation/default_camera_placement.js';
+import { getDefaultPerspectiveCameraPosition, getDefaultSceneFocus } from '../navigation/default_camera_placement.js';
 import { SolidBrushEdgeFader } from '../solid/model/solid_brush_edge_fader.js';
 
-/**
- * Ambient fill intensity for the 3D viewport (white content stays readable).
- */
+/** Ambient fill intensity for the 3D viewport (white content stays readable). */
 export const VIEWPORT_3D_AMBIENT_INTENSITY = 0.7;
 
-/**
- * Camera headlight intensity for the 3D viewport key light.
- */
+/** Camera headlight intensity for the 3D viewport key light. */
 export const VIEWPORT_3D_HEADLIGHT_INTENSITY = 1.15;
 
 /**
  * Callback type for transform gizmo pointer events.
+ *
  * @param event The pointer event.
  * @returns True if the event was consumed by the transform handler.
  */
@@ -39,6 +33,7 @@ export type TransformCallback = (event: MouseEvent) => boolean;
 
 /**
  * Resolves a raycast hit mesh to the authoritative world mesh.
+ *
  * @param mesh The mesh hit by the raycaster.
  * @returns The world mesh that should be selected.
  */
@@ -67,6 +62,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Creates a new 3D perspective viewport.
+   *
    * @param container The DOM element that will contain this viewport.
    * @param inputManager The shared input manager for camera controls.
    */
@@ -86,8 +82,8 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
-   * Creates and configures the perspective camera near the default cube.
-   * Raises the camera by the cube center height so the view aims at the cube.
+   * Creates and configures the perspective camera near the default cube. Raises
+   * the camera by the cube center height so the view aims at the cube.
    */
   private initializeCamera(): void {
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -96,9 +92,7 @@ export class Viewport3D extends BaseViewport {
     this.camera.lookAt(focus.x, focus.y, focus.z);
   }
 
-  /**
-   * Initializes the mutable state properties of this viewport.
-   */
+  /** Initializes the mutable state properties of this viewport. */
   private initializeState(): void {
     this.selectableObjects = [];
     this.selectionManager = null;
@@ -112,6 +106,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Creates the flying camera controller for orbit navigation.
+   *
    * @param inputManager The shared input manager for keyboard and mouse state.
    */
   private setupFlyingCamera(inputManager: InputManager): void {
@@ -126,6 +121,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the base movement speed for the 3D flying camera.
+   *
    * @param speed World units moved per second before Shift boost.
    */
   setFlyingCameraMoveSpeed(speed: number): void {
@@ -134,6 +130,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the world group reference for object collection.
+   *
    * @param group The world group containing scene objects.
    */
   setWorldGroup(group: THREE.Group): void {
@@ -142,6 +139,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Collects all selectable meshes from the world group.
+   *
    * @returns An array of selectable mesh objects.
    */
   collectSelectableObjects(): THREE.Mesh[] {
@@ -157,6 +155,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the selection manager for this viewport.
+   *
    * @param manager The selection manager instance.
    */
   setSelectionManager(manager: SelectionManager): void {
@@ -166,6 +165,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the selection highlight for this viewport.
+   *
    * @param highlight The selection highlight instance.
    */
   setSelectionHighlight(highlight: SelectionHighlight): void {
@@ -174,6 +174,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the selectable objects for raycasting.
+   *
    * @param objects The meshes to make selectable.
    */
   setSelectableObjects(objects: THREE.Mesh[]): void {
@@ -182,6 +183,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the current selectable objects array.
+   *
    * @returns The array of selectable meshes.
    */
   getSelectableObjects(): THREE.Mesh[] {
@@ -189,8 +191,9 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
-   * Sets the gizmo group to be rendered in this viewport.
-   * Removes any previously set gizmo group to avoid duplicates.
+   * Sets the gizmo group to be rendered in this viewport. Removes any
+   * previously set gizmo group to avoid duplicates.
+   *
    * @param group The Three.js group containing gizmo handles.
    */
   setGizmoGroup(group: THREE.Group): void {
@@ -203,6 +206,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the gizmo group for this viewport.
+   *
    * @returns The gizmo group, or null if not set.
    */
   getGizmoGroup(): THREE.Group | null {
@@ -211,6 +215,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the callback to handle transform gizmo pointer events.
+   *
    * @param callback The transform event handler function.
    */
   setTransformCallback(callback: TransformCallback): void {
@@ -219,6 +224,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the callback to handle face selection pointer events.
+   *
    * @param callback The face selection event handler function.
    */
   setFaceSelectionCallback(callback: (event: MouseEvent) => boolean): void {
@@ -227,6 +233,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the callback to handle clip plane tool pointer events.
+   *
    * @param callback The clip plane event handler function.
    */
   setClipPlaneCallback(callback: (event: MouseEvent) => boolean): void {
@@ -235,15 +242,14 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the callback that remaps raycast hits to world meshes.
+   *
    * @param callback The mesh resolve function, or null to disable remapping.
    */
   setMeshResolveCallback(callback: MeshResolveCallback | null): void {
     this.meshResolveCallback = callback;
   }
 
-  /**
-   * Configures pointer event listeners for selection and transform.
-   */
+  /** Configures pointer event listeners for selection and transform. */
   private setupClickSelection(): void {
     this.renderer.domElement.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
@@ -263,8 +269,9 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
-   * Handles a mouse click to select or deselect objects.
-   * Plain clicks cycle through overlapping meshes; Shift adds; Ctrl/Meta toggles.
+   * Handles a mouse click to select or deselect objects. Plain clicks cycle
+   * through overlapping meshes; Shift adds; Ctrl/Meta toggles.
+   *
    * @param event The pointer event from the click.
    */
   private handleObjectSelection(event: MouseEvent): void {
@@ -283,37 +290,28 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
-   * Builds the near-to-far world-mesh pick stack under the pointer.
-   * Used for click-through selection and for bounds/gizmo skip decisions.
+   * Builds the near-to-far world-mesh pick stack under the pointer. Used for
+   * click-through selection and for bounds/gizmo skip decisions.
+   *
    * @param event The pointer event providing screen coordinates.
    * @returns Unique world meshes ordered closest to farthest.
    */
   getObjectPickStack(event: MouseEvent): THREE.Mesh[] {
     const objects = this.getEffectiveSelectableObjects();
     if (objects.length === 0) return [];
-    const intersections = this.raycaster.castIntersections(
-      this.camera,
-      this.renderer,
-      event,
-      objects,
-    );
-    return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) =>
-      this.resolveClickedMesh(mesh),
-    );
+    const intersections = this.raycaster.castIntersections(this.camera, this.renderer, event, objects);
+    return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) => this.resolveClickedMesh(mesh));
   }
 
   /**
    * Chooses the mesh for a click: frontmost for multi-select, cycle for plain.
+   *
    * @param stack Unique world meshes ordered near-to-far.
    * @param additive True when Shift is held.
    * @param toggle True when Ctrl/Meta is held.
    * @returns Mesh to apply selection to, or null.
    */
-  private resolvePickFromStack(
-    stack: THREE.Mesh[],
-    additive: boolean,
-    toggle: boolean,
-  ): THREE.Mesh | null {
+  private resolvePickFromStack(stack: THREE.Mesh[], additive: boolean, toggle: boolean): THREE.Mesh | null {
     if (stack.length === 0 || !this.selectionManager) return null;
     if (additive || toggle) return stack[0];
     return SelectionClickThrough.pickFromStack(stack, this.selectionManager);
@@ -321,6 +319,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns whether the flying camera is currently navigating.
+   *
    * @returns True during right-mouse fly or middle-mouse pan.
    */
   isCameraNavigating(): boolean {
@@ -328,7 +327,9 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
-   * Returns selectable meshes, falling back to world group traversal when empty.
+   * Returns selectable meshes, falling back to world group traversal when
+   * empty.
+   *
    * @returns Meshes available for raycasting.
    */
   private getEffectiveSelectableObjects(): THREE.Mesh[] {
@@ -338,6 +339,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Remaps a raycast hit to the authoritative world mesh when possible.
+   *
    * @param clicked The mesh returned by the raycaster.
    * @returns The mesh that should enter the selection set.
    */
@@ -350,21 +352,19 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Adds ambient fill and a directional headlight locked to the camera.
-   * Intensities are tuned so white content materials stay readable when
-   * facing the camera (PBR MeshStandardMaterial needs more fill than Basic).
+   * Intensities are tuned so white content materials stay readable when facing
+   * the camera (PBR MeshStandardMaterial needs more fill than Basic).
    */
   private setupLights(): void {
     this.ambientLight = new THREE.AmbientLight(Theme.lightAmbient, VIEWPORT_3D_AMBIENT_INTENSITY);
     this.scene.add(this.ambientLight);
-    this.cameraHeadlight = new CameraHeadlight(
-      Theme.lightDirectional,
-      VIEWPORT_3D_HEADLIGHT_INTENSITY,
-    );
+    this.cameraHeadlight = new CameraHeadlight(Theme.lightDirectional, VIEWPORT_3D_HEADLIGHT_INTENSITY);
     this.cameraHeadlight.attachToCamera(this.scene, this.camera);
   }
 
   /**
    * Resizes the renderer and updates the perspective camera aspect ratio.
+   *
    * @param width Viewport width in CSS pixels.
    * @param height Viewport height in CSS pixels.
    */
@@ -374,9 +374,7 @@ export class Viewport3D extends BaseViewport {
     this.camera.updateProjectionMatrix();
   }
 
-  /**
-   * Updates grids, renders the scene, and refreshes the camera widget.
-   */
+  /** Updates grids, renders the scene, and refreshes the camera widget. */
   render(): void {
     this.grids.update(this.camera);
     this.updateBrushEdgeDistanceFade();
@@ -384,9 +382,7 @@ export class Viewport3D extends BaseViewport {
     this.cameraWidget.update(this.camera);
   }
 
-  /**
-   * Distance-fades and culls solid brush edge helpers for large 3D maps.
-   */
+  /** Distance-fades and culls solid brush edge helpers for large 3D maps. */
   private updateBrushEdgeDistanceFade(): void {
     if (!this.worldGroup) return;
     SolidBrushEdgeFader.updateForCamera(this.worldGroup, this.camera);
@@ -394,6 +390,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the perspective camera for this viewport.
+   *
    * @returns The perspective camera instance.
    */
   getCamera(): THREE.PerspectiveCamera {
@@ -402,6 +399,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns a copy of the current camera position.
+   *
    * @returns The camera position vector.
    */
   getCameraPosition(): THREE.Vector3 {
@@ -410,6 +408,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns a point one unit along the camera's current look direction.
+   *
    * @returns A look-direction sample point in world space.
    */
   getCameraLookAt(): THREE.Vector3 {
@@ -420,6 +419,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Advances fly-camera and grid updates for one frame.
+   *
    * @param deltaTime Elapsed seconds since the previous frame.
    */
   update(deltaTime: number): void {
@@ -430,6 +430,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the ambient light used by this viewport.
+   *
    * @returns The ambient light instance.
    */
   getAmbientLight(): THREE.AmbientLight {
@@ -438,6 +439,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the directional headlight attached to the camera.
+   *
    * @returns The directional light instance.
    */
   getDirectionalLight(): THREE.DirectionalLight {
@@ -446,6 +448,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the camera-attached headlight helper.
+   *
    * @returns The CameraHeadlight instance.
    */
   getCameraHeadlight(): CameraHeadlight {
@@ -454,6 +457,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the on-screen camera orientation widget.
+   *
    * @returns The camera widget instance.
    */
   getCameraWidget(): CameraWidget {
@@ -462,6 +466,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the shading controller for this viewport.
+   *
    * @returns The ViewportShadingController instance.
    */
   getShadingController(): ViewportShadingController {
@@ -470,6 +475,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Sets the shading mode for this viewport and updates the toolbar highlight.
+   *
    * @param mode The shading mode to apply.
    */
   setShadingMode(mode: ShadingMode): void {
@@ -479,6 +485,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the current shading mode of this viewport.
+   *
    * @returns The current ShadingMode value.
    */
   getShadingMode(): ShadingMode {
@@ -487,6 +494,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Updates the shading controller overlay with current meshes.
+   *
    * @param meshes The meshes to generate wireframe overlays for.
    */
   updateShadingMeshes(meshes: THREE.Mesh[]): void {
@@ -495,6 +503,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Returns the grid system for this viewport.
+   *
    * @returns The Grids instance.
    */
   getGrid(): Grids {
@@ -503,6 +512,7 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Legacy accessor used by older grid update call sites.
+   *
    * @returns The grid system (supports setSnapInterval).
    */
   getGridHelper(): Grids {

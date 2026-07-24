@@ -1,9 +1,8 @@
-/**
- * Material name rules for Source tool textures during VMF import.
- */
+/** Material name rules for Source tool textures during VMF import. */
 
 /**
  * Normalizes a material path for case-insensitive comparisons.
+ *
  * @param materialName Raw material string from the VMF.
  * @returns Uppercase path with forward slashes.
  */
@@ -12,8 +11,9 @@ export function normalizeVmfMaterialName(materialName: string): string {
 }
 
 /**
- * Returns true when the material marks a non-rendered volume brush
- * (triggers, hints, fog, skybox shells, etc.) that should be skipped.
+ * Returns true when the material marks a non-rendered volume brush (triggers,
+ * hints, fog, skybox shells, etc.) that should be skipped.
+ *
  * @param materialName Material path from a solid side.
  * @returns True when the entire solid should be skipped.
  */
@@ -24,6 +24,7 @@ export function isSkippedVolumeMaterial(materialName: string): boolean {
 
 /**
  * Returns true when the material is collision / clip only.
+ *
  * @param materialName Material path.
  * @returns True for clip-like tools textures.
  */
@@ -34,6 +35,7 @@ export function isCollisionOnlyMaterial(materialName: string): boolean {
 
 /**
  * Returns true when the material is nodraw (still solid, not textured).
+ *
  * @param materialName Material path.
  * @returns True for nodraw.
  */
@@ -43,6 +45,7 @@ export function isNodrawMaterial(materialName: string): boolean {
 
 /**
  * Converts a VMF material path into a durable texture identity string.
+ *
  * @param materialName Material path.
  * @returns Texture id suitable for face mappings.
  */

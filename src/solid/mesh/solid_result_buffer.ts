@@ -20,9 +20,7 @@ export class SolidResultBuffer {
   private lastUpdateRanges: SolidMeshUpdateRange[] = [];
   private partialWrite = false;
 
-  /**
-   * Clears all buffers and ranges.
-   */
+  /** Clears all buffers and ranges. */
   clear(): void {
     this.positions = new Float32Array(0);
     this.normals = new Float32Array(0);
@@ -38,6 +36,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns surface regions with global triangle indices.
+   *
    * @returns Region list.
    */
   getSurfaceRegions(): SolidSurfaceRegion[] {
@@ -46,6 +45,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns per-triangle brush sources.
+   *
    * @returns Source list.
    */
   getTriangleSources(): SolidTriangleSource[] {
@@ -54,6 +54,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns update ranges from the last partial patch.
+   *
    * @returns GPU update windows.
    */
   getLastUpdateRanges(): SolidMeshUpdateRange[] {
@@ -62,6 +63,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns whether the last write was a partial patch.
+   *
    * @returns True after a successful tryPatchDirty.
    */
   wasLastWritePartial(): boolean {
@@ -70,6 +72,7 @@ export class SolidResultBuffer {
 
   /**
    * Fully rebuilds buffers from every chunk in brush order.
+   *
    * @param brushIds Evaluation order.
    * @param chunkCache Per-brush chunks.
    */
@@ -94,10 +97,12 @@ export class SolidResultBuffer {
 
   /**
    * Patches dirty brush slices when every dirty brush keeps its vertex count.
+   *
    * @param dirtyBrushIds Brushes whose chunks were rebuilt.
    * @param brushIds Current evaluation order.
    * @param chunkCache Per-brush chunks.
-   * @returns True when patching succeeded; false when a full rebuild is required.
+   * @returns True when patching succeeded; false when a full rebuild is
+   *   required.
    */
   tryPatchDirty(
     dirtyBrushIds: readonly string[],
@@ -121,8 +126,10 @@ export class SolidResultBuffer {
   }
 
   /**
-   * Rebuilds from the first layout-changing brush onward, keeping a stable prefix.
-   * Avoids rewriting the entire map when only a late brush changes topology.
+   * Rebuilds from the first layout-changing brush onward, keeping a stable
+   * prefix. Avoids rewriting the entire map when only a late brush changes
+   * topology.
+   *
    * @param dirtyBrushIds Brushes recompiled this pass.
    * @param brushIds Current evaluation order.
    * @param chunkCache Per-brush chunks.
@@ -135,11 +142,7 @@ export class SolidResultBuffer {
   ): boolean {
     if (this.ranges.length === 0) return false;
     if (!this.orderMatches(brushIds)) return false;
-    const firstChangedOrderIndex = this.findFirstLayoutChangeOrderIndex(
-      dirtyBrushIds,
-      brushIds,
-      chunkCache,
-    );
+    const firstChangedOrderIndex = this.findFirstLayoutChangeOrderIndex(dirtyBrushIds, brushIds, chunkCache);
     if (firstChangedOrderIndex < 0) return false;
     if (firstChangedOrderIndex === 0) return false;
     const prefixBrushIds = brushIds.slice(0, firstChangedOrderIndex);
@@ -182,8 +185,9 @@ export class SolidResultBuffer {
   }
 
   /**
-   * Uploads buffer contents onto a Three.js geometry.
-   * Prefers shared arrays and partial update ranges after patches.
+   * Uploads buffer contents onto a Three.js geometry. Prefers shared arrays and
+   * partial update ranges after patches.
+   *
    * @param geometry Target buffer geometry.
    */
   uploadToGeometry(geometry: THREE.BufferGeometry): void {
@@ -201,7 +205,9 @@ export class SolidResultBuffer {
   }
 
   /**
-   * Recomputes bounds; uses a cheap dirty-range expansion after partial patches.
+   * Recomputes bounds; uses a cheap dirty-range expansion after partial
+   * patches.
+   *
    * @param geometry Target geometry.
    */
   private refreshGeometryBounds(geometry: THREE.BufferGeometry): void {
@@ -215,6 +221,7 @@ export class SolidResultBuffer {
 
   /**
    * Expands existing geometry bounds using only dirty vertex windows.
+   *
    * @param geometry Target geometry with position attribute.
    */
   private expandBoundsFromUpdateRanges(geometry: THREE.BufferGeometry): void {
@@ -244,6 +251,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns whether dirty brushes can be patched without rebuilding the layout.
+   *
    * @param dirtyBrushIds Dirty brush ids.
    * @param brushIds Current order.
    * @param chunkCache Chunk cache.
@@ -265,6 +273,7 @@ export class SolidResultBuffer {
   /**
    * Finds the earliest brush order index that must rebuild because size changed
    * or the brush is dirty with a missing prior range.
+   *
    * @param dirtyBrushIds Dirty brush ids.
    * @param brushIds Evaluation order.
    * @param chunkCache Chunk cache.
@@ -297,6 +306,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns the vertex end index after the listed prefix brushes.
+   *
    * @param prefixBrushIds Brush ids that remain stable.
    * @returns Vertex count of the prefix.
    */
@@ -310,6 +320,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns the triangle end index after the listed prefix brushes.
+   *
    * @param prefixBrushIds Brush ids that remain stable.
    * @returns Triangle count of the prefix.
    */
@@ -323,6 +334,7 @@ export class SolidResultBuffer {
 
   /**
    * Drops range/region/source data for brushes after the stable prefix.
+   *
    * @param prefixBrushIds Brush ids to keep.
    * @param prefixTriangleEnd Triangle count of the prefix.
    */
@@ -339,6 +351,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns whether one dirty brush still fits its stored range.
+   *
    * @param brushId Brush id.
    * @param chunkCache Chunk cache.
    * @returns True when vertex and triangle counts match.
@@ -352,6 +365,7 @@ export class SolidResultBuffer {
 
   /**
    * Returns whether brush order matches the last full layout.
+   *
    * @param brushIds Candidate order.
    * @returns True when identical.
    */
@@ -365,6 +379,7 @@ export class SolidResultBuffer {
 
   /**
    * Collects non-empty chunks with their brush ids.
+   *
    * @param brushIds Order.
    * @param chunkCache Cache.
    * @returns Ordered chunk entries.
@@ -384,6 +399,7 @@ export class SolidResultBuffer {
 
   /**
    * Sums vertex counts across chunk entries.
+   *
    * @param chunks Chunk entries.
    * @returns Total vertex count.
    */
@@ -397,6 +413,7 @@ export class SolidResultBuffer {
 
   /**
    * Allocates exact-sized internal typed arrays.
+   *
    * @param vertexCount Required vertices.
    */
   private allocateExact(vertexCount: number): void {
@@ -405,9 +422,7 @@ export class SolidResultBuffer {
     this.uvs = new Float32Array(vertexCount * 2);
   }
 
-  /**
-   * Resets range and region collections before a full rebuild.
-   */
+  /** Resets range and region collections before a full rebuild. */
   private resetLayoutCollections(): void {
     this.ranges = [];
     this.rangeByBrushId.clear();
@@ -417,6 +432,7 @@ export class SolidResultBuffer {
 
   /**
    * Copies one chunk into the combined buffers at a vertex offset.
+   *
    * @param chunk Source chunk.
    * @param vertexOffset Destination vertex start.
    */
@@ -428,17 +444,13 @@ export class SolidResultBuffer {
 
   /**
    * Records a brush range after writing its chunk.
+   *
    * @param brushId Brush id.
    * @param vertexOffset Vertex start.
    * @param chunk Written chunk.
    * @param triangleOffset Triangle start.
    */
-  private recordRange(
-    brushId: string,
-    vertexOffset: number,
-    chunk: SolidBrushMeshChunk,
-    triangleOffset: number,
-  ): void {
+  private recordRange(brushId: string, vertexOffset: number, chunk: SolidBrushMeshChunk, triangleOffset: number): void {
     const range: SolidBrushMeshRange = {
       brushId,
       vertexStart: vertexOffset,
@@ -452,6 +464,7 @@ export class SolidResultBuffer {
 
   /**
    * Builds a GPU update range for a brush range.
+   *
    * @param range Brush range.
    * @returns Update range.
    */
@@ -466,6 +479,7 @@ export class SolidResultBuffer {
 
   /**
    * Appends chunk regions/sources with a global triangle offset.
+   *
    * @param chunk Source chunk.
    * @param triangleOffset Global triangle base.
    */
@@ -485,6 +499,7 @@ export class SolidResultBuffer {
 
   /**
    * Replaces region and triangle-source entries for one patched brush.
+   *
    * @param range Brush range in the combined mesh.
    * @param chunk Updated chunk.
    */
@@ -493,9 +508,7 @@ export class SolidResultBuffer {
     this.triangleSources.splice(range.triangleStart, range.triangleCount, ...chunk.triangleSources);
     for (const region of chunk.regions) {
       this.surfaceRegions.push({
-        triangleIndices: region.triangleIndices.map(
-          (localIndex) => localIndex + range.triangleStart,
-        ),
+        triangleIndices: region.triangleIndices.map((localIndex) => localIndex + range.triangleStart),
         textureId: region.textureId,
         brushId: region.brushId,
         surfaceIndex: region.surfaceIndex,
@@ -505,6 +518,7 @@ export class SolidResultBuffer {
 
   /**
    * Uploads using shared arrays or copies into existing attributes.
+   *
    * @param geometry Target geometry.
    * @param vertexCount Combined vertex count.
    * @returns True when upload finished without rebinding attributes.
@@ -529,6 +543,7 @@ export class SolidResultBuffer {
 
   /**
    * Copies internal buffers into attribute arrays (full or dirty ranges only).
+   *
    * @param position Position attribute.
    * @param normal Normal attribute.
    * @param uv UV attribute.
@@ -549,28 +564,20 @@ export class SolidResultBuffer {
     }
     for (const range of this.lastUpdateRanges) {
       posArray.set(
-        this.positions.subarray(
-          range.positionFloatStart,
-          range.positionFloatStart + range.positionFloatCount,
-        ),
+        this.positions.subarray(range.positionFloatStart, range.positionFloatStart + range.positionFloatCount),
         range.positionFloatStart,
       );
       normArray.set(
-        this.normals.subarray(
-          range.positionFloatStart,
-          range.positionFloatStart + range.positionFloatCount,
-        ),
+        this.normals.subarray(range.positionFloatStart, range.positionFloatStart + range.positionFloatCount),
         range.positionFloatStart,
       );
-      uvArray.set(
-        this.uvs.subarray(range.uvFloatStart, range.uvFloatStart + range.uvFloatCount),
-        range.uvFloatStart,
-      );
+      uvArray.set(this.uvs.subarray(range.uvFloatStart, range.uvFloatStart + range.uvFloatCount), range.uvFloatStart);
     }
   }
 
   /**
    * Marks attributes dirty, using partial update ranges after patches.
+   *
    * @param position Position attribute.
    * @param normal Normal attribute.
    * @param uv UV attribute.
@@ -601,11 +608,10 @@ export class SolidResultBuffer {
 
   /**
    * Clears prior update ranges on a buffer attribute when supported.
+   *
    * @param attribute Geometry attribute.
    */
-  private clearUpdateRanges(
-    attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  ): void {
+  private clearUpdateRanges(attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute): void {
     const buffered = attribute as THREE.BufferAttribute & {
       clearUpdateRanges?: () => void;
     };
@@ -614,6 +620,7 @@ export class SolidResultBuffer {
 
   /**
    * Adds one update range when the Three.js API is available.
+   *
    * @param attribute Geometry attribute.
    * @param start Float start index.
    * @param count Float count.
@@ -631,6 +638,7 @@ export class SolidResultBuffer {
 
   /**
    * Binds internal arrays as geometry attributes (shared, no copy).
+   *
    * @param geometry Target geometry.
    */
   private bindFreshAttributes(geometry: THREE.BufferGeometry): void {
@@ -641,6 +649,7 @@ export class SolidResultBuffer {
 
   /**
    * Writes empty attributes when the solid has no triangles.
+   *
    * @param geometry Target geometry.
    */
   private writeEmptyAttributes(geometry: THREE.BufferGeometry): void {

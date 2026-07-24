@@ -2,7 +2,8 @@
 const VIEW_SETTINGS_STYLE_ID = 'aiworlded-view-settings-styles';
 
 /**
- * Installs the stylesheet that turns View preferences into visible editor changes.
+ * Installs the stylesheet that turns View preferences into visible editor
+ * changes.
  */
 export function ensureViewSettingsStyles(): void {
   if (typeof document === 'undefined') {
@@ -14,6 +15,7 @@ export function ensureViewSettingsStyles(): void {
 
 /**
  * Returns the dedicated stylesheet, creating it when necessary.
+ *
  * @returns View settings stylesheet.
  */
 function getOrCreateViewSettingsStyle(): HTMLStyleElement {
@@ -29,6 +31,7 @@ function getOrCreateViewSettingsStyle(): HTMLStyleElement {
 
 /**
  * Builds global rules consumed by the editor's View settings.
+ *
  * @returns Complete view settings stylesheet.
  */
 function buildViewSettingsCss(): string {
@@ -37,6 +40,7 @@ function buildViewSettingsCss(): string {
 
 /**
  * Builds the program UI font-size override.
+ *
  * @returns Font-size CSS rules.
  */
 function buildFontSizeCss(): string {
@@ -48,6 +52,7 @@ function buildFontSizeCss(): string {
 
 /**
  * Builds texture browser visual preference rules.
+ *
  * @returns Texture browser CSS rules.
  */
 function buildTextureBrowserCss(): string {
@@ -61,6 +66,7 @@ function buildTextureBrowserCss(): string {
 
 /**
  * Builds the Windows-inspired light theme palette.
+ *
  * @returns Light theme CSS rules.
  */
 function buildLightThemeCss(): string {
@@ -83,6 +89,7 @@ function buildLightThemeCss(): string {
 
 /**
  * Builds the bright workspace used in light mode.
+ *
  * @returns Light theme frame CSS rules.
  */
 function buildLightThemeFrameCss(): string {
@@ -96,6 +103,7 @@ html[data-aiworlded-theme='light'] #editor-container {
 
 /**
  * Builds the neutral gray editor chrome surrounding the dark work viewports.
+ *
  * @returns Editor chrome light-theme CSS rules.
  */
 function buildLightThemeChromeCss(): string {
@@ -124,6 +132,7 @@ html[data-aiworlded-theme='light'] .editor-status-bar * {
 
 /**
  * Builds the light context-menu surface and its item states.
+ *
  * @returns Light theme context-menu CSS rules.
  */
 function buildLightThemeContextMenuCss(): string {
@@ -145,6 +154,7 @@ html[data-aiworlded-theme='light'] .editor-context-menu-item-disabled {
 
 /**
  * Builds neutral grey surfaces for floating editor panels.
+ *
  * @returns Light theme panel CSS rules.
  */
 function buildLightThemePanelCss(): string {
@@ -159,7 +169,9 @@ html[data-aiworlded-theme='light'] .editor-tools-palette {
 }
 
 /**
- * Builds consistent dark text and restrained borders inside light editor panels.
+ * Builds consistent dark text and restrained borders inside light editor
+ * panels.
+ *
  * @returns Editor panel content light-theme CSS rules.
  */
 function buildLightThemePanelContentCss(): string {
@@ -176,6 +188,7 @@ html[data-aiworlded-theme='light'] .editor-tools-palette {
 
 /**
  * Builds the white settings content surface with neutral gray dialog chrome.
+ *
  * @returns Settings dialog light-theme CSS rules.
  */
 function buildLightThemeSettingsDialogCss(): string {
@@ -193,6 +206,7 @@ html[data-aiworlded-theme='light'] .settings-dialog-tab-bar {
 
 /**
  * Builds soft gray labels that separate the viewport tools from the work area.
+ *
  * @returns Viewport label light-theme CSS rules.
  */
 function buildLightThemeViewportLabelCss(): string {
@@ -205,6 +219,7 @@ function buildLightThemeViewportLabelCss(): string {
 
 /**
  * Builds the Windows-blue selected-texture treatment used by the light theme.
+ *
  * @returns Light theme selection CSS rules.
  */
 function buildLightThemeSelectionCss(): string {
@@ -216,6 +231,7 @@ function buildLightThemeSelectionCss(): string {
 
 /**
  * Builds white, readable interactive controls for the light theme.
+ *
  * @returns Light theme control CSS rules.
  */
 function buildLightThemeControlCss(): string {
@@ -231,6 +247,7 @@ html[data-aiworlded-theme='light'] textarea {
 
 /**
  * Builds readable settings categories and unselected tab controls.
+ *
  * @returns Settings content light-theme CSS rules.
  */
 function buildLightThemeSettingsContentCss(): string {
@@ -252,6 +269,7 @@ html[data-aiworlded-theme='light'] [data-settings-field='coordinate-space-summar
 
 /**
  * Builds pointer and keyboard feedback for light-theme controls.
+ *
  * @returns Interactive light-theme CSS rules.
  */
 function buildLightThemeInteractionCss(): string {
@@ -266,6 +284,7 @@ html[data-aiworlded-theme='light'] input[type='range'] {
 
 /**
  * Builds keyboard focus feedback for light-theme form controls.
+ *
  * @returns Focus light-theme CSS rules.
  */
 function buildLightThemeFocusCss(): string {
@@ -280,6 +299,7 @@ html[data-aiworlded-theme='light'] textarea:focus-visible {
 
 /**
  * Builds the light-blue active-tab treatment for the settings dialog.
+ *
  * @returns Active-tab light-theme CSS rules.
  */
 function buildLightThemeActiveTabCss(): string {

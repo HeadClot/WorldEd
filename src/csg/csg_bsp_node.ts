@@ -1,17 +1,15 @@
 import * as THREE from 'three';
 import { CsgPolygon } from './csg_polygon.js';
 
-/**
- * Vertex classification codes for plane splitting.
- */
+/** Vertex classification codes for plane splitting. */
 const COPLANAR = 0;
 const FRONT = 1;
 const BACK = 2;
 const SPANNING = 3;
 
 /**
- * Binary space partitioning node used for CSG boolean operations.
- * Adapted from the classic open-source CSG.js algorithm for convex brush work.
+ * Binary space partitioning node used for CSG boolean operations. Adapted from
+ * the classic open-source CSG.js algorithm for convex brush work.
  */
 export class CsgBspNode {
   private planeNormal: THREE.Vector3 | null;
@@ -23,6 +21,7 @@ export class CsgBspNode {
 
   /**
    * Creates a BSP node optionally built from polygons.
+   *
    * @param polygons Optional initial polygons for this subtree.
    * @param epsilon Plane thickness epsilon.
    */
@@ -40,6 +39,7 @@ export class CsgBspNode {
 
   /**
    * Returns a deep clone of this BSP subtree.
+   *
    * @returns A cloned BSP node.
    */
   clone(): CsgBspNode {
@@ -54,9 +54,7 @@ export class CsgBspNode {
     return node;
   }
 
-  /**
-   * Inverts the solid by flipping all planes and polygons and swapping sides.
-   */
+  /** Inverts the solid by flipping all planes and polygons and swapping sides. */
   invert(): void {
     this.polygons.forEach((polygon) => polygon.flip());
     if (this.planeNormal) {
@@ -71,7 +69,9 @@ export class CsgBspNode {
   }
 
   /**
-   * Recursively removes all polygons in this solid that are inside the other solid.
+   * Recursively removes all polygons in this solid that are inside the other
+   * solid.
+   *
    * @param bsp The clipping BSP solid.
    */
   clipTo(bsp: CsgBspNode): void {
@@ -82,6 +82,7 @@ export class CsgBspNode {
 
   /**
    * Collects all polygons in this BSP tree.
+   *
    * @returns All polygons stored in the tree.
    */
   allPolygons(): CsgPolygon[] {
@@ -93,6 +94,7 @@ export class CsgBspNode {
 
   /**
    * Builds this node from a list of polygons.
+   *
    * @param polygons The polygons to insert.
    */
   build(polygons: CsgPolygon[]): void {
@@ -119,6 +121,7 @@ export class CsgBspNode {
 
   /**
    * Clips a list of polygons against this BSP solid, keeping exterior pieces.
+   *
    * @param polygons The polygons to clip.
    * @returns Polygons remaining outside this solid.
    */
@@ -136,6 +139,7 @@ export class CsgBspNode {
 
   /**
    * Splits a polygon by this node's plane into coplanar/front/back lists.
+   *
    * @param polygon The polygon to split.
    * @param coplanarFront Destination for coplanar front-facing polygons.
    * @param coplanarBack Destination for coplanar back-facing polygons.
@@ -182,17 +186,13 @@ export class CsgBspNode {
 
   /**
    * Splits a spanning polygon into front and back fragments.
+   *
    * @param polygon The spanning polygon.
    * @param types Per-vertex classifications.
    * @param front Front fragment destination.
    * @param back Back fragment destination.
    */
-  private pushSpanningFragments(
-    polygon: CsgPolygon,
-    types: number[],
-    front: CsgPolygon[],
-    back: CsgPolygon[],
-  ): void {
+  private pushSpanningFragments(polygon: CsgPolygon, types: number[], front: CsgPolygon[], back: CsgPolygon[]): void {
     const vertices = polygon.getVertices();
     const frontVertices: THREE.Vector3[] = [];
     const backVertices: THREE.Vector3[] = [];
@@ -221,6 +221,7 @@ export class CsgBspNode {
 
   /**
    * Intersects an edge with this node's plane.
+   *
    * @param start Edge start.
    * @param end Edge end.
    * @returns Intersection point.

@@ -6,6 +6,7 @@ import { InlineRenameInput } from './inline_rename_input.js';
 
 /**
  * Callback type for item selection events.
+ *
  * @param obj The Three.js object that was selected.
  * @param event The mouse event that triggered selection (for modifiers).
  */
@@ -13,24 +14,28 @@ export type ItemSelectCallback = (obj: THREE.Object3D, event?: MouseEvent) => vo
 
 /**
  * Callback type for visibility toggle events.
+ *
  * @param obj The Three.js object whose visibility toggled.
  */
 export type ItemVisibilityCallback = (obj: THREE.Object3D) => void;
 
 /**
  * Callback type for lock toggle events.
+ *
  * @param obj The Three.js object whose lock state toggled.
  */
 export type ItemLockCallback = (obj: THREE.Object3D) => void;
 
 /**
  * Callback type for expand/collapse toggle events.
+ *
  * @param obj The Three.js object that was expanded or collapsed.
  */
 export type ItemExpandCallback = (obj: THREE.Object3D) => void;
 
 /**
  * Callback type for double-click rename events.
+ *
  * @param obj The Three.js object that was double-clicked.
  * @param newName The new name entered by the user.
  */
@@ -38,6 +43,7 @@ export type ItemRenameCallback = (obj: THREE.Object3D, newName: string) => void;
 
 /**
  * Callback type for context menu requests.
+ *
  * @param obj The Three.js object for the context menu.
  * @param x The horizontal screen coordinate.
  * @param y The vertical screen coordinate.
@@ -46,6 +52,7 @@ export type ItemContextMenuCallback = (obj: THREE.Object3D, x: number, y: number
 
 /**
  * Callback type for drag-start events on an outliner row.
+ *
  * @param obj The Three.js object being dragged.
  * @param event The native drag event.
  */
@@ -53,14 +60,15 @@ export type ItemDragStartCallback = (obj: THREE.Object3D, event: DragEvent) => v
 
 /**
  * Callback type for drop events on an outliner row.
+ *
  * @param target The Three.js object under the drop.
  * @param event The native drop event.
  */
 export type ItemDropCallback = (target: THREE.Object3D, event: DragEvent) => void;
 
 /**
- * Single row in the outliner tree representing one Three.js object.
- * Displays icon, name, expand chevron, visibility and lock toggles.
+ * Single row in the outliner tree representing one Three.js object. Displays
+ * icon, name, expand chevron, visibility and lock toggles.
  */
 export class OutlinerItem {
   private rowElement: HTMLElement;
@@ -89,6 +97,7 @@ export class OutlinerItem {
 
   /**
    * Creates a new outliner item for a Three.js object.
+   *
    * @param object The Three.js object this row represents.
    * @param depth The indentation depth level in the hierarchy.
    * @param hasChildren Whether the object has child objects.
@@ -122,6 +131,7 @@ export class OutlinerItem {
 
   /**
    * Returns the root DOM element of this item.
+   *
    * @returns The row element.
    */
   getElement(): HTMLElement {
@@ -130,6 +140,7 @@ export class OutlinerItem {
 
   /**
    * Returns the Three.js object this item represents.
+   *
    * @returns The associated Three.js object.
    */
   getObject(): THREE.Object3D {
@@ -138,6 +149,7 @@ export class OutlinerItem {
 
   /**
    * Sets the selection state and updates visual appearance.
+   *
    * @param selected True to highlight the item as selected.
    */
   setSelectionState(selected: boolean): void {
@@ -151,6 +163,7 @@ export class OutlinerItem {
 
   /**
    * Sets the expanded state and updates the chevron.
+   *
    * @param expanded True to show the expanded chevron state.
    */
   setExpandedState(expanded: boolean): void {
@@ -160,6 +173,7 @@ export class OutlinerItem {
 
   /**
    * Sets the visibility state and updates the visibility icon.
+   *
    * @param visible True to show the visible state.
    */
   setVisibilityState(visible: boolean): void {
@@ -169,6 +183,7 @@ export class OutlinerItem {
 
   /**
    * Sets the lock state and updates the lock icon.
+   *
    * @param locked True to show the locked state.
    */
   setLockState(locked: boolean): void {
@@ -178,6 +193,7 @@ export class OutlinerItem {
 
   /**
    * Registers the callback for selection events.
+   *
    * @param callback The function to call on item selection.
    */
   onSelection(callback: ItemSelectCallback): void {
@@ -186,6 +202,7 @@ export class OutlinerItem {
 
   /**
    * Registers the callback for visibility toggle events.
+   *
    * @param callback The function to call on visibility toggle.
    */
   onVisibilityToggle(callback: ItemVisibilityCallback): void {
@@ -194,6 +211,7 @@ export class OutlinerItem {
 
   /**
    * Registers the callback for lock toggle events.
+   *
    * @param callback The function to call on lock toggle.
    */
   onLockToggle(callback: ItemLockCallback): void {
@@ -202,6 +220,7 @@ export class OutlinerItem {
 
   /**
    * Registers the callback for expand/collapse events.
+   *
    * @param callback The function to call on expand toggle.
    */
   onExpandToggle(callback: ItemExpandCallback): void {
@@ -210,6 +229,7 @@ export class OutlinerItem {
 
   /**
    * Registers the callback for rename events.
+   *
    * @param callback The function to call on rename trigger.
    */
   onRenameRequest(callback: ItemRenameCallback): void {
@@ -218,6 +238,7 @@ export class OutlinerItem {
 
   /**
    * Registers the callback for context menu events.
+   *
    * @param callback The function to call on context menu trigger.
    */
   onContextMenuRequest(callback: ItemContextMenuCallback): void {
@@ -226,6 +247,7 @@ export class OutlinerItem {
 
   /**
    * Registers the callback for drag-start events.
+   *
    * @param callback The function to call when a drag begins.
    */
   onDragStartRequest(callback: ItemDragStartCallback): void {
@@ -234,15 +256,14 @@ export class OutlinerItem {
 
   /**
    * Registers the callback for drop events.
+   *
    * @param callback The function to call when an item is dropped here.
    */
   onDropRequest(callback: ItemDropCallback): void {
     this.onDropCallback = callback;
   }
 
-  /**
-   * Starts inline rename editing for this item.
-   */
+  /** Starts inline rename editing for this item. */
   startRename(): void {
     if (this.isDisposed) return;
     this.renameInput = new InlineRenameInput(this.rowElement, this.nameElement, this.object.name);
@@ -257,9 +278,7 @@ export class OutlinerItem {
     this.renameInput.activate();
   }
 
-  /**
-   * Disposes this item and removes it from the DOM.
-   */
+  /** Disposes this item and removes it from the DOM. */
   dispose(): void {
     this.isDisposed = true;
     if (this.renameInput) {
@@ -271,9 +290,7 @@ export class OutlinerItem {
     }
   }
 
-  /**
-   * Builds the complete row DOM structure.
-   */
+  /** Builds the complete row DOM structure. */
   private buildRow(): void {
     this.applyRowStyles();
     this.buildChevron();
@@ -289,9 +306,7 @@ export class OutlinerItem {
     this.bindRowEvents();
   }
 
-  /**
-   * Applies base styles to the row element.
-   */
+  /** Applies base styles to the row element. */
   private applyRowStyles(): void {
     this.rowElement.style.display = 'flex';
     this.rowElement.style.alignItems = 'center';
@@ -306,9 +321,7 @@ export class OutlinerItem {
     this.rowElement.style.minHeight = '20px';
   }
 
-  /**
-   * Builds the expand/collapse chevron element.
-   */
+  /** Builds the expand/collapse chevron element. */
   private buildChevron(): void {
     this.chevronElement.style.width = '16px';
     this.chevronElement.style.textAlign = 'center';
@@ -327,17 +340,13 @@ export class OutlinerItem {
     });
   }
 
-  /**
-   * Updates the chevron character based on expanded state.
-   */
+  /** Updates the chevron character based on expanded state. */
   private updateChevron(): void {
     if (!this.hasChildren) return;
     this.chevronElement.textContent = this.isExpanded ? '▼' : '▶';
   }
 
-  /**
-   * Builds the object type icon element.
-   */
+  /** Builds the object type icon element. */
   private buildIcon(): void {
     const icon = ObjectIconFactory.getIcon(this.object);
     this.iconElement.textContent = icon.character;
@@ -347,9 +356,7 @@ export class OutlinerItem {
     this.iconElement.style.fontSize = '12px';
   }
 
-  /**
-   * Builds the name text span element.
-   */
+  /** Builds the name text span element. */
   private buildName(): void {
     this.nameElement.textContent = this.object.name || 'Unnamed';
     this.nameElement.style.flex = '1';
@@ -362,9 +369,7 @@ export class OutlinerItem {
     });
   }
 
-  /**
-   * Builds the visibility toggle icon element.
-   */
+  /** Builds the visibility toggle icon element. */
   private buildVisibilityIcon(): void {
     this.visibilityElement.style.cursor = 'pointer';
     this.visibilityElement.style.marginLeft = '4px';
@@ -379,17 +384,13 @@ export class OutlinerItem {
     });
   }
 
-  /**
-   * Updates the visibility icon character and color.
-   */
+  /** Updates the visibility icon character and color. */
   private updateVisibilityIcon(): void {
     this.visibilityElement.textContent = this.isVisible ? '👁' : '👁‍🗨';
     this.visibilityElement.style.color = this.isVisible ? '#ffffff' : '#555555';
   }
 
-  /**
-   * Builds the lock toggle icon element.
-   */
+  /** Builds the lock toggle icon element. */
   private buildLockIcon(): void {
     this.lockElement.style.cursor = 'pointer';
     this.lockElement.style.marginLeft = '2px';
@@ -408,17 +409,13 @@ export class OutlinerItem {
     });
   }
 
-  /**
-   * Updates the lock icon character and color.
-   */
+  /** Updates the lock icon character and color. */
   private updateLockIcon(): void {
     this.lockElement.textContent = this.isLocked ? '🔒' : '🔓';
     this.lockElement.style.color = this.isLocked ? '#e67e22' : '#555555';
   }
 
-  /**
-   * Binds interaction events to the row element.
-   */
+  /** Binds interaction events to the row element. */
   private bindRowEvents(): void {
     this.rowElement.draggable = true;
     this.rowElement.addEventListener('click', (event: MouseEvent) => {
@@ -447,9 +444,7 @@ export class OutlinerItem {
     });
   }
 
-  /**
-   * Binds HTML5 drag-and-drop events used for hierarchy reparenting.
-   */
+  /** Binds HTML5 drag-and-drop events used for hierarchy reparenting. */
   private bindDragAndDropEvents(): void {
     this.rowElement.addEventListener('dragstart', (event: DragEvent) => {
       event.stopPropagation();

@@ -2,17 +2,13 @@ import * as THREE from 'three';
 import { CommandStack } from '../commands/command_stack.js';
 import { SetColorCommand } from '../commands/set_color_command.js';
 
-/**
- * Coalesces color-picker gestures into a single undoable SetColorCommand.
- */
+/** Coalesces color-picker gestures into a single undoable SetColorCommand. */
 export class PropertiesColorSession {
   private commandStack: CommandStack | null;
   private activeCommand: SetColorCommand | null;
   private finalizeTimerId: number | null;
 
-  /**
-   * Creates a color edit session helper.
-   */
+  /** Creates a color edit session helper. */
   constructor() {
     this.commandStack = null;
     this.activeCommand = null;
@@ -21,6 +17,7 @@ export class PropertiesColorSession {
 
   /**
    * Sets the command stack used for color edits.
+   *
    * @param stack Command stack, or null.
    */
   setCommandStack(stack: CommandStack | null): void {
@@ -29,6 +26,7 @@ export class PropertiesColorSession {
 
   /**
    * Applies a color picker value, starting or updating the active gesture.
+   *
    * @param colorHex Parsed hex color.
    * @param meshes Editable meshes with material colors.
    */
@@ -41,9 +39,7 @@ export class PropertiesColorSession {
     this.scheduleFinalize();
   }
 
-  /**
-   * Ends the active color gesture and drops no-op commands.
-   */
+  /** Ends the active color gesture and drops no-op commands. */
   finalize(): void {
     this.clearFinalizeTimer();
     if (!this.activeCommand) return;
@@ -55,6 +51,7 @@ export class PropertiesColorSession {
 
   /**
    * Creates and pushes a new color command for the start of a picker gesture.
+   *
    * @param colorHex First non-session color from the picker.
    * @param meshes Editable meshes.
    */
@@ -75,6 +72,7 @@ export class PropertiesColorSession {
 
   /**
    * Updates the in-progress color command target and re-applies it.
+   *
    * @param colorHex Latest picker color.
    */
   private updateActiveCommand(colorHex: number): void {
@@ -84,9 +82,7 @@ export class PropertiesColorSession {
     this.activeCommand.execute();
   }
 
-  /**
-   * Finalizes the active color gesture shortly after picker activity stops.
-   */
+  /** Finalizes the active color gesture shortly after picker activity stops. */
   private scheduleFinalize(): void {
     this.clearFinalizeTimer();
     this.finalizeTimerId = window.setTimeout(() => {
@@ -95,9 +91,7 @@ export class PropertiesColorSession {
     }, 300);
   }
 
-  /**
-   * Cancels a pending delayed color-session finalize.
-   */
+  /** Cancels a pending delayed color-session finalize. */
   private clearFinalizeTimer(): void {
     if (this.finalizeTimerId === null) return;
     window.clearTimeout(this.finalizeTimerId);
@@ -105,7 +99,8 @@ export class PropertiesColorSession {
   }
 
   /**
-   * Removes a no-op active color command from the stack without undoing scene state.
+   * Removes a no-op active color command from the stack without undoing scene
+   * state.
    */
   private discardActiveCommand(): void {
     if (!this.activeCommand) return;

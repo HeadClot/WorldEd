@@ -20,9 +20,10 @@ const scratchAxis = new THREE.Vector3();
 
 /**
  * When texture lock is on, adjusts solid brush face mappings so world-projected
- * UVs stick to the brush across a transform (Hammer / classic CSG texture lock).
- * Call after the instance transform has been updated to the new pose, passing the
- * previous local transform components.
+ * UVs stick to the brush across a transform (Hammer / classic CSG texture
+ * lock). Call after the instance transform has been updated to the new pose,
+ * passing the previous local transform components.
+ *
  * @param instance Brush whose face mappings should stick.
  * @param previousPosition Local position before the transform.
  * @param previousRotation Local rotation before the transform.
@@ -68,12 +69,11 @@ export interface SolidBrushTextureLockBaseline {
 
 /**
  * Captures pose and face mappings for absolute texture lock during a drag.
+ *
  * @param instance Brush at the pre-drag pose.
  * @returns Baseline snapshot.
  */
-export function captureSolidBrushTextureLockBaseline(
-  instance: SolidBrushInstance,
-): SolidBrushTextureLockBaseline {
+export function captureSolidBrushTextureLockBaseline(instance: SolidBrushInstance): SolidBrushTextureLockBaseline {
   const faceCount = instance.brush.faces.length;
   const faceMappings: FaceTextureMapping[] = [];
   for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
@@ -90,6 +90,7 @@ export function captureSolidBrushTextureLockBaseline(
 /**
  * Restores baseline mappings and locks them from the baseline pose to the
  * instance's current pose (absolute, not incremental).
+ *
  * @param instance Brush already at the new pose.
  * @param baseline Snapshot from drag start.
  * @param parentWorldMatrix World matrix of the solid root.
@@ -118,7 +119,9 @@ export function lockSolidBrushTexturesFromBaseline(
 }
 
 /**
- * Locks one face mapping so a sample point keeps its UV after a world transform.
+ * Locks one face mapping so a sample point keeps its UV after a world
+ * transform.
+ *
  * @param mapping Mapping before the transform.
  * @param brush Local brush geometry.
  * @param faceIndex Face index on the brush.
@@ -153,6 +156,7 @@ export function lockFaceMappingForBrushTransform(
 
 /**
  * Builds a local TRS matrix into the target matrix.
+ *
  * @param position Local position.
  * @param rotation Local Euler rotation.
  * @param scale Local scale.
@@ -170,21 +174,19 @@ function composeLocalMatrix(
 
 /**
  * Transforms a local direction by a matrix's normal matrix into the target.
+ *
  * @param localDirection Local direction.
  * @param matrix World matrix.
  * @param target Output unit world direction.
  */
-function transformDirection(
-  localDirection: THREE.Vector3,
-  matrix: THREE.Matrix4,
-  target: THREE.Vector3,
-): void {
+function transformDirection(localDirection: THREE.Vector3, matrix: THREE.Matrix4, target: THREE.Vector3): void {
   scratchNormalMatrix.getNormalMatrix(matrix);
   target.copy(localDirection).applyMatrix3(scratchNormalMatrix).normalize();
 }
 
 /**
  * Rotates custom U/V axes by the same rotation delta as the brush world pose.
+ *
  * @param mapping Mapping that may carry custom axes (modified in place).
  * @param previousWorldMatrix Pose before transform.
  * @param nextWorldMatrix Pose after transform.
@@ -205,13 +207,11 @@ function rotateCustomAxesIfPresent(
 
 /**
  * Applies a quaternion to a stored axis record.
+ *
  * @param axis Axis components.
  * @param rotation World rotation delta.
  */
-function rotateAxisRecord(
-  axis: { x: number; y: number; z: number },
-  rotation: THREE.Quaternion,
-): void {
+function rotateAxisRecord(axis: { x: number; y: number; z: number }, rotation: THREE.Quaternion): void {
   scratchAxis.set(axis.x, axis.y, axis.z).applyQuaternion(rotation).normalize();
   axis.x = scratchAxis.x;
   axis.y = scratchAxis.y;
@@ -220,6 +220,7 @@ function rotateAxisRecord(
 
 /**
  * Computes the centroid of a brush face in local brush space.
+ *
  * @param brush Solid brush geometry.
  * @param faceIndex Face index.
  * @returns Face centroid.

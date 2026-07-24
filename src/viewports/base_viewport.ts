@@ -2,10 +2,7 @@ import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { ViewportToolbar } from '../ui/viewport_toolbar.js';
 import { ShadingMode } from '../types/shading_mode.js';
-import {
-  createEditorWebGLCanvas,
-  getEditorWebGLRendererOptions,
-} from './webgl_renderer_options.js';
+import { createEditorWebGLCanvas, getEditorWebGLRendererOptions } from './webgl_renderer_options.js';
 
 export abstract class BaseViewport {
   protected container: HTMLElement;
@@ -16,15 +13,12 @@ export abstract class BaseViewport {
 
   /**
    * Creates a viewport with a scene, renderer, and overlay toolbar.
+   *
    * @param container The DOM element that hosts this viewport.
    * @param name The display name shown in the viewport toolbar.
    * @param initialShadingMode The shading mode highlighted on the toolbar.
    */
-  constructor(
-    container: HTMLElement,
-    name: string,
-    initialShadingMode: ShadingMode = ShadingMode.SOLID,
-  ) {
+  constructor(container: HTMLElement, name: string, initialShadingMode: ShadingMode = ShadingMode.SOLID) {
     this.container = container;
     this.name = name;
     this.scene = new THREE.Scene();
@@ -39,9 +33,7 @@ export abstract class BaseViewport {
     this.setupContainer();
   }
 
-  /**
-   * Configures container and canvas layout styles, then attaches the canvas.
-   */
+  /** Configures container and canvas layout styles, then attaches the canvas. */
   protected setupContainer(): void {
     this.container.style.position = 'relative';
     this.container.style.overflow = 'hidden';
@@ -57,6 +49,7 @@ export abstract class BaseViewport {
 
   /**
    * Returns the Three.js scene for this viewport.
+   *
    * @returns The scene instance.
    */
   getScene(): THREE.Scene {
@@ -65,6 +58,7 @@ export abstract class BaseViewport {
 
   /**
    * Returns the WebGL renderer for this viewport.
+   *
    * @returns The renderer instance.
    */
   getRenderer(): THREE.WebGLRenderer {
@@ -73,6 +67,7 @@ export abstract class BaseViewport {
 
   /**
    * Returns the display name of this viewport.
+   *
    * @returns The viewport name string.
    */
   getName(): string {
@@ -81,6 +76,7 @@ export abstract class BaseViewport {
 
   /**
    * Returns the overlay toolbar for this viewport.
+   *
    * @returns The ViewportToolbar instance.
    */
   getViewportToolbar(): ViewportToolbar {
@@ -89,6 +85,7 @@ export abstract class BaseViewport {
 
   /**
    * Returns the toolbar root element (replaces the old standalone label).
+   *
    * @returns The toolbar container element.
    */
   getLabelElement(): HTMLElement {

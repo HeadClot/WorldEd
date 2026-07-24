@@ -11,20 +11,14 @@ describe('DeleteObjectCommand', () => {
 
   beforeEach(() => {
     parent = new THREE.Group();
-    mesh1 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
-    );
+    mesh1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
     mesh1.position.set(1, 2, 3);
     mesh1.rotation.set(0.1, 0.2, 0.3);
     mesh1.scale.set(2, 2, 2);
     mesh1.name = 'Mesh1';
     parent.add(mesh1);
 
-    mesh2 = new THREE.Mesh(
-      new THREE.SphereGeometry(0.5, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0x999999 }),
-    );
+    mesh2 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color: 0x999999 }));
     mesh2.position.set(4, 5, 6);
     mesh2.rotation.set(0.4, 0.5, 0.6);
     mesh2.scale.set(0.5, 0.5, 0.5);

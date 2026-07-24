@@ -3,8 +3,8 @@ import { SolidFace, WingEdge, createSolidFace, createWingEdge } from '../types/w
 import { SolidPlane } from './solid_plane.js';
 
 /**
- * Convex solid brush stored with wing-edge topology.
- * Faces are convex polygons; half-edges form a closed manifold shell.
+ * Convex solid brush stored with wing-edge topology. Faces are convex polygons;
+ * half-edges form a closed manifold shell.
  */
 export class SolidBrush {
   vertices: THREE.Vector3[];
@@ -13,9 +13,7 @@ export class SolidBrush {
   faces: SolidFace[];
   planes: SolidPlane[];
 
-  /**
-   * Creates an empty solid brush.
-   */
+  /** Creates an empty solid brush. */
   constructor() {
     this.vertices = [];
     this.wingEdges = [];
@@ -26,6 +24,7 @@ export class SolidBrush {
 
   /**
    * Deep-clones this brush.
+   *
    * @returns Independent copy of all topology and geometry.
    */
   clone(): SolidBrush {
@@ -33,16 +32,12 @@ export class SolidBrush {
     copy.vertices = this.vertices.map((vertex) => vertex.clone());
     copy.wingEdges = this.wingEdges.map((edge) => createWingEdge(edge.vertexIndex, edge.twinIndex));
     copy.edgeFaceIndices = this.edgeFaceIndices.slice();
-    copy.faces = this.faces.map((face) =>
-      createSolidFace(face.firstEdge, face.edgeCount, face.surfaceIndex),
-    );
+    copy.faces = this.faces.map((face) => createSolidFace(face.firstEdge, face.edgeCount, face.surfaceIndex));
     copy.planes = this.planes.map((plane) => plane.clone());
     return copy;
   }
 
-  /**
-   * Rebuilds face planes from current vertex positions using Newell's method.
-   */
+  /** Rebuilds face planes from current vertex positions using Newell's method. */
   recalculatePlanes(): void {
     this.planes = this.faces.map((face) => {
       const points = this.getFaceVertices(face);
@@ -50,9 +45,7 @@ export class SolidBrush {
     });
   }
 
-  /**
-   * Rebuilds the edge → face index table from face edge ranges.
-   */
+  /** Rebuilds the edge → face index table from face edge ranges. */
   rebuildEdgeFaceIndices(): void {
     this.edgeFaceIndices = new Array(this.wingEdges.length).fill(0);
     for (let faceIndex = 0; faceIndex < this.faces.length; faceIndex++) {
@@ -66,6 +59,7 @@ export class SolidBrush {
 
   /**
    * Returns ordered vertices for a face (one vertex per wing edge).
+   *
    * @param face Face descriptor.
    * @returns Vertex positions in winding order.
    */
@@ -81,6 +75,7 @@ export class SolidBrush {
 
   /**
    * Returns ordered vertex indices for a face.
+   *
    * @param face Face descriptor.
    * @returns Vertex indices in winding order.
    */
@@ -95,6 +90,7 @@ export class SolidBrush {
 
   /**
    * Axis-aligned bounds of brush vertices in local space.
+   *
    * @returns Bounding box, or empty box when the brush has no vertices.
    */
   computeLocalBounds(): THREE.Box3 {
@@ -106,6 +102,7 @@ export class SolidBrush {
 
   /**
    * Transforms all vertices by a matrix and rebuilds planes.
+   *
    * @param matrix Affine transform applied to vertices.
    */
   transformVertices(matrix: THREE.Matrix4): void {

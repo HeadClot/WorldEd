@@ -2,9 +2,7 @@ import { ShadingMode } from '../types/shading_mode.js';
 import { ViewportShadingController } from '../viewports/viewport_shading_controller.js';
 import { StatusBar } from '../ui/status_bar.js';
 
-/**
- * Maps ShadingMode values to their display names for the status bar.
- */
+/** Maps ShadingMode values to their display names for the status bar. */
 const SHADING_MODE_DISPLAY_NAMES: Record<ShadingMode, string> = {
   [ShadingMode.SOLID]: 'SOLID',
   [ShadingMode.WIREFRAME]: 'WIREFRAME',
@@ -13,9 +11,9 @@ const SHADING_MODE_DISPLAY_NAMES: Record<ShadingMode, string> = {
 };
 
 /**
- * Centralized handler for viewport shading mode operations.
- * Coordinates shading mode changes across multiple viewport controllers,
- * tracks the active viewport, and provides status bar feedback.
+ * Centralized handler for viewport shading mode operations. Coordinates shading
+ * mode changes across multiple viewport controllers, tracks the active
+ * viewport, and provides status bar feedback.
  */
 export class ShadingModeHandler {
   private controllers: ViewportShadingController[];
@@ -24,15 +22,12 @@ export class ShadingModeHandler {
 
   /**
    * Creates a new shading mode handler.
+   *
    * @param controllers The per-viewport shading controllers to manage.
    * @param activeViewportIndex The index of the currently active viewport.
    * @param statusBar The status bar for feedback display, or null.
    */
-  constructor(
-    controllers: ViewportShadingController[],
-    activeViewportIndex: number,
-    statusBar: StatusBar | null,
-  ) {
+  constructor(controllers: ViewportShadingController[], activeViewportIndex: number, statusBar: StatusBar | null) {
     this.controllers = controllers;
     this.activeViewportIndex = activeViewportIndex;
     this.statusBar = statusBar;
@@ -40,6 +35,7 @@ export class ShadingModeHandler {
 
   /**
    * Updates which viewport is considered active for shading changes.
+   *
    * @param index The new active viewport index.
    */
   setActiveViewportIndex(index: number): void {
@@ -47,8 +43,9 @@ export class ShadingModeHandler {
   }
 
   /**
-   * Applies a shading mode to the currently active viewport.
-   * Updates the status bar to reflect the change.
+   * Applies a shading mode to the currently active viewport. Updates the status
+   * bar to reflect the change.
+   *
    * @param mode The shading mode to apply.
    */
   applyShadingMode(mode: ShadingMode): void {
@@ -62,6 +59,7 @@ export class ShadingModeHandler {
 
   /**
    * Applies a shading mode to all managed viewports simultaneously.
+   *
    * @param mode The shading mode to apply to every viewport.
    */
   applyShadingModeToAll(mode: ShadingMode): void {
@@ -73,6 +71,7 @@ export class ShadingModeHandler {
 
   /**
    * Updates the status bar with the current shading mode name.
+   *
    * @param mode The shading mode to display.
    */
   private updateStatusBar(mode: ShadingMode): void {
@@ -83,6 +82,7 @@ export class ShadingModeHandler {
 
   /**
    * Returns the shading mode of the currently active viewport.
+   *
    * @returns The active viewport's ShadingMode value.
    */
   getActiveMode(): ShadingMode {

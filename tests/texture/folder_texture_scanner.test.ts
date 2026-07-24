@@ -47,6 +47,7 @@ describe('FolderTextureScanner', () => {
 
 /**
  * Builds a test directory listing from name/path pairs.
+ *
  * @param pairs File name and relative path pairs.
  * @returns Synthetic listing.
  */

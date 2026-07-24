@@ -12,14 +12,12 @@ export const DEFAULT_GAME_PROFILE_NAME = 'Default';
 
 /**
  * Creates a fresh default game profile with metric meters and Godot axes.
+ *
  * @param id Stable unique identifier for the profile.
  * @param name Optional display name.
  * @returns New game profile object.
  */
-export function createDefaultGameProfile(
-  id: string,
-  name: string = DEFAULT_GAME_PROFILE_NAME,
-): GameProfile {
+export function createDefaultGameProfile(id: string, name: string = DEFAULT_GAME_PROFILE_NAME): GameProfile {
   return {
     id,
     name,
@@ -32,6 +30,7 @@ export function createDefaultGameProfile(
 
 /**
  * Returns default View tab settings.
+ *
  * @returns Fresh view settings snapshot.
  */
 export function createDefaultViewSettings(): ViewSettings {
@@ -46,6 +45,7 @@ export function createDefaultViewSettings(): ViewSettings {
 
 /**
  * Returns default Mouse tab navigation settings.
+ *
  * @returns Fresh mouse settings snapshot.
  */
 export function createDefaultMouseSettings(): MouseSettings {
@@ -72,6 +72,7 @@ export function createDefaultUpdateSettings(): UpdateSettings {
 
 /**
  * Returns default Keyboard tab bindings.
+ *
  * @returns Fresh keyboard shortcut settings snapshot.
  */
 export function createDefaultKeyboardShortcutSettings(): KeyboardShortcutSettings {
@@ -114,6 +115,7 @@ export function createDefaultKeyboardShortcutSettings(): KeyboardShortcutSetting
 
 /**
  * Builds a keyboard shortcut binding.
+ *
  * @param code KeyboardEvent.code value.
  * @param ctrl Whether Control is required.
  * @param shift Whether Shift is required.

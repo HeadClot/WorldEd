@@ -10,9 +10,7 @@ import { GridSnap } from '../transform/grid_snap.js';
 import { Viewport3D } from '../viewports/viewport_3d.js';
 import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 
-/**
- * Host callbacks used while wiring the solid model panel and controller.
- */
+/** Host callbacks used while wiring the solid model panel and controller. */
 export interface SolidModelLayoutHost {
   worldObject: THREE.Group;
   commandStack: CommandStack;
@@ -29,9 +27,7 @@ export interface SolidModelLayoutHost {
   showStatusMessage: (message: string) => void;
 }
 
-/**
- * Result of solid model UI wiring.
- */
+/** Result of solid model UI wiring. */
 export interface SolidModelLayoutSetup {
   solidModelPanel: SolidModelPanel;
   solidModelController: SolidModelController;
@@ -39,6 +35,7 @@ export interface SolidModelLayoutSetup {
 
 /**
  * Creates the solid model floating panel, controller, and property handlers.
+ *
  * @param host Layout host providing scene and UI dependencies.
  * @returns Panel and controller instances.
  */
@@ -63,13 +60,11 @@ export function setupSolidModelLayout(host: SolidModelLayoutHost): SolidModelLay
 
 /**
  * Connects solid controller callbacks to the layout host.
+ *
  * @param host Layout host.
  * @param controller Solid model controller.
  */
-function wireSolidModelController(
-  host: SolidModelLayoutHost,
-  controller: SolidModelController,
-): void {
+function wireSolidModelController(host: SolidModelLayoutHost, controller: SolidModelController): void {
   controller.setSyncViewports(() => host.refreshAfterWorldMutation());
   controller.setRefreshOutliner(() => host.refreshOutliner());
   controller.setShowStatus((message) => host.showStatusMessage(message));
@@ -83,13 +78,11 @@ function wireSolidModelController(
 
 /**
  * Wires inspector solid-brush controls to the controller.
+ *
  * @param propertiesPanel Properties panel instance.
  * @param controller Solid model controller.
  */
-function wireSolidBrushPropertyHandlers(
-  propertiesPanel: PropertiesPanel,
-  controller: SolidModelController,
-): void {
+function wireSolidBrushPropertyHandlers(propertiesPanel: PropertiesPanel, controller: SolidModelController): void {
   propertiesPanel.setSolidBrushHandlers({
     onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) =>
       controller.setBrushOperationForMeshes(meshes, operation),

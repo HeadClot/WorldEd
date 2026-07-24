@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '../types/bounds_face.js';
 import { pointerEventToNdc } from '../utils/pointer_ndc.js';
 
-/**
- * Result of picking a bounds face for plane-constrained translation.
- */
+/** Result of picking a bounds face for plane-constrained translation. */
 export interface BoundsFacePickResult {
   face: BoundsFace;
   point: THREE.Vector3;
@@ -12,16 +10,14 @@ export interface BoundsFacePickResult {
 }
 
 /**
- * Raycasts against bounds face pick meshes in a gizmo group.
- * Used by Bounds Move mode to start a face-plane drag.
+ * Raycasts against bounds face pick meshes in a gizmo group. Used by Bounds
+ * Move mode to start a face-plane drag.
  */
 export class BoundsFacePicker {
   private raycaster: THREE.Raycaster;
   private ndcVector: THREE.Vector2;
 
-  /**
-   * Creates a new bounds face picker.
-   */
+  /** Creates a new bounds face picker. */
   constructor() {
     this.raycaster = new THREE.Raycaster();
     this.ndcVector = new THREE.Vector2();
@@ -29,6 +25,7 @@ export class BoundsFacePicker {
 
   /**
    * Picks the closest bounds face under the pointer.
+   *
    * @param event Pointer event.
    * @param camera Viewport camera.
    * @param renderer Viewport renderer.
@@ -54,6 +51,7 @@ export class BoundsFacePicker {
 
   /**
    * Collects visible face pick meshes from the gizmo hierarchy.
+   *
    * @param group The gizmo group.
    * @returns Pickable face meshes.
    */
@@ -70,6 +68,7 @@ export class BoundsFacePicker {
 
   /**
    * Builds a pick result from sorted raycast hits.
+   *
    * @param hits Intersection list sorted by distance.
    * @returns Face pick result or null.
    */
@@ -89,6 +88,7 @@ export class BoundsFacePicker {
 
   /**
    * Extracts a world-space face normal from an intersection.
+   *
    * @param hit The raycast hit.
    * @returns Normalized world normal.
    */
@@ -102,9 +102,7 @@ export class BoundsFacePicker {
     return new THREE.Vector3(0, 1, 0);
   }
 
-  /**
-   * Disposes internal resources.
-   */
+  /** Disposes internal resources. */
   dispose(): void {
     this.ndcVector.set(0, 0);
   }

@@ -1,8 +1,6 @@
 import * as THREE from 'three';
 
-/**
- * Entry used when building undirected AABB overlap adjacency.
- */
+/** Entry used when building undirected AABB overlap adjacency. */
 export interface OverlapBoundsEntry {
   /** Axis-aligned bounds in model space. */
   bounds: THREE.Box3;
@@ -11,12 +9,13 @@ export interface OverlapBoundsEntry {
 }
 
 /**
- * Builds undirected bounds-overlap adjacency for solid CSG peer filtering.
- * Uses a uniform grid so sparse maps stay near-linear instead of quadratic.
+ * Builds undirected bounds-overlap adjacency for solid CSG peer filtering. Uses
+ * a uniform grid so sparse maps stay near-linear instead of quadratic.
  */
 export class BrushOverlapGraph {
   /**
    * Fills overlappingPeerIndices for each entry from padded AABB tests.
+   *
    * @param entries Prepared brushes with empty overlap lists.
    * @param pad Extra margin added to each bounds test.
    */
@@ -33,6 +32,7 @@ export class BrushOverlapGraph {
   /**
    * Rebuilds overlaps only for seed brushes against every entry, then restores
    * cached peers for clean brushes that do not touch any seed.
+   *
    * @param entries Prepared brushes (overlap lists start empty).
    * @param pad Extra margin.
    * @param seedIndices Indices that moved or changed shape.
@@ -53,7 +53,9 @@ export class BrushOverlapGraph {
   }
 
   /**
-   * Restores previous peer lists for non-seed brushes, dropping stale seed peers.
+   * Restores previous peer lists for non-seed brushes, dropping stale seed
+   * peers.
+   *
    * @param entries Bounds entries.
    * @param seedIndices Changed brush indices.
    * @param previousPeerIndices Previous peer index lists.
@@ -75,8 +77,10 @@ export class BrushOverlapGraph {
   }
 
   /**
-   * Links each seed brush against overlapping peers and records undirected edges.
-   * Uses the uniform grid for large scenes instead of O(seed * n) scans.
+   * Links each seed brush against overlapping peers and records undirected
+   * edges. Uses the uniform grid for large scenes instead of O(seed * n)
+   * scans.
+   *
    * @param entries Bounds entries.
    * @param pad Overlap pad.
    * @param seedIndices Seed indices.
@@ -94,13 +98,7 @@ export class BrushOverlapGraph {
     const cells = this.binEntriesIntoCells(entries, cellSize, pad);
     for (const seedIndex of seedIndices) {
       if (seedIndex < 0 || seedIndex >= entries.length) continue;
-      const candidates = this.collectCellCandidates(
-        cells,
-        entries[seedIndex].bounds,
-        cellSize,
-        pad,
-        seedIndex,
-      );
+      const candidates = this.collectCellCandidates(cells, entries[seedIndex].bounds, cellSize, pad, seedIndex);
       for (const other of candidates) {
         if (!this.boundsOverlap(entries[seedIndex].bounds, entries[other].bounds, pad)) {
           continue;
@@ -112,15 +110,12 @@ export class BrushOverlapGraph {
 
   /**
    * Pairwise seed linking for small scenes or large seed sets.
+   *
    * @param entries Bounds entries.
    * @param pad Overlap pad.
    * @param seedIndices Seed indices.
    */
-  private static linkSeedsPairwise(
-    entries: OverlapBoundsEntry[],
-    pad: number,
-    seedIndices: ReadonlySet<number>,
-  ): void {
+  private static linkSeedsPairwise(entries: OverlapBoundsEntry[], pad: number, seedIndices: ReadonlySet<number>): void {
     for (const seedIndex of seedIndices) {
       if (seedIndex < 0 || seedIndex >= entries.length) continue;
       for (let other = 0; other < entries.length; other++) {
@@ -135,6 +130,7 @@ export class BrushOverlapGraph {
 
   /**
    * Collects unique brush indices from grid cells covered by query bounds.
+   *
    * @param cells Grid buckets.
    * @param bounds Query bounds.
    * @param cellSize Grid cell size.
@@ -173,6 +169,7 @@ export class BrushOverlapGraph {
 
   /**
    * Adds an undirected overlap edge when missing.
+   *
    * @param entries Bounds entries.
    * @param a First index.
    * @param b Second index.
@@ -188,6 +185,7 @@ export class BrushOverlapGraph {
 
   /**
    * Pairwise overlap for very small brush counts.
+   *
    * @param entries Bounds entries.
    * @param pad Overlap pad.
    */
@@ -206,6 +204,7 @@ export class BrushOverlapGraph {
 
   /**
    * Grid-accelerated overlap for larger brush counts.
+   *
    * @param entries Bounds entries.
    * @param pad Overlap pad.
    */
@@ -220,6 +219,7 @@ export class BrushOverlapGraph {
 
   /**
    * Picks a grid cell size from average brush extent.
+   *
    * @param entries Bounds entries.
    * @returns Positive cell edge length.
    */
@@ -235,6 +235,7 @@ export class BrushOverlapGraph {
 
   /**
    * Inserts each brush index into every grid cell its padded bounds cover.
+   *
    * @param entries Bounds entries.
    * @param cellSize Grid cell edge length.
    * @param pad Bounds pad.
@@ -254,6 +255,7 @@ export class BrushOverlapGraph {
 
   /**
    * Inserts one brush into all overlapped grid cells.
+   *
    * @param cells Grid map.
    * @param bounds Brush bounds.
    * @param index Brush index.
@@ -287,6 +289,7 @@ export class BrushOverlapGraph {
 
   /**
    * Links overlapping pairs within one cell, deduping across cells.
+   *
    * @param entries Bounds entries.
    * @param indices Brush indices in the cell.
    * @param pad Bounds pad.
@@ -316,6 +319,7 @@ export class BrushOverlapGraph {
 
   /**
    * Returns whether two bounds overlap with padding.
+   *
    * @param a First bounds.
    * @param b Second bounds.
    * @param pad Padding distance.

@@ -9,9 +9,7 @@ import {
   createEmptyVmfWorld,
 } from './vmf_types.js';
 
-/**
- * Mutable pointers while walking a VMF document tree.
- */
+/** Mutable pointers while walking a VMF document tree. */
 interface VmfParseCursor {
   solid: VmfSolid | null;
   solidSide: VmfSolidSide | null;
@@ -19,12 +17,13 @@ interface VmfParseCursor {
 }
 
 /**
- * Parses Valve Map Format 2006 text into a structured world document.
- * Handles world solids, entity solids, and keyvalue type detection.
+ * Parses Valve Map Format 2006 text into a structured world document. Handles
+ * world solids, entity solids, and keyvalue type detection.
  */
 export class VmfParser {
   /**
    * Parses a full VMF document string.
+   *
    * @param source Complete VMF file contents.
    * @returns Parsed world with solids and entities.
    */
@@ -42,6 +41,7 @@ export class VmfParser {
 
   /**
    * Walks each non-empty line of the VMF document.
+   *
    * @param source Full document text.
    * @param world Target world.
    * @param closures Active block names by depth.
@@ -73,6 +73,7 @@ export class VmfParser {
 
   /**
    * Handles opening/closing braces and updates closure stack depth.
+   *
    * @param line Trimmed line.
    * @param closures Closure name stack.
    * @param depth Current depth.
@@ -99,6 +100,7 @@ export class VmfParser {
 
   /**
    * Routes one content line into the correct parse handler.
+   *
    * @param line Trimmed content line.
    * @param closures Active block names by depth.
    * @param world World being filled.
@@ -124,6 +126,7 @@ export class VmfParser {
 
   /**
    * Parses versioninfo keyvalues.
+   *
    * @param line Content line.
    * @param closures Active closures.
    * @param world Target world.
@@ -141,6 +144,7 @@ export class VmfParser {
 
   /**
    * Parses viewsettings keyvalues.
+   *
    * @param line Content line.
    * @param closures Active closures.
    * @param world Target world.
@@ -160,15 +164,12 @@ export class VmfParser {
 
   /**
    * Parses top-level worldspawn properties.
+   *
    * @param line Content line.
    * @param closures Active closures.
    * @param world Target world.
    */
-  private parseWorldProperties(
-    line: string,
-    closures: Array<string | null>,
-    world: VmfWorld,
-  ): void {
+  private parseWorldProperties(line: string, closures: Array<string | null>, world: VmfWorld): void {
     if (closures[0] !== 'world' || closures[1] !== null) return;
     const pair = this.tryParseKeyValue(line);
     if (!pair) return;
@@ -185,10 +186,12 @@ export class VmfParser {
 
   /**
    * Parses world-level solid blocks.
+   *
    * @param line Content line.
    * @param closures Active closures.
    * @param world Target world.
-   * @param justEnteredClosure Whether this is the first line inside a new block.
+   * @param justEnteredClosure Whether this is the first line inside a new
+   *   block.
    * @param state Mutable parse pointers.
    */
   private parseWorldSolid(
@@ -213,9 +216,11 @@ export class VmfParser {
 
   /**
    * Parses sides under a world solid.
+   *
    * @param line Content line.
    * @param closures Active closures.
-   * @param justEnteredClosure Whether this is the first line inside a new block.
+   * @param justEnteredClosure Whether this is the first line inside a new
+   *   block.
    * @param state Mutable parse pointers.
    */
   private parseWorldSolidSide(
@@ -224,12 +229,7 @@ export class VmfParser {
     justEnteredClosure: boolean,
     state: VmfParseCursor,
   ): void {
-    if (
-      closures[0] !== 'world' ||
-      closures[1] !== 'solid' ||
-      closures[2] !== 'side' ||
-      closures[3] !== null
-    ) {
+    if (closures[0] !== 'world' || closures[1] !== 'solid' || closures[2] !== 'side' || closures[3] !== null) {
       return;
     }
     this.ensureSideOnSolid(justEnteredClosure, state);
@@ -238,10 +238,12 @@ export class VmfParser {
 
   /**
    * Parses entity blocks and their keyvalues.
+   *
    * @param line Content line.
    * @param closures Active closures.
    * @param world Target world.
-   * @param justEnteredClosure Whether this is the first line inside a new block.
+   * @param justEnteredClosure Whether this is the first line inside a new
+   *   block.
    * @param state Mutable parse pointers.
    */
   private parseEntity(
@@ -276,9 +278,11 @@ export class VmfParser {
 
   /**
    * Parses solids nested under entities.
+   *
    * @param line Content line.
    * @param closures Active closures.
-   * @param justEnteredClosure Whether this is the first line inside a new block.
+   * @param justEnteredClosure Whether this is the first line inside a new
+   *   block.
    * @param state Mutable parse pointers.
    */
   private parseEntitySolid(
@@ -302,9 +306,11 @@ export class VmfParser {
 
   /**
    * Parses sides under an entity solid.
+   *
    * @param line Content line.
    * @param closures Active closures.
-   * @param justEnteredClosure Whether this is the first line inside a new block.
+   * @param justEnteredClosure Whether this is the first line inside a new
+   *   block.
    * @param state Mutable parse pointers.
    */
   private parseEntitySolidSide(
@@ -313,12 +319,7 @@ export class VmfParser {
     justEnteredClosure: boolean,
     state: VmfParseCursor,
   ): void {
-    if (
-      closures[0] !== 'entity' ||
-      closures[1] !== 'solid' ||
-      closures[2] !== 'side' ||
-      closures[3] !== null
-    ) {
+    if (closures[0] !== 'entity' || closures[1] !== 'solid' || closures[2] !== 'side' || closures[3] !== null) {
       return;
     }
     this.ensureSideOnSolid(justEnteredClosure, state);
@@ -327,6 +328,7 @@ export class VmfParser {
 
   /**
    * Ensures a new side object exists when entering a side block.
+   *
    * @param justEnteredClosure Whether the side block just opened.
    * @param state Mutable parse pointers.
    */
@@ -338,6 +340,7 @@ export class VmfParser {
 
   /**
    * Applies a keyvalue onto a solid side when recognized.
+   *
    * @param line Content line.
    * @param solidSide Target side or null.
    */
@@ -350,15 +353,12 @@ export class VmfParser {
 
   /**
    * Writes one recognized side property onto a solid side.
+   *
    * @param solidSide Target side.
    * @param key Property name.
    * @param value Parsed value.
    */
-  private writeSideProperty(
-    solidSide: VmfSolidSide,
-    key: string,
-    value: string | number | VmfVector3 | object,
-  ): void {
+  private writeSideProperty(solidSide: VmfSolidSide, key: string, value: string | number | VmfVector3 | object): void {
     if (key === 'id') solidSide.id = Number(value);
     if (key === 'plane' && this.isPlanePoints(value)) solidSide.plane = value;
     if (key === 'material') solidSide.material = String(value);
@@ -371,6 +371,7 @@ export class VmfParser {
 
   /**
    * Creates an empty solid side with default UV axes.
+   *
    * @returns New side object.
    */
   private createEmptySide(): VmfSolidSide {
@@ -393,12 +394,11 @@ export class VmfParser {
 
   /**
    * Parses a quoted keyvalue line into a typed value.
+   *
    * @param line Line such as `"plane" "(0 0 0) (1 0 0) (1 1 0)"`.
    * @returns Key and value, or null when not a keyvalue line.
    */
-  tryParseKeyValue(
-    line: string,
-  ): { key: string; value: string | number | VmfVector3 | object } | null {
+  tryParseKeyValue(line: string): { key: string; value: string | number | VmfVector3 | object } | null {
     if (!line.includes('"')) return null;
     if ((line.match(/"/g) ?? []).length !== 4) return null;
     const firstEnd = line.indexOf('"', 1);
@@ -413,6 +413,7 @@ export class VmfParser {
 
   /**
    * Detects plane, axis, vector, float, int, or string values.
+   *
    * @param raw Normalized raw value text.
    * @param rawOriginal Original raw value (preserves string content).
    * @returns Typed value.
@@ -432,6 +433,7 @@ export class VmfParser {
 
   /**
    * Parses three parenthesized points into a plane definition.
+   *
    * @param raw Value beginning with '('.
    * @returns Plane point triple.
    */
@@ -454,6 +456,7 @@ export class VmfParser {
 
   /**
    * Parses a Hammer UV axis `[x y z offset] scale`.
+   *
    * @param raw Axis string without trailing `]` only form.
    * @returns Texture axis components.
    */
@@ -474,6 +477,7 @@ export class VmfParser {
 
   /**
    * Attempts to parse a space-separated three-float vector.
+   *
    * @param raw Candidate text.
    * @returns Vector or null.
    */
@@ -493,25 +497,21 @@ export class VmfParser {
 
   /**
    * Type guard for plane point triples.
+   *
    * @param value Candidate value.
    * @returns True when value has p1/p2/p3.
    */
-  private isPlanePoints(
-    value: unknown,
-  ): value is { p1: VmfVector3; p2: VmfVector3; p3: VmfVector3 } {
-    return (
-      typeof value === 'object' && value !== null && 'p1' in value && 'p2' in value && 'p3' in value
-    );
+  private isPlanePoints(value: unknown): value is { p1: VmfVector3; p2: VmfVector3; p3: VmfVector3 } {
+    return typeof value === 'object' && value !== null && 'p1' in value && 'p2' in value && 'p3' in value;
   }
 
   /**
    * Type guard for texture axes.
+   *
    * @param value Candidate value.
    * @returns True when value looks like a texture axis.
    */
   private isTextureAxis(value: unknown): value is VmfTextureAxis {
-    return (
-      typeof value === 'object' && value !== null && 'translation' in value && 'scale' in value
-    );
+    return typeof value === 'object' && value !== null && 'translation' in value && 'scale' in value;
   }
 }

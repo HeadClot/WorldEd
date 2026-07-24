@@ -87,20 +87,19 @@ describe('CsgActionHandler', () => {
 
 /**
  * Creates a regular content mesh eligible for mesh CSG.
+ *
  * @param name Mesh name.
  * @returns Configured mesh.
  */
 function createRegularMesh(name: string): THREE.Mesh {
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshStandardMaterial({ color: 0x888888 }),
-  );
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
   mesh.name = name;
   return mesh;
 }
 
 /**
  * Creates a solid brush helper mesh marked with brush userData.
+ *
  * @param name Mesh name.
  * @returns Brush-marked mesh.
  */
@@ -112,6 +111,7 @@ function createBrushMesh(name: string): THREE.Mesh {
 
 /**
  * Creates a solid model result mesh marked with result userData.
+ *
  * @param name Mesh name.
  * @returns Result-marked mesh.
  */

@@ -4,10 +4,10 @@ import { GridPlane } from './grid_plane.js';
 import { GridLineBuffer } from './grid_line_buffer.js';
 
 /**
- * Adaptive infinite orthographic grid for 2D viewports.
- * Uses an adaptive base cell (grows when zoomed out) with minor lines,
- * brighter section lines every 4 cells, and strongest lines every 8 cells.
- * Minor lines fade smoothly between LOD steps so major quads never pop.
+ * Adaptive infinite orthographic grid for 2D viewports. Uses an adaptive base
+ * cell (grows when zoomed out) with minor lines, brighter section lines every 4
+ * cells, and strongest lines every 8 cells. Minor lines fade smoothly between
+ * LOD steps so major quads never pop.
  */
 export class InfiniteGrid2D {
   private group: THREE.Group;
@@ -27,6 +27,7 @@ export class InfiniteGrid2D {
 
   /**
    * Creates a 2D infinite grid for the given plane.
+   *
    * @param plane World plane the grid lies on.
    * @param snapInterval Base snap cell size in world units.
    */
@@ -51,6 +52,7 @@ export class InfiniteGrid2D {
 
   /**
    * Returns the root object to parent in a viewport scene.
+   *
    * @returns The grid group.
    */
   getObject(): THREE.Group {
@@ -59,6 +61,7 @@ export class InfiniteGrid2D {
 
   /**
    * Updates the base snap cell size used for LOD selection.
+   *
    * @param snapInterval Snap interval in world units.
    */
   setSnapInterval(snapInterval: number): void {
@@ -67,6 +70,7 @@ export class InfiniteGrid2D {
 
   /**
    * Rebuilds grid lines for the current orthographic view.
+   *
    * @param camera The orthographic camera for this viewport.
    */
   update(camera: THREE.OrthographicCamera): void {
@@ -80,6 +84,7 @@ export class InfiniteGrid2D {
 
   /**
    * Computes world-space U/V bounds of the orthographic view on this plane.
+   *
    * @param camera Orthographic camera.
    * @returns Min/max along plane U and V axes.
    */
@@ -114,6 +119,7 @@ export class InfiniteGrid2D {
 
   /**
    * Builds the four near-plane frustum corners in world space.
+   *
    * @param camera Orthographic camera.
    * @returns Corner positions.
    */
@@ -133,6 +139,7 @@ export class InfiniteGrid2D {
 
   /**
    * Projects a world point onto plane UV coordinates.
+   *
    * @param point World position.
    * @returns Plane U/V components.
    */
@@ -144,6 +151,7 @@ export class InfiniteGrid2D {
 
   /**
    * Converts plane UV coordinates back to a world point on the grid plane.
+   *
    * @param u Plane U.
    * @param v Plane V.
    * @returns World position on the plane.
@@ -155,8 +163,9 @@ export class InfiniteGrid2D {
   }
 
   /**
-   * Picks an adaptive cell size and minor-line fade for the current zoom.
-   * Cell grows by 4x when too dense; minorFade smoothly eases within a LOD band.
+   * Picks an adaptive cell size and minor-line fade for the current zoom. Cell
+   * grows by 4x when too dense; minorFade smoothly eases within a LOD band.
+   *
    * @param camera Orthographic camera.
    * @returns Display cell size and minor-line visibility 0..1.
    */
@@ -179,6 +188,7 @@ export class InfiniteGrid2D {
 
   /**
    * Estimates relative on-screen size of one cell for adaptive grid density.
+   *
    * @param camera Orthographic camera.
    * @param cell Cell size in world units.
    * @returns Clamped factor 0..1.
@@ -193,6 +203,7 @@ export class InfiniteGrid2D {
 
   /**
    * Draws minor, section (x4), and major (x8) lines for the current LOD.
+   *
    * @param view Visible plane bounds.
    * @param cell Adaptive cell size.
    * @param minorFade Minor-line opacity 0..1.
@@ -221,23 +232,25 @@ export class InfiniteGrid2D {
 
   /**
    * Prepares minor/section/major colors for the current minor fade.
+   *
    * @param minorFade Minor-line visibility 0..1.
    */
   private prepareLineColors(minorFade: number): void {
     this.workMinor.copy(this.backgroundColor).lerp(this.minorColor, minorFade);
-    this.workSection
-      .copy(this.backgroundColor)
-      .lerp(this.sectionColor, THREE.MathUtils.lerp(0.55, 1, minorFade));
+    this.workSection.copy(this.backgroundColor).lerp(this.sectionColor, THREE.MathUtils.lerp(0.55, 1, minorFade));
     this.workMajor.copy(this.backgroundColor).lerp(this.sectionColor, 1);
   }
 
   /**
-   * Picks the line color for a grid coordinate from the minor/section/major hierarchy.
+   * Picks the line color for a grid coordinate from the minor/section/major
+   * hierarchy.
+   *
    * @param coordinate Line coordinate on the plane axis.
    * @param cell Base cell size.
    * @param cell4 Section spacing.
    * @param cell8 Major spacing.
-   * @param minorFade Minor visibility (skips pure-minor lines when fully faded).
+   * @param minorFade Minor visibility (skips pure-minor lines when fully
+   *   faded).
    * @returns Color for that line.
    */
   private colorForCoordinate(
@@ -262,6 +275,7 @@ export class InfiniteGrid2D {
 
   /**
    * Draws a line of constant U across the V range.
+   *
    * @param u Constant U.
    * @param minV Range start V.
    * @param maxV Range end V.
@@ -275,6 +289,7 @@ export class InfiniteGrid2D {
 
   /**
    * Draws a line of constant V across the U range.
+   *
    * @param v Constant V.
    * @param minU Range start U.
    * @param maxU Range end U.
@@ -288,6 +303,7 @@ export class InfiniteGrid2D {
 
   /**
    * Draws the highlighted center axes through the origin.
+   *
    * @param view Visible plane bounds.
    */
   private appendCenterAxes(view: { minU: number; maxU: number; minV: number; maxV: number }): void {
@@ -297,6 +313,7 @@ export class InfiniteGrid2D {
 
   /**
    * Snaps a value down to the previous multiple of step.
+   *
    * @param value Input value.
    * @param step Step size.
    * @returns Snapped value.
@@ -306,8 +323,9 @@ export class InfiniteGrid2D {
   }
 
   /**
-   * Returns true when value is an integer multiple of step (float-safe).
-   * Used for minor, section, and major grid steps alike.
+   * Returns true when value is an integer multiple of step (float-safe). Used
+   * for minor, section, and major grid steps alike.
+   *
    * @param value Coordinate.
    * @param step Step size.
    * @returns True when value is a float-safe integer multiple of step.
@@ -320,6 +338,7 @@ export class InfiniteGrid2D {
 
   /**
    * Resolves the U-axis accent color for the plane.
+   *
    * @param plane Grid plane.
    * @returns Three.js numeric hex color (e.g. 0xff0000), not a CSS string.
    */
@@ -330,6 +349,7 @@ export class InfiniteGrid2D {
 
   /**
    * Resolves the V-axis accent color for the plane.
+   *
    * @param plane Grid plane.
    * @returns Three.js numeric hex color (e.g. 0xff0000), not a CSS string.
    */
@@ -340,15 +360,14 @@ export class InfiniteGrid2D {
 
   /**
    * Returns segment count from the last update.
+   *
    * @returns Number of line segments.
    */
   getSegmentCount(): number {
     return this.buffer.getSegmentCount();
   }
 
-  /**
-   * Disposes grid resources.
-   */
+  /** Disposes grid resources. */
   dispose(): void {
     this.buffer.dispose();
   }

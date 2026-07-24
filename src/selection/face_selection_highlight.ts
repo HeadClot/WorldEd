@@ -4,21 +4,17 @@ import { FaceSelection } from './face_selection_manager.js';
 import { getTriangleVertexIndices, getVertexPosition } from './triangle_geometry_utils.js';
 import { GizmoVisualStyle } from '../transform/gizmo_visual_style.js';
 
-/**
- * Opacity for face highlights that pass the depth test (in front).
- */
+/** Opacity for face highlights that pass the depth test (in front). */
 const FACE_HIGHLIGHT_FRONT_OPACITY = 0.45;
 
-/**
- * Opacity for face highlights occluded by other scene geometry.
- */
+/** Opacity for face highlights occluded by other scene geometry. */
 const FACE_HIGHLIGHT_OCCLUDED_OPACITY = 0.18;
 
 /**
  * Renders orange face-selection overlays with gizmo-style depth treatment.
- * Unoccluded faces stay bright; faces behind other geometry draw as ghosts.
- * All selected triangles on one mesh share a single dual-pass mesh so complex
- * CSG faces do not create thousands of draw calls.
+ * Unoccluded faces stay bright; faces behind other geometry draw as ghosts. All
+ * selected triangles on one mesh share a single dual-pass mesh so complex CSG
+ * faces do not create thousands of draw calls.
  */
 export class FaceSelectionHighlight {
   private scene: THREE.Scene;
@@ -30,6 +26,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Creates a new face highlight renderer and adds it to the scene.
+   *
    * @param scene The scene to add the highlight group to.
    */
   constructor(scene: THREE.Scene) {
@@ -43,6 +40,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Creates the bright front-pass material used where the face is unoccluded.
+   *
    * @returns Configured MeshBasicMaterial.
    */
   private createFrontMaterial(): THREE.MeshBasicMaterial {
@@ -63,6 +61,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Creates the ghost material used where the face is behind other geometry.
+   *
    * @returns Configured MeshBasicMaterial.
    */
   private createOccludedMaterial(): THREE.MeshBasicMaterial {
@@ -82,8 +81,9 @@ export class FaceSelectionHighlight {
   }
 
   /**
-   * Updates the highlight to show the given set of selected faces.
-   * Rebuilds batched mesh overlays (selection changes are infrequent).
+   * Updates the highlight to show the given set of selected faces. Rebuilds
+   * batched mesh overlays (selection changes are infrequent).
+   *
    * @param faces The array of face selections to highlight.
    */
   setSelectedFaces(faces: FaceSelection[]): void {
@@ -100,6 +100,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Buckets face selections by owning mesh.
+   *
    * @param faces Face selection entries.
    * @returns Map from mesh to triangle indices.
    */
@@ -118,6 +119,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Builds one dual-pass highlight group for all selected triangles on a mesh.
+   *
    * @param mesh Source mesh.
    * @param faceIndices Selected triangle indices on that mesh.
    * @returns Dual-pass group, or null when geometry is empty.
@@ -134,14 +136,12 @@ export class FaceSelectionHighlight {
 
   /**
    * Builds a single non-indexed world-space mesh for many selected triangles.
+   *
    * @param mesh Source mesh.
    * @param faceIndices Triangle indices to include.
    * @returns Batched geometry, or null when no valid triangles exist.
    */
-  private buildWorldSpaceBatchedGeometry(
-    mesh: THREE.Mesh,
-    faceIndices: number[],
-  ): THREE.BufferGeometry | null {
+  private buildWorldSpaceBatchedGeometry(mesh: THREE.Mesh, faceIndices: number[]): THREE.BufferGeometry | null {
     const positions = mesh.geometry.getAttribute('position');
     if (!positions || faceIndices.length === 0) return null;
     mesh.updateMatrixWorld(true);
@@ -165,6 +165,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Writes one transformed vertex into the batch float buffer.
+   *
    * @param positions Position attribute.
    * @param vertexIndex Attribute vertex index.
    * @param worldMatrix Mesh world matrix.
@@ -190,6 +191,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Creates the bright front-pass mesh for a face highlight.
+   *
    * @param geometry Shared triangle geometry.
    * @returns Front highlight mesh.
    */
@@ -203,6 +205,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Creates the ghost mesh drawn only where the face is occluded.
+   *
    * @param geometry Shared triangle geometry.
    * @returns Occluded highlight mesh.
    */
@@ -217,6 +220,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Removes a mesh group from the scene and disposes its geometry.
+   *
    * @param group The dual-pass face highlight group.
    */
   private disposeFaceGroup(group: THREE.Group): void {
@@ -227,6 +231,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Finds the shared triangle geometry used by a face highlight group.
+   *
    * @param group Face highlight group containing front and occluded meshes.
    * @returns Shared geometry, or null when missing.
    */
@@ -239,9 +244,7 @@ export class FaceSelectionHighlight {
     return null;
   }
 
-  /**
-   * Removes all face highlights from the scene.
-   */
+  /** Removes all face highlights from the scene. */
   private clearHighlights(): void {
     this.meshGroups.forEach((group) => {
       this.disposeFaceGroup(group);
@@ -249,9 +252,7 @@ export class FaceSelectionHighlight {
     this.meshGroups.clear();
   }
 
-  /**
-   * Disposes all highlight resources and removes the group from the scene.
-   */
+  /** Disposes all highlight resources and removes the group from the scene. */
   dispose(): void {
     this.clearHighlights();
     this.scene.remove(this.highlightGroup);
@@ -261,6 +262,7 @@ export class FaceSelectionHighlight {
 
   /**
    * Returns the count of active highlight mesh groups (one per source mesh).
+   *
    * @returns The number of batched highlight groups.
    */
   getHighlightCount(): number {

@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { rebakeStoredFaceTextureMaps } from './planar_uv_projector.js';
 
 /**
- * Global setting for CSG-style texture lock during scale/bounds resize.
- * When locked, UVs are re-baked from world planar mappings so texture density
- * stays constant (new surface shows more tiles instead of stretching).
+ * Global setting for CSG-style texture lock during scale/bounds resize. When
+ * locked, UVs are re-baked from world planar mappings so texture density stays
+ * constant (new surface shows more tiles instead of stretching).
  */
 export class TextureLockSettings {
   private locked: boolean;
@@ -12,6 +12,7 @@ export class TextureLockSettings {
 
   /**
    * Creates texture lock settings.
+   *
    * @param initiallyLocked Whether lock starts enabled (default true).
    */
   constructor(initiallyLocked: boolean = true) {
@@ -21,6 +22,7 @@ export class TextureLockSettings {
 
   /**
    * Returns whether texture lock is enabled.
+   *
    * @returns True when UVs should stay world-density locked.
    */
   isLocked(): boolean {
@@ -29,6 +31,7 @@ export class TextureLockSettings {
 
   /**
    * Enables or disables texture lock.
+   *
    * @param locked Desired lock state.
    */
   setLocked(locked: boolean): void {
@@ -39,6 +42,7 @@ export class TextureLockSettings {
 
   /**
    * Toggles texture lock and returns the new state.
+   *
    * @returns New locked state.
    */
   toggle(): boolean {
@@ -48,6 +52,7 @@ export class TextureLockSettings {
 
   /**
    * Registers a listener for lock state changes.
+   *
    * @param callback Invoked with the new locked flag.
    */
   onChanged(callback: (locked: boolean) => void): void {
@@ -55,8 +60,9 @@ export class TextureLockSettings {
   }
 
   /**
-   * Re-bakes world planar UVs on meshes when texture lock is enabled.
-   * No-op when lock is off (UVs stretch with the mesh).
+   * Re-bakes world planar UVs on meshes when texture lock is enabled. No-op
+   * when lock is off (UVs stretch with the mesh).
+   *
    * @param meshes Meshes whose transforms just changed.
    */
   rebakeMeshesIfLocked(meshes: THREE.Mesh[]): void {

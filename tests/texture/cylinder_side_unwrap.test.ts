@@ -3,14 +3,8 @@ import * as THREE from 'three';
 import { initializeMeshTextureUVs } from '../../src/texture/face_texture_applier.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { applyCylinderSideUnwrapOffsets } from '../../src/texture/cylinder_side_unwrap.js';
-import {
-  cloneFaceTextureMapEntry,
-  createDefaultFaceTextureMapping,
-} from '../../src/texture/face_texture_mapping.js';
-import {
-  computeRegionWorldNormal,
-  splitMeshIntoCoplanarRegions,
-} from '../../src/texture/planar_uv_projector.js';
+import { cloneFaceTextureMapEntry, createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
+import { computeRegionWorldNormal, splitMeshIntoCoplanarRegions } from '../../src/texture/planar_uv_projector.js';
 import { captureGeometrySourceIfNeeded } from '../../src/texture/geometry_source.js';
 
 describe('cylinder_side_unwrap', () => {

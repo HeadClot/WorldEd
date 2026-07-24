@@ -20,6 +20,7 @@ import { mapPreviewTriangleToBrushFace } from '../solid/model/brush_preview_face
 
 /**
  * Callback for status messages after texture assignment.
+ *
  * @param message Status text.
  */
 export type TextureAssignmentStatusCallback = (message: string) => void;
@@ -37,6 +38,7 @@ export class TextureAssignmentController {
 
   /**
    * Creates a texture assignment controller.
+   *
    * @param selectionManager Object selection.
    * @param faceExtrusionController Face selection / mode.
    * @param commandStack Undo stack.
@@ -55,6 +57,7 @@ export class TextureAssignmentController {
 
   /**
    * Registers a status callback.
+   *
    * @param callback Status handler, or null.
    */
   setStatusCallback(callback: TextureAssignmentStatusCallback | null): void {
@@ -63,6 +66,7 @@ export class TextureAssignmentController {
 
   /**
    * Optional viewport refresh after solid CSG texture rebuilds.
+   *
    * @param callback Refresh hook, or null.
    */
   setAfterSolidTextureAssign(callback: (() => void) | null): void {
@@ -71,6 +75,7 @@ export class TextureAssignmentController {
 
   /**
    * Records paint texture and assigns it to the current selection when any.
+   *
    * @param entry Selected browser entry.
    */
   onTextureSelected(entry: TextureBrowserEntry): void {
@@ -94,9 +99,7 @@ export class TextureAssignmentController {
     }
     const targets = this.collectContentObjectTargets(meshes);
     if (targets.length === 0) {
-      this.statusCallback?.(
-        `Paint texture: ${entry.displayName} (select faces, objects, or solid brushes)`,
-      );
+      this.statusCallback?.(`Paint texture: ${entry.displayName} (select faces, objects, or solid brushes)`);
       return;
     }
     this.assignTextureToTargets(targets, entry);
@@ -104,6 +107,7 @@ export class TextureAssignmentController {
 
   /**
    * Face-mode paint for solid result or solid brush faces.
+   *
    * @param entry Texture entry.
    * @returns True when solid faces were painted.
    */
@@ -121,6 +125,7 @@ export class TextureAssignmentController {
 
   /**
    * Maps selected triangles on solid result/brush meshes to brush face targets.
+   *
    * @param faces Face selections.
    * @returns Unique solid face paint targets.
    */
@@ -146,6 +151,7 @@ export class TextureAssignmentController {
 
   /**
    * Resolves one face selection to a brush surface when possible.
+   *
    * @param face Face selection entry.
    * @returns Solid face target or null.
    */
@@ -163,6 +169,7 @@ export class TextureAssignmentController {
 
   /**
    * Maps a result-mesh triangle back to its originating brush face.
+   *
    * @param mesh Result mesh.
    * @param triangleIndex Triangle index.
    * @returns Solid face target or null.
@@ -188,6 +195,7 @@ export class TextureAssignmentController {
   /**
    * Maps a brush-preview triangle to a brush face by normal matching.
    * BoxGeometry face order differs from solid wing-edge face order.
+   *
    * @param mesh Brush preview mesh.
    * @param triangleIndex Triangle index on the preview.
    * @returns Solid face target or null.
@@ -212,6 +220,7 @@ export class TextureAssignmentController {
 
   /**
    * Assigns texture to solid brushes and rebuilds their CSG results.
+   *
    * @param brushMeshes Selected solid brush meshes.
    * @param entry Texture entry.
    */
@@ -224,6 +233,7 @@ export class TextureAssignmentController {
 
   /**
    * Pushes an undoable assignment for regular content mesh targets.
+   *
    * @param targets Regions to paint.
    * @param entry Texture to apply.
    */
@@ -235,6 +245,7 @@ export class TextureAssignmentController {
 
   /**
    * Face-mode targets for regular (non-solid) content only.
+   *
    * @returns Apply targets.
    */
   private collectRegularFaceTargets(): TextureApplyTarget[] {
@@ -247,6 +258,7 @@ export class TextureAssignmentController {
 
   /**
    * Object-mode targets for regular content meshes only.
+   *
    * @param selectedMeshes Current object selection.
    * @returns Apply targets.
    */
@@ -258,6 +270,7 @@ export class TextureAssignmentController {
 
   /**
    * Returns whether a mesh may receive freeform content texture paint.
+   *
    * @param mesh Candidate mesh.
    * @returns True for regular content meshes.
    */

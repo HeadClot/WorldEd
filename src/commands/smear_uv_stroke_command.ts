@@ -11,30 +11,29 @@ import { rebakeStoredFaceTextureMaps } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 
-/**
- * Snapshot of one solid brush's authored UV mappings for smear undo.
- */
+/** Snapshot of one solid brush's authored UV mappings for smear undo. */
 export interface SmearSolidBrushUvSnapshot {
   brushId: string;
   defaultMapping: FaceTextureMapping;
   faceMappings: (FaceTextureMapping | undefined)[];
 }
 
-/**
- * Snapshot of one mesh surface state for smear stroke undo.
- */
+/** Snapshot of one mesh surface state for smear stroke undo. */
 export interface SmearMeshSnapshot {
   mesh: THREE.Mesh;
   maps: FaceTextureMapEntry[];
   uvArray: Float32Array | null;
-  /** Present when mesh is a solid model result; restores brush faces on undo/redo. */
+  /**
+   * Present when mesh is a solid model result; restores brush faces on
+   * undo/redo.
+   */
   solidBrushUvs: SmearSolidBrushUvSnapshot[] | null;
 }
 
 /**
- * Undoable command for one continuous UV-smear drag stroke.
- * The stroke is applied live during the drag; execute restores the post-stroke
- * state (redo), undo restores the pre-stroke snapshots including solid brushes.
+ * Undoable command for one continuous UV-smear drag stroke. The stroke is
+ * applied live during the drag; execute restores the post-stroke state (redo),
+ * undo restores the pre-stroke snapshots including solid brushes.
  */
 export class SmearUvStrokeCommand implements UndoCommand {
   private beforeSnapshots: SmearMeshSnapshot[];
@@ -43,6 +42,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
 
   /**
    * Creates a smear stroke command from before/after mesh snapshots.
+   *
    * @param beforeSnapshots Mesh state before the stroke began.
    * @param afterSnapshots Mesh state after the stroke finished.
    */
@@ -52,9 +52,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
     this.isLive = true;
   }
 
-  /**
-   * Restores the post-stroke surface state (no-op right after a live stroke).
-   */
+  /** Restores the post-stroke surface state (no-op right after a live stroke). */
   execute(): void {
     if (this.isLive) {
       this.isLive = false;
@@ -63,9 +61,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
     this.afterSnapshots.forEach((snapshot) => this.restoreSnapshot(snapshot));
   }
 
-  /**
-   * Restores pre-stroke maps, UVs, materials, and solid brush face mappings.
-   */
+  /** Restores pre-stroke maps, UVs, materials, and solid brush face mappings. */
   undo(): void {
     this.isLive = false;
     this.beforeSnapshots.forEach((snapshot) => this.restoreSnapshot(snapshot));
@@ -73,6 +69,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
 
   /**
    * Captures maps, UV buffer, and solid brush UV state for one mesh.
+   *
    * @param mesh Mesh to snapshot.
    * @returns Snapshot object.
    */
@@ -90,6 +87,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
 
   /**
    * Captures all brush face mappings when the mesh is a solid result.
+   *
    * @param mesh Candidate mesh.
    * @returns Brush UV snapshots, or null when not a solid result.
    */
@@ -102,6 +100,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
 
   /**
    * Writes a snapshot back onto its mesh and owning solid brushes.
+   *
    * @param snapshot Prior or post stroke state.
    */
   private restoreSnapshot(snapshot: SmearMeshSnapshot): void {
@@ -119,6 +118,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
 
   /**
    * Restores solid brush face mappings from a mesh snapshot when present.
+   *
    * @param snapshot Snapshot that may include solid brush UV state.
    */
   private restoreSolidBrushUvs(snapshot: SmearMeshSnapshot): void {
@@ -130,6 +130,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
 
   /**
    * Writes a saved UV array back onto geometry.
+   *
    * @param mesh Target mesh.
    * @param uvArray Saved UV floats.
    */

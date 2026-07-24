@@ -4,9 +4,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { BrushMembership } from '../../src/solid/algorithm/brush_membership.js';
 
-/**
- * Outliner / scene-graph brush order must drive CSG evaluation order.
- */
+/** Outliner / scene-graph brush order must drive CSG evaluation order. */
 describe('Solid brush CSG order', () => {
   it('syncs brush list order from scene graph children', () => {
     const model = new SolidModel('OrderSolid');
@@ -67,10 +65,7 @@ describe('Solid brush CSG order', () => {
     model.root.add(subtractive.mesh!);
     model.root.add(additive.mesh!);
     SolidModel.rebuildAllUnder(world);
-    expect(model.getBrushes().map((b) => b.operation)).toEqual([
-      SolidOperation.Subtractive,
-      SolidOperation.Additive,
-    ]);
+    expect(model.getBrushes().map((b) => b.operation)).toEqual([SolidOperation.Subtractive, SolidOperation.Additive]);
     expect(model.getResultMesh().geometry.getAttribute('position').count).toBeLessThan(holeVerts);
   });
 });

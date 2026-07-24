@@ -1,7 +1,9 @@
 /**
  * Yields to the browser event loop so the UI can paint (progress bars, input).
  * Prefer requestAnimationFrame so progress updates align with frames.
- * @returns Promise that resolves on the next animation frame (or next macrotask).
+ *
+ * @returns Promise that resolves on the next animation frame (or next
+ *   macrotask).
  */
 export function yieldToBrowser(): Promise<void> {
   return new Promise((resolve) => {
@@ -15,6 +17,7 @@ export function yieldToBrowser(): Promise<void> {
 
 /**
  * Runs an async loop over items in batches, yielding between batches.
+ *
  * @param itemCount Total items to process.
  * @param batchSize Items per batch before yielding.
  * @param processBatch Called with [startIndex, endIndexExclusive).

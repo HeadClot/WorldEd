@@ -14,12 +14,7 @@ describe('FaceExtrusionController drag select', () => {
   beforeEach(() => {
     const scene = new THREE.Scene();
     const world = new THREE.Group();
-    controller = new FaceExtrusionController(
-      scene,
-      new CommandStack(16),
-      new GridSnap(false, 1),
-      world,
-    );
+    controller = new FaceExtrusionController(scene, new CommandStack(16), new GridSnap(false, 1), world);
     mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.position.set(0, 0.5, 0);
     mesh.updateMatrixWorld(true);
@@ -70,6 +65,7 @@ describe('FaceExtrusionController drag select', () => {
 
 /**
  * Builds a minimal mouse event for tests.
+ *
  * @param clientX X coordinate.
  * @param clientY Y coordinate.
  * @returns MouseEvent-like object.

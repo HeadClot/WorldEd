@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { isDescendantOf } from './hierarchy_utils.js';
 
 /**
- * Removes objects that are descendants of other selected objects.
- * Keeps the outermost selected nodes so grouping nests instead of flattening.
+ * Removes objects that are descendants of other selected objects. Keeps the
+ * outermost selected nodes so grouping nests instead of flattening.
+ *
  * @param objects Selected hierarchy objects.
  * @returns Root-most objects only.
  */
@@ -16,14 +17,12 @@ export function collapseToHierarchyRoots(objects: THREE.Object3D[]): THREE.Objec
 
 /**
  * Finds the deepest common parent of the given objects.
+ *
  * @param objects Objects to inspect.
  * @param worldRoot Fallback parent when no shared parent exists.
  * @returns Common parent, or worldRoot.
  */
-export function findCommonParent(
-  objects: THREE.Object3D[],
-  worldRoot: THREE.Object3D,
-): THREE.Object3D {
+export function findCommonParent(objects: THREE.Object3D[], worldRoot: THREE.Object3D): THREE.Object3D {
   if (objects.length === 0) return worldRoot;
   let ancestor: THREE.Object3D | null = objects[0].parent;
   while (ancestor) {
@@ -37,6 +36,7 @@ export function findCommonParent(
 
 /**
  * Returns whether object is the ancestor or a descendant of ancestor.
+ *
  * @param object Object to test.
  * @param ancestor Potential ancestor (or self).
  * @returns True when object is under ancestor in the hierarchy.
@@ -48,6 +48,7 @@ function isUnderOrEqual(object: THREE.Object3D, ancestor: THREE.Object3D): boole
 
 /**
  * Deduplicates object references while preserving order.
+ *
  * @param objects Input list.
  * @returns Unique objects.
  */

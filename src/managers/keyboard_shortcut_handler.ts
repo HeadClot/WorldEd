@@ -7,37 +7,39 @@ import type { KeyboardShortcutSettings } from '../settings/settings_types.js';
 
 /**
  * Callback for transform mode changes.
+ *
  * @param mode The new transform mode to activate.
  */
 export type TransformModeCallback = (mode: TransformMode) => void;
 
-/**
- * Callback for a generic action triggered by a keyboard shortcut.
- */
+/** Callback for a generic action triggered by a keyboard shortcut. */
 export type ActionCallback = () => void;
 
 /**
  * Callback for shading mode changes.
+ *
  * @param mode The new shading mode to apply.
  */
 export type ShadingModeCallback = (mode: ShadingMode) => void;
 
 /**
  * Callback for selection mode toggle.
+ *
  * @param mode The new selection mode to activate.
  */
 export type SelectionModeCallback = (mode: SelectionMode) => void;
 
 /**
  * Optional guard that reports whether 3D fly navigation is active.
+ *
  * @returns True when tool keys must be suppressed for fly mode.
  */
 export type NavigationActiveCallback = () => boolean;
 
 /**
- * Configures keyboard shortcuts for editor operations.
- * Binds window-level keydown events to editor actions.
- * Tool keys (W/E/R/T, WASD-adjacent) are blocked while flying with RMB.
+ * Configures keyboard shortcuts for editor operations. Binds window-level
+ * keydown events to editor actions. Tool keys (W/E/R/T, WASD-adjacent) are
+ * blocked while flying with RMB.
  */
 export class KeyboardShortcutHandler {
   private inputManager: InputManager;
@@ -72,6 +74,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Returns whether a keyboard code is currently held.
+   *
    * @param keyCode KeyboardEvent.code value (e.g. KeyG).
    * @returns True while the key is down.
    */
@@ -81,6 +84,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Creates a new keyboard shortcut handler.
+   *
    * @param inputManager The input manager providing key state queries.
    */
   constructor(
@@ -120,6 +124,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for Escape (deselect / exit tool).
+   *
    * @param callback Function to call when Escape is pressed.
    */
   setOnEscape(callback: ActionCallback): void {
@@ -128,6 +133,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers a guard that reports when 3D fly navigation is active.
+   *
    * @param callback Returns true while RMB fly mode should block tool keys.
    */
   setNavigationActiveCallback(callback: NavigationActiveCallback | null): void {
@@ -136,6 +142,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for transform mode changes.
+   *
    * @param callback The function to call when a transform mode key is pressed.
    */
   setOnTransformMode(callback: TransformModeCallback): void {
@@ -144,6 +151,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the delete action.
+   *
    * @param callback The function to call when Delete is pressed.
    */
   setOnDeleteSelected(callback: ActionCallback): void {
@@ -152,6 +160,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the undo action.
+   *
    * @param callback The function to call when the undo shortcut is pressed.
    */
   setOnUndo(callback: ActionCallback): void {
@@ -160,6 +169,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the redo action.
+   *
    * @param callback The function to call when the redo shortcut is pressed.
    */
   setOnRedo(callback: ActionCallback): void {
@@ -168,7 +178,9 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the duplicate action.
-   * @param callback The function to call when the duplicate shortcut is pressed.
+   *
+   * @param callback The function to call when the duplicate shortcut is
+   *   pressed.
    */
   setOnDuplicateSelected(callback: ActionCallback): void {
     this.onDuplicateSelected = callback;
@@ -176,6 +188,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the group action.
+   *
    * @param callback The function to call when the group shortcut is pressed.
    */
   setOnGroupSelected(callback: ActionCallback): void {
@@ -184,6 +197,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the ungroup action.
+   *
    * @param callback The function to call when the ungroup shortcut is pressed.
    */
   setOnUngroupSelected(callback: ActionCallback): void {
@@ -192,7 +206,9 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the align to origin action.
-   * @param callback The function to call when the align to origin shortcut is pressed.
+   *
+   * @param callback The function to call when the align to origin shortcut is
+   *   pressed.
    */
   setOnAlignToOrigin(callback: ActionCallback): void {
     this.onAlignToOrigin = callback;
@@ -200,7 +216,9 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for axis cycling.
-   * @param callback The function to call when the axis cycle shortcut is pressed.
+   *
+   * @param callback The function to call when the axis cycle shortcut is
+   *   pressed.
    */
   setOnAxisCycle(callback: ActionCallback): void {
     this.onAxisCycle = callback;
@@ -208,6 +226,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the save scene action.
+   *
    * @param callback The function to call when the save shortcut is pressed.
    */
   setOnSaveScene(callback: ActionCallback): void {
@@ -216,6 +235,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the load scene action.
+   *
    * @param callback The function to call when the load shortcut is pressed.
    */
   setOnLoadScene(callback: ActionCallback): void {
@@ -224,6 +244,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the export GLB action.
+   *
    * @param callback The function to call when the export shortcut is pressed.
    */
   setOnExportGlb(callback: ActionCallback): void {
@@ -232,6 +253,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the fit-to-selection action.
+   *
    * @param callback The function to call when F is pressed.
    */
   setOnFitToSelection(callback: ActionCallback): void {
@@ -240,6 +262,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for the fit-all-viewports action.
+   *
    * @param callback The function to call when Shift+F is pressed.
    */
   setOnFitAllViewports(callback: ActionCallback): void {
@@ -248,6 +271,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for shading mode changes.
+   *
    * @param callback The function to call when a shading mode key is pressed.
    */
   setOnShadingMode(callback: ShadingModeCallback): void {
@@ -256,6 +280,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for selection mode toggling via Tab key.
+   *
    * @param callback The function to call when Tab is pressed.
    */
   setOnSelectionModeToggle(callback: SelectionModeCallback): void {
@@ -264,6 +289,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for cycling snap interval forward.
+   *
    * @param callback The function to call when Period is pressed.
    */
   setOnSnapIntervalForward(callback: ActionCallback): void {
@@ -272,6 +298,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for cycling snap interval backward.
+   *
    * @param callback The function to call when Comma is pressed.
    */
   setOnSnapIntervalBackward(callback: ActionCallback): void {
@@ -280,6 +307,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers the callback for face extrusion (Shift+E).
+   *
    * @param callback The function to call when extrude is triggered.
    */
   setOnExtrudeFaces(callback: ActionCallback): void {
@@ -288,6 +316,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Registers clip plane tool keyboard actions and an active-tool guard.
+   *
    * @param isActive Returns true while the clip plane tool should own keys.
    * @param onFlip Flip keep side callback.
    * @param onCommit Clip keep callback.
@@ -308,18 +337,14 @@ export class KeyboardShortcutHandler {
     this.onClipCancel = onCancel;
   }
 
-  /**
-   * Registers the window keydown listener for all keyboard shortcuts.
-   */
+  /** Registers the window keydown listener for all keyboard shortcuts. */
   register(): void {
     if (this.keydownListener) return;
     this.keydownListener = (event) => this.handleKeyDown(event);
     window.addEventListener('keydown', this.keydownListener);
   }
 
-  /**
-   * Removes the window keydown listener.
-   */
+  /** Removes the window keydown listener. */
   unregister(): void {
     if (!this.keydownListener) return;
     window.removeEventListener('keydown', this.keydownListener);
@@ -328,6 +353,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Processes a keydown event and dispatches to the appropriate callback.
+   *
    * @param event The keyboard event to process.
    */
   private handleKeyDown(event: KeyboardEvent): void {
@@ -352,6 +378,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles Escape: deselect everything and return to object select.
+   *
    * @param event Keyboard event.
    * @returns True when Escape was handled.
    */
@@ -364,6 +391,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles clip plane tool keys when that tool is active.
+   *
    * @param event Keyboard event.
    * @returns True when a clip shortcut consumed the event.
    */
@@ -388,7 +416,9 @@ export class KeyboardShortcutHandler {
   }
 
   /**
-   * Handles the face extrude shortcut (Shift+E, Unity-style transform uses plain E).
+   * Handles the face extrude shortcut (Shift+E, Unity-style transform uses
+   * plain E).
+   *
    * @param event The keyboard event to check.
    */
   private handleExtrudeKey(event: KeyboardEvent): void {
@@ -400,6 +430,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Returns true when the event target is a text input that should own keys.
+   *
    * @param event The keyboard event.
    * @returns True if shortcuts must not run.
    */
@@ -413,6 +444,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Returns true when RMB fly mode should suppress tool keys like W/E/R/T/A.
+   *
    * @returns True if tool shortcuts must be ignored.
    */
   private isFlyNavigationBlockingTools(): boolean {
@@ -423,6 +455,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles file keyboard shortcuts (Ctrl+S, Ctrl+O, Ctrl+Shift+E).
+   *
    * @param event The keyboard event to check.
    */
   private handleFileKeys(event: KeyboardEvent): void {
@@ -433,6 +466,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the save keyboard shortcut (Ctrl+S).
+   *
    * @param event The keyboard event to check.
    */
   private handleSaveKey(event: KeyboardEvent): void {
@@ -445,6 +479,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the load keyboard shortcut (Ctrl+O).
+   *
    * @param event The keyboard event to check.
    */
   private handleLoadKey(event: KeyboardEvent): void {
@@ -457,6 +492,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the export GLB keyboard shortcut (Ctrl+Shift+E).
+   *
    * @param event The keyboard event to check.
    */
   private handleExportKey(event: KeyboardEvent): void {
@@ -469,6 +505,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles configured transform mode shortcuts.
+   *
    * @param event The keyboard event to check.
    */
   private handleTransformModeKeys(event: KeyboardEvent): void {
@@ -496,6 +533,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles edit keyboard shortcuts (Delete).
+   *
    * @param event The keyboard event to check.
    */
   private handleEditKeys(event: KeyboardEvent): void {
@@ -507,9 +545,10 @@ export class KeyboardShortcutHandler {
   }
 
   /**
-   * Handles undo and redo keyboard shortcuts.
-   * Ctrl+Z undoes; Ctrl+Y (and Ctrl+Shift+Z) redo.
-   * Uses event.key (not event.code) so QWERTZ/AZERTY layouts match the labeled letter.
+   * Handles undo and redo keyboard shortcuts. Ctrl+Z undoes; Ctrl+Y (and
+   * Ctrl+Shift+Z) redo. Uses event.key (not event.code) so QWERTZ/AZERTY
+   * layouts match the labeled letter.
+   *
    * @param event The keyboard event to check.
    */
   private handleUndoRedoKeys(event: KeyboardEvent): void {
@@ -526,11 +565,13 @@ export class KeyboardShortcutHandler {
 
   /**
    * Returns true when Ctrl (or Cmd on macOS) is held for this event.
+   *
    * @param event The keyboard event.
    * @returns True if the primary editor modifier is active.
    */
   /**
    * Handles the duplicate keyboard shortcut (Ctrl+D).
+   *
    * @param event The keyboard event to check.
    */
   private handleDuplicateKey(event: KeyboardEvent): void {
@@ -543,6 +584,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles group and ungroup keyboard shortcuts.
+   *
    * @param event The keyboard event to check.
    */
   private handleGroupKeys(event: KeyboardEvent): void {
@@ -558,6 +600,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the align to origin keyboard shortcut (Alt+G).
+   *
    * @param event The keyboard event to check.
    */
   private handleAlignKeys(event: KeyboardEvent): void {
@@ -570,6 +613,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the axis cycle keyboard shortcut (A).
+   *
    * @param event The keyboard event to check.
    */
   private handleAxisCycleKey(event: KeyboardEvent): void {
@@ -582,10 +626,12 @@ export class KeyboardShortcutHandler {
 
   /**
    * Returns true when Ctrl, Shift, or Alt is held.
+   *
    * @returns True if any common modifier is down.
    */
   /**
    * Handles the fit-to-selection keyboard shortcuts (F and Shift+F).
+   *
    * @param event The keyboard event to check.
    */
   private handleFitKeys(event: KeyboardEvent): void {
@@ -595,6 +641,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the fit-to-selection keyboard shortcut (F).
+   *
    * @param event The keyboard event to check.
    */
   private handleFitToSelectionKey(event: KeyboardEvent): void {
@@ -607,6 +654,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the fit-all-viewports keyboard shortcut (Shift+F).
+   *
    * @param event The keyboard event to check.
    */
   private handleFitAllViewportsKey(event: KeyboardEvent): void {
@@ -619,6 +667,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles shading mode keyboard shortcuts (Digit1-Digit4).
+   *
    * @param event The keyboard event to check.
    */
   private handleShadingModeKeys(event: KeyboardEvent): void {
@@ -643,6 +692,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the Tab key for toggling selection mode.
+   *
    * @param event The keyboard event to check.
    */
   private handleSelectionModeToggleKey(event: KeyboardEvent): void {
@@ -660,6 +710,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the snap interval cycling keyboard shortcuts (Comma, Period).
+   *
    * @param event The keyboard event to check.
    */
   private handleSnapIntervalKeys(event: KeyboardEvent): void {
@@ -671,6 +722,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the snap interval forward shortcut (Period, Shift+Period).
+   *
    * @param event The keyboard event to check.
    */
   private handleSnapIntervalForwardKey(event: KeyboardEvent): void {
@@ -683,6 +735,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the snap interval backward shortcut (Comma, Shift+Comma).
+   *
    * @param event The keyboard event to check.
    */
   private handleSnapIntervalBackwardKey(event: KeyboardEvent): void {
@@ -695,6 +748,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the configured large snap interval forward shortcut.
+   *
    * @param event Keyboard event to check.
    */
   private handleLargeSnapIntervalForwardKey(event: KeyboardEvent): void {
@@ -705,6 +759,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Handles the configured large snap interval backward shortcut.
+   *
    * @param event Keyboard event to check.
    */
   private handleLargeSnapIntervalBackwardKey(event: KeyboardEvent): void {
@@ -715,6 +770,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Runs a large snap interval change.
+   *
    * @param action Callback to invoke three times.
    */
   private runSnapIntervalAction(action: ActionCallback): void {
@@ -723,6 +779,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Checks whether an event matches a configured shortcut.
+   *
    * @param event Keyboard event to compare.
    * @param action Configured action identifier.
    * @returns True when the key and modifier state match exactly.
@@ -740,16 +797,13 @@ export class KeyboardShortcutHandler {
 
   /**
    * Matches a shortcut code, using displayed letters for undo and redo.
+   *
    * @param event Keyboard event to inspect.
    * @param action Shortcut action identifier.
    * @param code Configured keyboard event code.
    * @returns True when the event matches the configured key.
    */
-  private matchesShortcutCode(
-    event: KeyboardEvent,
-    action: keyof KeyboardShortcutSettings,
-    code: string,
-  ): boolean {
+  private matchesShortcutCode(event: KeyboardEvent, action: keyof KeyboardShortcutSettings, code: string): boolean {
     if (action !== 'undo' && action !== 'redo' && action !== 'redo_alternate') {
       return event.code === code;
     }
@@ -759,6 +813,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Returns whether Control is active for an event.
+   *
    * @param event Keyboard event to inspect.
    * @returns True when Control is active.
    */
@@ -768,6 +823,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Returns whether Shift is active for an event.
+   *
    * @param event Keyboard event to inspect.
    * @returns True when Shift is active.
    */
@@ -777,6 +833,7 @@ export class KeyboardShortcutHandler {
 
   /**
    * Returns whether Alt is active for an event.
+   *
    * @param event Keyboard event to inspect.
    * @returns True when Alt is active.
    */

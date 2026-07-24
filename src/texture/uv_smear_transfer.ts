@@ -11,19 +11,14 @@ import {
   projectWorldPositionToUv,
   resolveProjectionNormal,
 } from './planar_uv_projector.js';
-import {
-  getTriangleVertexIndices,
-  getVertexPosition,
-} from '../selection/triangle_geometry_utils.js';
+import { getTriangleVertexIndices, getVertexPosition } from '../selection/triangle_geometry_utils.js';
 
 /** Edge coincidence tolerance in world units. */
 const EDGE_MATCH_TOLERANCE = 1e-3;
 /** Parallel-plane threshold on |nA × nB|². */
 const PARALLEL_NORMAL_DET = 1e-8;
 
-/**
- * World-space edge segment used for shared-boundary detection.
- */
+/** World-space edge segment used for shared-boundary detection. */
 interface WorldEdge {
   a: THREE.Vector3;
   b: THREE.Vector3;
@@ -33,6 +28,7 @@ interface WorldEdge {
  * Builds a destination face mapping so UV coordinates continue from a source
  * face across a shared edge (or projected plane alignment when parallel).
  * Copies texture id and scale; solves rotation and offset for face-plane UV.
+ *
  * @param sourceMesh Mesh owning the source region.
  * @param sourceTriangles Source coplanar triangle indices.
  * @param sourceMapping Source projection parameters.
@@ -62,20 +58,13 @@ export function transferUvMappingAcrossFaces(
   const sourceBasis = buildSourceBasis(sourceNormal, sourceMapping);
   const uvA = projectWorldPositionToUv(points.pointA, sourceBasis, sourceMapping);
   const uvB = projectWorldPositionToUv(points.pointB, sourceBasis, sourceMapping);
-  return solveDestinationMapping(
-    destNormal,
-    sourceMapping,
-    points.pointA,
-    points.pointB,
-    uvA,
-    uvB,
-    points.flipU,
-  );
+  return solveDestinationMapping(destNormal, sourceMapping, points.pointA, points.pointB, uvA, uvB, points.flipU);
 }
 
 /**
- * Resolves two world points used to lock UV continuity between faces.
- * Prefers a shared mesh edge; falls back to plane-intersection geometry.
+ * Resolves two world points used to lock UV continuity between faces. Prefers a
+ * shared mesh edge; falls back to plane-intersection geometry.
+ *
  * @param sourceMesh Source mesh.
  * @param sourceTriangles Source triangles.
  * @param sourceNormal Source world normal.
@@ -105,6 +94,7 @@ function resolveAlignmentWorldPoints(
 
 /**
  * Finds a world-space edge shared (within tolerance) by two face regions.
+ *
  * @param sourceMesh Source mesh.
  * @param sourceTriangles Source triangles.
  * @param destMesh Destination mesh.
@@ -130,6 +120,7 @@ function findSharedWorldEdge(
 
 /**
  * Collects unique world-space edges for a triangle region.
+ *
  * @param mesh Mesh owner.
  * @param triangleIndices Region triangles.
  * @returns Edge list.
@@ -153,17 +144,13 @@ function collectRegionWorldEdges(mesh: THREE.Mesh, triangleIndices: number[]): W
 
 /**
  * Adds an undirected edge if not already present.
+ *
  * @param edges Accumulator.
  * @param seen Dedup keys.
  * @param a First endpoint.
  * @param b Second endpoint.
  */
-function pushUniqueEdge(
-  edges: WorldEdge[],
-  seen: Set<string>,
-  a: THREE.Vector3,
-  b: THREE.Vector3,
-): void {
+function pushUniqueEdge(edges: WorldEdge[], seen: Set<string>, a: THREE.Vector3, b: THREE.Vector3): void {
   const key = edgeKey(a, b);
   if (seen.has(key)) return;
   seen.add(key);
@@ -172,6 +159,7 @@ function pushUniqueEdge(
 
 /**
  * Builds a stable key for an undirected edge.
+ *
  * @param a First point.
  * @param b Second point.
  * @returns String key.
@@ -184,6 +172,7 @@ function edgeKey(a: THREE.Vector3, b: THREE.Vector3): string {
 
 /**
  * Returns a shared edge when endpoints coincide within tolerance.
+ *
  * @param edgeA First edge.
  * @param edgeB Second edge.
  * @returns Canonical edge, or null.
@@ -200,6 +189,7 @@ function matchEdges(edgeA: WorldEdge, edgeB: WorldEdge): WorldEdge | null {
 
 /**
  * Returns whether two points are within match tolerance.
+ *
  * @param a First point.
  * @param b Second point.
  * @returns True when near.
@@ -210,6 +200,7 @@ function pointsNear(a: THREE.Vector3, b: THREE.Vector3): boolean {
 
 /**
  * Builds alignment points from plane geometry when faces do not share an edge.
+ *
  * @param sourceMesh Source mesh.
  * @param sourceTriangles Source triangles.
  * @param sourceNormal Source normal.
@@ -240,6 +231,7 @@ function buildPlaneAlignmentPoints(
 
 /**
  * Picks a unit tangent not parallel to the normal.
+ *
  * @param normal Face normal.
  * @returns Unit tangent.
  */
@@ -250,6 +242,7 @@ function pickStableTangent(normal: THREE.Vector3): THREE.Vector3 {
 
 /**
  * Average world-space centroid of region triangles.
+ *
  * @param mesh Mesh owner.
  * @param triangleIndices Region triangles.
  * @returns World centroid.
@@ -272,6 +265,7 @@ function computeRegionWorldCentroid(mesh: THREE.Mesh, triangleIndices: number[])
 
 /**
  * Builds the source projection basis from mapping align/rotation.
+ *
  * @param faceNormal Source face normal.
  * @param mapping Source mapping.
  * @returns Projection basis.
@@ -283,6 +277,7 @@ function buildSourceBasis(faceNormal: THREE.Vector3, mapping: FaceTextureMapping
 
 /**
  * Solves destination mapping so both alignment points match source UVs.
+ *
  * @param destNormal Destination face normal.
  * @param sourceMapping Source mapping (scale/texture copied).
  * @param pointA First world alignment point.
@@ -318,6 +313,7 @@ function solveDestinationMapping(
 
 /**
  * Sets offset so a world point maps to a target UV with the current rotation.
+ *
  * @param mapping Mapping to update.
  * @param projectionNormal Projection normal.
  * @param worldPoint World sample.
@@ -340,6 +336,7 @@ function applyOffsetToMatchPoint(
 
 /**
  * Measures rotation (degrees) so pointB UV direction matches the source.
+ *
  * @param mapping Current dest mapping (offset already set for pointA).
  * @param projectionNormal Dest projection normal.
  * @param pointA First world point.
@@ -381,6 +378,7 @@ function measureRequiredRotation(
 
 /**
  * Clones a mapping for use as a smear source seed.
+ *
  * @param mapping Source mapping.
  * @returns Independent copy.
  */

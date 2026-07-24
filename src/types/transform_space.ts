@@ -1,6 +1,4 @@
-/**
- * Coordinate space for translate / rotate / scale gizmo handles.
- */
+/** Coordinate space for translate / rotate / scale gizmo handles. */
 export enum TransformSpace {
   /** Handles align to world axes (default). */
   Global = 'global',
@@ -10,6 +8,7 @@ export enum TransformSpace {
 
 /**
  * Returns a short UI label for a transform space mode.
+ *
  * @param space Transform space value.
  * @returns Display label.
  */
