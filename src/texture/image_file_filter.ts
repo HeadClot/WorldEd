@@ -1,15 +1,7 @@
 /**
  * Image extensions accepted by the texture browser folder scan.
  */
-const IMAGE_EXTENSIONS = new Set([
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'webp',
-  'bmp',
-  'svg'
-]);
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg']);
 
 /**
  * Returns whether a file name looks like a supported image texture.

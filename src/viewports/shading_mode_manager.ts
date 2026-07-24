@@ -15,11 +15,7 @@ interface MaterialSnapshot {
 /**
  * Group names used by editor gizmos that must never receive shading overrides.
  */
-const EXEMPT_GROUP_NAMES = new Set([
-  'transform_gizmo',
-  'transform_gizmo_viewport',
-  'bounds_gizmo'
-]);
+const EXEMPT_GROUP_NAMES = new Set(['transform_gizmo', 'transform_gizmo_viewport', 'bounds_gizmo']);
 
 /**
  * Manages material overrides for viewport shading modes.
@@ -176,13 +172,13 @@ export class ShadingModeManager {
       if (materials.length === 0) return;
       this.materialSnapshots.set(mesh.uuid, {
         materials: materials.slice(),
-        wireframeFlags: materials.map((entry) => entry.wireframe)
+        wireframeFlags: materials.map((entry) => entry.wireframe),
       });
       return;
     }
     this.materialSnapshots.set(mesh.uuid, {
       materials,
-      wireframeFlags: materials.wireframe
+      wireframeFlags: materials.wireframe,
     });
   }
 
@@ -218,10 +214,7 @@ export class ShadingModeManager {
    * @param mesh The mesh to restore.
    * @param snapshot The content material snapshot.
    */
-  private restoreMeshMaterial(
-    mesh: THREE.Mesh,
-    snapshot: MaterialSnapshot
-  ): void {
+  private restoreMeshMaterial(mesh: THREE.Mesh, snapshot: MaterialSnapshot): void {
     mesh.material = snapshot.materials;
     if (Array.isArray(snapshot.materials)) {
       const flags = snapshot.wireframeFlags as boolean[];
@@ -242,15 +235,13 @@ export class ShadingModeManager {
     meshes.forEach((mesh) => {
       const contentMaterials = this.getContentMaterialsForMesh(mesh);
       const outlineOnlyMaterials = contentMaterials.map((source) =>
-        this.createOutlineOnlySurfaceMaterial(source)
+        this.createOutlineOnlySurfaceMaterial(source),
       );
       outlineOnlyMaterials.forEach((material) => {
         this.ownedOverrideMaterials.add(material);
       });
       mesh.material =
-        outlineOnlyMaterials.length === 1
-          ? outlineOnlyMaterials[0]
-          : outlineOnlyMaterials;
+        outlineOnlyMaterials.length === 1 ? outlineOnlyMaterials[0] : outlineOnlyMaterials;
     });
   }
 
@@ -260,17 +251,12 @@ export class ShadingModeManager {
    * @param source Content material used only for side/culling settings.
    * @returns MeshBasicMaterial with color writes disabled.
    */
-  private createOutlineOnlySurfaceMaterial(
-    source: THREE.Material
-  ): THREE.MeshBasicMaterial {
-    const side =
-      'side' in source
-        ? (source as THREE.MeshStandardMaterial).side
-        : THREE.FrontSide;
+  private createOutlineOnlySurfaceMaterial(source: THREE.Material): THREE.MeshBasicMaterial {
+    const side = 'side' in source ? (source as THREE.MeshStandardMaterial).side : THREE.FrontSide;
     const material = new THREE.MeshBasicMaterial({
       color: 0x000000,
       side,
-      toneMapped: false
+      toneMapped: false,
     });
     material.colorWrite = false;
     material.depthWrite = true;
@@ -286,13 +272,12 @@ export class ShadingModeManager {
     meshes.forEach((mesh) => {
       const contentMaterials = this.getContentMaterialsForMesh(mesh);
       const flatMaterials = contentMaterials.map((source) =>
-        this.createUnlitAlbedoMaterial(source)
+        this.createUnlitAlbedoMaterial(source),
       );
       flatMaterials.forEach((material) => {
         this.ownedOverrideMaterials.add(material);
       });
-      mesh.material =
-        flatMaterials.length === 1 ? flatMaterials[0] : flatMaterials;
+      mesh.material = flatMaterials.length === 1 ? flatMaterials[0] : flatMaterials;
     });
   }
 
@@ -304,9 +289,7 @@ export class ShadingModeManager {
   private getContentMaterialsForMesh(mesh: THREE.Mesh): THREE.Material[] {
     const snapshot = this.materialSnapshots.get(mesh.uuid);
     if (snapshot) {
-      return Array.isArray(snapshot.materials)
-        ? snapshot.materials
-        : [snapshot.materials];
+      return Array.isArray(snapshot.materials) ? snapshot.materials : [snapshot.materials];
     }
     const live = mesh.material;
     if (Array.isArray(live)) return live;
@@ -318,20 +301,15 @@ export class ShadingModeManager {
    * @param source Content material to mirror.
    * @returns MeshBasicMaterial with color and map from source.
    */
-  private createUnlitAlbedoMaterial(
-    source: THREE.Material
-  ): THREE.MeshBasicMaterial {
+  private createUnlitAlbedoMaterial(source: THREE.Material): THREE.MeshBasicMaterial {
     const color = readMaterialColorHex(source);
     const map = readMaterialMap(source);
-    const side =
-      'side' in source
-        ? (source as THREE.MeshStandardMaterial).side
-        : THREE.FrontSide;
+    const side = 'side' in source ? (source as THREE.MeshStandardMaterial).side : THREE.FrontSide;
     return new THREE.MeshBasicMaterial({
       color,
       map,
       side,
-      toneMapped: false
+      toneMapped: false,
     });
   }
 

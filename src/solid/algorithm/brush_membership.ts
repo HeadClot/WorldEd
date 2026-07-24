@@ -18,7 +18,7 @@ export class BrushMembership {
   static isInsidePlanes(
     point: THREE.Vector3,
     planes: SolidPlane[],
-    epsilon: number = SOLID_FAT_PLANE_EPSILON
+    epsilon: number = SOLID_FAT_PLANE_EPSILON,
   ): boolean {
     for (const plane of planes) {
       if (plane.signedDistance(point) > epsilon) return false;
@@ -36,7 +36,7 @@ export class BrushMembership {
   static isOutsidePlanes(
     point: THREE.Vector3,
     planes: SolidPlane[],
-    epsilon: number = SOLID_FAT_PLANE_EPSILON
+    epsilon: number = SOLID_FAT_PLANE_EPSILON,
   ): boolean {
     return !this.isInsidePlanes(point, planes, epsilon);
   }
@@ -51,7 +51,7 @@ export class BrushMembership {
   static classifyPoint(
     point: THREE.Vector3,
     brush: SolidBrush,
-    surfaceNormal?: THREE.Vector3
+    surfaceNormal?: THREE.Vector3,
   ): SurfaceCategory {
     let minAbsDistance = Number.POSITIVE_INFINITY;
     let closestPlane: SolidPlane | null = null;
@@ -84,7 +84,7 @@ export class BrushMembership {
   static classifyPolygon(
     polygon: THREE.Vector3[],
     brush: SolidBrush,
-    surfaceNormal: THREE.Vector3
+    surfaceNormal: THREE.Vector3,
   ): SurfaceCategory {
     const centroid = this.polygonCentroid(polygon);
     return this.classifyPoint(centroid, brush, surfaceNormal);

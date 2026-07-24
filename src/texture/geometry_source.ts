@@ -22,7 +22,7 @@ export const GEOMETRY_SOURCE_USERDATA_KEY = 'geometrySource';
  * @returns Geometry source or null.
  */
 export function getGeometrySource(
-  target: THREE.Mesh | THREE.BufferGeometry
+  target: THREE.Mesh | THREE.BufferGeometry,
 ): GeometrySource | null {
   const raw = target.userData[GEOMETRY_SOURCE_USERDATA_KEY];
   if (!raw || typeof raw !== 'object') return null;
@@ -30,7 +30,7 @@ export function getGeometrySource(
   if (!record.type) return null;
   return {
     type: record.type,
-    params: { ...(record.params || {}) }
+    params: { ...(record.params || {}) },
   };
 }
 
@@ -42,7 +42,7 @@ export function getGeometrySource(
 export function setGeometrySource(mesh: THREE.Mesh, source: GeometrySource): void {
   const copy: GeometrySource = {
     type: source.type,
-    params: { ...source.params }
+    params: { ...source.params },
   };
   mesh.userData[GEOMETRY_SOURCE_USERDATA_KEY] = copy;
   mesh.geometry.userData[GEOMETRY_SOURCE_USERDATA_KEY] = copy;
@@ -66,7 +66,7 @@ export function captureGeometrySourceIfNeeded(mesh: THREE.Mesh): void {
  * @returns Source snapshot or null for plain buffers.
  */
 export function detectGeometrySourceFromInstance(
-  geometry: THREE.BufferGeometry
+  geometry: THREE.BufferGeometry,
 ): GeometrySource | null {
   if (geometry instanceof THREE.BoxGeometry) {
     return {
@@ -74,8 +74,8 @@ export function detectGeometrySourceFromInstance(
       params: {
         width: geometry.parameters.width,
         height: geometry.parameters.height,
-        depth: geometry.parameters.depth
-      }
+        depth: geometry.parameters.depth,
+      },
     };
   }
   if (geometry instanceof THREE.SphereGeometry) {
@@ -84,8 +84,8 @@ export function detectGeometrySourceFromInstance(
       params: {
         radius: geometry.parameters.radius,
         widthSegments: geometry.parameters.widthSegments,
-        heightSegments: geometry.parameters.heightSegments
-      }
+        heightSegments: geometry.parameters.heightSegments,
+      },
     };
   }
   if (geometry instanceof THREE.CylinderGeometry) {
@@ -95,8 +95,8 @@ export function detectGeometrySourceFromInstance(
         radiusTop: geometry.parameters.radiusTop,
         radiusBottom: geometry.parameters.radiusBottom,
         height: geometry.parameters.height,
-        radialSegments: geometry.parameters.radialSegments
-      }
+        radialSegments: geometry.parameters.radialSegments,
+      },
     };
   }
   if (geometry instanceof THREE.PlaneGeometry) {
@@ -104,8 +104,8 @@ export function detectGeometrySourceFromInstance(
       type: 'plane',
       params: {
         width: geometry.parameters.width,
-        height: geometry.parameters.height
-      }
+        height: geometry.parameters.height,
+      },
     };
   }
   return null;
@@ -116,9 +116,7 @@ export function detectGeometrySourceFromInstance(
  * @param geometry Geometry to classify.
  * @returns Geometry source type string.
  */
-export function resolveGeometrySourceType(
-  geometry: THREE.BufferGeometry
-): GeometrySourceType {
+export function resolveGeometrySourceType(geometry: THREE.BufferGeometry): GeometrySourceType {
   const stamped = getGeometrySource(geometry);
   if (stamped) return stamped.type;
   const detected = detectGeometrySourceFromInstance(geometry);
@@ -132,7 +130,7 @@ export function resolveGeometrySourceType(
  * @returns Parameter record (empty for plain buffers).
  */
 export function resolveGeometrySourceParams(
-  geometry: THREE.BufferGeometry
+  geometry: THREE.BufferGeometry,
 ): Record<string, number> {
   const stamped = getGeometrySource(geometry);
   if (stamped) return { ...stamped.params };

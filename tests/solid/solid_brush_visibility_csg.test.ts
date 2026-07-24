@@ -13,10 +13,7 @@ import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.j
  * @param brushes Visible brush instances only.
  * @returns True when inside the evaluated solid.
  */
-function isInsideFromBrushes(
-  point: THREE.Vector3,
-  brushes: SolidBrushInstance[]
-): boolean {
+function isInsideFromBrushes(point: THREE.Vector3, brushes: SolidBrushInstance[]): boolean {
   let inside = false;
   for (const instance of brushes) {
     if (!instance.visible) continue;
@@ -44,9 +41,7 @@ describe('Solid brush visibility CSG', () => {
     expect(outer.mesh && cutter.mesh).toBeTruthy();
     const center = new THREE.Vector3(0, 0, 0);
     expect(isInsideFromBrushes(center, model.getBrushes())).toBe(false);
-    const beforeHide = model
-      .getResultMesh()
-      .geometry.getAttribute('position').count;
+    const beforeHide = model.getResultMesh().geometry.getAttribute('position').count;
     expect(beforeHide).toBeGreaterThan(0);
 
     cutter.mesh!.visible = false;
@@ -54,9 +49,7 @@ describe('Solid brush visibility CSG', () => {
     expect(changed).toBe(true);
     expect(cutter.visible).toBe(false);
     expect(isInsideFromBrushes(center, model.getBrushes())).toBe(true);
-    const afterHide = model
-      .getResultMesh()
-      .geometry.getAttribute('position').count;
+    const afterHide = model.getResultMesh().geometry.getAttribute('position').count;
     expect(afterHide).toBeGreaterThan(0);
     expect(afterHide).not.toBe(beforeHide);
   });
@@ -67,16 +60,12 @@ describe('Solid brush visibility CSG', () => {
     const cutter = model.addBoxBrush(2, SolidOperation.Subtractive);
     cutter.mesh!.visible = false;
     model.applyBrushVisibilityChange(cutter.mesh!);
-    expect(isInsideFromBrushes(new THREE.Vector3(0, 0, 0), model.getBrushes())).toBe(
-      true
-    );
+    expect(isInsideFromBrushes(new THREE.Vector3(0, 0, 0), model.getBrushes())).toBe(true);
 
     cutter.mesh!.visible = true;
     model.applyBrushVisibilityChange(cutter.mesh!);
     expect(cutter.visible).toBe(true);
-    expect(isInsideFromBrushes(new THREE.Vector3(0, 0, 0), model.getBrushes())).toBe(
-      false
-    );
+    expect(isInsideFromBrushes(new THREE.Vector3(0, 0, 0), model.getBrushes())).toBe(false);
   });
 
   it('toggle visibility command rebuilds solid CSG on execute and undo', () => {
@@ -88,15 +77,11 @@ describe('Solid brush visibility CSG', () => {
     command.execute();
     expect(cutter.mesh!.visible).toBe(false);
     expect(cutter.visible).toBe(false);
-    expect(isInsideFromBrushes(new THREE.Vector3(0, 0, 0), model.getBrushes())).toBe(
-      true
-    );
+    expect(isInsideFromBrushes(new THREE.Vector3(0, 0, 0), model.getBrushes())).toBe(true);
     command.undo();
     expect(cutter.mesh!.visible).toBe(true);
     expect(cutter.visible).toBe(true);
-    expect(isInsideFromBrushes(new THREE.Vector3(0, 0, 0), model.getBrushes())).toBe(
-      false
-    );
+    expect(isInsideFromBrushes(new THREE.Vector3(0, 0, 0), model.getBrushes())).toBe(false);
   });
 
   it('expands previous peers for seeds no longer in the prepared list', () => {
@@ -105,13 +90,13 @@ describe('Solid brush visibility CSG', () => {
       ['a', 'b'],
       new Map([
         ['a', []],
-        ['b', []]
+        ['b', []],
       ]),
       new Map([
         ['hidden', ['a', 'b']],
         ['a', ['hidden']],
-        ['b', ['hidden']]
-      ])
+        ['b', ['hidden']],
+      ]),
     );
     expect(updateSet.has('a')).toBe(true);
     expect(updateSet.has('b')).toBe(true);

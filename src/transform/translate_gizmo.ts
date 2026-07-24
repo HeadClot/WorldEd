@@ -6,7 +6,7 @@ import {
   GizmoVisualStyle,
   applyGizmoFrontRenderOrder,
   createGizmoFrontMaterial,
-  createGizmoOccludedMesh
+  createGizmoOccludedMesh,
 } from './gizmo_visual_style.js';
 
 /**
@@ -82,18 +82,17 @@ export class TranslateGizmo {
       GizmoVisualStyle.stemRadius,
       GizmoVisualStyle.stemRadius,
       GizmoVisualStyle.moveStemLength,
-      8
+      8,
     );
     const headGeometry = new THREE.ConeGeometry(
       GizmoVisualStyle.moveHeadRadius,
       GizmoVisualStyle.moveHeadLength,
-      8
+      8,
     );
     const stemMesh = this.createFrontMesh(stemGeometry, color);
     stemMesh.position.set(0, GizmoVisualStyle.moveStemLength * 0.5, 0);
     const headMesh = this.createFrontMesh(headGeometry, color);
-    const headOffset =
-      GizmoVisualStyle.moveStemLength + GizmoVisualStyle.moveHeadLength * 0.5;
+    const headOffset = GizmoVisualStyle.moveStemLength + GizmoVisualStyle.moveHeadLength * 0.5;
     headMesh.position.set(0, headOffset, 0);
     const handle = new GizmoHandle(axis, color, headMesh);
     const handleId = handle.getHandleId();
@@ -114,10 +113,7 @@ export class TranslateGizmo {
    * @param color Hex color.
    * @returns Configured front mesh.
    */
-  private createFrontMesh(
-    geometry: THREE.BufferGeometry,
-    color: number
-  ): THREE.Mesh {
+  private createFrontMesh(geometry: THREE.BufferGeometry, color: number): THREE.Mesh {
     const mesh = new THREE.Mesh(geometry, createGizmoFrontMaterial(color));
     applyGizmoFrontRenderOrder(mesh);
     return mesh;
@@ -136,7 +132,7 @@ export class TranslateGizmo {
     geometry: THREE.BufferGeometry,
     color: number,
     handleId: number,
-    position: THREE.Vector3
+    position: THREE.Vector3,
   ): void {
     const ghost = createGizmoOccludedMesh(geometry, color, handleId);
     ghost.position.copy(position);

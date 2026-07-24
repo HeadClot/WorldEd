@@ -19,7 +19,7 @@ function makeBoxBrush(
   id: string,
   size: number,
   operation: SolidOperation,
-  position?: THREE.Vector3
+  position?: THREE.Vector3,
 ): SolidBrushInstance {
   const brush = SolidBrushFactory.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
@@ -33,10 +33,7 @@ function makeBoxBrush(
  * @param brushes Brush instances in tree order.
  * @returns Membership result.
  */
-function isInsideSolid(
-  point: THREE.Vector3,
-  brushes: SolidBrushInstance[]
-): boolean {
+function isInsideSolid(point: THREE.Vector3, brushes: SolidBrushInstance[]): boolean {
   let inside = false;
   for (const instance of brushes) {
     const modelBrush = instance.getModelSpaceBrush();
@@ -74,7 +71,7 @@ describe('SolidCsgCompiler', () => {
       'cutter',
       2,
       SolidOperation.Subtractive,
-      new THREE.Vector3(0, 0, 0)
+      new THREE.Vector3(0, 0, 0),
     );
     const brushes = [outer, cutter];
     const compiler = new SolidCsgCompiler();
@@ -87,18 +84,8 @@ describe('SolidCsgCompiler', () => {
   });
 
   it('unions two offset additive boxes without collapsing either volume', () => {
-    const left = makeBoxBrush(
-      'left',
-      2,
-      SolidOperation.Additive,
-      new THREE.Vector3(-0.75, 0, 0)
-    );
-    const right = makeBoxBrush(
-      'right',
-      2,
-      SolidOperation.Additive,
-      new THREE.Vector3(0.75, 0, 0)
-    );
+    const left = makeBoxBrush('left', 2, SolidOperation.Additive, new THREE.Vector3(-0.75, 0, 0));
+    const right = makeBoxBrush('right', 2, SolidOperation.Additive, new THREE.Vector3(0.75, 0, 0));
     const brushes = [left, right];
     const compiler = new SolidCsgCompiler();
     const polygons = compiler.compile(brushes);
@@ -110,18 +97,8 @@ describe('SolidCsgCompiler', () => {
   });
 
   it('intersects two overlapping boxes into the shared region only', () => {
-    const a = makeBoxBrush(
-      'a',
-      2,
-      SolidOperation.Additive,
-      new THREE.Vector3(-0.5, 0, 0)
-    );
-    const b = makeBoxBrush(
-      'b',
-      2,
-      SolidOperation.Intersecting,
-      new THREE.Vector3(0.5, 0, 0)
-    );
+    const a = makeBoxBrush('a', 2, SolidOperation.Additive, new THREE.Vector3(-0.5, 0, 0));
+    const b = makeBoxBrush('b', 2, SolidOperation.Intersecting, new THREE.Vector3(0.5, 0, 0));
     const brushes = [a, b];
     const compiler = new SolidCsgCompiler();
     const polygons = compiler.compile(brushes);
@@ -134,17 +111,12 @@ describe('SolidCsgCompiler', () => {
   it('does not emit duplicate coplanar exterior faces from two additive boxes', () => {
     const size = 2;
     const centerOffset = size * 0.5;
-    const left = makeBoxBrush(
-      'left',
-      size,
-      SolidOperation.Additive,
-      new THREE.Vector3(0, 0, 0)
-    );
+    const left = makeBoxBrush('left', size, SolidOperation.Additive, new THREE.Vector3(0, 0, 0));
     const right = makeBoxBrush(
       'right',
       size,
       SolidOperation.Additive,
-      new THREE.Vector3(centerOffset, 0, 0)
+      new THREE.Vector3(centerOffset, 0, 0),
     );
     left.surfaceTextureId = 'folder/left.png';
     right.surfaceTextureId = 'folder/right.png';
@@ -152,26 +124,21 @@ describe('SolidCsgCompiler', () => {
     const compiler = new SolidCsgCompiler();
     const polygons = compiler.compile(brushes);
     const topNormal = new THREE.Vector3(0, 1, 0);
-    const topPolygons = polygons.filter(
-      (polygon) => polygon.normal.dot(topNormal) > 0.99
-    );
+    const topPolygons = polygons.filter((polygon) => polygon.normal.dot(topNormal) > 0.99);
     const samplePoint = new THREE.Vector3(centerOffset * 0.5, size * 0.5, 0);
     const coveringTops = topPolygons.filter((polygon) =>
-      polygonCoversPointOnPlane(polygon.vertices, samplePoint)
+      polygonCoversPointOnPlane(polygon.vertices, samplePoint),
     );
     const coverageSummary = coveringTops.map((polygon) => ({
       brushId: polygon.brushId,
       vertexCount: polygon.vertices.length,
       centerX:
-        polygon.vertices.reduce((sum, vertex) => sum + vertex.x, 0) /
-        polygon.vertices.length
+        polygon.vertices.reduce((sum, vertex) => sum + vertex.x, 0) / polygon.vertices.length,
     }));
     expect(coverageSummary, JSON.stringify(coverageSummary)).toHaveLength(1);
     expect(coveringTops[0].brushId).toBe('right');
     expect(isInsideSolid(new THREE.Vector3(0, 0, 0), brushes)).toBe(true);
-    expect(isInsideSolid(new THREE.Vector3(centerOffset, 0, 0), brushes)).toBe(
-      true
-    );
+    expect(isInsideSolid(new THREE.Vector3(centerOffset, 0, 0), brushes)).toBe(true);
   });
 });
 
@@ -181,10 +148,7 @@ describe('SolidCsgCompiler', () => {
  * @param point Point on the polygon plane.
  * @returns True when the point lies inside the polygon AABB in XZ.
  */
-function polygonCoversPointOnPlane(
-  vertices: THREE.Vector3[],
-  point: THREE.Vector3
-): boolean {
+function polygonCoversPointOnPlane(vertices: THREE.Vector3[], point: THREE.Vector3): boolean {
   let minX = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
   let minZ = Number.POSITIVE_INFINITY;
@@ -197,9 +161,6 @@ function polygonCoversPointOnPlane(
   }
   const pad = 1e-4;
   return (
-    point.x >= minX - pad &&
-    point.x <= maxX + pad &&
-    point.z >= minZ - pad &&
-    point.z <= maxZ + pad
+    point.x >= minX - pad && point.x <= maxX + pad && point.z >= minZ - pad && point.z <= maxZ + pad
   );
 }

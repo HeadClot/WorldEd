@@ -292,7 +292,7 @@ export class KeyboardShortcutHandler {
     onFlip: ActionCallback,
     onCommit: ActionCallback,
     onSplit: ActionCallback,
-    onCancel: ActionCallback
+    onCancel: ActionCallback,
   ): void {
     this.isClipToolActive = isActive;
     this.onClipFlip = onFlip;
@@ -432,7 +432,11 @@ export class KeyboardShortcutHandler {
    */
   private handleSaveKey(event: KeyboardEvent): void {
     if (!this.onSaveScene) return;
-    if (event.code === 'KeyS' && this.inputManager.isCtrlDown() && !this.inputManager.isShiftDown()) {
+    if (
+      event.code === 'KeyS' &&
+      this.inputManager.isCtrlDown() &&
+      !this.inputManager.isShiftDown()
+    ) {
       event.preventDefault();
       this.onSaveScene();
     }
@@ -456,7 +460,11 @@ export class KeyboardShortcutHandler {
    */
   private handleExportKey(event: KeyboardEvent): void {
     if (!this.onExportGlb) return;
-    if (event.code === 'KeyE' && this.inputManager.isCtrlDown() && this.inputManager.isShiftDown()) {
+    if (
+      event.code === 'KeyE' &&
+      this.inputManager.isCtrlDown() &&
+      this.inputManager.isShiftDown()
+    ) {
       event.preventDefault();
       this.onExportGlb();
     }
@@ -665,9 +673,7 @@ export class KeyboardShortcutHandler {
     if (!this.onSelectionModeToggle) return;
     if (event.code === 'Tab') {
       event.preventDefault();
-      const nextMode = event.shiftKey
-        ? SelectionMode.FACE
-        : SelectionMode.OBJECT;
+      const nextMode = event.shiftKey ? SelectionMode.FACE : SelectionMode.OBJECT;
       this.onSelectionModeToggle(nextMode);
     }
   }

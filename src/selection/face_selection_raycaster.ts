@@ -40,7 +40,7 @@ export class FaceSelectionRaycaster {
     event: MouseEvent,
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
-    meshes: THREE.Mesh[]
+    meshes: THREE.Mesh[],
   ): FacePickResult | null {
     if (meshes.length === 0) return null;
     this.prepareMeshesForPicking(meshes);
@@ -54,7 +54,7 @@ export class FaceSelectionRaycaster {
     return {
       mesh: hit.object as THREE.Mesh,
       faceIndex: this.extractFaceIndex(hit),
-      hitPoint: hit.point.clone()
+      hitPoint: hit.point.clone(),
     };
   }
 
@@ -64,7 +64,7 @@ export class FaceSelectionRaycaster {
    * @returns Previous side values for restoration.
    */
   private enableDoubleSidedPicking(
-    meshes: THREE.Mesh[]
+    meshes: THREE.Mesh[],
   ): Array<{ material: THREE.Material; side: THREE.Side }> {
     const restored: Array<{ material: THREE.Material; side: THREE.Side }> = [];
     meshes.forEach((mesh) => {
@@ -83,7 +83,7 @@ export class FaceSelectionRaycaster {
    * @param restored Previous material side snapshots.
    */
   private restoreMaterialSides(
-    restored: Array<{ material: THREE.Material; side: THREE.Side }>
+    restored: Array<{ material: THREE.Material; side: THREE.Side }>,
   ): void {
     restored.forEach((entry) => {
       entry.material.side = entry.side;
@@ -109,7 +109,7 @@ export class FaceSelectionRaycaster {
   private setRayFromEvent(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
+    renderer: THREE.WebGLRenderer,
   ): void {
     pointerEventToNdc(event, renderer.domElement, this.ndcVector);
     this.raycaster.setFromCamera(this.ndcVector, camera);
@@ -123,7 +123,7 @@ export class FaceSelectionRaycaster {
    */
   private findFirstMeshHit(
     intersections: THREE.Intersection[],
-    meshes: THREE.Mesh[]
+    meshes: THREE.Mesh[],
   ): THREE.Intersection | null {
     const meshSet = new Set(meshes);
     for (const hit of intersections) {

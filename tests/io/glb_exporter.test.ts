@@ -21,7 +21,7 @@ describe('GlbExporter', () => {
   it('should produce non-empty ArrayBuffer for a single mesh', async () => {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     worldGroup.add(mesh);
     const buffer = await exporter.export(worldGroup);
@@ -40,15 +40,15 @@ describe('GlbExporter', () => {
   it('should produce larger buffer for multiple meshes', async () => {
     const mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     const mesh2 = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     const mesh3 = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 1, 2, 32),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     worldGroup.add(mesh1);
     worldGroup.add(mesh2);
@@ -62,7 +62,7 @@ describe('GlbExporter', () => {
     group.name = 'TestGroup';
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     group.add(mesh);
     worldGroup.add(group);
@@ -77,7 +77,7 @@ describe('GlbExporter', () => {
   it('should export plane geometry correctly', async () => {
     const mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(2, 2),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh.rotation.x = -Math.PI / 2;
     worldGroup.add(mesh);
@@ -92,7 +92,7 @@ describe('GlbExporter', () => {
     model.addBoxBrush(1, SolidOperation.Subtractive);
     worldGroup.add(model.root);
     const liveBrushCount = model.root.children.filter((child) =>
-      SolidBrushVisual.isBrushObject(child)
+      SolidBrushVisual.isBrushObject(child),
     ).length;
     expect(liveBrushCount).toBeGreaterThanOrEqual(2);
     const filtered = buildExportScene(worldGroup);

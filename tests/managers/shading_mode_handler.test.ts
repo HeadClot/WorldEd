@@ -37,7 +37,7 @@ describe('ShadingModeHandler', () => {
     controllers = [
       new ViewportShadingController(vp1),
       new ViewportShadingController(vp2),
-      new ViewportShadingController(vp3)
+      new ViewportShadingController(vp3),
     ];
     mockStatusBar = new MockStatusBar() as MockStatusBar & StatusBar;
     handler = new ShadingModeHandler(controllers, 0, mockStatusBar);

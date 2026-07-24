@@ -34,10 +34,7 @@ export class SolidBrushValidator {
    * @param brush Brush under test.
    * @param errors Accumulator for error strings.
    */
-  private static checkArrayConsistency(
-    brush: SolidBrush,
-    errors: string[]
-  ): void {
+  private static checkArrayConsistency(brush: SolidBrush, errors: string[]): void {
     if (brush.vertices.length < 4) {
       errors.push('Brush must have at least 4 vertices');
     }
@@ -96,18 +93,13 @@ export class SolidBrushValidator {
    * @param brush Brush under test.
    * @param errors Accumulator for error strings.
    */
-  private static checkVertexInsidePlanes(
-    brush: SolidBrush,
-    errors: string[]
-  ): void {
+  private static checkVertexInsidePlanes(brush: SolidBrush, errors: string[]): void {
     for (let vertexIndex = 0; vertexIndex < brush.vertices.length; vertexIndex++) {
       const vertex = brush.vertices[vertexIndex];
       for (let planeIndex = 0; planeIndex < brush.planes.length; planeIndex++) {
         const distance = brush.planes[planeIndex].signedDistance(vertex);
         if (distance > SOLID_FAT_PLANE_EPSILON) {
-          errors.push(
-            `Vertex ${vertexIndex} is outside plane ${planeIndex}`
-          );
+          errors.push(`Vertex ${vertexIndex} is outside plane ${planeIndex}`);
         }
       }
     }
@@ -118,10 +110,7 @@ export class SolidBrushValidator {
    * @param brush Brush under test.
    * @param errors Accumulator for error strings.
    */
-  private static checkMinimumFaceSize(
-    brush: SolidBrush,
-    errors: string[]
-  ): void {
+  private static checkMinimumFaceSize(brush: SolidBrush, errors: string[]): void {
     for (const face of brush.faces) {
       if (face.edgeCount < 3) {
         errors.push('Face edge count must be at least 3');

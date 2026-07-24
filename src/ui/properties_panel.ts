@@ -11,7 +11,7 @@ import { filterUnlockedObjects } from '../utils/object_lock.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import {
   PropertiesSolidBrushSection,
-  SolidBrushPropertyHandlers
+  SolidBrushPropertyHandlers,
 } from './properties_solid_brush_section.js';
 import { PropertiesColorSession } from './properties_color_session.js';
 
@@ -60,11 +60,7 @@ export class PropertiesPanel {
    * @param theme The theme containing color definitions.
    * @param selectionManager The selection manager to bind to.
    */
-  constructor(
-    container: HTMLElement,
-    theme: typeof Theme,
-    selectionManager: SelectionManager
-  ) {
+  constructor(container: HTMLElement, theme: typeof Theme, selectionManager: SelectionManager) {
     this.container = document.createElement('div');
     this.theme = theme;
     this.selectionManager = selectionManager;
@@ -83,13 +79,13 @@ export class PropertiesPanel {
       this.theme,
       () => this.createSectionContainer(),
       (title) => this.createSectionHeader(title),
-      (hex) => this.hexToRgb(hex)
+      (hex) => this.hexToRgb(hex),
     );
     this.solidBrushSection.setEditableBrushMeshProvider(() =>
       this.getEditableBoundObjects().filter(
         (object): object is THREE.Mesh =>
-          object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object)
-      )
+          object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object),
+      ),
     );
     this.applyContainerStyles();
     this.createPositionSection();
@@ -183,17 +179,17 @@ export class PropertiesPanel {
     this.writeVectorInputs(
       this.positionInputs,
       objects.map((object) => object.position),
-      2
+      2,
     );
     this.writeVectorInputs(
       this.rotationInputs,
       objects.map((object) => this.eulerDegrees(object.rotation)),
-      1
+      1,
     );
     this.writeVectorInputs(
       this.scaleInputs,
       objects.map((object) => object.scale),
-      2
+      2,
     );
     this.updateColorFromObjects(objects);
     this.solidBrushSection.updateFromObjects(objects);
@@ -232,7 +228,7 @@ export class PropertiesPanel {
     return new THREE.Vector3(
       THREE.MathUtils.radToDeg(rotation.x),
       THREE.MathUtils.radToDeg(rotation.y),
-      THREE.MathUtils.radToDeg(rotation.z)
+      THREE.MathUtils.radToDeg(rotation.z),
     );
   }
 
@@ -245,11 +241,26 @@ export class PropertiesPanel {
   private writeVectorInputs(
     inputMap: Map<string, HTMLInputElement>,
     vectors: THREE.Vector3[],
-    decimals: number
+    decimals: number,
   ): void {
-    this.writeAxisInput(inputMap, 'x', vectors.map((vector) => vector.x), decimals);
-    this.writeAxisInput(inputMap, 'y', vectors.map((vector) => vector.y), decimals);
-    this.writeAxisInput(inputMap, 'z', vectors.map((vector) => vector.z), decimals);
+    this.writeAxisInput(
+      inputMap,
+      'x',
+      vectors.map((vector) => vector.x),
+      decimals,
+    );
+    this.writeAxisInput(
+      inputMap,
+      'y',
+      vectors.map((vector) => vector.y),
+      decimals,
+    );
+    this.writeAxisInput(
+      inputMap,
+      'z',
+      vectors.map((vector) => vector.z),
+      decimals,
+    );
   }
 
   /**
@@ -263,7 +274,7 @@ export class PropertiesPanel {
     inputMap: Map<string, HTMLInputElement>,
     axis: string,
     values: number[],
-    decimals: number
+    decimals: number,
   ): void {
     const input = inputMap.get(axis);
     if (!input) return;
@@ -392,7 +403,7 @@ export class PropertiesPanel {
   private rebakeBoundMeshesIfTextureLocked(): void {
     if (!this.textureLock) return;
     const meshes = this.getEditableBoundObjects().filter(
-      (object): object is THREE.Mesh => object instanceof THREE.Mesh
+      (object): object is THREE.Mesh => object instanceof THREE.Mesh,
     );
     this.textureLock.rebakeMeshesIfLocked(meshes);
   }
@@ -405,7 +416,7 @@ export class PropertiesPanel {
    */
   private areObjectPositionsUnchanged(
     objects: THREE.Object3D[],
-    positions: THREE.Vector3[]
+    positions: THREE.Vector3[],
   ): boolean {
     return objects.every((object, index) => {
       return object.position.distanceToSquared(positions[index]) < 1e-12;
@@ -420,7 +431,7 @@ export class PropertiesPanel {
    */
   private areObjectRotationsUnchanged(
     objects: THREE.Object3D[],
-    rotations: THREE.Euler[]
+    rotations: THREE.Euler[],
   ): boolean {
     return objects.every((object, index) => {
       const current = object.rotation;
@@ -439,10 +450,7 @@ export class PropertiesPanel {
    * @param scales Proposed scales.
    * @returns True when nothing would change.
    */
-  private areObjectScalesUnchanged(
-    objects: THREE.Object3D[],
-    scales: THREE.Vector3[]
-  ): boolean {
+  private areObjectScalesUnchanged(objects: THREE.Object3D[], scales: THREE.Vector3[]): boolean {
     return objects.every((object, index) => {
       return object.scale.distanceToSquared(scales[index]) < 1e-12;
     });
@@ -478,11 +486,15 @@ export class PropertiesPanel {
    * Creates the Position collapsible section.
    */
   private createPositionSection(): void {
-    const section = this.createSection('Position', [
-      { label: 'x', axis: 'x', color: this.axisColor(Theme.gizmoXAxisColor) },
-      { label: 'y', axis: 'y', color: this.axisColor(Theme.gizmoYAxisColor) },
-      { label: 'z', axis: 'z', color: this.axisColor(Theme.gizmoZAxisColor) }
-    ], this.positionInputs);
+    const section = this.createSection(
+      'Position',
+      [
+        { label: 'x', axis: 'x', color: this.axisColor(Theme.gizmoXAxisColor) },
+        { label: 'y', axis: 'y', color: this.axisColor(Theme.gizmoYAxisColor) },
+        { label: 'z', axis: 'z', color: this.axisColor(Theme.gizmoZAxisColor) },
+      ],
+      this.positionInputs,
+    );
     this.sections.push(section);
     this.container.appendChild(section);
   }
@@ -491,11 +503,15 @@ export class PropertiesPanel {
    * Creates the Rotation collapsible section.
    */
   private createRotationSection(): void {
-    const section = this.createSection('Rotation', [
-      { label: 'x', axis: 'x', color: this.axisColor(Theme.gizmoXAxisColor) },
-      { label: 'y', axis: 'y', color: this.axisColor(Theme.gizmoYAxisColor) },
-      { label: 'z', axis: 'z', color: this.axisColor(Theme.gizmoZAxisColor) }
-    ], this.rotationInputs);
+    const section = this.createSection(
+      'Rotation',
+      [
+        { label: 'x', axis: 'x', color: this.axisColor(Theme.gizmoXAxisColor) },
+        { label: 'y', axis: 'y', color: this.axisColor(Theme.gizmoYAxisColor) },
+        { label: 'z', axis: 'z', color: this.axisColor(Theme.gizmoZAxisColor) },
+      ],
+      this.rotationInputs,
+    );
     this.sections.push(section);
     this.container.appendChild(section);
   }
@@ -504,11 +520,15 @@ export class PropertiesPanel {
    * Creates the Scale collapsible section.
    */
   private createScaleSection(): void {
-    const section = this.createSection('Scale', [
-      { label: 'x', axis: 'x', color: this.axisColor(Theme.gizmoXAxisColor) },
-      { label: 'y', axis: 'y', color: this.axisColor(Theme.gizmoYAxisColor) },
-      { label: 'z', axis: 'z', color: this.axisColor(Theme.gizmoZAxisColor) }
-    ], this.scaleInputs);
+    const section = this.createSection(
+      'Scale',
+      [
+        { label: 'x', axis: 'x', color: this.axisColor(Theme.gizmoXAxisColor) },
+        { label: 'y', axis: 'y', color: this.axisColor(Theme.gizmoYAxisColor) },
+        { label: 'z', axis: 'z', color: this.axisColor(Theme.gizmoZAxisColor) },
+      ],
+      this.scaleInputs,
+    );
     this.sections.push(section);
     this.container.appendChild(section);
   }
@@ -648,7 +668,7 @@ export class PropertiesPanel {
     if (colorHex === null) return;
     this.colorSession.onColorEdited(
       colorHex,
-      this.collectColorEditableMeshes(this.getEditableBoundObjects())
+      this.collectColorEditableMeshes(this.getEditableBoundObjects()),
     );
     this.colorInput.style.opacity = '1';
   }
@@ -690,7 +710,7 @@ export class PropertiesPanel {
   private createSection(
     title: string,
     axes: AxisInputConfig[],
-    inputMap: Map<string, HTMLInputElement>
+    inputMap: Map<string, HTMLInputElement>,
   ): HTMLElement {
     const section = this.createSectionContainer();
     const header = this.createSectionHeader(title);
@@ -737,7 +757,7 @@ export class PropertiesPanel {
    */
   private createSectionContent(
     axes: AxisInputConfig[],
-    inputMap: Map<string, HTMLInputElement>
+    inputMap: Map<string, HTMLInputElement>,
   ): HTMLElement {
     const content = document.createElement('div');
     content.style.paddingLeft = '4px';
@@ -746,7 +766,7 @@ export class PropertiesPanel {
         axisConfig.label.toUpperCase(),
         axisConfig.color,
         axisConfig.axis,
-        inputMap
+        inputMap,
       );
       content.appendChild(row);
     });
@@ -765,7 +785,7 @@ export class PropertiesPanel {
     label: string,
     color: string,
     axis: string,
-    inputMap: Map<string, HTMLInputElement>
+    inputMap: Map<string, HTMLInputElement>,
   ): HTMLElement {
     const row = this.createAxisRowContainer();
     const labelEl = this.createAxisLabel(label, color);
@@ -810,10 +830,7 @@ export class PropertiesPanel {
    * @param inputMap The map to store the input reference.
    * @returns The styled input element.
    */
-  private createAxisInput(
-    axis: string,
-    inputMap: Map<string, HTMLInputElement>
-  ): HTMLInputElement {
+  private createAxisInput(axis: string, inputMap: Map<string, HTMLInputElement>): HTMLInputElement {
     const input = document.createElement('input');
     input.type = 'text';
     input.inputMode = 'decimal';
@@ -852,7 +869,7 @@ export class PropertiesPanel {
    */
   private bindInputToChanges(
     input: HTMLInputElement,
-    inputMap: Map<string, HTMLInputElement>
+    inputMap: Map<string, HTMLInputElement>,
   ): void {
     const handleChange = () => {
       if (this.boundObjects.length === 0) return;

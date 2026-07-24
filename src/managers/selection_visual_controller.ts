@@ -24,10 +24,7 @@ export class SelectionVisualController {
    * @param selectionManager The shared selection state.
    * @param viewportSyncManager Used to find 2D clone meshes for a world mesh.
    */
-  constructor(
-    selectionManager: SelectionManager,
-    viewportSyncManager: ViewportSyncManager
-  ) {
+  constructor(selectionManager: SelectionManager, viewportSyncManager: ViewportSyncManager) {
     this.selectionManager = selectionManager;
     this.viewportSyncManager = viewportSyncManager;
     this.selectionHighlights = [];
@@ -86,9 +83,7 @@ export class SelectionVisualController {
    */
   syncDuringTransform(): void {
     this.selectionHighlights.forEach((highlight) => highlight.syncTransforms());
-    this.shadingControllers.forEach((controller) =>
-      controller.syncOverlayTransforms()
-    );
+    this.shadingControllers.forEach((controller) => controller.syncOverlayTransforms());
   }
 
   /**
@@ -146,10 +141,7 @@ export class SelectionVisualController {
    * @param worldMesh Authoritative brush preview mesh.
    * @param fillVisible Whether the translucent volume should be drawn.
    */
-  private applyBrushHullFillToMeshAndClones(
-    worldMesh: THREE.Mesh,
-    fillVisible: boolean
-  ): void {
+  private applyBrushHullFillToMeshAndClones(worldMesh: THREE.Mesh, fillVisible: boolean): void {
     SolidBrushVisual.setHullFillVisible(worldMesh, fillVisible);
     this.viewportSyncManager
       .findCloneMeshesForWorldUuid(worldMesh.uuid)

@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import {
-  buildExportScene,
-  shouldOmitFromExport
-} from '../../src/io/export_scene_builder.js';
+import { buildExportScene, shouldOmitFromExport } from '../../src/io/export_scene_builder.js';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
@@ -20,7 +17,7 @@ describe('export_scene_builder', () => {
   it('exports regular content meshes', () => {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh.name = 'Cube';
     world.add(mesh);
@@ -61,16 +58,16 @@ describe('export_scene_builder', () => {
   it('strips selection highlights and decorative edges from content meshes', () => {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xaaaaaa })
+      new THREE.MeshStandardMaterial({ color: 0xaaaaaa }),
     );
     const outline = new THREE.LineSegments(
       new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial({ color: 0xff0000 })
+      new THREE.LineBasicMaterial({ color: 0xff0000 }),
     );
     outline.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] = true;
     const edges = new THREE.LineSegments(
       new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial({ color: 0xffffff })
+      new THREE.LineBasicMaterial({ color: 0xffffff }),
     );
     edges.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
     mesh.add(outline);
@@ -83,16 +80,9 @@ describe('export_scene_builder', () => {
   });
 
   it('omits clip plane previews and bare brush objects', () => {
-    const preview = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const preview = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
     preview.userData.isClipPlanePreview = true;
-    const brush = SolidBrushVisual.createBoxPreview(
-      'Helper',
-      1,
-      SolidOperation.Additive
-    );
+    const brush = SolidBrushVisual.createBoxPreview('Helper', 1, SolidOperation.Additive);
     world.add(preview);
     world.add(brush);
     expect(shouldOmitFromExport(preview)).toBe(true);
@@ -106,7 +96,7 @@ describe('export_scene_builder', () => {
     group.name = 'Props';
     const mesh = new THREE.Mesh(
       new THREE.SphereGeometry(0.5, 8, 8),
-      new THREE.MeshStandardMaterial()
+      new THREE.MeshStandardMaterial(),
     );
     group.add(mesh);
     world.add(group);

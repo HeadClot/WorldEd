@@ -32,7 +32,7 @@ export class PrimitiveCreationHandler {
     primitiveTool: PrimitiveCreationTool,
     worldObject: THREE.Group,
     commandStack: CommandStack,
-    selectionManager: SelectionManager
+    selectionManager: SelectionManager,
   ) {
     this.primitiveTool = primitiveTool;
     this.worldObject = worldObject;
@@ -53,34 +53,46 @@ export class PrimitiveCreationHandler {
    * Creates a cube primitive and registers it with the command stack.
    */
   createCube(): void {
-    this.createPrimitive(() => this.primitiveTool.createBox(1, 1, 1), (mesh) => {
-      mesh.position.y = 0.5;
-    });
+    this.createPrimitive(
+      () => this.primitiveTool.createBox(1, 1, 1),
+      (mesh) => {
+        mesh.position.y = 0.5;
+      },
+    );
   }
 
   /**
    * Creates a sphere primitive and registers it with the command stack.
    */
   createSphere(): void {
-    this.createPrimitive(() => this.primitiveTool.createSphere(0.5), (mesh) => {
-      mesh.position.y = 0.5;
-    });
+    this.createPrimitive(
+      () => this.primitiveTool.createSphere(0.5),
+      (mesh) => {
+        mesh.position.y = 0.5;
+      },
+    );
   }
 
   /**
    * Creates a cylinder primitive and registers it with the command stack.
    */
   createCylinder(): void {
-    this.createPrimitive(() => this.primitiveTool.createCylinder(0.5, 0.5, 1), (mesh) => {
-      mesh.position.y = 0.5;
-    });
+    this.createPrimitive(
+      () => this.primitiveTool.createCylinder(0.5, 0.5, 1),
+      (mesh) => {
+        mesh.position.y = 0.5;
+      },
+    );
   }
 
   /**
    * Creates a plane primitive and registers it with the command stack.
    */
   createPlane(): void {
-    this.createPrimitive(() => this.primitiveTool.createPlane(2, 2), () => {});
+    this.createPrimitive(
+      () => this.primitiveTool.createPlane(2, 2),
+      () => {},
+    );
   }
 
   /**
@@ -88,10 +100,7 @@ export class PrimitiveCreationHandler {
    * @param factory Function that creates the primitive mesh.
    * @param configure Function that configures the created mesh.
    */
-  private createPrimitive(
-    factory: () => THREE.Mesh,
-    configure: (mesh: THREE.Mesh) => void
-  ): void {
+  private createPrimitive(factory: () => THREE.Mesh, configure: (mesh: THREE.Mesh) => void): void {
     const mesh = factory();
     configure(mesh);
     const command = new CreatePrimitiveCommand(mesh, this.worldObject);
@@ -101,8 +110,8 @@ export class PrimitiveCreationHandler {
   }
 
   /**
-    * Triggers the viewport sync and outliner refresh after primitive creation.
-    */
+   * Triggers the viewport sync and outliner refresh after primitive creation.
+   */
   private onPrimitiveCreatedCallback(): void {
     if (this.onPrimitiveCreated) {
       this.onPrimitiveCreated();

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   BoundsResizeCommand,
-  BoundsResizeSnapshot
+  BoundsResizeSnapshot,
 } from '../../src/commands/bounds_resize_command.js';
 
 describe('BoundsResizeCommand', () => {
@@ -41,10 +41,7 @@ describe('BoundsResizeCommand', () => {
  * @returns A mesh for command tests.
  */
 function createMesh(): THREE.Mesh {
-  return new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial()
-  );
+  return new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
 }
 
 /**
@@ -58,6 +55,6 @@ function buildSnapshot(mesh: THREE.Mesh): BoundsResizeSnapshot {
     originalPosition: new THREE.Vector3(0, 0, 0),
     originalScale: new THREE.Vector3(1, 1, 1),
     finalPosition: new THREE.Vector3(2, 0, 0),
-    finalScale: new THREE.Vector3(3, 1, 1)
+    finalScale: new THREE.Vector3(3, 1, 1),
   };
 }

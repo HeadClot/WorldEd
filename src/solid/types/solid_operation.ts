@@ -5,7 +5,7 @@
 export enum SolidOperation {
   Additive = 0,
   Subtractive = 1,
-  Intersecting = 2
+  Intersecting = 2,
 }
 
 /**

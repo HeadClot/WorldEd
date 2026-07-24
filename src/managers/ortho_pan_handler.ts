@@ -27,11 +27,7 @@ export class OrthoPanHandler {
    * @param camera Orthographic camera whose position and frustum are updated.
    * @param zoomCallback Invoked with a zoom factor on wheel events.
    */
-  constructor(
-    canvas: HTMLElement,
-    camera: THREE.OrthographicCamera,
-    zoomCallback: ZoomCallback
-  ) {
+  constructor(canvas: HTMLElement, camera: THREE.OrthographicCamera, zoomCallback: ZoomCallback) {
     this.canvas = canvas;
     this.camera = camera;
     this.isPanning = false;
@@ -148,13 +144,11 @@ export class OrthoPanHandler {
     const frustumHeight = this.camera.top - this.camera.bottom;
     const canvasWidth = this.canvas.clientWidth || 1;
     const canvasHeight = this.canvas.clientHeight || 1;
-    const worldX = screenDeltaX * frustumWidth / canvasWidth;
-    const worldY = screenDeltaY * frustumHeight / canvasHeight;
+    const worldX = (screenDeltaX * frustumWidth) / canvasWidth;
+    const worldY = (screenDeltaY * frustumHeight) / canvasHeight;
     this.camera.getWorldDirection(this.tempForward);
     // Use the camera's own up so top-down views (up = -Z) pan correctly.
-    this.tempRight
-      .crossVectors(this.tempForward, this.camera.up)
-      .normalize();
+    this.tempRight.crossVectors(this.tempForward, this.camera.up).normalize();
     if (this.tempRight.lengthSq() < 1e-10) {
       this.tempRight.set(1, 0, 0);
     }

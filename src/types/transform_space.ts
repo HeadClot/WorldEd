@@ -5,7 +5,7 @@ export enum TransformSpace {
   /** Handles align to world axes (default). */
   Global = 'global',
   /** Handles align to the selected object's local axes (single selection). */
-  Local = 'local'
+  Local = 'local',
 }
 
 /**

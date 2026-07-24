@@ -4,7 +4,7 @@ import {
   TEXTURE_BROWSER_TILE_CLASS,
   TEXTURE_BROWSER_GRID_CLASS,
   TEXTURE_BROWSER_MIN_TRACK_PX,
-  ensureTextureBrowserStylesheet
+  ensureTextureBrowserStylesheet,
 } from '../../src/ui/texture_browser_styles.js';
 
 describe('texture_browser_styles', () => {
@@ -28,9 +28,7 @@ describe('texture_browser_styles', () => {
     expect(css).toContain('height: 100cqi');
     expect(css).toContain('container-type: inline-size');
     expect(css).toContain('width: 100%');
-    expect(css).toContain(
-      `repeat(auto-fill, minmax(${TEXTURE_BROWSER_MIN_TRACK_PX}px, 1fr))`
-    );
+    expect(css).toContain(`repeat(auto-fill, minmax(${TEXTURE_BROWSER_MIN_TRACK_PX}px, 1fr))`);
     expect(css).toContain('grid-auto-rows: max-content');
     expect(css).not.toContain('padding-top: 100%');
   });

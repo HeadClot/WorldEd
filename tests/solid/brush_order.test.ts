@@ -26,8 +26,7 @@ describe('Solid brush CSG order', () => {
     const additive = model.addBoxBrush(4, SolidOperation.Additive);
     const subtractive = model.addBoxBrush(2, SolidOperation.Subtractive);
     model.rebuild(true);
-    const holeVerts =
-      model.getResultMesh().geometry.getAttribute('position').count;
+    const holeVerts = model.getResultMesh().geometry.getAttribute('position').count;
     subtractive.mesh!.position.set(0, 0, 0);
     subtractive.pushTransformToMesh();
     model.root.remove(subtractive.mesh!);
@@ -50,8 +49,7 @@ describe('Solid brush CSG order', () => {
       }
     }
     expect(inside).toBe(true);
-    const solidVerts =
-      model.getResultMesh().geometry.getAttribute('position').count;
+    const solidVerts = model.getResultMesh().geometry.getAttribute('position').count;
     expect(solidVerts).toBeGreaterThan(0);
     expect(solidVerts).toBeLessThan(holeVerts);
   });
@@ -63,8 +61,7 @@ describe('Solid brush CSG order', () => {
     const additive = model.addBoxBrush(4, SolidOperation.Additive);
     const subtractive = model.addBoxBrush(2, SolidOperation.Subtractive);
     model.rebuild(true);
-    const holeVerts =
-      model.getResultMesh().geometry.getAttribute('position').count;
+    const holeVerts = model.getResultMesh().geometry.getAttribute('position').count;
     model.root.remove(subtractive.mesh!);
     model.root.remove(additive.mesh!);
     model.root.add(subtractive.mesh!);
@@ -72,11 +69,8 @@ describe('Solid brush CSG order', () => {
     SolidModel.rebuildAllUnder(world);
     expect(model.getBrushes().map((b) => b.operation)).toEqual([
       SolidOperation.Subtractive,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     ]);
-    expect(
-      model.getResultMesh().geometry.getAttribute('position').count
-    ).toBeLessThan(holeVerts);
+    expect(model.getResultMesh().geometry.getAttribute('position').count).toBeLessThan(holeVerts);
   });
 });
-

@@ -66,7 +66,7 @@ const SKIPPED_ENTITY_CLASSNAMES = new Set([
   'func_regenerate',
   'func_respawnroom',
   'func_smokevolume',
-  'func_viscluster'
+  'func_viscluster',
 ]);
 
 /**
@@ -82,10 +82,7 @@ export class VmfSolidImporter {
    * @param options Import options.
    * @returns Import result with model and counts.
    */
-  importFromText(
-    source: string,
-    options: VmfImportOptions = {}
-  ): VmfImportResult {
+  importFromText(source: string, options: VmfImportOptions = {}): VmfImportResult {
     const world = this.parser.parse(source);
     return this.importWorld(world, options);
   }
@@ -99,7 +96,7 @@ export class VmfSolidImporter {
    */
   async importFromTextAsync(
     source: string,
-    options: VmfImportOptions = {}
+    options: VmfImportOptions = {},
   ): Promise<VmfImportResult> {
     const report = options.onProgress ?? (() => undefined);
     report(0.02, 'Parsing VMF…');
@@ -116,10 +113,7 @@ export class VmfSolidImporter {
    * @param options Import options.
    * @returns Import result with model and counts.
    */
-  importWorld(
-    world: VmfWorld,
-    options: VmfImportOptions = {}
-  ): VmfImportResult {
+  importWorld(world: VmfWorld, options: VmfImportOptions = {}): VmfImportResult {
     const unitScale = options.unitScale ?? VMF_INCHES_TO_METERS;
     const skipVolumes = options.skipVolumeMaterials !== false;
     const includeEntities = options.includeEntitySolids !== false;
@@ -129,14 +123,14 @@ export class VmfSolidImporter {
       collected.solids,
       unitScale,
       skipVolumes,
-      collected.skippedCount
+      collected.skippedCount,
     );
     model.addBrushInstancesBatch(built.instances, 2, options.rebuild !== false);
     return {
       model,
       importedBrushCount: built.imported,
       skippedBrushCount: built.skipped,
-      skyName: world.skyName
+      skyName: world.skyName,
     };
   }
 
@@ -148,7 +142,7 @@ export class VmfSolidImporter {
    */
   async importWorldAsync(
     world: VmfWorld,
-    options: VmfImportOptions = {}
+    options: VmfImportOptions = {},
   ): Promise<VmfImportResult> {
     const report = options.onProgress ?? (() => undefined);
     const unitScale = options.unitScale ?? VMF_INCHES_TO_METERS;
@@ -161,13 +155,11 @@ export class VmfSolidImporter {
       unitScale,
       skipVolumes,
       collected.skippedCount,
-      (ratio, label) => report(0.08 + ratio * 0.52, label)
+      (ratio, label) => report(0.08 + ratio * 0.52, label),
     );
     model.addBrushInstancesBatch(built.instances, 2, false);
     if (options.rebuild !== false && built.instances.length > 0) {
-      await model.rebuildAsync((ratio, label) =>
-        report(0.6 + ratio * 0.4, label)
-      );
+      await model.rebuildAsync((ratio, label) => report(0.6 + ratio * 0.4, label));
     } else {
       report(1, 'Done');
     }
@@ -175,7 +167,7 @@ export class VmfSolidImporter {
       model,
       importedBrushCount: built.imported,
       skippedBrushCount: built.skipped,
-      skyName: world.skyName
+      skyName: world.skyName,
     };
   }
 
@@ -191,7 +183,7 @@ export class VmfSolidImporter {
     solids: VmfSolid[],
     unitScale: number,
     skipVolumes: boolean,
-    alreadySkipped: number
+    alreadySkipped: number,
   ): {
     instances: SolidBrushInstance[];
     imported: number;
@@ -226,7 +218,7 @@ export class VmfSolidImporter {
     unitScale: number,
     skipVolumes: boolean,
     alreadySkipped: number,
-    onProgress?: (ratio: number, label: string) => void
+    onProgress?: (ratio: number, label: string) => void,
   ): Promise<{
     instances: SolidBrushInstance[];
     imported: number;
@@ -253,8 +245,8 @@ export class VmfSolidImporter {
       (ratio) =>
         onProgress?.(
           ratio,
-          `Building brushes ${Math.min(solids.length, Math.round(ratio * total))}/${solids.length}`
-        )
+          `Building brushes ${Math.min(solids.length, Math.round(ratio * total))}/${solids.length}`,
+        ),
     );
     return { instances, imported, skipped };
   }
@@ -269,7 +261,7 @@ export class VmfSolidImporter {
   private tryBuildSolid(
     solid: VmfSolid,
     unitScale: number,
-    skipVolumes: boolean
+    skipVolumes: boolean,
   ): VmfBuiltBrush | null {
     if (solid.sides.length === 0) return null;
     if (skipVolumes && isSkippedVolumeMaterial(solid.sides[0].material)) {
@@ -284,30 +276,16 @@ export class VmfSolidImporter {
    * @param ordinal 1-based brush index for naming.
    * @returns Solid brush instance with hull preview mesh.
    */
-  private createInstance(
-    built: VmfBuiltBrush,
-    ordinal: number
-  ): SolidBrushInstance {
+  private createInstance(built: VmfBuiltBrush, ordinal: number): SolidBrushInstance {
     const name =
-      built.solidId >= 0
-        ? `Solid ${built.solidId}`
-        : `Solid ${String(ordinal).padStart(2, '0')}`;
+      built.solidId >= 0 ? `Solid ${built.solidId}` : `Solid ${String(ordinal).padStart(2, '0')}`;
     const id = `vmf-solid-${built.solidId}-${ordinal}`;
-    const instance = new SolidBrushInstance(
-      id,
-      name,
-      built.brush,
-      SolidOperation.Additive
-    );
+    const instance = new SolidBrushInstance(id, name, built.brush, SolidOperation.Additive);
     instance.position.copy(built.worldCenter);
     for (let index = 0; index < built.faceMappings.length; index++) {
       instance.setFaceMapping(index, built.faceMappings[index]);
     }
-    const preview = SolidBrushVisual.createHullPreview(
-      name,
-      built.brush,
-      SolidOperation.Additive
-    );
+    const preview = SolidBrushVisual.createHullPreview(name, built.brush, SolidOperation.Additive);
     instance.attachMesh(preview);
     return instance;
   }
@@ -320,7 +298,7 @@ export class VmfSolidImporter {
    */
   private collectSolids(
     world: VmfWorld,
-    includeEntities: boolean
+    includeEntities: boolean,
   ): { solids: VmfSolid[]; skippedCount: number } {
     const solids = world.solids.slice();
     if (!includeEntities) {

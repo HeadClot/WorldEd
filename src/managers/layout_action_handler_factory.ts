@@ -34,29 +34,17 @@ export function createWiredActionHandlers(
   commandStack: CommandStack,
   selectionManager: SelectionManager,
   gridSnap: GridSnap,
-  callbacks: ActionHandlerSharedCallbacks
+  callbacks: ActionHandlerSharedCallbacks,
 ): {
   objectActionHandler: ObjectActionHandler;
   csgActionHandler: CsgActionHandler;
   alignmentHandler: AlignmentHandler;
 } {
-  const objectActionHandler = new ObjectActionHandler(
-    worldObject,
-    commandStack,
-    selectionManager
-  );
+  const objectActionHandler = new ObjectActionHandler(worldObject, commandStack, selectionManager);
   bindObjectActionCallbacks(objectActionHandler, callbacks);
-  const csgActionHandler = new CsgActionHandler(
-    worldObject,
-    commandStack,
-    selectionManager
-  );
+  const csgActionHandler = new CsgActionHandler(worldObject, commandStack, selectionManager);
   bindCsgActionCallbacks(csgActionHandler, callbacks);
-  const alignmentHandler = createAlignmentHandler(
-    commandStack,
-    selectionManager,
-    gridSnap
-  );
+  const alignmentHandler = createAlignmentHandler(commandStack, selectionManager, gridSnap);
   bindAlignmentCallbacks(alignmentHandler, callbacks);
   return { objectActionHandler, csgActionHandler, alignmentHandler };
 }
@@ -68,7 +56,7 @@ export function createWiredActionHandlers(
  */
 function bindObjectActionCallbacks(
   handler: ObjectActionHandler,
-  callbacks: ActionHandlerSharedCallbacks
+  callbacks: ActionHandlerSharedCallbacks,
 ): void {
   handler.setSyncViewports(callbacks.syncViewports);
   handler.setRefreshOutliner(callbacks.refreshOutliner);
@@ -82,7 +70,7 @@ function bindObjectActionCallbacks(
  */
 function bindCsgActionCallbacks(
   handler: CsgActionHandler,
-  callbacks: ActionHandlerSharedCallbacks
+  callbacks: ActionHandlerSharedCallbacks,
 ): void {
   handler.setSyncViewports(callbacks.syncViewports);
   handler.setRefreshOutliner(callbacks.refreshOutliner);
@@ -99,14 +87,9 @@ function bindCsgActionCallbacks(
 function createAlignmentHandler(
   commandStack: CommandStack,
   selectionManager: SelectionManager,
-  gridSnap: GridSnap
+  gridSnap: GridSnap,
 ): AlignmentHandler {
-  return new AlignmentHandler(
-    new AlignmentController(),
-    commandStack,
-    selectionManager,
-    gridSnap
-  );
+  return new AlignmentHandler(new AlignmentController(), commandStack, selectionManager, gridSnap);
 }
 
 /**
@@ -116,7 +99,7 @@ function createAlignmentHandler(
  */
 function bindAlignmentCallbacks(
   handler: AlignmentHandler,
-  callbacks: ActionHandlerSharedCallbacks
+  callbacks: ActionHandlerSharedCallbacks,
 ): void {
   handler.setSyncViewports(callbacks.syncViewports);
   handler.setOnAxisRestriction(callbacks.onAxisRestrictionChanged);

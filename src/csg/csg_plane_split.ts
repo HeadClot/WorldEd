@@ -44,16 +44,12 @@ export class CsgPlaneSplit {
     mesh: THREE.Mesh,
     plane: THREE.Plane,
     keepFront: boolean,
-    resultName?: string
+    resultName?: string,
   ): THREE.Mesh | null {
     mesh.updateMatrixWorld(true);
     const sourcePolygons = this.meshBuilder.meshToPolygons(mesh);
     if (sourcePolygons.length === 0) return null;
-    const capped = this.buildCappedHalf(
-      sourcePolygons,
-      plane,
-      keepFront
-    );
+    const capped = this.buildCappedHalf(sourcePolygons, plane, keepFront);
     if (!capped) return null;
     const name = resultName ?? this.nextName('Clip');
     return this.buildResultMesh(capped, mesh, name);
@@ -69,25 +65,23 @@ export class CsgPlaneSplit {
   private buildCappedHalf(
     sourcePolygons: CsgPolygon[],
     plane: THREE.Plane,
-    keepFront: boolean
+    keepFront: boolean,
   ): CsgPolygon[] | null {
     const csgPlane = planeToCsgForm(plane);
     const clipped = this.clipPolygonsToSide(
       sourcePolygons,
       csgPlane.normal,
       csgPlane.constant,
-      keepFront
+      keepFront,
     );
     if (clipped.length === 0) return null;
-    const outwardNormal = keepFront
-      ? csgPlane.normal.clone().negate()
-      : csgPlane.normal.clone();
+    const outwardNormal = keepFront ? csgPlane.normal.clone().negate() : csgPlane.normal.clone();
     return this.appendCapIfPossible(
       clipped,
       sourcePolygons,
       csgPlane.normal,
       csgPlane.constant,
-      outwardNormal
+      outwardNormal,
     );
   }
 
@@ -103,20 +97,10 @@ export class CsgPlaneSplit {
     mesh: THREE.Mesh,
     plane: THREE.Plane,
     frontName?: string,
-    backName?: string
+    backName?: string,
   ): PlaneSplitResult | null {
-    const frontMesh = this.clipMeshToPlane(
-      mesh,
-      plane,
-      true,
-      frontName ?? this.nextName('SplitA')
-    );
-    const backMesh = this.clipMeshToPlane(
-      mesh,
-      plane,
-      false,
-      backName ?? this.nextName('SplitB')
-    );
+    const frontMesh = this.clipMeshToPlane(mesh, plane, true, frontName ?? this.nextName('SplitA'));
+    const backMesh = this.clipMeshToPlane(mesh, plane, false, backName ?? this.nextName('SplitB'));
     if (!frontMesh || !backMesh) {
       this.disposeMesh(frontMesh);
       this.disposeMesh(backMesh);
@@ -137,22 +121,14 @@ export class CsgPlaneSplit {
     polygons: CsgPolygon[],
     planeNormal: THREE.Vector3,
     planeConstant: number,
-    keepFront: boolean
+    keepFront: boolean,
   ): CsgPolygon[] {
     if (keepFront) {
-      return this.clipper.clipPolygonsToFront(
-        polygons,
-        planeNormal,
-        planeConstant
-      );
+      return this.clipper.clipPolygonsToFront(polygons, planeNormal, planeConstant);
     }
     const invertedNormal = planeNormal.clone().negate();
     const invertedConstant = -planeConstant;
-    return this.clipper.clipPolygonsToFront(
-      polygons,
-      invertedNormal,
-      invertedConstant
-    );
+    return this.clipper.clipPolygonsToFront(polygons, invertedNormal, invertedConstant);
   }
 
   /**
@@ -169,14 +145,9 @@ export class CsgPlaneSplit {
     sourcePolygons: CsgPolygon[],
     planeNormal: THREE.Vector3,
     planeConstant: number,
-    outwardNormal: THREE.Vector3
+    outwardNormal: THREE.Vector3,
   ): CsgPolygon[] {
-    const cap = buildPlaneCapPolygon(
-      sourcePolygons,
-      planeNormal,
-      planeConstant,
-      outwardNormal
-    );
+    const cap = buildPlaneCapPolygon(sourcePolygons, planeNormal, planeConstant, outwardNormal);
     if (!cap) return clipped;
     return [...clipped, cap];
   }
@@ -191,7 +162,7 @@ export class CsgPlaneSplit {
   private buildResultMesh(
     polygons: CsgPolygon[],
     sourceMesh: THREE.Mesh,
-    name: string
+    name: string,
   ): THREE.Mesh {
     const color = this.extractMeshColor(sourceMesh);
     const mesh = this.meshBuilder.polygonsToMesh(polygons, color, name);

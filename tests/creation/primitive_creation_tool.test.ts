@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '../../src/theme.js';
 import { PrimitiveCreationTool } from '../../src/managers/primitive_creation_tool.js';
-import {
-  getGeometrySource,
-  resolveGeometrySourceType
-} from '../../src/texture/geometry_source.js';
+import { getGeometrySource, resolveGeometrySourceType } from '../../src/texture/geometry_source.js';
 
 describe('PrimitiveCreationTool', () => {
   let scene: THREE.Scene;
@@ -111,9 +108,7 @@ describe('PrimitiveCreationTool', () => {
 
   it('should add edge wireframe to created objects', () => {
     const mesh = tool.createBox(1, 1, 1);
-    const lineSegments = mesh.children.find(
-      (child) => child instanceof THREE.LineSegments
-    );
+    const lineSegments = mesh.children.find((child) => child instanceof THREE.LineSegments);
     expect(lineSegments).toBeDefined();
   });
 

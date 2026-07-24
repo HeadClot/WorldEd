@@ -143,9 +143,7 @@ export class ClipPlaneTool {
         ? 'Plane ready (optional point 3) · Flip / Clip / Split'
         : 'Need a valid second point';
     }
-    return this.plane
-      ? '3-point plane ready · Flip / Clip / Split'
-      : 'Invalid 3-point plane';
+    return this.plane ? '3-point plane ready · Flip / Clip / Split' : 'Invalid 3-point plane';
   }
 
   /**

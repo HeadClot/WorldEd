@@ -6,7 +6,7 @@ import {
   GizmoVisualStyle,
   applyGizmoFrontRenderOrder,
   createGizmoFrontMaterial,
-  createGizmoOccludedMesh
+  createGizmoOccludedMesh,
 } from './gizmo_visual_style.js';
 
 /**
@@ -81,7 +81,7 @@ export class ScaleGizmo {
       GizmoVisualStyle.stemRadius,
       GizmoVisualStyle.stemRadius,
       GizmoVisualStyle.scaleStemLength,
-      8
+      8,
     );
     const tipSize = GizmoVisualStyle.scaleTipSize;
     const tipGeometry = new THREE.BoxGeometry(tipSize, tipSize, tipSize);
@@ -108,10 +108,7 @@ export class ScaleGizmo {
    * @param color Hex color.
    * @returns Configured front mesh.
    */
-  private createFrontMesh(
-    geometry: THREE.BufferGeometry,
-    color: number
-  ): THREE.Mesh {
+  private createFrontMesh(geometry: THREE.BufferGeometry, color: number): THREE.Mesh {
     const mesh = new THREE.Mesh(geometry, createGizmoFrontMaterial(color));
     applyGizmoFrontRenderOrder(mesh);
     return mesh;
@@ -130,7 +127,7 @@ export class ScaleGizmo {
     geometry: THREE.BufferGeometry,
     color: number,
     handleId: number,
-    position: THREE.Vector3
+    position: THREE.Vector3,
   ): void {
     const ghost = createGizmoOccludedMesh(geometry, color, handleId);
     ghost.position.copy(position);

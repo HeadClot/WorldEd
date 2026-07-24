@@ -7,12 +7,7 @@
  * Supported geometry classifications in scene files.
  * Primitive types store constructor params; buffer stores raw vertex data.
  */
-export type GeometryType =
-  | 'box'
-  | 'sphere'
-  | 'cylinder'
-  | 'plane'
-  | 'buffer';
+export type GeometryType = 'box' | 'sphere' | 'cylinder' | 'plane' | 'buffer';
 
 /**
  * Raw BufferGeometry payload for CSG and other non-primitive meshes.

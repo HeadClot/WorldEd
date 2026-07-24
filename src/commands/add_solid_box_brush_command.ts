@@ -23,12 +23,7 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
    * @param operation CSG operation for the new brush.
    * @param offset Local position applied after creation.
    */
-  constructor(
-    model: SolidModel,
-    size: number,
-    operation: SolidOperation,
-    offset: THREE.Vector3
-  ) {
+  constructor(model: SolidModel, size: number, operation: SolidOperation, offset: THREE.Vector3) {
     this.model = model;
     this.size = size;
     this.operation = operation;
@@ -77,9 +72,7 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
     brush.pushTransformToMesh();
     this.model.rebuild(true);
     this.created = brush;
-    this.listIndex = this.model
-      .getBrushes()
-      .findIndex((entry) => entry.id === brush.id);
+    this.listIndex = this.model.getBrushes().findIndex((entry) => entry.id === brush.id);
   }
 
   /**

@@ -6,10 +6,7 @@ import { CommandStack } from '../commands/command_stack.js';
 import { TranslateCommand, ObjectTransformSnapshot } from '../commands/translate_command.js';
 import { RotateCommand, ObjectRotationSnapshot } from '../commands/rotate_command.js';
 import { ScaleCommand, ObjectScaleSnapshot } from '../commands/scale_command.js';
-import {
-  BoundsResizeCommand,
-  BoundsResizeSnapshot
-} from '../commands/bounds_resize_command.js';
+import { BoundsResizeCommand, BoundsResizeSnapshot } from '../commands/bounds_resize_command.js';
 import { TransformDragSession } from './transform_drag_session.js';
 import { TransformProjectionMath } from './transform_projection_math.js';
 
@@ -33,7 +30,7 @@ export class TransformCommandPusher {
     session: TransformDragSession,
     transformGizmo: TransformGizmo,
     transformExecutor: TransformExecutor,
-    commandStack: CommandStack | null
+    commandStack: CommandStack | null,
   ) {
     this.session = session;
     this.transformGizmo = transformGizmo;
@@ -46,10 +43,7 @@ export class TransformCommandPusher {
    * @param pivot The transform pivot point.
    * @param selectedObjects The meshes that were transformed.
    */
-  pushUndoCommand(
-    pivot: THREE.Vector3,
-    selectedObjects: THREE.Mesh[]
-  ): void {
+  pushUndoCommand(pivot: THREE.Vector3, selectedObjects: THREE.Mesh[]): void {
     if (!this.commandStack) return;
     const mode = this.transformGizmo.getMode();
     if (mode === TransformMode.TRANSLATE) {
@@ -89,8 +83,7 @@ export class TransformCommandPusher {
     const changed = snapshots.some((snapshot) => {
       const posChanged =
         snapshot.originalPosition.distanceToSquared(snapshot.finalPosition) > 1e-12;
-      const scaleChanged =
-        snapshot.originalScale.distanceToSquared(snapshot.finalScale) > 1e-12;
+      const scaleChanged = snapshot.originalScale.distanceToSquared(snapshot.finalScale) > 1e-12;
       return posChanged || scaleChanged;
     });
     if (!changed) return;
@@ -102,9 +95,7 @@ export class TransformCommandPusher {
    * @param selectedObjects Meshes to snapshot.
    * @returns Snapshot array for BoundsResizeCommand.
    */
-  private buildBoundsResizeSnapshots(
-    selectedObjects: THREE.Mesh[]
-  ): BoundsResizeSnapshot[] {
+  private buildBoundsResizeSnapshots(selectedObjects: THREE.Mesh[]): BoundsResizeSnapshot[] {
     return selectedObjects.map((mesh) => {
       const originalPos = this.session.initialPositions.get(mesh);
       const originalScale = this.session.initialScales.get(mesh);
@@ -113,7 +104,7 @@ export class TransformCommandPusher {
         originalPosition: originalPos ? originalPos.clone() : mesh.position.clone(),
         originalScale: originalScale ? originalScale.clone() : mesh.scale.clone(),
         finalPosition: mesh.position.clone(),
-        finalScale: mesh.scale.clone()
+        finalScale: mesh.scale.clone(),
       };
     });
   }
@@ -139,10 +130,7 @@ export class TransformCommandPusher {
    * @param pivot The rotation pivot point.
    * @param selectedObjects The meshes that were rotated.
    */
-  private pushRotateCommand(
-    pivot: THREE.Vector3,
-    selectedObjects: THREE.Mesh[]
-  ): void {
+  private pushRotateCommand(pivot: THREE.Vector3, selectedObjects: THREE.Mesh[]): void {
     const snappedAngle = this.transformExecutor
       .getGridSnap()
       .snapAngleRadians(this.session.dragRotationAngle);
@@ -151,15 +139,10 @@ export class TransformCommandPusher {
     const axisVector = this.session.activeAxis
       ? TransformProjectionMath.axisToWorldVector(
           this.session.activeAxis,
-          this.transformGizmo.getOrientation()
+          this.transformGizmo.getOrientation(),
         )
       : new THREE.Vector3(0, 1, 0);
-    const command = new RotateCommand(
-      snapshots,
-      pivot,
-      axisVector,
-      snappedAngle
-    );
+    const command = new RotateCommand(snapshots, pivot, axisVector, snappedAngle);
     this.commandStack?.push(command);
   }
 
@@ -168,10 +151,7 @@ export class TransformCommandPusher {
    * @param pivot The scale pivot point.
    * @param selectedObjects The meshes that were scaled.
    */
-  private pushScaleCommand(
-    pivot: THREE.Vector3,
-    selectedObjects: THREE.Mesh[]
-  ): void {
+  private pushScaleCommand(pivot: THREE.Vector3, selectedObjects: THREE.Mesh[]): void {
     const snappedFactor = this.transformExecutor
       .getGridSnap()
       .snapScaleFactor(this.session.dragScaleFactor);
@@ -180,7 +160,7 @@ export class TransformCommandPusher {
     const axisVector = this.session.activeAxis
       ? TransformProjectionMath.axisToWorldVector(
           this.session.activeAxis,
-          this.transformGizmo.getOrientation()
+          this.transformGizmo.getOrientation(),
         )
       : new THREE.Vector3(1, 0, 0);
     const command = new ScaleCommand(
@@ -188,7 +168,7 @@ export class TransformCommandPusher {
       pivot,
       axisVector,
       snappedFactor,
-      this.session.activeAxis ?? undefined
+      this.session.activeAxis ?? undefined,
     );
     this.commandStack?.push(command);
   }
@@ -199,14 +179,14 @@ export class TransformCommandPusher {
    * @returns Snapshots with original and final positions.
    */
   private buildPositionSnapshotsWithFinals(
-    selectedObjects: THREE.Mesh[]
+    selectedObjects: THREE.Mesh[],
   ): ObjectTransformSnapshot[] {
     return selectedObjects.map((mesh) => {
       const originalPos = this.session.initialPositions.get(mesh);
       return {
         object: mesh,
         position: originalPos ? originalPos.clone() : mesh.position.clone(),
-        finalPosition: mesh.position.clone()
+        finalPosition: mesh.position.clone(),
       };
     });
   }
@@ -216,9 +196,7 @@ export class TransformCommandPusher {
    * @param snapshots The position snapshots with finals.
    * @returns Average translation delta.
    */
-  private computeAverageDelta(
-    snapshots: ObjectTransformSnapshot[]
-  ): THREE.Vector3 {
+  private computeAverageDelta(snapshots: ObjectTransformSnapshot[]): THREE.Vector3 {
     const delta = new THREE.Vector3();
     let count = 0;
     snapshots.forEach((snapshot) => {
@@ -235,20 +213,14 @@ export class TransformCommandPusher {
    * @param selectedObjects The meshes to build snapshots for.
    * @returns An array of rotation snapshots.
    */
-  private buildRotationSnapshots(
-    selectedObjects: THREE.Mesh[]
-  ): ObjectRotationSnapshot[] {
+  private buildRotationSnapshots(selectedObjects: THREE.Mesh[]): ObjectRotationSnapshot[] {
     return selectedObjects.map((mesh) => {
       const originalPos = this.session.initialPositions.get(mesh);
       const originalQuat = this.session.initialQuaternions.get(mesh);
       return {
         object: mesh,
-        originalPosition: originalPos
-          ? originalPos.clone()
-          : mesh.position.clone(),
-        originalQuaternion: originalQuat
-          ? originalQuat.clone()
-          : mesh.quaternion.clone()
+        originalPosition: originalPos ? originalPos.clone() : mesh.position.clone(),
+        originalQuaternion: originalQuat ? originalQuat.clone() : mesh.quaternion.clone(),
       };
     });
   }
@@ -258,20 +230,14 @@ export class TransformCommandPusher {
    * @param selectedObjects The meshes to build snapshots for.
    * @returns An array of scale snapshots.
    */
-  private buildScaleSnapshots(
-    selectedObjects: THREE.Mesh[]
-  ): ObjectScaleSnapshot[] {
+  private buildScaleSnapshots(selectedObjects: THREE.Mesh[]): ObjectScaleSnapshot[] {
     return selectedObjects.map((mesh) => {
       const originalPos = this.session.initialPositions.get(mesh);
       const originalScale = this.session.initialScales.get(mesh);
       return {
         object: mesh,
-        originalPosition: originalPos
-          ? originalPos.clone()
-          : mesh.position.clone(),
-        originalScale: originalScale
-          ? originalScale.clone()
-          : mesh.scale.clone()
+        originalPosition: originalPos ? originalPos.clone() : mesh.position.clone(),
+        originalScale: originalScale ? originalScale.clone() : mesh.scale.clone(),
       };
     });
   }

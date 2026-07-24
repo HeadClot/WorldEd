@@ -39,7 +39,7 @@ export function computeOptimalDivisions(snapInterval: number): number {
  */
 export function updateGridDivisions(
   grid: GridSnapTarget | THREE.GridHelper,
-  snapInterval: number
+  snapInterval: number,
 ): void {
   if (isGridSnapTarget(grid)) {
     grid.setSnapInterval(snapInterval);

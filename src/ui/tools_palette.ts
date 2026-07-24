@@ -54,7 +54,7 @@ export class ToolsPalette {
   constructor(
     host: HTMLElement,
     handlers: ToolsPaletteHandlers,
-    defaultAnchor: HTMLElement | null = null
+    defaultAnchor: HTMLElement | null = null,
   ) {
     this.host = host;
     this.handlers = handlers;
@@ -292,24 +292,9 @@ export class ToolsPalette {
     grid.style.gridTemplateColumns = '1fr 1fr 1fr';
     grid.style.gap = '6px';
     grid.style.padding = '10px 10px 6px';
-    this.addToolButton(
-      grid,
-      EditorToolId.OBJECT,
-      'Object Select',
-      ToolbarIcons.toolObjectSelect()
-    );
-    this.addToolButton(
-      grid,
-      EditorToolId.FACE,
-      'Face Select',
-      ToolbarIcons.toolFaceSelect()
-    );
-    this.addToolButton(
-      grid,
-      EditorToolId.CLIP_PLANE,
-      'Clip Plane',
-      ToolbarIcons.toolClipPlane()
-    );
+    this.addToolButton(grid, EditorToolId.OBJECT, 'Object Select', ToolbarIcons.toolObjectSelect());
+    this.addToolButton(grid, EditorToolId.FACE, 'Face Select', ToolbarIcons.toolFaceSelect());
+    this.addToolButton(grid, EditorToolId.CLIP_PLANE, 'Clip Plane', ToolbarIcons.toolClipPlane());
     return grid;
   }
 
@@ -324,7 +309,7 @@ export class ToolsPalette {
     grid: HTMLElement,
     toolId: EditorToolId,
     title: string,
-    svgIcon: string
+    svgIcon: string,
   ): void {
     const button = this.createIconActionButton(title, svgIcon, () => {
       this.handlers.onSelectTool(toolId);
@@ -369,30 +354,10 @@ export class ToolsPalette {
     row.style.display = 'grid';
     row.style.gridTemplateColumns = '1fr 1fr 1fr 1fr';
     row.style.gap = '4px';
-    this.addTransformButton(
-      row,
-      TransformMode.BOUNDS,
-      'Bounds (T)',
-      ToolbarIcons.toolBounds()
-    );
-    this.addTransformButton(
-      row,
-      TransformMode.TRANSLATE,
-      'Move (W)',
-      ToolbarIcons.toolMove()
-    );
-    this.addTransformButton(
-      row,
-      TransformMode.ROTATE,
-      'Rotate (E)',
-      ToolbarIcons.toolRotate()
-    );
-    this.addTransformButton(
-      row,
-      TransformMode.SCALE,
-      'Scale (R)',
-      ToolbarIcons.toolScale()
-    );
+    this.addTransformButton(row, TransformMode.BOUNDS, 'Bounds (T)', ToolbarIcons.toolBounds());
+    this.addTransformButton(row, TransformMode.TRANSLATE, 'Move (W)', ToolbarIcons.toolMove());
+    this.addTransformButton(row, TransformMode.ROTATE, 'Rotate (E)', ToolbarIcons.toolRotate());
+    this.addTransformButton(row, TransformMode.SCALE, 'Scale (R)', ToolbarIcons.toolScale());
     this.objectContext.appendChild(row);
   }
 
@@ -458,12 +423,9 @@ export class ToolsPalette {
    * @param toolId Active tool id.
    */
   private updateContextVisibility(toolId: EditorToolId): void {
-    this.objectContext.style.display =
-      toolId === EditorToolId.OBJECT ? 'flex' : 'none';
-    this.faceContext.style.display =
-      toolId === EditorToolId.FACE ? 'flex' : 'none';
-    this.clipContext.style.display =
-      toolId === EditorToolId.CLIP_PLANE ? 'flex' : 'none';
+    this.objectContext.style.display = toolId === EditorToolId.OBJECT ? 'flex' : 'none';
+    this.faceContext.style.display = toolId === EditorToolId.FACE ? 'flex' : 'none';
+    this.clipContext.style.display = toolId === EditorToolId.CLIP_PLANE ? 'flex' : 'none';
   }
 
   /**
@@ -477,7 +439,7 @@ export class ToolsPalette {
     row: HTMLElement,
     mode: TransformMode,
     title: string,
-    svgIcon: string
+    svgIcon: string,
   ): void {
     const button = this.createIconActionButton(title, svgIcon, () => {
       this.handlers.onTransformMode(mode);
@@ -497,7 +459,7 @@ export class ToolsPalette {
   private createIconActionButton(
     title: string,
     svgIcon: string,
-    onClick: () => void
+    onClick: () => void,
   ): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
@@ -524,10 +486,7 @@ export class ToolsPalette {
    * @param onClick Click handler.
    * @returns Configured button.
    */
-  private createTextActionButton(
-    label: string,
-    onClick: () => void
-  ): HTMLButtonElement {
+  private createTextActionButton(label: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     this.configureActionButton(button, label, onClick);
     return button;
@@ -557,7 +516,7 @@ export class ToolsPalette {
   private configureActionButton(
     button: HTMLButtonElement,
     label: string,
-    onClick: () => void
+    onClick: () => void,
   ): void {
     button.type = 'button';
     button.textContent = label;
@@ -608,9 +567,7 @@ export class ToolsPalette {
    * @param emphasize Whether to use stronger weight and color.
    */
   private styleMutedLabel(label: HTMLElement, emphasize: boolean): void {
-    label.style.color = emphasize
-      ? Theme.buttonTextColor
-      : Theme.statusBarTextColor;
+    label.style.color = emphasize ? Theme.buttonTextColor : Theme.statusBarTextColor;
     label.style.fontFamily = Theme.uiFontFamily;
     label.style.fontSize = emphasize ? '11px' : '10px';
     label.style.fontWeight = emphasize ? '600' : '400';
@@ -640,9 +597,7 @@ export class ToolsPalette {
     const paddingPx = 8;
     const anchor = this.defaultAnchor ?? this.host;
     const rect = anchor.getBoundingClientRect();
-    const topInset = this.defaultAnchor
-      ? Theme.viewportToolbarHeightPx + paddingPx
-      : paddingPx;
+    const topInset = this.defaultAnchor ? Theme.viewportToolbarHeightPx + paddingPx : paddingPx;
     this.root.style.left = `${rect.left + paddingPx}px`;
     this.root.style.top = `${rect.top + topInset}px`;
     this.root.style.right = 'auto';

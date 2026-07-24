@@ -1,11 +1,5 @@
-import {
-  TextureBrowserEntry,
-  revokeTextureBrowserEntry
-} from './texture_browser_entry.js';
-import {
-  getDefaultCheckerBrowserEntry,
-  isBuiltinCheckerEntry
-} from './default_checker_entry.js';
+import { TextureBrowserEntry, revokeTextureBrowserEntry } from './texture_browser_entry.js';
+import { getDefaultCheckerBrowserEntry, isBuiltinCheckerEntry } from './default_checker_entry.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from './texture_id.js';
 
 /**
@@ -36,9 +30,7 @@ export class TextureLibrary {
   replaceAll(folderName: string, entries: TextureBrowserEntry[]): void {
     this.revokeFolderEntries();
     this.folderName = folderName;
-    this.folderEntries = entries
-      .filter((entry) => !isBuiltinCheckerEntry(entry))
-      .slice();
+    this.folderEntries = entries.filter((entry) => !isBuiltinCheckerEntry(entry)).slice();
     if (!this.getEntryById(this.selectedId)) {
       this.selectedId = DEFAULT_CHECKER_TEXTURE_ID;
     }
@@ -91,9 +83,7 @@ export class TextureLibrary {
    * @returns Selected entry (checker when nothing else selected).
    */
   getSelectedEntry(): TextureBrowserEntry {
-    return (
-      this.getEntryById(this.selectedId) ?? getDefaultCheckerBrowserEntry()
-    );
+    return this.getEntryById(this.selectedId) ?? getDefaultCheckerBrowserEntry();
   }
 
   /**

@@ -18,6 +18,7 @@ A professional 3D level editor that runs entirely in your browser. Built with Th
 ## Features
 
 ### Solid CSG Modeling
+
 Build levels from brushes using constructive solid geometry. Add, subtract, and intersect brush volumes to carve out rooms, corridors, and architecture — then compile them into a single textured mesh.
 
 - **Additive / Subtractive / Clip brushes** — each brush has a boolean operation
@@ -26,12 +27,14 @@ Build levels from brushes using constructive solid geometry. Add, subtract, and 
 - **Brush reordering** — drag brushes in the outliner to change boolean evaluation order
 
 ### Primitives
+
 Create basic geometry to start building your scene:
 
 - Cubes, Spheres, Cylinders, and Planes
 - All primitives support textures, colors, and CSG operations
 
 ### CSG Boolean Operations
+
 Combine any two meshes using BSP-based boolean operations:
 
 - **Union** — merge two meshes into one
@@ -39,6 +42,7 @@ Combine any two meshes using BSP-based boolean operations:
 - **Intersect** — keep only the overlapping volume
 
 ### Clip Plane Tool
+
 Slice meshes with an interactive clipping plane. Place three points in the viewport to define a plane, then flip, clip, or split your geometry:
 
 - **Clip** — cut away one side of the mesh
@@ -46,6 +50,7 @@ Slice meshes with an interactive clipping plane. Place three points in the viewp
 - **Flip** — swap which side is kept
 
 ### Face Selection & Extrusion
+
 Switch to face mode to select individual faces on any mesh, then extrude them into new convex prism geometry:
 
 - Click or drag to select faces
@@ -53,6 +58,7 @@ Switch to face mode to select individual faces on any mesh, then extrude them in
 - Extruded geometry is created as a new mesh (source stays intact)
 
 ### Texturing & UV Editor
+
 Full texture workflow with per-face control:
 
 - **Texture browser** — load textures from a local folder using the File System Access API
@@ -65,6 +71,7 @@ Full texture workflow with per-face control:
 - **Texture lock** — keep UVs locked to world space during transform operations
 
 ### Terrain Generation
+
 Procedural heightmap terrain for blocking-out landscapes and level layouts:
 
 - Configurable width, depth, segmentation, and height scale
@@ -72,6 +79,7 @@ Procedural heightmap terrain for blocking-out landscapes and level layouts:
 - Automatic world-aligned texture projection
 
 ### Transform Gizmos
+
 Precision object manipulation with Unity-style gizmos:
 
 - **Bounds resize** — OBB-based bounding box gizmo for intuitive scaling
@@ -82,9 +90,11 @@ Precision object manipulation with Unity-style gizmos:
 - **Texture lock** — UVs stay world-aligned when objects are transformed
 
 ### Alignment Tools
+
 Snap selected objects to the world origin with per-axis control. Cycle through ALL / X / Y / Z axis restrictions with the `A` key.
 
 ### Scene Hierarchy
+
 Organize your scene with a full object hierarchy:
 
 - **Group / Ungroup** objects into containers
@@ -95,6 +105,7 @@ Organize your scene with a full object hierarchy:
 - **Context menus** with duplicate, delete, group, ungroup, visibility
 
 ### Multi-Viewport Layout
+
 Four-viewport workspace like Blender and Maya:
 
 - **Perspective** — 3D fly camera with orbit and pan controls
@@ -106,6 +117,7 @@ Four-viewport workspace like Blender and Maya:
 - **Infinite grid** — grid that scales with camera distance
 
 ### Shading Modes
+
 Toggle viewport rendering modes for any viewport:
 
 - **Solid** — standard shaded rendering
@@ -114,6 +126,7 @@ Toggle viewport rendering modes for any viewport:
 - **Wireframe Overlay** — solid with wireframe edges on top
 
 ### Selection
+
 Robust selection system with full multi-select support:
 
 - Click to select, Shift+click to add, Ctrl+click to toggle
@@ -122,6 +135,7 @@ Robust selection system with full multi-select support:
 - Mixed-value display in inspector for multi-select
 
 ### Properties Inspector
+
 Unity-style properties panel with live editing:
 
 - **Position / Rotation / Scale** — numeric inputs with axis color coding
@@ -130,12 +144,14 @@ Unity-style properties panel with live editing:
 - **Solid brush properties** — operation type, per-face texture assignment
 
 ### Import / Export
+
 - **Save scene** — proprietary JSON format with full geometry, transforms, textures, and solid model data
 - **Load scene** — restore saved projects with all data
 - **Export GLB** — binary glTF export for use in game engines (Unity, Godot, Unreal), Blender, and more
 - **File dialogs** — native save/open dialogs via the File System Access API
 
 ### Undo / Redo
+
 Full undo/redo for all operations:
 
 - 35+ tracked command types covering every editor action
@@ -143,6 +159,7 @@ Full undo/redo for all operations:
 - `Ctrl+Z` / `Ctrl+Y` shortcuts
 
 ### Keyboard Shortcuts
+
 ```
 W       Move tool
 E       Rotate tool
@@ -170,6 +187,7 @@ Escape  Deselect / exit tool
 ```
 
 ### UI
+
 - **Blender-inspired dark theme** — dark backgrounds with orange selection highlights
 - **Toolbar** — menu bar with file operations, primitive creation, CSG operations, and shading modes
 - **Floating panels** — draggable, resizable Tools palette, UV editor, and Texture browser
@@ -198,16 +216,33 @@ Escape  Deselect / exit tool
 bun install
 bun run dev          # Start development server
 bun run testrun      # Run all tests
+bun run format       # Format authored source, tests, and configuration
+bun run format:check # Verify formatting without changing files
+bun run ci           # Run formatting, tests, and the web build
 bun run build        # Production build
-bun run typecheck    # TypeScript type checking
+bun run typecheck    # Baseline TypeScript check
+bun run typecheck:strict # Strongest TypeScript check (informational in CI)
 bun run desktop:dev  # Watch and launch the Electrobun desktop app
-bun run desktop:build # Build the Windows desktop app into desktop_build/
+bun run desktop:build # Build the native desktop app into desktop_artifacts/
 bun run desktop:run  # Relaunch the last Electrobun build
 ```
 
-The desktop build uses Electrobun with Bun and the native Windows WebView2
-renderer. The desktop view bundles the same `src/app.ts` editor entrypoint as
-the browser build, so editor behavior remains shared between both targets.
+The desktop build uses Electrobun with Bun and the native renderer configured for
+Windows, Linux, and macOS. The desktop view bundles the same `src/app.ts` editor
+entrypoint as the browser build, so editor behavior remains shared between both
+targets.
+
+## CI/CD
+
+GitHub Actions runs formatting, unit tests, and the Vite production build for
+pull requests and pushes to `main`. The strict TypeScript check from
+`tsconfig.strict.json` also runs as an informational step while the existing
+type errors remain unresolved.
+
+Every successful push to `main` starts native Electrobun builds on Windows,
+Linux, and macOS. The resulting `desktop_artifacts/` files are uploaded as
+platform-specific GitHub Actions artifacts named with the platform and commit
+SHA and retained for 30 days.
 
 ---
 

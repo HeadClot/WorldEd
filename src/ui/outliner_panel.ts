@@ -51,7 +51,7 @@ export type OutlinerLockCallback = (obj: THREE.Object3D) => void;
  */
 export type OutlinerReparentCallback = (
   dragged: THREE.Object3D,
-  dropTarget: THREE.Object3D
+  dropTarget: THREE.Object3D,
 ) => void;
 
 /**
@@ -83,11 +83,7 @@ export class OutlinerPanel {
    * @param selectionManager The selection manager for tracking selection state.
    * @param root The root Three.js object representing the scene hierarchy.
    */
-  constructor(
-    container: HTMLElement,
-    selectionManager: SelectionManager,
-    root: THREE.Object3D
-  ) {
+  constructor(container: HTMLElement, selectionManager: SelectionManager, root: THREE.Object3D) {
     this.container = document.createElement('div');
     this.selectionManager = selectionManager;
     this.root = root;
@@ -193,7 +189,7 @@ export class OutlinerPanel {
    */
   setContextCallbacks(
     onDuplicate: OutlinerContextCallback | null,
-    onDelete: OutlinerContextCallback | null
+    onDelete: OutlinerContextCallback | null,
   ): void {
     this.duplicateCallback = onDuplicate;
     this.deleteCallback = onDelete;
@@ -206,10 +202,7 @@ export class OutlinerPanel {
   refresh(_sceneObjects?: THREE.Mesh[]): void {
     if (this.isDisposed) return;
     if (this.tree) {
-      this.tree.refresh(
-        this.selectionManager.getSelectedObjects(),
-        this.hierarchySelection
-      );
+      this.tree.refresh(this.selectionManager.getSelectedObjects(), this.hierarchySelection);
     }
   }
 
@@ -220,7 +213,7 @@ export class OutlinerPanel {
     if (this.isDisposed || !this.tree) return;
     this.tree.updateSelectionStates(
       this.selectionManager.getSelectedObjects(),
-      this.hierarchySelection
+      this.hierarchySelection,
     );
   }
 
@@ -297,11 +290,7 @@ export class OutlinerPanel {
    * @param additive Shift-add mode.
    * @param toggle Ctrl/Meta toggle mode.
    */
-  private updateHierarchySelection(
-    obj: THREE.Object3D,
-    additive: boolean,
-    toggle: boolean
-  ): void {
+  private updateHierarchySelection(obj: THREE.Object3D, additive: boolean, toggle: boolean): void {
     if (toggle) {
       if (this.hierarchySelection.has(obj)) {
         this.hierarchySelection.delete(obj);
@@ -339,9 +328,7 @@ export class OutlinerPanel {
   private onMeshSelectionChanged(): void {
     if (this.isDisposed) return;
     if (!this.isApplyingOutlinerSelection) {
-      this.hierarchySelection = new Set(
-        this.selectionManager.getAllSelectedObjectsAsArray()
-      );
+      this.hierarchySelection = new Set(this.selectionManager.getAllSelectedObjectsAsArray());
       this.revealLastSelectionInTree();
       return;
     }
@@ -361,7 +348,7 @@ export class OutlinerPanel {
     this.tree.revealObject(
       focus,
       this.selectionManager.getSelectedObjects(),
-      this.hierarchySelection
+      this.hierarchySelection,
     );
   }
 
@@ -370,20 +357,17 @@ export class OutlinerPanel {
    * @param dragged The object being dragged.
    * @param dropTarget The drop target object.
    */
-  private onReparentFromTree(
-    dragged: THREE.Object3D,
-    dropTarget: THREE.Object3D
-  ): void {
+  private onReparentFromTree(dragged: THREE.Object3D, dropTarget: THREE.Object3D): void {
     if (this.reparentCallback) {
       this.reparentCallback(dragged, dropTarget);
     }
   }
 
   /**
-    * Handles rename from the tree view inline editor.
-    * @param obj The object to rename.
-    * @param newName The new name to assign.
-    */
+   * Handles rename from the tree view inline editor.
+   * @param obj The object to rename.
+   * @param newName The new name to assign.
+   */
   private onRenameFromOutliner(obj: THREE.Object3D, newName: string): void {
     if (this.renameCallback) {
       this.renameCallback(obj, newName);
@@ -391,9 +375,9 @@ export class OutlinerPanel {
   }
 
   /**
-    * Handles visibility toggle from the tree view.
-    * @param obj The object whose visibility should toggle.
-    */
+   * Handles visibility toggle from the tree view.
+   * @param obj The object whose visibility should toggle.
+   */
   private onToggleVisibility(obj: THREE.Object3D): void {
     if (this.visibilityCallback) {
       this.visibilityCallback(obj);
@@ -436,10 +420,10 @@ export class OutlinerPanel {
   }
 
   /**
-    * Builds the array of context menu items for an object.
-    * @param obj The object for which to build menu items.
-    * @returns An array of context menu item configurations.
-    */
+   * Builds the array of context menu items for an object.
+   * @param obj The object for which to build menu items.
+   * @returns An array of context menu item configurations.
+   */
   private buildContextItems(obj: THREE.Object3D): ContextMenuItem[] {
     const items: ContextMenuItem[] = [];
     items.push(...this.buildEditMenuItems(obj));
@@ -451,69 +435,69 @@ export class OutlinerPanel {
   }
 
   /**
-    * Builds the edit section of context menu items.
-    * @param obj The object for which to build edit menu items.
-    * @returns An array of edit-related menu items.
-    */
+   * Builds the edit section of context menu items.
+   * @param obj The object for which to build edit menu items.
+   * @returns An array of edit-related menu items.
+   */
   private buildEditMenuItems(obj: THREE.Object3D): ContextMenuItem[] {
     const items: ContextMenuItem[] = [];
     if (this.duplicateCallback) {
       items.push({
         label: 'Duplicate',
-        callback: () => this.duplicateCallback(obj)
+        callback: () => this.duplicateCallback(obj),
       });
     }
     if (this.deleteCallback) {
       items.push({
         label: 'Delete',
-        callback: () => this.deleteCallback(obj)
+        callback: () => this.deleteCallback(obj),
       });
     }
     return items;
   }
 
   /**
-    * Builds the grouping section of context menu items.
-    * @param obj The object for which to build group menu items.
-    * @returns An array of group-related menu items.
-    */
+   * Builds the grouping section of context menu items.
+   * @param obj The object for which to build group menu items.
+   * @returns An array of group-related menu items.
+   */
   private buildGroupMenuItems(obj: THREE.Object3D): ContextMenuItem[] {
     const items: ContextMenuItem[] = [];
     if (this.groupCallback) {
       items.push({
         label: 'Group',
-        callback: () => this.onGroup(obj)
+        callback: () => this.onGroup(obj),
       });
     }
     if (this.ungroupCallback && obj instanceof THREE.Group) {
       items.push({
         label: 'Ungroup',
-        callback: () => this.ungroupCallback(obj)
+        callback: () => this.ungroupCallback(obj),
       });
     }
     return items;
   }
 
   /**
-    * Builds the visibility toggle menu item.
-    * @param obj The object for which to build the visibility menu item.
-    * @returns The visibility toggle menu item configuration.
-    */
+   * Builds the visibility toggle menu item.
+   * @param obj The object for which to build the visibility menu item.
+   * @returns The visibility toggle menu item configuration.
+   */
   private buildVisibilityMenuItem(obj: THREE.Object3D): ContextMenuItem {
     return {
       label: 'Toggle Visibility',
-      callback: () => this.onToggleVisibility(obj)
+      callback: () => this.onToggleVisibility(obj),
     };
   }
 
   /**
-    * Builds a separator menu item for the context menu.
-    * @returns A separator menu item configuration.
-    */
+   * Builds a separator menu item for the context menu.
+   * @returns A separator menu item configuration.
+   */
   private buildSeparatorItem(): ContextMenuItem {
     return {
       label: '---',
-      callback: () => {}
+      callback: () => {},
     };
   }
 

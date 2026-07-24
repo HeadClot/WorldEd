@@ -17,18 +17,9 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
  * @param position Center position.
  * @returns Brush instance.
  */
-function makeBox(
-  id: string,
-  size: number,
-  position: THREE.Vector3
-): SolidBrushInstance {
+function makeBox(id: string, size: number, position: THREE.Vector3): SolidBrushInstance {
   const brush = SolidBrushFactory.createCenteredBox(size, size, size);
-  const instance = new SolidBrushInstance(
-    id,
-    id,
-    brush,
-    SolidOperation.Additive
-  );
+  const instance = new SolidBrushInstance(id, id, brush, SolidOperation.Additive);
   instance.position.copy(position);
   return instance;
 }
@@ -44,7 +35,7 @@ function rebuildChunks(
   compiler: SolidCsgCompiler,
   chunkCache: SolidMeshChunkCache,
   builder: SolidBrushMeshChunkBuilder,
-  brushIds: string[]
+  brushIds: string[],
 ): void {
   const identity = new THREE.Matrix4();
   for (const brushId of brushIds) {
@@ -53,8 +44,8 @@ function rebuildChunks(
       builder.build(
         compiler.getCachedPolygons(brushId) ?? [],
         () => createDefaultFaceTextureMapping(),
-        { stickToBrush: false, resultWorldMatrix: identity }
-      )
+        { stickToBrush: false, resultWorldMatrix: identity },
+      ),
     );
   }
 }
@@ -67,7 +58,7 @@ describe('SolidResultBuffer', () => {
     const brushes = [
       makeBox('a', 2, new THREE.Vector3(0, 0, 0)),
       makeBox('b', 2, new THREE.Vector3(6, 0, 0)),
-      makeBox('c', 2, new THREE.Vector3(12, 0, 0))
+      makeBox('c', 2, new THREE.Vector3(12, 0, 0)),
     ];
     const compiler = new SolidCsgCompiler();
     const chunkCache = new SolidMeshChunkCache();
@@ -81,22 +72,16 @@ describe('SolidResultBuffer', () => {
     brushes[1].position.x += 0.4;
     compiler.compile(brushes, {
       dirtyBrushIds: ['b'],
-      skipPolygonAssembly: true
+      skipPolygonAssembly: true,
     });
     const dirty = compiler.getLastUpdateBrushIds();
     expect(dirty).toContain('b');
     rebuildChunks(compiler, chunkCache, builder, dirty);
-    const patched = buffer.tryPatchDirty(
-      dirty,
-      compiler.getLastBrushOrder(),
-      chunkCache
-    );
+    const patched = buffer.tryPatchDirty(dirty, compiler.getLastBrushOrder(), chunkCache);
     expect(patched).toBe(true);
     expect(buffer.wasLastWritePartial()).toBe(true);
     expect(buffer.getLastUpdateRanges().length).toBeGreaterThan(0);
-    expect(buffer.getTriangleSources().map((source) => source.brushId)).toEqual(
-      before
-    );
+    expect(buffer.getTriangleSources().map((source) => source.brushId)).toEqual(before);
 
     const full = new SolidResultBuffer();
     full.rebuildFull(compiler.getLastBrushOrder(), chunkCache);
@@ -122,14 +107,12 @@ describe('SolidResultBuffer', () => {
     }
     model.markDirty();
     model.rebuild(true);
-    const beforeCount = model.getResultMesh().geometry.getAttribute('position')
-      .count;
+    const beforeCount = model.getResultMesh().geometry.getAttribute('position').count;
     const mover = model.getBrushes()[3];
     mover.mesh!.position.x += 0.2;
     model.syncBrushesFromScene();
     model.rebuildLive();
-    const afterCount = model.getResultMesh().geometry.getAttribute('position')
-      .count;
+    const afterCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(afterCount).toBe(beforeCount);
     expect(afterCount).toBeGreaterThan(36 * 12);
   });
@@ -139,7 +122,7 @@ describe('SolidResultBuffer', () => {
       makeBox('a', 2, new THREE.Vector3(0, 0, 0)),
       makeBox('b', 2, new THREE.Vector3(6, 0, 0)),
       makeBox('c', 2, new THREE.Vector3(12, 0, 0)),
-      makeBox('d', 2, new THREE.Vector3(18, 0, 0))
+      makeBox('d', 2, new THREE.Vector3(18, 0, 0)),
     ];
     const compiler = new SolidCsgCompiler();
     const chunkCache = new SolidMeshChunkCache();
@@ -149,32 +132,26 @@ describe('SolidResultBuffer', () => {
     rebuildChunks(compiler, chunkCache, builder, compiler.getLastUpdateBrushIds());
     buffer.rebuildFull(compiler.getLastBrushOrder(), chunkCache);
     const prefixA = Array.from(
-      buffer.getTriangleSources().filter((source) => source.brushId === 'a')
+      buffer.getTriangleSources().filter((source) => source.brushId === 'a'),
     );
 
     brushes[2].position.copy(brushes[3].position);
     compiler.compile(brushes, {
       dirtyBrushIds: ['c'],
-      skipPolygonAssembly: true
+      skipPolygonAssembly: true,
     });
     const dirty = compiler.getLastUpdateBrushIds();
     rebuildChunks(compiler, chunkCache, builder, dirty);
     const order = compiler.getLastBrushOrder();
     const patched = buffer.tryPatchDirty(dirty, order, chunkCache);
     if (!patched) {
-      expect(buffer.tryRebuildFromFirstChanged(dirty, order, chunkCache)).toBe(
-        true
-      );
+      expect(buffer.tryRebuildFromFirstChanged(dirty, order, chunkCache)).toBe(true);
     }
-    const afterA = buffer
-      .getTriangleSources()
-      .filter((source) => source.brushId === 'a');
+    const afterA = buffer.getTriangleSources().filter((source) => source.brushId === 'a');
     expect(afterA.length).toBe(prefixA.length);
 
     const full = new SolidResultBuffer();
     full.rebuildFull(order, chunkCache);
-    expect(buffer.getTriangleSources().length).toBe(
-      full.getTriangleSources().length
-    );
+    expect(buffer.getTriangleSources().length).toBe(full.getTriangleSources().length);
   });
 });

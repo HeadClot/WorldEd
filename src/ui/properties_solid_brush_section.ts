@@ -2,10 +2,7 @@ import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../solid/model/solid_model.js';
-import {
-  SolidOperation,
-  solidOperationLabel
-} from '../solid/types/solid_operation.js';
+import { SolidOperation, solidOperationLabel } from '../solid/types/solid_operation.js';
 
 /**
  * Handlers for solid-brush context controls in the inspector.
@@ -43,7 +40,7 @@ export class PropertiesSolidBrushSection {
     theme: typeof Theme,
     createSectionContainer: () => HTMLElement,
     createSectionHeader: (title: string) => HTMLElement,
-    hexToRgb: (hex: number) => string
+    hexToRgb: (hex: number) => string,
   ) {
     this.theme = theme;
     this.hexToRgb = hexToRgb;
@@ -110,7 +107,7 @@ export class PropertiesSolidBrushSection {
   applyOperation(
     brushMeshes: THREE.Mesh[],
     operation: SolidOperation,
-    boundObjects: THREE.Object3D[]
+    boundObjects: THREE.Object3D[],
   ): void {
     if (!this.handlers || brushMeshes.length === 0) return;
     this.handlers.onSetOperation(brushMeshes, operation);
@@ -161,13 +158,13 @@ export class PropertiesSolidBrushSection {
     row.style.gap = '6px';
     row.appendChild(
       this.createTextActionButton('To First', 'Move brush to first in CSG order', () =>
-        this.onMoveOrderClicked('first')
-      )
+        this.onMoveOrderClicked('first'),
+      ),
     );
     row.appendChild(
       this.createTextActionButton('To Last', 'Move brush to last in CSG order', () =>
-        this.onMoveOrderClicked('last')
-      )
+        this.onMoveOrderClicked('last'),
+      ),
     );
     return row;
   }
@@ -182,7 +179,7 @@ export class PropertiesSolidBrushSection {
   private createTextActionButton(
     label: string,
     title: string,
-    onClick: () => void
+    onClick: () => void,
   ): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
@@ -208,9 +205,7 @@ export class PropertiesSolidBrushSection {
    */
   private onMoveOrderClicked(end: 'first' | 'last'): void {
     if (!this.handlers) return;
-    const meshes =
-      this.getEditableBrushMeshes?.() ??
-      this.collectBrushMeshes(this.boundObjects);
+    const meshes = this.getEditableBrushMeshes?.() ?? this.collectBrushMeshes(this.boundObjects);
     if (meshes.length === 0) return;
     if (end === 'first') this.handlers.onMoveToFirst(meshes);
     else this.handlers.onMoveToLast(meshes);
@@ -246,18 +241,18 @@ export class PropertiesSolidBrushSection {
       {
         operation: SolidOperation.Additive,
         icon: this.operationIconSvg('add'),
-        title: solidOperationLabel(SolidOperation.Additive)
+        title: solidOperationLabel(SolidOperation.Additive),
       },
       {
         operation: SolidOperation.Subtractive,
         icon: this.operationIconSvg('sub'),
-        title: solidOperationLabel(SolidOperation.Subtractive)
+        title: solidOperationLabel(SolidOperation.Subtractive),
       },
       {
         operation: SolidOperation.Intersecting,
         icon: this.operationIconSvg('int'),
-        title: solidOperationLabel(SolidOperation.Intersecting)
-      }
+        title: solidOperationLabel(SolidOperation.Intersecting),
+      },
     ];
   }
 
@@ -271,7 +266,7 @@ export class PropertiesSolidBrushSection {
   private createOperationButton(
     operation: SolidOperation,
     icon: string,
-    title: string
+    title: string,
   ): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
@@ -298,9 +293,7 @@ export class PropertiesSolidBrushSection {
    * @param operation Selected operation.
    */
   private onOperationClicked(operation: SolidOperation): void {
-    const meshes =
-      this.getEditableBrushMeshes?.() ??
-      this.collectBrushMeshes(this.boundObjects);
+    const meshes = this.getEditableBrushMeshes?.() ?? this.collectBrushMeshes(this.boundObjects);
     this.applyOperation(meshes, operation, this.boundObjects);
   }
 
@@ -349,7 +342,7 @@ export class PropertiesSolidBrushSection {
   private collectBrushMeshes(objects: THREE.Object3D[]): THREE.Mesh[] {
     return objects.filter(
       (object): object is THREE.Mesh =>
-        object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object)
+        object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object),
     );
   }
 
@@ -363,7 +356,7 @@ export class PropertiesSolidBrushSection {
       (object) =>
         SolidBrushVisual.isBrushObject(object) ||
         SolidModel.isSolidModelObject(object) ||
-        SolidModel.fromObject(object) !== null
+        SolidModel.fromObject(object) !== null,
     );
   }
 
@@ -389,9 +382,7 @@ export class PropertiesSolidBrushSection {
     const shared = operations.every((operation) => operation === operations[0]);
     this.operationButtons.forEach((button, operation) => {
       const active = shared && operation === operations[0];
-      button.style.outline = active
-        ? `1px solid ${this.hexToRgb(Theme.selectionColor)}`
-        : 'none';
+      button.style.outline = active ? `1px solid ${this.hexToRgb(Theme.selectionColor)}` : 'none';
       button.style.background = active
         ? this.hexToRgb(Theme.buttonHoverColor)
         : this.hexToRgb(Theme.buttonBackground);

@@ -31,7 +31,7 @@ export class GridSnap {
     snapEnabled: boolean,
     snapInterval: number,
     rotationSnapDegrees: number = DEFAULT_ROTATION_SNAP_DEGREES,
-    scaleSnapInterval: number = DEFAULT_SCALE_SNAP_INTERVAL
+    scaleSnapInterval: number = DEFAULT_SCALE_SNAP_INTERVAL,
   ) {
     this.snapEnabled = snapEnabled;
     this.snapInterval = snapInterval;
@@ -102,8 +102,7 @@ export class GridSnap {
     const safeFactor = Math.max(0.01, factor);
     if (!this.snapEnabled) return safeFactor;
     if (this.scaleSnapInterval <= 0) return safeFactor;
-    const snapped =
-      Math.round(safeFactor / this.scaleSnapInterval) * this.scaleSnapInterval;
+    const snapped = Math.round(safeFactor / this.scaleSnapInterval) * this.scaleSnapInterval;
     return Math.max(0.01, snapped);
   }
 

@@ -39,12 +39,10 @@ class MockViewport {
  * @param worldMeshes Authoritative selectable meshes.
  * @returns Partial ViewportSyncManager used by the controller.
  */
-function createSyncManagerStub(
-  worldMeshes: THREE.Mesh[]
-): ViewportSyncManager {
+function createSyncManagerStub(worldMeshes: THREE.Mesh[]): ViewportSyncManager {
   return {
     findCloneMeshesForWorldUuid: () => [],
-    getWorldSelectableMeshes: () => worldMeshes.slice()
+    getWorldSelectableMeshes: () => worldMeshes.slice(),
   } as unknown as ViewportSyncManager;
 }
 
@@ -60,10 +58,7 @@ describe('SelectionVisualController', () => {
   beforeEach(() => {
     selectionManager = new SelectionManager();
     world = new THREE.Group();
-    mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'Box';
     world.add(mesh);
     viewport3d = new MockViewport();
@@ -77,7 +72,7 @@ describe('SelectionVisualController', () => {
   it('should apply selection outline to the world mesh on selection', () => {
     selectionManager.selectObject(mesh);
     const hasOutline = mesh.children.some(
-      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true
+      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
     );
     expect(hasOutline).toBe(true);
   });
@@ -87,7 +82,7 @@ describe('SelectionVisualController', () => {
     mesh.position.set(3, 4, 5);
     controller.syncDuringTransform();
     const outline = mesh.children.find(
-      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true
+      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
     ) as THREE.Object3D;
     expect(outline.parent).toBe(mesh);
     expect(outline.position.x).toBe(0);
@@ -97,7 +92,7 @@ describe('SelectionVisualController', () => {
     selectionManager.selectObject(mesh);
     controller.reapplyAfterViewportSync();
     const hasOutline = mesh.children.some(
-      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true
+      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
     );
     expect(hasOutline).toBe(true);
   });
@@ -106,17 +101,13 @@ describe('SelectionVisualController', () => {
     selectionManager.selectObject(mesh);
     selectionManager.clearSelection();
     const hasOutline = mesh.children.some(
-      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true
+      (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
     );
     expect(hasOutline).toBe(false);
   });
 
   it('should show solid brush hull fill only while the brush is selected', () => {
-    const brushMesh = SolidBrushVisual.createBoxPreview(
-      'Brush',
-      2,
-      SolidOperation.Subtractive
-    );
+    const brushMesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Subtractive);
     world.add(brushMesh);
     syncManager = createSyncManagerStub([mesh, brushMesh]);
     controller = new SelectionVisualController(selectionManager, syncManager);
@@ -129,8 +120,6 @@ describe('SelectionVisualController', () => {
     expect(fillMaterial.color.getHex()).toBe(0xc0392b);
     selectionManager.clearSelection();
     expect(SolidBrushVisual.isHullFillVisible(brushMesh)).toBe(false);
-    expect((brushMesh.material as THREE.MeshBasicMaterial).colorWrite).toBe(
-      false
-    );
+    expect((brushMesh.material as THREE.MeshBasicMaterial).colorWrite).toBe(false);
   });
 });

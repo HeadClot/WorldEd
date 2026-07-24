@@ -10,15 +10,9 @@ describe('ExtrudeFacesCommand', () => {
 
   beforeEach(() => {
     parent = new THREE.Group();
-    meshA = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial()
-    );
+    meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
     meshA.name = 'Extrude001';
-    meshB = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial()
-    );
+    meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
     meshB.name = 'Extrude002';
   });
 

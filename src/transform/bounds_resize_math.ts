@@ -3,7 +3,7 @@ import { BoundsFace } from '../types/bounds_face.js';
 import {
   getBoundsFaceHalfExtent,
   getBoundsFaceLocalNormal,
-  OrientedBoundsData
+  OrientedBoundsData,
 } from './oriented_bounds.js';
 
 /** Minimum half-extent allowed when resizing a bounds face. */
@@ -25,11 +25,9 @@ export interface MeshBoundsResizeResult {
  */
 export function getFixedFaceWorldCenter(
   bounds: OrientedBoundsData,
-  face: BoundsFace
+  face: BoundsFace,
 ): THREE.Vector3 {
-  const outward = getBoundsFaceLocalNormal(face)
-    .applyQuaternion(bounds.quaternion)
-    .normalize();
+  const outward = getBoundsFaceLocalNormal(face).applyQuaternion(bounds.quaternion).normalize();
   const half = getBoundsFaceHalfExtent(bounds.halfExtents, face);
   return bounds.center.clone().addScaledVector(outward, -half);
 }
@@ -48,12 +46,11 @@ export function snapBoundsFaceDelta(
   deltaAlongNormal: number,
   snapEnabled: boolean,
   snapInterval: number,
-  startFaceCoordinate: number = 0
+  startFaceCoordinate: number = 0,
 ): number {
   if (!snapEnabled || snapInterval <= 0) return deltaAlongNormal;
   const targetCoordinate = startFaceCoordinate + deltaAlongNormal;
-  const snappedCoordinate =
-    Math.round(targetCoordinate / snapInterval) * snapInterval;
+  const snappedCoordinate = Math.round(targetCoordinate / snapInterval) * snapInterval;
   return snappedCoordinate - startFaceCoordinate;
 }
 
@@ -72,7 +69,7 @@ export function computeOneSidedMeshResize(
   startScale: THREE.Vector3,
   startBounds: OrientedBoundsData,
   face: BoundsFace,
-  deltaAlongNormal: number
+  deltaAlongNormal: number,
 ): MeshBoundsResizeResult {
   const oldHalf = getBoundsFaceHalfExtent(startBounds.halfExtents, face);
   const safeOldHalf = Math.max(oldHalf, MIN_BOUNDS_HALF_EXTENT);
@@ -97,7 +94,7 @@ export function computeOneSidedMeshResize(
 export function multiplyScaleAlongLocalFace(
   startScale: THREE.Vector3,
   face: BoundsFace,
-  factor: number
+  factor: number,
 ): THREE.Vector3 {
   const scale = startScale.clone();
   const safeFactor = Math.max(0.01, factor);
@@ -124,7 +121,7 @@ export function multiplyScaleAlongLocalFace(
 export function multiplyScaleAlongWorldAxis(
   startScale: THREE.Vector3,
   worldAxis: THREE.Vector3,
-  factor: number
+  factor: number,
 ): THREE.Vector3 {
   const scale = startScale.clone();
   const safeFactor = Math.max(0.01, factor);
@@ -157,7 +154,7 @@ export function computeOneSidedMultiMeshResize(
   startScale: THREE.Vector3,
   startBounds: OrientedBoundsData,
   face: BoundsFace,
-  deltaAlongNormal: number
+  deltaAlongNormal: number,
 ): MeshBoundsResizeResult {
   const oldHalf = getBoundsFaceHalfExtent(startBounds.halfExtents, face);
   const safeOldHalf = Math.max(oldHalf, MIN_BOUNDS_HALF_EXTENT);

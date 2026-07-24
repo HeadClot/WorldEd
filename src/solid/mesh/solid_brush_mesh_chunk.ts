@@ -2,15 +2,12 @@ import * as THREE from 'three';
 import { FaceTextureMapping } from '../../texture/face_texture_mapping.js';
 import {
   projectWorldPositionToUv,
-  resolveProjectionBasis
+  resolveProjectionBasis,
 } from '../../texture/planar_uv_projector.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
 import { SolidCompiledPolygon } from '../algorithm/solid_compiled_polygon.js';
 import { SurfaceTriangulator } from '../algorithm/surface_triangulator.js';
-import {
-  SolidSurfaceRegion,
-  SolidTriangleSource
-} from '../algorithm/surface_triangulator.js';
+import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';
 
 /**
  * Pre-triangulated, UV-baked output for one brush. Reused across partial
@@ -80,7 +77,7 @@ export class SolidBrushMeshChunkBuilder {
   build(
     polygons: SolidCompiledPolygon[],
     resolveMapping: (surfaceIndex: number) => FaceTextureMapping,
-    uvOptions: SolidChunkUvBakeOptions
+    uvOptions: SolidChunkUvBakeOptions,
   ): SolidBrushMeshChunk {
     const vertexCount = this.countVertices(polygons);
     const positions = new Float32Array(vertexCount * 3);
@@ -104,7 +101,7 @@ export class SolidBrushMeshChunkBuilder {
         regions,
         triangleSources,
         triangleCount,
-        vertexWrite
+        vertexWrite,
       );
       vertexWrite = triangleCount * 3;
     }
@@ -115,7 +112,7 @@ export class SolidBrushMeshChunkBuilder {
       triangleCount,
       vertexCount: triangleCount * 3,
       regions,
-      triangleSources
+      triangleSources,
     };
   }
 
@@ -127,9 +124,7 @@ export class SolidBrushMeshChunkBuilder {
   private countVertices(polygons: SolidCompiledPolygon[]): number {
     let count = 0;
     for (const polygon of polygons) {
-      const tris = SurfaceTriangulator.triangulateConvexVertices(
-        polygon.vertices
-      );
+      const tris = SurfaceTriangulator.triangulateConvexVertices(polygon.vertices);
       count += tris.length * 3;
     }
     return count;
@@ -159,7 +154,7 @@ export class SolidBrushMeshChunkBuilder {
     regions: SolidSurfaceRegion[],
     triangleSources: SolidTriangleSource[],
     triangleCount: number,
-    vertexWrite: number
+    vertexWrite: number,
   ): number {
     const tris = SurfaceTriangulator.triangulateConvexVertices(polygon.vertices);
     if (tris.length < 1) return triangleCount;
@@ -172,7 +167,7 @@ export class SolidBrushMeshChunkBuilder {
       triangleSources.push({
         brushId: polygon.brushId,
         surfaceIndex: polygon.surfaceIndex,
-        textureId
+        textureId,
       });
       vertexWrite = this.writeTriangleCorners(
         polygon,
@@ -183,14 +178,14 @@ export class SolidBrushMeshChunkBuilder {
         positions,
         normals,
         uvs,
-        vertexWrite
+        vertexWrite,
       );
     }
     regions.push({
       triangleIndices: regionIndices,
       textureId,
       brushId: polygon.brushId,
-      surfaceIndex: polygon.surfaceIndex
+      surfaceIndex: polygon.surfaceIndex,
     });
     return triangleCount + tris.length;
   }
@@ -205,22 +200,17 @@ export class SolidBrushMeshChunkBuilder {
   private buildUvBasis(
     polygon: SolidCompiledPolygon,
     mapping: FaceTextureMapping,
-    uvOptions: SolidChunkUvBakeOptions
+    uvOptions: SolidChunkUvBakeOptions,
   ): ReturnType<typeof resolveProjectionBasis> {
     if (uvOptions.stickToBrush) {
       const localNormal =
-        uvOptions.resolveLocalFaceNormal?.(polygon.surfaceIndex) ??
-        polygon.normal;
+        uvOptions.resolveLocalFaceNormal?.(polygon.surfaceIndex) ?? polygon.normal;
       this.scratchNormal.copy(localNormal).normalize();
       return resolveProjectionBasis(this.scratchNormal, mapping);
     }
-    const modelNormal =
-      uvOptions.resolveModelFaceNormal?.(polygon.surfaceIndex) ?? polygon.normal;
+    const modelNormal = uvOptions.resolveModelFaceNormal?.(polygon.surfaceIndex) ?? polygon.normal;
     this.scratchNormalMatrix.getNormalMatrix(uvOptions.resultWorldMatrix);
-    this.scratchNormal
-      .copy(modelNormal)
-      .applyMatrix3(this.scratchNormalMatrix)
-      .normalize();
+    this.scratchNormal.copy(modelNormal).applyMatrix3(this.scratchNormalMatrix).normalize();
     return resolveProjectionBasis(this.scratchNormal, mapping);
   }
 
@@ -246,7 +236,7 @@ export class SolidBrushMeshChunkBuilder {
     positions: Float32Array,
     normals: Float32Array,
     uvs: Float32Array,
-    vertexWrite: number
+    vertexWrite: number,
   ): number {
     for (const localIndex of cornerIndices) {
       const vertex = polygon.vertices[localIndex];
@@ -278,14 +268,12 @@ export class SolidBrushMeshChunkBuilder {
     basis: ReturnType<typeof resolveProjectionBasis>,
     uvOptions: SolidChunkUvBakeOptions,
     uvs: Float32Array,
-    vertexWrite: number
+    vertexWrite: number,
   ): void {
     if (uvOptions.stickToBrush && uvOptions.brushModelMatrix) {
       this.scratchPoint.copy(modelVertex).applyMatrix4(this.scratchInverse);
     } else {
-      this.scratchPoint
-        .copy(modelVertex)
-        .applyMatrix4(uvOptions.resultWorldMatrix);
+      this.scratchPoint.copy(modelVertex).applyMatrix4(uvOptions.resultWorldMatrix);
     }
     const coords = projectWorldPositionToUv(this.scratchPoint, basis, mapping);
     const uvBase = vertexWrite * 2;

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {
   DEFAULT_CUBE_CENTER_Y,
-  DEFAULT_PERSPECTIVE_CAMERA_OFFSET
+  DEFAULT_PERSPECTIVE_CAMERA_OFFSET,
 } from '../types/editor_config.js';
 
 /**

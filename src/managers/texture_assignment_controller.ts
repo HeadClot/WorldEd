@@ -9,15 +9,12 @@ import { SelectionMode } from '../types/selection_mode.js';
 import {
   TextureApplyTarget,
   buildTargetsFromFaceSelection,
-  buildTargetsFromMeshes
+  buildTargetsFromMeshes,
 } from '../texture/face_texture_applier.js';
 import { getTexturePaintState } from '../texture/texture_paint_state.js';
 import { TextureBrowserEntry } from '../texture/texture_browser_entry.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
-import {
-  SolidModel,
-  SOLID_TRIANGLE_SOURCES_USERDATA_KEY
-} from '../solid/model/solid_model.js';
+import { SolidModel, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../solid/model/solid_model.js';
 import { FaceSelection } from '../selection/face_selection_manager.js';
 import { mapPreviewTriangleToBrushFace } from '../solid/model/brush_preview_face_map.js';
 
@@ -47,7 +44,7 @@ export class TextureAssignmentController {
   constructor(
     selectionManager: SelectionManager,
     faceExtrusionController: FaceExtrusionController,
-    commandStack: CommandStack
+    commandStack: CommandStack,
   ) {
     this.selectionManager = selectionManager;
     this.faceExtrusionController = faceExtrusionController;
@@ -83,9 +80,7 @@ export class TextureAssignmentController {
       if (this.tryAssignSolidFaces(entry)) return;
       const targets = this.collectRegularFaceTargets();
       if (targets.length === 0) {
-        this.statusCallback?.(
-          `Paint texture: ${entry.displayName} (select faces to assign)`
-        );
+        this.statusCallback?.(`Paint texture: ${entry.displayName} (select faces to assign)`);
         return;
       }
       this.assignTextureToTargets(targets, entry);
@@ -100,7 +95,7 @@ export class TextureAssignmentController {
     const targets = this.collectContentObjectTargets(meshes);
     if (targets.length === 0) {
       this.statusCallback?.(
-        `Paint texture: ${entry.displayName} (select faces, objects, or solid brushes)`
+        `Paint texture: ${entry.displayName} (select faces, objects, or solid brushes)`,
       );
       return;
     }
@@ -120,9 +115,7 @@ export class TextureAssignmentController {
     const command = new AssignSolidFaceTextureCommand(solidTargets, entry.id);
     this.commandStack.push(command);
     this.afterSolidTextureAssign?.();
-    this.statusCallback?.(
-      `Assigned ${entry.displayName} to ${solidTargets.length} solid face(s)`
-    );
+    this.statusCallback?.(`Assigned ${entry.displayName} to ${solidTargets.length} solid face(s)`);
     return true;
   }
 
@@ -132,7 +125,7 @@ export class TextureAssignmentController {
    * @returns Unique solid face paint targets.
    */
   private resolveSolidFaceTargets(
-    faces: FaceSelection[]
+    faces: FaceSelection[],
   ): Array<{ model: SolidModel; brushId: string; surfaceIndex: number }> {
     const targets: Array<{
       model: SolidModel;
@@ -157,7 +150,7 @@ export class TextureAssignmentController {
    * @returns Solid face target or null.
    */
   private resolveOneSolidFace(
-    face: FaceSelection
+    face: FaceSelection,
   ): { model: SolidModel; brushId: string; surfaceIndex: number } | null {
     if (SolidModel.isResultMesh(face.mesh)) {
       return this.resolveResultTriangle(face.mesh, face.faceIndex);
@@ -176,20 +169,19 @@ export class TextureAssignmentController {
    */
   private resolveResultTriangle(
     mesh: THREE.Mesh,
-    triangleIndex: number
+    triangleIndex: number,
   ): { model: SolidModel; brushId: string; surfaceIndex: number } | null {
     const model = SolidModel.fromObject(mesh);
     if (!model) return null;
     const sources = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-      | Array<{ brushId: string; surfaceIndex: number }>
-      | undefined;
+      Array<{ brushId: string; surfaceIndex: number }> | undefined;
     if (!sources || !sources[triangleIndex]) return null;
     const source = sources[triangleIndex];
     if (!source.brushId) return null;
     return {
       model,
       brushId: source.brushId,
-      surfaceIndex: source.surfaceIndex
+      surfaceIndex: source.surfaceIndex,
     };
   }
 
@@ -202,23 +194,19 @@ export class TextureAssignmentController {
    */
   private resolveBrushTriangle(
     mesh: THREE.Mesh,
-    triangleIndex: number
+    triangleIndex: number,
   ): { model: SolidModel; brushId: string; surfaceIndex: number } | null {
     const model = SolidModel.fromObject(mesh);
     if (!model) return null;
     const brush = model.findBrushByMesh(mesh);
     if (!brush) return null;
     mesh.updateMatrix();
-    const surfaceIndex = mapPreviewTriangleToBrushFace(
-      mesh,
-      triangleIndex,
-      brush
-    );
+    const surfaceIndex = mapPreviewTriangleToBrushFace(mesh, triangleIndex, brush);
     if (surfaceIndex < 0) return null;
     return {
       model,
       brushId: brush.id,
-      surfaceIndex
+      surfaceIndex,
     };
   }
 
@@ -227,16 +215,11 @@ export class TextureAssignmentController {
    * @param brushMeshes Selected solid brush meshes.
    * @param entry Texture entry.
    */
-  private assignSolidBrushTextures(
-    brushMeshes: THREE.Mesh[],
-    entry: TextureBrowserEntry
-  ): void {
+  private assignSolidBrushTextures(brushMeshes: THREE.Mesh[], entry: TextureBrowserEntry): void {
     const command = new AssignSolidBrushTextureCommand(brushMeshes, entry.id);
     this.commandStack.push(command);
     this.afterSolidTextureAssign?.();
-    this.statusCallback?.(
-      `Assigned ${entry.displayName} to ${brushMeshes.length} solid brush(es)`
-    );
+    this.statusCallback?.(`Assigned ${entry.displayName} to ${brushMeshes.length} solid brush(es)`);
   }
 
   /**
@@ -244,15 +227,10 @@ export class TextureAssignmentController {
    * @param targets Regions to paint.
    * @param entry Texture to apply.
    */
-  private assignTextureToTargets(
-    targets: TextureApplyTarget[],
-    entry: TextureBrowserEntry
-  ): void {
+  private assignTextureToTargets(targets: TextureApplyTarget[], entry: TextureBrowserEntry): void {
     const command = new AssignSurfaceTextureCommand(targets, entry.id);
     this.commandStack.push(command);
-    this.statusCallback?.(
-      `Assigned ${entry.displayName} to ${targets.length} surface region(s)`
-    );
+    this.statusCallback?.(`Assigned ${entry.displayName} to ${targets.length} surface region(s)`);
   }
 
   /**
@@ -272,12 +250,8 @@ export class TextureAssignmentController {
    * @param selectedMeshes Current object selection.
    * @returns Apply targets.
    */
-  private collectContentObjectTargets(
-    selectedMeshes: THREE.Mesh[]
-  ): TextureApplyTarget[] {
-    const contentMeshes = selectedMeshes.filter((mesh) =>
-      this.isContentTextureMesh(mesh)
-    );
+  private collectContentObjectTargets(selectedMeshes: THREE.Mesh[]): TextureApplyTarget[] {
+    const contentMeshes = selectedMeshes.filter((mesh) => this.isContentTextureMesh(mesh));
     if (contentMeshes.length === 0) return [];
     return buildTargetsFromMeshes(contentMeshes);
   }

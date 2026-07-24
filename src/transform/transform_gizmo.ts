@@ -179,10 +179,7 @@ export class TransformGizmo {
    * @param meshes Selected meshes defining the OBB.
    * @param camera Optional camera used to size resize handles.
    */
-  updateBoundsFromMeshes(
-    meshes: THREE.Mesh[],
-    camera: THREE.Camera | null = null
-  ): void {
+  updateBoundsFromMeshes(meshes: THREE.Mesh[], camera: THREE.Camera | null = null): void {
     if (this.currentMode !== TransformMode.BOUNDS) return;
     this.resetHandleGroupTransform();
     const bounds = this.boundsBuilder.buildFromMeshes(meshes);
@@ -391,7 +388,7 @@ export class TransformGizmo {
    */
   private computeBoundsHandleSize(
     bounds: OrientedBoundsData | null,
-    _camera: THREE.Camera | null
+    _camera: THREE.Camera | null,
   ): number {
     const minHalf = bounds
       ? Math.min(bounds.halfExtents.x, bounds.halfExtents.y, bounds.halfExtents.z)

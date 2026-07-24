@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {
   CONTENT_METALNESS,
   CONTENT_ROUGHNESS,
-  createContentMaterial
+  createContentMaterial,
 } from '../../src/materials/content_material_factory.js';
 import { disposeDebugCheckerTexture } from '../../src/texture/debug_texture_factory.js';
 
@@ -34,4 +34,3 @@ describe('content_material_factory', () => {
     material.dispose();
   });
 });
-

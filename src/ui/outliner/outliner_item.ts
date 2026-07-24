@@ -93,11 +93,7 @@ export class OutlinerItem {
    * @param depth The indentation depth level in the hierarchy.
    * @param hasChildren Whether the object has child objects.
    */
-  constructor(
-    object: THREE.Object3D,
-    depth: number,
-    hasChildren: boolean
-  ) {
+  constructor(object: THREE.Object3D, depth: number, hasChildren: boolean) {
     this.object = object;
     this.depth = depth;
     this.hasChildren = hasChildren;
@@ -249,11 +245,7 @@ export class OutlinerItem {
    */
   startRename(): void {
     if (this.isDisposed) return;
-    this.renameInput = new InlineRenameInput(
-      this.rowElement,
-      this.nameElement,
-      this.object.name
-    );
+    this.renameInput = new InlineRenameInput(this.rowElement, this.nameElement, this.object.name);
     this.renameInput.setConfirmCallback((newName) => {
       if (this.onRename) {
         this.onRename(this.object, newName);
@@ -490,4 +482,3 @@ export class OutlinerItem {
     });
   }
 }
-

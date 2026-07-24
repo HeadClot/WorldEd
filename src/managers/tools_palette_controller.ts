@@ -49,8 +49,7 @@ export class ToolsPaletteController {
    * @returns True when clip mode is live.
    */
   isClipToolActive(): boolean {
-    return this.activeTool === EditorToolId.CLIP_PLANE
-      && this.deps.clipPlaneTool.isActive();
+    return this.activeTool === EditorToolId.CLIP_PLANE && this.deps.clipPlaneTool.isActive();
   }
 
   /**
@@ -77,9 +76,7 @@ export class ToolsPaletteController {
     if (this.activeTool === EditorToolId.CLIP_PLANE) {
       this.deps.clipPlaneTool.deactivate();
     }
-    this.activeTool = mode === SelectionMode.FACE
-      ? EditorToolId.FACE
-      : EditorToolId.OBJECT;
+    this.activeTool = mode === SelectionMode.FACE ? EditorToolId.FACE : EditorToolId.OBJECT;
     this.deps.toolsPalette.setActiveTool(this.activeTool);
     this.refreshPaletteContext();
   }
@@ -90,24 +87,16 @@ export class ToolsPaletteController {
   refreshPaletteContext(): void {
     this.deps.toolsPalette.setActiveTool(this.activeTool);
     if (this.activeTool === EditorToolId.CLIP_PLANE) {
-      this.deps.toolsPalette.setContextStatus(
-        this.deps.clipPlaneTool.getStatusMessage()
-      );
-      this.deps.toolsPalette.setClipActionsEnabled(
-        this.deps.clipPlaneTool.isPlaneReady()
-      );
+      this.deps.toolsPalette.setContextStatus(this.deps.clipPlaneTool.getStatusMessage());
+      this.deps.toolsPalette.setClipActionsEnabled(this.deps.clipPlaneTool.isPlaneReady());
       return;
     }
     this.deps.toolsPalette.setClipActionsEnabled(false);
     if (this.activeTool === EditorToolId.FACE) {
-      this.deps.toolsPalette.setContextStatus(
-        'Click faces · open UV Editor or Extrude'
-      );
+      this.deps.toolsPalette.setContextStatus('Click faces · open UV Editor or Extrude');
       return;
     }
-    this.deps.toolsPalette.setContextStatus(
-      'Transform modes · select objects in the viewport'
-    );
+    this.deps.toolsPalette.setContextStatus('Transform modes · select objects in the viewport');
   }
 
   /**

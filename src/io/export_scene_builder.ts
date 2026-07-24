@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../solid/model/solid_model.js';
-import {
-  DECORATIVE_EDGE_USERDATA_KEY,
-  isSolidBrushEdge
-} from '../utils/mesh_edge_sync.js';
+import { DECORATIVE_EDGE_USERDATA_KEY, isSolidBrushEdge } from '../utils/mesh_edge_sync.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
 
 /**
@@ -122,10 +119,7 @@ function cloneGroupForExport(group: THREE.Group): THREE.Group | null {
  * @returns Mesh clone without helper children.
  */
 function cloneContentMeshForExport(mesh: THREE.Mesh): THREE.Mesh {
-  const clone = new THREE.Mesh(
-    mesh.geometry,
-    cloneMaterialsForExport(mesh.material)
-  );
+  const clone = new THREE.Mesh(mesh.geometry, cloneMaterialsForExport(mesh.material));
   copyObjectTransform(mesh, clone);
   clone.name = mesh.name;
   clone.visible = mesh.visible;
@@ -139,7 +133,7 @@ function cloneContentMeshForExport(mesh: THREE.Mesh): THREE.Mesh {
  * @returns Export-safe material(s).
  */
 function cloneMaterialsForExport(
-  material: THREE.Material | THREE.Material[]
+  material: THREE.Material | THREE.Material[],
 ): THREE.Material | THREE.Material[] {
   if (Array.isArray(material)) {
     return material.map((entry) => cloneOneMaterialForExport(entry));

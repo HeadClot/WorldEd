@@ -7,17 +7,14 @@ import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
 import {
   setTexturePaintStateForTests,
-  TexturePaintState
+  TexturePaintState,
 } from '../../src/texture/texture_paint_state.js';
 import {
   setTextureMapCacheForTests,
-  TextureMapCache
+  TextureMapCache,
 } from '../../src/texture/texture_map_cache.js';
 import { CLIP_PREVIEW_USERDATA_KEY } from '../../src/managers/clip_plane_preview.js';
-import {
-  getGeometrySource,
-  resolveGeometrySourceType
-} from '../../src/texture/geometry_source.js';
+import { getGeometrySource, resolveGeometrySourceType } from '../../src/texture/geometry_source.js';
 
 describe('SceneDeserializer', () => {
   let worldGroup: THREE.Group;
@@ -44,32 +41,23 @@ describe('SceneDeserializer', () => {
 
   it('should preserve clip plane preview helpers when clearing the world', () => {
     const previewRoot = createClipPreviewHelper();
-    const staleMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const staleMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     staleMesh.name = 'StaleContent';
     worldGroup.add(previewRoot);
     worldGroup.add(staleMesh);
-    const data = createSceneJSON([
-      createBoxEntry('box-load', 'LoadedCube', 1, 1, 1)
-    ]);
+    const data = createSceneJSON([createBoxEntry('box-load', 'LoadedCube', 1, 1, 1)]);
     deserializer.deserialize(data, worldGroup);
     expect(worldGroup.children).toContain(previewRoot);
     expect(previewRoot.parent).toBe(worldGroup);
     expect(previewRoot.children.length).toBe(1);
     expect(worldGroup.children).not.toContain(staleMesh);
-    const loadedMeshes = worldGroup.children.filter(
-      (child) => child instanceof THREE.Mesh
-    );
+    const loadedMeshes = worldGroup.children.filter((child) => child instanceof THREE.Mesh);
     expect(loadedMeshes.length).toBe(1);
     expect(loadedMeshes[0].name).toBe('LoadedCube');
   });
 
   it('should deserialize single mesh with correct geometry', () => {
-    const data = createSceneJSON([
-      createBoxEntry('box-001', 'Cube001', 1, 1, 1)
-    ]);
+    const data = createSceneJSON([createBoxEntry('box-001', 'Cube001', 1, 1, 1)]);
     const result = deserializer.deserialize(data, worldGroup);
     expect(result.length).toBe(1);
     expect(worldGroup.children.length).toBe(1);
@@ -166,13 +154,11 @@ describe('SceneDeserializer', () => {
   it('should dispose existing children before loading', () => {
     const existingMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xffffff })
+      new THREE.MeshStandardMaterial({ color: 0xffffff }),
     );
     worldGroup.add(existingMesh);
     expect(worldGroup.children.length).toBe(1);
-    const data = createSceneJSON([
-      createBoxEntry('box-006', 'NewCube', 1, 1, 1)
-    ]);
+    const data = createSceneJSON([createBoxEntry('box-006', 'NewCube', 1, 1, 1)]);
     deserializer.deserialize(data, worldGroup);
     expect(worldGroup.children.length).toBe(1);
     expect(worldGroup.children[0].name).toBe('NewCube');
@@ -221,7 +207,7 @@ describe('SceneDeserializer', () => {
     const originalGroup = new THREE.Group();
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(2, 3, 4),
-      new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+      new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
     );
     mesh.name = 'RoundTripCube';
     mesh.position.set(10, 20, 30);
@@ -260,7 +246,7 @@ describe('SceneDeserializer', () => {
 
     const childMesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
-      new THREE.MeshStandardMaterial({ color: 0x0000ff })
+      new THREE.MeshStandardMaterial({ color: 0x0000ff }),
     );
     childMesh.name = 'ChildSphere';
     childMesh.position.set(0, 2, 0);
@@ -284,23 +270,13 @@ describe('SceneDeserializer', () => {
   });
 
   it('should round-trip custom BufferGeometry without collapsing to a unit box', () => {
-    const positions = [
-      -2, -1, 0,
-      2, -1, 0,
-      2, 1, 0,
-      -2, -1, 0,
-      2, 1, 0,
-      -2, 1, 0
-    ];
+    const positions = [-2, -1, 0, 2, -1, 0, 2, 1, 0, -2, -1, 0, 2, 1, 0, -2, 1, 0];
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(positions, 3)
-    );
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.computeVertexNormals();
     const originalMesh = new THREE.Mesh(
       geometry,
-      new THREE.MeshStandardMaterial({ color: 0xff8800 })
+      new THREE.MeshStandardMaterial({ color: 0xff8800 }),
     );
     originalMesh.name = 'CsgMesh';
     originalMesh.position.set(3, 4, 5);
@@ -317,7 +293,7 @@ describe('SceneDeserializer', () => {
     expect(restored.position.x).toBe(3);
     expect(restored.geometry).not.toBeInstanceOf(THREE.BoxGeometry);
     const restoredPositions = Array.from(
-      restored.geometry.getAttribute('position').array as ArrayLike<number>
+      restored.geometry.getAttribute('position').array as ArrayLike<number>,
     );
     expect(restoredPositions).toEqual(positions);
     const mat = restored.material as THREE.MeshStandardMaterial;
@@ -328,9 +304,7 @@ describe('SceneDeserializer', () => {
     const entry = createBoxEntry('box-edges', 'EdgeCube', 1, 1, 1);
     deserializer.deserialize(createSceneJSON([entry]), worldGroup);
     const mesh = worldGroup.children[0] as THREE.Mesh;
-    const edgeChildren = mesh.children.filter(
-      (child) => child instanceof THREE.LineSegments
-    );
+    const edgeChildren = mesh.children.filter((child) => child instanceof THREE.LineSegments);
     expect(edgeChildren.length).toBeGreaterThan(0);
   });
 
@@ -360,7 +334,7 @@ function createClipPreviewHelper(): THREE.Group {
   previewRoot.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
   const marker = new THREE.Mesh(
     new THREE.SphereGeometry(0.05, 8, 8),
-    new THREE.MeshBasicMaterial({ color: 0xffff00 })
+    new THREE.MeshBasicMaterial({ color: 0xffff00 }),
   );
   marker.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
   previewRoot.add(marker);
@@ -390,7 +364,7 @@ function createBoxEntry(
   name: string,
   width: number,
   height: number,
-  depth: number
+  depth: number,
 ): ObjectEntry {
   return {
     uuid: uuid,
@@ -403,7 +377,7 @@ function createBoxEntry(
     parentId: null,
     geometryType: 'box',
     geometryParams: { width, height, depth },
-    materialColor: 0x888888
+    materialColor: 0x888888,
   };
 }
 
@@ -414,11 +388,7 @@ function createBoxEntry(
  * @param radius The sphere radius.
  * @returns A sphere ObjectEntry.
  */
-function createSphereEntry(
-  uuid: string,
-  name: string,
-  radius: number
-): ObjectEntry {
+function createSphereEntry(uuid: string, name: string, radius: number): ObjectEntry {
   return {
     uuid: uuid,
     name: name,
@@ -430,7 +400,7 @@ function createSphereEntry(
     parentId: null,
     geometryType: 'sphere',
     geometryParams: { radius, widthSegments: 32, heightSegments: 32 },
-    materialColor: 0x888888
+    materialColor: 0x888888,
   };
 }
 
@@ -448,7 +418,7 @@ function createCylinderEntry(
   name: string,
   radiusTop: number,
   radiusBottom: number,
-  height: number
+  height: number,
 ): ObjectEntry {
   return {
     uuid: uuid,
@@ -461,7 +431,7 @@ function createCylinderEntry(
     parentId: null,
     geometryType: 'cylinder',
     geometryParams: { radiusTop, radiusBottom, height, radialSegments: 32 },
-    materialColor: 0x888888
+    materialColor: 0x888888,
   };
 }
 
@@ -473,12 +443,7 @@ function createCylinderEntry(
  * @param height Plane height.
  * @returns A plane ObjectEntry.
  */
-function createPlaneEntry(
-  uuid: string,
-  name: string,
-  width: number,
-  height: number
-): ObjectEntry {
+function createPlaneEntry(uuid: string, name: string, width: number, height: number): ObjectEntry {
   return {
     uuid: uuid,
     name: name,
@@ -490,7 +455,7 @@ function createPlaneEntry(
     parentId: null,
     geometryType: 'plane',
     geometryParams: { width, height },
-    materialColor: 0x888888
+    materialColor: 0x888888,
   };
 }
 
@@ -509,6 +474,6 @@ function createGroupEntry(uuid: string, name: string): ObjectEntry {
     rotation: { x: 0, y: 0, z: 0 },
     scale: { x: 1, y: 1, z: 1 },
     visible: true,
-    parentId: null
+    parentId: null,
   };
 }

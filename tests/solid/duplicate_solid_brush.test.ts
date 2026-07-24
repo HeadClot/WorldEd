@@ -29,10 +29,7 @@ describe('Duplicate solid brushes', () => {
   it('undoes solid brush duplication via command', () => {
     const model = new SolidModel('CmdSolid');
     const source = model.addBoxBrush(2, SolidOperation.Subtractive);
-    const command = new DuplicateSolidBrushesCommand(
-      [source.mesh!],
-      new THREE.Vector3(0, 0, 0)
-    );
+    const command = new DuplicateSolidBrushesCommand([source.mesh!], new THREE.Vector3(0, 0, 0));
     command.execute();
     expect(model.getBrushCount()).toBe(2);
     expect(command.getClonedMeshes().length).toBe(1);

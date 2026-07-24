@@ -55,19 +55,13 @@ export interface ClipToolsSetupResult {
  * @param deps Shared services and viewports for clip/tools setup.
  * @returns Created palette, controller, and clip handler.
  */
-export function setupClipToolsAndPalette(
-  deps: ClipToolsSetupDeps
-): ClipToolsSetupResult {
+export function setupClipToolsAndPalette(deps: ClipToolsSetupDeps): ClipToolsSetupResult {
   const clipPlaneHandler = createClipPlaneHandler(deps);
   const controllerHolder: { current: ToolsPaletteController | null } = {
-    current: null
+    current: null,
   };
   const toolsPalette = createToolsPalette(deps, controllerHolder, clipPlaneHandler);
-  const toolsPaletteController = createToolsPaletteController(
-    deps,
-    toolsPalette,
-    clipPlaneHandler
-  );
+  const toolsPaletteController = createToolsPaletteController(deps, toolsPalette, clipPlaneHandler);
   controllerHolder.current = toolsPaletteController;
   wireClipPlaneViewportCallbacks(deps, clipPlaneHandler);
   wireClipPlaneKeyboardShortcuts(deps, clipPlaneHandler);
@@ -91,7 +85,7 @@ function createClipPlaneHandler(deps: ClipToolsSetupDeps): ClipPlaneHandler {
     syncPrimitivesToViewports: deps.syncPrimitivesToViewports,
     refreshOutliner: deps.refreshOutliner,
     updateShadingMeshes: deps.updateShadingMeshes,
-    onToolStateChanged: deps.onToolStateChanged
+    onToolStateChanged: deps.onToolStateChanged,
   });
 }
 
@@ -105,7 +99,7 @@ function createClipPlaneHandler(deps: ClipToolsSetupDeps): ClipPlaneHandler {
 function createToolsPalette(
   deps: ClipToolsSetupDeps,
   controllerHolder: { current: ToolsPaletteController | null },
-  clipPlaneHandler: ClipPlaneHandler
+  clipPlaneHandler: ClipPlaneHandler,
 ): ToolsPalette {
   return new ToolsPalette(
     deps.toolbarContainer,
@@ -116,9 +110,9 @@ function createToolsPalette(
       onCommitClip: () => clipPlaneHandler.commitClip(),
       onCommitSplit: () => clipPlaneHandler.commitSplit(),
       onOpenUvEditor: () => deps.onOpenUvEditor(),
-      onExtrudeFaces: () => deps.onExtrudeFaces()
+      onExtrudeFaces: () => deps.onExtrudeFaces(),
     },
-    deps.anchorViewport
+    deps.anchorViewport,
   );
 }
 
@@ -132,7 +126,7 @@ function createToolsPalette(
 function createToolsPaletteController(
   deps: ClipToolsSetupDeps,
   toolsPalette: ToolsPalette,
-  clipPlaneHandler: ClipPlaneHandler
+  clipPlaneHandler: ClipPlaneHandler,
 ): ToolsPaletteController {
   return new ToolsPaletteController({
     toolsPalette,
@@ -140,7 +134,7 @@ function createToolsPaletteController(
     clipPlaneTool: deps.clipPlaneTool,
     clipPlaneHandler,
     selectionManager: deps.selectionManager,
-    showStatusMessage: deps.showStatusMessage
+    showStatusMessage: deps.showStatusMessage,
   });
 }
 
@@ -151,21 +145,17 @@ function createToolsPaletteController(
  */
 function wireClipPlaneViewportCallbacks(
   deps: ClipToolsSetupDeps,
-  clipPlaneHandler: ClipPlaneHandler
+  clipPlaneHandler: ClipPlaneHandler,
 ): void {
   const viewports = [
     deps.viewport3D,
     deps.viewport2DTop,
     deps.viewport2DFront,
-    deps.viewport2DSide
+    deps.viewport2DSide,
   ];
   viewports.forEach((viewport) => {
     viewport.setClipPlaneCallback((event) => {
-      return clipPlaneHandler.onPointerDown(
-        event,
-        viewport.getCamera(),
-        viewport.getRenderer()
-      );
+      return clipPlaneHandler.onPointerDown(event, viewport.getCamera(), viewport.getRenderer());
     });
   });
 }
@@ -177,14 +167,14 @@ function wireClipPlaneViewportCallbacks(
  */
 function wireClipPlaneKeyboardShortcuts(
   deps: ClipToolsSetupDeps,
-  clipPlaneHandler: ClipPlaneHandler
+  clipPlaneHandler: ClipPlaneHandler,
 ): void {
   deps.keyboardShortcutHandler.setClipPlaneShortcuts(
     () => deps.clipPlaneTool.isActive(),
     () => clipPlaneHandler.flipPlane(),
     () => clipPlaneHandler.commitClip(),
     () => clipPlaneHandler.commitSplit(),
-    () => deps.onClipCancel()
+    () => deps.onClipCancel(),
   );
 }
 
@@ -195,7 +185,7 @@ function wireClipPlaneKeyboardShortcuts(
  */
 export function cancelClipAndSelectObject(
   clipPlaneHandler: ClipPlaneHandler | null,
-  toolsPaletteController: ToolsPaletteController | null
+  toolsPaletteController: ToolsPaletteController | null,
 ): void {
   clipPlaneHandler?.cancel();
   toolsPaletteController?.selectTool(EditorToolId.OBJECT);

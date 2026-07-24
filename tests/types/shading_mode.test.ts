@@ -3,9 +3,7 @@ import { ShadingMode } from '../../src/types/shading_mode.js';
 
 describe('ShadingMode enum', () => {
   it('should have exactly 4 values', () => {
-    const values = Object.values(ShadingMode).filter(
-      (v) => typeof v === 'string'
-    );
+    const values = Object.values(ShadingMode).filter((v) => typeof v === 'string');
     expect(values).toHaveLength(4);
   });
 

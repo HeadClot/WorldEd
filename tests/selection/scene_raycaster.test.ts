@@ -104,7 +104,7 @@ describe('SceneRaycaster', () => {
     const camera = createTestCamera();
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(2, 2),
-      new THREE.MeshBasicMaterial({ side: THREE.FrontSide })
+      new THREE.MeshBasicMaterial({ side: THREE.FrontSide }),
     );
     plane.position.set(0, 0, 0);
     plane.rotation.y = Math.PI;
@@ -146,11 +146,11 @@ function createMeshAt(
   sizeZ: number,
   posX: number,
   posY: number,
-  posZ: number
+  posZ: number,
 ): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(sizeX, sizeY, sizeZ),
-    new THREE.MeshBasicMaterial()
+    new THREE.MeshBasicMaterial(),
   );
   mesh.position.set(posX, posY, posZ);
   mesh.updateMatrixWorld(true);

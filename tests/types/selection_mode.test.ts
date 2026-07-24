@@ -3,9 +3,7 @@ import { SelectionMode } from '../../src/types/selection_mode.js';
 
 describe('SelectionMode enum', () => {
   it('should have exactly 2 values', () => {
-    const values = Object.values(SelectionMode).filter(
-      (v) => typeof v === 'string'
-    );
+    const values = Object.values(SelectionMode).filter((v) => typeof v === 'string');
     expect(values).toHaveLength(2);
   });
 

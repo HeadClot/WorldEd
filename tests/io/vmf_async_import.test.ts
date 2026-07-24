@@ -13,7 +13,7 @@ describe('VmfSolidImporter async', () => {
     const ratios: number[] = [];
     const source = buildAxisAlignedWorldSolidVmf(
       { x: -32, y: -32, z: -32 },
-      { x: 32, y: 32, z: 32 }
+      { x: 32, y: 32, z: 32 },
     );
     const result = await importer.importFromTextAsync(source, {
       modelName: 'ProgressTest',
@@ -21,7 +21,7 @@ describe('VmfSolidImporter async', () => {
       onProgress: (ratio, label) => {
         ratios.push(ratio);
         labels.push(label);
-      }
+      },
     });
     expect(result.importedBrushCount).toBe(1);
     expect(labels.length).toBeGreaterThan(2);

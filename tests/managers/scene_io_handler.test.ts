@@ -67,15 +67,21 @@ describe('SceneIOHandler', () => {
     worldGroup.add(mesh);
     const serializer = new SceneSerializer();
     const json = JSON.stringify(serializer.serialize(worldGroup));
-    const fileDialog = (handler as unknown as {
-      fileDialogManager: { loadJSON: () => Promise<string | null> };
-    }).fileDialogManager;
+    const fileDialog = (
+      handler as unknown as {
+        fileDialogManager: { loadJSON: () => Promise<string | null> };
+      }
+    ).fileDialogManager;
     vi.spyOn(fileDialog, 'loadJSON').mockResolvedValue(json);
     const target = new THREE.Group();
     let loaded = false;
-    await handler.loadScene(target, () => {
-      loaded = true;
-    }, null);
+    await handler.loadScene(
+      target,
+      () => {
+        loaded = true;
+      },
+      null,
+    );
     expect(loaded).toBe(true);
     expect(target.children.length).toBe(1);
     expect(target.children[0].name).toBe('LoadNoStatus');
@@ -84,9 +90,11 @@ describe('SceneIOHandler', () => {
   it('should export GLB and produce non-empty buffer for real meshes', async () => {
     const mesh = createTestMesh('ExportMe');
     worldGroup.add(mesh);
-    const buffer = await (handler as unknown as {
-      glbExporter: { export: (group: THREE.Group) => Promise<ArrayBuffer> };
-    }).glbExporter.export(worldGroup);
+    const buffer = await (
+      handler as unknown as {
+        glbExporter: { export: (group: THREE.Group) => Promise<ArrayBuffer> };
+      }
+    ).glbExporter.export(worldGroup);
     expect(buffer.byteLength).toBeGreaterThan(0);
     const magic = new DataView(buffer).getUint32(0, true);
     expect(magic).toBe(0x46546c67);
@@ -115,14 +123,16 @@ world
   });
 
   it('loads a VMF via the file dialog path', async () => {
-    const fileDialog = (handler as unknown as {
-      fileDialogManager: {
-        loadTextFile: () => Promise<{ text: string; filename: string } | null>;
-      };
-    }).fileDialogManager;
+    const fileDialog = (
+      handler as unknown as {
+        fileDialogManager: {
+          loadTextFile: () => Promise<{ text: string; filename: string } | null>;
+        };
+      }
+    ).fileDialogManager;
     vi.spyOn(fileDialog, 'loadTextFile').mockResolvedValue({
       text: buildSimpleBoxVmf(),
-      filename: 'dialog_map.vmf'
+      filename: 'dialog_map.vmf',
     });
     const result = await handler.importVmf(null);
     expect(result).not.toBeNull();

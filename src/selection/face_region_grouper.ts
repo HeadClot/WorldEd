@@ -17,9 +17,7 @@ export interface FaceRegion {
  * @param selections The current face selection entries.
  * @returns Ordered face regions (stable per mesh, then by seed face index).
  */
-export function groupSelectionsIntoFaceRegions(
-  selections: FaceSelection[]
-): FaceRegion[] {
+export function groupSelectionsIntoFaceRegions(selections: FaceSelection[]): FaceRegion[] {
   if (selections.length === 0) return [];
   const byMesh = groupSelectionsByMesh(selections);
   const regions: FaceRegion[] = [];
@@ -37,9 +35,7 @@ export function groupSelectionsIntoFaceRegions(
  * @param selections Face selection entries.
  * @returns Map from mesh to selected triangle indices.
  */
-function groupSelectionsByMesh(
-  selections: FaceSelection[]
-): Map<THREE.Mesh, number[]> {
+function groupSelectionsByMesh(selections: FaceSelection[]): Map<THREE.Mesh, number[]> {
   const byMesh = new Map<THREE.Mesh, number[]>();
   selections.forEach((entry) => {
     const existing = byMesh.get(entry.mesh);
@@ -61,18 +57,13 @@ function groupSelectionsByMesh(
  * @param faceIndices Selected triangle indices on that mesh.
  * @returns Arrays of triangle indices, one region each.
  */
-function splitMeshFacesIntoSelectableRegions(
-  mesh: THREE.Mesh,
-  faceIndices: number[]
-): number[][] {
+function splitMeshFacesIntoSelectableRegions(mesh: THREE.Mesh, faceIndices: number[]): number[][] {
   const remaining = new Set(faceIndices);
   const regions: number[][] = [];
   const sortedSeeds = faceIndices.slice().sort((a, b) => a - b);
   sortedSeeds.forEach((seed) => {
     if (!remaining.has(seed)) return;
-    const region = expandFaceSelectionIndices(mesh, seed).filter((index) =>
-      remaining.has(index)
-    );
+    const region = expandFaceSelectionIndices(mesh, seed).filter((index) => remaining.has(index));
     const finalRegion = region.length > 0 ? region : [seed];
     finalRegion.forEach((index) => remaining.delete(index));
     regions.push(finalRegion.sort((a, b) => a - b));

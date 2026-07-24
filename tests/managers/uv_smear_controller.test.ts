@@ -7,11 +7,11 @@ import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
 import {
   setTexturePaintStateForTests,
-  TexturePaintState
+  TexturePaintState,
 } from '../../src/texture/texture_paint_state.js';
 import {
   setTextureMapCacheForTests,
-  TextureMapCache
+  TextureMapCache,
 } from '../../src/texture/texture_map_cache.js';
 import { computeRegionWorldNormal } from '../../src/texture/planar_uv_projector.js';
 
@@ -34,7 +34,7 @@ describe('UvSmearController', () => {
   it('should paint multiple cylinder sides during one stroke and support undo', () => {
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 0.5, 1, 8),
-      createContentMaterial(0xcccccc)
+      createContentMaterial(0xcccccc),
     );
     mesh.position.set(0, 0.5, 0);
     mesh.updateMatrixWorld(true);
@@ -56,10 +56,7 @@ describe('UvSmearController', () => {
   });
 
   it('should not push undo when the stroke never leaves the first face', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      createContentMaterial(0xaaaaaa)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0xaaaaaa));
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh);
     controller.beginStroke(mesh, 0);

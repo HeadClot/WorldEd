@@ -30,11 +30,7 @@ export class SplitSolidBrushCommand implements UndoCommand {
    * @param sourceBrushId Brush to split.
    * @param worldPlane World-space split plane.
    */
-  constructor(
-    model: SolidModel,
-    sourceBrushId: string,
-    worldPlane: THREE.Plane
-  ) {
+  constructor(model: SolidModel, sourceBrushId: string, worldPlane: THREE.Plane) {
     this.model = model;
     this.sourceBrushId = sourceBrushId;
     this.worldPlane = worldPlane.clone();
@@ -58,29 +54,13 @@ export class SplitSolidBrushCommand implements UndoCommand {
     if (!source) return;
     source.pullTransformFromMesh();
     const localPlane = this.worldPlaneToLocal(source, this.worldPlane);
-    const front = SolidBrushPlaneClip.clipKeepThreeHalfSpace(
-      source.brush,
-      localPlane,
-      true
-    );
-    const back = SolidBrushPlaneClip.clipKeepThreeHalfSpace(
-      source.brush,
-      localPlane,
-      false
-    );
+    const front = SolidBrushPlaneClip.clipKeepThreeHalfSpace(source.brush, localPlane, true);
+    const back = SolidBrushPlaneClip.clipKeepThreeHalfSpace(source.brush, localPlane, false);
     if (!front || !back) return;
     this.snapshotSource(source);
     this.model.removeBrush(this.sourceBrushId, true);
-    const frontInstance = this.createPiece(
-      `${this.previousName}_A`,
-      front,
-      this.previousOperation
-    );
-    const backInstance = this.createPiece(
-      `${this.previousName}_B`,
-      back,
-      this.previousOperation
-    );
+    const frontInstance = this.createPiece(`${this.previousName}_A`, front, this.previousOperation);
+    const backInstance = this.createPiece(`${this.previousName}_B`, back, this.previousOperation);
     this.model.addBrushInstance(frontInstance);
     this.model.addBrushInstance(backInstance);
     this.frontBrushId = frontInstance.id;
@@ -99,7 +79,7 @@ export class SplitSolidBrushCommand implements UndoCommand {
       this.sourceBrushId,
       this.previousName,
       this.previousBrush,
-      this.previousOperation
+      this.previousOperation,
     );
     restored.position.copy(this.previousPosition);
     restored.rotation.copy(this.previousRotation);
@@ -107,7 +87,7 @@ export class SplitSolidBrushCommand implements UndoCommand {
     const preview = SolidBrushVisual.createHullPreview(
       this.previousName,
       this.previousBrush,
-      this.previousOperation
+      this.previousOperation,
     );
     restored.attachMesh(preview);
     this.model.addBrushInstance(restored);
@@ -165,7 +145,7 @@ export class SplitSolidBrushCommand implements UndoCommand {
   private createPiece(
     name: string,
     brush: SolidBrush,
-    operation: SolidOperation
+    operation: SolidOperation,
   ): SolidBrushInstance {
     const id = `${this.sourceBrushId}-split-${Math.random().toString(36).slice(2, 8)}`;
     const instance = new SolidBrushInstance(id, name, brush, operation);
@@ -183,10 +163,7 @@ export class SplitSolidBrushCommand implements UndoCommand {
    * @param worldPlane World plane.
    * @returns Local Three.js plane.
    */
-  private worldPlaneToLocal(
-    instance: SolidBrushInstance,
-    worldPlane: THREE.Plane
-  ): THREE.Plane {
+  private worldPlaneToLocal(instance: SolidBrushInstance, worldPlane: THREE.Plane): THREE.Plane {
     const matrix = instance.getLocalMatrix();
     return worldPlane.clone().applyMatrix4(matrix.clone().invert());
   }

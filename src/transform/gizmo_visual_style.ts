@@ -26,7 +26,7 @@ export const GizmoVisualStyle = {
   /** Render order for occluded ghost meshes (drawn first). */
   occludedRenderOrder: 998,
   /** Render order for front gizmo meshes. */
-  frontRenderOrder: 999
+  frontRenderOrder: 999,
 } as const;
 
 /**
@@ -44,7 +44,7 @@ export function createGizmoFrontMaterial(color: number): THREE.MeshBasicMaterial
     transparent: true,
     opacity: GizmoVisualStyle.frontOpacity,
     side: THREE.DoubleSide,
-    toneMapped: false
+    toneMapped: false,
   });
 }
 
@@ -63,7 +63,7 @@ export function createGizmoOccludedMaterial(color: number): THREE.MeshBasicMater
     transparent: true,
     opacity: GizmoVisualStyle.occludedOpacity,
     side: THREE.DoubleSide,
-    toneMapped: false
+    toneMapped: false,
   });
 }
 
@@ -77,7 +77,7 @@ export function createGizmoOccludedMaterial(color: number): THREE.MeshBasicMater
 export function createGizmoOccludedMesh(
   geometry: THREE.BufferGeometry,
   color: number,
-  handleId?: number
+  handleId?: number,
 ): THREE.Mesh {
   const mesh = new THREE.Mesh(geometry, createGizmoOccludedMaterial(color));
   mesh.renderOrder = GizmoVisualStyle.occludedRenderOrder;
@@ -110,7 +110,7 @@ export function createGizmoFrontLineMaterial(): THREE.LineBasicMaterial {
     transparent: true,
     opacity: GizmoVisualStyle.frontOpacity,
     toneMapped: false,
-    linewidth: 1
+    linewidth: 1,
   });
 }
 
@@ -128,6 +128,6 @@ export function createGizmoOccludedLineMaterial(): THREE.LineBasicMaterial {
     transparent: true,
     opacity: GizmoVisualStyle.occludedOpacity,
     toneMapped: false,
-    linewidth: 1
+    linewidth: 1,
   });
 }

@@ -115,7 +115,7 @@ describe('ViewportShadingController', () => {
     it('should rebuild overlay with multiple meshes', () => {
       const meshB = new THREE.Mesh(
         new THREE.SphereGeometry(1, 8, 8),
-        new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+        new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
       );
       controller.updateMeshes([meshA, meshB]);
       expect(controller['wireframeOverlayRenderer'].getOverlayCount()).toBe(2);

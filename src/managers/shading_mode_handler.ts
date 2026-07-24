@@ -9,7 +9,7 @@ const SHADING_MODE_DISPLAY_NAMES: Record<ShadingMode, string> = {
   [ShadingMode.SOLID]: 'SOLID',
   [ShadingMode.WIREFRAME]: 'WIREFRAME',
   [ShadingMode.FLAT]: 'FLAT',
-  [ShadingMode.WIREFRAME_OVERLAY]: 'WIREFRAME_OVERLAY'
+  [ShadingMode.WIREFRAME_OVERLAY]: 'WIREFRAME_OVERLAY',
 };
 
 /**
@@ -31,7 +31,7 @@ export class ShadingModeHandler {
   constructor(
     controllers: ViewportShadingController[],
     activeViewportIndex: number,
-    statusBar: StatusBar | null
+    statusBar: StatusBar | null,
   ) {
     this.controllers = controllers;
     this.activeViewportIndex = activeViewportIndex;

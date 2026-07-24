@@ -46,8 +46,7 @@ export class SelectionManager {
     if (this.isSameSelection(meshes)) return;
     this.selectedObjects.clear();
     meshes.forEach((mesh) => this.selectedObjects.add(mesh));
-    this.lastSelectedMesh =
-      meshes.length > 0 ? meshes[meshes.length - 1] : null;
+    this.lastSelectedMesh = meshes.length > 0 ? meshes[meshes.length - 1] : null;
     this.notifyChange();
   }
 
@@ -151,10 +150,7 @@ export class SelectionManager {
     if (!removedAny) return false;
     this.selectedObjects.clear();
     survivors.forEach((mesh) => this.selectedObjects.add(mesh));
-    if (
-      !this.lastSelectedMesh ||
-      !this.selectedObjects.has(this.lastSelectedMesh)
-    ) {
+    if (!this.lastSelectedMesh || !this.selectedObjects.has(this.lastSelectedMesh)) {
       this.lastSelectedMesh = survivors.length > 0 ? survivors[survivors.length - 1] : null;
     }
     this.notifyChange();
@@ -167,10 +163,7 @@ export class SelectionManager {
    * @param root The scene root to search toward.
    * @returns True when object is under root in the parent chain.
    */
-  private isDescendantOf(
-    object: THREE.Object3D,
-    root: THREE.Object3D
-  ): boolean {
+  private isDescendantOf(object: THREE.Object3D, root: THREE.Object3D): boolean {
     let current: THREE.Object3D | null = object;
     while (current) {
       if (current === root) return true;

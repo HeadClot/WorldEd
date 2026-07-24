@@ -17,7 +17,7 @@ export class CategoryRouter {
       SurfaceCategory.Inside,
       SurfaceCategory.Inside,
       SurfaceCategory.Inside,
-      SurfaceCategory.Inside
+      SurfaceCategory.Inside,
     ],
     [
       SurfaceCategory.Inside,
@@ -25,7 +25,7 @@ export class CategoryRouter {
       SurfaceCategory.SelfAligned,
       SurfaceCategory.Inside,
       SurfaceCategory.Inside,
-      SurfaceCategory.Aligned
+      SurfaceCategory.Aligned,
     ],
     [
       SurfaceCategory.Inside,
@@ -33,7 +33,7 @@ export class CategoryRouter {
       SurfaceCategory.SelfAligned,
       SurfaceCategory.Inside,
       SurfaceCategory.Inside,
-      SurfaceCategory.SelfAligned
+      SurfaceCategory.SelfAligned,
     ],
     [
       SurfaceCategory.Inside,
@@ -41,7 +41,7 @@ export class CategoryRouter {
       SurfaceCategory.Inside,
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.ReverseAligned,
-      SurfaceCategory.SelfReverseAligned
+      SurfaceCategory.SelfReverseAligned,
     ],
     [
       SurfaceCategory.Inside,
@@ -49,7 +49,7 @@ export class CategoryRouter {
       SurfaceCategory.Inside,
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.ReverseAligned,
-      SurfaceCategory.ReverseAligned
+      SurfaceCategory.ReverseAligned,
     ],
     [
       SurfaceCategory.Inside,
@@ -57,8 +57,8 @@ export class CategoryRouter {
       SurfaceCategory.SelfAligned,
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.ReverseAligned,
-      SurfaceCategory.Outside
-    ]
+      SurfaceCategory.Outside,
+    ],
   ];
 
   private static readonly SUBTRACTIVE_TABLE: SurfaceCategory[][] = [
@@ -68,7 +68,7 @@ export class CategoryRouter {
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.SelfAligned,
       SurfaceCategory.Aligned,
-      SurfaceCategory.Inside
+      SurfaceCategory.Inside,
     ],
     [
       SurfaceCategory.Outside,
@@ -76,7 +76,7 @@ export class CategoryRouter {
       SurfaceCategory.Outside,
       SurfaceCategory.Aligned,
       SurfaceCategory.Aligned,
-      SurfaceCategory.Aligned
+      SurfaceCategory.Aligned,
     ],
     [
       SurfaceCategory.Outside,
@@ -84,7 +84,7 @@ export class CategoryRouter {
       SurfaceCategory.Outside,
       SurfaceCategory.Aligned,
       SurfaceCategory.Aligned,
-      SurfaceCategory.SelfAligned
+      SurfaceCategory.SelfAligned,
     ],
     [
       SurfaceCategory.Outside,
@@ -92,7 +92,7 @@ export class CategoryRouter {
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
-      SurfaceCategory.SelfReverseAligned
+      SurfaceCategory.SelfReverseAligned,
     ],
     [
       SurfaceCategory.Outside,
@@ -100,7 +100,7 @@ export class CategoryRouter {
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
-      SurfaceCategory.ReverseAligned
+      SurfaceCategory.ReverseAligned,
     ],
     [
       SurfaceCategory.Outside,
@@ -108,8 +108,8 @@ export class CategoryRouter {
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
-      SurfaceCategory.Outside
-    ]
+      SurfaceCategory.Outside,
+    ],
   ];
 
   private static readonly INTERSECTING_TABLE: SurfaceCategory[][] = [
@@ -119,7 +119,7 @@ export class CategoryRouter {
       SurfaceCategory.SelfAligned,
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.ReverseAligned,
-      SurfaceCategory.Outside
+      SurfaceCategory.Outside,
     ],
     [
       SurfaceCategory.Aligned,
@@ -127,7 +127,7 @@ export class CategoryRouter {
       SurfaceCategory.SelfAligned,
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
-      SurfaceCategory.Outside
+      SurfaceCategory.Outside,
     ],
     [
       SurfaceCategory.SelfAligned,
@@ -135,7 +135,7 @@ export class CategoryRouter {
       SurfaceCategory.SelfAligned,
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
-      SurfaceCategory.Outside
+      SurfaceCategory.Outside,
     ],
     [
       SurfaceCategory.SelfReverseAligned,
@@ -143,7 +143,7 @@ export class CategoryRouter {
       SurfaceCategory.Outside,
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.ReverseAligned,
-      SurfaceCategory.Outside
+      SurfaceCategory.Outside,
     ],
     [
       SurfaceCategory.ReverseAligned,
@@ -151,7 +151,7 @@ export class CategoryRouter {
       SurfaceCategory.Outside,
       SurfaceCategory.SelfReverseAligned,
       SurfaceCategory.ReverseAligned,
-      SurfaceCategory.Outside
+      SurfaceCategory.Outside,
     ],
     [
       SurfaceCategory.Outside,
@@ -159,8 +159,8 @@ export class CategoryRouter {
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
-      SurfaceCategory.Outside
-    ]
+      SurfaceCategory.Outside,
+    ],
   ];
 
   /**
@@ -173,7 +173,7 @@ export class CategoryRouter {
   static route(
     leftCategory: SurfaceCategory,
     rightCategory: SurfaceCategory,
-    operation: SolidOperation
+    operation: SolidOperation,
   ): SurfaceCategory {
     const table = this.tableForOperation(operation);
     return table[leftCategory][rightCategory];

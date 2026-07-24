@@ -13,13 +13,13 @@ describe('BufferGeometryCodec', () => {
     const source = new THREE.BufferGeometry();
     source.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3)
+      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3),
     );
     source.computeVertexNormals();
     const encoded = codec.encode(source);
     const decoded = codec.decode(encoded);
     const decodedPositions = Array.from(
-      decoded.getAttribute('position').array as ArrayLike<number>
+      decoded.getAttribute('position').array as ArrayLike<number>,
     );
     expect(decodedPositions).toEqual([0, 0, 0, 1, 0, 0, 0, 1, 0]);
   });
@@ -28,7 +28,7 @@ describe('BufferGeometryCodec', () => {
     const source = new THREE.BufferGeometry();
     source.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0], 3)
+      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0], 3),
     );
     source.setIndex([0, 1, 2, 0, 2, 3]);
     const encoded = codec.encode(source);
@@ -48,8 +48,6 @@ describe('BufferGeometryCodec', () => {
     const encoded = codec.encode(plain);
     expect(encoded.position.length).toBeGreaterThan(0);
     const decoded = codec.decode(encoded);
-    expect(decoded.getAttribute('position').count).toBe(
-      plain.getAttribute('position').count
-    );
+    expect(decoded.getAttribute('position').count).toBe(plain.getAttribute('position').count);
   });
 });

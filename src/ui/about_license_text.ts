@@ -82,7 +82,7 @@ export function getAboutLicenseText(): string {
     REALTIME_CSG_LICENSE,
     '',
     '=== SabreCSG (MIT) ===',
-    SABRE_CSG_LICENSE
+    SABRE_CSG_LICENSE,
   ].join('\n');
 }
 

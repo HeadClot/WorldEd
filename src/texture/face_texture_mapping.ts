@@ -4,12 +4,7 @@ import { DEFAULT_CHECKER_TEXTURE_ID } from './texture_id.js';
  * World-axis alignment presets for planar face texture projection.
  * Matches classic CSG / brush editor surface tools.
  */
-export type FaceTextureAlign =
-  | 'auto'
-  | 'floor'
-  | 'ceiling'
-  | 'wall'
-  | 'face';
+export type FaceTextureAlign = 'auto' | 'floor' | 'ceiling' | 'wall' | 'face';
 
 /**
  * Optional explicit world-space UV axis (Source/VMF style).
@@ -74,7 +69,7 @@ export const FACE_TEXTURE_MAPS_USERDATA_KEY = 'faceTextureMaps';
  * @returns A new default mapping object.
  */
 export function createDefaultFaceTextureMapping(
-  textureId: string = DEFAULT_CHECKER_TEXTURE_ID
+  textureId: string = DEFAULT_CHECKER_TEXTURE_ID,
 ): FaceTextureMapping {
   return {
     align: 'auto',
@@ -83,7 +78,7 @@ export function createDefaultFaceTextureMapping(
     offsetU: 0,
     offsetV: 0,
     rotationDeg: 0,
-    textureId
+    textureId,
   };
 }
 
@@ -92,9 +87,7 @@ export function createDefaultFaceTextureMapping(
  * @param mapping Source mapping.
  * @returns Independent copy.
  */
-export function cloneFaceTextureMapping(
-  mapping: FaceTextureMapping
-): FaceTextureMapping {
+export function cloneFaceTextureMapping(mapping: FaceTextureMapping): FaceTextureMapping {
   const copy: FaceTextureMapping = {
     align: mapping.align,
     scaleU: mapping.scaleU,
@@ -102,7 +95,7 @@ export function cloneFaceTextureMapping(
     offsetU: mapping.offsetU,
     offsetV: mapping.offsetV,
     rotationDeg: mapping.rotationDeg,
-    textureId: mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID
+    textureId: mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID,
   };
   if (mapping.customUAxis) {
     copy.customUAxis = { ...mapping.customUAxis };
@@ -118,11 +111,9 @@ export function cloneFaceTextureMapping(
  * @param entry Source entry.
  * @returns Independent copy.
  */
-export function cloneFaceTextureMapEntry(
-  entry: FaceTextureMapEntry
-): FaceTextureMapEntry {
+export function cloneFaceTextureMapEntry(entry: FaceTextureMapEntry): FaceTextureMapEntry {
   return {
     triangleIndices: entry.triangleIndices.slice(),
-    mapping: cloneFaceTextureMapping(entry.mapping)
+    mapping: cloneFaceTextureMapping(entry.mapping),
   };
 }

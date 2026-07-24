@@ -4,10 +4,7 @@ import { SceneDeserializer } from '../io/scene_deserializer.js';
 import { GlbExporter } from '../io/glb_exporter.js';
 import { FileDialogManager } from '../io/file_dialog_manager.js';
 import { StatusBar } from '../ui/status_bar.js';
-import {
-  VmfImportResult,
-  VmfSolidImporter
-} from '../io/vmf/vmf_solid_importer.js';
+import { VmfImportResult, VmfSolidImporter } from '../io/vmf/vmf_solid_importer.js';
 import { ImportProgressOverlay } from '../ui/import_progress_overlay.js';
 
 /**
@@ -37,23 +34,14 @@ export class SceneIOHandler {
    * @param worldGroup The root group containing the scene objects.
    * @param statusBar The status bar for feedback, or null.
    */
-  async saveScene(
-    worldGroup: THREE.Group,
-    statusBar: StatusBar | null
-  ): Promise<void> {
+  async saveScene(worldGroup: THREE.Group, statusBar: StatusBar | null): Promise<void> {
     try {
       const sceneData = this.sceneSerializer.serialize(worldGroup);
       const jsonString = JSON.stringify(sceneData, null, 2);
-      const filename = await this.fileDialogManager.saveJSON(
-        jsonString,
-        'scene.json'
-      );
+      const filename = await this.fileDialogManager.saveJSON(jsonString, 'scene.json');
       this.showSaveResult(filename, statusBar);
     } catch (error) {
-      this.showError(
-        statusBar,
-        `Failed to save scene: ${this.formatError(error)}`
-      );
+      this.showError(statusBar, `Failed to save scene: ${this.formatError(error)}`);
     }
   }
 
@@ -62,10 +50,7 @@ export class SceneIOHandler {
    * @param filename The saved filename, or null on failure.
    * @param statusBar The status bar for feedback, or null.
    */
-  private showSaveResult(
-    filename: string | null,
-    statusBar: StatusBar | null
-  ): void {
+  private showSaveResult(filename: string | null, statusBar: StatusBar | null): void {
     if (!statusBar) return;
     if (filename) {
       statusBar.setLastSavedInfo(filename);
@@ -84,16 +69,13 @@ export class SceneIOHandler {
   async loadScene(
     worldGroup: THREE.Group,
     onSceneLoaded: () => void,
-    statusBar: StatusBar | null
+    statusBar: StatusBar | null,
   ): Promise<void> {
     try {
       const jsonString = await this.fileDialogManager.loadJSON();
       this.processLoadResult(jsonString, worldGroup, onSceneLoaded, statusBar);
     } catch (error) {
-      this.showError(
-        statusBar,
-        `Failed to load scene: ${this.formatError(error)}`
-      );
+      this.showError(statusBar, `Failed to load scene: ${this.formatError(error)}`);
     }
   }
 
@@ -109,7 +91,7 @@ export class SceneIOHandler {
     jsonString: string | null,
     worldGroup: THREE.Group,
     onSceneLoaded: () => void,
-    statusBar: StatusBar | null
+    statusBar: StatusBar | null,
   ): void {
     if (jsonString) {
       this.processLoadedScene(jsonString, worldGroup, onSceneLoaded, statusBar);
@@ -129,7 +111,7 @@ export class SceneIOHandler {
     jsonString: string,
     worldGroup: THREE.Group,
     onSceneLoaded: () => void,
-    statusBar: StatusBar | null
+    statusBar: StatusBar | null,
   ): void {
     try {
       const sceneData = JSON.parse(jsonString);
@@ -144,10 +126,7 @@ export class SceneIOHandler {
         statusBar.setLastSavedInfo('loaded scene');
       }
     } catch (error) {
-      this.showError(
-        statusBar,
-        `Invalid scene file format: ${this.formatError(error)}`
-      );
+      this.showError(statusBar, `Invalid scene file format: ${this.formatError(error)}`);
     }
   }
 
@@ -168,14 +147,12 @@ export class SceneIOHandler {
    * @param statusBar Status bar for feedback, or null.
    * @returns Import result, or null when cancelled or failed.
    */
-  async importVmf(
-    statusBar: StatusBar | null
-  ): Promise<VmfImportResult | null> {
+  async importVmf(statusBar: StatusBar | null): Promise<VmfImportResult | null> {
     try {
       const file = await this.fileDialogManager.loadTextFile(
         '.vmf,text/plain',
         'Valve Map Format (VMF)',
-        ['.vmf']
+        ['.vmf'],
       );
       if (!file) {
         this.showError(statusBar, 'VMF import cancelled');
@@ -183,10 +160,7 @@ export class SceneIOHandler {
       }
       return await this.importVmfFromText(file.text, file.filename, statusBar);
     } catch (error) {
-      this.showError(
-        statusBar,
-        `Failed to import VMF: ${this.formatError(error)}`
-      );
+      this.showError(statusBar, `Failed to import VMF: ${this.formatError(error)}`);
       return null;
     }
   }
@@ -201,7 +175,7 @@ export class SceneIOHandler {
   async importVmfFromText(
     source: string,
     filename: string,
-    statusBar: StatusBar | null
+    statusBar: StatusBar | null,
   ): Promise<VmfImportResult | null> {
     const overlay = new ImportProgressOverlay(`Importing ${filename}`);
     overlay.show();
@@ -213,7 +187,7 @@ export class SceneIOHandler {
         includeEntitySolids: true,
         skipVolumeMaterials: true,
         rebuild: true,
-        onProgress: (ratio, label) => overlay.setProgress(ratio, label)
+        onProgress: (ratio, label) => overlay.setProgress(ratio, label),
       });
       if (result.importedBrushCount === 0) {
         this.showError(statusBar, 'VMF contained no importable brushes');
@@ -222,10 +196,7 @@ export class SceneIOHandler {
       this.showVmfImportResult(result, filename, statusBar);
       return result;
     } catch (error) {
-      this.showError(
-        statusBar,
-        `Failed to import VMF: ${this.formatError(error)}`
-      );
+      this.showError(statusBar, `Failed to import VMF: ${this.formatError(error)}`);
       return null;
     } finally {
       overlay.hide();
@@ -251,15 +222,12 @@ export class SceneIOHandler {
   private showVmfImportResult(
     result: VmfImportResult,
     filename: string,
-    statusBar: StatusBar | null
+    statusBar: StatusBar | null,
   ): void {
     if (!statusBar) return;
-    const skipped =
-      result.skippedBrushCount > 0
-        ? `, skipped ${result.skippedBrushCount}`
-        : '';
+    const skipped = result.skippedBrushCount > 0 ? `, skipped ${result.skippedBrushCount}` : '';
     statusBar.setLastAction(
-      `Imported ${result.importedBrushCount} brushes from ${filename}${skipped}`
+      `Imported ${result.importedBrushCount} brushes from ${filename}${skipped}`,
     );
   }
 
@@ -268,10 +236,7 @@ export class SceneIOHandler {
    * @param worldGroup The root group to export.
    * @param statusBar The status bar for feedback, or null.
    */
-  async exportGlb(
-    worldGroup: THREE.Group,
-    statusBar: StatusBar | null
-  ): Promise<void> {
+  async exportGlb(worldGroup: THREE.Group, statusBar: StatusBar | null): Promise<void> {
     try {
       if (worldGroup.children.length === 0) {
         this.showError(statusBar, 'Nothing to export');
@@ -282,16 +247,10 @@ export class SceneIOHandler {
         this.showError(statusBar, 'Failed to export GLB: empty result');
         return;
       }
-      const filename = await this.fileDialogManager.saveBinary(
-        buffer,
-        'scene.glb'
-      );
+      const filename = await this.fileDialogManager.saveBinary(buffer, 'scene.glb');
       this.showExportResult(filename, statusBar);
     } catch (error) {
-      this.showError(
-        statusBar,
-        `Failed to export GLB: ${this.formatError(error)}`
-      );
+      this.showError(statusBar, `Failed to export GLB: ${this.formatError(error)}`);
     }
   }
 
@@ -300,10 +259,7 @@ export class SceneIOHandler {
    * @param filename The exported filename, or null on failure.
    * @param statusBar The status bar for feedback, or null.
    */
-  private showExportResult(
-    filename: string | null,
-    statusBar: StatusBar | null
-  ): void {
+  private showExportResult(filename: string | null, statusBar: StatusBar | null): void {
     if (!statusBar) return;
     if (filename) {
       statusBar.setLastAction(`Exported GLB to ${filename}`);

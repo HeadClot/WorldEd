@@ -10,7 +10,7 @@ describe('groupSelectionsIntoFaceRegions', () => {
     const faceIndices = findCoplanarFaceIndices(mesh.geometry, 0);
     const selections: FaceSelection[] = faceIndices.map((faceIndex) => ({
       mesh,
-      faceIndex
+      faceIndex,
     }));
     const regions = groupSelectionsIntoFaceRegions(selections);
     expect(regions.length).toBe(1);
@@ -23,7 +23,7 @@ describe('groupSelectionsIntoFaceRegions', () => {
     const faceB = findCoplanarFaceIndices(mesh.geometry, 4);
     const selections: FaceSelection[] = [
       ...faceA.map((faceIndex) => ({ mesh, faceIndex })),
-      ...faceB.map((faceIndex) => ({ mesh, faceIndex }))
+      ...faceB.map((faceIndex) => ({ mesh, faceIndex })),
     ];
     const regions = groupSelectionsIntoFaceRegions(selections);
     expect(regions.length).toBe(2);
@@ -38,7 +38,7 @@ describe('groupSelectionsIntoFaceRegions', () => {
     const faceB = findCoplanarFaceIndices(meshB.geometry, 0);
     const selections: FaceSelection[] = [
       ...faceA.map((faceIndex) => ({ mesh: meshA, faceIndex })),
-      ...faceB.map((faceIndex) => ({ mesh: meshB, faceIndex }))
+      ...faceB.map((faceIndex) => ({ mesh: meshB, faceIndex })),
     ];
     const regions = groupSelectionsIntoFaceRegions(selections);
     expect(regions.length).toBe(2);

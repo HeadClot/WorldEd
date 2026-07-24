@@ -47,7 +47,7 @@ describe('CsgPlaneSplit', () => {
     mesh.updateMatrixWorld(true);
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
       new THREE.Vector3(1, 0, 0),
-      new THREE.Vector3(0, 0, 0)
+      new THREE.Vector3(0, 0, 0),
     );
     const result = splitter.clipMeshToPlane(mesh, plane, false);
     expect(result).toBeNull();
@@ -81,15 +81,9 @@ function createBoxMesh(width: number, height: number, depth: number): THREE.Mesh
  * @param normal Plane normal.
  * @returns Cutting plane.
  */
-function midPlaneThroughMesh(
-  mesh: THREE.Mesh,
-  normal: THREE.Vector3
-): THREE.Plane {
+function midPlaneThroughMesh(mesh: THREE.Mesh, normal: THREE.Vector3): THREE.Plane {
   const center = computeWorldBoundsCenter(mesh);
-  return new THREE.Plane().setFromNormalAndCoplanarPoint(
-    normal.clone().normalize(),
-    center
-  );
+  return new THREE.Plane().setFromNormalAndCoplanarPoint(normal.clone().normalize(), center);
 }
 
 /**

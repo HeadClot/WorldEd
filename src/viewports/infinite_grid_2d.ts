@@ -108,7 +108,7 @@ export class InfiniteGrid2D {
       minU: minU - pad,
       maxU: maxU + pad,
       minV: minV - pad,
-      maxV: maxV + pad
+      maxV: maxV + pad,
     };
   }
 
@@ -123,7 +123,7 @@ export class InfiniteGrid2D {
       [-1, -1],
       [1, -1],
       [-1, 1],
-      [1, 1]
+      [1, 1],
     ];
     ndc.forEach(([x, y]) => {
       corners.push(new THREE.Vector3(x, y, 0).unproject(camera));
@@ -173,11 +173,7 @@ export class InfiniteGrid2D {
       factor = this.measureCellScreenFactor(camera, cell);
       steps += 1;
     }
-    const minorFade = THREE.MathUtils.clamp(
-      THREE.MathUtils.inverseLerp(0.35, 1.0, factor),
-      0,
-      1
-    );
+    const minorFade = THREE.MathUtils.clamp(THREE.MathUtils.inverseLerp(0.35, 1.0, factor), 0, 1);
     return { cell, minorFade };
   }
 
@@ -187,10 +183,7 @@ export class InfiniteGrid2D {
    * @param cell Cell size in world units.
    * @returns Clamped factor 0..1.
    */
-  private measureCellScreenFactor(
-    camera: THREE.OrthographicCamera,
-    cell: number
-  ): number {
+  private measureCellScreenFactor(camera: THREE.OrthographicCamera, cell: number): number {
     const viewHeight = Math.abs(camera.top - camera.bottom);
     if (viewHeight <= 0) return 1;
     const referencePixels = 800;
@@ -207,7 +200,7 @@ export class InfiniteGrid2D {
   private appendGridLines(
     view: { minU: number; maxU: number; minV: number; maxV: number },
     cell: number,
-    minorFade: number
+    minorFade: number,
   ): void {
     const cell4 = cell * 4;
     const cell8 = cell * 8;
@@ -252,7 +245,7 @@ export class InfiniteGrid2D {
     cell: number,
     cell4: number,
     cell8: number,
-    minorFade: number
+    minorFade: number,
   ): THREE.Color {
     if (this.isMultipleOf(coordinate, cell8)) {
       return this.workMajor;
@@ -274,12 +267,7 @@ export class InfiniteGrid2D {
    * @param maxV Range end V.
    * @param color Line color.
    */
-  private appendConstantULine(
-    u: number,
-    minV: number,
-    maxV: number,
-    color: THREE.Color
-  ): void {
+  private appendConstantULine(u: number, minV: number, maxV: number, color: THREE.Color): void {
     const a = this.planeUVToWorld(u, minV);
     const b = this.planeUVToWorld(u, maxV);
     this.buffer.addLine(a.x, a.y, a.z, b.x, b.y, b.z, color, color);
@@ -292,12 +280,7 @@ export class InfiniteGrid2D {
    * @param maxU Range end U.
    * @param color Line color.
    */
-  private appendConstantVLine(
-    v: number,
-    minU: number,
-    maxU: number,
-    color: THREE.Color
-  ): void {
+  private appendConstantVLine(v: number, minU: number, maxU: number, color: THREE.Color): void {
     const a = this.planeUVToWorld(minU, v);
     const b = this.planeUVToWorld(maxU, v);
     this.buffer.addLine(a.x, a.y, a.z, b.x, b.y, b.z, color, color);
@@ -307,12 +290,7 @@ export class InfiniteGrid2D {
    * Draws the highlighted center axes through the origin.
    * @param view Visible plane bounds.
    */
-  private appendCenterAxes(view: {
-    minU: number;
-    maxU: number;
-    minV: number;
-    maxV: number;
-  }): void {
+  private appendCenterAxes(view: { minU: number; maxU: number; minV: number; maxV: number }): void {
     this.appendConstantVLine(0, view.minU, view.maxU, this.axisUColor);
     this.appendConstantULine(0, view.minV, view.maxV, this.axisVColor);
   }

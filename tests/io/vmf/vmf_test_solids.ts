@@ -14,7 +14,7 @@ export function buildAxisAlignedWorldSolidVmf(
   min: { x: number; y: number; z: number },
   max: { x: number; y: number; z: number },
   material: string = 'DEV/DEV_MEASUREGENERIC01',
-  solidId: number = 42
+  solidId: number = 42,
 ): string {
   const sides = buildAxisAlignedSideBlocks(min, max, material);
   return `
@@ -42,7 +42,7 @@ ${sides}
 export function buildAxisAlignedSideBlocks(
   min: { x: number; y: number; z: number },
   max: { x: number; y: number; z: number },
-  material: string
+  material: string,
 ): string {
   const { x: x0, y: y0, z: z0 } = min;
   const { x: x1, y: y1, z: z1 } = max;
@@ -52,7 +52,7 @@ export function buildAxisAlignedSideBlocks(
     `(${x0} ${y0} ${z1}) (${x1} ${y0} ${z1}) (${x1} ${y0} ${z0})`,
     `(${x1} ${y1} ${z0}) (${x1} ${y0} ${z0}) (${x1} ${y0} ${z1})`,
     `(${x0} ${y1} ${z0}) (${x1} ${y1} ${z0}) (${x1} ${y1} ${z1})`,
-    `(${x0} ${y1} ${z1}) (${x0} ${y0} ${z1}) (${x0} ${y0} ${z0})`
+    `(${x0} ${y1} ${z1}) (${x0} ${y0} ${z1}) (${x0} ${y0} ${z0})`,
   ];
   const uAxes = [
     '[1 0 0 0] 0.25',
@@ -60,7 +60,7 @@ export function buildAxisAlignedSideBlocks(
     '[1 0 0 0] 0.25',
     '[0 1 0 0] 0.25',
     '[1 0 0 0] 0.25',
-    '[0 1 0 0] 0.25'
+    '[0 1 0 0] 0.25',
   ];
   const vAxes = [
     '[0 -1 0 0] 0.25',
@@ -68,7 +68,7 @@ export function buildAxisAlignedSideBlocks(
     '[0 0 -1 0] 0.25',
     '[0 0 -1 0] 0.25',
     '[0 0 -1 0] 0.25',
-    '[0 0 -1 0] 0.25'
+    '[0 0 -1 0] 0.25',
   ];
   return planes
     .map((plane, index) => {

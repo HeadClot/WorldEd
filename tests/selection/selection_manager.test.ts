@@ -86,14 +86,18 @@ describe('SelectionManager', () => {
 
   it('should fire callback on selection change', () => {
     let callbackCount = 0;
-    manager.onSelectionChanged(() => { callbackCount++; });
+    manager.onSelectionChanged(() => {
+      callbackCount++;
+    });
     manager.selectObject(meshA);
     expect(callbackCount).toBe(1);
   });
 
   it('should fire callback with correct selection set', () => {
     let capturedSet: Set<THREE.Mesh> | null = null;
-    manager.onSelectionChanged((selected) => { capturedSet = selected; });
+    manager.onSelectionChanged((selected) => {
+      capturedSet = selected;
+    });
     manager.selectObject(meshA);
     expect(capturedSet).not.toBeNull();
     expect(capturedSet?.has(meshA)).toBe(true);
@@ -102,8 +106,12 @@ describe('SelectionManager', () => {
   it('should support multiple change callbacks', () => {
     let countA = 0;
     let countB = 0;
-    manager.onSelectionChanged(() => { countA++; });
-    manager.onSelectionChanged(() => { countB++; });
+    manager.onSelectionChanged(() => {
+      countA++;
+    });
+    manager.onSelectionChanged(() => {
+      countB++;
+    });
     manager.selectObject(meshA);
     expect(countA).toBe(1);
     expect(countB).toBe(1);
@@ -121,7 +129,9 @@ describe('SelectionManager', () => {
 
   it('should not fire callbacks after disposal', () => {
     let callbackCount = 0;
-    manager.onSelectionChanged(() => { callbackCount++; });
+    manager.onSelectionChanged(() => {
+      callbackCount++;
+    });
     manager.dispose();
     manager.selectObject(meshA);
     expect(callbackCount).toBe(0);
@@ -129,7 +139,9 @@ describe('SelectionManager', () => {
 
   it('should stop firing a callback after it is unregistered', () => {
     let callbackCount = 0;
-    const callback = () => { callbackCount++; };
+    const callback = () => {
+      callbackCount++;
+    };
     manager.onSelectionChanged(callback);
     manager.selectObject(meshA);
     expect(callbackCount).toBe(1);
@@ -141,8 +153,12 @@ describe('SelectionManager', () => {
   it('should keep other callbacks firing after one is unregistered', () => {
     let countA = 0;
     let countB = 0;
-    const callbackA = () => { countA++; };
-    const callbackB = () => { countB++; };
+    const callbackA = () => {
+      countA++;
+    };
+    const callbackB = () => {
+      countB++;
+    };
     manager.onSelectionChanged(callbackA);
     manager.onSelectionChanged(callbackB);
     manager.selectObject(meshA);

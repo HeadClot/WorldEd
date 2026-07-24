@@ -4,7 +4,7 @@ import { BufferGeometryCodec } from './buffer_geometry_codec.js';
 import { getFaceTextureMaps } from '../texture/face_texture_storage.js';
 import {
   resolveGeometrySourceParams,
-  resolveGeometrySourceType
+  resolveGeometrySourceType,
 } from '../texture/geometry_source.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidModelCodec } from '../solid/io/solid_model_codec.js';
@@ -39,7 +39,7 @@ export class SceneSerializer {
     this.collectEntries(worldGroup, entries);
     return {
       version: SCHEMA_VERSION,
-      objects: entries
+      objects: entries,
     };
   }
 
@@ -110,7 +110,7 @@ export class SceneSerializer {
       rotation: this.extractRotationData(euler),
       scale: this.extractScaleData(object),
       visible: object.visible,
-      parentId: parentId
+      parentId: parentId,
     };
   }
 
@@ -120,12 +120,7 @@ export class SceneSerializer {
    * @returns An Euler instance in XYZ order.
    */
   private buildEulerFromObject(object: THREE.Object3D): THREE.Euler {
-    return new THREE.Euler(
-      object.rotation.x,
-      object.rotation.y,
-      object.rotation.z,
-      'XYZ'
-    );
+    return new THREE.Euler(object.rotation.x, object.rotation.y, object.rotation.z, 'XYZ');
   }
 
   /**
@@ -137,7 +132,7 @@ export class SceneSerializer {
     return {
       x: object.position.x,
       y: object.position.y,
-      z: object.position.z
+      z: object.position.z,
     };
   }
 
@@ -150,7 +145,7 @@ export class SceneSerializer {
     return {
       x: euler.x,
       y: euler.y,
-      z: euler.z
+      z: euler.z,
     };
   }
 
@@ -163,7 +158,7 @@ export class SceneSerializer {
     return {
       x: object.scale.x,
       y: object.scale.y,
-      z: object.scale.z
+      z: object.scale.z,
     };
   }
 
@@ -238,7 +233,7 @@ export class SceneSerializer {
    */
   private extractGeometryParams(
     geometry: THREE.BufferGeometry,
-    _geometryType: GeometryType
+    _geometryType: GeometryType,
   ): Record<string, number> {
     return resolveGeometrySourceParams(geometry);
   }

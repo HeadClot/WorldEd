@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   attachWebGLContextDiagnostics,
-  WebGLContextStateChange
+  WebGLContextStateChange,
 } from '../../src/viewports/webgl_context_diagnostics.js';
 
 describe('WebGL context diagnostics', () => {
@@ -16,9 +16,7 @@ describe('WebGL context diagnostics', () => {
     canvas.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(true);
-    expect(changes).toEqual([
-      { ownerName: 'viewport:Perspective', state: 'lost' }
-    ]);
+    expect(changes).toEqual([{ ownerName: 'viewport:Perspective', state: 'lost' }]);
   });
 
   it('should report context restoration for the same owner', () => {
@@ -30,7 +28,7 @@ describe('WebGL context diagnostics', () => {
 
     expect(onStateChange).toHaveBeenCalledWith({
       ownerName: 'camera_widget',
-      state: 'restored'
+      state: 'restored',
     });
   });
 
@@ -39,14 +37,14 @@ describe('WebGL context diagnostics', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const event = new Event('webglcontextcreationerror');
     Object.defineProperty(event, 'statusMessage', {
-      value: 'GPU process disabled'
+      value: 'GPU process disabled',
     });
 
     attachWebGLContextDiagnostics(canvas, 'viewport:Perspective');
     canvas.dispatchEvent(event);
 
     expect(consoleError).toHaveBeenCalledWith(
-      '[AiWorldEd] WebGL context creation failed for viewport:Perspective: GPU process disabled. Check WebGL2 support, GPU drivers, and desktop hardware acceleration.'
+      '[AiWorldEd] WebGL context creation failed for viewport:Perspective: GPU process disabled. Check WebGL2 support, GPU drivers, and desktop hardware acceleration.',
     );
     consoleError.mockRestore();
   });

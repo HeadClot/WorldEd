@@ -68,7 +68,7 @@ describe('UngroupCommand', () => {
     const singleGroup = new THREE.Group();
     const singleMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
+      new THREE.MeshBasicMaterial(),
     );
     singleMesh.name = 'SingleMesh';
     singleGroup.add(singleMesh);
@@ -84,7 +84,7 @@ describe('UngroupCommand', () => {
     const orphanGroup = new THREE.Group();
     const orphanMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
+      new THREE.MeshBasicMaterial(),
     );
     orphanMesh.name = 'OrphanMesh';
     orphanGroup.add(orphanMesh);

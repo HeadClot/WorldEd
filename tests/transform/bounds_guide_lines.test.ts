@@ -32,14 +32,8 @@ describe('BoundsGuideLines', () => {
     guides = new BoundsGuideLines(Theme, fixedLength);
     guides.updateFromHalfExtents(new THREE.Vector3(50, 1, 1));
     const position = guides.getGeometry().getAttribute('position');
-    const start = new THREE.Vector3().fromBufferAttribute(
-      position as THREE.BufferAttribute,
-      0
-    );
-    const end = new THREE.Vector3().fromBufferAttribute(
-      position as THREE.BufferAttribute,
-      1
-    );
+    const start = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, 0);
+    const end = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, 1);
     expect(start.distanceTo(end)).toBeCloseTo(fixedLength, 5);
   });
 
@@ -50,10 +44,7 @@ describe('BoundsGuideLines', () => {
     const corner = new THREE.Vector3(1, 2, 3);
     let foundCorner = false;
     for (let i = 0; i < position.count; i += 2) {
-      const start = new THREE.Vector3().fromBufferAttribute(
-        position as THREE.BufferAttribute,
-        i
-      );
+      const start = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, i);
       if (start.distanceTo(corner) < 1e-6) {
         foundCorner = true;
         break;
@@ -74,25 +65,17 @@ describe('BoundsGuideLines', () => {
     const root = guides.getObject();
     expect(root).toBeInstanceOf(THREE.Group);
     expect(root.userData.isBoundsGuideLines).toBe(true);
-    const linePasses = root.children.filter(
-      (child) => child instanceof THREE.LineSegments
-    );
+    const linePasses = root.children.filter((child) => child instanceof THREE.LineSegments);
     expect(linePasses).toHaveLength(2);
   });
 
   it('should use depth-aware front and occluded materials like move gizmos', () => {
-    const linePasses = guides.getObject().children.filter(
-      (child) => child instanceof THREE.LineSegments
-    ) as THREE.LineSegments[];
-    const materials = linePasses.map(
-      (line) => line.material as THREE.LineBasicMaterial
-    );
-    const front = materials.find(
-      (material) => material.depthFunc === THREE.LessEqualDepth
-    );
-    const occluded = materials.find(
-      (material) => material.depthFunc === THREE.GreaterDepth
-    );
+    const linePasses = guides
+      .getObject()
+      .children.filter((child) => child instanceof THREE.LineSegments) as THREE.LineSegments[];
+    const materials = linePasses.map((line) => line.material as THREE.LineBasicMaterial);
+    const front = materials.find((material) => material.depthFunc === THREE.LessEqualDepth);
+    const occluded = materials.find((material) => material.depthFunc === THREE.GreaterDepth);
     expect(front).toBeDefined();
     expect(occluded).toBeDefined();
     expect(front!.depthTest).toBe(true);
@@ -103,17 +86,17 @@ describe('BoundsGuideLines', () => {
 
   it('should share one geometry between front and occluded passes', () => {
     guides.updateFromHalfExtents(new THREE.Vector3(1, 1, 1));
-    const linePasses = guides.getObject().children.filter(
-      (child) => child instanceof THREE.LineSegments
-    ) as THREE.LineSegments[];
+    const linePasses = guides
+      .getObject()
+      .children.filter((child) => child instanceof THREE.LineSegments) as THREE.LineSegments[];
     expect(linePasses[0].geometry).toBe(linePasses[1].geometry);
     expect(linePasses[0].geometry).toBe(guides.getGeometry());
   });
 
   it('should mark the occluded pass as a gizmo ghost', () => {
-    const occluded = guides.getObject().children.find(
-      (child) => child.userData.isGizmoOccludedGhost === true
-    );
+    const occluded = guides
+      .getObject()
+      .children.find((child) => child.userData.isGizmoOccludedGhost === true);
     expect(occluded).toBeInstanceOf(THREE.LineSegments);
   });
 

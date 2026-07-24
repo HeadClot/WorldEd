@@ -6,7 +6,7 @@ import {
   createGizmoOccludedMaterial,
   createGizmoOccludedMesh,
   createGizmoFrontLineMaterial,
-  createGizmoOccludedLineMaterial
+  createGizmoOccludedLineMaterial,
 } from '../../src/transform/gizmo_visual_style.js';
 
 describe('GizmoVisualStyle', () => {

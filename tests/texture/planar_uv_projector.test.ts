@@ -8,7 +8,7 @@ import {
   resolveProjectionNormal,
   ensureUvAttribute,
   ensureUniqueTriangleVertices,
-  computeRegionWorldNormal
+  computeRegionWorldNormal,
 } from '../../src/texture/planar_uv_projector.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
@@ -103,8 +103,7 @@ describe('planar_uv_projector', () => {
     const top = wallSamples.filter((entry) => entry.worldY > 0.9);
     expect(bottom.length).toBeGreaterThan(0);
     expect(top.length).toBeGreaterThan(0);
-    const avgBottomV =
-      bottom.reduce((sum, entry) => sum + entry.v, 0) / bottom.length;
+    const avgBottomV = bottom.reduce((sum, entry) => sum + entry.v, 0) / bottom.length;
     const avgTopV = top.reduce((sum, entry) => sum + entry.v, 0) / top.length;
     expect(avgTopV - avgBottomV).toBeCloseTo(1, 4);
   });
@@ -113,7 +112,7 @@ describe('planar_uv_projector', () => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3)
+      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3),
     );
     const uv = ensureUvAttribute(geometry);
     expect(uv.count).toBe(3);
@@ -143,11 +142,11 @@ describe('planar_uv_projector', () => {
     const topRim = collectVerticesNear(
       position,
       uv,
-      (x, y, z) => Math.abs(y - 0.5) < 1e-3 && Math.hypot(x, z) > 0.4
+      (x, y, z) => Math.abs(y - 0.5) < 1e-3 && Math.hypot(x, z) > 0.4,
     );
     expect(topRim.length).toBeGreaterThan(4);
     const uniqueUvKeys = new Set(
-      topRim.map((entry) => `${entry.u.toFixed(4)},${entry.v.toFixed(4)}`)
+      topRim.map((entry) => `${entry.u.toFixed(4)},${entry.v.toFixed(4)}`),
     );
     expect(uniqueUvKeys.size).toBeGreaterThan(1);
   });
@@ -163,7 +162,7 @@ describe('planar_uv_projector', () => {
         x: position.getX(i),
         z: position.getZ(i),
         u: uv.getX(i),
-        v: uv.getY(i)
+        v: uv.getY(i),
       });
     }
     expect(samples.length).toBeGreaterThan(4);
@@ -196,9 +195,7 @@ describe('planar_uv_projector', () => {
     const segments = 8;
     const radius = 1;
     const height = 2;
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(radius, radius, height, segments)
-    );
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, segments));
     mesh.position.set(0, height / 2, 0);
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh);
@@ -238,7 +235,7 @@ describe('planar_uv_projector', () => {
 function collectVerticesNear(
   position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   uv: THREE.BufferAttribute,
-  match: (x: number, y: number, z: number) => boolean
+  match: (x: number, y: number, z: number) => boolean,
 ): Array<{ u: number; v: number }> {
   const results: Array<{ u: number; v: number }> = [];
   for (let i = 0; i < position.count; i++) {
@@ -262,7 +259,7 @@ function collectVerticesNear(
 function measureCylinderSideAspectRatios(
   mesh: THREE.Mesh,
   sideLength: number,
-  height: number
+  height: number,
 ): number[] {
   const entries = getFaceTextureMaps(mesh);
   const ratios: number[] = [];
@@ -282,9 +279,7 @@ function measureCylinderSideAspectRatios(
  * @param mesh Initialized cylinder mesh.
  * @returns U ranges for side faces.
  */
-function measureCylinderSideURanges(
-  mesh: THREE.Mesh
-): Array<{ minU: number; maxU: number }> {
+function measureCylinderSideURanges(mesh: THREE.Mesh): Array<{ minU: number; maxU: number }> {
   const entries = getFaceTextureMaps(mesh);
   const ranges: Array<{ minU: number; maxU: number }> = [];
   entries.forEach((entry) => {
@@ -304,7 +299,7 @@ function measureCylinderSideURanges(
  */
 function measureRegionUvRange(
   mesh: THREE.Mesh,
-  triangleIndices: number[]
+  triangleIndices: number[],
 ): { minU: number; maxU: number; uSpan: number; vSpan: number } {
   const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
   const index = mesh.geometry.getIndex();
@@ -314,9 +309,7 @@ function measureRegionUvRange(
   let maxV = -Infinity;
   triangleIndices.forEach((faceIndex) => {
     for (let corner = 0; corner < 3; corner++) {
-      const vertexIndex = index
-        ? index.getX(faceIndex * 3 + corner)
-        : faceIndex * 3 + corner;
+      const vertexIndex = index ? index.getX(faceIndex * 3 + corner) : faceIndex * 3 + corner;
       const u = uv.getX(vertexIndex);
       const v = uv.getY(vertexIndex);
       minU = Math.min(minU, u);
@@ -329,6 +322,6 @@ function measureRegionUvRange(
     minU,
     maxU,
     uSpan: maxU - minU,
-    vSpan: maxV - minV
+    vSpan: maxV - minV,
   };
 }

@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { FaceSelection } from './face_selection_manager.js';
-import {
-  getTriangleVertexIndices,
-  getVertexPosition
-} from './triangle_geometry_utils.js';
+import { getTriangleVertexIndices, getVertexPosition } from './triangle_geometry_utils.js';
 import { GizmoVisualStyle } from '../transform/gizmo_visual_style.js';
 
 /**
@@ -60,7 +57,7 @@ export class FaceSelectionHighlight {
       toneMapped: false,
       polygonOffset: true,
       polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1
+      polygonOffsetUnits: -1,
     });
   }
 
@@ -80,7 +77,7 @@ export class FaceSelectionHighlight {
       toneMapped: false,
       polygonOffset: true,
       polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1
+      polygonOffsetUnits: -1,
     });
   }
 
@@ -106,9 +103,7 @@ export class FaceSelectionHighlight {
    * @param faces Face selection entries.
    * @returns Map from mesh to triangle indices.
    */
-  private groupFacesByMesh(
-    faces: FaceSelection[]
-  ): Map<THREE.Mesh, number[]> {
+  private groupFacesByMesh(faces: FaceSelection[]): Map<THREE.Mesh, number[]> {
     const byMesh = new Map<THREE.Mesh, number[]>();
     for (const entry of faces) {
       const list = byMesh.get(entry.mesh);
@@ -127,10 +122,7 @@ export class FaceSelectionHighlight {
    * @param faceIndices Selected triangle indices on that mesh.
    * @returns Dual-pass group, or null when geometry is empty.
    */
-  private buildBatchedMeshHighlight(
-    mesh: THREE.Mesh,
-    faceIndices: number[]
-  ): THREE.Group | null {
+  private buildBatchedMeshHighlight(mesh: THREE.Mesh, faceIndices: number[]): THREE.Group | null {
     const geometry = this.buildWorldSpaceBatchedGeometry(mesh, faceIndices);
     if (!geometry) return null;
     const group = new THREE.Group();
@@ -148,7 +140,7 @@ export class FaceSelectionHighlight {
    */
   private buildWorldSpaceBatchedGeometry(
     mesh: THREE.Mesh,
-    faceIndices: number[]
+    faceIndices: number[],
   ): THREE.BufferGeometry | null {
     const positions = mesh.geometry.getAttribute('position');
     if (!positions || faceIndices.length === 0) return null;
@@ -187,7 +179,7 @@ export class FaceSelectionHighlight {
     worldMatrix: THREE.Matrix4,
     floats: Float32Array,
     write: number,
-    scratch: THREE.Vector3
+    scratch: THREE.Vector3,
   ): number {
     scratch.copy(getVertexPosition(positions, vertexIndex)).applyMatrix4(worldMatrix);
     floats[write] = scratch.x;

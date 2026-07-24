@@ -41,7 +41,7 @@ export function createWingEdge(vertexIndex: number, twinIndex: number): WingEdge
 export function createSolidFace(
   firstEdge: number,
   edgeCount: number,
-  surfaceIndex: number = 0
+  surfaceIndex: number = 0,
 ): SolidFace {
   return { firstEdge, edgeCount, surfaceIndex };
 }

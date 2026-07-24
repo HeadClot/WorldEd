@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   computeBrushSpawnPosition,
-  snapPositionToGrid
+  snapPositionToGrid,
 } from '../../src/solid/model/brush_spawn_placement.js';
 
 /**

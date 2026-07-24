@@ -5,13 +5,13 @@ import {
   FaceTextureMapEntry,
   FaceTextureMapping,
   cloneFaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../texture/face_texture_mapping.js';
 import { setFaceTextureMaps } from '../texture/face_texture_storage.js';
 import { getFaceTextureMaps } from '../texture/face_texture_storage.js';
 import {
   rebakeStoredFaceTextureMaps,
-  splitMeshIntoCoplanarRegions
+  splitMeshIntoCoplanarRegions,
 } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
 import { getTexturePaintState } from '../texture/texture_paint_state.js';
@@ -35,12 +35,7 @@ export class CsgMeshBuilder {
     const triangleMappings = this.buildTriangleMappingTable(mesh);
     const polygons: CsgPolygon[] = [];
     if (index) {
-      this.extractIndexedTriangles(
-        position,
-        index,
-        polygons,
-        triangleMappings
-      );
+      this.extractIndexedTriangles(position, index, polygons, triangleMappings);
     } else {
       this.extractNonIndexedTriangles(position, polygons, triangleMappings);
     }
@@ -56,16 +51,12 @@ export class CsgMeshBuilder {
    * @param name The mesh name.
    * @returns A new mesh centered at the origin of its geometry bounds.
    */
-  polygonsToMesh(
-    polygons: CsgPolygon[],
-    color: number,
-    name: string
-  ): THREE.Mesh {
+  polygonsToMesh(polygons: CsgPolygon[], color: number, name: string): THREE.Mesh {
     const built = this.buildGeometryFromPolygons(polygons);
     built.geometry.computeVertexNormals();
     const material = createContentMaterial(color, {
       flatShading: true,
-      side: THREE.FrontSide
+      side: THREE.FrontSide,
     });
     const mesh = new THREE.Mesh(built.geometry, material);
     mesh.name = name;
@@ -79,9 +70,7 @@ export class CsgMeshBuilder {
    * @param mesh Source mesh.
    * @returns Mapping per triangle index.
    */
-  private buildTriangleMappingTable(
-    mesh: THREE.Mesh
-  ): Map<number, FaceTextureMapping> {
+  private buildTriangleMappingTable(mesh: THREE.Mesh): Map<number, FaceTextureMapping> {
     const lookup = new Map<number, FaceTextureMapping>();
     const entries = getFaceTextureMaps(mesh);
     entries.forEach((entry) => {
@@ -100,13 +89,11 @@ export class CsgMeshBuilder {
    */
   private resolveTriangleMapping(
     triangleIndex: number,
-    table: Map<number, FaceTextureMapping>
+    table: Map<number, FaceTextureMapping>,
   ): FaceTextureMapping {
     const existing = table.get(triangleIndex);
     if (existing) return cloneFaceTextureMapping(existing);
-    return createDefaultFaceTextureMapping(
-      getTexturePaintState().getLastTextureId()
-    );
+    return createDefaultFaceTextureMapping(getTexturePaintState().getLastTextureId());
   }
 
   /**
@@ -120,7 +107,7 @@ export class CsgMeshBuilder {
     position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
     index: THREE.BufferAttribute,
     polygons: CsgPolygon[],
-    triangleMappings: Map<number, FaceTextureMapping>
+    triangleMappings: Map<number, FaceTextureMapping>,
   ): void {
     let triangleIndex = 0;
     for (let i = 0; i < index.count; i += 3) {
@@ -128,10 +115,7 @@ export class CsgMeshBuilder {
       const b = this.readVertex(position, index.getX(i + 1));
       const c = this.readVertex(position, index.getX(i + 2));
       if (this.isValidTriangle(a, b, c)) {
-        const mapping = this.resolveTriangleMapping(
-          triangleIndex,
-          triangleMappings
-        );
+        const mapping = this.resolveTriangleMapping(triangleIndex, triangleMappings);
         polygons.push(new CsgPolygon([a, b, c], mapping));
       }
       triangleIndex += 1;
@@ -147,7 +131,7 @@ export class CsgMeshBuilder {
   private extractNonIndexedTriangles(
     position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
     polygons: CsgPolygon[],
-    triangleMappings: Map<number, FaceTextureMapping>
+    triangleMappings: Map<number, FaceTextureMapping>,
   ): void {
     let triangleIndex = 0;
     for (let i = 0; i < position.count; i += 3) {
@@ -155,10 +139,7 @@ export class CsgMeshBuilder {
       const b = this.readVertex(position, i + 1);
       const c = this.readVertex(position, i + 2);
       if (this.isValidTriangle(a, b, c)) {
-        const mapping = this.resolveTriangleMapping(
-          triangleIndex,
-          triangleMappings
-        );
+        const mapping = this.resolveTriangleMapping(triangleIndex, triangleMappings);
         polygons.push(new CsgPolygon([a, b, c], mapping));
       }
       triangleIndex += 1;
@@ -173,13 +154,9 @@ export class CsgMeshBuilder {
    */
   private readVertex(
     position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-    index: number
+    index: number,
   ): THREE.Vector3 {
-    return new THREE.Vector3(
-      position.getX(index),
-      position.getY(index),
-      position.getZ(index)
-    );
+    return new THREE.Vector3(position.getX(index), position.getY(index), position.getZ(index));
   }
 
   /**
@@ -189,11 +166,7 @@ export class CsgMeshBuilder {
    * @param c Third vertex.
    * @returns True if the triangle has area.
    */
-  private isValidTriangle(
-    a: THREE.Vector3,
-    b: THREE.Vector3,
-    c: THREE.Vector3
-  ): boolean {
+  private isValidTriangle(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3): boolean {
     const ab = new THREE.Vector3().subVectors(b, a);
     const ac = new THREE.Vector3().subVectors(c, a);
     return ab.cross(ac).lengthSq() > 1e-12;
@@ -210,29 +183,19 @@ export class CsgMeshBuilder {
   } {
     const positions: number[] = [];
     const triangleMappings: FaceTextureMapping[] = [];
-    const fallback = createDefaultFaceTextureMapping(
-      getTexturePaintState().getLastTextureId()
-    );
+    const fallback = createDefaultFaceTextureMapping(getTexturePaintState().getLastTextureId());
     polygons.forEach((polygon) => {
       const vertices = polygon.getVertices();
-      const mapping =
-        polygon.getSurfaceMapping() ?? cloneFaceTextureMapping(fallback);
+      const mapping = polygon.getSurfaceMapping() ?? cloneFaceTextureMapping(fallback);
       for (let i = 1; i + 1 < vertices.length; i++) {
         positions.push(vertices[0].x, vertices[0].y, vertices[0].z);
         positions.push(vertices[i].x, vertices[i].y, vertices[i].z);
-        positions.push(
-          vertices[i + 1].x,
-          vertices[i + 1].y,
-          vertices[i + 1].z
-        );
+        positions.push(vertices[i + 1].x, vertices[i + 1].y, vertices[i + 1].z);
         triangleMappings.push(cloneFaceTextureMapping(mapping));
       }
     });
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(positions, 3)
-    );
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     return { geometry, triangleMappings };
   }
 
@@ -245,7 +208,7 @@ export class CsgMeshBuilder {
    */
   private applyTriangleMappingsToMesh(
     mesh: THREE.Mesh,
-    triangleMappings: FaceTextureMapping[]
+    triangleMappings: FaceTextureMapping[],
   ): void {
     mesh.updateMatrixWorld(true);
     const entries = this.groupByCoplanarRegion(mesh, triangleMappings);
@@ -263,11 +226,9 @@ export class CsgMeshBuilder {
    */
   private groupByCoplanarRegion(
     mesh: THREE.Mesh,
-    triangleMappings: FaceTextureMapping[]
+    triangleMappings: FaceTextureMapping[],
   ): FaceTextureMapEntry[] {
-    const fallback = createDefaultFaceTextureMapping(
-      getTexturePaintState().getLastTextureId()
-    );
+    const fallback = createDefaultFaceTextureMapping(getTexturePaintState().getLastTextureId());
     const regions = splitMeshIntoCoplanarRegions(mesh);
     const entries: FaceTextureMapEntry[] = [];
     regions.forEach((region) => {
@@ -287,12 +248,11 @@ export class CsgMeshBuilder {
     region: number[],
     triangleMappings: FaceTextureMapping[],
     fallback: FaceTextureMapping,
-    entries: FaceTextureMapEntry[]
+    entries: FaceTextureMapEntry[],
   ): void {
     const byMapping = new Map<string, number[]>();
     region.forEach((triangleIndex) => {
-      const mapping =
-        triangleMappings[triangleIndex] ?? cloneFaceTextureMapping(fallback);
+      const mapping = triangleMappings[triangleIndex] ?? cloneFaceTextureMapping(fallback);
       const key = mappingKey(mapping);
       const list = byMapping.get(key);
       if (list) {
@@ -303,11 +263,10 @@ export class CsgMeshBuilder {
     });
     byMapping.forEach((triangleIndices) => {
       const sampleIndex = triangleIndices[0];
-      const mapping =
-        triangleMappings[sampleIndex] ?? cloneFaceTextureMapping(fallback);
+      const mapping = triangleMappings[sampleIndex] ?? cloneFaceTextureMapping(fallback);
       entries.push({
         triangleIndices: triangleIndices.slice().sort((a, b) => a - b),
-        mapping: cloneFaceTextureMapping(mapping)
+        mapping: cloneFaceTextureMapping(mapping),
       });
     });
   }
@@ -340,6 +299,6 @@ function mappingKey(mapping: FaceTextureMapping): string {
     mapping.scaleV,
     mapping.offsetU,
     mapping.offsetV,
-    mapping.rotationDeg
+    mapping.rotationDeg,
   ].join('|');
 }

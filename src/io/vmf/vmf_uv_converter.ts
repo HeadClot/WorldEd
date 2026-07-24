@@ -1,12 +1,9 @@
 import * as THREE from 'three';
 import {
   FaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../../texture/face_texture_mapping.js';
-import {
-  VMF_INCHES_TO_METERS,
-  swizzleSourceComponentsToThree
-} from './vmf_coordinates.js';
+import { VMF_INCHES_TO_METERS, swizzleSourceComponentsToThree } from './vmf_coordinates.js';
 import { VmfTextureAxis } from './vmf_types.js';
 import { materialNameToTextureId } from './vmf_material_policy.js';
 
@@ -42,11 +39,9 @@ export class VmfUvConverter {
     _faceNormal: THREE.Vector3,
     textureWidth: number = VMF_DEFAULT_TEXTURE_SIZE,
     textureHeight: number = VMF_DEFAULT_TEXTURE_SIZE,
-    unitScale: number = VMF_INCHES_TO_METERS
+    unitScale: number = VMF_INCHES_TO_METERS,
   ): FaceTextureMapping {
-    const mapping = createDefaultFaceTextureMapping(
-      materialNameToTextureId(materialName)
-    );
+    const mapping = createDefaultFaceTextureMapping(materialNameToTextureId(materialName));
     mapping.align = 'face';
     mapping.rotationDeg = 0;
     const worldU = this.swizzleAxisDirection(uAxis);
@@ -88,7 +83,7 @@ export class VmfUvConverter {
   private axisToMetersPerTile(
     axis: VmfTextureAxis,
     textureSize: number,
-    unitScale: number
+    unitScale: number,
   ): number {
     const scale = axis.scale === 0 ? 0.25 : Math.abs(axis.scale);
     const meters = textureSize * scale * unitScale;

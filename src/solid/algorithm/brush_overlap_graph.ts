@@ -42,7 +42,7 @@ export class BrushOverlapGraph {
     entries: OverlapBoundsEntry[],
     pad: number,
     seedIndices: ReadonlySet<number>,
-    previousPeerIndices: readonly number[][]
+    previousPeerIndices: readonly number[][],
   ): void {
     if (seedIndices.size === 0 || seedIndices.size >= entries.length) {
       this.build(entries, pad);
@@ -61,7 +61,7 @@ export class BrushOverlapGraph {
   private static restorePreviousPeers(
     entries: OverlapBoundsEntry[],
     seedIndices: ReadonlySet<number>,
-    previousPeerIndices: readonly number[][]
+    previousPeerIndices: readonly number[][],
   ): void {
     for (let index = 0; index < entries.length; index++) {
       if (seedIndices.has(index)) continue;
@@ -84,7 +84,7 @@ export class BrushOverlapGraph {
   private static linkSeedsAgainstAll(
     entries: OverlapBoundsEntry[],
     pad: number,
-    seedIndices: ReadonlySet<number>
+    seedIndices: ReadonlySet<number>,
   ): void {
     if (entries.length <= 32 || seedIndices.size >= entries.length / 2) {
       this.linkSeedsPairwise(entries, pad, seedIndices);
@@ -99,7 +99,7 @@ export class BrushOverlapGraph {
         entries[seedIndex].bounds,
         cellSize,
         pad,
-        seedIndex
+        seedIndex,
       );
       for (const other of candidates) {
         if (!this.boundsOverlap(entries[seedIndex].bounds, entries[other].bounds, pad)) {
@@ -119,7 +119,7 @@ export class BrushOverlapGraph {
   private static linkSeedsPairwise(
     entries: OverlapBoundsEntry[],
     pad: number,
-    seedIndices: ReadonlySet<number>
+    seedIndices: ReadonlySet<number>,
   ): void {
     for (const seedIndex of seedIndices) {
       if (seedIndex < 0 || seedIndex >= entries.length) continue;
@@ -147,7 +147,7 @@ export class BrushOverlapGraph {
     bounds: THREE.Box3,
     cellSize: number,
     pad: number,
-    excludeIndex: number
+    excludeIndex: number,
   ): number[] {
     const minX = Math.floor((bounds.min.x - pad) / cellSize);
     const minY = Math.floor((bounds.min.y - pad) / cellSize);
@@ -177,11 +177,7 @@ export class BrushOverlapGraph {
    * @param a First index.
    * @param b Second index.
    */
-  private static addUndirectedPeer(
-    entries: OverlapBoundsEntry[],
-    a: number,
-    b: number
-  ): void {
+  private static addUndirectedPeer(entries: OverlapBoundsEntry[], a: number, b: number): void {
     if (!entries[a].overlappingPeerIndices.includes(b)) {
       entries[a].overlappingPeerIndices.push(b);
     }
@@ -195,10 +191,7 @@ export class BrushOverlapGraph {
    * @param entries Bounds entries.
    * @param pad Overlap pad.
    */
-  private static buildPairwise(
-    entries: OverlapBoundsEntry[],
-    pad: number
-  ): void {
+  private static buildPairwise(entries: OverlapBoundsEntry[], pad: number): void {
     const count = entries.length;
     for (let i = 0; i < count; i++) {
       for (let j = i + 1; j < count; j++) {
@@ -216,10 +209,7 @@ export class BrushOverlapGraph {
    * @param entries Bounds entries.
    * @param pad Overlap pad.
    */
-  private static buildWithGrid(
-    entries: OverlapBoundsEntry[],
-    pad: number
-  ): void {
+  private static buildWithGrid(entries: OverlapBoundsEntry[], pad: number): void {
     const cellSize = this.chooseCellSize(entries);
     const cells = this.binEntriesIntoCells(entries, cellSize, pad);
     const seenPairs = new Set<string>();
@@ -253,7 +243,7 @@ export class BrushOverlapGraph {
   private static binEntriesIntoCells(
     entries: OverlapBoundsEntry[],
     cellSize: number,
-    pad: number
+    pad: number,
   ): Map<string, number[]> {
     const cells = new Map<string, number[]>();
     for (let index = 0; index < entries.length; index++) {
@@ -275,7 +265,7 @@ export class BrushOverlapGraph {
     bounds: THREE.Box3,
     index: number,
     cellSize: number,
-    pad: number
+    pad: number,
   ): void {
     const minX = Math.floor((bounds.min.x - pad) / cellSize);
     const minY = Math.floor((bounds.min.y - pad) / cellSize);
@@ -306,7 +296,7 @@ export class BrushOverlapGraph {
     entries: OverlapBoundsEntry[],
     indices: number[],
     pad: number,
-    seenPairs: Set<string>
+    seenPairs: Set<string>,
   ): void {
     for (let i = 0; i < indices.length; i++) {
       for (let j = i + 1; j < indices.length; j++) {
@@ -331,11 +321,7 @@ export class BrushOverlapGraph {
    * @param pad Padding distance.
    * @returns True when they may touch or intersect.
    */
-  private static boundsOverlap(
-    a: THREE.Box3,
-    b: THREE.Box3,
-    pad: number
-  ): boolean {
+  private static boundsOverlap(a: THREE.Box3, b: THREE.Box3, pad: number): boolean {
     return !(
       a.max.x + pad < b.min.x ||
       a.min.x - pad > b.max.x ||

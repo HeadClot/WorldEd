@@ -27,7 +27,7 @@ function buildKeyframeCss(): string {
     buildTitleKeyframes(),
     buildGlowKeyframes(),
     buildShimmerKeyframes(),
-    buildClassRules()
+    buildClassRules(),
   ].join('\n');
 }
 
@@ -146,8 +146,7 @@ export function styleAboutPanel(panel: HTMLElement): void {
   panel.style.flexDirection = 'column';
   panel.style.borderRadius = '14px';
   panel.style.border = '1px solid rgba(232, 106, 23, 0.45)';
-  panel.style.background =
-    'linear-gradient(165deg, #1a2238 0%, #12141c 42%, #0e1018 100%)';
+  panel.style.background = 'linear-gradient(165deg, #1a2238 0%, #12141c 42%, #0e1018 100%)';
   panel.style.fontFamily = 'Segoe UI, system-ui, -apple-system, sans-serif';
   panel.style.color = '#e0e0e0';
   panel.style.overflowY = 'auto';
@@ -242,8 +241,7 @@ export function styleAboutLicenseBox(textArea: HTMLTextAreaElement): void {
   textArea.style.padding = '10px';
   textArea.style.borderRadius = '8px';
   textArea.style.border = '1px solid rgba(255,255,255,0.12)';
-  textArea.style.background =
-    'linear-gradient(180deg, #0c0e14 0%, #141820 100%)';
+  textArea.style.background = 'linear-gradient(180deg, #0c0e14 0%, #141820 100%)';
   textArea.style.color = '#9aa3b5';
   textArea.style.fontFamily = 'Consolas, ui-monospace, monospace';
   textArea.style.fontSize = '11px';
@@ -256,10 +254,7 @@ export function styleAboutLicenseBox(textArea: HTMLTextAreaElement): void {
  * @param button Button element.
  * @param primary Whether this is the accent primary action.
  */
-export function styleAboutActionButton(
-  button: HTMLButtonElement,
-  primary: boolean
-): void {
+export function styleAboutActionButton(button: HTMLButtonElement, primary: boolean): void {
   button.type = 'button';
   button.style.cursor = 'pointer';
   button.style.border = '1px solid transparent';
@@ -278,13 +273,9 @@ export function styleAboutActionButton(
  * @param button Button element.
  * @param primary Whether the orange primary palette is used.
  */
-function applyAboutButtonPalette(
-  button: HTMLButtonElement,
-  primary: boolean
-): void {
+function applyAboutButtonPalette(button: HTMLButtonElement, primary: boolean): void {
   if (primary) {
-    button.style.background =
-      'linear-gradient(180deg, #f08a3a 0%, #e86a17 100%)';
+    button.style.background = 'linear-gradient(180deg, #f08a3a 0%, #e86a17 100%)';
     button.style.color = '#1a1208';
     button.style.borderColor = 'rgba(255,200,140,0.35)';
     return;

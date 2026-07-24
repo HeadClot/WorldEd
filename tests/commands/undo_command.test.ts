@@ -31,7 +31,7 @@ describe('UndoCommand interface', () => {
   it('should define execute and undo methods', () => {
     const command: UndoCommand = {
       execute: () => {},
-      undo: () => {}
+      undo: () => {},
     };
     expect(typeof command.execute).toBe('function');
     expect(typeof command.undo).toBe('function');

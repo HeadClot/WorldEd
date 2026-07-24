@@ -6,7 +6,7 @@ import { GizmoHandle } from './gizmo_handle.js';
 import {
   getAllBoundsFaces,
   getBoundsFaceLocalNormal,
-  OrientedBoundsData
+  OrientedBoundsData,
 } from './oriented_bounds.js';
 import { BoundsGuideLines } from './bounds_guide_lines.js';
 
@@ -84,10 +84,7 @@ export class BoundsGizmo {
    * @param bounds The OBB to display, or null to hide contents.
    * @param handleWorldSize Optional world size for handle cubes.
    */
-  updateFromBounds(
-    bounds: OrientedBoundsData | null,
-    handleWorldSize: number = 0.18
-  ): void {
+  updateFromBounds(bounds: OrientedBoundsData | null, handleWorldSize: number = 0.18): void {
     this.currentBounds = bounds;
     this.handleScreenSize = Math.max(0.08, handleWorldSize);
     if (!bounds) {
@@ -171,7 +168,7 @@ export class BoundsGizmo {
       depthTest: false,
       transparent: true,
       opacity: 0.95,
-      toneMapped: false
+      toneMapped: false,
     });
     this.wireframe = new THREE.LineSegments(edges, material);
     this.wireframe.renderOrder = 999;
@@ -203,7 +200,7 @@ export class BoundsGizmo {
       opacity: 0.001,
       depthTest: false,
       side: THREE.DoubleSide,
-      toneMapped: false
+      toneMapped: false,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData[BOUNDS_FACE_USERDATA_KEY] = face;
@@ -244,7 +241,7 @@ export class BoundsGizmo {
       depthWrite: false,
       transparent: true,
       opacity: 0.95,
-      toneMapped: false
+      toneMapped: false,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = `bounds_handle_${face}`;
@@ -261,7 +258,7 @@ export class BoundsGizmo {
     this.wireframe.scale.set(
       Math.max(halfExtents.x, 0.001),
       Math.max(halfExtents.y, 0.001),
-      Math.max(halfExtents.z, 0.001)
+      Math.max(halfExtents.z, 0.001),
     );
   }
 
@@ -299,11 +296,7 @@ export class BoundsGizmo {
    * @param face The face being covered.
    * @param halfExtents OBB half extents.
    */
-  private scaleFacePickMesh(
-    mesh: THREE.Mesh,
-    face: BoundsFace,
-    halfExtents: THREE.Vector3
-  ): void {
+  private scaleFacePickMesh(mesh: THREE.Mesh, face: BoundsFace, halfExtents: THREE.Vector3): void {
     if (face === BoundsFace.POS_X || face === BoundsFace.NEG_X) {
       mesh.scale.set(halfExtents.z, halfExtents.y, 1);
       return;
@@ -414,9 +407,7 @@ export class BoundsGizmo {
    * Disposes a material or material array.
    * @param material The material(s) to dispose.
    */
-  private disposeMaterial(
-    material: THREE.Material | THREE.Material[]
-  ): void {
+  private disposeMaterial(material: THREE.Material | THREE.Material[]): void {
     if (Array.isArray(material)) {
       material.forEach((entry) => entry.dispose());
       return;

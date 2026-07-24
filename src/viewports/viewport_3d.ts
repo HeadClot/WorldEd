@@ -16,7 +16,7 @@ import { blurActiveFormField } from '../utils/dom_focus.js';
 import { isEditorHelperObject } from '../utils/mesh_edge_sync.js';
 import {
   getDefaultPerspectiveCameraPosition,
-  getDefaultSceneFocus
+  getDefaultSceneFocus,
 } from '../navigation/default_camera_placement.js';
 import { SolidBrushEdgeFader } from '../solid/model/solid_brush_edge_fader.js';
 
@@ -119,8 +119,8 @@ export class Viewport3D extends BaseViewport {
       this.renderer.domElement,
       this.camera,
       inputManager,
-      -3 * Math.PI / 4,
-      -Math.asin(1 / Math.sqrt(3))
+      (-3 * Math.PI) / 4,
+      -Math.asin(1 / Math.sqrt(3)),
     );
   }
 
@@ -202,17 +202,17 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
-    * Sets the callback to handle transform gizmo pointer events.
-    * @param callback The transform event handler function.
-    */
+   * Sets the callback to handle transform gizmo pointer events.
+   * @param callback The transform event handler function.
+   */
   setTransformCallback(callback: TransformCallback): void {
     this.transformCallback = callback;
   }
 
   /**
-    * Sets the callback to handle face selection pointer events.
-    * @param callback The face selection event handler function.
-    */
+   * Sets the callback to handle face selection pointer events.
+   * @param callback The face selection event handler function.
+   */
   setFaceSelectionCallback(callback: (event: MouseEvent) => boolean): void {
     this.faceSelectionCallback = callback;
   }
@@ -287,11 +287,10 @@ export class Viewport3D extends BaseViewport {
       this.camera,
       this.renderer,
       event,
-      objects
+      objects,
     );
-    return SelectionClickThrough.uniqueMeshesFromHits(
-      intersections,
-      (mesh) => this.resolveClickedMesh(mesh)
+    return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) =>
+      this.resolveClickedMesh(mesh),
     );
   }
 
@@ -305,7 +304,7 @@ export class Viewport3D extends BaseViewport {
   private resolvePickFromStack(
     stack: THREE.Mesh[],
     additive: boolean,
-    toggle: boolean
+    toggle: boolean,
   ): THREE.Mesh | null {
     if (stack.length === 0 || !this.selectionManager) return null;
     if (additive || toggle) return stack[0];
@@ -347,14 +346,11 @@ export class Viewport3D extends BaseViewport {
    * facing the camera (PBR MeshStandardMaterial needs more fill than Basic).
    */
   private setupLights(): void {
-    this.ambientLight = new THREE.AmbientLight(
-      Theme.lightAmbient,
-      VIEWPORT_3D_AMBIENT_INTENSITY
-    );
+    this.ambientLight = new THREE.AmbientLight(Theme.lightAmbient, VIEWPORT_3D_AMBIENT_INTENSITY);
     this.scene.add(this.ambientLight);
     this.cameraHeadlight = new CameraHeadlight(
       Theme.lightDirectional,
-      VIEWPORT_3D_HEADLIGHT_INTENSITY
+      VIEWPORT_3D_HEADLIGHT_INTENSITY,
     );
     this.cameraHeadlight.attachToCamera(this.scene, this.camera);
   }

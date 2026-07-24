@@ -29,7 +29,7 @@ export class SetPositionCommand implements UndoCommand {
     for (let i = 0; i < objects.length; i++) {
       this.snapshots.push({
         object: objects[i],
-        position: objects[i].position.clone()
+        position: objects[i].position.clone(),
       });
       this.newPositions.push(newPositions[i].clone());
     }

@@ -7,14 +7,10 @@ import { isDescendantOf } from './hierarchy_utils.js';
  * @param objects Selected hierarchy objects.
  * @returns Root-most objects only.
  */
-export function collapseToHierarchyRoots(
-  objects: THREE.Object3D[]
-): THREE.Object3D[] {
+export function collapseToHierarchyRoots(objects: THREE.Object3D[]): THREE.Object3D[] {
   const unique = dedupeObjects(objects);
   return unique.filter((candidate) => {
-    return !unique.some(
-      (other) => other !== candidate && isDescendantOf(candidate, other)
-    );
+    return !unique.some((other) => other !== candidate && isDescendantOf(candidate, other));
   });
 }
 
@@ -26,7 +22,7 @@ export function collapseToHierarchyRoots(
  */
 export function findCommonParent(
   objects: THREE.Object3D[],
-  worldRoot: THREE.Object3D
+  worldRoot: THREE.Object3D,
 ): THREE.Object3D {
   if (objects.length === 0) return worldRoot;
   let ancestor: THREE.Object3D | null = objects[0].parent;
@@ -45,10 +41,7 @@ export function findCommonParent(
  * @param ancestor Potential ancestor (or self).
  * @returns True when object is under ancestor in the hierarchy.
  */
-function isUnderOrEqual(
-  object: THREE.Object3D,
-  ancestor: THREE.Object3D
-): boolean {
+function isUnderOrEqual(object: THREE.Object3D, ancestor: THREE.Object3D): boolean {
   if (object === ancestor) return true;
   return isDescendantOf(object, ancestor);
 }

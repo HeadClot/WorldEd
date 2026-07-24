@@ -1,8 +1,5 @@
 import { TextureBrowserEntry } from './texture_browser_entry.js';
-import {
-  DEFAULT_CHECKER_DISPLAY_NAME,
-  DEFAULT_CHECKER_TEXTURE_ID
-} from './texture_id.js';
+import { DEFAULT_CHECKER_DISPLAY_NAME, DEFAULT_CHECKER_TEXTURE_ID } from './texture_id.js';
 
 let checkerPreviewUrl: string | null = null;
 
@@ -20,7 +17,7 @@ export function getDefaultCheckerBrowserEntry(): TextureBrowserEntry {
     previewObjectUrl: getOrCreateCheckerPreviewUrl(),
     mimeType: 'image/png',
     byteSize: 0,
-    sourceFile: createPlaceholderCheckerFile()
+    sourceFile: createPlaceholderCheckerFile(),
   };
 }
 

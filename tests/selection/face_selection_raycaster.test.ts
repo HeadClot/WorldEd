@@ -104,7 +104,10 @@ function createMockCanvas(width: number, height: number): HTMLElement {
  * @returns A mock canvas element.
  */
 function createMockCanvasWithOffset(
-  width: number, height: number, leftOffset: number, topOffset: number
+  width: number,
+  height: number,
+  leftOffset: number,
+  topOffset: number,
 ): HTMLElement {
   const canvas = document.createElement('canvas');
   Object.defineProperty(canvas, 'getBoundingClientRect', {
@@ -161,12 +164,16 @@ function createMockMouseEvent(clientX: number, clientY: number): MouseEvent {
  * @returns A mesh with an updated world matrix.
  */
 function createMeshAt(
-  sizeX: number, sizeY: number, sizeZ: number,
-  posX: number, posY: number, posZ: number
+  sizeX: number,
+  sizeY: number,
+  sizeZ: number,
+  posX: number,
+  posY: number,
+  posZ: number,
 ): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(sizeX, sizeY, sizeZ),
-    new THREE.MeshBasicMaterial()
+    new THREE.MeshBasicMaterial(),
   );
   mesh.position.set(posX, posY, posZ);
   mesh.updateMatrixWorld(true);

@@ -50,5 +50,5 @@ export const Theme = Object.freeze({
   viewportToolbarBackground: 'rgba(22, 22, 26, 0.92)',
   viewportToolbarBorder: 'rgba(255, 255, 255, 0.06)',
   viewportToolbarSeparator: 'rgba(255, 255, 255, 0.12)',
-  viewportToolbarButtonHover: 'rgba(255, 255, 255, 0.08)'
+  viewportToolbarButtonHover: 'rgba(255, 255, 255, 0.08)',
 });

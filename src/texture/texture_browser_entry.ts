@@ -26,10 +26,7 @@ export interface TextureBrowserEntry {
  * @param relativePath Path relative to the opened root folder.
  * @returns Texture browser entry with a live object URL.
  */
-export function createTextureBrowserEntry(
-  file: File,
-  relativePath: string
-): TextureBrowserEntry {
+export function createTextureBrowserEntry(file: File, relativePath: string): TextureBrowserEntry {
   const previewObjectUrl = URL.createObjectURL(file);
   return {
     id: relativePath,
@@ -39,7 +36,7 @@ export function createTextureBrowserEntry(
     previewObjectUrl,
     mimeType: file.type || 'application/octet-stream',
     byteSize: file.size,
-    sourceFile: file
+    sourceFile: file,
   };
 }
 

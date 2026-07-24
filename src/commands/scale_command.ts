@@ -36,7 +36,7 @@ export class ScaleCommand implements UndoCommand {
     pivot: THREE.Vector3,
     axis: THREE.Vector3,
     factor: number,
-    gizmoAxis: GizmoAxis = GizmoAxis.X
+    gizmoAxis: GizmoAxis = GizmoAxis.X,
   ) {
     this.snapshots = snapshots;
     this.pivot = pivot.clone();
@@ -75,7 +75,7 @@ export class ScaleCommand implements UndoCommand {
   private applyScaleToSnapshot(
     snapshot: ObjectScaleSnapshot,
     axis: THREE.Vector3,
-    factor: number
+    factor: number,
   ): void {
     const relativePos = snapshot.originalPosition.clone().sub(this.pivot);
     const projection = relativePos.dot(axis);
@@ -93,10 +93,7 @@ export class ScaleCommand implements UndoCommand {
    * @param scale Scale vector modified in place.
    * @param factor Multiplicative factor.
    */
-  private multiplyLocalScaleComponent(
-    scale: THREE.Vector3,
-    factor: number
-  ): void {
+  private multiplyLocalScaleComponent(scale: THREE.Vector3, factor: number): void {
     if (this.gizmoAxis === GizmoAxis.X) {
       scale.x = Math.max(0.01, scale.x * factor);
       return;

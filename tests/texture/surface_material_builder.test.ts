@@ -1,14 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { rebuildSurfaceMaterials } from '../../src/texture/surface_material_builder.js';
-import {
-  setFaceTextureMaps,
-  getFaceTextureMaps
-} from '../../src/texture/face_texture_storage.js';
+import { setFaceTextureMaps, getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import {
   setTextureMapCacheForTests,
-  TextureMapCache
+  TextureMapCache,
 } from '../../src/texture/texture_map_cache.js';
 
 /**
@@ -28,15 +25,13 @@ describe('rebuildSurfaceMaterials', () => {
     setFaceTextureMaps(mesh, [
       {
         triangleIndices: [0, 1, 2, 3],
-        mapping: createDefaultFaceTextureMapping('only.png')
-      }
+        mapping: createDefaultFaceTextureMapping('only.png'),
+      },
     ]);
     rebuildSurfaceMaterials(mesh);
     expect(mesh.geometry.groups.length).toBe(0);
     expect(Array.isArray(mesh.material)).toBe(false);
-    expect((mesh.material as THREE.MeshStandardMaterial).side).toBe(
-      THREE.FrontSide
-    );
+    expect((mesh.material as THREE.MeshStandardMaterial).side).toBe(THREE.FrontSide);
   });
 
   it('merges triangles into one group per texture instead of per triangle', () => {
@@ -44,12 +39,12 @@ describe('rebuildSurfaceMaterials', () => {
     setFaceTextureMaps(mesh, [
       {
         triangleIndices: [0, 2, 4],
-        mapping: createDefaultFaceTextureMapping('a.png')
+        mapping: createDefaultFaceTextureMapping('a.png'),
       },
       {
         triangleIndices: [1, 3, 5],
-        mapping: createDefaultFaceTextureMapping('b.png')
-      }
+        mapping: createDefaultFaceTextureMapping('b.png'),
+      },
     ]);
     rebuildSurfaceMaterials(mesh);
     expect(Array.isArray(mesh.material)).toBe(true);
@@ -59,10 +54,7 @@ describe('rebuildSurfaceMaterials', () => {
       expect(group.count % 3).toBe(0);
       expect(group.count).toBeGreaterThanOrEqual(3);
     });
-    const totalTriangles = mesh.geometry.groups.reduce(
-      (sum, group) => sum + group.count / 3,
-      0
-    );
+    const totalTriangles = mesh.geometry.groups.reduce((sum, group) => sum + group.count / 3, 0);
     expect(totalTriangles).toBe(6);
   });
 
@@ -71,12 +63,12 @@ describe('rebuildSurfaceMaterials', () => {
     setFaceTextureMaps(mesh, [
       {
         triangleIndices: [0, 2],
-        mapping: createDefaultFaceTextureMapping('a.png')
+        mapping: createDefaultFaceTextureMapping('a.png'),
       },
       {
         triangleIndices: [1, 3],
-        mapping: createDefaultFaceTextureMapping('b.png')
-      }
+        mapping: createDefaultFaceTextureMapping('b.png'),
+      },
     ]);
     rebuildSurfaceMaterials(mesh);
     const maps = getFaceTextureMaps(mesh);
@@ -110,8 +102,5 @@ function createTriangleMesh(triangleCount: number): THREE.Mesh {
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  return new THREE.Mesh(
-    geometry,
-    new THREE.MeshStandardMaterial({ color: 0xffffff })
-  );
+  return new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0xffffff }));
 }

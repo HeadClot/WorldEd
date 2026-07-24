@@ -48,9 +48,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
    */
   undo(): void {
     if (!this.executed) return;
-    const ordered = this.snapshots
-      .slice()
-      .sort((left, right) => left.listIndex - right.listIndex);
+    const ordered = this.snapshots.slice().sort((left, right) => left.listIndex - right.listIndex);
     for (const snapshot of ordered) {
       this.restoreSnapshot(snapshot);
     }
@@ -102,9 +100,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
     if (!model) return null;
     const brush = model.findBrushByMesh(mesh);
     if (!brush) return null;
-    const listIndex = model
-      .getBrushes()
-      .findIndex((entry) => entry.id === brush.id);
+    const listIndex = model.getBrushes().findIndex((entry) => entry.id === brush.id);
     if (listIndex < 0) return null;
     brush.pullTransformFromMesh();
     return { model, instance: brush, listIndex };
@@ -126,10 +122,7 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
   private restoreSnapshot(snapshot: SolidBrushDeleteSnapshot): void {
     if (snapshot.model.findBrush(snapshot.instance.id)) return;
     snapshot.instance.pushTransformToMesh();
-    snapshot.model.insertBrushInstance(
-      snapshot.instance,
-      snapshot.listIndex
-    );
+    snapshot.model.insertBrushInstance(snapshot.instance, snapshot.listIndex);
   }
 
   /**

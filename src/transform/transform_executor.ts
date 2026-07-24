@@ -44,7 +44,7 @@ export class TransformExecutor {
   applyAbsoluteTranslation(
     objects: THREE.Mesh[],
     initialPositions: Map<THREE.Mesh, THREE.Vector3>,
-    totalDelta: THREE.Vector3
+    totalDelta: THREE.Vector3,
   ): void {
     objects.forEach((mesh) => {
       const start = initialPositions.get(mesh);
@@ -62,10 +62,7 @@ export class TransformExecutor {
    * @param mesh The mesh whose position was just updated.
    * @param startPosition Pre-drag local position used to detect changed axes.
    */
-  private snapTranslationOnChangedAxes(
-    mesh: THREE.Mesh,
-    startPosition: THREE.Vector3
-  ): void {
+  private snapTranslationOnChangedAxes(mesh: THREE.Mesh, startPosition: THREE.Vector3): void {
     if (!this.gridSnap.isEnabled()) return;
     const movedX = this.didAxisMove(mesh.position.x, startPosition.x);
     const movedY = this.didAxisMove(mesh.position.y, startPosition.y);
@@ -120,7 +117,7 @@ export class TransformExecutor {
     worldBox: THREE.Box3,
     movedX: boolean,
     movedY: boolean,
-    movedZ: boolean
+    movedZ: boolean,
   ): void {
     if (movedX) {
       mesh.position.x += this.gridSnap.snapValue(worldBox.min.x) - worldBox.min.x;
@@ -144,13 +141,10 @@ export class TransformExecutor {
     objects: THREE.Mesh[],
     pivot: THREE.Vector3,
     axis: THREE.Vector3,
-    angle: number
+    angle: number,
   ): void {
     const normalizedAxis = axis.clone().normalize();
-    const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(
-      normalizedAxis,
-      angle
-    );
+    const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(normalizedAxis, angle);
     objects.forEach((mesh) => {
       this.rotateMeshAroundPivot(mesh, pivot, rotationQuaternion);
     });
@@ -171,13 +165,13 @@ export class TransformExecutor {
     initialQuaternions: Map<THREE.Mesh, THREE.Quaternion>,
     pivot: THREE.Vector3,
     axis: THREE.Vector3,
-    totalAngle: number
+    totalAngle: number,
   ): void {
     const snappedAngle = this.gridSnap.snapAngleRadians(totalAngle);
     const normalizedAxis = axis.clone().normalize();
     const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(
       normalizedAxis,
-      snappedAngle
+      snappedAngle,
     );
     objects.forEach((mesh) => {
       this.applyAbsoluteRotationToMesh(
@@ -185,7 +179,7 @@ export class TransformExecutor {
         initialPositions,
         initialQuaternions,
         pivot,
-        rotationQuaternion
+        rotationQuaternion,
       );
     });
   }
@@ -201,7 +195,7 @@ export class TransformExecutor {
     objects: THREE.Mesh[],
     pivot: THREE.Vector3,
     axis: THREE.Vector3,
-    factor: number
+    factor: number,
   ): void {
     const normalizedAxis = axis.clone().normalize();
     const safeFactor = Math.max(0.01, factor);
@@ -227,7 +221,7 @@ export class TransformExecutor {
     pivot: THREE.Vector3,
     worldAxis: THREE.Vector3,
     totalFactor: number,
-    gizmoAxis: GizmoAxis = GizmoAxis.X
+    gizmoAxis: GizmoAxis = GizmoAxis.X,
   ): void {
     const snappedFactor = this.gridSnap.snapScaleFactor(totalFactor);
     const normalizedAxis = worldAxis.clone().normalize();
@@ -239,7 +233,7 @@ export class TransformExecutor {
         pivot,
         normalizedAxis,
         snappedFactor,
-        gizmoAxis
+        gizmoAxis,
       );
     });
   }
@@ -277,7 +271,7 @@ export class TransformExecutor {
   private rotateMeshAroundPivot(
     mesh: THREE.Mesh,
     pivot: THREE.Vector3,
-    rotationQuaternion: THREE.Quaternion
+    rotationQuaternion: THREE.Quaternion,
   ): void {
     const relativePos = mesh.position.clone().sub(pivot);
     relativePos.applyQuaternion(rotationQuaternion);
@@ -298,7 +292,7 @@ export class TransformExecutor {
     initialPositions: Map<THREE.Mesh, THREE.Vector3>,
     initialQuaternions: Map<THREE.Mesh, THREE.Quaternion>,
     pivot: THREE.Vector3,
-    rotationQuaternion: THREE.Quaternion
+    rotationQuaternion: THREE.Quaternion,
   ): void {
     const startPos = initialPositions.get(mesh);
     const startQuat = initialQuaternions.get(mesh);
@@ -320,7 +314,7 @@ export class TransformExecutor {
     mesh: THREE.Mesh,
     pivot: THREE.Vector3,
     axis: THREE.Vector3,
-    factor: number
+    factor: number,
   ): void {
     const relativePos = mesh.position.clone().sub(pivot);
     const projection = relativePos.dot(axis);
@@ -355,7 +349,7 @@ export class TransformExecutor {
     pivot: THREE.Vector3,
     axis: THREE.Vector3,
     totalFactor: number,
-    gizmoAxis: GizmoAxis
+    gizmoAxis: GizmoAxis,
   ): void {
     const startPos = initialPositions.get(mesh);
     const startScale = initialScales.get(mesh);
@@ -380,7 +374,7 @@ export class TransformExecutor {
   private multiplyLocalScaleComponent(
     scale: THREE.Vector3,
     gizmoAxis: GizmoAxis,
-    factor: number
+    factor: number,
   ): void {
     if (gizmoAxis === GizmoAxis.X) {
       scale.x = Math.max(0.01, scale.x * factor);

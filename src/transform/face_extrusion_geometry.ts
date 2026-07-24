@@ -3,7 +3,7 @@ import {
   computeTriangleNormal,
   getTriangleVertexIndices,
   getUniqueVertexIndicesForFaces as collectUniqueVertices,
-  getVertexPosition
+  getVertexPosition,
 } from '../selection/triangle_geometry_utils.js';
 
 /**
@@ -19,7 +19,7 @@ import {
  */
 export function computeFaceNormal(
   geometry: THREE.BufferGeometry,
-  faceIndex: number
+  faceIndex: number,
 ): THREE.Vector3 {
   return computeTriangleNormal(geometry, faceIndex);
 }
@@ -32,7 +32,7 @@ export function computeFaceNormal(
  */
 export function computeAverageNormals(
   geometry: THREE.BufferGeometry,
-  faceIndices: number[]
+  faceIndices: number[],
 ): THREE.Vector3 {
   const accumulator = new THREE.Vector3();
   faceIndices.forEach((faceIndex) => {
@@ -52,7 +52,7 @@ export function computeAverageNormals(
  */
 export function getUniqueVertexIndicesForFaces(
   geometry: THREE.BufferGeometry,
-  faceIndices: number[]
+  faceIndices: number[],
 ): number[] {
   return collectUniqueVertices(geometry, faceIndices);
 }
@@ -69,7 +69,7 @@ export function extrudeVertexPositions(
   geometry: THREE.BufferGeometry,
   faceIndices: number[],
   displacement: number,
-  normal: THREE.Vector3
+  normal: THREE.Vector3,
 ): Float32Array {
   const sourcePositions = geometry.getAttribute('position');
   const vertexCount = sourcePositions.count;
@@ -102,7 +102,7 @@ export function extrudeVertexPositions(
  */
 export function getFaceVertexIndices(
   geometry: THREE.BufferGeometry,
-  faceIndex: number
+  faceIndex: number,
 ): [number, number, number] {
   return getTriangleVertexIndices(geometry, faceIndex);
 }
@@ -115,7 +115,7 @@ export function getFaceVertexIndices(
  */
 export function splitSharedVertices(
   geometry: THREE.BufferGeometry,
-  faceIndices: number[]
+  faceIndices: number[],
 ): THREE.BufferGeometry {
   const sourcePositions = geometry.getAttribute('position');
   const selectedVertices = getUniqueVertexIndicesForFaces(geometry, faceIndices);
@@ -128,7 +128,7 @@ export function splitSharedVertices(
     selectedSet,
     vertexToFaces,
     selectedFacesSet,
-    vertexCount
+    vertexCount,
   );
   return buildSplitGeometry(geometry, vertexCount, sharedVertexMap);
 }
@@ -141,7 +141,7 @@ export function splitSharedVertices(
  */
 export function mergeCoincidentVertices(
   geometry: THREE.BufferGeometry,
-  threshold: number
+  threshold: number,
 ): THREE.BufferGeometry {
   const positions = geometry.getAttribute('position') as THREE.BufferAttribute;
   const vertexCount = positions.count;
@@ -158,10 +158,7 @@ export function mergeCoincidentVertices(
  * @param faceCount Number of triangular faces.
  * @returns Map from vertex index to face indices.
  */
-function buildVertexToFaceMap(
-  vertexCount: number,
-  faceCount: number
-): Map<number, number[]> {
+function buildVertexToFaceMap(vertexCount: number, faceCount: number): Map<number, number[]> {
   const vertexToFaces = new Map<number, number[]>();
   for (let i = 0; i < vertexCount; i++) {
     vertexToFaces.set(i, []);
@@ -187,7 +184,7 @@ function identifySharedVertices(
   selectedSet: Set<number>,
   vertexToFaces: Map<number, number[]>,
   selectedFacesSet: Set<number>,
-  vertexCount: number
+  vertexCount: number,
 ): Map<number, number> {
   const sharedVertexMap = new Map<number, number>();
   let nextDuplicateIndex = vertexCount;
@@ -212,12 +209,11 @@ function identifySharedVertices(
 function buildSplitGeometry(
   geometry: THREE.BufferGeometry,
   vertexCount: number,
-  sharedVertexMap: Map<number, number>
+  sharedVertexMap: Map<number, number>,
 ): THREE.BufferGeometry {
   const sourcePositions = geometry.getAttribute('position');
-  const maxIndex = sharedVertexMap.size > 0
-    ? Math.max(...Array.from(sharedVertexMap.values()))
-    : vertexCount - 1;
+  const maxIndex =
+    sharedVertexMap.size > 0 ? Math.max(...Array.from(sharedVertexMap.values())) : vertexCount - 1;
   const newVertexCount = maxIndex + 1;
   const newPositions = new Float32Array(newVertexCount * 3);
   for (let i = 0; i < vertexCount; i++) {
@@ -245,7 +241,7 @@ function buildSplitGeometry(
 function buildMergeMap(
   positions: THREE.BufferAttribute,
   vertexCount: number,
-  threshold: number
+  threshold: number,
 ): Map<number, number> {
   const mergeMap = new Map<number, number>();
   const processed = new Set<number>();
@@ -274,7 +270,7 @@ function buildMergeMap(
 function applyMergeMap(
   positions: THREE.BufferAttribute,
   vertexCount: number,
-  mergeMap: Map<number, number>
+  mergeMap: Map<number, number>,
 ): Float32Array {
   const newPositions = new Float32Array(positions.array as ArrayLike<number>);
   mergeMap.forEach((targetIndex, sourceIndex) => {
@@ -295,7 +291,7 @@ function applyMergeMap(
 function measureVertexDistance(
   positions: THREE.BufferAttribute,
   indexA: number,
-  indexB: number
+  indexB: number,
 ): number {
   const vA = getVertexPosition(positions, indexA);
   const vB = getVertexPosition(positions, indexB);

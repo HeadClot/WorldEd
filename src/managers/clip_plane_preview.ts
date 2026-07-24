@@ -6,7 +6,7 @@ import {
   CLIP_MARKER_HALO_RADIUS,
   CLIP_MARKER_INDEX_KEY,
   CLIP_MARKER_MAX_SCALE,
-  CLIP_MARKER_MIN_SCALE
+  CLIP_MARKER_MIN_SCALE,
 } from './clip_plane_marker_style.js';
 
 /**
@@ -116,7 +116,7 @@ export class ClipPlanePreview {
     const geometry = new THREE.SphereGeometry(CLIP_MARKER_HALO_RADIUS, 16, 14);
     const material = new THREE.MeshBasicMaterial({
       color: Theme.clipMarkerColor,
-      depthTest: false
+      depthTest: false,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
@@ -140,10 +140,7 @@ export class ClipPlanePreview {
       const halfHeight = Math.abs(camera.top - camera.bottom) * 0.5;
       raw = halfHeight * CLIP_MARKER_DISTANCE_SCALE * 2.5;
     }
-    return Math.min(
-      CLIP_MARKER_MAX_SCALE,
-      Math.max(CLIP_MARKER_MIN_SCALE, raw)
-    );
+    return Math.min(CLIP_MARKER_MAX_SCALE, Math.max(CLIP_MARKER_MIN_SCALE, raw));
   }
 
   /**
@@ -159,7 +156,7 @@ export class ClipPlanePreview {
       transparent: true,
       opacity: 0.22,
       side: THREE.DoubleSide,
-      depthWrite: false
+      depthWrite: false,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
@@ -174,11 +171,7 @@ export class ClipPlanePreview {
    * @param plane Cutting plane.
    * @param points Placement points for center.
    */
-  private orientPlaneMesh(
-    mesh: THREE.Mesh,
-    plane: THREE.Plane,
-    points: THREE.Vector3[]
-  ): void {
+  private orientPlaneMesh(mesh: THREE.Mesh, plane: THREE.Plane, points: THREE.Vector3[]): void {
     const center = this.computePointsCenter(points);
     const projected = new THREE.Vector3();
     plane.projectPoint(center, projected);
@@ -194,11 +187,7 @@ export class ClipPlanePreview {
    * @param points Placement points for origin.
    * @param keepFront Whether the front half-space is kept.
    */
-  private addKeepArrow(
-    plane: THREE.Plane,
-    points: THREE.Vector3[],
-    keepFront: boolean
-  ): void {
+  private addKeepArrow(plane: THREE.Plane, points: THREE.Vector3[], keepFront: boolean): void {
     const origin = this.computePointsCenter(points);
     plane.projectPoint(origin, origin);
     const direction = plane.normal.clone().normalize();
@@ -210,7 +199,7 @@ export class ClipPlanePreview {
       length,
       Theme.selectionColor,
       length * 0.22,
-      length * 0.12
+      length * 0.12,
     );
     arrow.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
     this.root.add(arrow);

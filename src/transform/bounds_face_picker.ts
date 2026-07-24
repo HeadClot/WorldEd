@@ -39,7 +39,7 @@ export class BoundsFacePicker {
     event: MouseEvent,
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
-    gizmoGroup: THREE.Group
+    gizmoGroup: THREE.Group,
   ): BoundsFacePickResult | null {
     if (!gizmoGroup.visible) return null;
     camera.updateMatrixWorld(true);
@@ -73,9 +73,7 @@ export class BoundsFacePicker {
    * @param hits Intersection list sorted by distance.
    * @returns Face pick result or null.
    */
-  private buildResultFromHits(
-    hits: THREE.Intersection[]
-  ): BoundsFacePickResult | null {
+  private buildResultFromHits(hits: THREE.Intersection[]): BoundsFacePickResult | null {
     for (const hit of hits) {
       const face = hit.object.userData[BOUNDS_FACE_USERDATA_KEY] as BoundsFace | undefined;
       if (!face) continue;
@@ -83,7 +81,7 @@ export class BoundsFacePicker {
       return {
         face,
         point: hit.point.clone(),
-        normal
+        normal,
       };
     }
     return null;

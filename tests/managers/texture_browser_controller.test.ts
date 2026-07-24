@@ -4,7 +4,7 @@ import { TextureBrowser } from '../../src/ui/texture_browser.js';
 import { TextureLibrary } from '../../src/texture/texture_library.js';
 import {
   LocalDirectoryAccess,
-  PickedDirectoryListing
+  PickedDirectoryListing,
 } from '../../src/texture/local_directory_access.js';
 import { mockObjectUrlApis } from '../texture/object_url_test_utils.js';
 
@@ -25,7 +25,7 @@ describe('TextureBrowserController', () => {
       onOpenFolder: () => {
         void controller.openFolder();
       },
-      onSelectTexture: (entryId) => controller.selectTexture(entryId)
+      onSelectTexture: (entryId) => controller.selectTexture(entryId),
     });
     library = new TextureLibrary();
     directoryAccess = createMockDirectoryAccess(null);
@@ -34,7 +34,7 @@ describe('TextureBrowserController', () => {
     controller = new TextureBrowserController({
       browser,
       library,
-      directoryAccess
+      directoryAccess,
     });
     controller.setStatusCallback((message) => statusMessages.push(message));
     controller.setSelectionCallback((entry) => {
@@ -56,20 +56,20 @@ describe('TextureBrowserController', () => {
         {
           name: 'brick.png',
           relativePath: 'brick.png',
-          file: new File(['a'], 'brick.png', { type: 'image/png' })
+          file: new File(['a'], 'brick.png', { type: 'image/png' }),
         },
         {
           name: 'notes.txt',
           relativePath: 'notes.txt',
-          file: new File(['b'], 'notes.txt', { type: 'text/plain' })
-        }
-      ]
+          file: new File(['b'], 'notes.txt', { type: 'text/plain' }),
+        },
+      ],
     });
     controller.dispose();
     controller = new TextureBrowserController({
       browser,
       library: new TextureLibrary(),
-      directoryAccess
+      directoryAccess,
     });
     controller.setStatusCallback((message) => statusMessages.push(message));
     controller.setSelectionCallback((entry) => {
@@ -81,9 +81,7 @@ describe('TextureBrowserController', () => {
     expect(host.textContent).toContain('Checker');
     expect(host.textContent).toContain('brick');
     expect(host.textContent).toContain('Folder: Walls');
-    expect(statusMessages.some((message) => message.includes('Loaded 1'))).toBe(
-      true
-    );
+    expect(statusMessages.some((message) => message.includes('Loaded 1'))).toBe(true);
   });
 
   it('should ignore cancelled folder picks without clearing existing data', async () => {
@@ -98,15 +96,15 @@ describe('TextureBrowserController', () => {
         previewObjectUrl: 'blob:keep',
         mimeType: 'image/png',
         byteSize: existingFile.size,
-        sourceFile: existingFile
-      }
+        sourceFile: existingFile,
+      },
     ]);
     directoryAccess = createMockDirectoryAccess(null);
     controller.dispose();
     controller = new TextureBrowserController({
       browser,
       library: populatedLibrary,
-      directoryAccess
+      directoryAccess,
     });
     controller.refreshBrowserUi();
     await controller.openFolder();
@@ -121,20 +119,20 @@ describe('TextureBrowserController', () => {
         {
           name: 'a.png',
           relativePath: 'a.png',
-          file: new File(['a'], 'a.png', { type: 'image/png' })
+          file: new File(['a'], 'a.png', { type: 'image/png' }),
         },
         {
           name: 'b.png',
           relativePath: 'b.png',
-          file: new File(['b'], 'b.png', { type: 'image/png' })
-        }
-      ]
+          file: new File(['b'], 'b.png', { type: 'image/png' }),
+        },
+      ],
     });
     controller.dispose();
     controller = new TextureBrowserController({
       browser,
       library: new TextureLibrary(),
-      directoryAccess
+      directoryAccess,
     });
     selectionNames = [];
     controller.setSelectionCallback((entry) => {
@@ -149,13 +147,13 @@ describe('TextureBrowserController', () => {
   it('should report when folder access is unsupported', async () => {
     directoryAccess = {
       isSupported: () => false,
-      pickDirectoryAndListFiles: async () => null
+      pickDirectoryAndListFiles: async () => null,
     };
     controller.dispose();
     controller = new TextureBrowserController({
       browser,
       library: new TextureLibrary(),
-      directoryAccess
+      directoryAccess,
     });
     statusMessages = [];
     controller.setStatusCallback((message) => statusMessages.push(message));
@@ -169,11 +167,9 @@ describe('TextureBrowserController', () => {
  * @param listing Listing or null for cancel.
  * @returns Mock access implementation.
  */
-function createMockDirectoryAccess(
-  listing: PickedDirectoryListing | null
-): LocalDirectoryAccess {
+function createMockDirectoryAccess(listing: PickedDirectoryListing | null): LocalDirectoryAccess {
   return {
     isSupported: () => true,
-    pickDirectoryAndListFiles: async () => listing
+    pickDirectoryAndListFiles: async () => listing,
   };
 }

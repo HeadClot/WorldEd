@@ -12,17 +12,17 @@ describe('TranslateCommand', () => {
   beforeEach(() => {
     mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh1.position.set(1, 2, 3);
     mesh2 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh2.position.set(4, 5, 6);
     snapshots = [
       { object: mesh1, position: mesh1.position.clone() },
-      { object: mesh2, position: mesh2.position.clone() }
+      { object: mesh2, position: mesh2.position.clone() },
     ];
     delta = new THREE.Vector3(10, 20, 30);
   });
@@ -93,8 +93,8 @@ describe('TranslateCommand', () => {
       {
         object: mesh1,
         position: new THREE.Vector3(1, 2, 3),
-        finalPosition: new THREE.Vector3(5, 2, 3)
-      }
+        finalPosition: new THREE.Vector3(5, 2, 3),
+      },
     ];
     const command = new TranslateCommand(finalSnapshots, new THREE.Vector3(100, 0, 0));
     command.execute();

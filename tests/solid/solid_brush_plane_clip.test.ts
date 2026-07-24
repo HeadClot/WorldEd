@@ -31,12 +31,7 @@ describe('SolidBrushPlaneClip', () => {
     expect(instance.mesh).toBeTruthy();
     expect(SolidBrushVisual.isBrushObject(instance.mesh!)).toBe(true);
     const plane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
-    const command = new ClipSolidBrushCommand(
-      model,
-      instance.id,
-      plane,
-      false
-    );
+    const command = new ClipSolidBrushCommand(model, instance.id, plane, false);
     command.execute();
     expect(command.didClip()).toBe(true);
     const updated = model.findBrush(instance.id);

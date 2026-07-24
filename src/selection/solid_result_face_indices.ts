@@ -19,10 +19,7 @@ export interface SolidTriangleSourceRef {
  * @param seedFaceIndex Clicked triangle index.
  * @returns Triangle indices that form the selectable face unit.
  */
-export function expandFaceSelectionIndices(
-  mesh: THREE.Mesh,
-  seedFaceIndex: number
-): number[] {
+export function expandFaceSelectionIndices(mesh: THREE.Mesh, seedFaceIndex: number): number[] {
   const sources = readSolidTriangleSources(mesh);
   if (sources) {
     return collectSameSolidBrushSurfaceIndices(sources, seedFaceIndex);
@@ -40,7 +37,7 @@ export function expandFaceSelectionIndices(
  */
 export function findSameSolidBrushSurfaceIndices(
   mesh: THREE.Mesh,
-  seedFaceIndex: number
+  seedFaceIndex: number,
 ): number[] | null {
   const sources = readSolidTriangleSources(mesh);
   if (!sources) return null;
@@ -55,7 +52,7 @@ export function findSameSolidBrushSurfaceIndices(
  */
 function collectSameSolidBrushSurfaceIndices(
   sources: SolidTriangleSourceRef[],
-  seedFaceIndex: number
+  seedFaceIndex: number,
 ): number[] {
   const seed = sources[seedFaceIndex];
   if (!seed?.brushId || typeof seed.surfaceIndex !== 'number') {
@@ -77,9 +74,7 @@ function collectSameSolidBrushSurfaceIndices(
  * @param mesh Mesh that may be a solid CSG result.
  * @returns Source array, or null when missing/invalid.
  */
-function readSolidTriangleSources(
-  mesh: THREE.Mesh
-): SolidTriangleSourceRef[] | null {
+function readSolidTriangleSources(mesh: THREE.Mesh): SolidTriangleSourceRef[] | null {
   const raw = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY];
   if (!Array.isArray(raw) || raw.length === 0) return null;
   return raw as SolidTriangleSourceRef[];

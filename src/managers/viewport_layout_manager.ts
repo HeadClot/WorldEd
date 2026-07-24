@@ -55,12 +55,9 @@ import { applyTransformModeUi } from './layout_transform_mode_ui.js';
 import {
   createOutlinerShellActions,
   createToolbarShellActions,
-  LayoutShellActionSource
+  LayoutShellActionSource,
 } from './layout_shell_action_builders.js';
-import {
-  setupUvEditorPanel,
-  setupTextureBrowserPanel
-} from './layout_surface_panel_setup.js';
+import { setupUvEditorPanel, setupTextureBrowserPanel } from './layout_surface_panel_setup.js';
 import { createWiredActionHandlers } from './layout_action_handler_factory.js';
 import { createAndRegisterKeyboardShortcuts } from './layout_keyboard_bindings.js';
 import { SolidModelPanel } from '../ui/solid_model_panel.js';
@@ -73,7 +70,7 @@ import {
   setupCameraAndShadingCoordinators as createCameraAndShadingCoordinators,
   setupFaceModeCoordinator as createFaceModeCoordinator,
   setupToolsPaletteAndClipWiring as createToolsPaletteAndClip,
-  cancelClipToolSelection
+  cancelClipToolSelection,
 } from './layout_coordinator_setup.js';
 import { LayoutRenderLoop } from './layout_render_loop.js';
 import { TransformSpace } from '../types/transform_space.js';
@@ -187,7 +184,7 @@ export class ViewportLayoutManager {
       this.textureLock,
       this.hierarchyReparentHandler,
       this.createOutlinerActions(),
-      this.createToolbarActions()
+      this.createToolbarActions(),
     );
     this.toolbarContainer = shell.toolbarContainer;
     this.viewports = shell.viewports;
@@ -214,13 +211,13 @@ export class ViewportLayoutManager {
       this.viewport2DTop,
       this.viewport2DFront,
       this.viewport2DSide,
-      this.viewport3D
+      this.viewport3D,
     );
     bootstrap.addSharedObjects(
       this.worldObject,
       viewports,
       this.viewportSyncManager,
-      this.transformGizmo
+      this.transformGizmo,
     );
   }
 
@@ -250,13 +247,13 @@ export class ViewportLayoutManager {
   private createSelectionAndPrimitiveHandlers(): void {
     this.selectionVisualController = new SelectionVisualController(
       this.selectionManager,
-      this.viewportSyncManager
+      this.viewportSyncManager,
     );
     this.primitiveCreationHandler = new PrimitiveCreationHandler(
       this.primitiveTool,
       this.worldObject,
       this.commandStack,
-      this.selectionManager
+      this.selectionManager,
     );
     this.primitiveCreationHandler.setOnPrimitiveCreated(() => this.onPrimitiveCreated());
   }
@@ -275,8 +272,8 @@ export class ViewportLayoutManager {
         refreshOutliner: () => this.refreshOutliner(),
         showStatusMessage: (message) => this.showStatusMessage(message),
         onAxisRestrictionChanged: (axis) => this.onAxisRestrictionChanged(axis),
-        statusBar: this.statusBar
-      }
+        statusBar: this.statusBar,
+      },
     );
     this.objectActionHandler = handlers.objectActionHandler;
     this.csgActionHandler = handlers.csgActionHandler;
@@ -296,7 +293,7 @@ export class ViewportLayoutManager {
       viewport2DSide: this.viewport2DSide,
       viewport3D: this.viewport3D,
       viewports: this.viewports,
-      selectionVisualController: this.selectionVisualController
+      selectionVisualController: this.selectionVisualController,
     });
     this.cameraFitCoordinator = setup.cameraFitCoordinator;
     this.shadingModeCoordinator = setup.shadingModeCoordinator;
@@ -323,11 +320,11 @@ export class ViewportLayoutManager {
       refreshOutliner: () => this.refreshOutliner(),
       onSelectionModeUiChanged: () => {
         this.toolsPaletteController?.onExternalSelectionModeChanged(
-          this.faceModeCoordinator.getSelectionMode()
+          this.faceModeCoordinator.getSelectionMode(),
         );
         this.updateGizmoVisibility();
         this.updateGizmoPivot();
-      }
+      },
     });
   }
 
@@ -356,7 +353,7 @@ export class ViewportLayoutManager {
       onToolStateChanged: () => this.onClipToolStateChanged(),
       onClipCancel: () => this.onClipCancel(),
       onTransformMode: (mode) => this.onTransformMode(mode),
-      onOpenUvEditor: () => this.onToggleUvEditor()
+      onOpenUvEditor: () => this.onToggleUvEditor(),
     });
     this.clipPlaneHandler = result.clipPlaneHandler;
     this.toolsPalette = result.toolsPalette;
@@ -386,9 +383,9 @@ export class ViewportLayoutManager {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     const unlockedSelected = filterUnlockedObjects(selected);
     this.transformGizmo.setVisible(
-      unlockedSelected.length > 0
-        && !this.isFaceSelectionModeActive()
-        && !this.isClipPlaneToolActive()
+      unlockedSelected.length > 0 &&
+        !this.isFaceSelectionModeActive() &&
+        !this.isClipPlaneToolActive(),
     );
   }
 
@@ -398,9 +395,7 @@ export class ViewportLayoutManager {
   private onEscapeCancel(): void {
     this.clipPlaneHandler?.cancel();
     this.toolsPaletteController?.selectTool(EditorToolId.OBJECT);
-    this.faceModeCoordinator
-      ?.getFaceExtrusionController()
-      .clearFaceSelection();
+    this.faceModeCoordinator?.getFaceExtrusionController().clearFaceSelection();
     this.selectionManager.clearSelection();
     this.statusBar?.setLastAction('Selection cleared');
   }
@@ -432,7 +427,7 @@ export class ViewportLayoutManager {
       textureLock: this.textureLock,
       refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
       refreshOutliner: () => this.refreshOutliner(),
-      showStatusMessage: (message) => this.showStatusMessage(message)
+      showStatusMessage: (message) => this.showStatusMessage(message),
     });
     this.solidModelPanel = setup.solidModelPanel;
     this.solidModelController = setup.solidModelController;
@@ -485,7 +480,7 @@ export class ViewportLayoutManager {
       getUserSnapEnabled: () => this.userSnapEnabled,
       setUserSnapEnabled: (enabled) => {
         this.userSnapEnabled = enabled;
-      }
+      },
     });
     this.snapSettingsController.setup();
   }
@@ -535,7 +530,7 @@ export class ViewportLayoutManager {
       this.viewport2DTop,
       this.viewport2DFront,
       this.viewport2DSide,
-      this.viewport3D
+      this.viewport3D,
     ]);
     this.selectionManager.onSelectionChanged(() => this.onSelectionChanged());
   }
@@ -557,21 +552,18 @@ export class ViewportLayoutManager {
       worldObject: this.worldObject,
       viewport3D: this.viewport3D,
       getUserSnapEnabled: () => this.userSnapEnabled,
-      isTransformSpaceLocal: () =>
-        this.transformSpace === TransformSpace.Local,
+      isTransformSpaceLocal: () => this.transformSpace === TransformSpace.Local,
       syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
-      onTransformsCommitted: (meshes) =>
-        this.solidModelController?.onTransformsCommitted(meshes),
-      onTransformsLive: (meshes) =>
-        this.solidModelController?.onTransformsLive(meshes),
+      onTransformsCommitted: (meshes) => this.solidModelController?.onTransformsCommitted(meshes),
+      onTransformsLive: (meshes) => this.solidModelController?.onTransformsLive(meshes),
       isInteractionEnabled: () =>
-        !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive()
+        !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
     });
     this.transformInteractionBridge.wireViewports([
       this.viewport3D,
       this.viewport2DTop,
       this.viewport2DFront,
-      this.viewport2DSide
+      this.viewport2DSide,
     ]);
   }
 
@@ -579,23 +571,20 @@ export class ViewportLayoutManager {
    * Sets up keyboard shortcuts using the dedicated shortcut handler.
    */
   private setupKeyboardShortcuts(): void {
-    this.keyboardShortcutHandler = createAndRegisterKeyboardShortcuts(
-      this.inputManager,
-      {
-        isCameraNavigating: () => this.viewport3D.isCameraNavigating(),
-        onTransformMode: (mode) => this.onTransformMode(mode),
-        onDeleteSelected: () => this.onDeleteSelected(),
-        onEscapeCancel: () => this.onEscapeCancel(),
-        onUndo: () => this.onUndo(),
-        onRedo: () => this.onRedo(),
-        onGroupSelected: () => this.onGroupSelected(),
-        onSaveScene: () => this.onSaveScene(),
-        onLoadScene: () => this.onLoadScene(),
-        onExportGlb: () => this.onExportGlb(),
-        getObjectActionHandler: () => this.objectActionHandler,
-        getAlignmentHandler: () => this.alignmentHandler
-      }
-    );
+    this.keyboardShortcutHandler = createAndRegisterKeyboardShortcuts(this.inputManager, {
+      isCameraNavigating: () => this.viewport3D.isCameraNavigating(),
+      onTransformMode: (mode) => this.onTransformMode(mode),
+      onDeleteSelected: () => this.onDeleteSelected(),
+      onEscapeCancel: () => this.onEscapeCancel(),
+      onUndo: () => this.onUndo(),
+      onRedo: () => this.onRedo(),
+      onGroupSelected: () => this.onGroupSelected(),
+      onSaveScene: () => this.onSaveScene(),
+      onLoadScene: () => this.onLoadScene(),
+      onExportGlb: () => this.onExportGlb(),
+      getObjectActionHandler: () => this.objectActionHandler,
+      getAlignmentHandler: () => this.alignmentHandler,
+    });
   }
 
   /**
@@ -609,7 +598,7 @@ export class ViewportLayoutManager {
       toolbarContainer: this.toolbarContainer,
       anchorViewport: this.viewports[3],
       statusBar: this.statusBar,
-      afterSurfaceChange: () => this.refreshShadingAfterSurfaceEdit()
+      afterSurfaceChange: () => this.refreshShadingAfterSurfaceEdit(),
     });
     this.uvEditor = result.uvEditor;
     this.uvEditorController = result.uvEditorController;
@@ -637,7 +626,7 @@ export class ViewportLayoutManager {
       toolbarContainer: this.toolbarContainer,
       anchorViewport: this.viewports[3],
       statusBar: this.statusBar,
-      afterSurfaceChange: () => this.refreshShadingAfterSurfaceEdit()
+      afterSurfaceChange: () => this.refreshShadingAfterSurfaceEdit(),
     });
     this.textureBrowser = result.textureBrowser;
     this.textureBrowserController = result.textureBrowserController;
@@ -702,10 +691,7 @@ export class ViewportLayoutManager {
       this.transformGizmo.setPivot(pivot);
       this.transformGizmo.setOrientation(this.resolveGizmoOrientation(selected));
       this.transformGizmo.updateScaleForCamera(this.viewport3D.getCamera());
-      this.transformGizmo.updateBoundsFromMeshes(
-        selected,
-        this.viewport3D.getCamera()
-      );
+      this.transformGizmo.updateBoundsFromMeshes(selected, this.viewport3D.getCamera());
       return;
     }
     this.transformGizmo.setPivot(new THREE.Vector3(0, 0, 0));
@@ -720,10 +706,7 @@ export class ViewportLayoutManager {
    * @returns World-space quaternion for the gizmo handles.
    */
   private resolveGizmoOrientation(selected: THREE.Object3D[]): THREE.Quaternion {
-    if (
-      this.transformSpace !== TransformSpace.Local ||
-      selected.length !== 1
-    ) {
+    if (this.transformSpace !== TransformSpace.Local || selected.length !== 1) {
       return new THREE.Quaternion();
     }
     const target = selected[0];
@@ -765,9 +748,7 @@ export class ViewportLayoutManager {
     this.toolbar.setButtonActiveByLabel('Global', !isLocal);
     this.toolbar.setButtonActiveByLabel('Local', isLocal);
     this.updateGizmoPivot();
-    this.showStatusMessage(
-      isLocal ? 'Gizmo space: Local' : 'Gizmo space: Global'
-    );
+    this.showStatusMessage(isLocal ? 'Gizmo space: Local' : 'Gizmo space: Global');
   }
 
   /**
@@ -831,11 +812,7 @@ export class ViewportLayoutManager {
    * Updates tools palette transform highlights and status bar mode text.
    */
   private updateTransformButtons(): void {
-    applyTransformModeUi(
-      this.toolsPalette,
-      this.statusBar,
-      this.transformGizmo.getMode()
-    );
+    applyTransformModeUi(this.toolsPalette, this.statusBar, this.transformGizmo.getMode());
   }
 
   /**
@@ -852,7 +829,7 @@ export class ViewportLayoutManager {
     void this.sceneIOHandler.loadScene(
       this.worldObject,
       () => this.onSceneLoaded(),
-      this.statusBar
+      this.statusBar,
     );
   }
 
@@ -893,7 +870,7 @@ export class ViewportLayoutManager {
     }
     this.solidModelController.placeImportedModel(
       result.model,
-      `Imported ${result.importedBrushCount} brushes from VMF`
+      `Imported ${result.importedBrushCount} brushes from VMF`,
     );
     this.refreshAfterWorldMutation();
   }
@@ -961,7 +938,7 @@ export class ViewportLayoutManager {
       viewport2DSide: this.viewport2DSide,
       cameraFitCoordinator: this.cameraFitCoordinator,
       clipPlaneHandler: this.clipPlaneHandler,
-      onBeforeRender: () => this.updateGizmoCameraScale()
+      onBeforeRender: () => this.updateGizmoCameraScale(),
     });
   }
 
@@ -981,7 +958,7 @@ export class ViewportLayoutManager {
       this.viewport2DTop,
       this.viewport2DFront,
       this.viewport2DSide,
-      this.viewport3D
+      this.viewport3D,
     ];
     allViewports.forEach((vp, index) => {
       const rect = this.viewports[index].getBoundingClientRect();
@@ -1026,8 +1003,7 @@ export class ViewportLayoutManager {
    */
   private disposeOwnedUiAndManagers(): void {
     disposeLayoutOwnedResources({
-      faceExtrusionController:
-        this.faceModeCoordinator?.getFaceExtrusionController(),
+      faceExtrusionController: this.faceModeCoordinator?.getFaceExtrusionController(),
       selectionVisualController: this.selectionVisualController,
       selectionManager: this.selectionManager,
       commandStack: this.commandStack,
@@ -1042,7 +1018,7 @@ export class ViewportLayoutManager {
       textureBrowserController: this.textureBrowserController,
       textureBrowser: this.textureBrowser,
       toolsPalette: this.toolsPalette,
-      aboutDialog: this.aboutDialog
+      aboutDialog: this.aboutDialog,
     });
   }
 
@@ -1054,10 +1030,7 @@ export class ViewportLayoutManager {
     this.transformGizmo.updateScaleForCamera(this.viewport3D.getCamera());
     if (this.transformGizmo.getMode() === TransformMode.BOUNDS) {
       const selected = this.selectionManager.getAllSelectedObjectsAsArray();
-      this.transformGizmo.updateBoundsFromMeshes(
-        selected,
-        this.viewport3D.getCamera()
-      );
+      this.transformGizmo.updateBoundsFromMeshes(selected, this.viewport3D.getCamera());
     }
   }
 

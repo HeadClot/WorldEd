@@ -16,14 +16,11 @@ export class SelectionClickThrough {
    */
   static pickFromStack(
     depthSortedMeshes: THREE.Mesh[],
-    selectionManager: SelectionManager
+    selectionManager: SelectionManager,
   ): THREE.Mesh | null {
     if (depthSortedMeshes.length === 0) return null;
     if (depthSortedMeshes.length === 1) return depthSortedMeshes[0];
-    const currentIndex = this.findSelectedIndex(
-      depthSortedMeshes,
-      selectionManager
-    );
+    const currentIndex = this.findSelectedIndex(depthSortedMeshes, selectionManager);
     if (currentIndex < 0) return depthSortedMeshes[0];
     const nextIndex = (currentIndex + 1) % depthSortedMeshes.length;
     return depthSortedMeshes[nextIndex];
@@ -37,7 +34,7 @@ export class SelectionClickThrough {
    */
   static uniqueMeshesFromHits(
     hits: THREE.Intersection[],
-    resolveMesh: (mesh: THREE.Mesh) => THREE.Mesh
+    resolveMesh: (mesh: THREE.Mesh) => THREE.Mesh,
   ): THREE.Mesh[] {
     const result: THREE.Mesh[] = [];
     const seen = new Set<THREE.Mesh>();
@@ -60,7 +57,7 @@ export class SelectionClickThrough {
    */
   private static findSelectedIndex(
     depthSortedMeshes: THREE.Mesh[],
-    selectionManager: SelectionManager
+    selectionManager: SelectionManager,
   ): number {
     const lastSelected = selectionManager.getLastSelectedObject();
     if (lastSelected) {

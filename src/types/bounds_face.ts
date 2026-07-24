@@ -8,7 +8,7 @@ export enum BoundsFace {
   POS_Y = 'pos_y',
   NEG_Y = 'neg_y',
   POS_Z = 'pos_z',
-  NEG_Z = 'neg_z'
+  NEG_Z = 'neg_z',
 }
 
 /**

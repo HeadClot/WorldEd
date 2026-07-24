@@ -9,7 +9,7 @@ export enum SurfaceCategory {
   SelfAligned = 2,
   SelfReverseAligned = 3,
   ReverseAligned = 4,
-  Outside = 5
+  Outside = 5,
 }
 
 /**
@@ -18,7 +18,7 @@ export enum SurfaceCategory {
  */
 export const KEEP_SURFACE_CATEGORIES: ReadonlySet<SurfaceCategory> = new Set([
   SurfaceCategory.SelfAligned,
-  SurfaceCategory.SelfReverseAligned
+  SurfaceCategory.SelfReverseAligned,
 ]);
 
 /**
@@ -37,7 +37,6 @@ export function shouldKeepSurfaceCategory(category: SurfaceCategory): boolean {
  */
 export function shouldReverseSurfaceWinding(category: SurfaceCategory): boolean {
   return (
-    category === SurfaceCategory.ReverseAligned ||
-    category === SurfaceCategory.SelfReverseAligned
+    category === SurfaceCategory.ReverseAligned || category === SurfaceCategory.SelfReverseAligned
   );
 }

@@ -12,7 +12,7 @@ import { DEFAULT_CUBE_CENTER_Y } from '../types/editor_config.js';
 import {
   getDefaultFrontCameraPosition,
   getDefaultSideCameraPosition,
-  getDefaultTopCameraPosition
+  getDefaultTopCameraPosition,
 } from '../navigation/default_camera_placement.js';
 
 /**
@@ -37,28 +37,28 @@ export class ViewportSceneBootstrap {
    */
   createViewports(
     viewportContainers: HTMLElement[],
-    inputManager: InputManager
+    inputManager: InputManager,
   ): BootstrappedViewports {
     return {
       viewport2DTop: new Viewport2D(
         viewportContainers[0],
         'Top',
         'xz',
-        getDefaultTopCameraPosition()
+        getDefaultTopCameraPosition(),
       ),
       viewport2DFront: new Viewport2D(
         viewportContainers[1],
         'Front',
         'xy',
-        getDefaultFrontCameraPosition()
+        getDefaultFrontCameraPosition(),
       ),
       viewport2DSide: new Viewport2D(
         viewportContainers[2],
         'Side',
         'yz',
-        getDefaultSideCameraPosition()
+        getDefaultSideCameraPosition(),
       ),
-      viewport3D: new Viewport3D(viewportContainers[3], inputManager)
+      viewport3D: new Viewport3D(viewportContainers[3], inputManager),
     };
   }
 
@@ -73,7 +73,7 @@ export class ViewportSceneBootstrap {
     worldObject: THREE.Group,
     viewports: BootstrappedViewports,
     viewportSyncManager: ViewportSyncManager,
-    transformGizmo: TransformGizmo
+    transformGizmo: TransformGizmo,
   ): void {
     worldObject.add(this.createDefaultBox());
     viewports.viewport2DTop.setWorldGroup(worldObject);
@@ -94,10 +94,9 @@ export class ViewportSceneBootstrap {
    */
   private bindMeshResolveCallbacks(
     viewports: BootstrappedViewports,
-    viewportSyncManager: ViewportSyncManager
+    viewportSyncManager: ViewportSyncManager,
   ): void {
-    const resolve = (mesh: THREE.Mesh) =>
-      viewportSyncManager.resolveToWorldMesh(mesh);
+    const resolve = (mesh: THREE.Mesh) => viewportSyncManager.resolveToWorldMesh(mesh);
     viewports.viewport2DTop.setMeshResolveCallback(resolve);
     viewports.viewport2DFront.setMeshResolveCallback(resolve);
     viewports.viewport2DSide.setMeshResolveCallback(resolve);
@@ -111,13 +110,13 @@ export class ViewportSceneBootstrap {
    */
   private addGizmoToAllViewports(
     viewports: BootstrappedViewports,
-    transformGizmo: TransformGizmo
+    transformGizmo: TransformGizmo,
   ): void {
     const list = [
       viewports.viewport2DTop,
       viewports.viewport2DFront,
       viewports.viewport2DSide,
-      viewports.viewport3D
+      viewports.viewport3D,
     ];
     list.forEach((vp) => {
       const gizmoGroup = transformGizmo.getHandleGroupClone();
@@ -139,7 +138,7 @@ export class ViewportSceneBootstrap {
     const edges = new THREE.EdgesGeometry(geometry, 1);
     const line = new THREE.LineSegments(
       edges,
-      new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor })
+      new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor }),
     );
     line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
     box.add(line);
@@ -151,11 +150,7 @@ export class ViewportSceneBootstrap {
    * @param viewports The four viewports (3D is skipped).
    */
   private addLightsTo2DScenes(viewports: BootstrappedViewports): void {
-    const list = [
-      viewports.viewport2DTop,
-      viewports.viewport2DFront,
-      viewports.viewport2DSide
-    ];
+    const list = [viewports.viewport2DTop, viewports.viewport2DFront, viewports.viewport2DSide];
     list.forEach((vp) => {
       const scene = vp.getScene();
       scene.add(new THREE.AmbientLight(Theme.lightAmbient, 0.5));

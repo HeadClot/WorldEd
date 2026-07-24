@@ -5,7 +5,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../src/solid/model/solid_model.js';
 import {
   expandFaceSelectionIndices,
-  findSameSolidBrushSurfaceIndices
+  findSameSolidBrushSurfaceIndices,
 } from '../../src/selection/solid_result_face_indices.js';
 import { findConnectedCoplanarFaceIndices } from '../../src/selection/triangle_geometry_utils.js';
 import { FaceSelectionManager } from '../../src/selection/face_selection_manager.js';
@@ -38,9 +38,9 @@ describe('solid result face indices', () => {
     const expandedIds = uniqueBrushIds(sources, expanded);
     expect(expandedIds.size).toBe(1);
     expect(expandedIds.has(leftId)).toBe(true);
-    expect(expanded.every((index) => sources[index].surfaceIndex === sources[leftSeed].surfaceIndex)).toBe(
-      true
-    );
+    expect(
+      expanded.every((index) => sources[index].surfaceIndex === sources[leftSeed].surfaceIndex),
+    ).toBe(true);
 
     const other = expandFaceSelectionIndices(result, rightSeed);
     expect(uniqueBrushIds(sources, other).has(rightId)).toBe(true);
@@ -89,19 +89,13 @@ describe('solid result face indices', () => {
     const rightFaces = expandFaceSelectionIndices(result, rightSeed);
     const selections = [...leftFaces, ...rightFaces].map((faceIndex) => ({
       mesh: result,
-      faceIndex
+      faceIndex,
     }));
     const regions = groupSelectionsIntoFaceRegions(selections);
     expect(regions.length).toBe(2);
-    const regionBrushSets = regions.map((region) =>
-      uniqueBrushIds(sources, region.faceIndices)
-    );
-    expect(regionBrushSets.some((set) => set.size === 1 && set.has(leftId))).toBe(
-      true
-    );
-    expect(regionBrushSets.some((set) => set.size === 1 && set.has(rightId))).toBe(
-      true
-    );
+    const regionBrushSets = regions.map((region) => uniqueBrushIds(sources, region.faceIndices));
+    expect(regionBrushSets.some((set) => set.size === 1 && set.has(leftId))).toBe(true);
+    expect(regionBrushSets.some((set) => set.size === 1 && set.has(rightId))).toBe(true);
   });
 
   it('falls back to coplanar expansion for ordinary non-solid meshes', () => {
@@ -114,7 +108,7 @@ describe('solid result face indices', () => {
   it('does not coplanar-flood when solid sources exist but seed row is missing', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = [
-      { brushId: 'only-zero', surfaceIndex: 0 }
+      { brushId: 'only-zero', surfaceIndex: 0 },
     ];
     const expanded = expandFaceSelectionIndices(mesh, 5);
     expect(expanded).toEqual([5]);
@@ -142,7 +136,7 @@ function buildAdjacentWallBrushes(): {
   return {
     result: model.getResultMesh(),
     leftId: left.id,
-    rightId: right.id
+    rightId: right.id,
   };
 }
 
@@ -168,7 +162,7 @@ function buildAdjacentFloorTiles(): {
   return {
     result: model.getResultMesh(),
     floorId: floor.id,
-    carpetId: carpet.id
+    carpetId: carpet.id,
   };
 }
 
@@ -178,9 +172,7 @@ function buildAdjacentFloorTiles(): {
  * @returns Source rows.
  */
 function readSources(mesh: THREE.Mesh): SourceRow[] {
-  const sources = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-    | SourceRow[]
-    | undefined;
+  const sources = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as SourceRow[] | undefined;
   expect(sources?.length).toBeGreaterThan(0);
   return sources!;
 }
@@ -204,11 +196,7 @@ function findSeedForBrush(sources: SourceRow[], brushId: string): number {
  * @param brushId Target brush.
  * @returns Triangle index.
  */
-function findTopFaceSeed(
-  mesh: THREE.Mesh,
-  sources: SourceRow[],
-  brushId: string
-): number {
+function findTopFaceSeed(mesh: THREE.Mesh, sources: SourceRow[], brushId: string): number {
   const up = new THREE.Vector3(0, 1, 0);
   for (let index = 0; index < sources.length; index++) {
     if (sources[index].brushId !== brushId) continue;

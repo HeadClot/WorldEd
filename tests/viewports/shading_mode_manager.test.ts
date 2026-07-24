@@ -37,7 +37,7 @@ describe('ShadingModeManager', () => {
     it('should handle multiple meshes correctly', () => {
       const meshC = new THREE.Mesh(
         new THREE.PlaneGeometry(1, 1),
-        new THREE.MeshStandardMaterial({ color: 0x0000ff })
+        new THREE.MeshStandardMaterial({ color: 0x0000ff }),
       );
       scene.add(meshA);
       scene.add(meshB);
@@ -80,7 +80,7 @@ describe('ShadingModeManager', () => {
     it('should leave decorative edge children visible', () => {
       const edge = new THREE.LineSegments(
         new THREE.EdgesGeometry(meshA.geometry),
-        new THREE.LineBasicMaterial({ color: 0xffffff })
+        new THREE.LineBasicMaterial({ color: 0xffffff }),
       );
       edge.userData.isDecorativeEdge = true;
       meshA.add(edge);
@@ -206,9 +206,7 @@ describe('ShadingModeManager', () => {
       manager.setMode(ShadingMode.WIREFRAME);
       manager.setMode(ShadingMode.FLAT);
       expect(meshA.material instanceof THREE.MeshBasicMaterial).toBe(true);
-      expect((meshA.material as THREE.MeshBasicMaterial).color.getHex()).toBe(
-        0xff0000
-      );
+      expect((meshA.material as THREE.MeshBasicMaterial).color.getHex()).toBe(0xff0000);
     });
   });
 
@@ -276,7 +274,7 @@ describe('ShadingModeManager', () => {
     it('should report bounds handles as shading-exempt', () => {
       const handleMesh = new THREE.Mesh(
         new THREE.BoxGeometry(1, 1, 1),
-        new THREE.MeshBasicMaterial()
+        new THREE.MeshBasicMaterial(),
       );
       handleMesh.userData.handleId = 9;
       expect(manager.isShadingExempt(handleMesh)).toBe(true);
@@ -286,7 +284,7 @@ describe('ShadingModeManager', () => {
     it('should report solid brush helpers as shading-exempt', () => {
       const brushMesh = new THREE.Mesh(
         new THREE.BoxGeometry(1, 1, 1),
-        new THREE.MeshBasicMaterial()
+        new THREE.MeshBasicMaterial(),
       );
       brushMesh.userData.isSolidBrush = true;
       expect(manager.isShadingExempt(brushMesh)).toBe(true);

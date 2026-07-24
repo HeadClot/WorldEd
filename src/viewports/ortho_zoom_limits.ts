@@ -18,10 +18,7 @@ export const MAX_ORTHO_HALF_EXTENT = 100_000;
  * @param proposedFactor Multiplier to apply to the frustum size.
  * @returns Factor that keeps half-height within min/max limits.
  */
-export function clampOrthoZoomFactor(
-  currentHalfHeight: number,
-  proposedFactor: number
-): number {
+export function clampOrthoZoomFactor(currentHalfHeight: number, proposedFactor: number): number {
   if (!isFinite(currentHalfHeight) || currentHalfHeight <= 0) {
     return 1;
   }

@@ -13,10 +13,7 @@ export class SurfaceFragmentSplitter {
    * @param planes Planes that may cut the polygon.
    * @returns List of non-empty convex fragments.
    */
-  static splitByPlanes(
-    polygon: THREE.Vector3[],
-    planes: SolidPlane[]
-  ): THREE.Vector3[][] {
+  static splitByPlanes(polygon: THREE.Vector3[], planes: SolidPlane[]): THREE.Vector3[][] {
     let fragments: THREE.Vector3[][] = [polygon.map((point) => point.clone())];
     for (const plane of planes) {
       fragments = this.splitFragmentsByPlane(fragments, plane);
@@ -33,7 +30,7 @@ export class SurfaceFragmentSplitter {
    */
   private static splitFragmentsByPlane(
     fragments: THREE.Vector3[][],
-    plane: SolidPlane
+    plane: SolidPlane,
   ): THREE.Vector3[][] {
     const next: THREE.Vector3[][] = [];
     for (const fragment of fragments) {
@@ -54,10 +51,7 @@ export class SurfaceFragmentSplitter {
    * @param plane Candidate cut plane.
    * @returns True when the plane may cut the polygon.
    */
-  private static planeLikelyCutsPolygon(
-    polygon: THREE.Vector3[],
-    plane: SolidPlane
-  ): boolean {
+  private static planeLikelyCutsPolygon(polygon: THREE.Vector3[], plane: SolidPlane): boolean {
     let sawInside = false;
     let sawOutside = false;
     for (const point of polygon) {

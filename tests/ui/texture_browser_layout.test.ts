@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TEXTURE_BROWSER_MIN_THUMB_PX,
-  TEXTURE_BROWSER_TILE_GAP_PX
+  TEXTURE_BROWSER_TILE_GAP_PX,
 } from '../../src/ui/texture_browser_layout.js';
 import { TEXTURE_BROWSER_MIN_TRACK_PX } from '../../src/ui/texture_browser_styles.js';
 

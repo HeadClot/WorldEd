@@ -33,9 +33,7 @@ export interface LayoutTestComponents {
   transformExecutor: TransformExecutor;
   commandStack: CommandStack;
   statusBar: StatusBar | null;
-  faceExtrusionController: ReturnType<
-    FaceModeCoordinator['getFaceExtrusionController']
-  >;
+  faceExtrusionController: ReturnType<FaceModeCoordinator['getFaceExtrusionController']>;
   selectionMode: SelectionMode;
 }
 
@@ -78,8 +76,7 @@ export function buildLayoutTestComponents(parts: {
     transformExecutor: parts.transformExecutor,
     commandStack: parts.commandStack,
     statusBar: parts.statusBar,
-    faceExtrusionController:
-      parts.faceModeCoordinator.getFaceExtrusionController(),
-    selectionMode: parts.faceModeCoordinator.getSelectionMode()
+    faceExtrusionController: parts.faceModeCoordinator.getFaceExtrusionController(),
+    selectionMode: parts.faceModeCoordinator.getSelectionMode(),
   };
 }

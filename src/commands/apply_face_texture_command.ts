@@ -5,17 +5,14 @@ import {
   FaceTextureMapEntry,
   FaceTextureMapping,
   cloneFaceTextureMapEntry,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../texture/face_texture_mapping.js';
-import {
-  getFaceTextureMaps,
-  setFaceTextureMaps
-} from '../texture/face_texture_storage.js';
+import { getFaceTextureMaps, setFaceTextureMaps } from '../texture/face_texture_storage.js';
 import {
   applyAlignToTargets,
   applyMappingToTargets,
   resetUvParamsOnTargets,
-  TextureApplyTarget
+  TextureApplyTarget,
 } from '../texture/face_texture_applier.js';
 import { rebakeStoredFaceTextureMaps } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
@@ -65,7 +62,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
   constructor(
     targets: TextureApplyTarget[],
     mapping: FaceTextureMapping = createDefaultFaceTextureMapping(),
-    options: ApplyFaceTextureCommandOptions = {}
+    options: ApplyFaceTextureCommandOptions = {},
   ) {
     this.targets = targets;
     this.mapping = { ...mapping };
@@ -139,13 +136,9 @@ export class ApplyFaceTextureCommand implements UndoCommand {
    * @returns Snapshot object.
    */
   private snapshotMesh(mesh: THREE.Mesh): MeshTextureSnapshot {
-    const maps = getFaceTextureMaps(mesh).map((entry) =>
-      cloneFaceTextureMapEntry(entry)
-    );
+    const maps = getFaceTextureMaps(mesh).map((entry) => cloneFaceTextureMapEntry(entry));
     const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute | null;
-    const uvArray = uv
-      ? new Float32Array(uv.array as ArrayLike<number>)
-      : null;
+    const uvArray = uv ? new Float32Array(uv.array as ArrayLike<number>) : null;
     return { mesh, maps, uvArray };
   }
 
@@ -175,9 +168,6 @@ export class ApplyFaceTextureCommand implements UndoCommand {
       uv.needsUpdate = true;
       return;
     }
-    mesh.geometry.setAttribute(
-      'uv',
-      new THREE.BufferAttribute(uvArray.slice(), 2)
-    );
+    mesh.geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray.slice(), 2));
   }
 }

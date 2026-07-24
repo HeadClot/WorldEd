@@ -5,7 +5,7 @@ import {
   isObjectLocked,
   isObjectOrAncestorLocked,
   setObjectLocked,
-  toggleObjectLocked
+  toggleObjectLocked,
 } from '../../src/utils/object_lock.js';
 
 describe('object_lock', () => {

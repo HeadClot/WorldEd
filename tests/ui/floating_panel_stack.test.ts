@@ -22,9 +22,7 @@ describe('FloatingPanelStack', () => {
     FloatingPanelStack.bringToFront(tools);
     FloatingPanelStack.bringToFront(texture);
     FloatingPanelStack.bringToFront(tools);
-    expect(Number(tools.style.zIndex)).toBeGreaterThan(
-      Number(texture.style.zIndex)
-    );
+    expect(Number(tools.style.zIndex)).toBeGreaterThan(Number(texture.style.zIndex));
   });
 
   it('should advance the shared top z-index on each bringToFront', () => {

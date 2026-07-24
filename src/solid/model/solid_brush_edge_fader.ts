@@ -1,12 +1,6 @@
 import * as THREE from 'three';
-import {
-  SolidBrushVisual,
-  SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY
-} from './solid_brush_visual.js';
-import {
-  BRUSH_EDGE_FADE_FAR,
-  BRUSH_EDGE_FADE_NEAR
-} from './solid_brush_edge_materials.js';
+import { SolidBrushVisual, SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from './solid_brush_visual.js';
+import { BRUSH_EDGE_FADE_FAR, BRUSH_EDGE_FADE_NEAR } from './solid_brush_edge_materials.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from './solid_brush_edge_materials.js';
 
 /**
@@ -59,8 +53,7 @@ export class SolidBrushEdgeFader {
       ? BRUSH_EDGE_FADE_FAR * SELECTED_FADE_RANGE_SCALE
       : BRUSH_EDGE_FADE_FAR;
     const showFront = distance < hideBeyond;
-    const showOccluded =
-      showFront && distance < BRUSH_EDGE_FADE_NEAR * OCCLUDED_PASS_RANGE_SCALE;
+    const showOccluded = showFront && distance < BRUSH_EDGE_FADE_NEAR * OCCLUDED_PASS_RANGE_SCALE;
     this.applyEdgeVisibility(brushMesh, showFront, showOccluded);
   }
 
@@ -85,20 +78,13 @@ export class SolidBrushEdgeFader {
    * @param sphere Local-space bounding sphere.
    * @returns Non-negative nearest distance.
    */
-  private static distanceToBoundingSphere(
-    brushMesh: THREE.Mesh,
-    sphere: THREE.Sphere
-  ): number {
+  private static distanceToBoundingSphere(brushMesh: THREE.Mesh, sphere: THREE.Sphere): number {
     brushWorldCenter.copy(sphere.center).applyMatrix4(brushMesh.matrixWorld);
-    brushMesh.matrixWorld.decompose(
-      brushWorldPosition,
-      brushWorldQuaternion,
-      brushWorldScale
-    );
+    brushMesh.matrixWorld.decompose(brushWorldPosition, brushWorldQuaternion, brushWorldScale);
     const maxScale = Math.max(
       Math.abs(brushWorldScale.x),
       Math.abs(brushWorldScale.y),
-      Math.abs(brushWorldScale.z)
+      Math.abs(brushWorldScale.z),
     );
     const worldRadius = sphere.radius * maxScale;
     const centerDistance = cameraWorldPosition.distanceTo(brushWorldCenter);
@@ -114,13 +100,12 @@ export class SolidBrushEdgeFader {
   private static applyEdgeVisibility(
     brushMesh: THREE.Mesh,
     showFront: boolean,
-    showOccluded: boolean
+    showOccluded: boolean,
   ): void {
     for (const child of brushMesh.children) {
       if (!(child instanceof THREE.LineSegments)) continue;
       if (child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] !== true) continue;
-      const isOccluded =
-        child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
+      const isOccluded = child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
       child.visible = isOccluded ? showOccluded : showFront;
     }
   }

@@ -9,5 +9,5 @@ export enum ShadingMode {
   SOLID = 'Solid',
   WIREFRAME = 'Wireframe',
   FLAT = 'Flat',
-  WIREFRAME_OVERLAY = 'Wireframe Overlay'
+  WIREFRAME_OVERLAY = 'Wireframe Overlay',
 }

@@ -29,7 +29,7 @@ export class CameraFitCoordinator {
     selectionManager: SelectionManager,
     statusBar: StatusBar | null,
     getOrderedViewports: () => Array<Viewport2D | Viewport3D>,
-    getActiveViewportIndex: () => number
+    getActiveViewportIndex: () => number,
   ) {
     this.cameraFitController = new CameraFitController();
     this.cameraAnimationConfig = this.cameraFitController.getConfig();
@@ -73,7 +73,7 @@ export class CameraFitCoordinator {
     const count = this.cameraFitController.fitViewportToSelection(
       viewport,
       selected,
-      this.cameraAnimationConfig
+      this.cameraAnimationConfig,
     );
     this.showFitFeedback(count);
   }
@@ -86,7 +86,7 @@ export class CameraFitCoordinator {
     const count = this.cameraFitController.fitAllViewportsToSelection(
       this.getOrderedViewports(),
       selected,
-      this.cameraAnimationConfig
+      this.cameraAnimationConfig,
     );
     this.showFitFeedback(count);
   }

@@ -3,18 +3,18 @@ import * as THREE from 'three';
 import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
 import {
   SolidBrushVisual,
-  SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY
+  SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY,
 } from '../../src/solid/model/solid_brush_visual.js';
 import {
   SolidBrushEdgeMaterials,
   BRUSH_EDGE_FADE_NEAR,
-  BRUSH_EDGE_FADE_FAR
+  BRUSH_EDGE_FADE_FAR,
 } from '../../src/solid/model/solid_brush_edge_materials.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_edge_materials.js';
 import {
   rebuildDecorativeEdges,
-  usesContentDecorativeEdges
+  usesContentDecorativeEdges,
 } from '../../src/utils/mesh_edge_sync.js';
 
 /**
@@ -23,11 +23,7 @@ import {
 describe('SolidBrushVisual', () => {
   it('creates box previews that are outline-only by default', () => {
     const size = 1.5 + Math.random();
-    const mesh = SolidBrushVisual.createBoxPreview(
-      'Brush',
-      size,
-      SolidOperation.Subtractive
-    );
+    const mesh = SolidBrushVisual.createBoxPreview('Brush', size, SolidOperation.Subtractive);
     expect(SolidBrushVisual.isBrushObject(mesh)).toBe(true);
     expect(SolidBrushVisual.isHullFillVisible(mesh)).toBe(false);
     const material = mesh.material as THREE.MeshBasicMaterial;
@@ -42,26 +38,22 @@ describe('SolidBrushVisual', () => {
 
   it('uses shared dual-pass distance-faded edge materials', () => {
     const brush = SolidBrushFactory.createCenteredBox(2, 2, 2);
-    const mesh = SolidBrushVisual.createHullPreview(
-      'Hull',
-      brush,
-      SolidOperation.Subtractive
-    );
+    const mesh = SolidBrushVisual.createHullPreview('Hull', brush, SolidOperation.Subtractive);
     const edges = collectDecorativeEdges(mesh);
     expect(edges).toHaveLength(2);
     const front = edges.find(
-      (edge) => edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] !== true
+      (edge) => edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] !== true,
     );
     const occluded = edges.find(
-      (edge) => edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true
+      (edge) => edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true,
     );
     expect(front).toBeDefined();
     expect(occluded).toBeDefined();
     expect(front!.material).toBe(
-      SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Subtractive)
+      SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Subtractive),
     );
     expect(occluded!.material).toBe(
-      SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Subtractive)
+      SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Subtractive),
     );
     const frontMaterial = front!.material as THREE.ShaderMaterial;
     const occludedMaterial = occluded!.material as THREE.ShaderMaterial;
@@ -70,17 +62,13 @@ describe('SolidBrushVisual', () => {
     expect(frontMaterial.uniforms.fadeNear.value).toBe(BRUSH_EDGE_FADE_NEAR);
     expect(frontMaterial.uniforms.fadeFar.value).toBe(BRUSH_EDGE_FADE_FAR);
     expect(occludedMaterial.uniforms.opacity.value).toBeLessThan(
-      frontMaterial.uniforms.opacity.value
+      frontMaterial.uniforms.opacity.value,
     );
     disposeBrushPreview(mesh);
   });
 
   it('shows translucent operation-tinted fill only when fill is enabled', () => {
-    const mesh = SolidBrushVisual.createBoxPreview(
-      'Brush',
-      2,
-      SolidOperation.Subtractive
-    );
+    const mesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Subtractive);
     SolidBrushVisual.setHullFillVisible(mesh, true);
     expect(SolidBrushVisual.isHullFillVisible(mesh)).toBe(true);
     const material = mesh.material as THREE.MeshBasicMaterial;
@@ -99,11 +87,7 @@ describe('SolidBrushVisual', () => {
   });
 
   it('rebinds shared edge materials when the brush operation changes', () => {
-    const mesh = SolidBrushVisual.createBoxPreview(
-      'Brush',
-      2,
-      SolidOperation.Additive
-    );
+    const mesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
     SolidBrushVisual.setHullFillVisible(mesh, true);
     SolidBrushVisual.applyOperationStyle(mesh, SolidOperation.Intersecting);
     expect(SolidBrushVisual.isHullFillVisible(mesh)).toBe(true);
@@ -113,12 +97,9 @@ describe('SolidBrushVisual', () => {
     const edges = collectDecorativeEdges(mesh);
     expect(edges.length).toBe(2);
     edges.forEach((edge) => {
-      const isOccluded =
-        edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
+      const isOccluded = edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
       const expected = isOccluded
-        ? SolidBrushEdgeMaterials.getOccludedMaterial(
-            SolidOperation.Intersecting
-          )
+        ? SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Intersecting)
         : SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Intersecting);
       expect(edge.material).toBe(expected);
     });
@@ -126,16 +107,11 @@ describe('SolidBrushVisual', () => {
   });
 
   it('creates additive edge materials for additive box previews', () => {
-    const mesh = SolidBrushVisual.createBoxPreview(
-      'Add',
-      1,
-      SolidOperation.Additive
-    );
+    const mesh = SolidBrushVisual.createBoxPreview('Add', 1, SolidOperation.Additive);
     const edges = collectDecorativeEdges(mesh);
     expect(edges.length).toBeGreaterThan(0);
     edges.forEach((edge) => {
-      const isOccluded =
-        edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
+      const isOccluded = edge.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
       const expected = isOccluded
         ? SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Additive)
         : SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Additive);
@@ -145,19 +121,13 @@ describe('SolidBrushVisual', () => {
   });
 
   it('never accepts white content decorative edges on brush previews', () => {
-    const mesh = SolidBrushVisual.createBoxPreview(
-      'NoWhite',
-      2,
-      SolidOperation.Additive
-    );
+    const mesh = SolidBrushVisual.createBoxPreview('NoWhite', 2, SolidOperation.Additive);
     expect(usesContentDecorativeEdges(mesh)).toBe(false);
     const brushEdgeCount = collectDecorativeEdges(mesh).length;
     rebuildDecorativeEdges(mesh);
     expect(collectDecorativeEdges(mesh).length).toBe(brushEdgeCount);
     const whiteEdges = mesh.children.filter(
-      (child) =>
-        child instanceof THREE.LineSegments &&
-        child.userData.isDecorativeEdge === true
+      (child) => child instanceof THREE.LineSegments && child.userData.isDecorativeEdge === true,
     );
     expect(whiteEdges).toHaveLength(0);
     disposeBrushPreview(mesh);
@@ -172,8 +142,7 @@ describe('SolidBrushVisual', () => {
 function collectDecorativeEdges(mesh: THREE.Mesh): THREE.LineSegments[] {
   return mesh.children.filter(
     (child): child is THREE.LineSegments =>
-      child instanceof THREE.LineSegments &&
-      child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true
+      child instanceof THREE.LineSegments && child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true,
   );
 }
 

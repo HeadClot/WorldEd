@@ -73,11 +73,7 @@ export class HierarchyReparentHandler {
       this.showStatus?.('Solid brushes must stay under their solid model');
       return;
     }
-    const command = new ReparentCommand(
-      dragged,
-      destination.parent,
-      destination.insertBefore
-    );
+    const command = new ReparentCommand(dragged, destination.parent, destination.insertBefore);
     this.commandStack.push(command);
     SolidModel.rebuildAllUnder(this.worldObject);
     this.syncViewports?.();
@@ -93,7 +89,7 @@ export class HierarchyReparentHandler {
    */
   private resolveDestination(
     dragged: THREE.Object3D,
-    dropTarget: THREE.Object3D
+    dropTarget: THREE.Object3D,
   ): { parent: THREE.Object3D; insertBefore: THREE.Object3D | null } | null {
     if (dropTarget === dragged) return null;
     if (isDescendantOf(dropTarget, dragged)) return null;
@@ -115,7 +111,7 @@ export class HierarchyReparentHandler {
    */
   private isSolidHierarchyMoveAllowed(
     dragged: THREE.Object3D,
-    destinationParent: THREE.Object3D
+    destinationParent: THREE.Object3D,
   ): boolean {
     if (SolidBrushVisual.isBrushObject(dragged)) {
       const model = SolidModel.fromObject(dragged);

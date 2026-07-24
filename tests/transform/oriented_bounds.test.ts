@@ -4,7 +4,7 @@ import {
   OrientedBoundsBuilder,
   getBoundsFaceLocalNormal,
   getBoundsFaceHalfExtent,
-  getAllBoundsFaces
+  getAllBoundsFaces,
 } from '../../src/transform/oriented_bounds.js';
 import { BoundsFace } from '../../src/types/bounds_face.js';
 
@@ -111,8 +111,5 @@ describe('bounds face helpers', () => {
  * @returns A mesh with updated world matrix.
  */
 function createBoxMesh(width: number, height: number, depth: number): THREE.Mesh {
-  return new THREE.Mesh(
-    new THREE.BoxGeometry(width, height, depth),
-    new THREE.MeshBasicMaterial()
-  );
+  return new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), new THREE.MeshBasicMaterial());
 }

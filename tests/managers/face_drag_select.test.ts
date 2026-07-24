@@ -18,7 +18,7 @@ describe('FaceExtrusionController drag select', () => {
       scene,
       new CommandStack(16),
       new GridSnap(false, 1),
-      world
+      world,
     );
     mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.position.set(0, 0.5, 0);
@@ -42,7 +42,7 @@ describe('FaceExtrusionController drag select', () => {
         bottom: 200,
         x: 0,
         y: 0,
-        toJSON: () => ({})
+        toJSON: () => ({}),
       }) as DOMRect;
     renderer = { domElement: canvas };
   });
@@ -79,6 +79,6 @@ function createMouseEvent(clientX: number, clientY: number): MouseEvent {
     clientX,
     clientY,
     shiftKey: false,
-    button: 0
+    button: 0,
   } as MouseEvent;
 }

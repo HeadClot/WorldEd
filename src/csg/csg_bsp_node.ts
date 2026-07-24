@@ -105,13 +105,7 @@ export class CsgBspNode {
     const frontList: CsgPolygon[] = [];
     const backList: CsgPolygon[] = [];
     polygons.forEach((polygon) => {
-      this.splitPolygon(
-        polygon,
-        this.polygons,
-        this.polygons,
-        frontList,
-        backList
-      );
+      this.splitPolygon(polygon, this.polygons, this.polygons, frontList, backList);
     });
     if (frontList.length > 0) {
       if (!this.front) this.front = new CsgBspNode([], this.epsilon);
@@ -135,9 +129,7 @@ export class CsgBspNode {
     polygons.forEach((polygon) => {
       this.splitPolygon(polygon, frontList, backList, frontList, backList);
     });
-    const clippedFront = this.front
-      ? this.front.clipPolygons(frontList)
-      : frontList;
+    const clippedFront = this.front ? this.front.clipPolygons(frontList) : frontList;
     const clippedBack = this.back ? this.back.clipPolygons(backList) : [];
     return clippedFront.concat(clippedBack);
   }
@@ -155,7 +147,7 @@ export class CsgBspNode {
     coplanarFront: CsgPolygon[],
     coplanarBack: CsgPolygon[],
     front: CsgPolygon[],
-    back: CsgPolygon[]
+    back: CsgPolygon[],
   ): void {
     if (!this.planeNormal) return;
     const vertices = polygon.getVertices();
@@ -199,7 +191,7 @@ export class CsgBspNode {
     polygon: CsgPolygon,
     types: number[],
     front: CsgPolygon[],
-    back: CsgPolygon[]
+    back: CsgPolygon[],
   ): void {
     const vertices = polygon.getVertices();
     const frontVertices: THREE.Vector3[] = [];
