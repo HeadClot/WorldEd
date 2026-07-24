@@ -26,7 +26,7 @@ export class WireframeOverlayRenderer {
     this.lineMaterial = new THREE.LineBasicMaterial({
       color: Theme.selectionColor,
       transparent: true,
-      opacity: 0.85
+      opacity: 0.85,
     });
   }
 

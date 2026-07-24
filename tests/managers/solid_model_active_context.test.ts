@@ -46,7 +46,7 @@ describe('Solid model active context', () => {
       world,
       new CommandStack(16),
       selection,
-      panel as never
+      panel as never,
     );
     const model = new SolidModel('ActiveCtx');
     world.add(model.root);

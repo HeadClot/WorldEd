@@ -71,9 +71,9 @@ describe('InfiniteGrid2D', () => {
     camera.bottom = -20;
     camera.updateProjectionMatrix();
     grid.update(camera);
-    const colors = (
-      grid.getObject().children[0] as THREE.LineSegments
-    ).geometry.getAttribute('color') as THREE.BufferAttribute;
+    const colors = (grid.getObject().children[0] as THREE.LineSegments).geometry.getAttribute(
+      'color',
+    ) as THREE.BufferAttribute;
     let minLuma = Infinity;
     let maxLuma = -Infinity;
     for (let i = 0; i < colors.count; i++) {

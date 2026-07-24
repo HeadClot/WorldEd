@@ -3,7 +3,7 @@ import { CategoryRouter } from '../../src/solid/algorithm/category_router.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import {
   SurfaceCategory,
-  shouldKeepSurfaceCategory
+  shouldKeepSurfaceCategory,
 } from '../../src/solid/types/surface_category.js';
 
 /**
@@ -14,7 +14,7 @@ describe('CategoryRouter', () => {
     const result = CategoryRouter.route(
       SurfaceCategory.Outside,
       SurfaceCategory.Outside,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     );
     expect(result).toBe(SurfaceCategory.Outside);
   });
@@ -23,7 +23,7 @@ describe('CategoryRouter', () => {
     const result = CategoryRouter.route(
       SurfaceCategory.Outside,
       SurfaceCategory.SelfAligned,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     );
     expect(result).toBe(SurfaceCategory.SelfAligned);
   });
@@ -32,12 +32,12 @@ describe('CategoryRouter', () => {
     const afterSelf = CategoryRouter.route(
       SurfaceCategory.Outside,
       SurfaceCategory.SelfAligned,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     );
     const afterPeer = CategoryRouter.route(
       afterSelf,
       SurfaceCategory.Aligned,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     );
     expect(afterPeer).toBe(SurfaceCategory.Aligned);
     expect(shouldKeepSurfaceCategory(afterPeer)).toBe(false);
@@ -47,12 +47,12 @@ describe('CategoryRouter', () => {
     const afterPeer = CategoryRouter.route(
       SurfaceCategory.Outside,
       SurfaceCategory.Aligned,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     );
     const afterSelf = CategoryRouter.route(
       afterPeer,
       SurfaceCategory.SelfAligned,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     );
     expect(afterSelf).toBe(SurfaceCategory.SelfAligned);
     expect(shouldKeepSurfaceCategory(afterSelf)).toBe(true);
@@ -62,7 +62,7 @@ describe('CategoryRouter', () => {
     const result = CategoryRouter.route(
       SurfaceCategory.Inside,
       SurfaceCategory.Inside,
-      SolidOperation.Subtractive
+      SolidOperation.Subtractive,
     );
     expect(result).toBe(SurfaceCategory.Outside);
   });
@@ -71,7 +71,7 @@ describe('CategoryRouter', () => {
     const result = CategoryRouter.route(
       SurfaceCategory.Inside,
       SurfaceCategory.Outside,
-      SolidOperation.Intersecting
+      SolidOperation.Intersecting,
     );
     expect(result).toBe(SurfaceCategory.Outside);
   });

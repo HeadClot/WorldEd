@@ -3,7 +3,7 @@ import {
   isImageFileName,
   extractFileExtension,
   getTextureDisplayName,
-  getAcceptedImageExtensions
+  getAcceptedImageExtensions,
 } from '../../src/texture/image_file_filter.js';
 
 describe('image_file_filter', () => {

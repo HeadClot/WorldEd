@@ -1,9 +1,6 @@
 import { UndoCommand } from './undo_command.js';
 import { SolidModel } from '../solid/model/solid_model.js';
-import {
-  FaceTextureMapping,
-  cloneFaceTextureMapping
-} from '../texture/face_texture_mapping.js';
+import { FaceTextureMapping, cloneFaceTextureMapping } from '../texture/face_texture_mapping.js';
 
 /**
  * One solid face texture paint target.
@@ -88,7 +85,7 @@ export class AssignSolidFaceTextureCommand implements UndoCommand {
       model: target.model,
       brushId: target.brushId,
       surfaceIndex: target.surfaceIndex,
-      previousMapping: brush.getSurfaceMapping(target.surfaceIndex)
+      previousMapping: brush.getSurfaceMapping(target.surfaceIndex),
     });
     brush.setFaceTextureId(target.surfaceIndex, this.textureId);
     return true;
@@ -102,10 +99,7 @@ export class AssignSolidFaceTextureCommand implements UndoCommand {
   private restoreSnapshot(snapshot: FaceTextureSnapshot): boolean {
     const brush = snapshot.model.findBrush(snapshot.brushId);
     if (!brush) return false;
-    brush.setFaceMapping(
-      snapshot.surfaceIndex,
-      cloneFaceTextureMapping(snapshot.previousMapping)
-    );
+    brush.setFaceMapping(snapshot.surfaceIndex, cloneFaceTextureMapping(snapshot.previousMapping));
     return true;
   }
 
@@ -118,7 +112,7 @@ export class AssignSolidFaceTextureCommand implements UndoCommand {
   private addBrush(
     brushesByModel: Map<SolidModel, Set<string>>,
     model: SolidModel,
-    brushId: string
+    brushId: string,
   ): void {
     const set = brushesByModel.get(model);
     if (set) {
@@ -132,9 +126,7 @@ export class AssignSolidFaceTextureCommand implements UndoCommand {
    * Remeshes painted brushes without CSG.
    * @param brushesByModel Brushes grouped by solid model.
    */
-  private refreshPresentations(
-    brushesByModel: Map<SolidModel, Set<string>>
-  ): void {
+  private refreshPresentations(brushesByModel: Map<SolidModel, Set<string>>): void {
     for (const [model, brushIds] of brushesByModel) {
       model.refreshBrushPresentations(Array.from(brushIds));
     }

@@ -3,7 +3,7 @@ import {
   MIN_ORTHO_HALF_EXTENT,
   MAX_ORTHO_HALF_EXTENT,
   clampOrthoZoomFactor,
-  clampOrthoHalfExtent
+  clampOrthoHalfExtent,
 } from '../../src/viewports/ortho_zoom_limits.js';
 
 describe('ortho_zoom_limits', () => {

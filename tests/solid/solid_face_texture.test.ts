@@ -14,18 +14,14 @@ describe('Solid face texture assignment', () => {
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
     const command = new AssignSolidFaceTextureCommand(
       [{ model, brushId: brush.id, surfaceIndex: 0 }],
-      'folder/face0.png'
+      'folder/face0.png',
     );
     command.execute();
     expect(brush.getSurfaceTextureId(0)).toBe('folder/face0.png');
     expect(brush.getSurfaceTextureId(1)).toBe(DEFAULT_CHECKER_TEXTURE_ID);
     const maps = getFaceTextureMaps(model.getResultMesh());
-    expect(maps.some((entry) => entry.mapping.textureId === 'folder/face0.png')).toBe(
-      true
-    );
-    expect(
-      maps.some((entry) => entry.mapping.textureId === DEFAULT_CHECKER_TEXTURE_ID)
-    ).toBe(true);
+    expect(maps.some((entry) => entry.mapping.textureId === 'folder/face0.png')).toBe(true);
+    expect(maps.some((entry) => entry.mapping.textureId === DEFAULT_CHECKER_TEXTURE_ID)).toBe(true);
   });
 
   it('undo restores the previous face texture', () => {
@@ -33,7 +29,7 @@ describe('Solid face texture assignment', () => {
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
     const command = new AssignSolidFaceTextureCommand(
       [{ model, brushId: brush.id, surfaceIndex: 2 }],
-      'folder/side.png'
+      'folder/side.png',
     );
     command.execute();
     command.undo();

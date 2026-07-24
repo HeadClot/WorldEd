@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   createConvexPrismFromFace,
-  orderConvexPolygon
+  orderConvexPolygon,
 } from '../../src/transform/convex_face_prism.js';
-import { findCoplanarFaceIndices, getTriangleCount } from '../../src/selection/triangle_geometry_utils.js';
+import {
+  findCoplanarFaceIndices,
+  getTriangleCount,
+} from '../../src/selection/triangle_geometry_utils.js';
 
 describe('createConvexPrismFromFace', () => {
   it('should create a new mesh without modifying the source', () => {
@@ -46,7 +49,7 @@ describe('createConvexPrismFromFace', () => {
     const faceIndices = findCoplanarFaceIndices(source.geometry, 0);
     const prism = createConvexPrismFromFace(source, faceIndices, 1.0, 'Extrude005');
     const edge = prism!.children.find(
-      (child) => child instanceof THREE.LineSegments
+      (child) => child instanceof THREE.LineSegments,
     ) as THREE.LineSegments;
     expect(edge).toBeDefined();
     edge.geometry.computeBoundingBox();
@@ -73,7 +76,7 @@ describe('orderConvexPolygon', () => {
       new THREE.Vector3(1, 0, 1),
       new THREE.Vector3(-1, 0, 1),
       new THREE.Vector3(-1, 0, -1),
-      new THREE.Vector3(1, 0, -1)
+      new THREE.Vector3(1, 0, -1),
     ];
     const ordered = orderConvexPolygon(points, normal);
     expect(ordered.length).toBe(4);

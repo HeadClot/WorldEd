@@ -30,7 +30,7 @@ export class CsgActionHandler {
   constructor(
     worldObject: THREE.Group,
     commandStack: CommandStack,
-    selectionManager: SelectionManager
+    selectionManager: SelectionManager,
   ) {
     this.worldObject = worldObject;
     this.commandStack = commandStack;
@@ -105,9 +105,7 @@ export class CsgActionHandler {
    */
   private validateMeshBooleanSelection(selected: THREE.Mesh[]): boolean {
     if (selected.length < 2) {
-      this.emitStatus(
-        'CSG needs two regular meshes — Shift+click or Ctrl+click to multi-select'
-      );
+      this.emitStatus('CSG needs two regular meshes — Shift+click or Ctrl+click to multi-select');
       return false;
     }
     return this.rejectSolidSelectionIfPresent(selected);
@@ -121,14 +119,12 @@ export class CsgActionHandler {
   private rejectSolidSelectionIfPresent(selected: THREE.Mesh[]): boolean {
     if (selected.some((mesh) => SolidBrushVisual.isBrushObject(mesh))) {
       this.emitStatus(
-        'Mesh CSG is not available for solid brushes — use Solid Brush ops in Properties'
+        'Mesh CSG is not available for solid brushes — use Solid Brush ops in Properties',
       );
       return false;
     }
     if (selected.some((mesh) => SolidModel.isResultMesh(mesh))) {
-      this.emitStatus(
-        'Mesh CSG is not available for solid model results — edit brushes instead'
-      );
+      this.emitStatus('Mesh CSG is not available for solid model results — edit brushes instead');
       return false;
     }
     return true;
@@ -158,7 +154,7 @@ export class CsgActionHandler {
     meshB: THREE.Mesh,
     result: THREE.Mesh,
     resultName: string,
-    operation: CsgOperation
+    operation: CsgOperation,
   ): void {
     const command = new CsgBooleanCommand(meshA, meshB, result, this.worldObject);
     this.commandStack.push(command);

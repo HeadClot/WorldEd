@@ -9,7 +9,7 @@ import {
   TEXTURE_BROWSER_ROOT_CLASS,
   TEXTURE_BROWSER_THUMB_CLASS,
   TEXTURE_BROWSER_TILE_CLASS,
-  ensureTextureBrowserStylesheet
+  ensureTextureBrowserStylesheet,
 } from './texture_browser_styles.js';
 
 /**
@@ -78,7 +78,7 @@ export class TextureBrowser {
   constructor(
     host: HTMLElement,
     handlers: TextureBrowserHandlers,
-    defaultAnchor: HTMLElement | null = null
+    defaultAnchor: HTMLElement | null = null,
   ) {
     ensureTextureBrowserStylesheet();
     this.host = host;
@@ -179,7 +179,7 @@ export class TextureBrowser {
   setEntries(
     entries: TextureBrowserEntry[],
     selectedId: string | null,
-    folderName: string | null
+    folderName: string | null,
   ): void {
     this.selectedId = selectedId;
     this.tileElements.clear();
@@ -400,8 +400,7 @@ export class TextureBrowser {
     handle.style.height = '14px';
     handle.style.cursor = 'nwse-resize';
     handle.style.boxSizing = 'border-box';
-    handle.style.background =
-      'linear-gradient(135deg, transparent 50%, rgba(232,106,23,0.55) 50%)';
+    handle.style.background = 'linear-gradient(135deg, transparent 50%, rgba(232,106,23,0.55) 50%)';
     handle.style.borderBottomRightRadius = '5px';
     this.bindResize(handle);
     return handle;
@@ -497,9 +496,7 @@ export class TextureBrowser {
    * @param folderName Folder name or null.
    */
   private updateFolderLabel(folderName: string | null): void {
-    this.folderLabel.textContent = folderName
-      ? `Folder: ${folderName}`
-      : 'No folder open';
+    this.folderLabel.textContent = folderName ? `Folder: ${folderName}` : 'No folder open';
   }
 
   /**
@@ -560,10 +557,7 @@ export class TextureBrowser {
     const panelWidthPx = TEXTURE_BROWSER_DEFAULT_WIDTH_PX;
     const anchor = this.defaultAnchor ?? this.host;
     const rect = anchor.getBoundingClientRect();
-    const left = Math.max(
-      paddingPx,
-      rect.right - panelWidthPx - paddingPx
-    );
+    const left = Math.max(paddingPx, rect.right - panelWidthPx - paddingPx);
     const bottomInset = window.innerHeight - rect.bottom + paddingPx;
     this.root.style.left = `${left}px`;
     this.root.style.right = 'auto';
@@ -659,14 +653,8 @@ export class TextureBrowser {
     if (!this.isResizing) return;
     const deltaX = moveEvent.clientX - this.resizeStartX;
     const deltaY = moveEvent.clientY - this.resizeStartY;
-    const nextWidth = Math.max(
-      TEXTURE_BROWSER_MIN_WIDTH_PX,
-      this.resizeStartWidth + deltaX
-    );
-    const nextHeight = Math.max(
-      TEXTURE_BROWSER_MIN_HEIGHT_PX,
-      this.resizeStartHeight + deltaY
-    );
+    const nextWidth = Math.max(TEXTURE_BROWSER_MIN_WIDTH_PX, this.resizeStartWidth + deltaX);
+    const nextHeight = Math.max(TEXTURE_BROWSER_MIN_HEIGHT_PX, this.resizeStartHeight + deltaY);
     this.root.style.width = `${nextWidth}px`;
     this.root.style.height = `${nextHeight}px`;
   }

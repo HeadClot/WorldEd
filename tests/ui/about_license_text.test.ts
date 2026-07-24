@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   HENRYS_TOOLS_DISCORD_URL,
   PROJECT_DISPLAY_NAME,
-  getAboutLicenseText
+  getAboutLicenseText,
 } from '../../src/ui/about_license_text.js';
 
 describe('about_license_text', () => {
@@ -10,7 +10,7 @@ describe('about_license_text', () => {
     expect(PROJECT_DISPLAY_NAME).toBe('AI World Editor');
   });
 
-  it('should expose the Henry\'s Tools Discord invite URL', () => {
+  it("should expose the Henry's Tools Discord invite URL", () => {
     expect(HENRYS_TOOLS_DISCORD_URL).toBe('https://discord.gg/sKEvrBwHtq');
   });
 

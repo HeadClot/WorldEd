@@ -45,26 +45,23 @@ describe('OutlinerTree', () => {
   });
 
   it('should hide decorative edges and selection outlines under meshes', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'CubeWithHelpers';
     const decorative = new THREE.LineSegments(
       new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial()
+      new THREE.LineBasicMaterial(),
     );
     decorative.name = 'DecorativeEdge';
     decorative.userData.isDecorativeEdge = true;
     const outline = new THREE.LineSegments(
       new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial()
+      new THREE.LineBasicMaterial(),
     );
     outline.name = 'SelectionOutline';
     outline.userData.isSelectionHighlight = true;
     const realChild = new THREE.Mesh(
       new THREE.BoxGeometry(0.5, 0.5, 0.5),
-      new THREE.MeshBasicMaterial()
+      new THREE.MeshBasicMaterial(),
     );
     realChild.name = 'RealChild';
     mesh.add(decorative);
@@ -82,14 +79,11 @@ describe('OutlinerTree', () => {
   });
 
   it('should not show expand chevron when mesh only has editor helper children', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'LeafCube';
     const decorative = new THREE.LineSegments(
       new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial()
+      new THREE.LineBasicMaterial(),
     );
     decorative.userData.isDecorativeEdge = true;
     mesh.add(decorative);
@@ -103,7 +97,9 @@ describe('OutlinerTree', () => {
 
   it('should select object on callback registration', () => {
     let selectedObj: THREE.Object3D | null = null;
-    tree.onSelectObject((obj) => { selectedObj = obj; });
+    tree.onSelectObject((obj) => {
+      selectedObj = obj;
+    });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'Selectable';
     root.add(mesh);
@@ -116,7 +112,9 @@ describe('OutlinerTree', () => {
 
   it('should toggle visibility on callback registration', () => {
     let toggledObj: THREE.Object3D | null = null;
-    tree.onToggleVisibility((obj) => { toggledObj = obj; });
+    tree.onToggleVisibility((obj) => {
+      toggledObj = obj;
+    });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'Visible';
     root.add(mesh);
@@ -195,7 +193,7 @@ describe('OutlinerTree', () => {
     childGroup.name = 'ChildGroup';
     const grandchild = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
+      new THREE.MeshBasicMaterial(),
     );
     grandchild.name = 'Grandchild';
     childGroup.add(grandchild);

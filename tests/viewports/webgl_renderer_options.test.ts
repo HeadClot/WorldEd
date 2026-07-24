@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  getEditorWebGLRendererOptions,
-} from '../../src/viewports/webgl_renderer_options.js';
+import { getEditorWebGLRendererOptions } from '../../src/viewports/webgl_renderer_options.js';
 
 describe('editor WebGL renderer options', () => {
   it('enables multisample antialiasing for clean thick lines', () => {

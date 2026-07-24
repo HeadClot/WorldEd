@@ -10,19 +10,16 @@ import { SolidBrushMeshChunkBuilder } from '../mesh/solid_brush_mesh_chunk.js';
 import { SolidMeshChunkCache } from '../mesh/solid_mesh_chunk_cache.js';
 import { SolidResultBuffer } from '../mesh/solid_result_buffer.js';
 import { createContentMaterial } from '../../materials/content_material_factory.js';
-import {
-  DECORATIVE_EDGE_USERDATA_KEY,
-  removeDecorativeEdges
-} from '../../utils/mesh_edge_sync.js';
+import { DECORATIVE_EDGE_USERDATA_KEY, removeDecorativeEdges } from '../../utils/mesh_edge_sync.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
 import { Theme } from '../../theme.js';
 import {
   FaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../../texture/face_texture_mapping.js';
 import {
   getFaceTextureMaps,
-  setFaceTextureMapsShared
+  setFaceTextureMapsShared,
 } from '../../texture/face_texture_storage.js';
 import { rebuildSolidResultMaterials } from '../../texture/surface_material_builder.js';
 import { forBatchesAsync } from '../../utils/async_yield.js';
@@ -273,17 +270,12 @@ export class SolidModel {
    */
   addBoxBrush(
     size: number = 2,
-    operation: SolidOperation = SolidOperation.Additive
+    operation: SolidOperation = SolidOperation.Additive,
   ): SolidBrushInstance {
     this.brushCounter += 1;
     const name = `Brush${this.padNumber(this.brushCounter)}`;
     const brush = SolidBrushFactory.createCenteredBox(size, size, size);
-    const instance = new SolidBrushInstance(
-      this.allocateBrushId(),
-      name,
-      brush,
-      operation
-    );
+    const instance = new SolidBrushInstance(this.allocateBrushId(), name, brush, operation);
     const preview = SolidBrushVisual.createBoxPreview(name, size, operation);
     instance.attachMesh(preview);
     this.root.add(preview);
@@ -314,7 +306,7 @@ export class SolidModel {
   addBrushInstancesBatch(
     instances: SolidBrushInstance[],
     previewSize: number = 2,
-    rebuild: boolean = true
+    rebuild: boolean = true,
   ): void {
     for (const instance of instances) {
       this.registerBrushAt(instance, this.brushes.length, previewSize);
@@ -334,7 +326,7 @@ export class SolidModel {
   insertBrushInstance(
     instance: SolidBrushInstance,
     listIndex: number,
-    previewSize: number = 2
+    previewSize: number = 2,
   ): void {
     this.registerBrushAt(instance, listIndex, previewSize);
     this.markDirty();
@@ -410,7 +402,7 @@ export class SolidModel {
     id: string,
     position?: THREE.Vector3,
     rotation?: THREE.Euler,
-    scale?: THREE.Vector3
+    scale?: THREE.Vector3,
   ): boolean {
     const brush = this.findBrush(id);
     if (!brush) return false;
@@ -445,7 +437,7 @@ export class SolidModel {
    */
   duplicateBrush(
     id: string,
-    offset: THREE.Vector3 = new THREE.Vector3(0, 0, 0)
+    offset: THREE.Vector3 = new THREE.Vector3(0, 0, 0),
   ): SolidBrushInstance | null {
     const source = this.findBrush(id);
     if (!source) return null;
@@ -454,11 +446,7 @@ export class SolidModel {
     const name = `${source.name}_copy`;
     const clone = source.cloneWithId(this.allocateBrushId(), name);
     clone.position.add(offset);
-    const preview = SolidBrushVisual.createHullPreview(
-      name,
-      clone.brush,
-      clone.operation
-    );
+    const preview = SolidBrushVisual.createHullPreview(name, clone.brush, clone.operation);
     clone.attachMesh(preview);
     this.root.add(preview);
     this.brushes.push(clone);
@@ -508,7 +496,7 @@ export class SolidModel {
    */
   syncSelectedBrushesFromScene(
     selectedMeshes: readonly THREE.Mesh[],
-    textureLockEnabled: boolean = false
+    textureLockEnabled: boolean = false,
   ): boolean {
     const selectedSet = new Set(selectedMeshes);
     const changedIds: string[] = [];
@@ -534,7 +522,7 @@ export class SolidModel {
    */
   prepareLiveBrushEdit(
     selectedMeshes: readonly THREE.Mesh[],
-    textureLockEnabled: boolean = false
+    textureLockEnabled: boolean = false,
   ): boolean {
     const selectedSet = new Set(selectedMeshes);
     const dirtyIds: string[] = [];
@@ -579,9 +567,7 @@ export class SolidModel {
    */
   syncBrushOrderFromScene(): void {
     const ordered: SolidBrushInstance[] = [];
-    const remaining = new Map(
-      this.brushes.map((brush) => [brush.id, brush] as const)
-    );
+    const remaining = new Map(this.brushes.map((brush) => [brush.id, brush] as const));
     for (const child of this.root.children) {
       if (!SolidBrushVisual.isBrushObject(child)) continue;
       const brush = this.findBrushByMesh(child);
@@ -639,9 +625,7 @@ export class SolidModel {
    */
   finalizeAfterInteractiveEdit(): void {
     const needsCompile =
-      this.fullRebuildRequired ||
-      this.dirtyBrushIds.size > 0 ||
-      !this.interactiveGeometryCurrent;
+      this.fullRebuildRequired || this.dirtyBrushIds.size > 0 || !this.interactiveGeometryCurrent;
     if (needsCompile) {
       this.compileResultGeometry(false);
       this.interactiveGeometryCurrent = true;
@@ -656,9 +640,7 @@ export class SolidModel {
    * Keeps the browser responsive for large VMF imports.
    * @param onProgress Optional progress (0..1) and status label.
    */
-  async rebuildAsync(
-    onProgress?: (ratio: number, label: string) => void
-  ): Promise<void> {
+  async rebuildAsync(onProgress?: (ratio: number, label: string) => void): Promise<void> {
     this.markDirty();
     this.syncBrushOrderFromScene();
     for (const brush of this.brushes) {
@@ -668,10 +650,10 @@ export class SolidModel {
     await this.compiler.compileAsync(
       this.brushes,
       { forceFull: true, skipPolygonAssembly: true },
-      (ratio) => onProgress?.(0.05 + ratio * 0.55, 'Compiling solid CSG…')
+      (ratio) => onProgress?.(0.05 + ratio * 0.55, 'Compiling solid CSG…'),
     );
     await this.rebuildDirtyMeshChunksAsync((ratio) =>
-      onProgress?.(0.6 + ratio * 0.3, 'Building result mesh…')
+      onProgress?.(0.6 + ratio * 0.3, 'Building result mesh…'),
     );
     const brushOrder = this.compiler.getLastBrushOrder();
     this.meshChunkCache.pruneToIds(new Set(brushOrder));
@@ -752,9 +734,7 @@ export class SolidModel {
    * @returns Parallel list of indices (-1 when missing).
    */
   getBrushOrderIndices(brushIds: readonly string[]): number[] {
-    return brushIds.map((brushId) =>
-      this.brushes.findIndex((brush) => brush.id === brushId)
-    );
+    return brushIds.map((brushId) => this.brushes.findIndex((brush) => brush.id === brushId));
   }
 
   /**
@@ -809,11 +789,7 @@ export class SolidModel {
    * @param textureId Texture identity.
    * @returns True when the brush was found.
    */
-  setBrushFaceTexture(
-    brushId: string,
-    surfaceIndex: number,
-    textureId: string
-  ): boolean {
+  setBrushFaceTexture(brushId: string, surfaceIndex: number, textureId: string): boolean {
     const brush = this.findBrush(brushId);
     if (!brush) return false;
     brush.setFaceTextureId(surfaceIndex, textureId);
@@ -851,11 +827,7 @@ export class SolidModel {
       this.rebuild(true);
       return true;
     }
-    const patched = this.resultBuffer.tryPatchDirty(
-      remeshed,
-      brushOrder,
-      this.meshChunkCache
-    );
+    const patched = this.resultBuffer.tryPatchDirty(remeshed, brushOrder, this.meshChunkCache);
     if (!patched) {
       this.resultBuffer.rebuildFull(brushOrder, this.meshChunkCache);
       this.uploadResultBufferToMesh(false);
@@ -882,7 +854,7 @@ export class SolidModel {
     const brush = this.findBrush(brushId);
     if (!brush) return false;
     return this.compiler.updateCachedPolygonTextures(brushId, (surfaceIndex) =>
-      brush.getSurfaceTextureId(surfaceIndex)
+      brush.getSurfaceTextureId(surfaceIndex),
     );
   }
 
@@ -950,11 +922,7 @@ export class SolidModel {
   private writeResultFromChunks(brushOrder: string[]): void {
     this.ensureMeshChunksForBrushOrder(brushOrder);
     const dirtyIds = this.compiler.getLastUpdateBrushIds();
-    const patched = this.resultBuffer.tryPatchDirty(
-      dirtyIds,
-      brushOrder,
-      this.meshChunkCache
-    );
+    const patched = this.resultBuffer.tryPatchDirty(dirtyIds, brushOrder, this.meshChunkCache);
     if (patched) {
       this.uploadResultBufferToMesh(true);
       return;
@@ -962,7 +930,7 @@ export class SolidModel {
     const suffixRebuilt = this.resultBuffer.tryRebuildFromFirstChanged(
       dirtyIds,
       brushOrder,
-      this.meshChunkCache
+      this.meshChunkCache,
     );
     if (!suffixRebuilt) {
       this.resultBuffer.rebuildFull(brushOrder, this.meshChunkCache);
@@ -994,9 +962,7 @@ export class SolidModel {
     }
     this.resultBuffer.uploadToGeometry(this.resultMesh.geometry);
     this.resultMesh.geometry.userData.solidMeshUpdateRanges =
-      this.resultBuffer.wasLastWritePartial()
-        ? this.resultBuffer.getLastUpdateRanges()
-        : [];
+      this.resultBuffer.wasLastWritePartial() ? this.resultBuffer.getLastUpdateRanges() : [];
   }
 
   /**
@@ -1014,9 +980,7 @@ export class SolidModel {
    * Rebuilds dirty mesh chunks in batches with browser yields.
    * @param onProgress Optional 0..1 progress for the chunk phase.
    */
-  private async rebuildDirtyMeshChunksAsync(
-    onProgress?: (ratio: number) => void
-  ): Promise<void> {
+  private async rebuildDirtyMeshChunksAsync(onProgress?: (ratio: number) => void): Promise<void> {
     this.resultMesh.updateMatrixWorld(true);
     const worldMatrix = this.resultMesh.matrixWorld;
     const dirtyIds = this.compiler.getLastUpdateBrushIds();
@@ -1028,7 +992,7 @@ export class SolidModel {
           this.rebuildOneMeshChunk(dirtyIds[index], worldMatrix);
         }
       },
-      onProgress
+      onProgress,
     );
   }
 
@@ -1037,17 +1001,14 @@ export class SolidModel {
    * @param brushId Brush instance id.
    * @param worldMatrix Result mesh world matrix for UV projection.
    */
-  private rebuildOneMeshChunk(
-    brushId: string,
-    worldMatrix: THREE.Matrix4
-  ): void {
+  private rebuildOneMeshChunk(brushId: string, worldMatrix: THREE.Matrix4): void {
     const polygons = this.compiler.getCachedPolygons(brushId) ?? [];
     const brush = this.findBrush(brushId);
     const brushModelMatrix = brush
       ? new THREE.Matrix4().compose(
           brush.position,
           new THREE.Quaternion().setFromEuler(brush.rotation),
-          brush.scale
+          brush.scale,
         )
       : new THREE.Matrix4();
     const chunk = this.chunkBuilder.build(
@@ -1060,8 +1021,8 @@ export class SolidModel {
         resolveLocalFaceNormal: (surfaceIndex) =>
           this.resolveBrushFaceLocalNormal(brush, surfaceIndex),
         resolveModelFaceNormal: (surfaceIndex) =>
-          this.resolveBrushFaceModelNormal(brush, surfaceIndex)
-      }
+          this.resolveBrushFaceModelNormal(brush, surfaceIndex),
+      },
     );
     this.meshChunkCache.set(brushId, chunk);
   }
@@ -1074,12 +1035,11 @@ export class SolidModel {
    */
   private resolveBrushFaceLocalNormal(
     brush: SolidBrushInstance | undefined,
-    surfaceIndex: number
+    surfaceIndex: number,
   ): THREE.Vector3 {
     if (!brush) return new THREE.Vector3(0, 1, 0);
     return (
-      brush.brush.planes[surfaceIndex]?.normal.clone().normalize() ??
-      new THREE.Vector3(0, 1, 0)
+      brush.brush.planes[surfaceIndex]?.normal.clone().normalize() ?? new THREE.Vector3(0, 1, 0)
     );
   }
 
@@ -1091,15 +1051,14 @@ export class SolidModel {
    */
   private resolveBrushFaceModelNormal(
     brush: SolidBrushInstance | undefined,
-    surfaceIndex: number
+    surfaceIndex: number,
   ): THREE.Vector3 {
     if (!brush) return new THREE.Vector3(0, 1, 0);
-    const localNormal =
-      brush.brush.planes[surfaceIndex]?.normal ?? new THREE.Vector3(0, 1, 0);
+    const localNormal = brush.brush.planes[surfaceIndex]?.normal ?? new THREE.Vector3(0, 1, 0);
     const localMatrix = new THREE.Matrix4().compose(
       brush.position,
       new THREE.Quaternion().setFromEuler(brush.rotation),
-      brush.scale
+      brush.scale,
     );
     const normalMatrix = new THREE.Matrix3().getNormalMatrix(localMatrix);
     return localNormal.clone().applyMatrix3(normalMatrix).normalize();
@@ -1113,7 +1072,7 @@ export class SolidModel {
    */
   private resolveBrushSurfaceMapping(
     brush: SolidBrushInstance | undefined,
-    surfaceIndex: number
+    surfaceIndex: number,
   ): FaceTextureMapping {
     if (brush) return brush.getSurfaceMapping(surfaceIndex);
     return createDefaultFaceTextureMapping(DEFAULT_CHECKER_TEXTURE_ID);
@@ -1133,7 +1092,7 @@ export class SolidModel {
     }
     return {
       dirtyBrushIds: Array.from(this.dirtyBrushIds),
-      skipPolygonAssembly: true
+      skipPolygonAssembly: true,
     };
   }
 
@@ -1149,9 +1108,7 @@ export class SolidModel {
    * Pulls mesh transforms and returns ids of brushes that actually changed.
    * @returns Brush ids whose transform or visibility changed.
    */
-  private pullChangedBrushTransforms(
-    textureLockEnabled: boolean = false
-  ): string[] {
+  private pullChangedBrushTransforms(textureLockEnabled: boolean = false): string[] {
     const changedIds: string[] = [];
     for (const brush of this.brushes) {
       if (this.pullTransformIfChanged(brush, textureLockEnabled)) {
@@ -1179,7 +1136,7 @@ export class SolidModel {
    */
   private pullTransformIfChanged(
     brush: SolidBrushInstance,
-    textureLockEnabled: boolean = false
+    textureLockEnabled: boolean = false,
   ): boolean {
     if (!brush.mesh) {
       brush.pullTransformFromMesh();
@@ -1204,7 +1161,7 @@ export class SolidModel {
    */
   private pullBrushTransformWithOptionalTextureLock(
     brush: SolidBrushInstance,
-    textureLockEnabled: boolean
+    textureLockEnabled: boolean,
   ): void {
     void textureLockEnabled;
     brush.pullTransformFromMesh();
@@ -1215,10 +1172,7 @@ export class SolidModel {
    * @param brush Brush instance.
    * @param textureLockEnabled Reserved; UV stick mode is controlled separately.
    */
-  private pullLiveBrushTransform(
-    brush: SolidBrushInstance,
-    textureLockEnabled: boolean
-  ): void {
+  private pullLiveBrushTransform(brush: SolidBrushInstance, textureLockEnabled: boolean): void {
     void textureLockEnabled;
     brush.pullTransformFromMesh();
   }
@@ -1229,10 +1183,7 @@ export class SolidModel {
    * @param brushes Current brush list.
    * @returns True when order and membership match.
    */
-  private sameBrushOrder(
-    before: string[],
-    brushes: SolidBrushInstance[]
-  ): boolean {
+  private sameBrushOrder(before: string[], brushes: SolidBrushInstance[]): boolean {
     if (before.length !== brushes.length) return false;
     for (let index = 0; index < before.length; index++) {
       if (before[index] !== brushes[index].id) return false;
@@ -1263,22 +1214,22 @@ export class SolidModel {
       return {
         triangleIndices: region.triangleIndices,
         textureId: mapping.textureId || region.textureId,
-        mapping
+        mapping,
       };
     });
     setFaceTextureMapsShared(
       this.resultMesh,
       textureRegions.map((region) => ({
         triangleIndices: region.triangleIndices,
-        mapping: region.mapping
-      }))
+        mapping: region.mapping,
+      })),
     );
     rebuildSolidResultMaterials(
       this.resultMesh,
       textureRegions.map((region) => ({
         triangleIndices: region.triangleIndices,
-        textureId: region.textureId
-      }))
+        textureId: region.textureId,
+      })),
     );
   }
 
@@ -1294,9 +1245,7 @@ export class SolidModel {
   }): FaceTextureMapping {
     const brush = this.findBrush(region.brushId);
     if (brush) return brush.getSurfaceMapping(region.surfaceIndex);
-    return createDefaultFaceTextureMapping(
-      region.textureId || DEFAULT_CHECKER_TEXTURE_ID
-    );
+    return createDefaultFaceTextureMapping(region.textureId || DEFAULT_CHECKER_TEXTURE_ID);
   }
 
   /**
@@ -1311,7 +1260,7 @@ export class SolidModel {
     return this.brushes.map((brush) => ({
       brushId: brush.id,
       defaultMapping: brush.serializeDefaultMapping(),
-      faceMappings: brush.serializeFaceMappings()
+      faceMappings: brush.serializeFaceMappings(),
     }));
   }
 
@@ -1324,15 +1273,12 @@ export class SolidModel {
       brushId: string;
       defaultMapping: FaceTextureMapping;
       faceMappings: (FaceTextureMapping | undefined)[];
-    }>
+    }>,
   ): void {
     for (const snapshot of snapshots) {
       const brush = this.findBrush(snapshot.brushId);
       if (!brush) continue;
-      brush.restoreFaceMappings(
-        snapshot.defaultMapping,
-        snapshot.faceMappings
-      );
+      brush.restoreFaceMappings(snapshot.defaultMapping, snapshot.faceMappings);
     }
   }
 
@@ -1345,8 +1291,7 @@ export class SolidModel {
     const maps = getFaceTextureMaps(this.resultMesh);
     const sources =
       (this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-        | Array<{ brushId: string; surfaceIndex: number }>
-        | undefined) ?? [];
+        Array<{ brushId: string; surfaceIndex: number }> | undefined) ?? [];
     for (const entry of maps) {
       this.writeMapEntryToBrushFaces(entry.triangleIndices, entry.mapping, sources);
     }
@@ -1362,7 +1307,7 @@ export class SolidModel {
    */
   private collectBrushIdsFromMaps(
     maps: Array<{ triangleIndices: number[] }>,
-    sources: Array<{ brushId: string; surfaceIndex: number }>
+    sources: Array<{ brushId: string; surfaceIndex: number }>,
   ): Set<string> {
     const brushIds = new Set<string>();
     for (const entry of maps) {
@@ -1392,11 +1337,7 @@ export class SolidModel {
     }
     if (dirtyIds.length === 0 || order.length === 0) return;
     this.ensureMeshChunksForBrushOrder(order);
-    const patched = this.resultBuffer.tryPatchDirty(
-      dirtyIds,
-      order,
-      this.meshChunkCache
-    );
+    const patched = this.resultBuffer.tryPatchDirty(dirtyIds, order, this.meshChunkCache);
     if (!patched) {
       this.resultBuffer.rebuildFull(order, this.meshChunkCache);
     }
@@ -1415,7 +1356,7 @@ export class SolidModel {
   private writeMapEntryToBrushFaces(
     triangleIndices: number[],
     mapping: FaceTextureMapping,
-    sources: Array<{ brushId: string; surfaceIndex: number }>
+    sources: Array<{ brushId: string; surfaceIndex: number }>,
   ): void {
     const written = new Set<string>();
     for (const triangleIndex of triangleIndices) {
@@ -1472,21 +1413,15 @@ export class SolidModel {
   private replaceResultGeometry(
     positions: Float32Array,
     normals: Float32Array,
-    uvs?: Float32Array
+    uvs?: Float32Array,
   ): void {
     const oldGeometry = this.resultMesh.geometry;
     const geometry = new THREE.BufferGeometry();
-    const safePositions =
-      positions.length >= 9 ? positions : new Float32Array(0);
+    const safePositions = positions.length >= 9 ? positions : new Float32Array(0);
     const safeNormals =
-      normals.length === safePositions.length
-        ? normals
-        : new Float32Array(safePositions.length);
+      normals.length === safePositions.length ? normals : new Float32Array(safePositions.length);
     const safeUvs = this.buildSafeUvArray(safePositions.length / 3, uvs);
-    geometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(safePositions, 3)
-    );
+    geometry.setAttribute('position', new THREE.BufferAttribute(safePositions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(safeNormals, 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(safeUvs, 2));
     if (safePositions.length > 0) {
@@ -1504,10 +1439,7 @@ export class SolidModel {
    * @param uvs Optional source UVs.
    * @returns UV float array of length vertexCount * 2.
    */
-  private buildSafeUvArray(
-    vertexCount: number,
-    uvs: Float32Array | undefined
-  ): Float32Array {
+  private buildSafeUvArray(vertexCount: number, uvs: Float32Array | undefined): Float32Array {
     const expected = vertexCount * 2;
     if (uvs && uvs.length === expected) return uvs;
     return new Float32Array(expected);
@@ -1519,7 +1451,7 @@ export class SolidModel {
    */
   private stripStaleDecorativeEdges(mesh: THREE.Mesh): void {
     const stale = mesh.children.filter(
-      (child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true
+      (child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true,
     );
     for (const child of stale) {
       mesh.remove(child);
@@ -1548,9 +1480,7 @@ export class SolidModel {
    * Disposes mesh-owned materials while leaving shared edge materials alive.
    * @param material Material or material array on a disposed mesh child.
    */
-  private disposeOwnedMaterials(
-    material: THREE.Material | THREE.Material[] | undefined
-  ): void {
+  private disposeOwnedMaterials(material: THREE.Material | THREE.Material[] | undefined): void {
     if (Array.isArray(material)) {
       material.forEach((entry) => this.disposeOwnedMaterial(entry));
       return;
@@ -1576,7 +1506,7 @@ export class SolidModel {
   private registerBrushAt(
     instance: SolidBrushInstance,
     listIndex: number,
-    previewSize: number
+    previewSize: number,
   ): void {
     if (this.findBrush(instance.id)) return;
     this.ensureBrushPreviewMesh(instance, previewSize);
@@ -1591,10 +1521,7 @@ export class SolidModel {
    * @param instance Brush instance.
    * @param previewSize Fallback box edge length when hull data is missing.
    */
-  private ensureBrushPreviewMesh(
-    instance: SolidBrushInstance,
-    previewSize: number
-  ): void {
+  private ensureBrushPreviewMesh(instance: SolidBrushInstance, previewSize: number): void {
     if (instance.mesh) {
       instance.pushTransformToMesh();
       return;
@@ -1603,18 +1530,14 @@ export class SolidModel {
       const hullPreview = SolidBrushVisual.createHullPreview(
         instance.name,
         instance.brush,
-        instance.operation
+        instance.operation,
       );
       instance.attachMesh(hullPreview);
       return;
     }
     const measuredSize = this.estimateBrushPreviewSize(instance);
     const size = measuredSize > 1e-6 ? measuredSize : previewSize;
-    const boxPreview = SolidBrushVisual.createBoxPreview(
-      instance.name,
-      size,
-      instance.operation
-    );
+    const boxPreview = SolidBrushVisual.createBoxPreview(instance.name, size, instance.operation);
     instance.attachMesh(boxPreview);
   }
 
@@ -1634,10 +1557,7 @@ export class SolidModel {
    * @param end Which end of the evaluation list to place them on.
    * @returns True when order changed.
    */
-  private reorderBrushesToEnd(
-    brushIds: readonly string[],
-    end: 'first' | 'last'
-  ): boolean {
+  private reorderBrushesToEnd(brushIds: readonly string[], end: 'first' | 'last'): boolean {
     const moving: SolidBrushInstance[] = [];
     const movingIds = new Set<string>();
     for (const brushId of brushIds) {
@@ -1649,8 +1569,7 @@ export class SolidModel {
     }
     if (moving.length === 0) return false;
     const remaining = this.brushes.filter((brush) => !movingIds.has(brush.id));
-    const next =
-      end === 'first' ? moving.concat(remaining) : remaining.concat(moving);
+    const next = end === 'first' ? moving.concat(remaining) : remaining.concat(moving);
     let changed = false;
     for (let index = 0; index < next.length; index++) {
       if (next[index].id !== this.brushes[index].id) {

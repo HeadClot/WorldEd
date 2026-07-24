@@ -33,11 +33,7 @@ export class GroupCommand implements UndoCommand {
    * @param parent The parent object to add the new group under.
    * @param groupName The name for the new group container.
    */
-  constructor(
-    objects: THREE.Object3D[],
-    parent: THREE.Object3D,
-    groupName: string
-  ) {
+  constructor(objects: THREE.Object3D[], parent: THREE.Object3D, groupName: string) {
     this.group = new THREE.Group();
     this.group.name = groupName;
     this.newParent = parent;
@@ -73,9 +69,7 @@ export class GroupCommand implements UndoCommand {
         const currentIndex = snapshot.originalParent.children.indexOf(snapshot.child);
         if (currentIndex > snapshot.siblingIndex) {
           snapshot.originalParent.children.splice(currentIndex, 1);
-          snapshot.originalParent.children.splice(
-            snapshot.siblingIndex, 0, snapshot.child
-          );
+          snapshot.originalParent.children.splice(snapshot.siblingIndex, 0, snapshot.child);
           snapshot.child.parent = snapshot.originalParent;
         }
       }
@@ -105,7 +99,7 @@ export class GroupCommand implements UndoCommand {
       const snapshot: GroupChildSnapshot = {
         child: child,
         originalParent: child.parent,
-        siblingIndex: child.parent ? child.parent.children.indexOf(child) : 0
+        siblingIndex: child.parent ? child.parent.children.indexOf(child) : 0,
       };
       snapshots.push(snapshot);
     });

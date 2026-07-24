@@ -9,9 +9,7 @@ describe('FolderTextureScanner', () => {
   beforeEach(() => {
     scanner = new FolderTextureScanner();
     ensureObjectUrlApis();
-    vi.spyOn(URL, 'createObjectURL').mockImplementation(
-      (blob) => `blob:${(blob as File).name}`
-    );
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => `blob:${(blob as File).name}`);
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   });
 
@@ -24,14 +22,11 @@ describe('FolderTextureScanner', () => {
       ['readme.txt', 'readme.txt'],
       ['zebra.png', 'zebra.png'],
       ['alpha.jpg', 'subdir/alpha.jpg'],
-      ['mesh.obj', 'mesh.obj']
+      ['mesh.obj', 'mesh.obj'],
     ]);
     const result = scanner.scanListing(listing);
     expect(result.folderName).toBe('Textures');
-    expect(result.entries.map((entry) => entry.displayName)).toEqual([
-      'alpha',
-      'zebra'
-    ]);
+    expect(result.entries.map((entry) => entry.displayName)).toEqual(['alpha', 'zebra']);
     expect(result.skippedNonImageCount).toBe(2);
   });
 
@@ -55,15 +50,13 @@ describe('FolderTextureScanner', () => {
  * @param pairs File name and relative path pairs.
  * @returns Synthetic listing.
  */
-function createListing(
-  pairs: Array<[string, string]>
-): PickedDirectoryListing {
+function createListing(pairs: Array<[string, string]>): PickedDirectoryListing {
   return {
     folderName: 'Textures',
     files: pairs.map(([name, relativePath]) => ({
       name,
       relativePath,
-      file: new File(['data'], name, { type: 'application/octet-stream' })
-    }))
+      file: new File(['data'], name, { type: 'application/octet-stream' }),
+    })),
   };
 }

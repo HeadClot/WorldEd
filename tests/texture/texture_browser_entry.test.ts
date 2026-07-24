@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   createTextureBrowserEntry,
-  revokeTextureBrowserEntry
+  revokeTextureBrowserEntry,
 } from '../../src/texture/texture_browser_entry.js';
 import { ensureObjectUrlApis } from './object_url_test_utils.js';
 
@@ -12,9 +12,7 @@ describe('texture_browser_entry', () => {
 
   it('should create an entry with a preview object URL from a File', () => {
     ensureObjectUrlApis();
-    const createObjectURL = vi
-      .spyOn(URL, 'createObjectURL')
-      .mockReturnValue('blob:mock-preview');
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-preview');
     const file = new File(['pixels'], 'brick_wall.png', { type: 'image/png' });
     const entry = createTextureBrowserEntry(file, 'walls/brick_wall.png');
     expect(createObjectURL).toHaveBeenCalledWith(file);
@@ -31,9 +29,7 @@ describe('texture_browser_entry', () => {
   it('should revoke the preview object URL', () => {
     ensureObjectUrlApis();
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:to-revoke');
-    const revokeObjectURL = vi
-      .spyOn(URL, 'revokeObjectURL')
-      .mockImplementation(() => undefined);
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const file = new File(['x'], 'floor.jpg', { type: 'image/jpeg' });
     const entry = createTextureBrowserEntry(file, 'floor.jpg');
     revokeTextureBrowserEntry(entry);

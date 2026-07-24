@@ -3,18 +3,18 @@ import * as THREE from 'three';
 import {
   applyTextureIdToTargets,
   buildTargetsFromMeshes,
-  initializeMeshTextureUVs
+  initializeMeshTextureUVs,
 } from '../../src/texture/face_texture_applier.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
 import {
   setTexturePaintStateForTests,
-  TexturePaintState
+  TexturePaintState,
 } from '../../src/texture/texture_paint_state.js';
 import {
   setTextureMapCacheForTests,
-  TextureMapCache
+  TextureMapCache,
 } from '../../src/texture/texture_map_cache.js';
 import { ShadingModeManager } from '../../src/viewports/shading_mode_manager.js';
 import { ShadingMode } from '../../src/types/shading_mode.js';
@@ -85,10 +85,7 @@ describe('mesh texture isolation', () => {
     const source = createCube();
     initializeMeshTextureUVs(source, DEFAULT_CHECKER_TEXTURE_ID);
     applyTextureIdToTargets(buildTargetsFromMeshes([source]), 'wood.png');
-    const [clone] = ObjectDuplicator.duplicate(
-      [source],
-      new THREE.Vector3(2, 0, 0)
-    );
+    const [clone] = ObjectDuplicator.duplicate([source], new THREE.Vector3(2, 0, 0));
     applyTextureIdToTargets(buildTargetsFromMeshes([clone]), 'stone.png');
     getFaceTextureMaps(source).forEach((entry) => {
       expect(entry.mapping.textureId).toBe('wood.png');
@@ -104,8 +101,5 @@ describe('mesh texture isolation', () => {
  * @returns Mesh ready for texture tests.
  */
 function createCube(): THREE.Mesh {
-  return new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    createContentMaterial(0x888888)
-  );
+  return new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0x888888));
 }

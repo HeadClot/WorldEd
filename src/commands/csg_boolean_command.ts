@@ -27,7 +27,7 @@ export class CsgBooleanCommand implements UndoCommand {
     meshA: THREE.Mesh,
     meshB: THREE.Mesh,
     resultMesh: THREE.Mesh,
-    worldGroup: THREE.Group
+    worldGroup: THREE.Group,
   ) {
     this.meshA = meshA;
     this.meshB = meshB;

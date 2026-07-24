@@ -39,7 +39,7 @@ export class ShadingModeCoordinator {
     viewport3D: Viewport3D,
     viewportElements: HTMLElement[],
     selectionVisualController: SelectionVisualController,
-    statusBar: StatusBar | null
+    statusBar: StatusBar | null,
   ) {
     this.viewport2DTop = viewport2DTop;
     this.viewport2DFront = viewport2DFront;
@@ -54,7 +54,7 @@ export class ShadingModeCoordinator {
     this.shadingModeHandler = new ShadingModeHandler(
       this.shadingControllers,
       this.activeViewportIndex,
-      this.statusBar
+      this.statusBar,
     );
   }
 
@@ -65,7 +65,7 @@ export class ShadingModeCoordinator {
    */
   wireControls(
     keyboardShortcutHandler: KeyboardShortcutHandler,
-    onFitViewport: (viewport: Viewport2D | Viewport3D) => void
+    onFitViewport: (viewport: Viewport2D | Viewport3D) => void,
   ): void {
     keyboardShortcutHandler.setOnShadingMode((mode) => this.onShadingMode(mode));
     this.bindViewportActivation();
@@ -87,30 +87,17 @@ export class ShadingModeCoordinator {
    * @returns The ordered viewport array.
    */
   getOrderedViewports(): Array<Viewport2D | Viewport3D> {
-    return [
-      this.viewport2DTop,
-      this.viewport2DFront,
-      this.viewport2DSide,
-      this.viewport3D
-    ];
+    return [this.viewport2DTop, this.viewport2DFront, this.viewport2DSide, this.viewport3D];
   }
 
   /**
    * Updates the wireframe overlay meshes for all viewports.
    */
   updateShadingMeshes(): void {
-    this.viewport2DTop.updateShadingMeshes(
-      this.viewport2DTop.collectSelectableObjects()
-    );
-    this.viewport2DFront.updateShadingMeshes(
-      this.viewport2DFront.collectSelectableObjects()
-    );
-    this.viewport2DSide.updateShadingMeshes(
-      this.viewport2DSide.collectSelectableObjects()
-    );
-    this.viewport3D.updateShadingMeshes(
-      this.viewport3D.collectSelectableObjects()
-    );
+    this.viewport2DTop.updateShadingMeshes(this.viewport2DTop.collectSelectableObjects());
+    this.viewport2DFront.updateShadingMeshes(this.viewport2DFront.collectSelectableObjects());
+    this.viewport2DSide.updateShadingMeshes(this.viewport2DSide.collectSelectableObjects());
+    this.viewport3D.updateShadingMeshes(this.viewport3D.collectSelectableObjects());
   }
 
   /**
@@ -122,7 +109,7 @@ export class ShadingModeCoordinator {
       this.viewport2DTop.getShadingController(),
       this.viewport2DFront.getShadingController(),
       this.viewport2DSide.getShadingController(),
-      this.viewport3D.getShadingController()
+      this.viewport3D.getShadingController(),
     ];
   }
 
@@ -143,9 +130,7 @@ export class ShadingModeCoordinator {
    * Wires shading and Fit actions on each viewport overlay toolbar.
    * @param onFitViewport Callback when Fit is pressed for a viewport.
    */
-  private bindViewportToolbars(
-    onFitViewport: (viewport: Viewport2D | Viewport3D) => void
-  ): void {
+  private bindViewportToolbars(onFitViewport: (viewport: Viewport2D | Viewport3D) => void): void {
     const viewports = this.getOrderedViewports();
     viewports.forEach((viewport, index) => {
       const toolbar = viewport.getViewportToolbar();

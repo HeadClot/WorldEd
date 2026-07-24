@@ -52,7 +52,7 @@ export class FaceExtrusionController {
     scene: THREE.Scene,
     commandStack: CommandStack,
     gridSnap: GridSnap,
-    worldRoot: THREE.Object3D
+    worldRoot: THREE.Object3D,
   ) {
     this.selectionManager = new FaceSelectionManager();
     this.raycaster = new FaceSelectionRaycaster();
@@ -75,8 +75,8 @@ export class FaceExtrusionController {
    * Binds the internal selection change callback to update highlights.
    */
   private bindSelectionChangeCallback(): void {
-    this.selectionManager.setSelectionChangedCallback(
-      (faces) => this.onFaceSelectionChanged(faces)
+    this.selectionManager.setSelectionChangedCallback((faces) =>
+      this.onFaceSelectionChanged(faces),
     );
   }
 
@@ -84,9 +84,7 @@ export class FaceExtrusionController {
    * Registers a listener for face selection changes (highlights stay internal).
    * @param callback Invoked with the current face list, or null to clear.
    */
-  setFaceSelectionChangedCallback(
-    callback: FaceSelectionChangedListener | null
-  ): void {
+  setFaceSelectionChangedCallback(callback: FaceSelectionChangedListener | null): void {
     this.faceSelectionChangedCallback = callback;
   }
 
@@ -165,11 +163,7 @@ export class FaceExtrusionController {
    * @param renderer The viewport renderer.
    * @returns True if the event was consumed.
    */
-  onPointerDown(
-    event: MouseEvent,
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
-  ): boolean {
+  onPointerDown(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): boolean {
     if (this.currentMode !== SelectionMode.FACE) return false;
     this.isFaceDragActive = true;
     this.lastDragRegionKey = null;
@@ -192,11 +186,7 @@ export class FaceExtrusionController {
    * @param renderer The viewport renderer.
    * @returns True if a face was painted this move.
    */
-  onPointerMove(
-    event: MouseEvent,
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
-  ): boolean {
+  onPointerMove(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): boolean {
     if (this.currentMode !== SelectionMode.FACE) return false;
     if (!this.isFaceDragActive) return false;
     const result = this.raycaster.pickFace(event, camera, renderer, this.availableMeshes);
@@ -231,7 +221,7 @@ export class FaceExtrusionController {
   pickFaceAtPointer(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
+    renderer: THREE.WebGLRenderer,
   ): FacePickResult | null {
     if (this.currentMode !== SelectionMode.FACE) return null;
     return this.raycaster.pickFace(event, camera, renderer, this.availableMeshes);
@@ -247,16 +237,12 @@ export class FaceExtrusionController {
   private paintSelectFace(
     result: FacePickResult,
     addToSelection: boolean,
-    skipIfSameRegion: boolean
+    skipIfSameRegion: boolean,
   ): void {
     const regionKey = `${result.mesh.uuid}:${result.faceIndex}`;
     if (skipIfSameRegion && regionKey === this.lastDragRegionKey) return;
     this.lastDragRegionKey = regionKey;
-    this.selectionManager.selectFace(
-      result.mesh,
-      result.faceIndex,
-      addToSelection
-    );
+    this.selectionManager.selectFace(result.mesh, result.faceIndex, addToSelection);
   }
 
   /**
@@ -325,7 +311,7 @@ export class FaceExtrusionController {
         region.mesh,
         region.faceIndices,
         safeDistance,
-        objectName
+        objectName,
       );
       if (prism) {
         createdMeshes.push(prism);

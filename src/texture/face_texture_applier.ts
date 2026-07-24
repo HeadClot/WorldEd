@@ -5,14 +5,18 @@ import {
   FaceTextureAlign,
   FaceTextureMapping,
   cloneFaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from './face_texture_mapping.js';
-import { upsertFaceTextureMap, getFaceTextureMaps, setFaceTextureMaps } from './face_texture_storage.js';
+import {
+  upsertFaceTextureMap,
+  getFaceTextureMaps,
+  setFaceTextureMaps,
+} from './face_texture_storage.js';
 import {
   bakeFaceUVs,
   bakeAllFacesDefaultUVs,
   countTriangles,
-  rebakeStoredFaceTextureMaps
+  rebakeStoredFaceTextureMaps,
 } from './planar_uv_projector.js';
 import { applyCylinderSideUnwrapOffsets } from './cylinder_side_unwrap.js';
 import { captureGeometrySourceIfNeeded } from './geometry_source.js';
@@ -34,14 +38,12 @@ export interface TextureApplyTarget {
  * @param selections Current face selection entries.
  * @returns Targets ready for mapping updates.
  */
-export function buildTargetsFromFaceSelection(
-  selections: FaceSelection[]
-): TextureApplyTarget[] {
+export function buildTargetsFromFaceSelection(selections: FaceSelection[]): TextureApplyTarget[] {
   const regions = groupSelectionsIntoFaceRegions(selections);
   return regions.map((region) => ({
     mesh: region.mesh,
     triangleIndices: region.faceIndices.slice(),
-    previousMapping: findExistingMapping(region.mesh, region.faceIndices)
+    previousMapping: findExistingMapping(region.mesh, region.faceIndices),
   }));
 }
 
@@ -58,7 +60,7 @@ export function buildTargetsFromMeshes(meshes: THREE.Mesh[]): TextureApplyTarget
     for (let i = 0; i < triangleCount; i++) indices.push(i);
     const selections: FaceSelection[] = indices.map((faceIndex) => ({
       mesh,
-      faceIndex
+      faceIndex,
     }));
     targets.push(...buildTargetsFromFaceSelection(selections));
   });
@@ -74,14 +76,17 @@ export function buildTargetsFromMeshes(meshes: THREE.Mesh[]): TextureApplyTarget
  */
 function findExistingMapping(
   mesh: THREE.Mesh,
-  triangleIndices: number[]
+  triangleIndices: number[],
 ): FaceTextureMapping | null {
   const sorted = triangleIndices.slice().sort((a, b) => a - b);
   const key = sorted.join(',');
   const indexSet = new Set(sorted);
   const entries = getFaceTextureMaps(mesh);
   for (let i = 0; i < entries.length; i++) {
-    const entryKey = entries[i].triangleIndices.slice().sort((a, b) => a - b).join(',');
+    const entryKey = entries[i].triangleIndices
+      .slice()
+      .sort((a, b) => a - b)
+      .join(',');
     if (entryKey === key) return cloneFaceTextureMapping(entries[i].mapping);
   }
   for (let i = 0; i < entries.length; i++) {
@@ -103,10 +108,7 @@ function findExistingMapping(
  * @param entryIndices Entry triangle indices.
  * @returns True when the entry covers the whole target region.
  */
-function regionFullyCoveredByEntry(
-  sortedTarget: number[],
-  entryIndices: number[]
-): boolean {
+function regionFullyCoveredByEntry(sortedTarget: number[], entryIndices: number[]): boolean {
   const entrySet = new Set(entryIndices);
   return sortedTarget.every((index) => entrySet.has(index));
 }
@@ -116,9 +118,7 @@ function regionFullyCoveredByEntry(
  * @param target Apply target.
  * @returns Mapping to edit.
  */
-export function resolveTargetMapping(
-  target: TextureApplyTarget
-): FaceTextureMapping {
+export function resolveTargetMapping(target: TextureApplyTarget): FaceTextureMapping {
   const live = findExistingMapping(target.mesh, target.triangleIndices);
   if (live) return live;
   if (target.previousMapping) {
@@ -135,7 +135,7 @@ export function resolveTargetMapping(
  */
 export function applyMappingToTargets(
   targets: TextureApplyTarget[],
-  mapping: FaceTextureMapping
+  mapping: FaceTextureMapping,
 ): void {
   const meshes = new Set<THREE.Mesh>();
   targets.forEach((target) => {
@@ -154,10 +154,7 @@ export function applyMappingToTargets(
  * @param targets Regions to update.
  * @param textureId Texture identity to apply.
  */
-export function applyTextureIdToTargets(
-  targets: TextureApplyTarget[],
-  textureId: string
-): void {
+export function applyTextureIdToTargets(targets: TextureApplyTarget[], textureId: string): void {
   const resolvedId = textureId || DEFAULT_CHECKER_TEXTURE_ID;
   const meshes = new Set<THREE.Mesh>();
   targets.forEach((target) => {
@@ -172,10 +169,7 @@ export function applyTextureIdToTargets(
  * @param targets Regions to update.
  * @param align Align preset.
  */
-export function applyAlignToTargets(
-  targets: TextureApplyTarget[],
-  align: FaceTextureAlign
-): void {
+export function applyAlignToTargets(targets: TextureApplyTarget[], align: FaceTextureAlign): void {
   const meshes = new Set<THREE.Mesh>();
   targets.forEach((target) => {
     const mapping = resolveTargetMapping(target);
@@ -223,10 +217,7 @@ export function resetUvParamsOnTargets(targets: TextureApplyTarget[]): void {
  * @param meshTargets Targets belonging to that mesh.
  * @returns True when the whole surface is covered.
  */
-function targetsCoverEntireMesh(
-  mesh: THREE.Mesh,
-  meshTargets: TextureApplyTarget[]
-): boolean {
+function targetsCoverEntireMesh(mesh: THREE.Mesh, meshTargets: TextureApplyTarget[]): boolean {
   const covered = new Set<number>();
   meshTargets.forEach((target) => {
     target.triangleIndices.forEach((index) => covered.add(index));
@@ -243,7 +234,7 @@ function targetsCoverEntireMesh(
 function patchTextureIdOnRegion(
   mesh: THREE.Mesh,
   triangleIndices: number[],
-  textureId: string
+  textureId: string,
 ): void {
   const indexSet = new Set(triangleIndices);
   const entries = getFaceTextureMaps(mesh);
@@ -257,7 +248,7 @@ function patchTextureIdOnRegion(
   if (hitCount === 0) {
     entries.push({
       triangleIndices: triangleIndices.slice().sort((a, b) => a - b),
-      mapping: createDefaultFaceTextureMapping(textureId)
+      mapping: createDefaultFaceTextureMapping(textureId),
     });
   }
   setFaceTextureMaps(mesh, entries);
@@ -292,11 +283,10 @@ export function resetTargetsToDefault(targets: TextureApplyTarget[]): void {
 export function initializeMeshTextureUVs(
   mesh: THREE.Mesh,
   textureId?: string,
-  align?: FaceTextureAlign
+  align?: FaceTextureAlign,
 ): void {
   captureGeometrySourceIfNeeded(mesh);
-  const paintId =
-    textureId ?? getTexturePaintState().getLastTextureId();
+  const paintId = textureId ?? getTexturePaintState().getLastTextureId();
   const mapping = createDefaultFaceTextureMapping(paintId);
   if (align) {
     mapping.align = align;
@@ -305,7 +295,7 @@ export function initializeMeshTextureUVs(
   const allIndices: number[] = [];
   for (let i = 0; i < triangleCount; i++) allIndices.push(i);
   const targets = buildTargetsFromFaceSelection(
-    allIndices.map((faceIndex) => ({ mesh, faceIndex }))
+    allIndices.map((faceIndex) => ({ mesh, faceIndex })),
   );
   if (targets.length === 0) {
     bakeAllFacesDefaultUVs(mesh, mapping);
@@ -314,7 +304,7 @@ export function initializeMeshTextureUVs(
   }
   const entries = targets.map((target) => ({
     triangleIndices: target.triangleIndices.slice(),
-    mapping: cloneFaceTextureMapping(mapping)
+    mapping: cloneFaceTextureMapping(mapping),
   }));
   // Unwrap cylinder sides so U walks continuously around the shell.
   applyCylinderSideUnwrapOffsets(mesh, entries);
@@ -328,9 +318,7 @@ export function initializeMeshTextureUVs(
  * @param targets Selection targets.
  * @returns Shared mapping, or null when mixed / empty.
  */
-export function getCommonMapping(
-  targets: TextureApplyTarget[]
-): FaceTextureMapping | null {
+export function getCommonMapping(targets: TextureApplyTarget[]): FaceTextureMapping | null {
   if (targets.length === 0) return null;
   const first = resolveTargetMapping(targets[0]);
   for (let i = 1; i < targets.length; i++) {
@@ -354,8 +342,7 @@ function mappingsEqual(a: FaceTextureMapping, b: FaceTextureMapping): boolean {
     a.offsetU === b.offsetU &&
     a.offsetV === b.offsetV &&
     a.rotationDeg === b.rotationDeg &&
-    (a.textureId || DEFAULT_CHECKER_TEXTURE_ID) ===
-      (b.textureId || DEFAULT_CHECKER_TEXTURE_ID)
+    (a.textureId || DEFAULT_CHECKER_TEXTURE_ID) === (b.textureId || DEFAULT_CHECKER_TEXTURE_ID)
   );
 }
 
@@ -367,7 +354,7 @@ function mappingsEqual(a: FaceTextureMapping, b: FaceTextureMapping): boolean {
  */
 function mergeMappingPreservingTexture(
   target: TextureApplyTarget,
-  mapping: FaceTextureMapping
+  mapping: FaceTextureMapping,
 ): FaceTextureMapping {
   const clone = cloneFaceTextureMapping(mapping);
   if (!mapping.textureId) {

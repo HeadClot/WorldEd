@@ -42,21 +42,19 @@ export interface SolidModelLayoutSetup {
  * @param host Layout host providing scene and UI dependencies.
  * @returns Panel and controller instances.
  */
-export function setupSolidModelLayout(
-  host: SolidModelLayoutHost
-): SolidModelLayoutSetup {
+export function setupSolidModelLayout(host: SolidModelLayoutHost): SolidModelLayoutSetup {
   const solidModelPanel = new SolidModelPanel(
     host.toolbarContainer,
     {
-      onAddBoxBrush: () => solidModelController.addBoxBrush()
+      onAddBoxBrush: () => solidModelController.addBoxBrush(),
     },
-    host.solidPanelAnchor
+    host.solidPanelAnchor,
   );
   const solidModelController = new SolidModelController(
     host.worldObject,
     host.commandStack,
     host.selectionManager,
-    solidModelPanel
+    solidModelPanel,
   );
   wireSolidModelController(host, solidModelController);
   wireSolidBrushPropertyHandlers(host.propertiesPanel, solidModelController);
@@ -70,7 +68,7 @@ export function setupSolidModelLayout(
  */
 function wireSolidModelController(
   host: SolidModelLayoutHost,
-  controller: SolidModelController
+  controller: SolidModelController,
 ): void {
   controller.setSyncViewports(() => host.refreshAfterWorldMutation());
   controller.setRefreshOutliner(() => host.refreshOutliner());
@@ -90,7 +88,7 @@ function wireSolidModelController(
  */
 function wireSolidBrushPropertyHandlers(
   propertiesPanel: PropertiesPanel,
-  controller: SolidModelController
+  controller: SolidModelController,
 ): void {
   propertiesPanel.setSolidBrushHandlers({
     onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) =>
@@ -99,9 +97,7 @@ function wireSolidBrushPropertyHandlers(
       controller.onTransformsCommitted(meshes);
     },
     onAddBoxBrush: () => controller.addBoxBrush(),
-    onMoveToFirst: (meshes: THREE.Mesh[]) =>
-      controller.moveBrushesInOrder(meshes, 'first'),
-    onMoveToLast: (meshes: THREE.Mesh[]) =>
-      controller.moveBrushesInOrder(meshes, 'last')
+    onMoveToFirst: (meshes: THREE.Mesh[]) => controller.moveBrushesInOrder(meshes, 'first'),
+    onMoveToLast: (meshes: THREE.Mesh[]) => controller.moveBrushesInOrder(meshes, 'last'),
   });
 }

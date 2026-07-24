@@ -22,19 +22,15 @@ export function buildPlaneCapPolygon(
   sourcePolygons: CsgPolygon[],
   planeNormal: THREE.Vector3,
   planeConstant: number,
-  outwardNormal: THREE.Vector3
+  outwardNormal: THREE.Vector3,
 ): CsgPolygon | null {
   const intersectionPoints = collectPlaneIntersectionPoints(
     sourcePolygons,
     planeNormal,
-    planeConstant
+    planeConstant,
   );
   if (intersectionPoints.length < 3) return null;
-  const projected = projectPointsOntoPlane(
-    intersectionPoints,
-    planeNormal,
-    planeConstant
-  );
+  const projected = projectPointsOntoPlane(intersectionPoints, planeNormal, planeConstant);
   const ordered = orderConvexPolygon(projected, outwardNormal);
   const hull = removeCollinearRingPoints(ordered, outwardNormal);
   if (hull.length < 3) return null;
@@ -49,7 +45,7 @@ export function buildPlaneCapPolygon(
  */
 function removeCollinearRingPoints(
   ordered: THREE.Vector3[],
-  planeNormal: THREE.Vector3
+  planeNormal: THREE.Vector3,
 ): THREE.Vector3[] {
   if (ordered.length <= 3) return ordered.slice();
   const kept: THREE.Vector3[] = [];
@@ -75,7 +71,7 @@ function isAlmostCollinear(
   prev: THREE.Vector3,
   current: THREE.Vector3,
   next: THREE.Vector3,
-  planeNormal: THREE.Vector3
+  planeNormal: THREE.Vector3,
 ): boolean {
   const ab = current.clone().sub(prev);
   const bc = next.clone().sub(current);
@@ -93,7 +89,7 @@ function isAlmostCollinear(
 function projectPointsOntoPlane(
   points: THREE.Vector3[],
   planeNormal: THREE.Vector3,
-  planeConstant: number
+  planeConstant: number,
 ): THREE.Vector3[] {
   return points.map((point) => {
     const distance = planeNormal.dot(point) - planeConstant;
@@ -109,11 +105,9 @@ function projectPointsOntoPlane(
  */
 function createCappedPolygonWithOutwardNormal(
   orderedVertices: THREE.Vector3[],
-  outwardNormal: THREE.Vector3
+  outwardNormal: THREE.Vector3,
 ): CsgPolygon | null {
-  const fillMapping = createDefaultFaceTextureMapping(
-    getTexturePaintState().getLastTextureId()
-  );
+  const fillMapping = createDefaultFaceTextureMapping(getTexturePaintState().getLastTextureId());
   const cap = new CsgPolygon(orderedVertices, fillMapping);
   if (cap.getPlaneNormal().lengthSq() < 1e-12) return null;
   ensureCapOutwardWinding(cap, outwardNormal);
@@ -130,16 +124,11 @@ function createCappedPolygonWithOutwardNormal(
 export function collectPlaneIntersectionPoints(
   polygons: CsgPolygon[],
   planeNormal: THREE.Vector3,
-  planeConstant: number
+  planeConstant: number,
 ): THREE.Vector3[] {
   const unique = new Map<string, THREE.Vector3>();
   polygons.forEach((polygon) => {
-    collectPolygonEdgeIntersections(
-      polygon,
-      planeNormal,
-      planeConstant,
-      unique
-    );
+    collectPolygonEdgeIntersections(polygon, planeNormal, planeConstant, unique);
   });
   return Array.from(unique.values());
 }
@@ -155,7 +144,7 @@ function collectPolygonEdgeIntersections(
   polygon: CsgPolygon,
   planeNormal: THREE.Vector3,
   planeConstant: number,
-  unique: Map<string, THREE.Vector3>
+  unique: Map<string, THREE.Vector3>,
 ): void {
   const vertices = polygon.getVertices();
   for (let index = 0; index < vertices.length; index++) {
@@ -166,13 +155,7 @@ function collectPolygonEdgeIntersections(
     const endDistance = planeNormal.dot(end) - planeConstant;
     addOnPlaneVertex(start, startDistance, unique);
     addOnPlaneVertex(end, endDistance, unique);
-    addSpanningIntersection(
-      start,
-      end,
-      startDistance,
-      endDistance,
-      unique
-    );
+    addSpanningIntersection(start, end, startDistance, endDistance, unique);
   }
 }
 
@@ -185,7 +168,7 @@ function collectPolygonEdgeIntersections(
 function addOnPlaneVertex(
   vertex: THREE.Vector3,
   signedDistance: number,
-  unique: Map<string, THREE.Vector3>
+  unique: Map<string, THREE.Vector3>,
 ): void {
   if (Math.abs(signedDistance) > CAP_PLANE_EPSILON) return;
   storeUniquePoint(vertex, unique);
@@ -204,7 +187,7 @@ function addSpanningIntersection(
   end: THREE.Vector3,
   startDistance: number,
   endDistance: number,
-  unique: Map<string, THREE.Vector3>
+  unique: Map<string, THREE.Vector3>,
 ): void {
   if (startDistance * endDistance >= 0) return;
   const t = startDistance / (startDistance - endDistance);
@@ -217,10 +200,7 @@ function addSpanningIntersection(
  * @param point World point to store.
  * @param unique Accumulator map.
  */
-function storeUniquePoint(
-  point: THREE.Vector3,
-  unique: Map<string, THREE.Vector3>
-): void {
+function storeUniquePoint(point: THREE.Vector3, unique: Map<string, THREE.Vector3>): void {
   const key = quantizePointKey(point);
   if (unique.has(key)) return;
   unique.set(key, point.clone());
@@ -244,10 +224,7 @@ function quantizePointKey(point: THREE.Vector3): string {
  * @param cap Cap polygon to adjust.
  * @param outwardNormal Desired outward normal.
  */
-function ensureCapOutwardWinding(
-  cap: CsgPolygon,
-  outwardNormal: THREE.Vector3
-): void {
+function ensureCapOutwardWinding(cap: CsgPolygon, outwardNormal: THREE.Vector3): void {
   if (cap.getPlaneNormal().dot(outwardNormal) >= 0) return;
   cap.flip();
 }

@@ -118,25 +118,19 @@ describe('PropertiesPanel', () => {
   it('should apply material color to all selected meshes', () => {
     const meshA = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xff0000 })
+      new THREE.MeshStandardMaterial({ color: 0xff0000 }),
     );
     const meshB = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+      new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
     );
     panel.bindObjects([meshA, meshB]);
     const panelElement = container.children[0] as HTMLElement;
-    const colorInput = panelElement.querySelector(
-      'input[type="color"]'
-    ) as HTMLInputElement;
+    const colorInput = panelElement.querySelector('input[type="color"]') as HTMLInputElement;
     colorInput.value = '#0000ff';
     colorInput.dispatchEvent(new Event('input'));
-    expect(
-      (meshA.material as THREE.MeshStandardMaterial).color.getHex()
-    ).toBe(0x0000ff);
-    expect(
-      (meshB.material as THREE.MeshStandardMaterial).color.getHex()
-    ).toBe(0x0000ff);
+    expect((meshA.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x0000ff);
+    expect((meshB.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x0000ff);
   });
 
   it('should refresh inputs from the bound object after external transforms', () => {

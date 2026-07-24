@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   getEditorStartupErrorMessage,
-  showEditorStartupError
+  showEditorStartupError,
 } from '../../src/ui/editor_startup_error.js';
 
 describe('editor startup error', () => {
   it('should preserve an Error message for diagnostics', () => {
-    expect(getEditorStartupErrorMessage(new Error('WebGL failed'))).toBe(
-      'WebGL failed'
-    );
+    expect(getEditorStartupErrorMessage(new Error('WebGL failed'))).toBe('WebGL failed');
   });
 
   it('should show a visible renderer failure overlay', () => {

@@ -4,7 +4,7 @@ import {
   applyMappingToTargets,
   buildTargetsFromMeshes,
   initializeMeshTextureUVs,
-  getCommonMapping
+  getCommonMapping,
 } from '../../src/texture/face_texture_applier.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
@@ -12,10 +12,7 @@ import { createContentMaterial } from '../../src/materials/content_material_fact
 
 describe('face_texture_applier', () => {
   it('should initialize UVs on a content mesh', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      createContentMaterial(0x888888)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0x888888));
     initializeMeshTextureUVs(mesh);
     expect(mesh.geometry.getAttribute('uv')).toBeDefined();
   });

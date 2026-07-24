@@ -77,9 +77,7 @@ export class SnapSettingsController {
     this.applySolidUvStickMode(locked);
     if (this.deps.statusBar) {
       this.deps.statusBar.setLastAction(
-        locked
-          ? 'Texture lock on (stick to brushes)'
-          : 'Texture lock off (world slide / stretch)'
+        locked ? 'Texture lock on (stick to brushes)' : 'Texture lock off (world slide / stretch)',
       );
     }
   }
@@ -151,11 +149,9 @@ export class SnapSettingsController {
    * Binds keyboard shortcuts for snap interval cycling.
    */
   private bindSnapKeyboardShortcuts(): void {
-    this.deps.keyboardShortcutHandler.setOnSnapIntervalForward(
-      () => this.onSnapIntervalForward()
-    );
-    this.deps.keyboardShortcutHandler.setOnSnapIntervalBackward(
-      () => this.onSnapIntervalBackward()
+    this.deps.keyboardShortcutHandler.setOnSnapIntervalForward(() => this.onSnapIntervalForward());
+    this.deps.keyboardShortcutHandler.setOnSnapIntervalBackward(() =>
+      this.onSnapIntervalBackward(),
     );
   }
 }

@@ -9,7 +9,7 @@ import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
 import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../../texture/face_texture_mapping.js';
 
 /**
@@ -57,7 +57,7 @@ export class SolidModelCodec {
     model.syncBrushesFromScene();
     model.syncAuthoredMappingsFromResultMesh();
     return {
-      brushes: model.getBrushes().map((brush) => this.encodeBrush(brush))
+      brushes: model.getBrushes().map((brush) => this.encodeBrush(brush)),
     };
   }
 
@@ -94,17 +94,17 @@ export class SolidModelCodec {
       position: {
         x: instance.position.x,
         y: instance.position.y,
-        z: instance.position.z
+        z: instance.position.z,
       },
       rotation: {
         x: instance.rotation.x,
         y: instance.rotation.y,
-        z: instance.rotation.z
+        z: instance.rotation.z,
       },
       scale: {
         x: instance.scale.x,
         y: instance.scale.y,
-        z: instance.scale.z
+        z: instance.scale.z,
       },
       visible: instance.visible,
       surfaceTextureId: defaultMapping.textureId,
@@ -114,14 +114,14 @@ export class SolidModelCodec {
       vertices: this.flattenVertices(brush.vertices),
       wingEdges: brush.wingEdges.map((edge) => ({
         vertexIndex: edge.vertexIndex,
-        twinIndex: edge.twinIndex
+        twinIndex: edge.twinIndex,
       })),
       edgeFaceIndices: brush.edgeFaceIndices.slice(),
       faces: brush.faces.map((face) => ({
         firstEdge: face.firstEdge,
         edgeCount: face.edgeCount,
-        surfaceIndex: face.surfaceIndex
-      }))
+        surfaceIndex: face.surfaceIndex,
+      })),
     };
   }
 
@@ -136,7 +136,7 @@ export class SolidModelCodec {
       data.id,
       data.name,
       brush,
-      data.operation ?? SolidOperation.Additive
+      data.operation ?? SolidOperation.Additive,
     );
     instance.position.set(data.position.x, data.position.y, data.position.z);
     instance.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z, 'XYZ');
@@ -153,17 +153,16 @@ export class SolidModelCodec {
    */
   private static restoreBrushSurfaceData(
     instance: SolidBrushInstance,
-    data: SerializedSolidBrush
+    data: SerializedSolidBrush,
   ): void {
     if (data.defaultMapping || data.faceMappings) {
       instance.restoreFaceMappings(
         this.normalizeMapping(data.defaultMapping, data.surfaceTextureId),
-        this.normalizeFaceMappingList(data.faceMappings)
+        this.normalizeFaceMappingList(data.faceMappings),
       );
       return;
     }
-    instance.surfaceTextureId =
-      data.surfaceTextureId || DEFAULT_CHECKER_TEXTURE_ID;
+    instance.surfaceTextureId = data.surfaceTextureId || DEFAULT_CHECKER_TEXTURE_ID;
     instance.restoreFaceTextureIds(data.faceTextureIds);
   }
 
@@ -175,7 +174,7 @@ export class SolidModelCodec {
    */
   private static normalizeMapping(
     mapping: FaceTextureMapping | undefined,
-    fallbackTextureId?: string
+    fallbackTextureId?: string,
   ): FaceTextureMapping {
     if (mapping) {
       const copy = cloneFaceTextureMapping(mapping);
@@ -184,9 +183,7 @@ export class SolidModelCodec {
       }
       return copy;
     }
-    return createDefaultFaceTextureMapping(
-      fallbackTextureId || DEFAULT_CHECKER_TEXTURE_ID
-    );
+    return createDefaultFaceTextureMapping(fallbackTextureId || DEFAULT_CHECKER_TEXTURE_ID);
   }
 
   /**
@@ -195,12 +192,10 @@ export class SolidModelCodec {
    * @returns Cloned sparse list.
    */
   private static normalizeFaceMappingList(
-    faceMappings: (FaceTextureMapping | undefined)[] | undefined
+    faceMappings: (FaceTextureMapping | undefined)[] | undefined,
   ): (FaceTextureMapping | undefined)[] {
     if (!faceMappings) return [];
-    return faceMappings.map((mapping) =>
-      mapping ? this.normalizeMapping(mapping) : undefined
-    );
+    return faceMappings.map((mapping) => (mapping ? this.normalizeMapping(mapping) : undefined));
   }
 
   /**
@@ -216,11 +211,11 @@ export class SolidModelCodec {
     const brush = new SolidBrush();
     brush.vertices = this.inflateVertices(data.vertices);
     brush.wingEdges = data.wingEdges.map((edge) =>
-      createWingEdge(edge.vertexIndex, edge.twinIndex)
+      createWingEdge(edge.vertexIndex, edge.twinIndex),
     );
     brush.edgeFaceIndices = data.edgeFaceIndices?.slice() ?? [];
     brush.faces = (data.faces ?? []).map((face) =>
-      createSolidFace(face.firstEdge, face.edgeCount, face.surfaceIndex)
+      createSolidFace(face.firstEdge, face.edgeCount, face.surfaceIndex),
     );
     if (brush.edgeFaceIndices.length !== brush.wingEdges.length) {
       brush.rebuildEdgeFaceIndices();
@@ -250,9 +245,7 @@ export class SolidModelCodec {
   private static inflateVertices(values: number[]): THREE.Vector3[] {
     const vertices: THREE.Vector3[] = [];
     for (let index = 0; index + 2 < values.length; index += 3) {
-      vertices.push(
-        new THREE.Vector3(values[index], values[index + 1], values[index + 2])
-      );
+      vertices.push(new THREE.Vector3(values[index], values[index + 1], values[index + 2]));
     }
     return vertices;
   }

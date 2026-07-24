@@ -72,11 +72,13 @@ describe('TransformHandler', () => {
   it('should accept pivot parameter in onPointerDown without errors', () => {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     const handles = gizmo.getHandles();
     const pivot = new THREE.Vector3(1, 2, 3);
-    const mockCanvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+    const mockCanvas = {
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    };
     const mockRenderer = { domElement: mockCanvas } as unknown as THREE.WebGLRenderer;
     expect(() => {
       handler.onPointerDown(
@@ -85,7 +87,7 @@ describe('TransformHandler', () => {
         new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
         handles,
         [mesh],
-        pivot
+        pivot,
       );
     }).not.toThrow();
   });
@@ -95,7 +97,9 @@ describe('TransformHandler', () => {
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
     const pivot = new THREE.Vector3(0, 0, 0);
-    const mockCanvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+    const mockCanvas = {
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    };
     const mockRenderer = { domElement: mockCanvas } as unknown as THREE.WebGLRenderer;
     const handles = gizmo.getHandles();
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
@@ -105,21 +109,25 @@ describe('TransformHandler', () => {
 
   it('should use default origin pivot when no pivot provided', () => {
     const handles = gizmo.getHandles();
-    const mockCanvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+    const mockCanvas = {
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    };
     const mockRenderer = { domElement: mockCanvas } as unknown as THREE.WebGLRenderer;
     expect(() => {
       handler.onPointerDown(
         new THREE.PerspectiveCamera(),
         mockRenderer,
         new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
-        handles
+        handles,
       );
     }).not.toThrow();
   });
 
   it('should use default empty selected objects when not provided', () => {
     const handles = gizmo.getHandles();
-    const mockCanvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+    const mockCanvas = {
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    };
     const mockRenderer = { domElement: mockCanvas } as unknown as THREE.WebGLRenderer;
     expect(() => {
       handler.onPointerDown(
@@ -128,7 +136,7 @@ describe('TransformHandler', () => {
         new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
         handles,
         [],
-        new THREE.Vector3()
+        new THREE.Vector3(),
       );
     }).not.toThrow();
   });
@@ -142,7 +150,7 @@ describe('TransformHandler', () => {
       setup.handles,
       setup.meshes,
       setup.pivot,
-      setup.gizmoGroup
+      setup.gizmoGroup,
     );
     expect(handler.isDragging()).toBe(false);
   });
@@ -156,7 +164,7 @@ describe('TransformHandler', () => {
       setup.handles,
       setup.meshes,
       setup.pivot,
-      setup.gizmoGroup
+      setup.gizmoGroup,
     );
     expect(handler.isDragging()).toBe(false);
   });
@@ -166,7 +174,7 @@ describe('TransformHandler', () => {
     // Off-center so the face plane is hit without a resize handle.
     const downEvent = new MouseEvent('pointerdown', {
       clientX: 460,
-      clientY: 280
+      clientY: 280,
     });
     handler.onPointerDown(
       setup.camera,
@@ -175,7 +183,7 @@ describe('TransformHandler', () => {
       setup.handles,
       setup.meshes,
       setup.pivot,
-      setup.gizmoGroup
+      setup.gizmoGroup,
     );
     expect(handler.isDragging()).toBe(true);
     const selectionClick = handler.onPointerUp(setup.pivot, setup.meshes);
@@ -187,7 +195,7 @@ describe('TransformHandler', () => {
     const setup = createBoundsPickSetup(gizmo);
     const downEvent = new MouseEvent('pointerdown', {
       clientX: 460,
-      clientY: 280
+      clientY: 280,
     });
     handler.onPointerDown(
       setup.camera,
@@ -196,7 +204,7 @@ describe('TransformHandler', () => {
       setup.handles,
       setup.meshes,
       setup.pivot,
-      setup.gizmoGroup
+      setup.gizmoGroup,
     );
     expect(handler.isDragging()).toBe(true);
     handler.onPointerMove(
@@ -204,7 +212,7 @@ describe('TransformHandler', () => {
       setup.renderer,
       new MouseEvent('pointermove', { clientX: 490, clientY: 310 }),
       setup.pivot,
-      setup.meshes
+      setup.meshes,
     );
     const selectionClick = handler.onPointerUp(setup.pivot, setup.meshes);
     expect(selectionClick).toBe(false);
@@ -227,10 +235,7 @@ function createBoundsPickSetup(gizmo: TransformGizmo): {
 } {
   gizmo.setMode(TransformMode.BOUNDS);
   gizmo.setVisible(true);
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(2, 2, 2),
-    new THREE.MeshBasicMaterial()
-  );
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
   mesh.updateMatrixWorld(true);
   gizmo.updateBoundsFromMeshes([mesh]);
   const gizmoGroup = gizmo.getHandleGroupClone();
@@ -241,7 +246,7 @@ function createBoundsPickSetup(gizmo: TransformGizmo): {
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld(true);
   const canvas = {
-    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
   };
   const renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
   return {
@@ -250,6 +255,6 @@ function createBoundsPickSetup(gizmo: TransformGizmo): {
     handles: gizmo.getHandles(),
     meshes: [mesh],
     pivot: new THREE.Vector3(0, 0, 0),
-    gizmoGroup
+    gizmoGroup,
   };
 }

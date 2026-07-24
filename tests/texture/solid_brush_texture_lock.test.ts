@@ -5,11 +5,11 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import {
   lockFaceMappingForBrushTransform,
-  lockSolidBrushTexturesToTransform
+  lockSolidBrushTexturesToTransform,
 } from '../../src/texture/solid_brush_texture_lock.js';
 import {
   projectWorldPositionToUv,
-  resolveProjectionBasis
+  resolveProjectionBasis,
 } from '../../src/texture/planar_uv_projector.js';
 
 /**
@@ -30,7 +30,7 @@ describe('solid brush texture lock', () => {
     model.rebuild(true);
     const uvBefore = sampleResultMeshUvNear(
       model.getResultMeshForSync(),
-      new THREE.Vector3(0, 1, 0)
+      new THREE.Vector3(0, 1, 0),
     );
 
     const mesh = brush.mesh!;
@@ -43,7 +43,7 @@ describe('solid brush texture lock', () => {
 
     const uvAfter = sampleResultMeshUvNear(
       model.getResultMeshForSync(),
-      new THREE.Vector3(mesh.position.x, 1, mesh.position.z)
+      new THREE.Vector3(mesh.position.x, 1, mesh.position.z),
     );
     expect(uvAfter.u).toBeCloseTo(uvBefore.u, 4);
     expect(uvAfter.v).toBeCloseTo(uvBefore.v, 4);
@@ -61,13 +61,7 @@ describe('solid brush texture lock', () => {
     brush.setFaceMapping(0, mapping);
     const prev = new THREE.Matrix4().identity();
     const next = new THREE.Matrix4().makeTranslation(2, 0, 0);
-    const locked = lockFaceMappingForBrushTransform(
-      mapping,
-      brush.brush,
-      0,
-      prev,
-      next
-    );
+    const locked = lockFaceMappingForBrushTransform(mapping, brush.brush, 0, prev, next);
     expect(locked.offsetU).not.toBeCloseTo(mapping.offsetU, 5);
     expect(locked.scaleU).toBeCloseTo(1, 5);
   });
@@ -84,7 +78,7 @@ describe('solid brush texture lock', () => {
     model.rebuild(true);
     const uvBefore = sampleResultMeshUvNear(
       model.getResultMeshForSync(),
-      new THREE.Vector3(0, 1, 0)
+      new THREE.Vector3(0, 1, 0),
     );
 
     const mesh = brush.mesh!;
@@ -100,7 +94,7 @@ describe('solid brush texture lock', () => {
 
     const uvAfter = sampleResultMeshUvNear(
       model.getResultMeshForSync(),
-      new THREE.Vector3(mesh.position.x, 1, mesh.position.z)
+      new THREE.Vector3(mesh.position.x, 1, mesh.position.z),
     );
     expect(uvAfter.u).toBeCloseTo(uvBefore.u, 3);
     expect(uvAfter.v).toBeCloseTo(uvBefore.v, 3);
@@ -116,7 +110,7 @@ describe('solid brush texture lock', () => {
     model.rebuild(true);
     const uvBefore = sampleResultMeshUvNear(
       model.getResultMeshForSync(),
-      new THREE.Vector3(0, 1, 0)
+      new THREE.Vector3(0, 1, 0),
     );
 
     const mesh = brush.mesh!;
@@ -128,7 +122,7 @@ describe('solid brush texture lock', () => {
 
     const uvAfter = sampleResultMeshUvNear(
       model.getResultMeshForSync(),
-      new THREE.Vector3(2, 1, 0)
+      new THREE.Vector3(2, 1, 0),
     );
     expect(Math.abs(uvAfter.u - uvBefore.u)).toBeGreaterThan(0.5);
   });
@@ -147,29 +141,23 @@ function sampleBrushFaceUv(
     rotation: THREE.Euler;
     scale: THREE.Vector3;
     brush: { planes: Array<{ normal: THREE.Vector3 }> };
-    getSurfaceMapping: (index: number) => ReturnType<
-      typeof createDefaultFaceTextureMapping
-    >;
+    getSurfaceMapping: (index: number) => ReturnType<typeof createDefaultFaceTextureMapping>;
   },
   faceIndex: number,
-  localPoint: THREE.Vector3
+  localPoint: THREE.Vector3,
 ): { u: number; v: number } {
   const mapping = brush.getSurfaceMapping(faceIndex);
   const world = new THREE.Matrix4().compose(
     brush.position.clone(),
     new THREE.Quaternion().setFromEuler(brush.rotation),
-    brush.scale.clone()
+    brush.scale.clone(),
   );
   const worldPoint = localPoint.clone().applyMatrix4(world);
   const normal = brush.brush.planes[faceIndex].normal
     .clone()
     .applyMatrix3(new THREE.Matrix3().getNormalMatrix(world))
     .normalize();
-  return projectWorldPositionToUv(
-    worldPoint,
-    resolveProjectionBasis(normal, mapping),
-    mapping
-  );
+  return projectWorldPositionToUv(worldPoint, resolveProjectionBasis(normal, mapping), mapping);
 }
 
 /**
@@ -182,7 +170,7 @@ function faceLocalCentroid(
   solidBrush: {
     getFaceVertices: (face: unknown) => THREE.Vector3[];
   },
-  face: unknown
+  face: unknown,
 ): THREE.Vector3 {
   const vertices = solidBrush.getFaceVertices(face);
   const centroid = new THREE.Vector3();
@@ -200,7 +188,7 @@ function faceLocalCentroid(
  */
 function sampleResultMeshUvNear(
   mesh: THREE.Mesh,
-  worldPoint: THREE.Vector3
+  worldPoint: THREE.Vector3,
 ): { u: number; v: number } {
   mesh.updateMatrixWorld(true);
   const inverse = mesh.matrixWorld.clone().invert();
@@ -220,6 +208,6 @@ function sampleResultMeshUvNear(
   }
   return {
     u: uvs.getX(bestIndex),
-    v: uvs.getY(bestIndex)
+    v: uvs.getY(bestIndex),
   };
 }

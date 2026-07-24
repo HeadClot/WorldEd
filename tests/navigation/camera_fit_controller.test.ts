@@ -113,7 +113,7 @@ describe('CameraFitController', () => {
     const scene = new THREE.Scene();
     const viewport = {
       getCamera: () => camera,
-      getScene: () => scene
+      getScene: () => scene,
     };
     const mesh = createBoxMesh(1, 1, 1, 0, 0, 0);
     scene.add(mesh);
@@ -132,7 +132,7 @@ function createPerspectiveViewport() {
   const scene = new THREE.Scene();
   return {
     getCamera: () => camera,
-    getScene: () => scene
+    getScene: () => scene,
   };
 }
 
@@ -143,13 +143,17 @@ function createOrthographicViewport() {
   const scene = new THREE.Scene();
   return {
     getCamera: () => camera,
-    getScene: () => scene
+    getScene: () => scene,
   };
 }
 
 function createBoxMesh(
-  width: number, height: number, depth: number,
-  px: number, py: number, pz: number
+  width: number,
+  height: number,
+  depth: number,
+  px: number,
+  py: number,
+  pz: number,
 ): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(width, height, depth);
   const material = new THREE.MeshStandardMaterial({ color: 0x888888 });

@@ -1,19 +1,10 @@
 import * as THREE from 'three';
-import {
-  FaceTextureMapping,
-  createDefaultFaceTextureMapping
-} from './face_texture_mapping.js';
-import {
-  getFaceTextureMaps,
-  setFaceTextureMaps
-} from './face_texture_storage.js';
+import { FaceTextureMapping, createDefaultFaceTextureMapping } from './face_texture_mapping.js';
+import { getFaceTextureMaps, setFaceTextureMaps } from './face_texture_storage.js';
 import { countTriangles } from './planar_uv_projector.js';
 import { TextureMapCache, getTextureMapCache } from './texture_map_cache.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from './texture_id.js';
-import {
-  CONTENT_METALNESS,
-  CONTENT_ROUGHNESS
-} from '../materials/content_material_factory.js';
+import { CONTENT_METALNESS, CONTENT_ROUGHNESS } from '../materials/content_material_factory.js';
 
 /**
  * UserData key for per-triangle brush surface sources on solid result meshes.
@@ -44,7 +35,7 @@ export function rebuildSurfaceMaterials(
   mesh: THREE.Mesh,
   cache: TextureMapCache = getTextureMapCache(),
   colorHex?: number,
-  options: RebuildSurfaceMaterialsOptions = {}
+  options: RebuildSurfaceMaterialsOptions = {},
 ): void {
   const color = colorHex ?? extractMeshColor(mesh);
   const triangleCount = countTriangles(mesh.geometry);
@@ -52,14 +43,9 @@ export function rebuildSurfaceMaterials(
   const perTriangle = buildPerTriangleTextureIds(mesh, triangleCount);
   const materialSlots = collectUniqueTextureIds(perTriangle);
   const materials = materialSlots.map((textureId) =>
-    createSurfaceMaterial(color, cache.resolve(textureId))
+    createSurfaceMaterial(color, cache.resolve(textureId)),
   );
-  applyMaterialLayout(
-    mesh,
-    perTriangle,
-    materialSlots,
-    options.preserveTriangleOrder === true
-  );
+  applyMaterialLayout(mesh, perTriangle, materialSlots, options.preserveTriangleOrder === true);
   disposeOwnedMaterials(mesh);
   mesh.material = materials.length === 1 ? materials[0] : materials;
 }
@@ -86,7 +72,7 @@ export function rebuildSolidResultMaterials(
   mesh: THREE.Mesh,
   regions: readonly SolidResultTextureRegion[],
   cache: TextureMapCache = getTextureMapCache(),
-  colorHex?: number
+  colorHex?: number,
 ): void {
   const color = colorHex ?? extractMeshColor(mesh);
   const triangleCount = countTriangles(mesh.geometry);
@@ -108,7 +94,7 @@ export function rebuildSolidResultMaterials(
     applySlotRunGroups(mesh.geometry, slotPerTriangle, materialSlots.length);
   }
   const materials = materialSlots.map((textureId) =>
-    createSurfaceMaterial(color, cache.resolve(textureId))
+    createSurfaceMaterial(color, cache.resolve(textureId)),
   );
   disposeOwnedMaterials(mesh);
   mesh.material = materials.length === 1 ? materials[0] : materials;
@@ -119,9 +105,7 @@ export function rebuildSolidResultMaterials(
  * @param regions Solid texture regions.
  * @returns Unique texture id list.
  */
-function collectRegionTextureIds(
-  regions: readonly SolidResultTextureRegion[]
-): string[] {
+function collectRegionTextureIds(regions: readonly SolidResultTextureRegion[]): string[] {
   const seen = new Set<string>();
   const ordered: string[] = [];
   for (const region of regions) {
@@ -142,17 +126,14 @@ function collectRegionTextureIds(
 function applySlotRunGroups(
   geometry: THREE.BufferGeometry,
   slotPerTriangle: Uint16Array,
-  slotCount: number
+  slotCount: number,
 ): void {
   void slotCount;
   let runStart = 0;
   while (runStart < slotPerTriangle.length) {
     const materialIndex = slotPerTriangle[runStart];
     let runEnd = runStart + 1;
-    while (
-      runEnd < slotPerTriangle.length &&
-      slotPerTriangle[runEnd] === materialIndex
-    ) {
+    while (runEnd < slotPerTriangle.length && slotPerTriangle[runEnd] === materialIndex) {
       runEnd += 1;
     }
     geometry.addGroup(runStart * 3, (runEnd - runStart) * 3, materialIndex);
@@ -171,7 +152,7 @@ function applyMaterialLayout(
   mesh: THREE.Mesh,
   perTriangle: string[],
   materialSlots: string[],
-  preserveTriangleOrder: boolean
+  preserveTriangleOrder: boolean,
 ): void {
   mesh.geometry.clearGroups();
   if (materialSlots.length <= 1) {
@@ -197,18 +178,14 @@ function applyMaterialLayout(
  * @param triangleCount Number of triangles.
  * @returns Texture id per triangle index.
  */
-function buildPerTriangleTextureIds(
-  mesh: THREE.Mesh,
-  triangleCount: number
-): string[] {
+function buildPerTriangleTextureIds(mesh: THREE.Mesh, triangleCount: number): string[] {
   const ids = new Array<string>(triangleCount).fill(DEFAULT_CHECKER_TEXTURE_ID);
   const entries = getFaceTextureMaps(mesh);
   if (entries.length === 0) {
     return ids;
   }
   entries.forEach((entry) => {
-    const textureId =
-      entry.mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID;
+    const textureId = entry.mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID;
     entry.triangleIndices.forEach((triangleIndex) => {
       if (triangleIndex >= 0 && triangleIndex < triangleCount) {
         ids[triangleIndex] = textureId;
@@ -240,10 +217,7 @@ function collectUniqueTextureIds(perTriangle: string[]): string[] {
  * @param materialSlots Ordered unique texture ids.
  * @returns New-order list of original triangle indices.
  */
-function buildMaterialSortedOrder(
-  perTriangle: string[],
-  materialSlots: string[]
-): number[] {
+function buildMaterialSortedOrder(perTriangle: string[], materialSlots: string[]): number[] {
   const slotIndex = new Map<string, number>();
   materialSlots.forEach((id, index) => slotIndex.set(id, index));
   const buckets: number[][] = materialSlots.map(() => []);
@@ -275,10 +249,7 @@ function isIdentityOrder(order: number[]): boolean {
  * @param geometry Mesh geometry (indexed or non-indexed).
  * @param order New-order list of original triangle indices.
  */
-function reorderGeometryTriangles(
-  geometry: THREE.BufferGeometry,
-  order: number[]
-): void {
+function reorderGeometryTriangles(geometry: THREE.BufferGeometry, order: number[]): void {
   const index = geometry.getIndex();
   if (index) {
     reorderIndexedTriangles(geometry, order);
@@ -292,10 +263,7 @@ function reorderGeometryTriangles(
  * @param geometry Indexed geometry.
  * @param order New-order list of original triangle indices.
  */
-function reorderIndexedTriangles(
-  geometry: THREE.BufferGeometry,
-  order: number[]
-): void {
+function reorderIndexedTriangles(geometry: THREE.BufferGeometry, order: number[]): void {
   const index = geometry.getIndex();
   if (!index) return;
   const source = Array.from(index.array as ArrayLike<number>);
@@ -316,10 +284,7 @@ function reorderIndexedTriangles(
  * @param geometry Non-indexed geometry.
  * @param order New-order list of original triangle indices.
  */
-function reorderNonIndexedTriangles(
-  geometry: THREE.BufferGeometry,
-  order: number[]
-): void {
+function reorderNonIndexedTriangles(geometry: THREE.BufferGeometry, order: number[]): void {
   const names = Object.keys(geometry.attributes);
   names.forEach((name) => {
     const attribute = geometry.getAttribute(name);
@@ -336,7 +301,7 @@ function reorderNonIndexedTriangles(
  */
 function reorderAttributeByTriangles(
   attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  order: number[]
+  order: number[],
 ): THREE.BufferAttribute {
   const itemSize = attribute.itemSize;
   const source = attribute.array as ArrayLike<number>;
@@ -362,7 +327,7 @@ function copyTriangleAttribute(
   destination: Float32Array,
   oldTriangle: number,
   newTriangle: number,
-  itemSize: number
+  itemSize: number,
 ): void {
   const dstVertex = newTriangle * 3;
   const srcVertex = oldTriangle * 3;
@@ -389,7 +354,7 @@ function remapFaceTextureMaps(mesh: THREE.Mesh, order: number[]): void {
       .map((oldIndex) => oldToNew[oldIndex])
       .filter((index) => index !== undefined)
       .sort((a, b) => a - b),
-    mapping: entry.mapping
+    mapping: entry.mapping,
   }));
   setFaceTextureMaps(mesh, remapped);
 }
@@ -402,9 +367,7 @@ function remapFaceTextureMaps(mesh: THREE.Mesh, order: number[]): void {
 function remapTriangleSources(mesh: THREE.Mesh, order: number[]): void {
   const sources = mesh.userData[TRIANGLE_SOURCES_USERDATA_KEY];
   if (!Array.isArray(sources) || sources.length === 0) return;
-  mesh.userData[TRIANGLE_SOURCES_USERDATA_KEY] = order.map(
-    (oldIndex) => sources[oldIndex]
-  );
+  mesh.userData[TRIANGLE_SOURCES_USERDATA_KEY] = order.map((oldIndex) => sources[oldIndex]);
 }
 
 /**
@@ -429,15 +392,14 @@ function buildOldToNewMap(order: number[]): number[] {
 function applyMergedGeometryGroups(
   geometry: THREE.BufferGeometry,
   sortedPerTriangle: string[],
-  materialSlots: string[]
+  materialSlots: string[],
 ): void {
   geometry.clearGroups();
   const slotIndex = new Map<string, number>();
   materialSlots.forEach((id, index) => slotIndex.set(id, index));
   let runStartTriangle = 0;
   while (runStartTriangle < sortedPerTriangle.length) {
-    const materialIndex =
-      slotIndex.get(sortedPerTriangle[runStartTriangle]) ?? 0;
+    const materialIndex = slotIndex.get(sortedPerTriangle[runStartTriangle]) ?? 0;
     let runEndTriangle = runStartTriangle + 1;
     while (
       runEndTriangle < sortedPerTriangle.length &&
@@ -445,11 +407,7 @@ function applyMergedGeometryGroups(
     ) {
       runEndTriangle += 1;
     }
-    geometry.addGroup(
-      runStartTriangle * 3,
-      (runEndTriangle - runStartTriangle) * 3,
-      materialIndex
-    );
+    geometry.addGroup(runStartTriangle * 3, (runEndTriangle - runStartTriangle) * 3, materialIndex);
     runStartTriangle = runEndTriangle;
   }
 }
@@ -461,17 +419,14 @@ function applyMergedGeometryGroups(
  * @param map Diffuse map texture.
  * @returns MeshStandardMaterial.
  */
-function createSurfaceMaterial(
-  color: number,
-  map: THREE.Texture
-): THREE.MeshStandardMaterial {
+function createSurfaceMaterial(color: number, map: THREE.Texture): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color,
     map,
     metalness: CONTENT_METALNESS,
     roughness: CONTENT_ROUGHNESS,
     flatShading: true,
-    side: THREE.FrontSide
+    side: THREE.FrontSide,
   });
 }
 
@@ -496,9 +451,7 @@ function extractMeshColor(mesh: THREE.Mesh): number {
  * @param mesh Mesh whose materials will be replaced.
  */
 function disposeOwnedMaterials(mesh: THREE.Mesh): void {
-  const materials = Array.isArray(mesh.material)
-    ? mesh.material
-    : [mesh.material];
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
   materials.forEach((material) => {
     if (!material) return;
     detachSharedMaps(material);
@@ -530,9 +483,7 @@ function detachSharedMaps(material: THREE.Material): void {
  * @param textureId Optional texture id override.
  * @returns New FaceTextureMapping.
  */
-export function createMappingWithTextureId(
-  textureId: string
-): FaceTextureMapping {
+export function createMappingWithTextureId(textureId: string): FaceTextureMapping {
   const mapping = createDefaultFaceTextureMapping();
   mapping.textureId = textureId;
   return mapping;

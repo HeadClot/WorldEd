@@ -10,5 +10,5 @@ export enum AlignmentAxis {
   /** Restrict alignment to the Z axis only. */
   Z = 'Z',
   /** Apply alignment to all axes (X, Y, Z). */
-  ALL = 'ALL'
+  ALL = 'ALL',
 }

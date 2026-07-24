@@ -11,10 +11,7 @@ describe('SelectionHighlight', () => {
   beforeEach(() => {
     scene = new THREE.Scene();
     highlight = new SelectionHighlight(scene, Theme);
-    testMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    testMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
   });
 
   it('should create without errors', () => {
@@ -24,9 +21,7 @@ describe('SelectionHighlight', () => {
   it('should apply highlight to a mesh', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
-    const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments
-    );
+    const lineSegments = testMesh.children.find((child) => child instanceof THREE.LineSegments);
     expect(lineSegments).toBeDefined();
   });
 
@@ -49,7 +44,7 @@ describe('SelectionHighlight', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
     const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments
+      (child) => child instanceof THREE.LineSegments,
     ) as THREE.LineSegments;
     const material = lineSegments.material as THREE.LineBasicMaterial;
     expect(material.color.getHex()).toBe(Theme.selectionColor);
@@ -60,7 +55,7 @@ describe('SelectionHighlight', () => {
     highlight.apply(testMesh);
     highlight.apply(testMesh);
     const lineCount = testMesh.children.filter(
-      (child) => child instanceof THREE.LineSegments
+      (child) => child instanceof THREE.LineSegments,
     ).length;
     expect(lineCount).toBe(1);
   });
@@ -69,9 +64,7 @@ describe('SelectionHighlight', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
     highlight.remove(testMesh);
-    const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments
-    );
+    const lineSegments = testMesh.children.find((child) => child instanceof THREE.LineSegments);
     expect(lineSegments).toBeUndefined();
   });
 
@@ -88,12 +81,8 @@ describe('SelectionHighlight', () => {
     highlight.apply(mesh1);
     highlight.apply(mesh2);
     highlight.clearAll();
-    const lines1 = mesh1.children.filter(
-      (child) => child instanceof THREE.LineSegments
-    ).length;
-    const lines2 = mesh2.children.filter(
-      (child) => child instanceof THREE.LineSegments
-    ).length;
+    const lines1 = mesh1.children.filter((child) => child instanceof THREE.LineSegments).length;
+    const lines2 = mesh2.children.filter((child) => child instanceof THREE.LineSegments).length;
     expect(lines1).toBe(0);
     expect(lines2).toBe(0);
   });
@@ -133,9 +122,7 @@ describe('SelectionHighlight', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
     highlight.dispose();
-    const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments
-    );
+    const lineSegments = testMesh.children.find((child) => child instanceof THREE.LineSegments);
     expect(lineSegments).toBeUndefined();
   });
 
@@ -145,7 +132,7 @@ describe('SelectionHighlight', () => {
     testMesh.position.set(4, 5, 6);
     highlight.syncTransforms();
     const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments
+      (child) => child instanceof THREE.LineSegments,
     ) as THREE.LineSegments;
     expect(lineSegments.parent).toBe(testMesh);
     expect(lineSegments.position.x).toBe(0);
@@ -157,7 +144,7 @@ describe('SelectionHighlight', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
     const lineSegments = testMesh.children.find(
-      (child) => child instanceof THREE.LineSegments
+      (child) => child instanceof THREE.LineSegments,
     ) as THREE.LineSegments;
     testMesh.position.set(7, 8, 9);
     testMesh.updateMatrixWorld(true);

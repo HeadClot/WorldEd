@@ -37,7 +37,7 @@ export class FlyingCamera {
     camera: THREE.PerspectiveCamera,
     inputManager: InputManager,
     initialYaw: number,
-    initialPitch: number
+    initialPitch: number,
   ) {
     this.canvas = canvas;
     this.camera = camera;
@@ -195,7 +195,7 @@ export class FlyingCamera {
     return new THREE.Vector3(
       Math.cos(this.pitch) * Math.sin(this.yaw),
       Math.sin(this.pitch),
-      Math.cos(this.pitch) * Math.cos(this.yaw)
+      Math.cos(this.pitch) * Math.cos(this.yaw),
     );
   }
 
@@ -277,9 +277,7 @@ export class FlyingCamera {
    * @returns World units to move this frame.
    */
   private resolveFlyMoveAmount(deltaTime: number): number {
-    const boost = this.inputManager.isShiftDown()
-      ? this.shiftSpeedMultiplier
-      : 1;
+    const boost = this.inputManager.isShiftDown() ? this.shiftSpeedMultiplier : 1;
     return this.moveSpeed * boost * deltaTime;
   }
 

@@ -21,10 +21,7 @@ export class WindowPointerDragSession {
    * @param onUp Called once for pointerup or pointercancel; listeners are
    * removed before this callback runs.
    */
-  begin(
-    onMove: (event: PointerEvent) => void,
-    onUp: () => void
-  ): void {
+  begin(onMove: (event: PointerEvent) => void, onUp: () => void): void {
     this.end();
     this.boundMove = (event) => onMove(event);
     this.boundUp = () => this.finishWithCallback(onUp);

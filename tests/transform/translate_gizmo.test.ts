@@ -18,10 +18,11 @@ describe('TranslateGizmo', () => {
 
   it('should not create plane handles', () => {
     const handles = gizmo.createHandles();
-    const planeHandles = handles.filter((h) =>
-      h.getAxis() === GizmoAxis.XY_PLANE ||
-      h.getAxis() === GizmoAxis.YZ_PLANE ||
-      h.getAxis() === GizmoAxis.XZ_PLANE
+    const planeHandles = handles.filter(
+      (h) =>
+        h.getAxis() === GizmoAxis.XY_PLANE ||
+        h.getAxis() === GizmoAxis.YZ_PLANE ||
+        h.getAxis() === GizmoAxis.XZ_PLANE,
     );
     expect(planeHandles.length).toBe(0);
   });

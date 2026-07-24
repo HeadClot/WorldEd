@@ -1,13 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  VmfUvConverter,
-  VMF_DEFAULT_TEXTURE_SIZE
-} from '../../../src/io/vmf/vmf_uv_converter.js';
+import { VmfUvConverter, VMF_DEFAULT_TEXTURE_SIZE } from '../../../src/io/vmf/vmf_uv_converter.js';
 import { VMF_INCHES_TO_METERS } from '../../../src/io/vmf/vmf_coordinates.js';
 import {
   projectWorldPositionToUv,
-  resolveProjectionBasis
+  resolveProjectionBasis,
 } from '../../../src/texture/planar_uv_projector.js';
 import { VmfParser } from '../../../src/io/vmf/vmf_parser.js';
 import { VmfBrushFromSides } from '../../../src/io/vmf/vmf_brush_from_sides.js';
@@ -25,15 +22,14 @@ describe('VmfUvConverter', () => {
       'DEV/DEV_MEASUREGENERIC01',
       { x: 1, y: 0, z: 0, translation: 0, scale: 0.25 },
       { x: 0, y: -1, z: 0, translation: 0, scale: 0.25 },
-      new THREE.Vector3(0, 1, 0)
+      new THREE.Vector3(0, 1, 0),
     );
     expect(mapping.customUAxis).toBeDefined();
     expect(mapping.customVAxis).toBeDefined();
     expect(mapping.customUAxis!.x).toBeCloseTo(1, 5);
     // Source (1,0,0)/(0,-1,0) → Three (1,0,0)/(0,0,-1), then V flipped → (0,0,1)
     expect(mapping.customVAxis!.z).toBeCloseTo(1, 5);
-    const expectedScale =
-      VMF_DEFAULT_TEXTURE_SIZE * 0.25 * VMF_INCHES_TO_METERS;
+    const expectedScale = VMF_DEFAULT_TEXTURE_SIZE * 0.25 * VMF_INCHES_TO_METERS;
     expect(mapping.scaleU).toBeCloseTo(expectedScale, 5);
     expect(mapping.scaleV).toBeCloseTo(expectedScale, 5);
   });
@@ -46,21 +42,19 @@ describe('VmfUvConverter', () => {
       'DEV/DEV',
       uAxis,
       vAxis,
-      new THREE.Vector3(0, 0, 1)
+      new THREE.Vector3(0, 0, 1),
     );
     // Source inches (x,y,z) → editor meters (x,z,y)*unitScale.
     const sourcePos = { x: 64, y: 0, z: 32 };
     const posMeters = new THREE.Vector3(
       sourcePos.x * VMF_INCHES_TO_METERS,
       sourcePos.z * VMF_INCHES_TO_METERS,
-      sourcePos.y * VMF_INCHES_TO_METERS
+      sourcePos.y * VMF_INCHES_TO_METERS,
     );
     // Hammer: u = (dot(pos, uxyz)/scale + translation) / texSize
-    const expectedU =
-      (sourcePos.x / uAxis.scale + uAxis.translation) / VMF_DEFAULT_TEXTURE_SIZE;
+    const expectedU = (sourcePos.x / uAxis.scale + uAxis.translation) / VMF_DEFAULT_TEXTURE_SIZE;
     const expectedV =
-      ((sourcePos.x * vAxis.x + sourcePos.y * vAxis.y + sourcePos.z * vAxis.z) /
-        vAxis.scale +
+      ((sourcePos.x * vAxis.x + sourcePos.y * vAxis.y + sourcePos.z * vAxis.z) / vAxis.scale +
         vAxis.translation) /
       VMF_DEFAULT_TEXTURE_SIZE;
     // Chisel flips V: our projector uses flipped axis so UV.v ≈ -HammerV
@@ -72,16 +66,11 @@ describe('VmfUvConverter', () => {
 
   it('imports axis-aligned solid face mappings with custom axes', () => {
     const world = new VmfParser().parse(
-      buildAxisAlignedWorldSolidVmf(
-        { x: -32, y: -32, z: -32 },
-        { x: 32, y: 32, z: 32 }
-      )
+      buildAxisAlignedWorldSolidVmf({ x: -32, y: -32, z: -32 }, { x: 32, y: 32, z: 32 }),
     );
     const built = new VmfBrushFromSides().build(world.solids[0]);
     expect(built).not.toBeNull();
-    expect(built!.faceMappings.every((m) => m.customUAxis && m.customVAxis)).toBe(
-      true
-    );
+    expect(built!.faceMappings.every((m) => m.customUAxis && m.customVAxis)).toBe(true);
     const model = new SolidModel('VmfUv');
     const instance = model.addBoxBrush(2, SolidOperation.Additive);
     // Replace with imported topology + mappings

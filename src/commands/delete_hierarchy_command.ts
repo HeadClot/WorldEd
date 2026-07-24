@@ -26,9 +26,7 @@ export class DeleteHierarchyCommand implements UndoCommand {
     this.snapshots = objects.map((object) => ({
       object,
       parent: object.parent,
-      siblingIndex: object.parent
-        ? object.parent.children.indexOf(object)
-        : 0
+      siblingIndex: object.parent ? object.parent.children.indexOf(object) : 0,
     }));
     this.executed = false;
   }
@@ -54,11 +52,7 @@ export class DeleteHierarchyCommand implements UndoCommand {
     this.snapshots.forEach((snapshot) => {
       if (!snapshot.parent) return;
       if (snapshot.siblingIndex < snapshot.parent.children.length) {
-        snapshot.parent.children.splice(
-          snapshot.siblingIndex,
-          0,
-          snapshot.object
-        );
+        snapshot.parent.children.splice(snapshot.siblingIndex, 0, snapshot.object);
         snapshot.object.parent = snapshot.parent;
       } else {
         snapshot.parent.add(snapshot.object);

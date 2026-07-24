@@ -38,7 +38,7 @@ export class TransformHandler {
     gizmoRaycaster: GizmoRaycaster,
     transformExecutor: TransformExecutor,
     _transformConstraint: TransformConstraint,
-    commandStack: CommandStack | null = null
+    commandStack: CommandStack | null = null,
   ) {
     this.transformGizmo = transformGizmo;
     this.gizmoRaycaster = gizmoRaycaster;
@@ -48,13 +48,13 @@ export class TransformHandler {
       this.session,
       transformGizmo,
       gizmoRaycaster,
-      transformExecutor
+      transformExecutor,
     );
     this.commandPusher = new TransformCommandPusher(
       this.session,
       transformGizmo,
       transformExecutor,
-      commandStack
+      commandStack,
     );
   }
 
@@ -84,22 +84,24 @@ export class TransformHandler {
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[] = [],
     pivot: THREE.Vector3 = new THREE.Vector3(),
-    gizmoGroup: THREE.Group = new THREE.Group()
+    gizmoGroup: THREE.Group = new THREE.Group(),
   ): void {
     if (this.isMultiSelectModifierHeld(event)) return;
     if (this.transformGizmo.getMode() === TransformMode.BOUNDS) {
       this.boundsDragController.beginPointerDown(
-        camera, renderer, event, handles, selectedObjects, pivot, gizmoGroup
+        camera,
+        renderer,
+        event,
+        handles,
+        selectedObjects,
+        pivot,
+        gizmoGroup,
       );
       return;
     }
-    const picked = this.gizmoRaycaster.pickHandle(
-      handles, camera, renderer, event, gizmoGroup
-    );
+    const picked = this.gizmoRaycaster.pickHandle(handles, camera, renderer, event, gizmoGroup);
     if (!picked) return;
-    this.beginStandardHandleDrag(
-      picked, camera, renderer, event, selectedObjects, pivot
-    );
+    this.beginStandardHandleDrag(picked, camera, renderer, event, selectedObjects, pivot);
   }
 
   /**
@@ -127,7 +129,7 @@ export class TransformHandler {
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
     selectedObjects: THREE.Mesh[],
-    pivot: THREE.Vector3
+    pivot: THREE.Vector3,
   ): void {
     this.session.snapshotPreDragState(selectedObjects);
     this.session.resetDragAccumulator();
@@ -154,7 +156,7 @@ export class TransformHandler {
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
     pivot: THREE.Vector3,
-    selectedObjects: THREE.Mesh[]
+    selectedObjects: THREE.Mesh[],
   ): void {
     if (!this.session.dragActive) return;
     this.session.dragCamera = camera;
@@ -189,7 +191,7 @@ export class TransformHandler {
    */
   onPointerUp(
     pivot: THREE.Vector3 = new THREE.Vector3(),
-    selectedObjects: THREE.Mesh[] = []
+    selectedObjects: THREE.Mesh[] = [],
   ): boolean {
     const selectionClick = this.isBoundsFaceClickWithoutDrag();
     if (selectionClick) {
@@ -279,7 +281,7 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    pivot: THREE.Vector3
+    pivot: THREE.Vector3,
   ): void {
     const mode = this.transformGizmo.getMode();
     if (mode === TransformMode.TRANSLATE) {
@@ -306,11 +308,14 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    pivot: THREE.Vector3
+    pivot: THREE.Vector3,
   ): void {
     const plane = TransformProjectionMath.buildCameraPlane(camera, pivot);
     this.session.initialMousePosition = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, plane
+      camera,
+      renderer,
+      event,
+      plane,
     );
   }
 
@@ -325,25 +330,24 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    pivot: THREE.Vector3
+    pivot: THREE.Vector3,
   ): void {
     const axis = TransformProjectionMath.axisToWorldVector(
       this.session.activeAxis!,
-      this.transformGizmo.getOrientation()
+      this.transformGizmo.getOrientation(),
     );
-    this.session.initialScreenPosition = TransformProjectionMath.getScreenPosition(
-      renderer, event
-    );
-    this.session.useScreenSpaceRotation = TransformProjectionMath.isAxisEdgeOn(
-      camera, axis
-    );
+    this.session.initialScreenPosition = TransformProjectionMath.getScreenPosition(renderer, event);
+    this.session.useScreenSpaceRotation = TransformProjectionMath.isAxisEdgeOn(camera, axis);
     if (this.session.useScreenSpaceRotation) {
       this.session.initialRotationDirection = null;
       return;
     }
     this.session.rotationPlane.setFromNormalAndCoplanarPoint(axis, pivot);
     const hit = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, this.session.rotationPlane
+      camera,
+      renderer,
+      event,
+      this.session.rotationPlane,
     );
     if (!hit) {
       this.session.useScreenSpaceRotation = true;
@@ -368,12 +372,10 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    pivot: THREE.Vector3
+    pivot: THREE.Vector3,
   ): void {
     const plane = TransformProjectionMath.buildCameraPlane(camera, pivot);
-    const hit = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, plane
-    );
+    const hit = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
     this.session.initialMousePosition = hit;
     if (!hit || !this.session.activeAxis) {
       this.session.initialDistanceAlongAxis = 1;
@@ -381,11 +383,10 @@ export class TransformHandler {
     }
     const axis = TransformProjectionMath.axisToWorldVector(
       this.session.activeAxis,
-      this.transformGizmo.getOrientation()
+      this.transformGizmo.getOrientation(),
     );
     const signedDistance = hit.clone().sub(pivot).dot(axis);
-    this.session.initialDistanceAlongAxis =
-      Math.abs(signedDistance) < 0.05 ? 1 : signedDistance;
+    this.session.initialDistanceAlongAxis = Math.abs(signedDistance) < 0.05 ? 1 : signedDistance;
   }
 
   /**
@@ -399,26 +400,19 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    objects: THREE.Mesh[]
+    objects: THREE.Mesh[],
   ): void {
     if (!this.session.initialMousePosition || !this.session.activeAxis) return;
-    const plane = TransformProjectionMath.buildCameraPlane(
-      camera, this.session.dragPivot
-    );
-    const currentMouse = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, plane
-    );
+    const plane = TransformProjectionMath.buildCameraPlane(camera, this.session.dragPivot);
+    const currentMouse = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
     if (!currentMouse) return;
     const totalDelta = currentMouse.clone().sub(this.session.initialMousePosition);
-    const constrainedDelta = this.constrainDeltaToOrientedAxis(
-      totalDelta,
-      this.session.activeAxis
-    );
+    const constrainedDelta = this.constrainDeltaToOrientedAxis(totalDelta, this.session.activeAxis);
     this.session.dragDeltaAccumulator.copy(constrainedDelta);
     this.transformExecutor.applyAbsoluteTranslation(
       objects,
       this.session.initialPositions,
-      constrainedDelta
+      constrainedDelta,
     );
   }
 
@@ -428,20 +422,10 @@ export class TransformHandler {
    * @param axis Active gizmo axis.
    * @returns Constrained world-space delta.
    */
-  private constrainDeltaToOrientedAxis(
-    delta: THREE.Vector3,
-    axis: GizmoAxis
-  ): THREE.Vector3 {
+  private constrainDeltaToOrientedAxis(delta: THREE.Vector3, axis: GizmoAxis): THREE.Vector3 {
     const orientation = this.transformGizmo.getOrientation();
-    if (
-      axis === GizmoAxis.X ||
-      axis === GizmoAxis.Y ||
-      axis === GizmoAxis.Z
-    ) {
-      const worldAxis = TransformProjectionMath.axisToWorldVector(
-        axis,
-        orientation
-      );
+    if (axis === GizmoAxis.X || axis === GizmoAxis.Y || axis === GizmoAxis.Z) {
+      const worldAxis = TransformProjectionMath.axisToWorldVector(axis, orientation);
       return worldAxis.multiplyScalar(delta.dot(worldAxis));
     }
     return TransformProjectionMath.constrainDelta(delta, axis);
@@ -458,12 +442,12 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    objects: THREE.Mesh[]
+    objects: THREE.Mesh[],
   ): void {
     if (!this.session.activeAxis) return;
     const axis = TransformProjectionMath.axisToWorldVector(
       this.session.activeAxis,
-      this.transformGizmo.getOrientation()
+      this.transformGizmo.getOrientation(),
     );
     const angle = this.computeRotationAngle(camera, renderer, event, axis);
     this.session.dragRotationAngle = angle;
@@ -473,7 +457,7 @@ export class TransformHandler {
       this.session.initialQuaternions,
       this.session.dragPivot,
       axis,
-      angle
+      angle,
     );
   }
 
@@ -489,16 +473,16 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    axis: THREE.Vector3
+    axis: THREE.Vector3,
   ): number {
-    if (
-      this.session.useScreenSpaceRotation
-      || !this.session.initialRotationDirection
-    ) {
+    if (this.session.useScreenSpaceRotation || !this.session.initialRotationDirection) {
       return this.computeScreenSpaceRotationAngle(renderer, event);
     }
     const hit = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, this.session.rotationPlane
+      camera,
+      renderer,
+      event,
+      this.session.rotationPlane,
     );
     if (!hit) {
       return this.computeScreenSpaceRotationAngle(renderer, event);
@@ -510,7 +494,7 @@ export class TransformHandler {
     return TransformConstraint.computeRotationAngle(
       this.session.initialRotationDirection,
       currentDirection,
-      axis
+      axis,
     );
   }
 
@@ -523,7 +507,7 @@ export class TransformHandler {
    */
   private computeScreenSpaceRotationAngle(
     renderer: THREE.WebGLRenderer,
-    event: MouseEvent
+    event: MouseEvent,
   ): number {
     if (!this.session.initialScreenPosition) return 0;
     const current = TransformProjectionMath.getScreenPosition(renderer, event);
@@ -543,24 +527,20 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    objects: THREE.Mesh[]
+    objects: THREE.Mesh[],
   ): void {
     if (!this.session.activeAxis) return;
-    const plane = TransformProjectionMath.buildCameraPlane(
-      camera, this.session.dragPivot
-    );
-    const hit = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, plane
-    );
+    const plane = TransformProjectionMath.buildCameraPlane(camera, this.session.dragPivot);
+    const hit = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
     if (!hit) return;
     const axis = TransformProjectionMath.axisToWorldVector(
       this.session.activeAxis,
-      this.transformGizmo.getOrientation()
+      this.transformGizmo.getOrientation(),
     );
     const currentDistance = hit.clone().sub(this.session.dragPivot).dot(axis);
     const factor = TransformConstraint.computeScaleFactor(
       this.session.initialDistanceAlongAxis,
-      currentDistance
+      currentDistance,
     );
     this.session.dragScaleFactor = factor;
     this.transformExecutor.applyAbsoluteScale(
@@ -570,7 +550,7 @@ export class TransformHandler {
       this.session.dragPivot,
       axis,
       factor,
-      this.session.activeAxis
+      this.session.activeAxis,
     );
     this.boundsDragController.rebakeLockedTextures(objects);
   }

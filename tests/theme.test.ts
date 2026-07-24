@@ -18,5 +18,3 @@ describe('Theme', () => {
     expect(Theme.clipMarkerColor).not.toBe(Theme.selectionColor);
   });
 });
-
-

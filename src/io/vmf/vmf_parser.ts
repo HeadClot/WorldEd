@@ -6,7 +6,7 @@ import {
   VmfVector3,
   VmfWorld,
   createDefaultVmfTextureAxis,
-  createEmptyVmfWorld
+  createEmptyVmfWorld,
 } from './vmf_types.js';
 
 /**
@@ -34,7 +34,7 @@ export class VmfParser {
     const cursor: VmfParseCursor = {
       solid: null,
       solidSide: null,
-      entity: null
+      entity: null,
     };
     this.walkDocumentLines(source, world, closures, cursor);
     return world;
@@ -51,7 +51,7 @@ export class VmfParser {
     source: string,
     world: VmfWorld,
     closures: Array<string | null>,
-    cursor: VmfParseCursor
+    cursor: VmfParseCursor,
   ): void {
     let depth = 0;
     let previousLine = '';
@@ -83,7 +83,7 @@ export class VmfParser {
     line: string,
     closures: Array<string | null>,
     depth: number,
-    previousLine: string
+    previousLine: string,
   ): { handled: boolean; depth: number; justEntered: boolean } {
     if (line[0] === '{') {
       closures[depth] = previousLine;
@@ -110,7 +110,7 @@ export class VmfParser {
     closures: Array<string | null>,
     world: VmfWorld,
     justEnteredClosure: boolean,
-    state: VmfParseCursor
+    state: VmfParseCursor,
   ): void {
     this.parseVersionInfo(line, closures, world);
     this.parseViewSettings(line, closures, world);
@@ -128,11 +128,7 @@ export class VmfParser {
    * @param closures Active closures.
    * @param world Target world.
    */
-  private parseVersionInfo(
-    line: string,
-    closures: Array<string | null>,
-    world: VmfWorld
-  ): void {
+  private parseVersionInfo(line: string, closures: Array<string | null>, world: VmfWorld): void {
     if (closures[0] !== 'versioninfo') return;
     const pair = this.tryParseKeyValue(line);
     if (!pair) return;
@@ -149,11 +145,7 @@ export class VmfParser {
    * @param closures Active closures.
    * @param world Target world.
    */
-  private parseViewSettings(
-    line: string,
-    closures: Array<string | null>,
-    world: VmfWorld
-  ): void {
+  private parseViewSettings(line: string, closures: Array<string | null>, world: VmfWorld): void {
     if (closures[0] !== 'viewsettings') return;
     const pair = this.tryParseKeyValue(line);
     if (!pair) return;
@@ -175,7 +167,7 @@ export class VmfParser {
   private parseWorldProperties(
     line: string,
     closures: Array<string | null>,
-    world: VmfWorld
+    world: VmfWorld,
   ): void {
     if (closures[0] !== 'world' || closures[1] !== null) return;
     const pair = this.tryParseKeyValue(line);
@@ -204,7 +196,7 @@ export class VmfParser {
     closures: Array<string | null>,
     world: VmfWorld,
     justEnteredClosure: boolean,
-    state: VmfParseCursor
+    state: VmfParseCursor,
   ): void {
     if (closures[0] !== 'world' || closures[1] !== 'solid' || closures[2] !== null) {
       return;
@@ -230,7 +222,7 @@ export class VmfParser {
     line: string,
     closures: Array<string | null>,
     justEnteredClosure: boolean,
-    state: VmfParseCursor
+    state: VmfParseCursor,
   ): void {
     if (
       closures[0] !== 'world' ||
@@ -257,7 +249,7 @@ export class VmfParser {
     closures: Array<string | null>,
     world: VmfWorld,
     justEnteredClosure: boolean,
-    state: VmfParseCursor
+    state: VmfParseCursor,
   ): void {
     if (closures[0] !== 'entity' || closures[1] !== null) return;
     if (justEnteredClosure) {
@@ -265,7 +257,7 @@ export class VmfParser {
         id: -1,
         className: '',
         solids: [],
-        properties: {}
+        properties: {},
       };
       world.entities.push(state.entity);
     }
@@ -293,7 +285,7 @@ export class VmfParser {
     line: string,
     closures: Array<string | null>,
     justEnteredClosure: boolean,
-    state: VmfParseCursor
+    state: VmfParseCursor,
   ): void {
     if (closures[0] !== 'entity' || closures[1] !== 'solid' || closures[2] !== null) {
       return;
@@ -319,7 +311,7 @@ export class VmfParser {
     line: string,
     closures: Array<string | null>,
     justEnteredClosure: boolean,
-    state: VmfParseCursor
+    state: VmfParseCursor,
   ): void {
     if (
       closures[0] !== 'entity' ||
@@ -338,10 +330,7 @@ export class VmfParser {
    * @param justEnteredClosure Whether the side block just opened.
    * @param state Mutable parse pointers.
    */
-  private ensureSideOnSolid(
-    justEnteredClosure: boolean,
-    state: VmfParseCursor
-  ): void {
+  private ensureSideOnSolid(justEnteredClosure: boolean, state: VmfParseCursor): void {
     if (!justEnteredClosure || !state.solid) return;
     state.solidSide = this.createEmptySide();
     state.solid.sides.push(state.solidSide);
@@ -368,7 +357,7 @@ export class VmfParser {
   private writeSideProperty(
     solidSide: VmfSolidSide,
     key: string,
-    value: string | number | VmfVector3 | object
+    value: string | number | VmfVector3 | object,
   ): void {
     if (key === 'id') solidSide.id = Number(value);
     if (key === 'plane' && this.isPlanePoints(value)) solidSide.plane = value;
@@ -390,7 +379,7 @@ export class VmfParser {
       plane: {
         p1: { x: 0, y: 0, z: 0 },
         p2: { x: 0, y: 0, z: 0 },
-        p3: { x: 0, y: 0, z: 0 }
+        p3: { x: 0, y: 0, z: 0 },
       },
       material: '',
       rotation: 0,
@@ -398,7 +387,7 @@ export class VmfParser {
       vAxis: createDefaultVmfTextureAxis(),
       lightmapScale: 16,
       smoothingGroups: 0,
-      displacement: null
+      displacement: null,
     };
   }
 
@@ -408,7 +397,7 @@ export class VmfParser {
    * @returns Key and value, or null when not a keyvalue line.
    */
   tryParseKeyValue(
-    line: string
+    line: string,
   ): { key: string; value: string | number | VmfVector3 | object } | null {
     if (!line.includes('"')) return null;
     if ((line.match(/"/g) ?? []).length !== 4) return null;
@@ -428,10 +417,7 @@ export class VmfParser {
    * @param rawOriginal Original raw value (preserves string content).
    * @returns Typed value.
    */
-  private parseValue(
-    raw: string,
-    rawOriginal: string
-  ): string | number | VmfVector3 | object {
+  private parseValue(raw: string, rawOriginal: string): string | number | VmfVector3 | object {
     if (raw[0] === '(') return this.parsePlanePoints(raw);
     if (raw[0] === '[' && raw[raw.length - 1] !== ']') {
       return this.parseTextureAxis(raw);
@@ -462,7 +448,7 @@ export class VmfParser {
     return {
       p1: { x: numbers[0], y: numbers[1], z: numbers[2] },
       p2: { x: numbers[3], y: numbers[4], z: numbers[5] },
-      p3: { x: numbers[6], y: numbers[7], z: numbers[8] }
+      p3: { x: numbers[6], y: numbers[7], z: numbers[8] },
     };
   }
 
@@ -482,7 +468,7 @@ export class VmfParser {
       y: numbers[1],
       z: numbers[2],
       translation: numbers[3],
-      scale: numbers[4]
+      scale: numbers[4],
     };
   }
 
@@ -501,7 +487,7 @@ export class VmfParser {
     return {
       x: Number.parseFloat(parts[0]),
       y: Number.parseFloat(parts[1]),
-      z: Number.parseFloat(parts[2])
+      z: Number.parseFloat(parts[2]),
     };
   }
 
@@ -511,14 +497,10 @@ export class VmfParser {
    * @returns True when value has p1/p2/p3.
    */
   private isPlanePoints(
-    value: unknown
+    value: unknown,
   ): value is { p1: VmfVector3; p2: VmfVector3; p3: VmfVector3 } {
     return (
-      typeof value === 'object' &&
-      value !== null &&
-      'p1' in value &&
-      'p2' in value &&
-      'p3' in value
+      typeof value === 'object' && value !== null && 'p1' in value && 'p2' in value && 'p3' in value
     );
   }
 
@@ -529,10 +511,7 @@ export class VmfParser {
    */
   private isTextureAxis(value: unknown): value is VmfTextureAxis {
     return (
-      typeof value === 'object' &&
-      value !== null &&
-      'translation' in value &&
-      'scale' in value
+      typeof value === 'object' && value !== null && 'translation' in value && 'scale' in value
     );
   }
 }

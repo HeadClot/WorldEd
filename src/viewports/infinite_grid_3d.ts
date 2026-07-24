@@ -131,7 +131,7 @@ export class InfiniteGrid3D {
     offsetZ: number,
     halfWorld: number,
     cell: number,
-    lineCount: number
+    lineCount: number,
   ): void {
     const start = -Math.floor(lineCount / 2);
     const sectionStep = cell * 4;
@@ -167,10 +167,7 @@ export class InfiniteGrid3D {
    * @param rank World-locked line rank.
    * @param radial Edge falloff 0..1.
    */
-  private assignLineColors(
-    rank: 'minor' | 'section' | 'major',
-    radial: number
-  ): void {
+  private assignLineColors(rank: 'minor' | 'section' | 'major', radial: number): void {
     let strength = MINOR_CENTER_STRENGTH;
     let source = this.minorColor;
     if (rank === 'section') {
@@ -181,9 +178,7 @@ export class InfiniteGrid3D {
       strength = MAJOR_CENTER_STRENGTH;
       source = this.sectionColor;
     }
-    this.centerColor
-      .copy(this.backgroundColor)
-      .lerp(source, radial * strength);
+    this.centerColor.copy(this.backgroundColor).lerp(source, radial * strength);
     this.edgeColor.copy(this.backgroundColor);
   }
 
@@ -198,7 +193,7 @@ export class InfiniteGrid3D {
   private classifyWorldRank(
     worldCoordinate: number,
     sectionStep: number,
-    majorStep: number
+    majorStep: number,
   ): 'minor' | 'section' | 'major' {
     if (this.isMultipleOf(worldCoordinate, majorStep)) return 'major';
     if (this.isMultipleOf(worldCoordinate, sectionStep)) return 'section';
@@ -223,21 +218,9 @@ export class InfiniteGrid3D {
    * @param centerZ Patch center Z.
    * @param halfWorld Half patch extent.
    */
-  private appendSplitLineX(
-    x: number,
-    centerZ: number,
-    halfWorld: number
-  ): void {
-    this.buffer.addLine(
-      x, 0, centerZ,
-      x, 0, centerZ + halfWorld,
-      this.centerColor, this.edgeColor
-    );
-    this.buffer.addLine(
-      x, 0, centerZ,
-      x, 0, centerZ - halfWorld,
-      this.centerColor, this.edgeColor
-    );
+  private appendSplitLineX(x: number, centerZ: number, halfWorld: number): void {
+    this.buffer.addLine(x, 0, centerZ, x, 0, centerZ + halfWorld, this.centerColor, this.edgeColor);
+    this.buffer.addLine(x, 0, centerZ, x, 0, centerZ - halfWorld, this.centerColor, this.edgeColor);
   }
 
   /**
@@ -246,21 +229,9 @@ export class InfiniteGrid3D {
    * @param centerX Patch center X.
    * @param halfWorld Half patch extent.
    */
-  private appendSplitLineZ(
-    z: number,
-    centerX: number,
-    halfWorld: number
-  ): void {
-    this.buffer.addLine(
-      centerX, 0, z,
-      centerX + halfWorld, 0, z,
-      this.centerColor, this.edgeColor
-    );
-    this.buffer.addLine(
-      centerX, 0, z,
-      centerX - halfWorld, 0, z,
-      this.centerColor, this.edgeColor
-    );
+  private appendSplitLineZ(z: number, centerX: number, halfWorld: number): void {
+    this.buffer.addLine(centerX, 0, z, centerX + halfWorld, 0, z, this.centerColor, this.edgeColor);
+    this.buffer.addLine(centerX, 0, z, centerX - halfWorld, 0, z, this.centerColor, this.edgeColor);
   }
 
   /**

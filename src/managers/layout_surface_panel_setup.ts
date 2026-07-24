@@ -72,7 +72,7 @@ function createUvEditorController(deps: UvEditorSetupDeps): UvEditorController {
   const controller = new UvEditorController(
     deps.selectionManager,
     deps.faceController,
-    deps.commandStack
+    deps.commandStack,
   );
   controller.setStatusCallback((message) => {
     deps.statusBar?.setLastAction(message);
@@ -86,10 +86,7 @@ function createUvEditorController(deps: UvEditorSetupDeps): UvEditorController {
  * @param controller UV mapping controller.
  * @returns Created UV editor panel.
  */
-function createUvEditorUi(
-  deps: UvEditorSetupDeps,
-  controller: UvEditorController
-): UvEditor {
+function createUvEditorUi(deps: UvEditorSetupDeps, controller: UvEditorController): UvEditor {
   return new UvEditor(
     deps.toolbarContainer,
     {
@@ -104,9 +101,9 @@ function createUvEditorUi(
       onReset: () => {
         controller.resetMapping();
         deps.afterSurfaceChange();
-      }
+      },
     },
-    deps.anchorViewport
+    deps.anchorViewport,
   );
 }
 
@@ -119,7 +116,7 @@ function createUvEditorUi(
 function wireUvEditorRefresh(
   deps: UvEditorSetupDeps,
   uvEditor: UvEditor,
-  controller: UvEditorController
+  controller: UvEditorController,
 ): void {
   controller.setUiRefreshCallback((mapping, count) => {
     uvEditor.setFromSelection(mapping, count);
@@ -134,24 +131,22 @@ function wireUvEditorRefresh(
  * @param deps Shared services and DOM anchors for the texture browser.
  * @returns Created texture browser instances.
  */
-export function setupTextureBrowserPanel(
-  deps: TextureBrowserSetupDeps
-): TextureBrowserSetupResult {
+export function setupTextureBrowserPanel(deps: TextureBrowserSetupDeps): TextureBrowserSetupResult {
   const textureAssignmentController = createTextureAssignmentController(deps);
   const controllerHolder: { current: TextureBrowserController | null } = {
-    current: null
+    current: null,
   };
   const textureBrowser = createTextureBrowserUi(deps, controllerHolder);
   const textureBrowserController = createTextureBrowserController(
     deps,
     textureBrowser,
-    textureAssignmentController
+    textureAssignmentController,
   );
   controllerHolder.current = textureBrowserController;
   return {
     textureBrowser,
     textureBrowserController,
-    textureAssignmentController
+    textureAssignmentController,
   };
 }
 
@@ -161,12 +156,12 @@ export function setupTextureBrowserPanel(
  * @returns Configured assignment controller.
  */
 function createTextureAssignmentController(
-  deps: TextureBrowserSetupDeps
+  deps: TextureBrowserSetupDeps,
 ): TextureAssignmentController {
   const controller = new TextureAssignmentController(
     deps.selectionManager,
     deps.faceController,
-    deps.commandStack
+    deps.commandStack,
   );
   controller.setStatusCallback((message) => {
     deps.statusBar?.setLastAction(message);
@@ -182,7 +177,7 @@ function createTextureAssignmentController(
  */
 function createTextureBrowserUi(
   deps: TextureBrowserSetupDeps,
-  controllerHolder: { current: TextureBrowserController | null }
+  controllerHolder: { current: TextureBrowserController | null },
 ): TextureBrowser {
   return new TextureBrowser(
     deps.toolbarContainer,
@@ -192,9 +187,9 @@ function createTextureBrowserUi(
       },
       onSelectTexture: (entryId) => {
         controllerHolder.current?.selectTexture(entryId);
-      }
+      },
     },
-    deps.anchorViewport
+    deps.anchorViewport,
   );
 }
 
@@ -208,7 +203,7 @@ function createTextureBrowserUi(
 function createTextureBrowserController(
   deps: TextureBrowserSetupDeps,
   browser: TextureBrowser,
-  assignmentController: TextureAssignmentController
+  assignmentController: TextureAssignmentController,
 ): TextureBrowserController {
   const controller = new TextureBrowserController({ browser });
   controller.setStatusCallback((message) => {

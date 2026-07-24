@@ -12,24 +12,24 @@ describe('AlignCommand', () => {
   beforeEach(() => {
     mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh1.position.set(1, 2, 3);
 
     mesh2 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh2.position.set(4, 5, 6);
 
     snapshots = [
       { mesh: mesh1, originalPosition: mesh1.position.clone() },
-      { mesh: mesh2, originalPosition: mesh2.position.clone() }
+      { mesh: mesh2, originalPosition: mesh2.position.clone() },
     ];
 
     targets = new Map([
       [mesh1, new THREE.Vector3(10, 20, 30)],
-      [mesh2, new THREE.Vector3(40, 50, 60)]
+      [mesh2, new THREE.Vector3(40, 50, 60)],
     ]);
   });
 
@@ -86,7 +86,7 @@ describe('AlignCommand', () => {
   it('should be a no-op when target equals current position', () => {
     const sameTargets = new Map([
       [mesh1, mesh1.position.clone()],
-      [mesh2, mesh2.position.clone()]
+      [mesh2, mesh2.position.clone()],
     ]);
     const command = new AlignCommand(snapshots, sameTargets);
     command.execute();
@@ -98,7 +98,7 @@ describe('AlignCommand', () => {
   it('should align only X axis when target differs only on X', () => {
     const xOnlyTargets = new Map([
       [mesh1, new THREE.Vector3(10, 2, 3)],
-      [mesh2, new THREE.Vector3(40, 5, 6)]
+      [mesh2, new THREE.Vector3(40, 5, 6)],
     ]);
     const command = new AlignCommand(snapshots, xOnlyTargets);
     command.execute();
@@ -110,7 +110,7 @@ describe('AlignCommand', () => {
   it('should align only Y axis when target differs only on Y', () => {
     const yOnlyTargets = new Map([
       [mesh1, new THREE.Vector3(1, 20, 3)],
-      [mesh2, new THREE.Vector3(4, 50, 6)]
+      [mesh2, new THREE.Vector3(4, 50, 6)],
     ]);
     const command = new AlignCommand(snapshots, yOnlyTargets);
     command.execute();
@@ -122,7 +122,7 @@ describe('AlignCommand', () => {
   it('should align only Z axis when target differs only on Z', () => {
     const zOnlyTargets = new Map([
       [mesh1, new THREE.Vector3(1, 2, 30)],
-      [mesh2, new THREE.Vector3(4, 5, 60)]
+      [mesh2, new THREE.Vector3(4, 5, 60)],
     ]);
     const command = new AlignCommand(snapshots, zOnlyTargets);
     command.execute();
@@ -143,12 +143,8 @@ describe('AlignCommand', () => {
   });
 
   it('should not modify axes not in the target map', () => {
-    const partialTargets = new Map([
-      [mesh1, new THREE.Vector3(10, 20, 30)]
-    ]);
-    const singleSnapshot = [
-      { mesh: mesh1, originalPosition: mesh1.position.clone() }
-    ];
+    const partialTargets = new Map([[mesh1, new THREE.Vector3(10, 20, 30)]]);
+    const singleSnapshot = [{ mesh: mesh1, originalPosition: mesh1.position.clone() }];
     const command = new AlignCommand(singleSnapshot, partialTargets);
     command.execute();
     expect(mesh1.position.x).toBeCloseTo(10);

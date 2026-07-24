@@ -27,4 +27,17 @@ describe('Bun project configuration', () => {
     expect(projectScripts.some((script) => /\b(npm|yarn|pnpm)\b/.test(script))).toBe(false);
     expect(existsSync(resolve(process.cwd(), 'package-lock.json'))).toBe(false);
   });
+
+  it('declares the local formatting and CI commands', () => {
+    const projectManifest = loadProjectManifest();
+    const projectScripts = projectManifest.scripts ?? {};
+
+    expect(projectScripts.format).toBe('prettier --write .');
+    expect(projectScripts['format:check']).toBe('prettier --check .');
+    expect(projectScripts['typecheck:strict']).toBe('tsc --project tsconfig.strict.json --noEmit');
+    expect(projectScripts.ci).toContain('bun run format:check');
+    expect(projectScripts.ci).toContain('bun run testrun');
+    expect(projectScripts.typecheck).toBe('tsc --noEmit');
+    expect(projectScripts.ci).toContain('bun run build');
+  });
 });

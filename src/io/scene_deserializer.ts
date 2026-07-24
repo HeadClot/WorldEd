@@ -103,7 +103,7 @@ export class SceneDeserializer {
    */
   private createObjectsFromEntries(
     entries: ObjectEntry[],
-    objectMap: Map<string, THREE.Object3D>
+    objectMap: Map<string, THREE.Object3D>,
   ): void {
     entries.forEach((entry) => {
       const object = this.createObjectFromEntry(entry);
@@ -147,10 +147,7 @@ export class SceneDeserializer {
    * @returns Solid model root group with transforms applied.
    */
   private createSolidModelFromEntry(entry: ObjectEntry): THREE.Object3D {
-    const model = SolidModelCodec.decode(
-      entry.solidModel as SerializedSolidModel,
-      entry.name
-    );
+    const model = SolidModelCodec.decode(entry.solidModel as SerializedSolidModel, entry.name);
     this.applyTransformToObject(model.root, entry);
     if (entry.uuid) {
       model.root.uuid = entry.uuid;
@@ -165,16 +162,13 @@ export class SceneDeserializer {
    */
   private applyFaceTextureData(mesh: THREE.Mesh, entry: ObjectEntry): void {
     if (entry.faceTextureMaps && entry.faceTextureMaps.length > 0) {
-      const maps = (entry.faceTextureMaps as FaceTextureMapEntry[]).map(
-        (mapEntry) => ({
-          triangleIndices: mapEntry.triangleIndices.slice(),
-          mapping: {
-            ...mapEntry.mapping,
-            textureId:
-              mapEntry.mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID
-          }
-        })
-      );
+      const maps = (entry.faceTextureMaps as FaceTextureMapEntry[]).map((mapEntry) => ({
+        triangleIndices: mapEntry.triangleIndices.slice(),
+        mapping: {
+          ...mapEntry.mapping,
+          textureId: mapEntry.mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID,
+        },
+      }));
       setFaceTextureMaps(mesh, maps);
       rebakeStoredFaceTextureMaps(mesh);
       rebuildSurfaceMaterials(mesh);
@@ -218,7 +212,7 @@ export class SceneDeserializer {
    * @returns A reconstructed BufferGeometry.
    */
   private reconstructBufferGeometry(
-    geometryData: BufferGeometryData | undefined
+    geometryData: BufferGeometryData | undefined,
   ): THREE.BufferGeometry {
     if (!geometryData || geometryData.position.length < 9) {
       return new THREE.BoxGeometry(1, 1, 1);
@@ -234,7 +228,7 @@ export class SceneDeserializer {
    */
   private buildGeometryFromType(
     geometryType: GeometryType | string,
-    params: Record<string, number>
+    params: Record<string, number>,
   ): THREE.BufferGeometry {
     if (geometryType === 'box') return this.buildBoxGeometry(params);
     if (geometryType === 'sphere') return this.buildSphereGeometry(params);
@@ -300,7 +294,7 @@ export class SceneDeserializer {
     const color = entry.materialColor || 0xffffff;
     return createContentMaterial(color, {
       flatShading: true,
-      side: THREE.FrontSide
+      side: THREE.FrontSide,
     });
   }
 
@@ -335,7 +329,7 @@ export class SceneDeserializer {
    */
   private resolveParentChildRelationships(
     entries: ObjectEntry[],
-    objectMap: Map<string, THREE.Object3D>
+    objectMap: Map<string, THREE.Object3D>,
   ): void {
     entries.forEach((entry) => {
       if (entry.parentId) {
@@ -356,7 +350,7 @@ export class SceneDeserializer {
    */
   private attachToGroup(
     worldGroup: THREE.Group,
-    objectMap: Map<string, THREE.Object3D>
+    objectMap: Map<string, THREE.Object3D>,
   ): THREE.Object3D[] {
     const topLevelObjects: THREE.Object3D[] = [];
     const attachedUuids = new Set<string>();

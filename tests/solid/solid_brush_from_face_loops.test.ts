@@ -29,11 +29,7 @@ describe('SolidBrushFactory.createFromFaceLoops', () => {
 
   it('creates a hull preview mesh with triangle geometry', () => {
     const brush = SolidBrushFactory.createCenteredBox(2, 3, 4);
-    const preview = SolidBrushVisual.createHullPreview(
-      'Hull',
-      brush,
-      SolidOperation.Additive
-    );
+    const preview = SolidBrushVisual.createHullPreview('Hull', brush, SolidOperation.Additive);
     expect(SolidBrushVisual.isBrushObject(preview)).toBe(true);
     const position = preview.geometry.getAttribute('position');
     expect(position.count).toBeGreaterThanOrEqual(36);

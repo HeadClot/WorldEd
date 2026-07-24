@@ -42,7 +42,7 @@ export class PerspectiveCameraAnimator {
     camera: THREE.PerspectiveCamera,
     targetPosition: THREE.Vector3,
     targetLookAt: THREE.Vector3,
-    config: CameraAnimationConfig
+    config: CameraAnimationConfig,
   ): boolean {
     this.camera = camera;
     this.startPosition.copy(camera.position);

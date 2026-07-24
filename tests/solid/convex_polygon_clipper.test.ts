@@ -12,7 +12,7 @@ describe('ConvexPolygonClipper', () => {
       new THREE.Vector3(-1, -1, 0),
       new THREE.Vector3(1, -1, 0),
       new THREE.Vector3(1, 1, 0),
-      new THREE.Vector3(-1, 1, 0)
+      new THREE.Vector3(-1, 1, 0),
     ];
     const plane = new SolidPlane(new THREE.Vector3(1, 0, 0), 0);
     const result = ConvexPolygonClipper.clipByPlane(square, plane);
@@ -31,13 +31,13 @@ describe('ConvexPolygonClipper', () => {
       new THREE.Vector3(-0.5, -0.5, 0),
       new THREE.Vector3(0.5, -0.5, 0),
       new THREE.Vector3(0.5, 0.5, 0),
-      new THREE.Vector3(-0.5, 0.5, 0)
+      new THREE.Vector3(-0.5, 0.5, 0),
     ];
     const planes = [
       new SolidPlane(new THREE.Vector3(1, 0, 0), -1),
       new SolidPlane(new THREE.Vector3(-1, 0, 0), -1),
       new SolidPlane(new THREE.Vector3(0, 1, 0), -1),
-      new SolidPlane(new THREE.Vector3(0, -1, 0), -1)
+      new SolidPlane(new THREE.Vector3(0, -1, 0), -1),
     ];
     const clipped = ConvexPolygonClipper.clipInsideAllPlanes(square, planes);
     expect(clipped.length).toBe(4);

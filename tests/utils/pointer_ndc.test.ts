@@ -58,11 +58,11 @@ function createElementWithRect(
   left: number,
   top: number,
   width: number,
-  height: number
+  height: number,
 ): HTMLElement {
   const element = document.createElement('div');
   Object.defineProperty(element, 'getBoundingClientRect', {
-    value: () => ({ left, top, width, height, right: left + width, bottom: top + height })
+    value: () => ({ left, top, width, height, right: left + width, bottom: top + height }),
   });
   return element;
 }

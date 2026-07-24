@@ -1,8 +1,5 @@
 import * as THREE from 'three';
-import {
-  FaceTextureMapping,
-  cloneFaceTextureMapping
-} from '../texture/face_texture_mapping.js';
+import { FaceTextureMapping, cloneFaceTextureMapping } from '../texture/face_texture_mapping.js';
 
 /**
  * A planar polygon used by the brush CSG pipeline.
@@ -19,17 +16,12 @@ export class CsgPolygon {
    * @param vertices The polygon vertices in winding order.
    * @param surfaceMapping Optional face texture mapping for this surface.
    */
-  constructor(
-    vertices: THREE.Vector3[],
-    surfaceMapping: FaceTextureMapping | null = null
-  ) {
+  constructor(vertices: THREE.Vector3[], surfaceMapping: FaceTextureMapping | null = null) {
     this.vertices = vertices.map((vertex) => vertex.clone());
     const plane = this.computePlaneFromVertices(this.vertices);
     this.planeNormal = plane.normal;
     this.planeConstant = plane.constant;
-    this.surfaceMapping = surfaceMapping
-      ? cloneFaceTextureMapping(surfaceMapping)
-      : null;
+    this.surfaceMapping = surfaceMapping ? cloneFaceTextureMapping(surfaceMapping) : null;
   }
 
   /**
@@ -78,9 +70,7 @@ export class CsgPolygon {
    * @returns Mapping clone, or null when unset.
    */
   getSurfaceMapping(): FaceTextureMapping | null {
-    return this.surfaceMapping
-      ? cloneFaceTextureMapping(this.surfaceMapping)
-      : null;
+    return this.surfaceMapping ? cloneFaceTextureMapping(this.surfaceMapping) : null;
   }
 
   /**
@@ -88,9 +78,7 @@ export class CsgPolygon {
    * @param mapping Mapping to store, or null to clear.
    */
   setSurfaceMapping(mapping: FaceTextureMapping | null): void {
-    this.surfaceMapping = mapping
-      ? cloneFaceTextureMapping(mapping)
-      : null;
+    this.surfaceMapping = mapping ? cloneFaceTextureMapping(mapping) : null;
   }
 
   /**
@@ -98,9 +86,10 @@ export class CsgPolygon {
    * @param vertices The polygon vertices.
    * @returns The plane normal and constant.
    */
-  private computePlaneFromVertices(
-    vertices: THREE.Vector3[]
-  ): { normal: THREE.Vector3; constant: number } {
+  private computePlaneFromVertices(vertices: THREE.Vector3[]): {
+    normal: THREE.Vector3;
+    constant: number;
+  } {
     const a = vertices[0];
     const b = vertices[1];
     const c = vertices[2];

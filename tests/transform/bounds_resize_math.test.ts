@@ -4,7 +4,7 @@ import {
   computeOneSidedMeshResize,
   getFixedFaceWorldCenter,
   snapBoundsFaceDelta,
-  MIN_BOUNDS_HALF_EXTENT
+  MIN_BOUNDS_HALF_EXTENT,
 } from '../../src/transform/bounds_resize_math.js';
 import { OrientedBoundsData } from '../../src/transform/oriented_bounds.js';
 import { BoundsFace } from '../../src/types/bounds_face.js';
@@ -15,21 +15,15 @@ describe('bounds_resize_math', () => {
     const startPos = new THREE.Vector3(0, 0, 0);
     const startScale = new THREE.Vector3(1, 1, 1);
     const fixedBefore = getFixedFaceWorldCenter(bounds, BoundsFace.POS_X);
-    const result = computeOneSidedMeshResize(
-      startPos,
-      startScale,
-      bounds,
-      BoundsFace.POS_X,
-      2
-    );
+    const result = computeOneSidedMeshResize(startPos, startScale, bounds, BoundsFace.POS_X, 2);
     const newBounds: OrientedBoundsData = {
       center: result.position.clone(),
       quaternion: bounds.quaternion.clone(),
       halfExtents: new THREE.Vector3(
         bounds.halfExtents.x * (result.scale.x / startScale.x),
         bounds.halfExtents.y,
-        bounds.halfExtents.z
-      )
+        bounds.halfExtents.z,
+      ),
     };
     const fixedAfter = getFixedFaceWorldCenter(newBounds, BoundsFace.POS_X);
     expect(fixedAfter.distanceTo(fixedBefore)).toBeLessThan(1e-6);
@@ -44,7 +38,7 @@ describe('bounds_resize_math', () => {
       new THREE.Vector3(1, 1, 1),
       bounds,
       BoundsFace.POS_Y,
-      -100
+      -100,
     );
     const newHalf = bounds.halfExtents.y * result.scale.y;
     expect(newHalf).toBeGreaterThanOrEqual(MIN_BOUNDS_HALF_EXTENT - 1e-6);
@@ -69,7 +63,7 @@ describe('bounds_resize_math', () => {
       new THREE.Vector3(1, 2, 3),
       bounds,
       BoundsFace.NEG_Z,
-      1
+      1,
     );
     expect(result.scale.x).toBeCloseTo(1, 5);
     expect(result.scale.y).toBeCloseTo(2, 5);
@@ -85,6 +79,6 @@ function createUnitBounds(): OrientedBoundsData {
   return {
     center: new THREE.Vector3(0, 0, 0),
     quaternion: new THREE.Quaternion(),
-    halfExtents: new THREE.Vector3(0.5, 0.5, 0.5)
+    halfExtents: new THREE.Vector3(0.5, 0.5, 0.5),
   };
 }

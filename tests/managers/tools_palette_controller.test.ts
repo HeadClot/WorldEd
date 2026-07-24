@@ -30,7 +30,7 @@ describe('ToolsPaletteController', () => {
       onCommitClip: () => undefined,
       onCommitSplit: () => undefined,
       onOpenUvEditor: () => undefined,
-      onExtrudeFaces: () => undefined
+      onExtrudeFaces: () => undefined,
     });
     const scene = new THREE.Scene();
     const world = new THREE.Group();
@@ -38,7 +38,7 @@ describe('ToolsPaletteController', () => {
       scene,
       new CommandStack(8),
       new GridSnap(false, 1),
-      world
+      world,
     );
     clipTool = new ClipPlaneTool();
     selectionManager = new SelectionManager();
@@ -47,7 +47,7 @@ describe('ToolsPaletteController', () => {
       flipPlane: () => undefined,
       commitClip: () => undefined,
       commitSplit: () => undefined,
-      cancel: () => undefined
+      cancel: () => undefined,
     } as unknown as ClipPlaneHandler;
     controller = new ToolsPaletteController({
       toolsPalette: palette,
@@ -55,7 +55,7 @@ describe('ToolsPaletteController', () => {
       clipPlaneTool: clipTool,
       clipPlaneHandler: clipHandler,
       selectionManager,
-      showStatusMessage: showStatus
+      showStatusMessage: showStatus,
     });
   });
 

@@ -12,10 +12,7 @@ import { GridSnap } from '../../src/transform/grid_snap.js';
  * @returns Mesh ready to clip.
  */
 function addBoxMesh(world: THREE.Group): THREE.Mesh {
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(2, 2, 2),
-    new THREE.MeshBasicMaterial()
-  );
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
   world.add(mesh);
   return mesh;
 }
@@ -54,7 +51,7 @@ describe('ClipPlaneHandler continuous commit flow', () => {
       syncPrimitivesToViewports: vi.fn(),
       refreshOutliner: vi.fn(),
       updateShadingMeshes: vi.fn(),
-      onToolStateChanged: vi.fn()
+      onToolStateChanged: vi.fn(),
     });
   });
 
@@ -88,9 +85,7 @@ describe('ClipPlaneHandler continuous commit flow', () => {
     expect(clipPlaneTool.isPlaneReady()).toBe(true);
     handler.commitClip();
     expect(clipPlaneTool.isActive()).toBe(true);
-    expect(selectionManager.getAllSelectedObjectsAsArray().length).toBeGreaterThan(
-      0
-    );
+    expect(selectionManager.getAllSelectedObjectsAsArray().length).toBeGreaterThan(0);
   });
 
   it('resetPlacementForNextCut preserves keep-front preference', () => {

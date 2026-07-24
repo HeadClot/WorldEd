@@ -3,7 +3,7 @@ import { Theme } from '../theme.js';
 import {
   GizmoVisualStyle,
   createGizmoFrontLineMaterial,
-  createGizmoOccludedLineMaterial
+  createGizmoOccludedLineMaterial,
 } from './gizmo_visual_style.js';
 
 /**
@@ -89,14 +89,8 @@ export class BoundsGuideLines {
    * Allocates zero-length buffers until the first bounds update.
    */
   private allocateEmptyGeometry(): void {
-    this.geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute([], 3)
-    );
-    this.geometry.setAttribute(
-      'color',
-      new THREE.Float32BufferAttribute([], 3)
-    );
+    this.geometry.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+    this.geometry.setAttribute('color', new THREE.Float32BufferAttribute([], 3));
   }
 
   /**
@@ -153,7 +147,7 @@ export class BoundsGuideLines {
   private appendAllCornerGuides(
     positions: number[],
     colors: number[],
-    halfExtents: THREE.Vector3
+    halfExtents: THREE.Vector3,
   ): void {
     this.cornerSigns.forEach((signX) => {
       this.cornerSigns.forEach((signY) => {
@@ -165,7 +159,7 @@ export class BoundsGuideLines {
             this.fixedGuideLength,
             signX,
             signY,
-            signZ
+            signZ,
           );
         });
       });
@@ -189,28 +183,43 @@ export class BoundsGuideLines {
     length: number,
     signX: number,
     signY: number,
-    signZ: number
+    signZ: number,
   ): void {
     const cornerX = signX * halfExtents.x;
     const cornerY = signY * halfExtents.y;
     const cornerZ = signZ * halfExtents.z;
     this.appendRay(
-      positions, colors,
-      cornerX, cornerY, cornerZ,
-      cornerX + signX * length, cornerY, cornerZ,
-      this.colorX
+      positions,
+      colors,
+      cornerX,
+      cornerY,
+      cornerZ,
+      cornerX + signX * length,
+      cornerY,
+      cornerZ,
+      this.colorX,
     );
     this.appendRay(
-      positions, colors,
-      cornerX, cornerY, cornerZ,
-      cornerX, cornerY + signY * length, cornerZ,
-      this.colorY
+      positions,
+      colors,
+      cornerX,
+      cornerY,
+      cornerZ,
+      cornerX,
+      cornerY + signY * length,
+      cornerZ,
+      this.colorY,
     );
     this.appendRay(
-      positions, colors,
-      cornerX, cornerY, cornerZ,
-      cornerX, cornerY, cornerZ + signZ * length,
-      this.colorZ
+      positions,
+      colors,
+      cornerX,
+      cornerY,
+      cornerZ,
+      cornerX,
+      cornerY,
+      cornerZ + signZ * length,
+      this.colorZ,
     );
   }
 
@@ -235,7 +244,7 @@ export class BoundsGuideLines {
     bx: number,
     by: number,
     bz: number,
-    color: THREE.Color
+    color: THREE.Color,
   ): void {
     positions.push(ax, ay, az, bx, by, bz);
     this.pushSolidColor(colors, color);
@@ -267,14 +276,8 @@ export class BoundsGuideLines {
    * @param colors Flat color components.
    */
   private applyBuffers(positions: number[], colors: number[]): void {
-    this.geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(positions, 3)
-    );
-    this.geometry.setAttribute(
-      'color',
-      new THREE.Float32BufferAttribute(colors, 3)
-    );
+    this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    this.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     this.geometry.computeBoundingSphere();
   }
 

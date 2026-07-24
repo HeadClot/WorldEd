@@ -20,7 +20,7 @@ export class TerrainGenerator {
     depth: number,
     segments: number,
     heightScale: number,
-    seed: number
+    seed: number,
   ): THREE.Mesh {
     const geometry = new THREE.PlaneGeometry(width, depth, segments, segments);
     geometry.rotateX(-Math.PI / 2);
@@ -32,7 +32,7 @@ export class TerrainGenerator {
       metalness: 0.1,
       roughness: 0.9,
       flatShading: false,
-      side: THREE.FrontSide
+      side: THREE.FrontSide,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = `Terrain_${segments}x${segments}`;
@@ -53,7 +53,7 @@ export class TerrainGenerator {
     geometry: THREE.PlaneGeometry,
     segments: number,
     heightScale: number,
-    seed: number
+    seed: number,
   ): void {
     const position = geometry.getAttribute('position');
     for (let index = 0; index < position.count; index++) {
@@ -73,12 +73,7 @@ export class TerrainGenerator {
    * @param seed Deterministic seed.
    * @returns The height value.
    */
-  private sampleHeight(
-    x: number,
-    z: number,
-    heightScale: number,
-    seed: number
-  ): number {
+  private sampleHeight(x: number, z: number, heightScale: number, seed: number): number {
     const s = seed * 0.1;
     const layer1 = Math.sin(x * 0.35 + s) * Math.cos(z * 0.35 - s);
     const layer2 = Math.sin(x * 0.8 + z * 0.5 + s * 2) * 0.45;

@@ -20,11 +20,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
    * @param parent The parent object to add clones to.
    * @param offset The positional offset for each clone.
    */
-  constructor(
-    sourceMeshes: THREE.Mesh[],
-    parent: THREE.Object3D,
-    offset: THREE.Vector3
-  ) {
+  constructor(sourceMeshes: THREE.Mesh[], parent: THREE.Object3D, offset: THREE.Vector3) {
     this.sourceMeshes = sourceMeshes.slice();
     this.parent = parent;
     this.offset = offset.clone();
@@ -90,9 +86,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
    * Disposes a material or material array when present.
    * @param material Material, material array, or undefined.
    */
-  private disposeMaterial(
-    material: THREE.Material | THREE.Material[] | undefined
-  ): void {
+  private disposeMaterial(material: THREE.Material | THREE.Material[] | undefined): void {
     if (!material) return;
     if (Array.isArray(material)) {
       material.forEach((entry) => entry.dispose());

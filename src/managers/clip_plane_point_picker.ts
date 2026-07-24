@@ -36,14 +36,9 @@ export class ClipPlanePointPicker {
     event: MouseEvent,
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
-    meshes: THREE.Mesh[]
+    meshes: THREE.Mesh[],
   ): THREE.Vector3 | null {
-    const surfaceHit = this.faceRaycaster.pickFace(
-      event,
-      camera,
-      renderer,
-      meshes
-    );
+    const surfaceHit = this.faceRaycaster.pickFace(event, camera, renderer, meshes);
     if (surfaceHit) {
       return this.snapPoint(surfaceHit.hitPoint);
     }
@@ -62,7 +57,7 @@ export class ClipPlanePointPicker {
   private pickGroundPlane(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
+    renderer: THREE.WebGLRenderer,
   ): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
     pointerEventToNdc(event, renderer.domElement, this.ndc);

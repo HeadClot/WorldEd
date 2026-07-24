@@ -3,7 +3,7 @@ import { Theme } from '../theme.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
 import {
   BRUSH_EDGE_SHARED_MATERIAL_KEY,
-  SOLID_BRUSH_EDGE_USERDATA_KEY
+  SOLID_BRUSH_EDGE_USERDATA_KEY,
 } from '../solid/model/solid_brush_edge_materials.js';
 
 /**
@@ -27,7 +27,7 @@ const SKIP_CONTENT_EDGE_MESH_KEYS = ['isSolidBrush', 'isSolidModelResult'] as co
  */
 export function rebuildDecorativeEdges(
   mesh: THREE.Mesh,
-  edgeColor: number = Theme.boxEdgeColor
+  edgeColor: number = Theme.boxEdgeColor,
 ): void {
   if (!usesContentDecorativeEdges(mesh)) {
     removeDecorativeEdges(mesh);
@@ -36,10 +36,7 @@ export function rebuildDecorativeEdges(
   removeDecorativeEdges(mesh);
   if (!hasEdgeBuildableGeometry(mesh)) return;
   const edges = new THREE.EdgesGeometry(mesh.geometry, 1);
-  const line = new THREE.LineSegments(
-    edges,
-    new THREE.LineBasicMaterial({ color: edgeColor })
-  );
+  const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: edgeColor }));
   line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
   mesh.add(line);
 }
@@ -100,9 +97,7 @@ export function stripEditorOverlayChildren(mesh: THREE.Mesh): void {
  * @param geometry The source geometry (may be indexed).
  * @returns A flat-shaded non-indexed geometry ready for a mesh.
  */
-export function prepareFlatShadedGeometry(
-  geometry: THREE.BufferGeometry
-): THREE.BufferGeometry {
+export function prepareFlatShadedGeometry(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
   const source = geometry.index ? geometry.toNonIndexed() : geometry.clone();
   source.computeVertexNormals();
   source.computeBoundingSphere();

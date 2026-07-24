@@ -43,9 +43,7 @@ export function isObjectOrAncestorLocked(object: THREE.Object3D): boolean {
  * @param objects Objects to filter.
  * @returns Unlocked objects only.
  */
-export function filterUnlockedObjects<T extends THREE.Object3D>(
-  objects: readonly T[]
-): T[] {
+export function filterUnlockedObjects<T extends THREE.Object3D>(objects: readonly T[]): T[] {
   return objects.filter((object) => !isObjectOrAncestorLocked(object));
 }
 

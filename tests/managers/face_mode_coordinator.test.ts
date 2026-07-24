@@ -47,10 +47,7 @@ describe('FaceModeCoordinator', () => {
   beforeEach(() => {
     selectionManager = new SelectionManager();
     worldObject = new THREE.Group();
-    mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     worldObject.add(mesh);
     selectionManager.selectObject(mesh);
     const viewport = new MockViewport();
@@ -64,17 +61,17 @@ describe('FaceModeCoordinator', () => {
       worldObject,
       selectionManager,
       statusBar: {
-        setSelectionModeInfo: () => undefined
+        setSelectionModeInfo: () => undefined,
       } as never,
       keyboardShortcutHandler: {
         setOnSelectionModeToggle: () => undefined,
         setOnExtrudeFaces: () => undefined,
-        isKeyDown: () => false
+        isKeyDown: () => false,
       } as never,
       showStatusMessage: vi.fn(),
       syncPrimitivesToViewports: () => undefined,
       updateShadingMeshes: () => undefined,
-      refreshOutliner: () => undefined
+      refreshOutliner: () => undefined,
     });
   });
 
@@ -92,8 +89,6 @@ describe('FaceModeCoordinator', () => {
   it('should not reintroduce object selection requirement in face mode', () => {
     coordinator.getFaceExtrusionController().setSelectionMode(SelectionMode.FACE);
     expect(selectionManager.getSelectedObjects().size).toBe(0);
-    expect(coordinator.getFaceExtrusionController().getSelectionMode()).toBe(
-      SelectionMode.FACE
-    );
+    expect(coordinator.getFaceExtrusionController().getSelectionMode()).toBe(SelectionMode.FACE);
   });
 });

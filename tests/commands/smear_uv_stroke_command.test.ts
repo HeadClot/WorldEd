@@ -36,13 +36,11 @@ describe('SmearUvStrokeCommand', () => {
     setFaceTextureMaps(result, [
       {
         triangleIndices: [0, 1],
-        mapping: smeared
-      }
+        mapping: smeared,
+      },
     ]);
     const after = SmearUvStrokeCommand.captureMesh(result);
-    expect(after.solidBrushUvs![0].faceMappings[0]?.textureId).toBe(
-      'smeared.png'
-    );
+    expect(after.solidBrushUvs![0].faceMappings[0]?.textureId).toBe('smeared.png');
 
     const stack = new CommandStack(16);
     stack.recordExecuted(new SmearUvStrokeCommand([before], [after]));
@@ -77,14 +75,8 @@ describe('SmearUvStrokeCommand', () => {
   });
 
   it('undo restores UV maps on a plain mesh without solid brushes', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
-    mesh.geometry.setAttribute(
-      'uv',
-      new THREE.BufferAttribute(new Float32Array(24).fill(0.25), 2)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    mesh.geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(24).fill(0.25), 2));
     const before = SmearUvStrokeCommand.captureMesh(mesh);
     const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
     (uv.array as Float32Array).fill(0.9);
@@ -96,8 +88,6 @@ describe('SmearUvStrokeCommand', () => {
     const restored = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
     expect(restored.getX(0)).toBeCloseTo(0.25, 5);
     stack.redo();
-    expect(
-      (mesh.geometry.getAttribute('uv') as THREE.BufferAttribute).getX(0)
-    ).toBeCloseTo(0.9, 5);
+    expect((mesh.geometry.getAttribute('uv') as THREE.BufferAttribute).getX(0)).toBeCloseTo(0.9, 5);
   });
 });

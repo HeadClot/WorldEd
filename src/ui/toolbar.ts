@@ -66,11 +66,7 @@ export class Toolbar {
    * @param onClick Click handler.
    * @returns The created button element.
    */
-  addIconButton(
-    label: string,
-    iconSvg: string,
-    onClick: () => void
-  ): HTMLButtonElement {
+  addIconButton(label: string, iconSvg: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.title = label;
@@ -89,10 +85,7 @@ export class Toolbar {
    * @param items The menu item labels, handlers, and optional enablement.
    * @returns The header button element.
    */
-  addDropdown(
-    label: string,
-    items: ToolbarDropdownItem[]
-  ): HTMLButtonElement {
+  addDropdown(label: string, items: ToolbarDropdownItem[]): HTMLButtonElement {
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
     wrapper.style.display = 'inline-flex';
@@ -387,10 +380,7 @@ export class Toolbar {
    * @param entry Menu item button.
    * @param enabled Whether the item can be activated.
    */
-  private applyDropdownItemEnabledState(
-    entry: HTMLButtonElement,
-    enabled: boolean
-  ): void {
+  private applyDropdownItemEnabledState(entry: HTMLButtonElement, enabled: boolean): void {
     entry.disabled = !enabled;
     entry.style.opacity = enabled ? '1' : '0.4';
     entry.style.cursor = enabled ? 'pointer' : 'default';

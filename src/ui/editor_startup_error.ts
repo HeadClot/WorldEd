@@ -5,10 +5,7 @@ import { Theme } from '../theme.js';
  * @param container Root editor container.
  * @param error Failure thrown during editor startup.
  */
-export function showEditorStartupError(
-  container: HTMLElement,
-  error: unknown
-): void {
+export function showEditorStartupError(container: HTMLElement, error: unknown): void {
   const overlay = createStartupErrorOverlay(error);
   container.style.position = 'relative';
   container.appendChild(overlay);

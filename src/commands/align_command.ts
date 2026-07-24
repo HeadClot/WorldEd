@@ -23,10 +23,7 @@ export class AlignCommand implements UndoCommand {
    * @param snapshots The position snapshots of all affected meshes.
    * @param targetPositions The target position for each mesh after alignment.
    */
-  constructor(
-    snapshots: ObjectAlignSnapshot[],
-    targetPositions: Map<THREE.Mesh, THREE.Vector3>
-  ) {
+  constructor(snapshots: ObjectAlignSnapshot[], targetPositions: Map<THREE.Mesh, THREE.Vector3>) {
     this.snapshots = snapshots;
     this.targetPositions = targetPositions;
   }

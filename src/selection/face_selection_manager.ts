@@ -45,14 +45,12 @@ export class FaceSelectionManager {
     mesh: THREE.Mesh,
     faceIndex: number,
     addToSelection: boolean,
-    expandFace: boolean = true
+    expandFace: boolean = true,
   ): void {
     if (!addToSelection) {
       this.selectedFaces = [];
     }
-    const faceIndices = expandFace
-      ? expandFaceSelectionIndices(mesh, faceIndex)
-      : [faceIndex];
+    const faceIndices = expandFace ? expandFaceSelectionIndices(mesh, faceIndex) : [faceIndex];
     let changed = false;
     faceIndices.forEach((index) => {
       if (this.isFaceSelected(mesh, index)) return;
@@ -81,7 +79,7 @@ export class FaceSelectionManager {
   removeFace(mesh: THREE.Mesh, faceIndex: number): void {
     const initialLength = this.selectedFaces.length;
     this.selectedFaces = this.selectedFaces.filter(
-      (entry) => !(entry.mesh === mesh && entry.faceIndex === faceIndex)
+      (entry) => !(entry.mesh === mesh && entry.faceIndex === faceIndex),
     );
     if (this.selectedFaces.length !== initialLength) {
       this.notifyChange();
@@ -111,9 +109,7 @@ export class FaceSelectionManager {
    * @returns True if the face is in the selection.
    */
   isFaceSelected(mesh: THREE.Mesh, faceIndex: number): boolean {
-    return this.selectedFaces.some(
-      (entry) => entry.mesh === mesh && entry.faceIndex === faceIndex
-    );
+    return this.selectedFaces.some((entry) => entry.mesh === mesh && entry.faceIndex === faceIndex);
   }
 
   /**

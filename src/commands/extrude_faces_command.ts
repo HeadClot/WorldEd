@@ -93,9 +93,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
    * Disposes a material or material array.
    * @param material Material(s) to dispose.
    */
-  private disposeMaterial(
-    material: THREE.Material | THREE.Material[]
-  ): void {
+  private disposeMaterial(material: THREE.Material | THREE.Material[]): void {
     if (Array.isArray(material)) {
       material.forEach((entry) => entry.dispose());
       return;

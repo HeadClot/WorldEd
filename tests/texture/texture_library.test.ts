@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TextureLibrary } from '../../src/texture/texture_library.js';
 import {
   TextureBrowserEntry,
-  createTextureBrowserEntry
+  createTextureBrowserEntry,
 } from '../../src/texture/texture_browser_entry.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
 import { mockObjectUrlApis } from './object_url_test_utils.js';
@@ -28,10 +28,7 @@ describe('TextureLibrary', () => {
   });
 
   it('should keep checker first when a folder is loaded', () => {
-    const entries = [
-      createEntry('b.png', 'b.png'),
-      createEntry('a.png', 'a.png')
-    ];
+    const entries = [createEntry('b.png', 'b.png'), createEntry('a.png', 'a.png')];
     library.replaceAll('MyFolder', entries);
     expect(library.getFolderName()).toBe('MyFolder');
     expect(library.getEntryCount()).toBe(3);
@@ -53,7 +50,7 @@ describe('TextureLibrary', () => {
   it('should select by id only when the entry exists', () => {
     library.replaceAll('Folder', [
       createEntry('one.png', 'one.png'),
-      createEntry('two.png', 'two.png')
+      createEntry('two.png', 'two.png'),
     ]);
     expect(library.selectById('two.png')).toBe(true);
     expect(library.getSelectedEntry()?.displayName).toBe('two');
@@ -80,6 +77,6 @@ describe('TextureLibrary', () => {
 function createEntry(fileName: string, relativePath: string): TextureBrowserEntry {
   return createTextureBrowserEntry(
     new File(['img'], fileName, { type: 'image/png' }),
-    relativePath
+    relativePath,
   );
 }

@@ -17,7 +17,7 @@ import { ClipPlaneTool } from './clip_plane_tool.js';
 import { TerrainGenerator } from '../terrain/terrain_generator.js';
 import {
   DEFAULT_COMMAND_STACK_MAX_SIZE,
-  DEFAULT_GRID_SNAP_INTERVAL
+  DEFAULT_GRID_SNAP_INTERVAL,
 } from '../types/editor_config.js';
 
 /**
@@ -64,7 +64,7 @@ export function createLayoutCoreSystems(): LayoutCoreSystems {
     textureLock,
     clipPlaneTool: new ClipPlaneTool(),
     terrainGenerator: new TerrainGenerator(),
-    userSnapEnabled: true
+    userSnapEnabled: true,
   };
 }
 
@@ -74,12 +74,7 @@ export function createLayoutCoreSystems(): LayoutCoreSystems {
  */
 function createRuntimeState(): Pick<
   LayoutCoreSystems,
-  | 'inputManager'
-  | 'lastTime'
-  | 'animationFrameId'
-  | 'resizeObserver'
-  | 'isDisposed'
-  | 'isRunning'
+  'inputManager' | 'lastTime' | 'animationFrameId' | 'resizeObserver' | 'isDisposed' | 'isRunning'
 > {
   return {
     inputManager: new InputManager(),
@@ -87,7 +82,7 @@ function createRuntimeState(): Pick<
     animationFrameId: null,
     resizeObserver: null,
     isDisposed: false,
-    isRunning: false
+    isRunning: false,
   };
 }
 
@@ -99,22 +94,16 @@ function createRuntimeState(): Pick<
  */
 function createSceneRootServices(
   worldObject: THREE.Group,
-  commandStack: CommandStack
+  commandStack: CommandStack,
 ): Pick<
   LayoutCoreSystems,
-  | 'worldObject'
-  | 'selectionManager'
-  | 'primitiveTool'
-  | 'hierarchyReparentHandler'
+  'worldObject' | 'selectionManager' | 'primitiveTool' | 'hierarchyReparentHandler'
 > {
   return {
     worldObject,
     selectionManager: new SelectionManager(),
     primitiveTool: new PrimitiveCreationTool(worldObject),
-    hierarchyReparentHandler: new HierarchyReparentHandler(
-      worldObject,
-      commandStack
-    )
+    hierarchyReparentHandler: new HierarchyReparentHandler(worldObject, commandStack),
   };
 }
 
@@ -152,7 +141,7 @@ function createSnapAndTransformStack(): Pick<
       gizmoRaycaster,
       transformExecutor,
       transformConstraint,
-      commandStack
-    )
+      commandStack,
+    ),
   };
 }

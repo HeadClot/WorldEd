@@ -59,7 +59,7 @@ export class BoundsResizeCommand implements UndoCommand {
       originalPosition: snapshot.originalPosition.clone(),
       originalScale: snapshot.originalScale.clone(),
       finalPosition: snapshot.finalPosition.clone(),
-      finalScale: snapshot.finalScale.clone()
+      finalScale: snapshot.finalScale.clone(),
     };
   }
 }

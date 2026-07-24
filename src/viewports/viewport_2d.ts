@@ -42,7 +42,12 @@ export class Viewport2D extends BaseViewport {
    * @param plane The grid plane orientation for this viewport.
    * @param cameraPosition The camera position for the orthographic view.
    */
-  constructor(container: HTMLElement, name: string, plane: GridPlane, cameraPosition: THREE.Vector3) {
+  constructor(
+    container: HTMLElement,
+    name: string,
+    plane: GridPlane,
+    cameraPosition: THREE.Vector3,
+  ) {
     super(container, name, ShadingMode.WIREFRAME);
     this.gridPlane = plane;
     this.grids = new Grids(50, 50, plane, 'orthographic');
@@ -146,17 +151,17 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-    * Sets the callback to handle transform gizmo pointer events.
-    * @param callback The transform event handler function.
-    */
+   * Sets the callback to handle transform gizmo pointer events.
+   * @param callback The transform event handler function.
+   */
   setTransformCallback(callback: TransformCallback): void {
     this.transformCallback = callback;
   }
 
   /**
-    * Sets the callback to handle face selection pointer events.
-    * @param callback The face selection event handler function.
-    */
+   * Sets the callback to handle face selection pointer events.
+   * @param callback The face selection event handler function.
+   */
   setFaceSelectionCallback(callback: (event: MouseEvent) => boolean): void {
     this.faceSelectionCallback = callback;
   }
@@ -231,11 +236,10 @@ export class Viewport2D extends BaseViewport {
       this.camera,
       this.renderer,
       event,
-      objects
+      objects,
     );
-    return SelectionClickThrough.uniqueMeshesFromHits(
-      intersections,
-      (mesh) => this.resolveClickedMesh(mesh)
+    return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) =>
+      this.resolveClickedMesh(mesh),
     );
   }
 
@@ -249,7 +253,7 @@ export class Viewport2D extends BaseViewport {
   private resolvePickFromStack(
     stack: THREE.Mesh[],
     additive: boolean,
-    toggle: boolean
+    toggle: boolean,
   ): THREE.Mesh | null {
     if (stack.length === 0 || !this.selectionManager) return null;
     if (additive || toggle) return stack[0];
@@ -284,14 +288,9 @@ export class Viewport2D extends BaseViewport {
    * @param plane Grid plane for this viewport.
    * @returns A configured orthographic camera looking at the default focus.
    */
-  private createCamera(
-    position: THREE.Vector3,
-    plane: GridPlane
-  ): THREE.OrthographicCamera {
+  private createCamera(position: THREE.Vector3, plane: GridPlane): THREE.OrthographicCamera {
     const extent = DEFAULT_ORTHO_HALF_EXTENT;
-    const camera = new THREE.OrthographicCamera(
-      -extent, extent, extent, -extent, 0.1, 1000
-    );
+    const camera = new THREE.OrthographicCamera(-extent, extent, extent, -extent, 0.1, 1000);
     camera.position.copy(position);
     this.applyPlaneCameraUp(camera, plane);
     const focus = getDefaultSceneFocus();
@@ -305,10 +304,7 @@ export class Viewport2D extends BaseViewport {
    * @param camera Orthographic camera to configure.
    * @param plane Viewport grid plane.
    */
-  private applyPlaneCameraUp(
-    camera: THREE.OrthographicCamera,
-    plane: GridPlane
-  ): void {
+  private applyPlaneCameraUp(camera: THREE.OrthographicCamera, plane: GridPlane): void {
     if (plane === 'xz') {
       camera.up.set(0, 0, -1);
       return;
@@ -320,11 +316,7 @@ export class Viewport2D extends BaseViewport {
    * Attaches orthographic pan and wheel-zoom handling to the canvas.
    */
   private setupPanHandler(): void {
-    new OrthoPanHandler(
-      this.renderer.domElement,
-      this.camera,
-      (factor) => this.zoom(factor)
-    );
+    new OrthoPanHandler(this.renderer.domElement, this.camera, (factor) => this.zoom(factor));
   }
 
   /**
@@ -338,7 +330,7 @@ export class Viewport2D extends BaseViewport {
     if (Math.abs(safeFactor - 1) < 1e-12) return;
     const centerX = (this.camera.left + this.camera.right) / 2;
     const centerY = (this.camera.top + this.camera.bottom) / 2;
-    const halfWidth = (this.camera.right - this.camera.left) * safeFactor / 2;
+    const halfWidth = ((this.camera.right - this.camera.left) * safeFactor) / 2;
     const halfHeight = currentHalfHeight * safeFactor;
     this.camera.left = centerX - halfWidth;
     this.camera.right = centerX + halfWidth;
@@ -391,7 +383,7 @@ export class Viewport2D extends BaseViewport {
       left: this.camera.left,
       right: this.camera.right,
       top: this.camera.top,
-      bottom: this.camera.bottom
+      bottom: this.camera.bottom,
     };
   }
 

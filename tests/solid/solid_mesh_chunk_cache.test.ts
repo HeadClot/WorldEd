@@ -17,18 +17,9 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
  * @param position Optional position.
  * @returns Brush instance.
  */
-function makeBox(
-  id: string,
-  size: number,
-  position?: THREE.Vector3
-): SolidBrushInstance {
+function makeBox(id: string, size: number, position?: THREE.Vector3): SolidBrushInstance {
   const brush = SolidBrushFactory.createCenteredBox(size, size, size);
-  const instance = new SolidBrushInstance(
-    id,
-    id,
-    brush,
-    SolidOperation.Additive
-  );
+  const instance = new SolidBrushInstance(id, id, brush, SolidOperation.Additive);
   if (position) instance.position.copy(position);
   return instance;
 }
@@ -41,7 +32,7 @@ describe('Solid mesh chunk cache', () => {
     const brushes = [
       makeBox('a', 2, new THREE.Vector3(0, 0, 0)),
       makeBox('b', 2, new THREE.Vector3(5, 0, 0)),
-      makeBox('c', 2, new THREE.Vector3(10, 0, 0))
+      makeBox('c', 2, new THREE.Vector3(10, 0, 0)),
     ];
     const compiler = new SolidCsgCompiler();
     const cache = new SolidMeshChunkCache();
@@ -52,17 +43,13 @@ describe('Solid mesh chunk cache', () => {
       const polygons = compiler.getCachedPolygons(brushId) ?? [];
       cache.set(
         brushId,
-        builder.build(
-          polygons,
-          () => createDefaultFaceTextureMapping(),
-          { stickToBrush: false, resultWorldMatrix: identity }
-        )
+        builder.build(polygons, () => createDefaultFaceTextureMapping(), {
+          stickToBrush: false,
+          resultWorldMatrix: identity,
+        }),
       );
     }
-    const before = SolidResultAssembler.assemble(
-      compiler.getLastBrushOrder(),
-      cache
-    );
+    const before = SolidResultAssembler.assemble(compiler.getLastBrushOrder(), cache);
     expect(before.triangleCount).toBeGreaterThan(0);
 
     brushes[1].position.x += 0.5;
@@ -76,14 +63,11 @@ describe('Solid mesh chunk cache', () => {
         builder.build(
           compiler.getCachedPolygons(brushId) ?? [],
           () => createDefaultFaceTextureMapping(),
-          { stickToBrush: false, resultWorldMatrix: identity }
-        )
+          { stickToBrush: false, resultWorldMatrix: identity },
+        ),
       );
     }
-    const partial = SolidResultAssembler.assemble(
-      compiler.getLastBrushOrder(),
-      cache
-    );
+    const partial = SolidResultAssembler.assemble(compiler.getLastBrushOrder(), cache);
     const fullCompiler = new SolidCsgCompiler();
     fullCompiler.compile(brushes, { forceFull: true });
     const fullCache = new SolidMeshChunkCache();
@@ -93,14 +77,11 @@ describe('Solid mesh chunk cache', () => {
         builder.build(
           fullCompiler.getCachedPolygons(brushId) ?? [],
           () => createDefaultFaceTextureMapping(),
-          { stickToBrush: false, resultWorldMatrix: identity }
-        )
+          { stickToBrush: false, resultWorldMatrix: identity },
+        ),
       );
     }
-    const full = SolidResultAssembler.assemble(
-      fullCompiler.getLastBrushOrder(),
-      fullCache
-    );
+    const full = SolidResultAssembler.assemble(fullCompiler.getLastBrushOrder(), fullCache);
     expect(partial.triangleCount).toBe(full.triangleCount);
     expect(partial.positions.length).toBe(full.positions.length);
     for (let index = 0; index < partial.positions.length; index++) {

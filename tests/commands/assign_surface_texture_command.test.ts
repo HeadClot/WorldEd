@@ -3,21 +3,18 @@ import * as THREE from 'three';
 import { AssignSurfaceTextureCommand } from '../../src/commands/assign_surface_texture_command.js';
 import {
   buildTargetsFromMeshes,
-  initializeMeshTextureUVs
+  initializeMeshTextureUVs,
 } from '../../src/texture/face_texture_applier.js';
-import {
-  getFaceTextureMaps,
-  setFaceTextureMaps
-} from '../../src/texture/face_texture_storage.js';
+import { getFaceTextureMaps, setFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
 import {
   setTexturePaintStateForTests,
-  TexturePaintState
+  TexturePaintState,
 } from '../../src/texture/texture_paint_state.js';
 import {
   setTextureMapCacheForTests,
-  TextureMapCache
+  TextureMapCache,
 } from '../../src/texture/texture_map_cache.js';
 
 describe('AssignSurfaceTextureCommand', () => {
@@ -32,10 +29,7 @@ describe('AssignSurfaceTextureCommand', () => {
   });
 
   it('should assign texture id on execute and restore on undo', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      createContentMaterial(0x888888)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0x888888));
     mesh.position.set(0, 0.5, 0);
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);
@@ -55,15 +49,12 @@ describe('AssignSurfaceTextureCommand', () => {
   });
 
   it('should preserve UV scale when only the texture id changes', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      createContentMaterial(0x888888)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0x888888));
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);
     const mapsBefore = getFaceTextureMaps(mesh).map((entry) => ({
       triangleIndices: entry.triangleIndices.slice(),
-      mapping: { ...entry.mapping, scaleU: 2.5 }
+      mapping: { ...entry.mapping, scaleU: 2.5 },
     }));
     setFaceTextureMaps(mesh, mapsBefore);
     const targets = buildTargetsFromMeshes([mesh]);

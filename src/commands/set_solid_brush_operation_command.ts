@@ -53,10 +53,7 @@ export class SetSolidBrushOperationCommand implements UndoCommand {
   undo(): void {
     if (!this.executed) return;
     for (const snapshot of this.snapshots) {
-      snapshot.model.setBrushOperation(
-        snapshot.brushId,
-        snapshot.previousOperation
-      );
+      snapshot.model.setBrushOperation(snapshot.brushId, snapshot.previousOperation);
     }
     this.snapshots = [];
     this.executed = false;
@@ -75,7 +72,7 @@ export class SetSolidBrushOperationCommand implements UndoCommand {
     this.snapshots.push({
       model,
       brushId: brush.id,
-      previousOperation: brush.operation
+      previousOperation: brush.operation,
     });
     model.setBrushOperation(brush.id, this.operation);
   }

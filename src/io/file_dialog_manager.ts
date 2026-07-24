@@ -8,8 +8,10 @@
  * @returns True if showSaveFilePicker or showOpenFilePicker exist.
  */
 function isFileSystemAccessAvailable(): boolean {
-  return typeof window !== 'undefined'
-    && ('showSaveFilePicker' in window || 'showOpenFilePicker' in window);
+  return (
+    typeof window !== 'undefined' &&
+    ('showSaveFilePicker' in window || 'showOpenFilePicker' in window)
+  );
 }
 
 /**
@@ -104,7 +106,7 @@ export class FileDialogManager {
   async loadTextFile(
     accept: string,
     description: string,
-    extensions: string[]
+    extensions: string[],
   ): Promise<{ text: string; filename: string } | null> {
     if (!isFileSystemAccessAvailable()) {
       return this.loadTextFileFallback(accept);
@@ -139,10 +141,12 @@ export class FileDialogManager {
     try {
       const handle = await (window as any).showSaveFilePicker({
         suggestedName: suggestedName,
-        types: [{
-          description: 'Scene JSON',
-          accept: { 'application/json': ['.json'] }
-        }]
+        types: [
+          {
+            description: 'Scene JSON',
+            accept: { 'application/json': ['.json'] },
+          },
+        ],
       });
       const writable = await handle.createWritable();
       await writable.write(data);
@@ -163,10 +167,12 @@ export class FileDialogManager {
     }
     try {
       const [handle] = await (window as any).showOpenFilePicker({
-        types: [{
-          description: 'Scene JSON',
-          accept: { 'application/json': ['.json'] }
-        }]
+        types: [
+          {
+            description: 'Scene JSON',
+            accept: { 'application/json': ['.json'] },
+          },
+        ],
       });
       const file = await handle.getFile();
       return await readFileAsText(file);
@@ -183,7 +189,7 @@ export class FileDialogManager {
    */
   private async saveBinaryWithAPI(
     buffer: ArrayBuffer,
-    suggestedName: string
+    suggestedName: string,
   ): Promise<string | null> {
     if (!('showSaveFilePicker' in window)) {
       return null;
@@ -191,10 +197,12 @@ export class FileDialogManager {
     try {
       const handle = await (window as any).showSaveFilePicker({
         suggestedName: suggestedName,
-        types: [{
-          description: 'GLB File',
-          accept: { 'model/gltf-binary': ['.glb'] }
-        }]
+        types: [
+          {
+            description: 'GLB File',
+            accept: { 'model/gltf-binary': ['.glb'] },
+          },
+        ],
       });
       const writable = await handle.createWritable();
       await writable.write(buffer);
@@ -226,9 +234,7 @@ export class FileDialogManager {
    * @returns The JSON string or null on failure.
    */
   private loadJSONFallback(): Promise<string | null> {
-    return this.loadTextFileFallback('.json').then((result) =>
-      result ? result.text : null
-    );
+    return this.loadTextFileFallback('.json').then((result) => (result ? result.text : null));
   }
 
   /**
@@ -239,17 +245,19 @@ export class FileDialogManager {
    */
   private async loadTextFileWithAPI(
     description: string,
-    extensions: string[]
+    extensions: string[],
   ): Promise<{ text: string; filename: string } | null> {
     if (!('showOpenFilePicker' in window)) {
       return null;
     }
     try {
       const [handle] = await (window as any).showOpenFilePicker({
-        types: [{
-          description,
-          accept: { 'text/plain': extensions }
-        }]
+        types: [
+          {
+            description,
+            accept: { 'text/plain': extensions },
+          },
+        ],
       });
       const file = await handle.getFile();
       const text = await readFileAsText(file);
@@ -264,9 +272,7 @@ export class FileDialogManager {
    * @param accept Accept attribute for the input.
    * @returns Text and filename, or null.
    */
-  private loadTextFileFallback(
-    accept: string
-  ): Promise<{ text: string; filename: string } | null> {
+  private loadTextFileFallback(accept: string): Promise<{ text: string; filename: string } | null> {
     return new Promise((resolve) => {
       try {
         const input = document.createElement('input');
@@ -287,7 +293,7 @@ export class FileDialogManager {
    */
   private handleFallbackTextFileSelect(
     input: HTMLInputElement,
-    resolve: (result: { text: string; filename: string } | null) => void
+    resolve: (result: { text: string; filename: string } | null) => void,
   ): void {
     const file = input.files?.[0];
     if (!file) {

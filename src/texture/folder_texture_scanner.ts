@@ -1,12 +1,6 @@
 import { isImageFileName } from './image_file_filter.js';
-import {
-  PickedDirectoryFile,
-  PickedDirectoryListing
-} from './local_directory_access.js';
-import {
-  TextureBrowserEntry,
-  createTextureBrowserEntry
-} from './texture_browser_entry.js';
+import { PickedDirectoryFile, PickedDirectoryListing } from './local_directory_access.js';
+import { TextureBrowserEntry, createTextureBrowserEntry } from './texture_browser_entry.js';
 
 /**
  * Result of scanning a picked directory for image textures.
@@ -27,21 +21,17 @@ export class FolderTextureScanner {
    * @returns Scan result with image entries only.
    */
   scanListing(listing: PickedDirectoryListing): FolderTextureScanResult {
-    const imageFiles = listing.files.filter((entry) =>
-      isImageFileName(entry.name)
-    );
-    const entries = imageFiles.map((entry) =>
-      this.createEntryFromPickedFile(entry)
-    );
+    const imageFiles = listing.files.filter((entry) => isImageFileName(entry.name));
+    const entries = imageFiles.map((entry) => this.createEntryFromPickedFile(entry));
     entries.sort((a, b) =>
       a.displayName.localeCompare(b.displayName, undefined, {
-        sensitivity: 'base'
-      })
+        sensitivity: 'base',
+      }),
     );
     return {
       folderName: listing.folderName,
       entries,
-      skippedNonImageCount: listing.files.length - imageFiles.length
+      skippedNonImageCount: listing.files.length - imageFiles.length,
     };
   }
 
@@ -50,9 +40,7 @@ export class FolderTextureScanner {
    * @param picked File from the directory walk.
    * @returns Texture browser entry.
    */
-  private createEntryFromPickedFile(
-    picked: PickedDirectoryFile
-  ): TextureBrowserEntry {
+  private createEntryFromPickedFile(picked: PickedDirectoryFile): TextureBrowserEntry {
     return createTextureBrowserEntry(picked.file, picked.relativePath);
   }
 }

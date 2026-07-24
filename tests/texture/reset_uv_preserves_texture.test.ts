@@ -5,7 +5,7 @@ import {
   applyTextureIdToTargets,
   buildTargetsFromMeshes,
   initializeMeshTextureUVs,
-  resetUvParamsOnTargets
+  resetUvParamsOnTargets,
 } from '../../src/texture/face_texture_applier.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { computeRegionWorldNormal } from '../../src/texture/planar_uv_projector.js';
@@ -14,11 +14,11 @@ import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
 import {
   setTexturePaintStateForTests,
-  TexturePaintState
+  TexturePaintState,
 } from '../../src/texture/texture_paint_state.js';
 import {
   setTextureMapCacheForTests,
-  TextureMapCache
+  TextureMapCache,
 } from '../../src/texture/texture_map_cache.js';
 
 describe('reset UV preserves texture assignment', () => {
@@ -33,10 +33,7 @@ describe('reset UV preserves texture assignment', () => {
   });
 
   it('should reset scale/offset while keeping texture id', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      createContentMaterial(0x888888)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0x888888));
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);
     const targets = buildTargetsFromMeshes([mesh]);
@@ -57,10 +54,7 @@ describe('reset UV preserves texture assignment', () => {
   });
 
   it('should support undoable resetUvOnly command without clearing texture', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      createContentMaterial(0x888888)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0x888888));
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);
     const targets = buildTargetsFromMeshes([mesh]);
@@ -69,7 +63,7 @@ describe('reset UV preserves texture assignment', () => {
     scaled.scaleU = 3;
     new ApplyFaceTextureCommand(targets, scaled).execute();
     const reset = new ApplyFaceTextureCommand(targets, createDefaultFaceTextureMapping(), {
-      resetUvOnly: true
+      resetUvOnly: true,
     });
     reset.execute();
     expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe('floor.png');
@@ -83,7 +77,7 @@ describe('reset UV preserves texture assignment', () => {
     const segments = 8;
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(1, 1, 2, segments),
-      createContentMaterial(0x888888)
+      createContentMaterial(0x888888),
     );
     mesh.position.set(0, 1, 0);
     mesh.updateMatrixWorld(true);
@@ -108,7 +102,7 @@ describe('reset UV preserves texture assignment', () => {
           const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
           return Math.abs(normal.y) <= 0.35;
         })
-        .map((entry) => entry.mapping.offsetU.toFixed(5))
+        .map((entry) => entry.mapping.offsetU.toFixed(5)),
     );
     expect(uniqueSideOffsets.size).toBe(segments);
   });

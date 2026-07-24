@@ -62,7 +62,7 @@ describe('CameraWidget ArrowHelper setup', () => {
       TEST_ARROW_LENGTH,
       Theme.widgetXAxisColor,
       TEST_HEAD_LENGTH,
-      TEST_HEAD_WIDTH
+      TEST_HEAD_WIDTH,
     );
 
     const extractedDir = new THREE.Vector3(0, 1, 0).applyQuaternion(arrow.quaternion);
@@ -79,7 +79,7 @@ describe('CameraWidget ArrowHelper setup', () => {
       TEST_ARROW_LENGTH,
       Theme.widgetYAxisColor,
       TEST_HEAD_LENGTH,
-      TEST_HEAD_WIDTH
+      TEST_HEAD_WIDTH,
     );
 
     const extractedDir = new THREE.Vector3(0, 1, 0).applyQuaternion(arrow.quaternion);
@@ -96,7 +96,7 @@ describe('CameraWidget ArrowHelper setup', () => {
       TEST_ARROW_LENGTH,
       Theme.widgetZAxisColor,
       TEST_HEAD_LENGTH,
-      TEST_HEAD_WIDTH
+      TEST_HEAD_WIDTH,
     );
 
     const extractedDir = new THREE.Vector3(0, 1, 0).applyQuaternion(arrow.quaternion);
@@ -112,7 +112,7 @@ describe('CameraWidget ArrowHelper setup', () => {
       TEST_ARROW_LENGTH,
       Theme.widgetXAxisColor,
       TEST_HEAD_LENGTH,
-      TEST_HEAD_WIDTH
+      TEST_HEAD_WIDTH,
     );
     const lineMat = arrow.line.material as THREE.LineBasicMaterial;
     expect(lineMat.color.getHex()).toBe(Theme.widgetXAxisColor);
@@ -125,7 +125,7 @@ describe('CameraWidget ArrowHelper setup', () => {
       TEST_ARROW_LENGTH,
       Theme.widgetYAxisColor,
       TEST_HEAD_LENGTH,
-      TEST_HEAD_WIDTH
+      TEST_HEAD_WIDTH,
     );
     const coneMat = arrow.cone.material as THREE.MeshBasicMaterial;
     expect(coneMat.color.getHex()).toBe(Theme.widgetYAxisColor);
@@ -145,7 +145,7 @@ describe('CameraWidget ArrowHelper setup', () => {
         TEST_ARROW_LENGTH,
         color,
         TEST_HEAD_LENGTH,
-        TEST_HEAD_WIDTH
+        TEST_HEAD_WIDTH,
       );
       const extractedDir = new THREE.Vector3(0, 0, 1).applyQuaternion(arrow.quaternion);
       expect(extractedDir.length()).toBeCloseTo(1);
@@ -175,7 +175,7 @@ describe('CameraWidget widget scene composition', () => {
         TEST_ARROW_LENGTH,
         color,
         TEST_HEAD_LENGTH,
-        TEST_HEAD_WIDTH
+        TEST_HEAD_WIDTH,
       );
       scene.add(arrow);
     });

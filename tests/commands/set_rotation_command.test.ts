@@ -10,12 +10,12 @@ describe('SetRotationCommand', () => {
   beforeEach(() => {
     mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh1.rotation.set(0, 0, 0);
     mesh2 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh2.rotation.set(1, 2, 3);
   });
@@ -105,10 +105,7 @@ describe('SetRotationCommand', () => {
   it('should handle multiple objects with different rotations', () => {
     const rot1 = new THREE.Euler(1, 0, 0);
     const rot2 = new THREE.Euler(0, 2, 0);
-    const command = new SetRotationCommand(
-      [mesh1, mesh2],
-      [rot1, rot2]
-    );
+    const command = new SetRotationCommand([mesh1, mesh2], [rot1, rot2]);
     command.execute();
     expect(mesh1.rotation.x).toBeCloseTo(1);
     expect(mesh2.rotation.y).toBeCloseTo(2);

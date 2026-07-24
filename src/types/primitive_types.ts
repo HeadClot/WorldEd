@@ -6,5 +6,5 @@ export enum PrimitiveType {
   CUBE = 'cube',
   SPHERE = 'sphere',
   CYLINDER = 'cylinder',
-  PLANE = 'plane'
+  PLANE = 'plane',
 }

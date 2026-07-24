@@ -37,7 +37,7 @@ export class GizmoRaycaster {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    gizmoGroup: THREE.Group
+    gizmoGroup: THREE.Group,
   ): GizmoHandle | null {
     if (!this.isGizmoPickable(gizmoGroup)) return null;
     this.prepareCameraAndGroup(camera, gizmoGroup);
@@ -63,10 +63,7 @@ export class GizmoRaycaster {
    * @param camera The camera used for the ray.
    * @param gizmoGroup The gizmo group that will be tested.
    */
-  private prepareCameraAndGroup(
-    camera: THREE.Camera,
-    gizmoGroup: THREE.Group
-  ): void {
+  private prepareCameraAndGroup(camera: THREE.Camera, gizmoGroup: THREE.Group): void {
     camera.updateMatrixWorld(true);
     gizmoGroup.updateMatrixWorld(true);
   }
@@ -80,7 +77,7 @@ export class GizmoRaycaster {
   private setRayFromEvent(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
+    renderer: THREE.WebGLRenderer,
   ): void {
     pointerEventToNdc(event, renderer.domElement, this.ndcVector);
     this.raycaster.setFromCamera(this.ndcVector, camera);
@@ -112,7 +109,7 @@ export class GizmoRaycaster {
    */
   private findFirstHandleHit(
     handles: GizmoHandle[],
-    intersections: THREE.Intersection[]
+    intersections: THREE.Intersection[],
   ): GizmoHandle | null {
     for (const hit of intersections) {
       if (!(hit.object instanceof THREE.Mesh)) continue;
@@ -134,7 +131,7 @@ export class GizmoRaycaster {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    distance: number
+    distance: number,
   ): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
     this.setRayFromEvent(event, camera, renderer);
@@ -179,7 +176,7 @@ export class GizmoRaycaster {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    plane: THREE.Plane
+    plane: THREE.Plane,
   ): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
     this.setRayFromEvent(event, camera, renderer);

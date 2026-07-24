@@ -49,9 +49,7 @@ describe('CsgActionHandler', () => {
     handler.runBoolean(CsgOperation.UNION);
     expect(world.children.length).toBe(childCountBefore);
     expect(commandStack.getUndoCount()).toBe(0);
-    expect(statusMessages.some((message) => message.includes('solid brushes'))).toBe(
-      true
-    );
+    expect(statusMessages.some((message) => message.includes('solid brushes'))).toBe(true);
   });
 
   it('disables mesh CSG when a solid result mesh is selected', () => {
@@ -63,9 +61,7 @@ describe('CsgActionHandler', () => {
     expect(handler.canRunMeshBoolean()).toBe(false);
     handler.runBoolean(CsgOperation.SUBTRACT);
     expect(commandStack.getUndoCount()).toBe(0);
-    expect(statusMessages.some((message) => message.includes('solid model results'))).toBe(
-      true
-    );
+    expect(statusMessages.some((message) => message.includes('solid model results'))).toBe(true);
   });
 
   it('disables mesh CSG when selection mixes regular and brush meshes', () => {
@@ -97,7 +93,7 @@ describe('CsgActionHandler', () => {
 function createRegularMesh(name: string): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshStandardMaterial({ color: 0x888888 })
+    new THREE.MeshStandardMaterial({ color: 0x888888 }),
   );
   mesh.name = name;
   return mesh;

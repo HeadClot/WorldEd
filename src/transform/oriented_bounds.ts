@@ -98,7 +98,7 @@ export class OrientedBoundsBuilder {
     const halfExtents = new THREE.Vector3(
       Math.abs(this.temporarySize.x * this.temporaryScale.x) * 0.5,
       Math.abs(this.temporarySize.y * this.temporaryScale.y) * 0.5,
-      Math.abs(this.temporarySize.z * this.temporaryScale.z) * 0.5
+      Math.abs(this.temporarySize.z * this.temporaryScale.z) * 0.5,
     );
     return { center: worldCenter, quaternion, halfExtents };
   }
@@ -119,7 +119,7 @@ export class OrientedBoundsBuilder {
     return {
       center: this.temporaryCenter.clone(),
       quaternion: new THREE.Quaternion(),
-      halfExtents: this.temporarySize.clone().multiplyScalar(0.5)
+      halfExtents: this.temporarySize.clone().multiplyScalar(0.5),
     };
   }
 
@@ -147,10 +147,7 @@ export class OrientedBoundsBuilder {
    * @returns Fallback local AABB.
    */
   private createUnitLocalBox(): THREE.Box3 {
-    return new THREE.Box3(
-      new THREE.Vector3(-0.5, -0.5, -0.5),
-      new THREE.Vector3(0.5, 0.5, 0.5)
-    );
+    return new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5));
   }
 }
 
@@ -174,10 +171,7 @@ export function getBoundsFaceLocalNormal(face: BoundsFace): THREE.Vector3 {
  * @param face The face to query.
  * @returns Half size along that face's axis.
  */
-export function getBoundsFaceHalfExtent(
-  halfExtents: THREE.Vector3,
-  face: BoundsFace
-): number {
+export function getBoundsFaceHalfExtent(halfExtents: THREE.Vector3, face: BoundsFace): number {
   if (face === BoundsFace.POS_X || face === BoundsFace.NEG_X) {
     return halfExtents.x;
   }
@@ -198,6 +192,6 @@ export function getAllBoundsFaces(): BoundsFace[] {
     BoundsFace.POS_Y,
     BoundsFace.NEG_Y,
     BoundsFace.POS_Z,
-    BoundsFace.NEG_Z
+    BoundsFace.NEG_Z,
   ];
 }

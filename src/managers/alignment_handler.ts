@@ -40,7 +40,7 @@ export class AlignmentHandler {
     alignmentController: AlignmentController,
     commandStack: CommandStack,
     selectionManager: SelectionManager,
-    gridSnap: GridSnap
+    gridSnap: GridSnap,
   ) {
     this.alignmentController = alignmentController;
     this.commandStack = commandStack;
@@ -82,11 +82,7 @@ export class AlignmentHandler {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     if (selected.length === 0) return;
     const axis = this.alignmentController.getAxisRestriction();
-    this.alignmentController.alignToOrigin(
-      selected,
-      axis,
-      this.commandStack
-    );
+    this.alignmentController.alignToOrigin(selected, axis, this.commandStack);
     this.syncViewportsAndShowFeedback('origin', selected.length);
   }
 
@@ -98,12 +94,7 @@ export class AlignmentHandler {
     if (selected.length === 0) return;
     const axis = this.alignmentController.getAxisRestriction();
     const snapInterval = this.gridSnap.getInterval();
-    this.alignmentController.alignCenterToGrid(
-      selected,
-      axis,
-      snapInterval,
-      this.commandStack
-    );
+    this.alignmentController.alignCenterToGrid(selected, axis, snapInterval, this.commandStack);
     this.syncViewportsAndShowFeedback('grid center', selected.length);
   }
 
@@ -117,12 +108,7 @@ export class AlignmentHandler {
     const target = selected[selected.length - 1];
     const sources = selected.slice(0, selected.length - 1);
     const axis = this.alignmentController.getAxisRestriction();
-    this.alignmentController.alignToObject(
-      sources,
-      target,
-      axis,
-      this.commandStack
-    );
+    this.alignmentController.alignToObject(sources, target, axis, this.commandStack);
     this.syncViewportsAndShowFeedback('object', sources.length);
   }
 

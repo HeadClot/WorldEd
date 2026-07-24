@@ -30,9 +30,7 @@ describe('ViewportToolbar', () => {
   });
 
   it('should use the configured viewport toolbar height', () => {
-    expect(toolbar.getElement().style.height).toBe(
-      `${Theme.viewportToolbarHeightPx}px`
-    );
+    expect(toolbar.getElement().style.height).toBe(`${Theme.viewportToolbarHeightPx}px`);
   });
 
   it('should highlight the initial shading mode', () => {

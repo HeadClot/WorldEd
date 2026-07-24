@@ -26,12 +26,10 @@ describe('UV smear solid mapping', () => {
     model.rebuild(true);
     const result = model.getResultMesh();
     const sources = result.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-      | Array<{ brushId: string; surfaceIndex: number }>
-      | undefined;
+      Array<{ brushId: string; surfaceIndex: number }> | undefined;
     expect(sources?.length).toBeGreaterThan(0);
     const seedTriangle = sources!.findIndex(
-      (source) =>
-        source.brushId === brush.id && source.surfaceIndex === 0
+      (source) => source.brushId === brush.id && source.surfaceIndex === 0,
     );
     expect(seedTriangle).toBeGreaterThanOrEqual(0);
 
@@ -63,8 +61,7 @@ describe('UV smear solid mapping', () => {
     model.rebuild(true);
     const result = model.getResultMesh();
     const sources = result.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-      | Array<{ brushId: string; surfaceIndex: number }>
-      | undefined;
+      Array<{ brushId: string; surfaceIndex: number }> | undefined;
     const seedTriangle = sources!.findIndex((s) => s.brushId === brush.id);
     const controller = new UvSmearController(new CommandStack(8));
     controller.beginStroke(result, seedTriangle);
@@ -89,15 +86,14 @@ describe('UV smear solid mapping', () => {
     setFaceTextureMaps(result, [
       {
         triangleIndices: [0, 1],
-        mapping: authored
-      }
+        mapping: authored,
+      },
     ]);
     const controller = new UvSmearController(new CommandStack(8));
     controller.beginStroke(result, 0);
     controller.endStroke();
     const maps = result.userData.faceTextureMaps as
-      | Array<{ mapping: { scaleU: number } }>
-      | undefined;
+      Array<{ mapping: { scaleU: number } }> | undefined;
     expect(maps?.some((entry) => entry.mapping.scaleU === 2.25)).toBe(true);
   });
 });

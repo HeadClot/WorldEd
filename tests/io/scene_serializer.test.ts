@@ -221,7 +221,7 @@ describe('SceneSerializer', () => {
     const mesh = createBoxAtPosition(0, 0, 0);
     const edges = new THREE.LineSegments(
       new THREE.EdgesGeometry(mesh.geometry),
-      new THREE.LineBasicMaterial({ color: 0xffffff })
+      new THREE.LineBasicMaterial({ color: 0xffffff }),
     );
     mesh.add(edges);
     worldGroup.add(mesh);
@@ -254,12 +254,7 @@ function createBoxAtPosition(x: number, y: number, z: number): THREE.Mesh {
  * @param z Z position.
  * @returns The created mesh.
  */
-function createSphereAtPosition(
-  radius: number,
-  x: number,
-  y: number,
-  z: number
-): THREE.Mesh {
+function createSphereAtPosition(radius: number, x: number, y: number, z: number): THREE.Mesh {
   const geometry = new THREE.SphereGeometry(radius, 32, 32);
   const material = new THREE.MeshStandardMaterial({ color: 0x888888 });
   const mesh = new THREE.Mesh(geometry, material);
@@ -306,16 +301,9 @@ function createCustomBufferMesh(): THREE.Mesh {
   geometry.setAttribute(
     'position',
     new THREE.Float32BufferAttribute(
-      [
-        -1, -1, 0,
-        1, -1, 0,
-        1, 1, 0,
-        -1, -1, 0,
-        1, 1, 0,
-        -1, 1, 0
-      ],
-      3
-    )
+      [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0],
+      3,
+    ),
   );
   geometry.computeVertexNormals();
   const material = new THREE.MeshStandardMaterial({ color: 0x4488ff });

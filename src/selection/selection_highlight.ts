@@ -32,7 +32,7 @@ export class SelectionHighlight {
     this.lineMaterial = new THREE.LineBasicMaterial({
       color: this.highlightColor,
       linewidth: 2,
-      depthTest: false
+      depthTest: false,
     });
   }
 
@@ -150,7 +150,7 @@ export class SelectionHighlight {
     const orphans = mesh.children.filter(
       (child) =>
         child instanceof THREE.LineSegments &&
-        child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true
+        child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true,
     );
     orphans.forEach((child) => {
       this.disposeLineSegments(mesh, child as THREE.LineSegments);
@@ -162,10 +162,7 @@ export class SelectionHighlight {
    * @param mesh The parent mesh.
    * @param lineSegments The outline to dispose.
    */
-  private disposeLineSegments(
-    mesh: THREE.Mesh,
-    lineSegments: THREE.LineSegments
-  ): void {
+  private disposeLineSegments(mesh: THREE.Mesh, lineSegments: THREE.LineSegments): void {
     mesh.remove(lineSegments);
     lineSegments.geometry.dispose();
     const lineMaterial = lineSegments.material as THREE.LineBasicMaterial;

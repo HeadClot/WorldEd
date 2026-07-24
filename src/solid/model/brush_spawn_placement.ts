@@ -20,7 +20,7 @@ const FALLBACK_GRID_INTERVAL = 1;
  */
 export function computeBrushSpawnPosition(
   camera: THREE.Camera,
-  distance: number = DEFAULT_SPAWN_DISTANCE
+  distance: number = DEFAULT_SPAWN_DISTANCE,
 ): THREE.Vector3 {
   const position = new THREE.Vector3();
   const forward = new THREE.Vector3();
@@ -40,14 +40,9 @@ export function computeBrushSpawnPosition(
  * @param position Position modified in place.
  * @param gridInterval Grid step (non-positive values leave the position unchanged).
  */
-export function snapPositionToGrid(
-  position: THREE.Vector3,
-  gridInterval: number
-): void {
+export function snapPositionToGrid(position: THREE.Vector3, gridInterval: number): void {
   const interval =
-    Number.isFinite(gridInterval) && gridInterval > 0
-      ? gridInterval
-      : FALLBACK_GRID_INTERVAL;
+    Number.isFinite(gridInterval) && gridInterval > 0 ? gridInterval : FALLBACK_GRID_INTERVAL;
   position.x = Math.round(position.x / interval) * interval;
   position.y = Math.round(position.y / interval) * interval;
   position.z = Math.round(position.z / interval) * interval;

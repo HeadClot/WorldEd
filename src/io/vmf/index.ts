@@ -11,7 +11,7 @@ export { VmfUvConverter, VMF_DEFAULT_TEXTURE_SIZE } from './vmf_uv_converter.js'
 export {
   VMF_INCHES_TO_METERS,
   sourcePointToEditorMeters,
-  swizzleSourceToThree
+  swizzleSourceToThree,
 } from './vmf_coordinates.js';
 export type {
   VmfWorld,
@@ -20,9 +20,6 @@ export type {
   VmfEntity,
   VmfTextureAxis,
   VmfVector3,
-  VmfPlanePoints
+  VmfPlanePoints,
 } from './vmf_types.js';
-export {
-  isSkippedVolumeMaterial,
-  materialNameToTextureId
-} from './vmf_material_policy.js';
+export { isSkippedVolumeMaterial, materialNameToTextureId } from './vmf_material_policy.js';

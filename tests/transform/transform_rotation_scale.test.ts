@@ -21,7 +21,7 @@ describe('TransformExecutor rotation snapping', () => {
       quats,
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 1, 0),
-      twelveDegrees
+      twelveDegrees,
     );
     const euler = new THREE.Euler().setFromQuaternion(mesh.quaternion, 'YXZ');
     expect(euler.y).toBeCloseTo((15 * Math.PI) / 180, 4);
@@ -42,7 +42,7 @@ describe('TransformExecutor rotation snapping', () => {
       quats,
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 1, 0),
-      twelveDegrees
+      twelveDegrees,
     );
     const euler = new THREE.Euler().setFromQuaternion(mesh.quaternion, 'YXZ');
     expect(euler.y).toBeCloseTo(twelveDegrees, 4);
@@ -64,7 +64,7 @@ describe('TransformExecutor scale snapping', () => {
       scales,
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(1, 0, 0),
-      1.24
+      1.24,
     );
     expect(mesh.scale.x).toBeCloseTo(1.2);
   });
@@ -83,7 +83,7 @@ describe('TransformExecutor scale snapping', () => {
       scales,
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(1, 0, 0),
-      1.37
+      1.37,
     );
     expect(mesh.scale.x).toBeCloseTo(1.37);
   });

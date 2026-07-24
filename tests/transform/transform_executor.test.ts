@@ -96,11 +96,7 @@ describe('TransformExecutor.executeTranslation', () => {
     mesh.position.set(0.3, 0.7, 0.2);
     const initials = new Map<THREE.Mesh, THREE.Vector3>();
     initials.set(mesh, new THREE.Vector3(0.3, 0.7, 0.2));
-    snapExecutor.applyAbsoluteTranslation(
-      [mesh],
-      initials,
-      new THREE.Vector3(1.1, 0, 0)
-    );
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(1.1, 0, 0));
     expect(mesh.position.x).toBeCloseTo(1);
     expect(mesh.position.y).toBeCloseTo(0.7);
     expect(mesh.position.z).toBeCloseTo(0.2);
@@ -115,11 +111,7 @@ describe('TransformExecutor.executeTranslation', () => {
     const start = mesh.position.clone();
     const initials = new Map<THREE.Mesh, THREE.Vector3>();
     initials.set(mesh, start.clone());
-    snapExecutor.applyAbsoluteTranslation(
-      [mesh],
-      initials,
-      new THREE.Vector3(0, 0.05, 0)
-    );
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(0, 0.05, 0));
     expect(mesh.position.y).toBeCloseTo(1.875, 5);
     const box = new THREE.Box3().setFromObject(mesh);
     expect(box.min.y % 0.25).toBeCloseTo(0, 5);
@@ -134,11 +126,7 @@ describe('TransformExecutor.executeTranslation', () => {
     const start = mesh.position.clone();
     const initials = new Map<THREE.Mesh, THREE.Vector3>();
     initials.set(mesh, start.clone());
-    snapExecutor.applyAbsoluteTranslation(
-      [mesh],
-      initials,
-      new THREE.Vector3(0, 0.3, 0)
-    );
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(0, 0.3, 0));
     expect(mesh.position.y).toBeCloseTo(2.125, 5);
     const box = new THREE.Box3().setFromObject(mesh);
     expect(box.min.y).toBeCloseTo(0.25, 5);
@@ -172,7 +160,7 @@ describe('TransformExecutor.executeRotation', () => {
       [mesh],
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 0, 1),
-      Math.PI / 2
+      Math.PI / 2,
     );
     expect(mesh.quaternion.equals(before)).toBe(false);
   });
@@ -214,12 +202,7 @@ describe('TransformExecutor.executeScale', () => {
   it('should update mesh.scale along axis', () => {
     const mesh = new THREE.Mesh();
     mesh.position.set(0, 0, 0);
-    executor.executeScale(
-      [mesh],
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(1, 0, 0),
-      2.0
-    );
+    executor.executeScale([mesh], new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), 2.0);
     expect(mesh.scale.x).toBeCloseTo(2);
     expect(mesh.scale.y).toBeCloseTo(1);
   });

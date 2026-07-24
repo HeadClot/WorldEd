@@ -56,7 +56,7 @@ export class TransformConstraint {
   static computeRotationAngle(
     initialDir: THREE.Vector3,
     currentDir: THREE.Vector3,
-    axis: THREE.Vector3
+    axis: THREE.Vector3,
   ): number {
     const normalizedInitial = initialDir.clone().normalize();
     const normalizedCurrent = currentDir.clone().normalize();

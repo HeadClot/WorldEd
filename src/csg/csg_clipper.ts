@@ -33,7 +33,7 @@ export class CsgClipper {
   clipPolygonsToFront(
     polygons: CsgPolygon[],
     planeNormal: THREE.Vector3,
-    planeConstant: number
+    planeConstant: number,
   ): CsgPolygon[] {
     const result: CsgPolygon[] = [];
     polygons.forEach((polygon) => {
@@ -53,7 +53,7 @@ export class CsgClipper {
     polygon: CsgPolygon,
     planeNormal: THREE.Vector3,
     planeConstant: number,
-    result: CsgPolygon[]
+    result: CsgPolygon[],
   ): void {
     const vertices = polygon.getVertices();
     const types = this.classifyVertices(vertices, planeNormal, planeConstant);
@@ -65,16 +65,9 @@ export class CsgClipper {
     if (polygonType === BACK) {
       return;
     }
-    const frontVertices = this.buildSplitVertices(
-      vertices,
-      types,
-      planeNormal,
-      planeConstant
-    );
+    const frontVertices = this.buildSplitVertices(vertices, types, planeNormal, planeConstant);
     if (frontVertices.length >= 3) {
-      result.push(
-        new CsgPolygon(frontVertices, polygon.getSurfaceMapping())
-      );
+      result.push(new CsgPolygon(frontVertices, polygon.getSurfaceMapping()));
     }
   }
 
@@ -88,7 +81,7 @@ export class CsgClipper {
   private classifyVertices(
     vertices: THREE.Vector3[],
     planeNormal: THREE.Vector3,
-    planeConstant: number
+    planeConstant: number,
   ): number[] {
     return vertices.map((vertex) => {
       const distance = planeNormal.dot(vertex) - planeConstant;
@@ -123,7 +116,7 @@ export class CsgClipper {
     vertices: THREE.Vector3[],
     types: number[],
     planeNormal: THREE.Vector3,
-    planeConstant: number
+    planeConstant: number,
   ): THREE.Vector3[] {
     const frontVertices: THREE.Vector3[] = [];
     for (let index = 0; index < vertices.length; index++) {
@@ -136,12 +129,7 @@ export class CsgClipper {
         frontVertices.push(vertex.clone());
       }
       if ((type | nextType) === SPANNING) {
-        const intersection = this.intersectEdge(
-          vertex,
-          nextVertex,
-          planeNormal,
-          planeConstant
-        );
+        const intersection = this.intersectEdge(vertex, nextVertex, planeNormal, planeConstant);
         frontVertices.push(intersection);
       }
     }
@@ -160,7 +148,7 @@ export class CsgClipper {
     start: THREE.Vector3,
     end: THREE.Vector3,
     planeNormal: THREE.Vector3,
-    planeConstant: number
+    planeConstant: number,
   ): THREE.Vector3 {
     const startDistance = planeNormal.dot(start) - planeConstant;
     const endDistance = planeNormal.dot(end) - planeConstant;

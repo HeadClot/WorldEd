@@ -21,17 +21,8 @@ describe('UvEditorController', () => {
     objectSelection = new SelectionManager();
     commandStack = new CommandStack(64);
     const gridSnap = new GridSnap(false, 1);
-    faceController = new FaceExtrusionController(
-      scene,
-      commandStack,
-      gridSnap,
-      world
-    );
-    controller = new UvEditorController(
-      objectSelection,
-      faceController,
-      commandStack
-    );
+    faceController = new FaceExtrusionController(scene, commandStack, gridSnap, world);
+    controller = new UvEditorController(objectSelection, faceController, commandStack);
   });
 
   it('should report zero targets when nothing is selected', () => {
@@ -42,10 +33,7 @@ describe('UvEditorController', () => {
   });
 
   it('should refresh UI with face region count after face selection', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     faceController.setAvailableMeshes([mesh]);
     faceController.setSelectionMode(SelectionMode.FACE);
     const uiRefresh = vi.fn();

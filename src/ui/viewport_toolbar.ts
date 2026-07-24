@@ -25,7 +25,7 @@ export class ViewportToolbar {
   constructor(
     parentElement: HTMLElement,
     titleText: string,
-    initialMode: ShadingMode = ShadingMode.SOLID
+    initialMode: ShadingMode = ShadingMode.SOLID,
   ) {
     this.container = document.createElement('div');
     this.titleElement = document.createElement('span');
@@ -151,11 +151,7 @@ export class ViewportToolbar {
    * @param tooltip Accessible label and tooltip text.
    * @param iconSvg SVG markup for the button face.
    */
-  private addShadingButton(
-    mode: ShadingMode,
-    tooltip: string,
-    iconSvg: string
-  ): void {
+  private addShadingButton(mode: ShadingMode, tooltip: string, iconSvg: string): void {
     const button = this.createIconButton(tooltip, iconSvg);
     button.addEventListener('click', (event) => {
       event.stopPropagation();

@@ -43,9 +43,7 @@ describe('ObjectDuplicator', () => {
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
     const clone = clones[0];
-    const lineChildren = clone.children.filter(
-      (c) => c instanceof THREE.LineSegments
-    );
+    const lineChildren = clone.children.filter((c) => c instanceof THREE.LineSegments);
     expect(lineChildren.length).toBe(1);
   });
 
@@ -53,7 +51,7 @@ describe('ObjectDuplicator', () => {
     const highlightEdges = new THREE.EdgesGeometry(originalGeometry);
     const highlight = new THREE.LineSegments(
       highlightEdges,
-      new THREE.LineBasicMaterial({ color: 0xe86a17 })
+      new THREE.LineBasicMaterial({ color: 0xe86a17 }),
     );
     highlight.userData.isSelectionHighlight = true;
     originalMesh.add(highlight);
@@ -62,13 +60,10 @@ describe('ObjectDuplicator', () => {
     const clone = clones[0];
     const highlightCopies = clone.children.filter(
       (child) =>
-        child instanceof THREE.LineSegments &&
-        child.userData.isSelectionHighlight === true
+        child instanceof THREE.LineSegments && child.userData.isSelectionHighlight === true,
     );
     expect(highlightCopies.length).toBe(0);
-    const decorativeLines = clone.children.filter(
-      (child) => child instanceof THREE.LineSegments
-    );
+    const decorativeLines = clone.children.filter((child) => child instanceof THREE.LineSegments);
     expect(decorativeLines.length).toBe(1);
   });
 
@@ -107,7 +102,7 @@ describe('ObjectDuplicator', () => {
   it('should duplicate multiple objects', () => {
     const mesh2 = new THREE.Mesh(
       new THREE.SphereGeometry(0.5, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0x999999 })
+      new THREE.MeshStandardMaterial({ color: 0x999999 }),
     );
     mesh2.position.set(5, 6, 7);
     mesh2.name = 'Sphere001';

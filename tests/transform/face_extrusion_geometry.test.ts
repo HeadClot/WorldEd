@@ -6,7 +6,7 @@ import {
   getUniqueVertexIndicesForFaces,
   extrudeVertexPositions,
   splitSharedVertices,
-  mergeCoincidentVertices
+  mergeCoincidentVertices,
 } from '../../src/transform/face_extrusion_geometry.js';
 
 describe('computeFaceNormal', () => {
@@ -172,13 +172,13 @@ describe('mergeCoincidentVertices', () => {
     const vertexB = 3;
     const distBefore = Math.sqrt(
       (originalPositions[vertexA * 3] - originalPositions[vertexB * 3]) ** 2 +
-      (originalPositions[vertexA * 3 + 1] - originalPositions[vertexB * 3 + 1]) ** 2 +
-      (originalPositions[vertexA * 3 + 2] - originalPositions[vertexB * 3 + 2]) ** 2
+        (originalPositions[vertexA * 3 + 1] - originalPositions[vertexB * 3 + 1]) ** 2 +
+        (originalPositions[vertexA * 3 + 2] - originalPositions[vertexB * 3 + 2]) ** 2,
     );
     const distAfter = Math.sqrt(
       (newPositions[vertexA * 3] - newPositions[vertexB * 3]) ** 2 +
-      (newPositions[vertexA * 3 + 1] - newPositions[vertexB * 3 + 1]) ** 2 +
-      (newPositions[vertexA * 3 + 2] - newPositions[vertexB * 3 + 2]) ** 2
+        (newPositions[vertexA * 3 + 1] - newPositions[vertexB * 3 + 1]) ** 2 +
+        (newPositions[vertexA * 3 + 2] - newPositions[vertexB * 3 + 2]) ** 2,
     );
     expect(distAfter).toBeCloseTo(0);
     expect(distBefore).toBeGreaterThan(0);
@@ -198,7 +198,7 @@ describe('mergeCoincidentVertices', () => {
     const geometry = createTriangleOnXYPlane();
     const newGeometry = mergeCoincidentVertices(geometry, 0.1);
     expect(newGeometry.getAttribute('position').count).toBe(
-      geometry.getAttribute('position').count
+      geometry.getAttribute('position').count,
     );
   });
 });
@@ -212,11 +212,7 @@ describe('mergeCoincidentVertices', () => {
  * @returns A buffer geometry with 3 vertices.
  */
 function createTriangleOnXYPlane(): THREE.BufferGeometry {
-  const vertices = new Float32Array([
-    0, 0, 0,
-    1, 0, 0,
-    0, 1, 0
-  ]);
+  const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   return geometry;
@@ -227,11 +223,7 @@ function createTriangleOnXYPlane(): THREE.BufferGeometry {
  * @returns A buffer geometry with 3 vertices.
  */
 function createTriangleOnXZPlane(): THREE.BufferGeometry {
-  const vertices = new Float32Array([
-    0, 0, 0,
-    0.5, 0, 1,
-    1, 0, 0
-  ]);
+  const vertices = new Float32Array([0, 0, 0, 0.5, 0, 1, 1, 0, 0]);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   return geometry;
@@ -267,14 +259,7 @@ function createMultiFaceParallelGeometry(count: number): THREE.BufferGeometry {
  * @returns A buffer geometry with 6 vertices where vertices 2 and 3 coincide.
  */
 function createSharedVertexGeometry(): THREE.BufferGeometry {
-  const vertices = new Float32Array([
-    0, 0, 0,
-    1, 0, 0,
-    0.5, 1, 0,
-    0.5, 1, 0,
-    1, 0, 0,
-    1.5, 1, 0
-  ]);
+  const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 0.5, 1, 0, 0.5, 1, 0, 1, 0, 0, 1.5, 1, 0]);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   return geometry;
@@ -285,14 +270,7 @@ function createSharedVertexGeometry(): THREE.BufferGeometry {
  * @returns A buffer geometry with 6 vertices where 2 pairs are close together.
  */
 function createCoincidentVertexGeometry(): THREE.BufferGeometry {
-  const vertices = new Float32Array([
-    0, 0, 0,
-    1, 0, 0,
-    0.5, 0, 0,
-    0.001, 0, 0,
-    2, 0, 0,
-    1.5, 0, 0
-  ]);
+  const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 0.5, 0, 0, 0.001, 0, 0, 2, 0, 0, 1.5, 0, 0]);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   return geometry;
@@ -303,14 +281,7 @@ function createCoincidentVertexGeometry(): THREE.BufferGeometry {
  * @returns A buffer geometry with 6 vertices far apart.
  */
 function createDistantVertexGeometry(): THREE.BufferGeometry {
-  const vertices = new Float32Array([
-    0, 0, 0,
-    10, 0, 0,
-    5, 10, 0,
-    20, 0, 0,
-    30, 0, 0,
-    25, 10, 0
-  ]);
+  const vertices = new Float32Array([0, 0, 0, 10, 0, 0, 5, 10, 0, 20, 0, 0, 30, 0, 0, 25, 10, 0]);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   return geometry;

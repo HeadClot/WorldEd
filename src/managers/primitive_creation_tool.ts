@@ -1,9 +1,6 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
-import {
-  DECORATIVE_EDGE_USERDATA_KEY,
-  enableFlatShadingOnMesh
-} from '../utils/mesh_edge_sync.js';
+import { DECORATIVE_EDGE_USERDATA_KEY, enableFlatShadingOnMesh } from '../utils/mesh_edge_sync.js';
 import { createContentMaterial } from '../materials/content_material_factory.js';
 import { initializeMeshTextureUVs } from '../texture/face_texture_applier.js';
 
@@ -40,12 +37,7 @@ export class PrimitiveCreationTool {
    * @param position Optional position for the box.
    * @returns The created mesh.
    */
-  createBox(
-    width: number,
-    height: number,
-    depth: number,
-    position?: THREE.Vector3
-  ): THREE.Mesh {
+  createBox(width: number, height: number, depth: number, position?: THREE.Vector3): THREE.Mesh {
     this.cubeCount++;
     const geometry = new THREE.BoxGeometry(width, height, depth);
     const mesh = this.buildMesh(geometry, `Cube${this.padNumber(this.cubeCount)}`);
@@ -61,10 +53,7 @@ export class PrimitiveCreationTool {
    * @param position Optional position for the sphere.
    * @returns The created mesh.
    */
-  createSphere(
-    radius: number,
-    position?: THREE.Vector3
-  ): THREE.Mesh {
+  createSphere(radius: number, position?: THREE.Vector3): THREE.Mesh {
     this.sphereCount++;
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
     const mesh = this.buildMesh(geometry, `Sphere${this.padNumber(this.sphereCount)}`);
@@ -86,7 +75,7 @@ export class PrimitiveCreationTool {
     radiusTop: number,
     radiusBottom: number,
     height: number,
-    position?: THREE.Vector3
+    position?: THREE.Vector3,
   ): THREE.Mesh {
     this.cylinderCount++;
     const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 32);
@@ -104,11 +93,7 @@ export class PrimitiveCreationTool {
    * @param position Optional position for the plane.
    * @returns The created mesh.
    */
-  createPlane(
-    width: number,
-    height: number,
-    position?: THREE.Vector3
-  ): THREE.Mesh {
+  createPlane(width: number, height: number, position?: THREE.Vector3): THREE.Mesh {
     this.planeCount++;
     const geometry = new THREE.PlaneGeometry(width, height);
     const mesh = this.buildMesh(geometry, `Plane${this.padNumber(this.planeCount)}`);
@@ -175,7 +160,7 @@ export class PrimitiveCreationTool {
     const edges = new THREE.EdgesGeometry(mesh.geometry, 1);
     const line = new THREE.LineSegments(
       edges,
-      new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor })
+      new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor }),
     );
     line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
     mesh.add(line);

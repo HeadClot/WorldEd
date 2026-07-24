@@ -29,7 +29,7 @@ export class SetRotationCommand implements UndoCommand {
     for (let i = 0; i < objects.length; i++) {
       this.snapshots.push({
         object: objects[i],
-        rotation: objects[i].rotation.clone()
+        rotation: objects[i].rotation.clone(),
       });
       this.newRotations.push(newRotations[i].clone());
     }

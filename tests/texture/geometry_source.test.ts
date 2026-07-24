@@ -4,7 +4,7 @@ import {
   captureGeometrySourceIfNeeded,
   getGeometrySource,
   resolveGeometrySourceParams,
-  resolveGeometrySourceType
+  resolveGeometrySourceType,
 } from '../../src/texture/geometry_source.js';
 import { ensureUniqueTriangleVertices } from '../../src/texture/planar_uv_projector.js';
 
@@ -15,7 +15,7 @@ describe('geometry_source', () => {
     expect(resolveGeometrySourceParams(geometry)).toEqual({
       width: 2,
       height: 3,
-      depth: 4
+      depth: 4,
     });
   });
 

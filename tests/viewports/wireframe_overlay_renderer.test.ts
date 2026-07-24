@@ -14,11 +14,11 @@ describe('WireframeOverlayRenderer', () => {
     renderer = new WireframeOverlayRenderer(scene);
     meshA = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xff0000 })
+      new THREE.MeshStandardMaterial({ color: 0xff0000 }),
     );
     meshB = new THREE.Mesh(
       new THREE.SphereGeometry(1, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+      new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
     );
     scene.add(meshA);
     scene.add(meshB);
@@ -45,18 +45,9 @@ describe('WireframeOverlayRenderer', () => {
 
     it('should skip meshes with empty or missing position attributes', () => {
       const emptyGeometry = new THREE.BufferGeometry();
-      emptyGeometry.setAttribute(
-        'position',
-        new THREE.BufferAttribute(new Float32Array(0), 3)
-      );
-      const emptyMesh = new THREE.Mesh(
-        emptyGeometry,
-        new THREE.MeshStandardMaterial()
-      );
-      const bareMesh = new THREE.Mesh(
-        new THREE.BufferGeometry(),
-        new THREE.MeshStandardMaterial()
-      );
+      emptyGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+      const emptyMesh = new THREE.Mesh(emptyGeometry, new THREE.MeshStandardMaterial());
+      const bareMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial());
       scene.add(emptyMesh);
       scene.add(bareMesh);
       expect(() => renderer.setMeshes([emptyMesh, bareMesh, meshA])).not.toThrow();

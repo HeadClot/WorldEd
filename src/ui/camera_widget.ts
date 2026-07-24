@@ -61,22 +61,13 @@ export class CameraWidget {
    * Creates the three axis arrows and adds them to the widget scene.
    */
   private createArrows(): void {
-    this.arrowX = this.buildArrow(
-      new THREE.Vector3(1, 0, 0),
-      Theme.widgetXAxisColor
-    );
+    this.arrowX = this.buildArrow(new THREE.Vector3(1, 0, 0), Theme.widgetXAxisColor);
     this.arrowGroup.add(this.arrowX);
 
-    this.arrowY = this.buildArrow(
-      new THREE.Vector3(0, 1, 0),
-      Theme.widgetYAxisColor
-    );
+    this.arrowY = this.buildArrow(new THREE.Vector3(0, 1, 0), Theme.widgetYAxisColor);
     this.arrowGroup.add(this.arrowY);
 
-    this.arrowZ = this.buildArrow(
-      new THREE.Vector3(0, 0, 1),
-      Theme.widgetZAxisColor
-    );
+    this.arrowZ = this.buildArrow(new THREE.Vector3(0, 0, 1), Theme.widgetZAxisColor);
     this.arrowGroup.add(this.arrowZ);
   }
 
@@ -93,7 +84,7 @@ export class CameraWidget {
       this.arrowLength,
       color,
       this.headLength,
-      this.headWidth
+      this.headWidth,
     );
   }
 

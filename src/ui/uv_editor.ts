@@ -4,7 +4,7 @@ import { ToolbarIcons } from './toolbar_icons.js';
 import {
   FaceTextureAlign,
   FaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../texture/face_texture_mapping.js';
 import { FloatingPanelStack } from './floating_panel_stack.js';
 
@@ -47,7 +47,7 @@ export class UvEditor {
   constructor(
     host: HTMLElement,
     handlers: UvEditorHandlers,
-    defaultAnchor: HTMLElement | null = null
+    defaultAnchor: HTMLElement | null = null,
   ) {
     this.host = host;
     this.handlers = handlers;
@@ -124,19 +124,14 @@ export class UvEditor {
    * @param mapping Common mapping or null.
    * @param targetCount Number of targeted regions.
    */
-  setFromSelection(
-    mapping: FaceTextureMapping | null,
-    targetCount: number
-  ): void {
+  setFromSelection(mapping: FaceTextureMapping | null, targetCount: number): void {
     if (mapping) {
       this.setMappingFields(mapping);
     } else if (targetCount > 0) {
       this.clearNumericFields();
     }
     this.statusLabel.textContent =
-      targetCount === 0
-        ? 'No surfaces selected'
-        : `${targetCount} face region(s)`;
+      targetCount === 0 ? 'No surfaces selected' : `${targetCount} face region(s)`;
   }
 
   /**
@@ -158,8 +153,12 @@ export class UvEditor {
     this.styleRoot(root);
     root.appendChild(this.buildTitleBar());
     root.appendChild(this.buildIconStrip());
-    root.appendChild(this.buildNumericSection('Scale', 'U', 'V', this.scaleUInput, this.scaleVInput, 0.25));
-    root.appendChild(this.buildNumericSection('Offset', 'U', 'V', this.offsetUInput, this.offsetVInput, 0.25));
+    root.appendChild(
+      this.buildNumericSection('Scale', 'U', 'V', this.scaleUInput, this.scaleVInput, 0.25),
+    );
+    root.appendChild(
+      this.buildNumericSection('Offset', 'U', 'V', this.offsetUInput, this.offsetVInput, 0.25),
+    );
     root.appendChild(this.buildRotationRow());
     this.styleStatusLabel();
     root.appendChild(this.statusLabel);
@@ -239,18 +238,26 @@ export class UvEditor {
     strip.style.display = 'flex';
     strip.style.gap = '4px';
     strip.style.padding = '8px 10px';
-    strip.appendChild(this.createIconButton('Floor', ToolbarIcons.alignFloor(), () => {
-      this.handlers.onAlign('floor');
-    }));
-    strip.appendChild(this.createIconButton('Wall', ToolbarIcons.alignWall(), () => {
-      this.handlers.onAlign('wall');
-    }));
-    strip.appendChild(this.createIconButton('Ceiling', ToolbarIcons.alignCeiling(), () => {
-      this.handlers.onAlign('ceiling');
-    }));
-    strip.appendChild(this.createIconButton('Reset', ToolbarIcons.textureReset(), () => {
-      this.handlers.onReset();
-    }));
+    strip.appendChild(
+      this.createIconButton('Floor', ToolbarIcons.alignFloor(), () => {
+        this.handlers.onAlign('floor');
+      }),
+    );
+    strip.appendChild(
+      this.createIconButton('Wall', ToolbarIcons.alignWall(), () => {
+        this.handlers.onAlign('wall');
+      }),
+    );
+    strip.appendChild(
+      this.createIconButton('Ceiling', ToolbarIcons.alignCeiling(), () => {
+        this.handlers.onAlign('ceiling');
+      }),
+    );
+    strip.appendChild(
+      this.createIconButton('Reset', ToolbarIcons.textureReset(), () => {
+        this.handlers.onReset();
+      }),
+    );
     return strip;
   }
 
@@ -261,11 +268,7 @@ export class UvEditor {
    * @param onClick Click handler.
    * @returns Button element.
    */
-  private createIconButton(
-    title: string,
-    svgIcon: string,
-    onClick: () => void
-  ): HTMLButtonElement {
+  private createIconButton(title: string, svgIcon: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.title = title;
@@ -310,7 +313,7 @@ export class UvEditor {
     labelB: string,
     inputA: HTMLInputElement,
     inputB: HTMLInputElement,
-    step: number
+    step: number,
   ): HTMLElement {
     const section = document.createElement('div');
     section.style.padding = '4px 10px';
@@ -351,11 +354,7 @@ export class UvEditor {
    * @param step Step size.
    * @returns Row element.
    */
-  private buildAxisRow(
-    label: string,
-    input: HTMLInputElement,
-    step: number
-  ): HTMLElement {
+  private buildAxisRow(label: string, input: HTMLInputElement, step: number): HTMLElement {
     const row = document.createElement('div');
     row.style.display = 'flex';
     row.style.alignItems = 'center';
@@ -427,7 +426,7 @@ export class UvEditor {
       this.scaleVInput,
       this.offsetUInput,
       this.offsetVInput,
-      this.rotationInput
+      this.rotationInput,
     ].forEach((input) => {
       input.addEventListener('change', apply);
     });
@@ -462,7 +461,7 @@ export class UvEditor {
       offsetU,
       offsetV,
       rotationDeg,
-      textureId: ''
+      textureId: '',
     };
   }
 

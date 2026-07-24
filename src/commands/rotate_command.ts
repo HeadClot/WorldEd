@@ -32,7 +32,7 @@ export class RotateCommand implements UndoCommand {
     snapshots: ObjectRotationSnapshot[],
     pivot: THREE.Vector3,
     axis: THREE.Vector3,
-    angle: number
+    angle: number,
   ) {
     this.snapshots = snapshots;
     this.pivot = pivot.clone();
@@ -45,10 +45,7 @@ export class RotateCommand implements UndoCommand {
    */
   execute(): void {
     const normalizedAxis = this.axis.clone().normalize();
-    const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(
-      normalizedAxis,
-      this.angle
-    );
+    const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(normalizedAxis, this.angle);
     this.snapshots.forEach((snapshot) => {
       this.applyRotationToSnapshot(snapshot, rotationQuaternion);
     });
@@ -71,13 +68,11 @@ export class RotateCommand implements UndoCommand {
    */
   private applyRotationToSnapshot(
     snapshot: ObjectRotationSnapshot,
-    rotationQuaternion: THREE.Quaternion
+    rotationQuaternion: THREE.Quaternion,
   ): void {
     const relativePos = snapshot.originalPosition.clone().sub(this.pivot);
     relativePos.applyQuaternion(rotationQuaternion);
     snapshot.object.position.copy(relativePos.add(this.pivot));
-    snapshot.object.quaternion
-      .copy(rotationQuaternion)
-      .multiply(snapshot.originalQuaternion);
+    snapshot.object.quaternion.copy(rotationQuaternion).multiply(snapshot.originalQuaternion);
   }
 }

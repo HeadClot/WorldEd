@@ -125,7 +125,7 @@ export function createEmptyVmfWorld(): VmfWorld {
     maxPropScreenWidth: -1,
     skyName: '',
     solids: [],
-    entities: []
+    entities: [],
   };
 }
 

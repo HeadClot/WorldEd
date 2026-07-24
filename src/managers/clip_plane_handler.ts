@@ -9,10 +9,7 @@ import { SelectionManager } from './selection_manager.js';
 import { ClipPlaneTool } from './clip_plane_tool.js';
 import { ClipPlanePointPicker } from './clip_plane_point_picker.js';
 import { ClipPlanePointDrag } from './clip_plane_point_drag.js';
-import {
-  ClipPlanePreview,
-  CLIP_PREVIEW_USERDATA_KEY
-} from './clip_plane_preview.js';
+import { ClipPlanePreview, CLIP_PREVIEW_USERDATA_KEY } from './clip_plane_preview.js';
 import { GridSnap } from '../transform/grid_snap.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../solid/model/solid_model.js';
@@ -106,11 +103,7 @@ export class ClipPlaneHandler {
    * @param renderer Viewport renderer.
    * @returns True when the event was consumed.
    */
-  onPointerDown(
-    event: MouseEvent,
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
-  ): boolean {
+  onPointerDown(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): boolean {
     if (!this.deps.clipPlaneTool.isActive()) return false;
     if (this.tryBeginMarkerDrag(event, camera, renderer)) return true;
     return this.placeNewPoint(event, camera, renderer);
@@ -123,9 +116,7 @@ export class ClipPlaneHandler {
     if (!this.deps.clipPlaneTool.isActive()) return;
     this.deps.clipPlaneTool.flipKeepSide();
     this.deps.showStatusMessage(
-      this.deps.clipPlaneTool.getKeepFront()
-        ? 'Keep front half-space'
-        : 'Keep back half-space'
+      this.deps.clipPlaneTool.getKeepFront() ? 'Keep front half-space' : 'Keep back half-space',
     );
   }
 
@@ -182,7 +173,7 @@ export class ClipPlaneHandler {
         mesh,
         split.frontMesh,
         split.backMesh,
-        this.deps.worldObject
+        this.deps.worldObject,
       );
       this.deps.commandStack.push(command);
       results.push(split.frontMesh, split.backMesh);
@@ -201,18 +192,13 @@ export class ClipPlaneHandler {
   private clipSolidBrushTarget(
     mesh: THREE.Mesh,
     plane: THREE.Plane,
-    keepFront: boolean
+    keepFront: boolean,
   ): THREE.Mesh | null {
     if (!SolidBrushVisual.isBrushObject(mesh)) return null;
     const model = SolidModel.fromObject(mesh);
     const brush = model?.findBrushByMesh(mesh);
     if (!model || !brush) return null;
-    const command = new ClipSolidBrushCommand(
-      model,
-      brush.id,
-      plane,
-      keepFront
-    );
+    const command = new ClipSolidBrushCommand(model, brush.id, plane, keepFront);
     command.execute();
     if (!command.didClip()) return null;
     this.deps.commandStack.recordExecuted(command);
@@ -226,10 +212,7 @@ export class ClipPlaneHandler {
    * @param plane World split plane.
    * @returns Result meshes, or null when not a brush / split failed.
    */
-  private splitSolidBrushTarget(
-    mesh: THREE.Mesh,
-    plane: THREE.Plane
-  ): THREE.Mesh[] | null {
+  private splitSolidBrushTarget(mesh: THREE.Mesh, plane: THREE.Plane): THREE.Mesh[] | null {
     if (!SolidBrushVisual.isBrushObject(mesh)) return null;
     const model = SolidModel.fromObject(mesh);
     const brush = model?.findBrushByMesh(mesh);
@@ -260,15 +243,10 @@ export class ClipPlaneHandler {
   private tryBeginMarkerDrag(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
+    renderer: THREE.WebGLRenderer,
   ): boolean {
     const points = this.deps.clipPlaneTool.getPoints();
-    const index = this.pointDrag.pickMarkerIndex(
-      event,
-      camera,
-      renderer,
-      points
-    );
+    const index = this.pointDrag.pickMarkerIndex(event, camera, renderer, points);
     if (index === null) return false;
     this.beginMarkerDrag(index, points[index], camera, renderer);
     return true;
@@ -285,7 +263,7 @@ export class ClipPlaneHandler {
     index: number,
     point: THREE.Vector3,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
+    renderer: THREE.WebGLRenderer,
   ): void {
     this.endMarkerDrag(false);
     this.draggingPointIndex = index;
@@ -310,7 +288,7 @@ export class ClipPlaneHandler {
       event,
       this.dragCamera,
       this.dragRenderer,
-      this.dragPlane
+      this.dragPlane,
     );
     if (!point) return;
     this.deps.clipPlaneTool.setPoint(this.draggingPointIndex, point);
@@ -350,7 +328,7 @@ export class ClipPlaneHandler {
   private placeNewPoint(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer
+    renderer: THREE.WebGLRenderer,
   ): boolean {
     const meshes = this.collectWorldMeshes();
     const point = this.pointPicker.pickPoint(event, camera, renderer, meshes);
@@ -413,7 +391,7 @@ export class ClipPlaneHandler {
     results: THREE.Mesh[],
     successCount: number,
     totalCount: number,
-    verb: string
+    verb: string,
   ): void {
     if (successCount === 0) {
       this.deps.showStatusMessage('Plane does not cut the selection');
@@ -425,7 +403,7 @@ export class ClipPlaneHandler {
     this.deps.refreshOutliner();
     this.deps.updateShadingMeshes();
     this.deps.showStatusMessage(
-      `${verb} ${successCount}/${totalCount} · place points to cut again`
+      `${verb} ${successCount}/${totalCount} · place points to cut again`,
     );
   }
 
@@ -434,9 +412,7 @@ export class ClipPlaneHandler {
    * @param results Candidate result meshes (nullish entries ignored).
    */
   private selectCommitResults(results: THREE.Mesh[]): void {
-    const selectable = results.filter(
-      (mesh) => mesh instanceof THREE.Mesh && mesh.parent !== null
-    );
+    const selectable = results.filter((mesh) => mesh instanceof THREE.Mesh && mesh.parent !== null);
     if (selectable.length === 0) return;
     this.deps.selectionManager.setSelection(selectable);
   }

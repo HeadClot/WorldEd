@@ -5,7 +5,7 @@ import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlig
 import { CLIP_PREVIEW_USERDATA_KEY } from './clip_plane_preview.js';
 import {
   SolidBrushEdgeMaterials,
-  SOLID_BRUSH_EDGE_USERDATA_KEY
+  SOLID_BRUSH_EDGE_USERDATA_KEY,
 } from '../solid/model/solid_brush_edge_materials.js';
 import { SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 
@@ -53,7 +53,7 @@ export class ViewportSyncManager {
     viewport2DTop: Viewport2D,
     viewport2DFront: Viewport2D,
     viewport2DSide: Viewport2D,
-    viewport3D: Viewport3D
+    viewport3D: Viewport3D,
   ) {
     this.viewport2DTop = viewport2DTop;
     this.viewport2DFront = viewport2DFront;
@@ -79,7 +79,7 @@ export class ViewportSyncManager {
       this.viewport2DTop.getScene(),
       this.viewport2DFront.getScene(),
       this.viewport2DSide.getScene(),
-      this.viewport3D.getScene()
+      this.viewport3D.getScene(),
     ];
   }
 
@@ -106,11 +106,7 @@ export class ViewportSyncManager {
     const meshes: THREE.Mesh[] = [];
     this.getAllViewportScenes().forEach((scene) => {
       scene.traverse((child) => {
-        if (
-          child instanceof THREE.Mesh &&
-          !this.isHelperMesh(child) &&
-          !meshes.includes(child)
-        ) {
+        if (child instanceof THREE.Mesh && !this.isHelperMesh(child) && !meshes.includes(child)) {
           meshes.push(child);
         }
       });
@@ -158,13 +154,10 @@ export class ViewportSyncManager {
     [
       this.viewport2DTop.getScene(),
       this.viewport2DFront.getScene(),
-      this.viewport2DSide.getScene()
+      this.viewport2DSide.getScene(),
     ].forEach((scene) => {
       scene.traverse((child) => {
-        if (
-          child instanceof THREE.Mesh &&
-          child.userData[EDITOR_SOURCE_UUID_KEY] === worldUuid
-        ) {
+        if (child instanceof THREE.Mesh && child.userData[EDITOR_SOURCE_UUID_KEY] === worldUuid) {
           clones.push(child);
         }
       });
@@ -198,7 +191,7 @@ export class ViewportSyncManager {
     const scenes = [
       this.viewport2DTop.getScene(),
       this.viewport2DFront.getScene(),
-      this.viewport2DSide.getScene()
+      this.viewport2DSide.getScene(),
     ];
     for (const scene of scenes) {
       this.pushGeometriesIntoSceneClones(scene, byUuid);
@@ -212,7 +205,7 @@ export class ViewportSyncManager {
    */
   private pushGeometriesIntoSceneClones(
     scene: THREE.Scene,
-    worldByUuid: Map<string, THREE.Mesh>
+    worldByUuid: Map<string, THREE.Mesh>,
   ): void {
     scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
@@ -230,10 +223,7 @@ export class ViewportSyncManager {
    * @param cloneMesh Viewport clone mesh.
    * @param worldMesh Authoritative world mesh.
    */
-  private replaceCloneGeometry(
-    cloneMesh: THREE.Mesh,
-    worldMesh: THREE.Mesh
-  ): void {
+  private replaceCloneGeometry(cloneMesh: THREE.Mesh, worldMesh: THREE.Mesh): void {
     if (this.copyGeometryAttributesInPlace(cloneMesh.geometry, worldMesh.geometry)) {
       return;
     }
@@ -251,7 +241,7 @@ export class ViewportSyncManager {
    */
   private copyGeometryAttributesInPlace(
     destination: THREE.BufferGeometry,
-    source: THREE.BufferGeometry
+    source: THREE.BufferGeometry,
   ): boolean {
     if (!this.canCopyGeometryInPlace(destination, source)) {
       return false;
@@ -277,7 +267,7 @@ export class ViewportSyncManager {
    */
   private canCopyGeometryInPlace(
     destination: THREE.BufferGeometry,
-    source: THREE.BufferGeometry
+    source: THREE.BufferGeometry,
   ): boolean {
     if (source.getIndex() || destination.getIndex()) return false;
     const sourcePosition = source.getAttribute('position');
@@ -298,7 +288,7 @@ export class ViewportSyncManager {
   private copyNamedAttribute(
     destination: THREE.BufferGeometry,
     source: THREE.BufferGeometry,
-    name: string
+    name: string,
   ): void {
     const sourceAttribute = source.getAttribute(name);
     const destAttribute = destination.getAttribute(name);
@@ -324,7 +314,7 @@ export class ViewportSyncManager {
     destArray: Float32Array,
     sourceArray: Float32Array,
     name: string,
-    sourceGeometry: THREE.BufferGeometry
+    sourceGeometry: THREE.BufferGeometry,
   ): boolean {
     const ranges = sourceGeometry.userData.solidMeshUpdateRanges as
       | Array<{
@@ -338,19 +328,16 @@ export class ViewportSyncManager {
     for (const range of ranges) {
       if (name === 'uv') {
         destArray.set(
-          sourceArray.subarray(
-            range.uvFloatStart,
-            range.uvFloatStart + range.uvFloatCount
-          ),
-          range.uvFloatStart
+          sourceArray.subarray(range.uvFloatStart, range.uvFloatStart + range.uvFloatCount),
+          range.uvFloatStart,
         );
       } else {
         destArray.set(
           sourceArray.subarray(
             range.positionFloatStart,
-            range.positionFloatStart + range.positionFloatCount
+            range.positionFloatStart + range.positionFloatCount,
           ),
-          range.positionFloatStart
+          range.positionFloatStart,
         );
       }
     }
@@ -364,7 +351,7 @@ export class ViewportSyncManager {
    */
   private copyGeometryGroups(
     destination: THREE.BufferGeometry,
-    source: THREE.BufferGeometry
+    source: THREE.BufferGeometry,
   ): void {
     destination.clearGroups();
     for (const group of source.groups) {
@@ -507,9 +494,7 @@ export class ViewportSyncManager {
       line.geometry = line.geometry.clone();
     }
     if (Array.isArray(line.material)) {
-      line.material = line.material.map((material) =>
-        this.cloneLineMaterial(material)
-      );
+      line.material = line.material.map((material) => this.cloneLineMaterial(material));
     } else if (line.material) {
       line.material = this.cloneLineMaterial(line.material);
     }
@@ -531,9 +516,7 @@ export class ViewportSyncManager {
    * Ensures solid brush edge lines always draw in 2D (no frustum/depth culling).
    * @param line Cloned line object in a 2D viewport scene.
    */
-  private prepareBrushEdgeLineForOrtho(
-    line: THREE.Line | THREE.LineSegments
-  ): void {
+  private prepareBrushEdgeLineForOrtho(line: THREE.Line | THREE.LineSegments): void {
     if (line.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] !== true) return;
     line.frustumCulled = false;
     line.visible = true;
@@ -544,10 +527,7 @@ export class ViewportSyncManager {
    * @param original The original object.
    * @param clone The cloned counterpart at the same hierarchy path.
    */
-  private tagCloneWithSourceUuids(
-    original: THREE.Object3D,
-    clone: THREE.Object3D
-  ): void {
+  private tagCloneWithSourceUuids(original: THREE.Object3D, clone: THREE.Object3D): void {
     clone.userData[EDITOR_SOURCE_UUID_KEY] = original.uuid;
     const childCount = Math.min(original.children.length, clone.children.length);
     for (let index = 0; index < childCount; index++) {
@@ -562,13 +542,13 @@ export class ViewportSyncManager {
     const worldMeshes = this.getWorldSelectableMeshes();
     this.viewport3D.setSelectableObjects(worldMeshes);
     this.viewport2DTop.setSelectableObjects(
-      this.collectCloneMeshesFromScene(this.viewport2DTop.getScene())
+      this.collectCloneMeshesFromScene(this.viewport2DTop.getScene()),
     );
     this.viewport2DFront.setSelectableObjects(
-      this.collectCloneMeshesFromScene(this.viewport2DFront.getScene())
+      this.collectCloneMeshesFromScene(this.viewport2DFront.getScene()),
     );
     this.viewport2DSide.setSelectableObjects(
-      this.collectCloneMeshesFromScene(this.viewport2DSide.getScene())
+      this.collectCloneMeshesFromScene(this.viewport2DSide.getScene()),
     );
   }
 
@@ -628,10 +608,7 @@ export class ViewportSyncManager {
    * @param scene The viewport scene containing the clone group.
    * @param worldObject The original world object with authoritative transforms.
    */
-  private syncSingleViewportClone(
-    scene: THREE.Scene,
-    worldObject: THREE.Group
-  ): void {
+  private syncSingleViewportClone(scene: THREE.Scene, worldObject: THREE.Group): void {
     const cloneGroup = this.findCloneGroupInScene(scene);
     if (!cloneGroup) return;
     this.syncObjectTransformsRecursively(worldObject, cloneGroup);
@@ -644,10 +621,7 @@ export class ViewportSyncManager {
    * @param original The authoritative object.
    * @param clone The viewport clone counterpart.
    */
-  private syncObjectTransformsRecursively(
-    original: THREE.Object3D,
-    clone: THREE.Object3D
-  ): void {
+  private syncObjectTransformsRecursively(original: THREE.Object3D, clone: THREE.Object3D): void {
     clone.position.copy(original.position);
     clone.quaternion.copy(original.quaternion);
     clone.scale.copy(original.scale);
@@ -661,10 +635,7 @@ export class ViewportSyncManager {
    * @param original Authoritative object.
    * @param clone Viewport clone counterpart.
    */
-  private syncCloneVisibility(
-    original: THREE.Object3D,
-    clone: THREE.Object3D
-  ): void {
+  private syncCloneVisibility(original: THREE.Object3D, clone: THREE.Object3D): void {
     if (this.isSolidBrushEdgeObject(clone)) {
       clone.visible = true;
       return;
@@ -677,15 +648,9 @@ export class ViewportSyncManager {
    * @param original Authoritative parent.
    * @param clone Viewport clone parent.
    */
-  private syncMatchedChildren(
-    original: THREE.Object3D,
-    clone: THREE.Object3D
-  ): void {
+  private syncMatchedChildren(original: THREE.Object3D, clone: THREE.Object3D): void {
     for (const cloneChild of clone.children) {
-      const originalChild = this.findMatchingOriginalChild(
-        original,
-        cloneChild
-      );
+      const originalChild = this.findMatchingOriginalChild(original, cloneChild);
       if (!originalChild) continue;
       this.syncObjectTransformsRecursively(originalChild, cloneChild);
     }
@@ -700,18 +665,14 @@ export class ViewportSyncManager {
    */
   private findMatchingOriginalChild(
     originalParent: THREE.Object3D,
-    cloneChild: THREE.Object3D
+    cloneChild: THREE.Object3D,
   ): THREE.Object3D | null {
     const sourceUuid = cloneChild.userData[EDITOR_SOURCE_UUID_KEY];
     if (typeof sourceUuid === 'string') {
-      const byUuid = originalParent.children.find(
-        (child) => child.uuid === sourceUuid
-      );
+      const byUuid = originalParent.children.find((child) => child.uuid === sourceUuid);
       if (byUuid) return byUuid;
     }
-    const index = cloneChild.parent
-      ? cloneChild.parent.children.indexOf(cloneChild)
-      : -1;
+    const index = cloneChild.parent ? cloneChild.parent.children.indexOf(cloneChild) : -1;
     if (index < 0 || index >= originalParent.children.length) return null;
     return originalParent.children[index];
   }
@@ -728,10 +689,7 @@ export class ViewportSyncManager {
       }
     }
     for (const child of scene.children) {
-      if (
-        child instanceof THREE.Group &&
-        child.userData[EDITOR_SOURCE_UUID_KEY]
-      ) {
+      if (child instanceof THREE.Group && child.userData[EDITOR_SOURCE_UUID_KEY]) {
         return child;
       }
     }
@@ -747,8 +705,7 @@ export class ViewportSyncManager {
     scene.children.forEach((child) => {
       if (
         child instanceof THREE.Group &&
-        (child.userData[EDITOR_VIEWPORT_CLONE_KEY] ||
-          child.userData[EDITOR_SOURCE_UUID_KEY])
+        (child.userData[EDITOR_VIEWPORT_CLONE_KEY] || child.userData[EDITOR_SOURCE_UUID_KEY])
       ) {
         toRemove.push(child);
       }
@@ -765,7 +722,11 @@ export class ViewportSyncManager {
    * @param obj The Three.js object whose resources should be disposed.
    */
   private disposeObject3D(obj: THREE.Object3D): void {
-    if (obj instanceof THREE.Mesh || obj instanceof THREE.Line || obj instanceof THREE.LineSegments) {
+    if (
+      obj instanceof THREE.Mesh ||
+      obj instanceof THREE.Line ||
+      obj instanceof THREE.LineSegments
+    ) {
       if (obj.geometry) obj.geometry.dispose();
       this.disposeCloneMaterials(obj.material);
     }
@@ -777,9 +738,7 @@ export class ViewportSyncManager {
    * Disposes clone-owned materials, never shared brush edge materials.
    * @param material Material or material array on a disposed clone object.
    */
-  private disposeCloneMaterials(
-    material: THREE.Material | THREE.Material[] | undefined
-  ): void {
+  private disposeCloneMaterials(material: THREE.Material | THREE.Material[] | undefined): void {
     if (Array.isArray(material)) {
       material.forEach((entry) => this.disposeCloneMaterial(entry));
       return;

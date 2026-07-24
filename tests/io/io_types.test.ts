@@ -85,12 +85,8 @@ describe('SceneJSON round-trip validation', () => {
     mesh.name = 'Child';
     parentGroup.add(mesh);
     const sceneData = serializer.serialize(group);
-    const parentEntry = sceneData.objects.find(
-      (o) => o.name === 'Parent'
-    );
-    const childEntry = sceneData.objects.find(
-      (o) => o.name === 'Child'
-    );
+    const parentEntry = sceneData.objects.find((o) => o.name === 'Parent');
+    const childEntry = sceneData.objects.find((o) => o.name === 'Child');
     if (parentEntry && childEntry) {
       expect(typeof childEntry.parentId).toBe('string');
       expect(childEntry.parentId).toBe(parentEntry.uuid);
@@ -161,13 +157,10 @@ describe('SceneJSON round-trip validation', () => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3)
+      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3),
     );
     geometry.computeVertexNormals();
-    const mesh = new THREE.Mesh(
-      geometry,
-      new THREE.MeshStandardMaterial({ color: 0x123456 })
-    );
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x123456 }));
     mesh.name = 'BufferMesh';
     sourceGroup.add(mesh);
     const sceneData = serializer.serialize(sourceGroup);
@@ -219,9 +212,7 @@ describe('SceneJSON round-trip validation', () => {
  * @param geometryType The type of geometry to create.
  * @returns The created mesh.
  */
-function createMeshWithGeometry(
-  geometryType: 'box' | 'sphere' | 'cylinder' | 'plane'
-): THREE.Mesh {
+function createMeshWithGeometry(geometryType: 'box' | 'sphere' | 'cylinder' | 'plane'): THREE.Mesh {
   let geometry: THREE.BufferGeometry;
   if (geometryType === 'box') {
     geometry = new THREE.BoxGeometry(1, 1, 1);

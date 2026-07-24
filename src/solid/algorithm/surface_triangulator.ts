@@ -47,9 +47,7 @@ export class SurfaceTriangulator {
    * @param vertices Ordered convex polygon vertices.
    * @returns One [i0, i1, i2] triple per triangle.
    */
-  static triangulateConvexVertices(
-    vertices: readonly THREE.Vector3[]
-  ): number[][] {
+  static triangulateConvexVertices(vertices: readonly THREE.Vector3[]): number[][] {
     const flat = this.fanIndices(vertices.length);
     const triples: number[][] = [];
     for (let index = 0; index < flat.length; index += 3) {
@@ -71,7 +69,7 @@ export class SurfaceTriangulator {
       textureId?: string;
       brushId?: string;
       surfaceIndex?: number;
-    }>
+    }>,
   ): {
     positions: Float32Array;
     normals: Float32Array;
@@ -103,7 +101,7 @@ export class SurfaceTriangulator {
         triangleIndices: regionIndices,
         textureId,
         brushId,
-        surfaceIndex
+        surfaceIndex,
       });
       triangleCount += triangleSteps;
       for (const localIndex of localIndices) {
@@ -118,7 +116,7 @@ export class SurfaceTriangulator {
       triangleCount,
       triangleTextureIds,
       surfaceRegions,
-      triangleSources
+      triangleSources,
     };
   }
 }

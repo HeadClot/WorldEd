@@ -25,11 +25,7 @@ export class SetColorCommand implements UndoCommand {
    * @param newColorHex The target color as a CSS hex number (e.g. 0xff0000).
    * @param originalColorHexes Optional per-mesh undo colors matching meshes order.
    */
-  constructor(
-    meshes: THREE.Mesh[],
-    newColorHex: number,
-    originalColorHexes?: number[]
-  ) {
+  constructor(meshes: THREE.Mesh[], newColorHex: number, originalColorHexes?: number[]) {
     this.snapshots = [];
     this.newColorHex = newColorHex;
     meshes.forEach((mesh, index) => {
@@ -49,7 +45,7 @@ export class SetColorCommand implements UndoCommand {
   private resolveOriginalColorHex(
     mesh: THREE.Mesh,
     originalColorHexes: number[] | undefined,
-    index: number
+    index: number,
   ): number | null {
     if (originalColorHexes && index < originalColorHexes.length) {
       return originalColorHexes[index];

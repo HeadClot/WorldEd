@@ -8,10 +8,7 @@ describe('TransformDragSession', () => {
    * @returns A mesh with position, rotation, and scale set.
    */
   function createTransformedMesh(): THREE.Mesh {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.position.set(1, 2, 3);
     mesh.quaternion.setFromEuler(new THREE.Euler(0.1, 0.2, 0.3));
     mesh.scale.set(2, 3, 4);

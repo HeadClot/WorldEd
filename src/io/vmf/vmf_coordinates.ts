@@ -27,7 +27,7 @@ export function swizzleSourceToThree(source: VmfVector3): THREE.Vector3 {
  */
 export function sourcePointToEditorMeters(
   source: VmfVector3,
-  unitScale: number = VMF_INCHES_TO_METERS
+  unitScale: number = VMF_INCHES_TO_METERS,
 ): THREE.Vector3 {
   return swizzleSourceToThree(source).multiplyScalar(unitScale);
 }
@@ -49,10 +49,6 @@ export function swizzleSourceDirectionToThree(source: VmfVector3): THREE.Vector3
  * @param z Source Z component.
  * @returns Three-space vector (x, z, y).
  */
-export function swizzleSourceComponentsToThree(
-  x: number,
-  y: number,
-  z: number
-): THREE.Vector3 {
+export function swizzleSourceComponentsToThree(x: number, y: number, z: number): THREE.Vector3 {
   return new THREE.Vector3(x, z, y);
 }

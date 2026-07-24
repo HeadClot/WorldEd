@@ -13,7 +13,7 @@ describe('OrthographicCameraAnimator', () => {
   beforeEach(() => {
     mockTime = 0;
     vi.stubGlobal('performance', {
-      now: () => mockTime
+      now: () => mockTime,
     });
     animator = new OrthographicCameraAnimator();
     config = new CameraAnimationConfig();

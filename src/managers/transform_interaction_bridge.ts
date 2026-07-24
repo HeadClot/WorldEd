@@ -109,7 +109,7 @@ export class TransformInteractionBridge {
       eventParams.handles,
       eventParams.selectedObjects,
       viewport.getGizmoGroup(),
-      viewport
+      viewport,
     );
   }
 
@@ -172,8 +172,8 @@ export class TransformInteractionBridge {
       renderer: viewport.getRenderer(),
       handles: this.deps.transformGizmo.getHandles(),
       selectedObjects: filterUnlockedObjects(
-        this.deps.selectionManager.getAllSelectedObjectsAsArray()
-      )
+        this.deps.selectionManager.getAllSelectedObjectsAsArray(),
+      ),
     };
   }
 
@@ -196,7 +196,7 @@ export class TransformInteractionBridge {
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[],
     gizmoGroup: THREE.Group | null,
-    viewport: Viewport3D | Viewport2D
+    viewport: Viewport3D | Viewport2D,
   ): boolean {
     if (eventType === 'pointerdown') {
       return this.beginTransformPointerDown(
@@ -206,7 +206,7 @@ export class TransformInteractionBridge {
         handles,
         selectedObjects,
         gizmoGroup,
-        viewport
+        viewport,
       );
     }
     if (eventType === 'pointermove') {
@@ -237,7 +237,7 @@ export class TransformInteractionBridge {
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[],
     gizmoGroup: THREE.Group | null,
-    viewport: Viewport3D | Viewport2D
+    viewport: Viewport3D | Viewport2D,
   ): boolean {
     const pivot = this.computeCurrentPivot();
     this.deps.transformHandler.onPointerDown(
@@ -247,7 +247,7 @@ export class TransformInteractionBridge {
       handles,
       selectedObjects,
       pivot,
-      gizmoGroup ?? new THREE.Group()
+      gizmoGroup ?? new THREE.Group(),
     );
     if (!this.deps.transformHandler.isDragging()) return false;
     this.pendingSelectionClickEvent = event;
@@ -265,7 +265,7 @@ export class TransformInteractionBridge {
     this.activeDragViewport = viewport;
     this.windowDragSession.begin(
       (moveEvent) => this.onWindowDragMove(moveEvent),
-      () => this.handleTransformPointerUp()
+      () => this.handleTransformPointerUp(),
     );
   }
 
@@ -278,7 +278,7 @@ export class TransformInteractionBridge {
     this.handleTransformPointerMove(
       this.activeDragViewport.getCamera(),
       this.activeDragViewport.getRenderer(),
-      event
+      event,
     );
   }
 
@@ -292,30 +292,21 @@ export class TransformInteractionBridge {
   private handleTransformPointerMove(
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
-    event: MouseEvent
+    event: MouseEvent,
   ): boolean {
     if (!this.deps.transformHandler.isDragging()) return false;
     const pivot = this.computeCurrentPivot();
     const selected = filterUnlockedObjects(
-      Array.from(this.deps.selectionManager.getSelectedObjects())
+      Array.from(this.deps.selectionManager.getSelectedObjects()),
     );
     this.updateSnapFromShiftKey();
-    this.deps.transformHandler.onPointerMove(
-      camera, renderer, event, pivot, selected
-    );
-    this.deps.viewportSyncManager.syncClonePositionsToWorldObject(
-      this.deps.worldObject
-    );
+    this.deps.transformHandler.onPointerMove(camera, renderer, event, pivot, selected);
+    this.deps.viewportSyncManager.syncClonePositionsToWorldObject(this.deps.worldObject);
     this.deps.onTransformsLive?.(selected);
     this.deps.selectionVisualController.syncDuringTransform();
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
-    this.deps.transformGizmo.setOrientation(
-      this.resolveGizmoOrientation(selected)
-    );
-    this.deps.transformGizmo.updateBoundsFromMeshes(
-      selected,
-      this.deps.viewport3D.getCamera()
-    );
+    this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(selected));
+    this.deps.transformGizmo.updateBoundsFromMeshes(selected, this.deps.viewport3D.getCamera());
     this.refreshPropertiesPanelTransform();
     return true;
   }
@@ -349,12 +340,9 @@ export class TransformInteractionBridge {
     }
     const pivot = this.computeCurrentPivot();
     const selectedObjects = filterUnlockedObjects(
-      this.deps.selectionManager.getAllSelectedObjectsAsArray()
+      this.deps.selectionManager.getAllSelectedObjectsAsArray(),
     );
-    const selectionClick = this.deps.transformHandler.onPointerUp(
-      pivot,
-      selectedObjects
-    );
+    const selectionClick = this.deps.transformHandler.onPointerUp(pivot, selectedObjects);
     const clickEvent = this.pendingSelectionClickEvent;
     const clickViewport = this.pendingSelectionClickViewport;
     this.clearWindowDragCapture();
@@ -371,19 +359,14 @@ export class TransformInteractionBridge {
    * @param selectedObjects Meshes that were transformed.
    */
   private commitTransformAfterDrag(selectedObjects: THREE.Mesh[]): void {
-    const solidHandled =
-      this.deps.onTransformsCommitted?.(selectedObjects) === true;
+    const solidHandled = this.deps.onTransformsCommitted?.(selectedObjects) === true;
     if (solidHandled) {
-      this.deps.viewportSyncManager.syncClonePositionsToWorldObject(
-        this.deps.worldObject
-      );
+      this.deps.viewportSyncManager.syncClonePositionsToWorldObject(this.deps.worldObject);
     } else {
       this.deps.syncPrimitivesToViewports();
     }
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
-    this.deps.transformGizmo.setOrientation(
-      this.resolveGizmoOrientation(selectedObjects)
-    );
+    this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(selectedObjects));
     this.refreshPropertiesPanelTransform();
   }
 
@@ -394,15 +377,12 @@ export class TransformInteractionBridge {
    */
   private applyBoundsFaceSelectionClick(
     event: MouseEvent | null,
-    viewport: Viewport3D | Viewport2D | null
+    viewport: Viewport3D | Viewport2D | null,
   ): void {
     if (!event || !viewport) return;
     if (typeof viewport.getObjectPickStack !== 'function') return;
     const stack = viewport.getObjectPickStack(event);
-    const picked = SelectionClickThrough.pickFromStack(
-      stack,
-      this.deps.selectionManager
-    );
+    const picked = SelectionClickThrough.pickFromStack(stack, this.deps.selectionManager);
     if (!picked) return;
     this.deps.selectionManager.selectFromClick(picked, false, false);
   }

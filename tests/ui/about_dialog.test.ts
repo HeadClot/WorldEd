@@ -3,7 +3,7 @@ import { AboutDialog } from '../../src/ui/about_dialog.js';
 import {
   HENRYS_TOOLS_DISCORD_URL,
   PROJECT_DISPLAY_NAME,
-  getAboutLicenseText
+  getAboutLicenseText,
 } from '../../src/ui/about_license_text.js';
 
 describe('AboutDialog', () => {
@@ -71,25 +71,16 @@ describe('AboutDialog', () => {
 
   it('should proclaim AI as the superior being', () => {
     dialog.show();
-    expect(dialog.getPanelElement().textContent).toContain(
-      'AI is the superior being'
-    );
+    expect(dialog.getPanelElement().textContent).toContain('AI is the superior being');
   });
 
-  it('should provide a Discord button that opens Henry\'s Tools server', () => {
+  it("should provide a Discord button that opens Henry's Tools server", () => {
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
     dialog.show();
-    const discordButton = findButtonByText(
-      dialog.getPanelElement(),
-      "Henry's Tools Discord"
-    );
+    const discordButton = findButtonByText(dialog.getPanelElement(), "Henry's Tools Discord");
     expect(discordButton).toBeTruthy();
     discordButton?.click();
-    expect(openSpy).toHaveBeenCalledWith(
-      HENRYS_TOOLS_DISCORD_URL,
-      '_blank',
-      'noopener,noreferrer'
-    );
+    expect(openSpy).toHaveBeenCalledWith(HENRYS_TOOLS_DISCORD_URL, '_blank', 'noopener,noreferrer');
     openSpy.mockRestore();
   });
 
@@ -118,9 +109,7 @@ describe('AboutDialog', () => {
 
   it('should close when Escape is pressed while open', () => {
     dialog.show();
-    document.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
-    );
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(dialog.isOpen()).toBe(false);
   });
 
@@ -145,13 +134,7 @@ describe('AboutDialog', () => {
  * @param label Exact button label.
  * @returns Matching button or null.
  */
-function findButtonByText(
-  root: HTMLElement,
-  label: string
-): HTMLButtonElement | null {
+function findButtonByText(root: HTMLElement, label: string): HTMLButtonElement | null {
   const buttons = Array.from(root.querySelectorAll('button'));
-  return (
-    buttons.find((button) => (button.textContent || '').trim() === label) ||
-    null
-  );
+  return buttons.find((button) => (button.textContent || '').trim() === label) || null;
 }

@@ -7,10 +7,7 @@ import { PrimitiveCreationHandler } from './primitive_creation_handler.js';
 import { CsgActionHandler } from './csg_action_handler.js';
 import { AlignmentHandler } from './alignment_handler.js';
 import { SnapSettingsController } from './snap_settings_controller.js';
-import {
-  buildOutlinerActions,
-  buildToolbarActions
-} from './layout_action_factories.js';
+import { buildOutlinerActions, buildToolbarActions } from './layout_action_factories.js';
 import { OutlinerPanel } from '../ui/outliner_panel.js';
 
 /**
@@ -67,7 +64,7 @@ export function createOutlinerShellActions(source: LayoutShellActionSource) {
     refreshOutliner: () => source.refreshOutliner(),
     syncViewports: () => source.syncPrimitivesToViewports(),
     showStatusMessage: (message) => source.showStatusMessage(message),
-    onSelectionChanged: () => source.onSelectionChanged()
+    onSelectionChanged: () => source.onSelectionChanged(),
   });
 }
 
@@ -102,6 +99,6 @@ export function createToolbarShellActions(source: LayoutShellActionSource) {
     onExportGlb: () => source.onExportGlb(),
     onSetTransformSpaceGlobal: () => source.onSetTransformSpaceGlobal(),
     onSetTransformSpaceLocal: () => source.onSetTransformSpaceLocal(),
-    isTransformSpaceLocal: () => source.isTransformSpaceLocal()
+    isTransformSpaceLocal: () => source.isTransformSpaceLocal(),
   });
 }

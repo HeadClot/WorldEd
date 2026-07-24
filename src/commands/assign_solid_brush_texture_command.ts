@@ -2,10 +2,7 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
-import {
-  FaceTextureMapping,
-  cloneFaceTextureMapping
-} from '../texture/face_texture_mapping.js';
+import { FaceTextureMapping, cloneFaceTextureMapping } from '../texture/face_texture_mapping.js';
 
 /**
  * Snapshot of one brush texture assignment for undo.
@@ -85,9 +82,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
    * @param mesh Brush preview mesh.
    * @returns Model and brush id when applied, otherwise null.
    */
-  private applyToMesh(
-    mesh: THREE.Mesh
-  ): { model: SolidModel; brushId: string } | null {
+  private applyToMesh(mesh: THREE.Mesh): { model: SolidModel; brushId: string } | null {
     const model = SolidModel.fromObject(mesh);
     if (!model) return null;
     const brush = model.findBrushByMesh(mesh);
@@ -96,7 +91,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
       model,
       brushId: brush.id,
       previousDefaultMapping: brush.serializeDefaultMapping(),
-      previousFaceMappings: brush.serializeFaceMappings()
+      previousFaceMappings: brush.serializeFaceMappings(),
     });
     brush.setAllFacesTextureId(this.textureId);
     return { model, brushId: brush.id };
@@ -113,8 +108,8 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
     brush.restoreFaceMappings(
       cloneFaceTextureMapping(snapshot.previousDefaultMapping),
       snapshot.previousFaceMappings.map((mapping) =>
-        mapping ? cloneFaceTextureMapping(mapping) : undefined
-      )
+        mapping ? cloneFaceTextureMapping(mapping) : undefined,
+      ),
     );
     return true;
   }
@@ -128,7 +123,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
   private addBrush(
     brushesByModel: Map<SolidModel, Set<string>>,
     model: SolidModel,
-    brushId: string
+    brushId: string,
   ): void {
     const set = brushesByModel.get(model);
     if (set) {
@@ -142,9 +137,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
    * Remeshes painted brushes without CSG.
    * @param brushesByModel Brushes grouped by solid model.
    */
-  private refreshPresentations(
-    brushesByModel: Map<SolidModel, Set<string>>
-  ): void {
+  private refreshPresentations(brushesByModel: Map<SolidModel, Set<string>>): void {
     for (const [model, brushIds] of brushesByModel) {
       model.refreshBrushPresentations(Array.from(brushIds));
     }

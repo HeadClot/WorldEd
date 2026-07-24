@@ -90,18 +90,15 @@ export class FaceModeCoordinator {
     if (this.faceExtrusionController.getSelectionMode() !== SelectionMode.FACE) {
       this.faceExtrusionController.setSelectionMode(SelectionMode.FACE);
       this.deps.showStatusMessage(
-        'Face mode: drag faces to select, hold G to smear UVs, Extrude (Shift+E)'
+        'Face mode: drag faces to select, hold G to smear UVs, Extrude (Shift+E)',
       );
       return;
     }
     if (this.faceExtrusionController.getSelectedFaceCount() === 0) {
-      this.deps.showStatusMessage(
-        'Select a face first, then Extrude (Shift+E)'
-      );
+      this.deps.showStatusMessage('Select a face first, then Extrude (Shift+E)');
       return;
     }
-    const createdMeshes =
-      this.faceExtrusionController.extrudeSelectedFacesByDefaultDistance();
+    const createdMeshes = this.faceExtrusionController.extrudeSelectedFacesByDefaultDistance();
     if (createdMeshes.length === 0) {
       this.deps.showStatusMessage('Extrude failed — select one or more faces');
       return;
@@ -114,9 +111,10 @@ export class FaceModeCoordinator {
     // Select after leaving face mode and syncing viewports so object gizmos show.
     this.deps.selectionManager.setSelection(createdMeshes);
     this.updateSelectionModeStatus();
-    const label = createdMeshes.length === 1
-      ? `Created convex solid ${createdMeshes[0].name}`
-      : `Created ${createdMeshes.length} convex solids`;
+    const label =
+      createdMeshes.length === 1
+        ? `Created convex solid ${createdMeshes[0].name}`
+        : `Created ${createdMeshes.length} convex solids`;
     this.deps.showStatusMessage(label);
   }
 
@@ -152,7 +150,7 @@ export class FaceModeCoordinator {
       this.deps.viewport3D.getScene(),
       this.deps.commandStack,
       this.deps.gridSnap,
-      this.deps.worldObject
+      this.deps.worldObject,
     );
   }
 
@@ -160,11 +158,11 @@ export class FaceModeCoordinator {
    * Binds callbacks between the face controller and keyboard shortcuts.
    */
   private bindFaceSelectionCallbacks(): void {
-    this.faceExtrusionController.setModeChangedCallback(
-      (mode) => this.onSelectionModeChanged(mode)
+    this.faceExtrusionController.setModeChangedCallback((mode) =>
+      this.onSelectionModeChanged(mode),
     );
-    this.deps.keyboardShortcutHandler.setOnSelectionModeToggle(
-      (mode) => this.onSelectionModeToggle(mode)
+    this.deps.keyboardShortcutHandler.setOnSelectionModeToggle((mode) =>
+      this.onSelectionModeToggle(mode),
     );
     this.deps.keyboardShortcutHandler.setOnExtrudeFaces(() => this.onExtrudeFaces());
   }
@@ -177,12 +175,10 @@ export class FaceModeCoordinator {
       this.deps.viewport3D,
       this.deps.viewport2DTop,
       this.deps.viewport2DFront,
-      this.deps.viewport2DSide
+      this.deps.viewport2DSide,
     ];
     viewports.forEach((viewport) => {
-      viewport.setFaceSelectionCallback(
-        (event) => this.onViewportFacePointerDown(event, viewport)
-      );
+      viewport.setFaceSelectionCallback((event) => this.onViewportFacePointerDown(event, viewport));
     });
   }
 
@@ -193,10 +189,7 @@ export class FaceModeCoordinator {
    * @param viewport The viewport that received the event.
    * @returns True if the event was consumed by face selection.
    */
-  private onViewportFacePointerDown(
-    event: MouseEvent,
-    viewport: Viewport3D | Viewport2D
-  ): boolean {
+  private onViewportFacePointerDown(event: MouseEvent, viewport: Viewport3D | Viewport2D): boolean {
     if (this.faceExtrusionController.getSelectionMode() !== SelectionMode.FACE) {
       return false;
     }
@@ -205,18 +198,12 @@ export class FaceModeCoordinator {
     const renderer = viewport.getRenderer();
     this.faceExtrusionController.onPointerDown(event, camera, renderer);
     if (smearHeld) {
-      const pick = this.faceExtrusionController.pickFaceAtPointer(
-        event,
-        camera,
-        renderer
-      );
+      const pick = this.faceExtrusionController.pickFaceAtPointer(event, camera, renderer);
       if (pick) {
         this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);
         this.isSmearStrokeLive = true;
         this.deps.updateShadingMeshes();
-        this.deps.showStatusMessage(
-          'Smearing UVs — drag across faces, release to finish'
-        );
+        this.deps.showStatusMessage('Smearing UVs — drag across faces, release to finish');
       }
     }
     this.beginWindowDragTracking(viewport);
@@ -272,11 +259,7 @@ export class FaceModeCoordinator {
     const camera = viewport.getCamera();
     const renderer = viewport.getRenderer();
     if (this.isSmearStrokeLive || this.isUvSmearKeyHeld()) {
-      const pick = this.faceExtrusionController.pickFaceAtPointer(
-        event,
-        camera,
-        renderer
-      );
+      const pick = this.faceExtrusionController.pickFaceAtPointer(event, camera, renderer);
       if (pick) {
         if (!this.isSmearStrokeLive) {
           this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);
@@ -348,7 +331,7 @@ export class FaceModeCoordinator {
     this.deps.selectionManager.clearSelection();
     this.updateFaceSelectionMeshes();
     this.deps.showStatusMessage(
-      'Face mode: drag to select faces · hold G and drag to smear UVs · Extrude / Shift+E'
+      'Face mode: drag to select faces · hold G and drag to smear UVs · Extrude / Shift+E',
     );
   }
 
@@ -359,9 +342,7 @@ export class FaceModeCoordinator {
     if (!this.deps.statusBar) return;
     const mode = this.faceExtrusionController.getSelectionMode();
     const count = this.faceExtrusionController.getSelectedFaceCount();
-    this.deps.statusBar.setSelectionModeInfo(
-      this.formatSelectionMode(mode), count
-    );
+    this.deps.statusBar.setSelectionModeInfo(this.formatSelectionMode(mode), count);
   }
 
   /**

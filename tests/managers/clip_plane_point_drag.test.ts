@@ -29,11 +29,11 @@ describe('ClipPlanePointDrag', () => {
         height: 200,
         x: 0,
         y: 0,
-        toJSON: () => ({})
-      })
+        toJSON: () => ({}),
+      }),
     });
     renderer = {
-      domElement: canvas
+      domElement: canvas,
     } as unknown as THREE.WebGLRenderer;
   });
 
@@ -44,7 +44,7 @@ describe('ClipPlanePointDrag', () => {
     const clientY = (-projected.y * 0.5 + 0.5) * 200;
     const event = {
       clientX,
-      clientY
+      clientY,
     } as MouseEvent;
     const index = drag.pickMarkerIndex(event, camera, renderer, [point]);
     expect(index).toBe(0);
@@ -54,7 +54,7 @@ describe('ClipPlanePointDrag', () => {
     const point = new THREE.Vector3(0, 0, 0);
     const event = {
       clientX: 0,
-      clientY: 0
+      clientY: 0,
     } as MouseEvent;
     const index = drag.pickMarkerIndex(event, camera, renderer, [point]);
     expect(index).toBeNull();
@@ -69,12 +69,7 @@ describe('ClipPlanePointDrag', () => {
     const origin = new THREE.Vector3(0, 0, 0);
     const plane = drag.createDragPlane(origin, camera);
     const centerEvent = { clientX: 100, clientY: 100 } as MouseEvent;
-    const hit = drag.projectOntoDragPlane(
-      centerEvent,
-      camera,
-      renderer,
-      plane
-    );
+    const hit = drag.projectOntoDragPlane(centerEvent, camera, renderer, plane);
     expect(hit).not.toBeNull();
     expect(hit!.z).toBeCloseTo(0, 1);
   });

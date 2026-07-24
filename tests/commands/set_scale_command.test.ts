@@ -10,12 +10,12 @@ describe('SetScaleCommand', () => {
   beforeEach(() => {
     mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh1.scale.set(1, 1, 1);
     mesh2 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh2.scale.set(2, 3, 4);
   });
@@ -102,10 +102,7 @@ describe('SetScaleCommand', () => {
   it('should handle multiple objects with different scales', () => {
     const scale1 = new THREE.Vector3(2, 2, 2);
     const scale2 = new THREE.Vector3(4, 4, 4);
-    const command = new SetScaleCommand(
-      [mesh1, mesh2],
-      [scale1, scale2]
-    );
+    const command = new SetScaleCommand([mesh1, mesh2], [scale1, scale2]);
     command.execute();
     expect(mesh1.scale.x).toBeCloseTo(2);
     expect(mesh2.scale.x).toBeCloseTo(4);

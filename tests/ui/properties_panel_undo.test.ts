@@ -255,10 +255,6 @@ function createUnboundPanel(): PropertiesPanel {
   const tempContainer = document.createElement('div');
   document.body.appendChild(tempContainer);
   const tempSelectionManager = new SelectionManager();
-  const tempPanel = new PropertiesPanel(
-    tempContainer,
-    Theme,
-    tempSelectionManager
-  );
+  const tempPanel = new PropertiesPanel(tempContainer, Theme, tempSelectionManager);
   return tempPanel;
 }

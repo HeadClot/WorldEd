@@ -9,7 +9,7 @@ import * as THREE from 'three';
  */
 export function getTriangleVertexIndices(
   geometry: THREE.BufferGeometry,
-  faceIndex: number
+  faceIndex: number,
 ): [number, number, number] {
   const indexAttribute = geometry.index;
   if (indexAttribute) {
@@ -17,7 +17,7 @@ export function getTriangleVertexIndices(
     return [
       indexAttribute.getX(base),
       indexAttribute.getX(base + 1),
-      indexAttribute.getX(base + 2)
+      indexAttribute.getX(base + 2),
     ];
   }
   const base = faceIndex * 3;
@@ -47,12 +47,12 @@ export function getTriangleCount(geometry: THREE.BufferGeometry): number {
  */
 export function getVertexPosition(
   positions: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  vertexIndex: number
+  vertexIndex: number,
 ): THREE.Vector3 {
   return new THREE.Vector3(
     positions.getX(vertexIndex),
     positions.getY(vertexIndex),
-    positions.getZ(vertexIndex)
+    positions.getZ(vertexIndex),
   );
 }
 
@@ -64,7 +64,7 @@ export function getVertexPosition(
  */
 export function computeTriangleNormal(
   geometry: THREE.BufferGeometry,
-  faceIndex: number
+  faceIndex: number,
 ): THREE.Vector3 {
   const positions = geometry.getAttribute('position');
   const [i0, i1, i2] = getTriangleVertexIndices(geometry, faceIndex);
@@ -84,14 +84,17 @@ export function computeTriangleNormal(
  */
 export function computeTriangleCentroid(
   geometry: THREE.BufferGeometry,
-  faceIndex: number
+  faceIndex: number,
 ): THREE.Vector3 {
   const positions = geometry.getAttribute('position');
   const [i0, i1, i2] = getTriangleVertexIndices(geometry, faceIndex);
   const v0 = getVertexPosition(positions, i0);
   const v1 = getVertexPosition(positions, i1);
   const v2 = getVertexPosition(positions, i2);
-  return v0.add(v1).add(v2).multiplyScalar(1 / 3);
+  return v0
+    .add(v1)
+    .add(v2)
+    .multiplyScalar(1 / 3);
 }
 
 /**
@@ -109,7 +112,7 @@ export function findCoplanarFaceIndices(
   geometry: THREE.BufferGeometry,
   seedFaceIndex: number,
   normalDotTolerance: number = 0.995,
-  planeTolerance: number = 1e-3
+  planeTolerance: number = 1e-3,
 ): number[] {
   const triangleCount = getTriangleCount(geometry);
   if (seedFaceIndex < 0 || seedFaceIndex >= triangleCount) {
@@ -120,14 +123,16 @@ export function findCoplanarFaceIndices(
   const seedPlaneConstant = seedNormal.dot(seedPoint);
   const result: number[] = [];
   for (let faceIndex = 0; faceIndex < triangleCount; faceIndex++) {
-    if (!isTriangleCoplanarWithSeed(
-      geometry,
-      faceIndex,
-      seedNormal,
-      seedPlaneConstant,
-      normalDotTolerance,
-      planeTolerance
-    )) {
+    if (
+      !isTriangleCoplanarWithSeed(
+        geometry,
+        faceIndex,
+        seedNormal,
+        seedPlaneConstant,
+        normalDotTolerance,
+        planeTolerance,
+      )
+    ) {
       continue;
     }
     result.push(faceIndex);
@@ -148,13 +153,13 @@ export function findConnectedCoplanarFaceIndices(
   geometry: THREE.BufferGeometry,
   seedFaceIndex: number,
   normalDotTolerance: number = 0.995,
-  planeTolerance: number = 1e-3
+  planeTolerance: number = 1e-3,
 ): number[] {
   const coplanar = findCoplanarFaceIndices(
     geometry,
     seedFaceIndex,
     normalDotTolerance,
-    planeTolerance
+    planeTolerance,
   );
   if (coplanar.length <= 1) return coplanar;
   return floodFillConnectedFaces(geometry, seedFaceIndex, new Set(coplanar));
@@ -170,7 +175,7 @@ export function findConnectedCoplanarFaceIndices(
 export function floodFillConnectedFaces(
   geometry: THREE.BufferGeometry,
   seedFaceIndex: number,
-  candidates: ReadonlySet<number>
+  candidates: ReadonlySet<number>,
 ): number[] {
   if (!candidates.has(seedFaceIndex)) return [];
   const adjacency = buildPositionEdgeAdjacency(geometry, candidates);
@@ -198,7 +203,7 @@ export function floodFillConnectedFaces(
  */
 function buildPositionEdgeAdjacency(
   geometry: THREE.BufferGeometry,
-  faceIndices: ReadonlySet<number>
+  faceIndices: ReadonlySet<number>,
 ): Map<number, number[]> {
   const edgeToFaces = new Map<string, number[]>();
   for (const faceIndex of faceIndices) {
@@ -227,11 +232,7 @@ function buildPositionEdgeAdjacency(
  * @param a First face index.
  * @param b Second face index.
  */
-function addAdjacencyEdge(
-  adjacency: Map<number, number[]>,
-  a: number,
-  b: number
-): void {
+function addAdjacencyEdge(adjacency: Map<number, number[]>, a: number, b: number): void {
   const listA = adjacency.get(a);
   if (listA) {
     if (!listA.includes(b)) listA.push(b);
@@ -254,18 +255,14 @@ function addAdjacencyEdge(
  */
 function getTrianglePositionEdgeKeys(
   geometry: THREE.BufferGeometry,
-  faceIndex: number
+  faceIndex: number,
 ): [string, string, string] {
   const positions = geometry.getAttribute('position');
   const [i0, i1, i2] = getTriangleVertexIndices(geometry, faceIndex);
   const p0 = getVertexPosition(positions, i0);
   const p1 = getVertexPosition(positions, i1);
   const p2 = getVertexPosition(positions, i2);
-  return [
-    makePositionEdgeKey(p0, p1),
-    makePositionEdgeKey(p1, p2),
-    makePositionEdgeKey(p2, p0)
-  ];
+  return [makePositionEdgeKey(p0, p1), makePositionEdgeKey(p1, p2), makePositionEdgeKey(p2, p0)];
 }
 
 /**
@@ -309,7 +306,7 @@ function isTriangleCoplanarWithSeed(
   seedNormal: THREE.Vector3,
   seedPlaneConstant: number,
   normalDotTolerance: number,
-  planeTolerance: number
+  planeTolerance: number,
 ): boolean {
   const normal = computeTriangleNormal(geometry, faceIndex);
   if (Math.abs(normal.dot(seedNormal)) < normalDotTolerance) {
@@ -328,7 +325,7 @@ function isTriangleCoplanarWithSeed(
  */
 export function getUniqueVertexIndicesForFaces(
   geometry: THREE.BufferGeometry,
-  faceIndices: number[]
+  faceIndices: number[],
 ): number[] {
   const vertexSet = new Set<number>();
   faceIndices.forEach((faceIndex) => {

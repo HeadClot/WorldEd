@@ -2,10 +2,7 @@ import * as THREE from 'three';
 import { TextureLibrary } from './texture_library.js';
 import { TextureBrowserEntry } from './texture_browser_entry.js';
 import { getDebugCheckerTexture } from './debug_texture_factory.js';
-import {
-  DEFAULT_CHECKER_TEXTURE_ID,
-  isDefaultCheckerTextureId
-} from './texture_id.js';
+import { DEFAULT_CHECKER_TEXTURE_ID, isDefaultCheckerTextureId } from './texture_id.js';
 
 /**
  * Loads and caches THREE.Texture instances for surface assignment.
@@ -57,9 +54,7 @@ export class TextureMapCache {
    */
   pruneMissingLibraryEntries(): void {
     if (!this.library) return;
-    const keep = new Set(
-      this.library.getEntries().map((entry) => entry.id)
-    );
+    const keep = new Set(this.library.getEntries().map((entry) => entry.id));
     const staleIds: string[] = [];
     this.textures.forEach((_texture, id) => {
       if (!keep.has(id)) staleIds.push(id);
@@ -116,9 +111,7 @@ export function setTextureMapCacheForTests(cache: TextureMapCache | null): void 
  * @param entry Texture browser entry with a live object URL.
  * @returns Configured THREE.Texture (updates when the image loads).
  */
-function createTextureFromBrowserEntry(
-  entry: TextureBrowserEntry
-): THREE.Texture {
+function createTextureFromBrowserEntry(entry: TextureBrowserEntry): THREE.Texture {
   if (entry.id === DEFAULT_CHECKER_TEXTURE_ID) {
     return getDebugCheckerTexture();
   }

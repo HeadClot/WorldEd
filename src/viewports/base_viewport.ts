@@ -23,7 +23,7 @@ export abstract class BaseViewport {
   constructor(
     container: HTMLElement,
     name: string,
-    initialShadingMode: ShadingMode = ShadingMode.SOLID
+    initialShadingMode: ShadingMode = ShadingMode.SOLID,
   ) {
     this.container = container;
     this.name = name;
@@ -35,11 +35,7 @@ export abstract class BaseViewport {
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.viewportToolbar = new ViewportToolbar(
-      container,
-      name,
-      initialShadingMode
-    );
+    this.viewportToolbar = new ViewportToolbar(container, name, initialShadingMode);
     this.setupContainer();
   }
 

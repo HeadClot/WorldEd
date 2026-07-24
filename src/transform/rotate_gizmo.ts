@@ -6,7 +6,7 @@ import {
   GizmoVisualStyle,
   applyGizmoFrontRenderOrder,
   createGizmoFrontMaterial,
-  createGizmoOccludedMesh
+  createGizmoOccludedMesh,
 } from './gizmo_visual_style.js';
 
 /**
@@ -71,7 +71,7 @@ export class RotateGizmo {
       GizmoVisualStyle.ringRadius,
       GizmoVisualStyle.stemRadius,
       12,
-      64
+      64,
     );
     const frontMesh = new THREE.Mesh(geometry, createGizmoFrontMaterial(color));
     applyGizmoFrontRenderOrder(frontMesh);

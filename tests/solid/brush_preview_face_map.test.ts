@@ -16,11 +16,7 @@ describe('brush_preview_face_map', () => {
     mesh.updateMatrix();
     const modelBrush = brush.getModelSpaceBrush();
     for (let triangleIndex = 0; triangleIndex < 12; triangleIndex++) {
-      const surfaceIndex = mapPreviewTriangleToBrushFace(
-        mesh,
-        triangleIndex,
-        brush
-      );
+      const surfaceIndex = mapPreviewTriangleToBrushFace(mesh, triangleIndex, brush);
       expect(surfaceIndex).toBeGreaterThanOrEqual(0);
       expect(surfaceIndex).toBeLessThan(6);
       const triNormal = computeTriangleNormal(mesh.geometry, triangleIndex);
@@ -44,9 +40,7 @@ describe('brush_preview_face_map', () => {
       if (n.y > 0.9) topTriangles.push(t);
     }
     expect(topTriangles.length).toBe(2);
-    const mapped = topTriangles.map((t) =>
-      mapPreviewTriangleToBrushFace(mesh, t, brush)
-    );
+    const mapped = topTriangles.map((t) => mapPreviewTriangleToBrushFace(mesh, t, brush));
     expect(mapped[0]).toBe(mapped[1]);
     const plane = brush.getModelSpaceBrush().planes[mapped[0]];
     expect(plane.normal.y).toBeGreaterThan(0.9);

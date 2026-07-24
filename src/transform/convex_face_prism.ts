@@ -2,13 +2,13 @@ import * as THREE from 'three';
 import {
   computeTriangleNormal,
   getTriangleVertexIndices,
-  getVertexPosition
+  getVertexPosition,
 } from '../selection/triangle_geometry_utils.js';
 import { Theme } from '../theme.js';
 import {
   enableFlatShadingOnMesh,
   prepareFlatShadedGeometry,
-  rebuildDecorativeEdges
+  rebuildDecorativeEdges,
 } from '../utils/mesh_edge_sync.js';
 import { createContentMaterial } from '../materials/content_material_factory.js';
 import { initializeMeshTextureUVs } from '../texture/face_texture_applier.js';
@@ -31,7 +31,7 @@ export function createConvexPrismFromFace(
   sourceMesh: THREE.Mesh,
   faceIndices: number[],
   distance: number,
-  objectName: string
+  objectName: string,
 ): THREE.Mesh | null {
   if (faceIndices.length === 0) return null;
   if (Math.abs(distance) < 1e-8) return null;
@@ -59,10 +59,7 @@ export function createConvexPrismFromFace(
  * @param faceIndices Selected triangle indices.
  * @returns Unique world-space points on the face.
  */
-function collectWorldFacePolygon(
-  sourceMesh: THREE.Mesh,
-  faceIndices: number[]
-): THREE.Vector3[] {
+function collectWorldFacePolygon(sourceMesh: THREE.Mesh, faceIndices: number[]): THREE.Vector3[] {
   const positions = sourceMesh.geometry.getAttribute('position');
   const unique = new Map<string, THREE.Vector3>();
   faceIndices.forEach((faceIndex) => {
@@ -85,10 +82,7 @@ function collectWorldFacePolygon(
  * @param faceIndex Any triangle on the face.
  * @returns Normalized world-space normal.
  */
-function computeWorldFaceNormal(
-  sourceMesh: THREE.Mesh,
-  faceIndex: number
-): THREE.Vector3 {
+function computeWorldFaceNormal(sourceMesh: THREE.Mesh, faceIndex: number): THREE.Vector3 {
   const localNormal = computeTriangleNormal(sourceMesh.geometry, faceIndex);
   const normalMatrix = new THREE.Matrix3().getNormalMatrix(sourceMesh.matrixWorld);
   return localNormal.applyMatrix3(normalMatrix).normalize();
@@ -102,7 +96,7 @@ function computeWorldFaceNormal(
  */
 export function orderConvexPolygon(
   points: THREE.Vector3[],
-  normal: THREE.Vector3
+  normal: THREE.Vector3,
 ): THREE.Vector3[] {
   if (points.length <= 3) return points.slice();
   const centroid = computeCentroid(points);
@@ -128,7 +122,7 @@ export function orderConvexPolygon(
 function buildPrismGeometry(
   basePolygon: THREE.Vector3[],
   normal: THREE.Vector3,
-  distance: number
+  distance: number,
 ): THREE.BufferGeometry {
   const offset = normal.clone().multiplyScalar(distance);
   const topPolygon = basePolygon.map((point) => point.clone().add(offset));
@@ -138,10 +132,7 @@ function buildPrismGeometry(
   appendPolygonCap(topPolygon, normal, true, positions, triangles);
   appendPrismSides(basePolygon, topPolygon, positions, triangles);
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    'position',
-    new THREE.BufferAttribute(new Float32Array(positions), 3)
-  );
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
   geometry.setIndex(triangles);
   return geometry;
 }
@@ -159,7 +150,7 @@ function appendPolygonCap(
   normal: THREE.Vector3,
   outward: boolean,
   positions: number[],
-  triangles: number[]
+  triangles: number[],
 ): void {
   const baseIndex = positions.length / 3;
   polygon.forEach((point) => {
@@ -186,7 +177,7 @@ function appendPrismSides(
   basePolygon: THREE.Vector3[],
   topPolygon: THREE.Vector3[],
   positions: number[],
-  triangles: number[]
+  triangles: number[],
 ): void {
   const count = basePolygon.length;
   for (let i = 0; i < count; i++) {
@@ -209,10 +200,7 @@ function appendPrismSides(
  * @param objectName Mesh name.
  * @returns Configured mesh.
  */
-function buildPrismMesh(
-  geometry: THREE.BufferGeometry,
-  objectName: string
-): THREE.Mesh {
+function buildPrismMesh(geometry: THREE.BufferGeometry, objectName: string): THREE.Mesh {
   const material = createContentMaterial(Theme.boxColor);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = objectName;
@@ -253,12 +241,9 @@ function computeCentroid(points: THREE.Vector3[]): THREE.Vector3 {
  * @param normal Unit plane normal.
  * @returns Orthogonal x/y axes on the plane.
  */
-function buildPlaneBasis(
-  normal: THREE.Vector3
-): { xAxis: THREE.Vector3; yAxis: THREE.Vector3 } {
-  const reference = Math.abs(normal.y) < 0.9
-    ? new THREE.Vector3(0, 1, 0)
-    : new THREE.Vector3(1, 0, 0);
+function buildPlaneBasis(normal: THREE.Vector3): { xAxis: THREE.Vector3; yAxis: THREE.Vector3 } {
+  const reference =
+    Math.abs(normal.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
   const xAxis = new THREE.Vector3().crossVectors(reference, normal).normalize();
   const yAxis = new THREE.Vector3().crossVectors(normal, xAxis).normalize();
   return { xAxis, yAxis };

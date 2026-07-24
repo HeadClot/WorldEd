@@ -1,7 +1,7 @@
 import {
   HENRYS_TOOLS_DISCORD_URL,
   PROJECT_DISPLAY_NAME,
-  getAboutLicenseText
+  getAboutLicenseText,
 } from './about_license_text.js';
 import {
   createAboutShimmer,
@@ -17,7 +17,7 @@ import {
   styleAboutPanel,
   styleAboutProclamation,
   styleAboutSubtitle,
-  styleAboutTitle
+  styleAboutTitle,
 } from './about_dialog_styles.js';
 
 /**
@@ -235,7 +235,7 @@ export class AboutDialog {
       'Human brain interface: Henry de Jongh',
       'Primary synthetic minds: Grok Build 4.5 · Qwen 3.6 27B',
       'CSG geometry lineage: Sander van Rossen — Chisel Editor & RealtimeCSG',
-      'Additional CSG inspiration: SabreCSG (MIT)'
+      'Additional CSG inspiration: SabreCSG (MIT)',
     ];
     lines.forEach((line) => {
       const paragraph = document.createElement('p');

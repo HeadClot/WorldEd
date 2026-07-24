@@ -19,18 +19,12 @@ export class ClipMeshCommand implements UndoCommand {
    * @param resultMesh The capped clip result.
    * @param worldGroup Fallback parent when the source has none.
    */
-  constructor(
-    sourceMesh: THREE.Mesh,
-    resultMesh: THREE.Mesh,
-    worldGroup: THREE.Group
-  ) {
+  constructor(sourceMesh: THREE.Mesh, resultMesh: THREE.Mesh, worldGroup: THREE.Group) {
     this.sourceMesh = sourceMesh;
     this.resultMesh = resultMesh;
     this.worldGroup = worldGroup;
     this.parent = sourceMesh.parent;
-    this.siblingIndex = sourceMesh.parent
-      ? sourceMesh.parent.children.indexOf(sourceMesh)
-      : 0;
+    this.siblingIndex = sourceMesh.parent ? sourceMesh.parent.children.indexOf(sourceMesh) : 0;
     this.executed = false;
   }
 
@@ -51,12 +45,7 @@ export class ClipMeshCommand implements UndoCommand {
   undo(): void {
     if (!this.executed) return;
     this.resultMesh.parent?.remove(this.resultMesh);
-    restoreObjectAtIndex(
-      this.sourceMesh,
-      this.parent,
-      this.siblingIndex,
-      this.worldGroup
-    );
+    restoreObjectAtIndex(this.sourceMesh, this.parent, this.siblingIndex, this.worldGroup);
     this.executed = false;
   }
 

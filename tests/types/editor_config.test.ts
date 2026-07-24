@@ -5,14 +5,14 @@ import {
   DEFAULT_CUBE_CENTER_Y,
   DEFAULT_GRID_SNAP_INTERVAL,
   DEFAULT_ORTHO_HALF_EXTENT,
-  DEFAULT_PERSPECTIVE_CAMERA_OFFSET
+  DEFAULT_PERSPECTIVE_CAMERA_OFFSET,
 } from '../../src/types/editor_config.js';
 import { SNAP_PRESETS } from '../../src/types/snap_presets.js';
 import { CameraFramer } from '../../src/navigation/camera_framer.js';
 import { BoundingVolumeComputer } from '../../src/navigation/bounding_volume_computer.js';
 import {
   getDefaultPerspectiveCameraPosition,
-  getDefaultSceneFocus
+  getDefaultSceneFocus,
 } from '../../src/navigation/default_camera_placement.js';
 
 /**

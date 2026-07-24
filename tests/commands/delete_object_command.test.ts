@@ -13,7 +13,7 @@ describe('DeleteObjectCommand', () => {
     parent = new THREE.Group();
     mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh1.position.set(1, 2, 3);
     mesh1.rotation.set(0.1, 0.2, 0.3);
@@ -23,7 +23,7 @@ describe('DeleteObjectCommand', () => {
 
     mesh2 = new THREE.Mesh(
       new THREE.SphereGeometry(0.5, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0x999999 })
+      new THREE.MeshStandardMaterial({ color: 0x999999 }),
     );
     mesh2.position.set(4, 5, 6);
     mesh2.rotation.set(0.4, 0.5, 0.6);
@@ -41,7 +41,7 @@ describe('DeleteObjectCommand', () => {
         scale: mesh1.scale.clone(),
         name: mesh1.name,
         geometry: mesh1.geometry.clone(),
-        material: (mesh1.material as THREE.Material).clone()
+        material: (mesh1.material as THREE.Material).clone(),
       },
       {
         mesh: mesh2,
@@ -52,8 +52,8 @@ describe('DeleteObjectCommand', () => {
         scale: mesh2.scale.clone(),
         name: mesh2.name,
         geometry: mesh2.geometry.clone(),
-        material: (mesh2.material as THREE.Material).clone()
-      }
+        material: (mesh2.material as THREE.Material).clone(),
+      },
     ];
   });
 
@@ -117,7 +117,7 @@ describe('DeleteObjectCommand', () => {
   it('should handle mesh with no parent gracefully', () => {
     const orphanMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     orphanMesh.name = 'Orphan';
     const orphanSnapshot: DeleteSnapshot = {
@@ -129,7 +129,7 @@ describe('DeleteObjectCommand', () => {
       scale: orphanMesh.scale.clone(),
       name: orphanMesh.name,
       geometry: orphanMesh.geometry.clone(),
-      material: (orphanMesh.material as THREE.Material).clone()
+      material: (orphanMesh.material as THREE.Material).clone(),
     };
     const command = new DeleteObjectCommand([orphanSnapshot]);
     command.execute();

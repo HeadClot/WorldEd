@@ -45,7 +45,9 @@ describe('InlineRenameInput', () => {
 
   it('should confirm rename and call confirm callback', () => {
     let confirmedName = '';
-    renameInput.setConfirmCallback((name) => { confirmedName = name; });
+    renameInput.setConfirmCallback((name) => {
+      confirmedName = name;
+    });
     renameInput.activate();
     const input = parentElement.querySelector('input') as HTMLInputElement;
     input.value = 'NewName';
@@ -56,7 +58,9 @@ describe('InlineRenameInput', () => {
 
   it('should cancel rename and restore original name', () => {
     let cancelled = false;
-    renameInput.setCancelCallback(() => { cancelled = true; });
+    renameInput.setCancelCallback(() => {
+      cancelled = true;
+    });
     renameInput.activate();
     const input = parentElement.querySelector('input') as HTMLInputElement;
     input.value = 'WrongName';
@@ -67,7 +71,9 @@ describe('InlineRenameInput', () => {
 
   it('should use original name when confirm receives empty input', () => {
     let confirmedName = '';
-    renameInput.setConfirmCallback((name) => { confirmedName = name; });
+    renameInput.setConfirmCallback((name) => {
+      confirmedName = name;
+    });
     renameInput.activate();
     const input = parentElement.querySelector('input') as HTMLInputElement;
     input.value = '   ';
@@ -77,7 +83,9 @@ describe('InlineRenameInput', () => {
 
   it('should handle Enter key event for confirmation', () => {
     let confirmedName = '';
-    renameInput.setConfirmCallback((name) => { confirmedName = name; });
+    renameInput.setConfirmCallback((name) => {
+      confirmedName = name;
+    });
     renameInput.activate();
     const input = parentElement.querySelector('input') as HTMLInputElement;
     input.value = 'EnterName';
@@ -87,7 +95,9 @@ describe('InlineRenameInput', () => {
 
   it('should handle Escape key event for cancellation', () => {
     let cancelled = false;
-    renameInput.setCancelCallback(() => { cancelled = true; });
+    renameInput.setCancelCallback(() => {
+      cancelled = true;
+    });
     renameInput.activate();
     const input = parentElement.querySelector('input') as HTMLInputElement;
     input.value = 'EscapeName';
@@ -98,7 +108,9 @@ describe('InlineRenameInput', () => {
 
   it('should handle blur event for auto-confirmation', () => {
     let confirmedName = '';
-    renameInput.setConfirmCallback((name) => { confirmedName = name; });
+    renameInput.setConfirmCallback((name) => {
+      confirmedName = name;
+    });
     renameInput.activate();
     const input = parentElement.querySelector('input') as HTMLInputElement;
     input.value = 'BlurName';

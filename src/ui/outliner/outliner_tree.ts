@@ -18,10 +18,7 @@ export type TreeSelectCallback = (obj: THREE.Object3D, event?: MouseEvent) => vo
  * @param dragged The object being dragged.
  * @param dropTarget The object that received the drop.
  */
-export type TreeReparentCallback = (
-  dragged: THREE.Object3D,
-  dropTarget: THREE.Object3D
-) => void;
+export type TreeReparentCallback = (dragged: THREE.Object3D, dropTarget: THREE.Object3D) => void;
 
 /**
  * Callback type for tree-level visibility toggle events.
@@ -166,19 +163,13 @@ export class OutlinerTree {
    */
   refresh(
     selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D> = new Set()
+    hierarchySelection: Set<THREE.Object3D> = new Set(),
   ): void {
     if (this.isDisposed) return;
     this.lastSelectedObjects = selectedObjects;
     this.lastHierarchySelection = hierarchySelection;
     this.clearItems();
-    this.renderChildren(
-      this.root,
-      0,
-      this.treeElement,
-      selectedObjects,
-      hierarchySelection
-    );
+    this.renderChildren(this.root, 0, this.treeElement, selectedObjects, hierarchySelection);
   }
 
   /**
@@ -189,15 +180,13 @@ export class OutlinerTree {
    */
   updateSelectionStates(
     selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>
+    hierarchySelection: Set<THREE.Object3D>,
   ): void {
     if (this.isDisposed) return;
     this.lastSelectedObjects = selectedObjects;
     this.lastHierarchySelection = hierarchySelection;
     this.itemMap.forEach((item, obj) => {
-      item.setSelectionState(
-        this.computeIsSelected(obj, selectedObjects, hierarchySelection)
-      );
+      item.setSelectionState(this.computeIsSelected(obj, selectedObjects, hierarchySelection));
     });
   }
 
@@ -211,7 +200,7 @@ export class OutlinerTree {
   revealObject(
     focusObject: THREE.Object3D,
     selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>
+    hierarchySelection: Set<THREE.Object3D>,
   ): void {
     if (this.isDisposed) return;
     const expanded = this.expandAncestorsOf(focusObject);
@@ -351,19 +340,14 @@ export class OutlinerTree {
     depth: number,
     targetContainer: HTMLElement,
     selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>
+    hierarchySelection: Set<THREE.Object3D>,
   ): void {
     const query = this.searchQuery.toLowerCase();
     this.getContentChildren(parent).forEach((child) => {
       if (!this.passesSearchFilter(child, query)) return;
       const hasChildren = this.getContentChildren(child).length > 0;
       const item = new OutlinerItem(child, depth, hasChildren);
-      this.applySelectionState(
-        item,
-        child,
-        selectedObjects,
-        hierarchySelection
-      );
+      this.applySelectionState(item, child, selectedObjects, hierarchySelection);
       this.applyExpandedState(item, child);
       this.applyVisibilityState(item, child);
       this.applyLockState(item, child);
@@ -371,13 +355,7 @@ export class OutlinerTree {
       targetContainer.appendChild(item.getElement());
       this.itemMap.set(child, item);
       if (hasChildren && this.expandedSet.has(child.uuid)) {
-        this.renderChildren(
-          child,
-          depth + 1,
-          targetContainer,
-          selectedObjects,
-          hierarchySelection
-        );
+        this.renderChildren(child, depth + 1, targetContainer, selectedObjects, hierarchySelection);
       }
     });
   }
@@ -417,11 +395,9 @@ export class OutlinerTree {
     item: OutlinerItem,
     obj: THREE.Object3D,
     selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>
+    hierarchySelection: Set<THREE.Object3D>,
   ): void {
-    item.setSelectionState(
-      this.computeIsSelected(obj, selectedObjects, hierarchySelection)
-    );
+    item.setSelectionState(this.computeIsSelected(obj, selectedObjects, hierarchySelection));
   }
 
   /**
@@ -435,7 +411,7 @@ export class OutlinerTree {
   private computeIsSelected(
     obj: THREE.Object3D,
     selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>
+    hierarchySelection: Set<THREE.Object3D>,
   ): boolean {
     if (hierarchySelection.has(obj)) return true;
     if (obj instanceof THREE.Mesh) return selectedObjects.has(obj);

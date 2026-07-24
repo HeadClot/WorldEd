@@ -16,10 +16,7 @@ describe('OrthoDepthRanger', () => {
     const leftBefore = camera.left;
     const rightBefore = camera.right;
     const scene = new THREE.Scene();
-    const farMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(10, 8, 12),
-      new THREE.MeshBasicMaterial()
-    );
+    const farMesh = new THREE.Mesh(new THREE.BoxGeometry(10, 8, 12), new THREE.MeshBasicMaterial());
     farMesh.position.set(8000, 4, 120);
     farMesh.updateMatrixWorld(true);
     scene.add(farMesh);
@@ -40,15 +37,9 @@ describe('OrthoDepthRanger', () => {
     camera.lookAt(0, 0.5, 0);
     camera.updateMatrixWorld(true);
     const scene = new THREE.Scene();
-    const negative = new THREE.Mesh(
-      new THREE.BoxGeometry(4, 4, 4),
-      new THREE.MeshBasicMaterial()
-    );
+    const negative = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), new THREE.MeshBasicMaterial());
     negative.position.set(-300, 2, 0);
-    const positive = new THREE.Mesh(
-      new THREE.BoxGeometry(4, 4, 4),
-      new THREE.MeshBasicMaterial()
-    );
+    const positive = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), new THREE.MeshBasicMaterial());
     positive.position.set(4000, 2, 0);
     scene.add(negative);
     scene.add(positive);

@@ -4,5 +4,5 @@
  */
 export enum SelectionMode {
   OBJECT = 'Object',
-  FACE = 'Face'
+  FACE = 'Face',
 }

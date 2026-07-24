@@ -12,10 +12,7 @@ export class TransformProjectionMath {
    * @param pivot The transform pivot point.
    * @returns A plane perpendicular to the camera's view direction.
    */
-  static buildCameraPlane(
-    camera: THREE.Camera,
-    pivot: THREE.Vector3
-  ): THREE.Plane {
+  static buildCameraPlane(camera: THREE.Camera, pivot: THREE.Vector3): THREE.Plane {
     const normal = TransformProjectionMath.getCameraForwardDirection(camera);
     return new THREE.Plane().setFromNormalAndCoplanarPoint(normal, pivot);
   }
@@ -50,10 +47,7 @@ export class TransformProjectionMath {
    * @param event The pointer event.
    * @returns Normalized screen position.
    */
-  static getScreenPosition(
-    renderer: THREE.WebGLRenderer,
-    event: MouseEvent
-  ): THREE.Vector2 {
+  static getScreenPosition(renderer: THREE.WebGLRenderer, event: MouseEvent): THREE.Vector2 {
     const rect = renderer.domElement.getBoundingClientRect();
     const x = (event.clientX - rect.left) / Math.max(rect.width, 1);
     const y = (event.clientY - rect.top) / Math.max(rect.height, 1);
@@ -66,10 +60,7 @@ export class TransformProjectionMath {
    * @param axis The gizmo axis to constrain to.
    * @returns The constrained delta vector.
    */
-  static constrainDelta(
-    delta: THREE.Vector3,
-    axis: GizmoAxis
-  ): THREE.Vector3 {
+  static constrainDelta(delta: THREE.Vector3, axis: GizmoAxis): THREE.Vector3 {
     if (axis === GizmoAxis.X || axis === GizmoAxis.Y || axis === GizmoAxis.Z) {
       return TransformConstraint.constrainTranslationToAxis(delta, axis);
     }
@@ -96,10 +87,7 @@ export class TransformProjectionMath {
    * @param orientation World orientation of the gizmo (object-local for single select).
    * @returns Unit world direction.
    */
-  static axisToWorldVector(
-    axis: GizmoAxis,
-    orientation: THREE.Quaternion
-  ): THREE.Vector3 {
+  static axisToWorldVector(axis: GizmoAxis, orientation: THREE.Quaternion): THREE.Vector3 {
     return this.axisToVector3(axis).applyQuaternion(orientation).normalize();
   }
 }
