@@ -7,10 +7,12 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'docs',
+    // Single-file app bundle so GitHub Pages never needs lazy chunk URLs.
+    cssCodeSplit: false,
     rollupOptions: {
       output: {
+        inlineDynamicImports: true,
         entryFileNames: 'index.js',
-        chunkFileNames: '[name].js',
         assetFileNames: '[name][extname]',
       },
     },

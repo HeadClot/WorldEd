@@ -8,6 +8,7 @@ import {
   VmfImportResult,
   VmfSolidImporter
 } from '../io/vmf/vmf_solid_importer.js';
+import { ImportProgressOverlay } from '../ui/import_progress_overlay.js';
 
 /**
  * Orchestrates save, load, GLB export, and VMF import operations.
@@ -202,9 +203,6 @@ export class SceneIOHandler {
     filename: string,
     statusBar: StatusBar | null
   ): Promise<VmfImportResult | null> {
-    const { ImportProgressOverlay } = await import(
-      '../ui/import_progress_overlay.js'
-    );
     const overlay = new ImportProgressOverlay(`Importing ${filename}`);
     overlay.show();
     overlay.setProgress(0, 'Starting…');
