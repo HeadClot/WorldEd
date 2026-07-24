@@ -92,6 +92,34 @@ describe('Toolbar', () => {
     expect(toolbar.getButtonIndexByLabel('File')).toBe(0);
   });
 
+  it('should switch from an open dropdown to another menu on hover', () => {
+    toolbar.addDropdown('File', [{ label: 'Save', onClick: () => {} }]);
+    toolbar.addDropdown('Edit', [{ label: 'Delete', onClick: () => {} }]);
+    const headers = container.querySelectorAll('.editor-toolbar-menu-button');
+    const menus = container.querySelectorAll('.editor-toolbar-dropdown-menu');
+
+    (headers[0] as HTMLButtonElement).click();
+    expect((menus[0] as HTMLElement).style.display).toBe('block');
+    expect((menus[1] as HTMLElement).style.display).toBe('none');
+    expect(headers[0].getAttribute('aria-expanded')).toBe('true');
+
+    headers[1].dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect((menus[0] as HTMLElement).style.display).toBe('none');
+    expect((menus[1] as HTMLElement).style.display).toBe('block');
+    expect(headers[0].getAttribute('aria-expanded')).toBe('false');
+    expect(headers[1].getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('should expose light-theme dropdown selectors for readable menu surfaces', async () => {
+    const { ensureViewSettingsStyles } = await import('../../src/settings/view_settings_styles.js');
+    ensureViewSettingsStyles();
+    const stylesheet = document.getElementById('aiworlded-view-settings-styles');
+
+    expect(stylesheet?.textContent).toContain('.editor-toolbar-dropdown-menu');
+    expect(stylesheet?.textContent).toContain('.editor-toolbar-dropdown-item:hover');
+    expect(stylesheet?.textContent).toContain('background: #ffffff !important');
+  });
+
   it('should disable dropdown items when isEnabled returns false', () => {
     const clickHandler = vi.fn();
     let enabled = false;
