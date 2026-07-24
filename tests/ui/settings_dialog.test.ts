@@ -34,19 +34,20 @@ describe('SettingsDialog', () => {
     expect(dialog.isOpen()).toBe(false);
   });
 
-  it('should expose Games View Themes Mouse Keyboard and Update tabs', () => {
+  it('should expose settings tabs without the removed Themes tab', () => {
     dialog.show();
-    const labels = Array.from(
-      dialog.getPanelElement().querySelectorAll('[role="tab"]')
-    ).map((tab) => (tab.textContent || '').trim());
+    const panel = dialog.getPanelElement();
+    const labels = Array.from(panel.querySelectorAll('[role="tab"]')).map(
+      (tab) => (tab.textContent || '').trim()
+    );
     expect(labels).toEqual([
       'Games',
       'View',
-      'Themes',
       'Mouse',
       'Keyboard',
       'Update'
     ]);
+    expect(panel.querySelector('[data-settings-tab="themes"]')).toBeNull();
   });
 
   it('should add a game profile from the Games tab plus button', () => {

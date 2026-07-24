@@ -7,7 +7,6 @@ import type { ImperialUnit, MetricUnit, UnitSystem } from './unit_presets.js';
 export type SettingsTabId =
   | 'games'
   | 'view'
-  | 'themes'
   | 'mouse'
   | 'keyboard'
   | 'update';
@@ -16,7 +15,6 @@ export type SettingsTabId =
 export const SETTINGS_TAB_ORDER: readonly SettingsTabId[] = Object.freeze([
   'games',
   'view',
-  'themes',
   'mouse',
   'keyboard',
   'update'
@@ -27,7 +25,6 @@ export const SETTINGS_TAB_LABELS: Readonly<Record<SettingsTabId, string>> =
   Object.freeze({
     games: 'Games',
     view: 'View',
-    themes: 'Themes',
     mouse: 'Mouse',
     keyboard: 'Keyboard',
     update: 'Update'

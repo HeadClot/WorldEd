@@ -18,12 +18,11 @@ import {
 import { SettingsGamesTab } from './settings_games_tab.js';
 import { SettingsKeyboardTab } from './settings_keyboard_tab.js';
 import { SettingsMouseTab } from './settings_mouse_tab.js';
-import { SettingsPlaceholderTab } from './settings_placeholder_tab.js';
 import { SettingsUpdaterTab } from './settings_updater_tab.js';
 import { SettingsViewTab } from './settings_view_tab.js';
 
 /**
- * Toggleable modal settings menu with Games, View, Themes, Mouse, Keyboard, and Update tabs.
+ * Toggleable modal settings menu with Games, View, Mouse, Keyboard, and Update tabs.
  */
 export class SettingsDialog {
   private readonly host: HTMLElement;
@@ -38,7 +37,6 @@ export class SettingsDialog {
   private readonly keyboardTab: SettingsKeyboardTab;
   private readonly mouseTab: SettingsMouseTab;
   private readonly updaterTab: SettingsUpdaterTab;
-  private readonly placeholderTabs: Map<SettingsTabId, SettingsPlaceholderTab>;
   private readonly unsubscribe: () => void;
   private readonly boundKeyDown: (event: KeyboardEvent) => void;
   private activeTabId: SettingsTabId;
@@ -57,7 +55,6 @@ export class SettingsDialog {
     this.isDisposed = false;
     this.activeTabId = 'games';
     this.tabButtons = new Map();
-    this.placeholderTabs = new Map();
     this.boundKeyDown = (event) => this.handleKeyDown(event);
     ensureSettingsDialogStyles();
     this.backdrop = document.createElement('div');
@@ -69,7 +66,6 @@ export class SettingsDialog {
     this.keyboardTab = new SettingsKeyboardTab(store);
     this.mouseTab = new SettingsMouseTab(store);
     this.updaterTab = new SettingsUpdaterTab();
-    this.createPlaceholderTabs();
     this.buildDialog();
     this.unsubscribe = store.subscribe(() => this.handleStoreChanged());
     this.host.appendChild(this.backdrop);
@@ -182,21 +178,6 @@ export class SettingsDialog {
   }
 
   /**
-   * Creates placeholder panels for unfinished tabs.
-   */
-  private createPlaceholderTabs(): void {
-    const placeholderIds: SettingsTabId[] = [
-      'themes'
-    ];
-    placeholderIds.forEach((tabId) => {
-      this.placeholderTabs.set(
-        tabId,
-        new SettingsPlaceholderTab(SETTINGS_TAB_LABELS[tabId])
-      );
-    });
-  }
-
-  /**
    * Builds the full dialog DOM tree.
    */
   private buildDialog(): void {
@@ -287,7 +268,7 @@ export class SettingsDialog {
     if (tabId === 'update') {
       return this.updaterTab.getElement();
     }
-    return this.placeholderTabs.get(tabId)?.getElement() as HTMLElement;
+    return this.gamesTab.getElement();
   }
 
   /**
