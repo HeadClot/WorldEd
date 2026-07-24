@@ -97,20 +97,15 @@ ${detailSides}
     expect(result.model.getBrushes()[0].name).toBe('Solid 7');
   });
 
-  it('imports a representative VMF map without throwing', () => {
-    const source = buildAxisAlignedWorldSolidVmf(
-      { x: -128, y: -128, z: -16 },
-      { x: 128, y: 128, z: 16 },
-      'DEV/DEV_MEASUREGENERIC01',
-      42,
-    );
+  it('imports a representative multi-solid VMF map without throwing', () => {
+    const source = buildRepresentativeVmfMap();
     const parsed = new VmfParser().parse(source);
     expect(parsed.solids.length).toBeGreaterThan(0);
     const result = new VmfSolidImporter().importFromText(source, {
-      modelName: 'Example VMF',
+      modelName: 'Representative VMF',
       rebuild: false,
     });
-    expect(result.model.root.name).toBe('Example VMF');
+    expect(result.model.root.name).toBe('Representative VMF');
     expect(result.importedBrushCount).toBeGreaterThan(0);
     const totalSolids =
       parsed.solids.length + parsed.entities.reduce((sum, entity) => sum + entity.solids.length, 0);
@@ -127,3 +122,60 @@ ${detailSides}
     expect(result.model.getResultMesh()).toBeTruthy();
   });
 });
+
+/**
+ * Builds a self-contained VMF map with world, entity, and skipped brushes.
+ * @returns VMF source text representing a small but varied map.
+ */
+function buildRepresentativeVmfMap(): string {
+  const worldSolids = [
+    createVmfSolidBlock(
+      10,
+      { x: -128, y: -128, z: 0 },
+      { x: -64, y: -64, z: 64 },
+      'CONCRETE/CONCRETEWALL001A',
+    ),
+    createVmfSolidBlock(
+      11,
+      { x: -48, y: -48, z: 0 },
+      { x: 48, y: 48, z: 96 },
+      'BRICK/BRICKWALL001A',
+    ),
+    createVmfSolidBlock(
+      12,
+      { x: 64, y: 64, z: 0 },
+      { x: 128, y: 128, z: 32 },
+      'DEV/DEV_MEASUREGENERIC01',
+    ),
+    createVmfSolidBlock(
+      13,
+      { x: 160, y: 160, z: 0 },
+      { x: 192, y: 192, z: 32 },
+      'TOOLS/TOOLSTRIGGER',
+    ),
+  ].join('\n');
+  const detailSolid = createVmfSolidBlock(
+    20,
+    { x: -24, y: 64, z: 0 },
+    { x: 24, y: 112, z: 48 },
+    'METAL/METALWALL001A',
+  );
+  return `world\n{\n\t"id" "1"\n\t"classname" "worldspawn"\n\t"skyname" "sky_representative"\n${worldSolids}\n}\nentity\n{\n\t"id" "2"\n\t"classname" "func_detail"\n${detailSolid}\n}`;
+}
+
+/**
+ * Builds one complete indented VMF solid block from axis-aligned bounds.
+ * @param id VMF solid identifier.
+ * @param min Minimum Source coordinate.
+ * @param max Maximum Source coordinate.
+ * @param material Material assigned to every side.
+ * @returns VMF solid block.
+ */
+function createVmfSolidBlock(
+  id: number,
+  min: { x: number; y: number; z: number },
+  max: { x: number; y: number; z: number },
+  material: string,
+): string {
+  return `\tsolid\n\t{\n\t\t"id" "${id}"\n${buildAxisAlignedSideBlocks(min, max, material)}\n\t}`;
+}
