@@ -83,3 +83,36 @@ jobs:
           path: desktop_artifacts/
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: Create Automatic Release
+    needs: desktop-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Downloads windows, linux, and macos artifacts into a local 'release_assets' directory
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: aiworlded-*
+          path: release_assets/
+          merge-multiple: true
+
+      # Generates a clean timestamp identifier (e.g., 20260724-a1b2c3d)
+      - name: Generate Release Tag
+        id: tag
+        run: |
+          TAG_NAME="build-$(date +'%Y%m%d')-${{ github.sha }}"
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+
+      # Automatically creates a Rolling Release on your GitHub panel
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag_name }}
+          name: "Automated Build: ${{ steps.tag.outputs.tag_name }}"
+          body: "Automated desktop binaries compiled from commit ${{ github.sha }}."
+          files: release_assets/**/*
+          generate_release_notes: true
