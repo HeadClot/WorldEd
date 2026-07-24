@@ -16,6 +16,7 @@ import {
   createDefaultGameProfile,
   createDefaultKeyboardShortcutSettings,
   createDefaultMouseSettings,
+  createDefaultUpdateSettings,
   createDefaultViewSettings,
 } from './settings_defaults.js';
 import { createProfileId, GameProfileRepository } from './game_profile_repository.js';
@@ -28,6 +29,7 @@ import type {
   KeyboardShortcut,
   KeyboardShortcutSettings,
   MouseSettings,
+  UpdateSettings,
   UiThemePreference,
   ViewportPaneCount,
   ViewSettings,
@@ -53,6 +55,9 @@ export const KEYBOARD_SHORTCUTS_STORAGE_KEY = 'aiworlded.settings.keyboard';
 /** Storage key for mouse navigation settings JSON. */
 export const MOUSE_SETTINGS_STORAGE_KEY = 'aiworlded.settings.mouse';
 
+/** Storage key for standalone updater preferences JSON. */
+export const UPDATE_SETTINGS_STORAGE_KEY = 'aiworlded.settings.update';
+
 /** Listener notified when any settings value changes. */
 export type EditorSettingsListener = (snapshot: EditorSettingsSnapshot) => void;
 
@@ -70,6 +75,7 @@ export class EditorSettingsStore {
   private customCoordinateSpaces: CoordinateSpaceDefinition[];
   private view: ViewSettings;
   private mouse: MouseSettings;
+  private update: UpdateSettings;
   private keyboard: KeyboardShortcutSettings;
 
   /**
@@ -87,6 +93,7 @@ export class EditorSettingsStore {
     this.listeners = new Set();
     this.view = this.loadViewSettings();
     this.mouse = this.loadMouseSettings();
+    this.update = this.loadUpdateSettings();
     this.keyboard = this.loadKeyboardShortcutSettings();
     this.customCoordinateSpaces = this.coordinateSpaceRepository
       .loadAll()
@@ -109,6 +116,7 @@ export class EditorSettingsStore {
       ),
       view: { ...this.view },
       mouse: { ...this.mouse },
+      update: { ...this.update },
       keyboard: { ...this.keyboard },
     };
   }
@@ -146,6 +154,11 @@ export class EditorSettingsStore {
    */
   getMouseSettings(): MouseSettings {
     return { ...this.mouse };
+  }
+
+  /** Returns standalone updater preferences. */
+  getUpdateSettings(): UpdateSettings {
+    return { ...this.update };
   }
 
   /**
@@ -495,6 +508,17 @@ export class EditorSettingsStore {
   }
 
   /**
+   * Enables or disables automatic standalone release checks.
+   * @param enabled Whether the updater should check when the Update tab opens.
+   */
+  setAutomaticUpdateChecksEnabled(enabled: boolean): void {
+    if (this.update.automaticChecks === enabled) return;
+    this.update = { automaticChecks: enabled };
+    this.persistUpdateSettings();
+    this.notifyListeners();
+  }
+
+  /**
    * Returns JSON file contents for a profile id.
    * @param profileId Profile identifier.
    * @returns JSON text or null when missing.
@@ -678,6 +702,11 @@ export class EditorSettingsStore {
     this.storage.setItem(MOUSE_SETTINGS_STORAGE_KEY, JSON.stringify(this.mouse));
   }
 
+  /** Writes standalone updater preferences to storage. */
+  private persistUpdateSettings(): void {
+    this.storage.setItem(UPDATE_SETTINGS_STORAGE_KEY, JSON.stringify(this.update));
+  }
+
   /** Writes keyboard shortcut settings to storage. */
   private persistKeyboardShortcutSettings(): void {
     this.storage.setItem(KEYBOARD_SHORTCUTS_STORAGE_KEY, JSON.stringify(this.keyboard));
@@ -706,6 +735,21 @@ export class EditorSettingsStore {
     if (!raw) return defaults;
     try {
       return mergeMouseSettings(defaults, JSON.parse(raw) as Partial<MouseSettings>);
+    } catch {
+      return defaults;
+    }
+  }
+
+  /** Loads standalone updater preferences with safe defaults. */
+  private loadUpdateSettings(): UpdateSettings {
+    const defaults = createDefaultUpdateSettings();
+    const raw = this.storage.getItem(UPDATE_SETTINGS_STORAGE_KEY);
+    if (!raw) return defaults;
+    try {
+      const parsed = JSON.parse(raw) as Partial<UpdateSettings>;
+      return {
+        automaticChecks: sanitizeBoolean(parsed.automaticChecks, defaults.automaticChecks),
+      };
     } catch {
       return defaults;
     }

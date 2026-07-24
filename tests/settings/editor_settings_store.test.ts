@@ -133,6 +133,15 @@ describe('EditorSettingsStore', () => {
     expect(reloaded.getMouseSettings()).toEqual(mouse);
   });
 
+  it('should default automatic update checks Off and persist a user toggle On', () => {
+    expect(store.getUpdateSettings().automaticChecks).toBe(false);
+
+    store.setAutomaticUpdateChecksEnabled(true);
+
+    expect(store.getSnapshot().update.automaticChecks).toBe(true);
+    expect(new EditorSettingsStore(storage).getUpdateSettings().automaticChecks).toBe(true);
+  });
+
   it('should persist rebindable keyboard shortcuts across reloads', () => {
     expect(store.getKeyboardShortcutSettings().move.code).toBe('KeyW');
     expect(store.getKeyboardShortcutSettings().delete_selected.code).toBe('Delete');

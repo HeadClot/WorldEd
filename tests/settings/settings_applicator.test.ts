@@ -26,6 +26,7 @@ describe('SettingsApplicator', () => {
     const snapshot: EditorSettingsSnapshot = {
       activeGameProfileId: null,
       gameProfiles: [],
+      customCoordinateSpaces: [],
       view: {
         ...createDefaultViewSettings(),
         theme: 'light',
@@ -34,6 +35,7 @@ describe('SettingsApplicator', () => {
         materialBrowserIconSizePercent: 150,
       },
       mouse: createDefaultMouseSettings(),
+      update: { automaticChecks: true },
       keyboard: createDefaultKeyboardShortcutSettings(),
     };
     applicator.applySnapshot(snapshot);
@@ -52,8 +54,10 @@ describe('SettingsApplicator', () => {
     applicator.applySnapshot({
       activeGameProfileId: null,
       gameProfiles: [],
+      customCoordinateSpaces: [],
       view: { ...createDefaultViewSettings(), theme: 'light' },
       mouse: createDefaultMouseSettings(),
+      update: { automaticChecks: true },
       keyboard: createDefaultKeyboardShortcutSettings(),
     });
     const style = document.getElementById('aiworlded-view-settings-styles');

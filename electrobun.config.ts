@@ -38,6 +38,9 @@ const electrobunConfig: ElectrobunConfig = {
   runtime: {
     exitOnLastWindowClosed: true,
   },
+  release: {
+    baseUrl: 'https://github.com/Henry00IS/AiWorldEd/releases/latest/download',
+  },
 };
 
 export default electrobunConfig;

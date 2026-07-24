@@ -43,6 +43,36 @@ describe('StandaloneUpdateService', () => {
     expect(result.status).toBe('unsupported');
     expect(fetchLatestRelease).not.toHaveBeenCalled();
   });
+
+  it('uses Electrobun native update checks and installation instead of GitHub assets', async () => {
+    const checkForUpdate = vi.fn(async () => ({
+      currentVersion: '1.0.0',
+      latestVersion: '1.1.0',
+      updateAvailable: true,
+    }));
+    const installUpdate = vi.fn(async () => undefined);
+    const fetchLatestRelease = vi.fn(async () => createRelease('v9.0.0', 'AiWorldEd-windows.exe'));
+    const service = new StandaloneUpdateService({
+      client: { fetchLatestRelease },
+      bridge: { kind: 'electrobun', checkForUpdate, installUpdate },
+      currentVersion: '1.0.0',
+      platform: 'windows',
+    });
+
+    const result = await service.checkForUpdates();
+    await service.installUpdate(result);
+
+    expect(result.status).toBe('update-available');
+    expect(result.latestRelease?.version).toBe('1.1.0');
+    expect(checkForUpdate).toHaveBeenCalledOnce();
+    expect(fetchLatestRelease).not.toHaveBeenCalled();
+    expect(installUpdate).toHaveBeenCalledWith({
+      version: '1.1.0',
+      downloadUrl: '',
+      fileName: 'Electrobun update bundle',
+      releasePageUrl: 'https://github.com/Henry00IS/AiWorldEd/releases',
+    });
+  });
 });
 
 /**

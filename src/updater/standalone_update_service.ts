@@ -1,5 +1,5 @@
 import packageMetadata from '../../package.json';
-import { GitHubReleaseClient } from './github_release_client.js';
+import { GITHUB_RELEASES_PAGE_URL, GitHubReleaseClient } from './github_release_client.js';
 import {
   detectStandalonePlatform,
   getStandaloneUpdaterBridge,
@@ -10,6 +10,7 @@ import { isNewerUpdateVersion } from './update_version.js';
 import type {
   GitHubRelease,
   GitHubReleaseAsset,
+  StandaloneHostUpdateCheck,
   StandalonePlatform,
   StandaloneUpdateRelease,
   UpdateCheckResult,
@@ -66,6 +67,7 @@ export class StandaloneUpdateService {
    */
   async checkForUpdates(): Promise<UpdateCheckResult> {
     if (!this.bridge) return this.createResult('unsupported');
+    if (this.bridge.kind === 'electrobun') return this.checkElectrobunUpdates();
     try {
       const release = await this.client.fetchLatestRelease();
       return this.createReleaseResult(release);
@@ -111,6 +113,43 @@ export class StandaloneUpdateService {
       ? 'update-available'
       : 'up-to-date';
     return { status, currentVersion: this.currentVersion, latestRelease };
+  }
+
+  /** Checks Electrobun's configured update channel through its native bridge. */
+  private async checkElectrobunUpdates(): Promise<UpdateCheckResult> {
+    if (!this.bridge?.checkForUpdate) {
+      return this.createResult('error', 'Electrobun updater unavailable.');
+    }
+    try {
+      const result = await this.bridge.checkForUpdate();
+      return this.createElectrobunResult(result);
+    } catch (error) {
+      return this.createErrorResult(error);
+    }
+  }
+
+  /** Converts a native Electrobun check into the shared updater result shape. */
+  private createElectrobunResult(result: StandaloneHostUpdateCheck): UpdateCheckResult {
+    if (result.error) return this.createResult('error', result.error);
+    if (!result.updateAvailable) {
+      return { status: 'up-to-date', currentVersion: result.currentVersion };
+    }
+    return {
+      status: 'update-available',
+      currentVersion: result.currentVersion,
+      latestRelease: this.createElectrobunRelease(result),
+    };
+  }
+
+  /** Creates a display release for an update managed entirely by Electrobun. */
+  private createElectrobunRelease(result: StandaloneHostUpdateCheck): StandaloneUpdateRelease {
+    return {
+      version: result.latestVersion,
+      title: `AiWorldEd ${result.latestVersion}`,
+      releasePageUrl: GITHUB_RELEASES_PAGE_URL,
+      notes: 'Electrobun will download and install the update bundle.',
+      asset: { name: 'Electrobun update bundle', downloadUrl: '', size: 0 },
+    };
   }
 
   /**

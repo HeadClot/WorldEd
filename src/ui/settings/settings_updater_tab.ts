@@ -1,4 +1,5 @@
 import { Theme } from '../../theme.js';
+import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
 import { GITHUB_RELEASES_PAGE_URL } from '../../updater/github_release_client.js';
 import { StandaloneUpdateService } from '../../updater/standalone_update_service.js';
 import type { UpdateCheckResult } from '../../updater/update_types.js';
@@ -6,6 +7,7 @@ import { hexToRgb } from '../../utils/color_utils.js';
 import {
   createSettingsButton,
   createSettingsCategory,
+  createSettingsControlRow,
   createSettingsSecondaryButton,
 } from './settings_form_controls.js';
 
@@ -16,6 +18,9 @@ export class SettingsUpdaterTab {
   private readonly statusLabel: HTMLElement;
   private readonly detailLabel: HTMLElement;
   private readonly actionHost: HTMLElement;
+  private readonly automaticChecksToggle: HTMLInputElement;
+  private readonly automaticChecksState: HTMLElement;
+  private readonly store: EditorSettingsStore;
   private lastResult: UpdateCheckResult | null;
   private isChecking: boolean;
   private isDisposed: boolean;
@@ -23,9 +28,11 @@ export class SettingsUpdaterTab {
 
   /**
    * Creates the updater tab.
+   * @param store Shared settings store for the automatic-check preference.
    * @param service Release service used to check and install updates.
    */
-  constructor(service = new StandaloneUpdateService()) {
+  constructor(store: EditorSettingsStore, service = new StandaloneUpdateService()) {
+    this.store = store;
     this.service = service;
     this.root = document.createElement('div');
     this.root.style.display = 'flex';
@@ -33,6 +40,8 @@ export class SettingsUpdaterTab {
     this.statusLabel = document.createElement('div');
     this.detailLabel = document.createElement('div');
     this.actionHost = document.createElement('div');
+    this.automaticChecksToggle = document.createElement('input');
+    this.automaticChecksState = document.createElement('span');
     this.lastResult = null;
     this.isChecking = false;
     this.isDisposed = false;
@@ -51,6 +60,7 @@ export class SettingsUpdaterTab {
 
   /** Rebuilds static content without starting another network request. */
   rebuild(): void {
+    this.refreshAutomaticChecksToggle();
     this.statusLabel.textContent = `Installed version: ${this.serviceVersion()}`;
     if (!this.service.isStandaloneBuild()) {
       this.renderBrowserMessage();
@@ -61,7 +71,7 @@ export class SettingsUpdaterTab {
 
   /** Starts an automatic check when the Update tab becomes visible. */
   activate(): void {
-    if (!this.service.isStandaloneBuild() || this.lastResult || this.isChecking) return;
+    if (!this.shouldCheckAutomatically() || this.lastResult || this.isChecking) return;
     void this.checkForUpdates();
   }
 
@@ -74,10 +84,46 @@ export class SettingsUpdaterTab {
   /** Creates the updater panel structure. */
   private buildLayout(): void {
     const { section, body } = createSettingsCategory('Standalone updater');
+    body.appendChild(this.createAutomaticChecksRow());
     body.appendChild(this.statusLabel);
     body.appendChild(this.detailLabel);
     body.appendChild(this.actionHost);
     this.root.appendChild(section);
+  }
+
+  /** Creates the persisted automatic-check preference row. */
+  private createAutomaticChecksRow(): HTMLElement {
+    this.automaticChecksToggle.type = 'checkbox';
+    this.automaticChecksToggle.dataset.settingsField = 'auto-updater';
+    this.automaticChecksToggle.setAttribute('role', 'switch');
+    this.automaticChecksToggle.setAttribute('aria-label', 'Auto updater');
+    this.automaticChecksToggle.addEventListener('change', () => {
+      this.store.setAutomaticUpdateChecksEnabled(this.automaticChecksToggle.checked);
+      this.refreshAutomaticChecksToggle();
+    });
+    this.automaticChecksState.style.fontSize = '12px';
+    this.automaticChecksState.style.color = Theme.statusBarTextColor;
+    const control = document.createElement('div');
+    control.style.display = 'flex';
+    control.style.alignItems = 'center';
+    control.style.gap = '6px';
+    control.appendChild(this.automaticChecksToggle);
+    control.appendChild(this.automaticChecksState);
+    return createSettingsControlRow('Auto updater', control);
+  }
+
+  /** Refreshes the checkbox and its visible On or Off state. */
+  private refreshAutomaticChecksToggle(): void {
+    const enabled = this.store.getUpdateSettings().automaticChecks;
+    this.automaticChecksToggle.checked = enabled;
+    this.automaticChecksToggle.setAttribute('aria-checked', String(enabled));
+    this.automaticChecksToggle.disabled = !this.service.isStandaloneBuild();
+    this.automaticChecksState.textContent = enabled ? 'On' : 'Off';
+  }
+
+  /** Returns whether the host and user preference allow an automatic check. */
+  private shouldCheckAutomatically(): boolean {
+    return this.service.isStandaloneBuild() && this.store.getUpdateSettings().automaticChecks;
   }
 
   /** Performs one guarded asynchronous release check. */
@@ -101,7 +147,7 @@ export class SettingsUpdaterTab {
 
   /** Renders the in-progress check state. */
   private renderChecking(): void {
-    this.detailLabel.textContent = 'Checking GitHub Releases…';
+    this.detailLabel.textContent = 'Checking the release channel…';
     this.actionHost.replaceChildren();
   }
 
@@ -118,8 +164,7 @@ export class SettingsUpdaterTab {
 
   /** Renders the initial standalone state. */
   private renderReadyState(): void {
-    this.detailLabel.textContent =
-      'Checks the AiWorldEd GitHub Releases page for a newer executable.';
+    this.detailLabel.textContent = 'Checks the configured release channel for a newer executable.';
     this.actionHost.replaceChildren(
       createSettingsButton('Check for updates', () => void this.checkForUpdates()),
     );

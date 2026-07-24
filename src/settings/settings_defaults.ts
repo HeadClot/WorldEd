@@ -3,6 +3,7 @@ import type {
   GameProfile,
   KeyboardShortcutSettings,
   MouseSettings,
+  UpdateSettings,
   ViewSettings,
 } from './settings_types.js';
 
@@ -62,6 +63,11 @@ export function createDefaultMouseSettings(): MouseSettings {
     invertAltMiddleMouseDragZAxis: false,
     moveCameraTowardsCursor: false,
   };
+}
+
+/** Returns default standalone updater preferences. */
+export function createDefaultUpdateSettings(): UpdateSettings {
+  return { automaticChecks: false };
 }
 
 /**

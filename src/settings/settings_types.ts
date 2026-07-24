@@ -96,6 +96,11 @@ export interface MouseSettings {
   moveCameraTowardsCursor: boolean;
 }
 
+/** Preferences controlling when the standalone updater checks for releases. */
+export interface UpdateSettings {
+  automaticChecks: boolean;
+}
+
 /** Actions whose primary keyboard shortcut can be configured by the user. */
 export type KeyboardShortcutAction =
   | 'move'
@@ -154,6 +159,7 @@ export interface EditorSettingsSnapshot {
   customCoordinateSpaces: CoordinateSpaceDefinition[];
   view: ViewSettings;
   mouse: MouseSettings;
+  update: UpdateSettings;
   keyboard: KeyboardShortcutSettings;
 }
 

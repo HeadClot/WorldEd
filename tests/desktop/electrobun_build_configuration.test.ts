@@ -13,5 +13,8 @@ describe('Electrobun desktop build configuration', () => {
       defaultRenderer: 'native',
       bundleCEF: false,
     });
+    expect(electrobunConfig.release?.baseUrl).toBe(
+      'https://github.com/Henry00IS/AiWorldEd/releases/latest/download',
+    );
   });
 });

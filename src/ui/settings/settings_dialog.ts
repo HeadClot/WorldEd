@@ -65,7 +65,7 @@ export class SettingsDialog {
     this.viewTab = new SettingsViewTab(store);
     this.keyboardTab = new SettingsKeyboardTab(store);
     this.mouseTab = new SettingsMouseTab(store);
-    this.updaterTab = new SettingsUpdaterTab();
+    this.updaterTab = new SettingsUpdaterTab(store);
     this.buildDialog();
     this.unsubscribe = store.subscribe(() => this.handleStoreChanged());
     this.host.appendChild(this.backdrop);

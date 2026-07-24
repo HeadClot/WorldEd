@@ -58,3 +58,11 @@ export interface StandaloneUpdateInstallRequest {
   fileName: string;
   releasePageUrl: string;
 }
+
+/** Result returned by a native standalone updater after checking its channel. */
+export interface StandaloneHostUpdateCheck {
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  error?: string;
+}
