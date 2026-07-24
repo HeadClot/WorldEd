@@ -183,6 +183,9 @@ export class BoundsDragController {
     this.session.dragCamera = camera;
     this.session.dragRenderer = renderer;
     this.session.initialMousePosition = pick.point.clone();
+    this.session.pointerDownClientX = event.clientX;
+    this.session.pointerDownClientY = event.clientY;
+    this.session.boundsPointerMoved = false;
     this.transformGizmo.setBoundsGuideLinesVisible(true);
   }
 

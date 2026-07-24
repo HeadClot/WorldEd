@@ -13,6 +13,7 @@ import { ViewportSyncManager } from './viewport_sync_manager.js';
 import { PropertiesPanel } from '../ui/properties_panel.js';
 import { filterUnlockedObjects } from '../utils/object_lock.js';
 import { WindowPointerDragSession } from '../utils/window_pointer_drag_session.js';
+import { SelectionClickThrough } from '../selection/selection_click_through.js';
 
 /**
  * Dependencies required to route viewport pointer events into the transform gizmo.
@@ -62,6 +63,8 @@ export class TransformInteractionBridge {
   private deps: TransformInteractionDependencies;
   private windowDragSession: WindowPointerDragSession;
   private activeDragViewport: Viewport3D | Viewport2D | null;
+  private pendingSelectionClickEvent: MouseEvent | null;
+  private pendingSelectionClickViewport: Viewport3D | Viewport2D | null;
 
   /**
    * Creates a transform interaction bridge.
@@ -71,6 +74,8 @@ export class TransformInteractionBridge {
     this.deps = deps;
     this.windowDragSession = new WindowPointerDragSession();
     this.activeDragViewport = null;
+    this.pendingSelectionClickEvent = null;
+    this.pendingSelectionClickViewport = null;
   }
 
   /**
@@ -245,6 +250,8 @@ export class TransformInteractionBridge {
       gizmoGroup ?? new THREE.Group()
     );
     if (!this.deps.transformHandler.isDragging()) return false;
+    this.pendingSelectionClickEvent = event;
+    this.pendingSelectionClickViewport = viewport;
     this.attachWindowDragCapture(viewport);
     return true;
   }
@@ -332,6 +339,7 @@ export class TransformInteractionBridge {
   /**
    * Handles the pointer up phase of a transform drag.
    * Clears window capture so later viewport moves do not resume the drag.
+   * Bounds face clicks without movement cycle nested object selection.
    * @returns True if the event was consumed.
    */
   private handleTransformPointerUp(): boolean {
@@ -343,8 +351,26 @@ export class TransformInteractionBridge {
     const selectedObjects = filterUnlockedObjects(
       this.deps.selectionManager.getAllSelectedObjectsAsArray()
     );
-    this.deps.transformHandler.onPointerUp(pivot, selectedObjects);
+    const selectionClick = this.deps.transformHandler.onPointerUp(
+      pivot,
+      selectedObjects
+    );
+    const clickEvent = this.pendingSelectionClickEvent;
+    const clickViewport = this.pendingSelectionClickViewport;
     this.clearWindowDragCapture();
+    if (selectionClick) {
+      this.applyBoundsFaceSelectionClick(clickEvent, clickViewport);
+      return true;
+    }
+    this.commitTransformAfterDrag(selectedObjects);
+    return true;
+  }
+
+  /**
+   * Commits a completed transform drag (viewport sync, gizmo refresh).
+   * @param selectedObjects Meshes that were transformed.
+   */
+  private commitTransformAfterDrag(selectedObjects: THREE.Mesh[]): void {
     const solidHandled =
       this.deps.onTransformsCommitted?.(selectedObjects) === true;
     if (solidHandled) {
@@ -359,7 +385,26 @@ export class TransformInteractionBridge {
       this.resolveGizmoOrientation(selectedObjects)
     );
     this.refreshPropertiesPanelTransform();
-    return true;
+  }
+
+  /**
+   * Applies click-through selection after a bounds face press with no drag.
+   * @param event The original pointerdown event used for picking.
+   * @param viewport The viewport that received the press.
+   */
+  private applyBoundsFaceSelectionClick(
+    event: MouseEvent | null,
+    viewport: Viewport3D | Viewport2D | null
+  ): void {
+    if (!event || !viewport) return;
+    if (typeof viewport.getObjectPickStack !== 'function') return;
+    const stack = viewport.getObjectPickStack(event);
+    const picked = SelectionClickThrough.pickFromStack(
+      stack,
+      this.deps.selectionManager
+    );
+    if (!picked) return;
+    this.deps.selectionManager.selectFromClick(picked, false, false);
   }
 
   /**
@@ -368,6 +413,8 @@ export class TransformInteractionBridge {
   private clearWindowDragCapture(): void {
     this.windowDragSession.end();
     this.activeDragViewport = null;
+    this.pendingSelectionClickEvent = null;
+    this.pendingSelectionClickViewport = null;
   }
 
   /**

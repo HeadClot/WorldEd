@@ -140,6 +140,21 @@ export class SolidBrushEdgeMaterials {
   }
 
   /**
+   * Prepares a cloned brush edge material for orthographic 2D viewports.
+   * Disables distance fade and depth testing so outlines stay visible from
+   * every axis (side/top/front) even when solid result depth would hide them.
+   * @param material Line material after clone.
+   */
+  static prepareForOrthoClone(material: THREE.Material): void {
+    this.disableDistanceFade(material);
+    if (material.userData[BRUSH_EDGE_DISTANCE_FADE_KEY] !== true) return;
+    material.depthTest = false;
+    material.depthWrite = false;
+    material.depthFunc = THREE.AlwaysDepth;
+    material.needsUpdate = true;
+  }
+
+  /**
    * Preview edge color for a CSG operation.
    * @param operation Solid operation.
    * @returns Hex color.

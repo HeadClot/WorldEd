@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { ViewportSyncManager } from '../../src/managers/viewport_sync_manager.js';
+import { Viewport2D } from '../../src/viewports/viewport_2d.js';
+import { Viewport3D } from '../../src/viewports/viewport_3d.js';
+import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
+import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_edge_materials.js';
 
 /**
  * Creates a minimal Viewport2D mock with the methods required by ViewportSyncManager.
@@ -190,5 +195,86 @@ describe('ViewportSyncManager', () => {
       ).not.toThrow();
       expect(findCloneGroup(sceneTop).children[0].position.x).toBe(100);
     });
+
+    it('keeps solid brush edge wireframes visible in 2D after 3D edge culling', () => {
+      const worldObject = new THREE.Group();
+      const brush = SolidBrushVisual.createBoxPreview(
+        'Brush',
+        2,
+        SolidOperation.Additive
+      );
+      worldObject.add(brush);
+      hideAllBrushEdges(brush);
+      syncManager.syncWorldObjectToViewports(worldObject);
+      const cloneBrush = findCloneGroup(sceneTop).children[0] as THREE.Mesh;
+      const cloneEdges = collectBrushEdges(cloneBrush);
+      expect(cloneEdges.length).toBeGreaterThan(0);
+      cloneEdges.forEach((edge) => expect(edge.visible).toBe(true));
+    });
+
+    it('does not hide 2D brush edges when world edges stay culled during transform sync', () => {
+      const worldObject = new THREE.Group();
+      const brush = SolidBrushVisual.createBoxPreview(
+        'Brush',
+        2,
+        SolidOperation.Additive
+      );
+      worldObject.add(brush);
+      syncManager.syncWorldObjectToViewports(worldObject);
+      hideAllBrushEdges(brush);
+      brush.position.set(5, 0, 0);
+      syncManager.syncClonePositionsToWorldObject(worldObject);
+      const cloneBrush = findCloneGroup(sceneTop).children[0] as THREE.Mesh;
+      expect(cloneBrush.position.x).toBe(5);
+      const cloneEdges = collectBrushEdges(cloneBrush);
+      expect(cloneEdges.length).toBeGreaterThan(0);
+      cloneEdges.forEach((edge) => expect(edge.visible).toBe(true));
+    });
+
+    it('disables depth testing on brush edges in every 2D clone including side', () => {
+      const worldObject = new THREE.Group();
+      const brush = SolidBrushVisual.createBoxPreview(
+        'Brush',
+        2,
+        SolidOperation.Additive
+      );
+      worldObject.add(brush);
+      syncManager.syncWorldObjectToViewports(worldObject);
+      const scenes = [sceneTop, sceneFront, sceneSide];
+      scenes.forEach((scene) => {
+        const cloneBrush = findCloneGroup(scene).children[0] as THREE.Mesh;
+        const cloneEdges = collectBrushEdges(cloneBrush);
+        expect(cloneEdges.length).toBeGreaterThan(0);
+        cloneEdges.forEach((edge) => {
+          expect(edge.visible).toBe(true);
+          expect(edge.frustumCulled).toBe(false);
+          const material = edge.material as THREE.Material;
+          expect(material.depthTest).toBe(false);
+        });
+      });
+    });
   });
 });
+
+/**
+ * Hides every solid brush edge child on a brush mesh (3D distance cull).
+ * @param brush Solid brush preview mesh.
+ */
+function hideAllBrushEdges(brush: THREE.Mesh): void {
+  collectBrushEdges(brush).forEach((edge) => {
+    edge.visible = false;
+  });
+}
+
+/**
+ * Collects solid brush edge line children, including occluded passes.
+ * @param mesh Brush preview mesh.
+ * @returns Edge line segments.
+ */
+function collectBrushEdges(mesh: THREE.Mesh): THREE.LineSegments[] {
+  return mesh.children.filter(
+    (child): child is THREE.LineSegments =>
+      child instanceof THREE.LineSegments &&
+      child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true
+  );
+}

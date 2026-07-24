@@ -13,7 +13,8 @@ export function createEditorWebGLCanvas(ownerName: string): HTMLCanvasElement {
 }
 
 /**
- * Returns conservative WebGL settings for desktop WebView backends.
+ * Returns WebGL settings for editor viewports and overlay widgets.
+ * Multisample antialiasing keeps edge/wireframe lines thick and clean.
  * @param alpha Whether the renderer needs a transparent drawing buffer.
  * @returns Three.js WebGL renderer parameters.
  */
@@ -22,7 +23,7 @@ export function getEditorWebGLRendererOptions(
 ): THREE.WebGLRendererParameters {
   return {
     alpha,
-    antialias: false,
+    antialias: true,
     failIfMajorPerformanceCaveat: false,
     powerPreference: 'default',
   };

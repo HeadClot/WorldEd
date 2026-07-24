@@ -3,7 +3,10 @@ import { Viewport3D } from '../viewports/viewport_3d.js';
 import { Viewport2D } from '../viewports/viewport_2d.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
 import { CLIP_PREVIEW_USERDATA_KEY } from './clip_plane_preview.js';
-import { SolidBrushEdgeMaterials } from '../solid/model/solid_brush_edge_materials.js';
+import {
+  SolidBrushEdgeMaterials,
+  SOLID_BRUSH_EDGE_USERDATA_KEY
+} from '../solid/model/solid_brush_edge_materials.js';
 import { SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 
 /**
@@ -392,7 +395,29 @@ export class ViewportSyncManager {
     this.tagCloneWithSourceUuids(worldObject, clone);
     this.detachSharedResources(clone);
     this.stripOccludedBrushEdges(clone);
+    this.forceBrushEdgesVisible(clone);
     return clone;
+  }
+
+  /**
+   * Forces solid brush edge helpers visible on a 2D clone hierarchy.
+   * 3D distance culling must never hide wireframes in orthographic views.
+   * @param root Cloned hierarchy root.
+   */
+  private forceBrushEdgesVisible(root: THREE.Object3D): void {
+    root.traverse((child) => {
+      if (!this.isSolidBrushEdgeObject(child)) return;
+      child.visible = true;
+    });
+  }
+
+  /**
+   * Returns whether an object is a solid brush decorative edge line.
+   * @param object Candidate object.
+   * @returns True for solid brush edge helpers.
+   */
+  private isSolidBrushEdgeObject(object: THREE.Object3D): boolean {
+    return object.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true;
   }
 
   /**
@@ -474,7 +499,7 @@ export class ViewportSyncManager {
 
   /**
    * Gives a line object its own geometry and material instances.
-   * Brush edge clones disable distance fade so 2D views keep full wire clarity.
+   * Brush edge clones drop distance fade and depth tests for 2D clarity.
    * @param line The line object to detach.
    */
   private detachLineResources(line: THREE.Line | THREE.LineSegments): void {
@@ -485,22 +510,33 @@ export class ViewportSyncManager {
       line.material = line.material.map((material) =>
         this.cloneLineMaterial(material)
       );
-      return;
-    }
-    if (line.material) {
+    } else if (line.material) {
       line.material = this.cloneLineMaterial(line.material);
     }
+    this.prepareBrushEdgeLineForOrtho(line);
   }
 
   /**
-   * Clones a line material and disables brush-edge distance fade when present.
+   * Clones a line material and configures brush edges for orthographic clones.
    * @param material Source material.
    * @returns Independent material for a 2D viewport clone.
    */
   private cloneLineMaterial(material: THREE.Material): THREE.Material {
     const cloned = material.clone();
-    SolidBrushEdgeMaterials.disableDistanceFade(cloned);
+    SolidBrushEdgeMaterials.prepareForOrthoClone(cloned);
     return cloned;
+  }
+
+  /**
+   * Ensures solid brush edge lines always draw in 2D (no frustum/depth culling).
+   * @param line Cloned line object in a 2D viewport scene.
+   */
+  private prepareBrushEdgeLineForOrtho(
+    line: THREE.Line | THREE.LineSegments
+  ): void {
+    if (line.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] !== true) return;
+    line.frustumCulled = false;
+    line.visible = true;
   }
 
   /**
@@ -603,6 +639,8 @@ export class ViewportSyncManager {
 
   /**
    * Recursively copies local transforms from original to clone hierarchy.
+   * Matches children by source UUID when tags exist so stripped occluded
+   * brush edges do not shift later siblings onto the wrong originals.
    * @param original The authoritative object.
    * @param clone The viewport clone counterpart.
    */
@@ -613,14 +651,69 @@ export class ViewportSyncManager {
     clone.position.copy(original.position);
     clone.quaternion.copy(original.quaternion);
     clone.scale.copy(original.scale);
-    clone.visible = original.visible;
-    const childCount = Math.min(original.children.length, clone.children.length);
-    for (let index = 0; index < childCount; index++) {
-      this.syncObjectTransformsRecursively(
-        original.children[index],
-        clone.children[index]
-      );
+    this.syncCloneVisibility(original, clone);
+    this.syncMatchedChildren(original, clone);
+  }
+
+  /**
+   * Copies object visibility unless the clone is a solid brush edge helper.
+   * 2D brush edges stay visible even when 3D distance culling hides world edges.
+   * @param original Authoritative object.
+   * @param clone Viewport clone counterpart.
+   */
+  private syncCloneVisibility(
+    original: THREE.Object3D,
+    clone: THREE.Object3D
+  ): void {
+    if (this.isSolidBrushEdgeObject(clone)) {
+      clone.visible = true;
+      return;
     }
+    clone.visible = original.visible;
+  }
+
+  /**
+   * Syncs each clone child to its matching original child.
+   * @param original Authoritative parent.
+   * @param clone Viewport clone parent.
+   */
+  private syncMatchedChildren(
+    original: THREE.Object3D,
+    clone: THREE.Object3D
+  ): void {
+    for (const cloneChild of clone.children) {
+      const originalChild = this.findMatchingOriginalChild(
+        original,
+        cloneChild
+      );
+      if (!originalChild) continue;
+      this.syncObjectTransformsRecursively(originalChild, cloneChild);
+    }
+  }
+
+  /**
+   * Finds the original child that corresponds to a clone child.
+   * Prefers EDITOR_SOURCE_UUID_KEY tags; falls back to sibling index.
+   * @param originalParent Authoritative parent.
+   * @param cloneChild Clone child to match.
+   * @returns Matching original child, or null.
+   */
+  private findMatchingOriginalChild(
+    originalParent: THREE.Object3D,
+    cloneChild: THREE.Object3D
+  ): THREE.Object3D | null {
+    const sourceUuid = cloneChild.userData[EDITOR_SOURCE_UUID_KEY];
+    if (typeof sourceUuid === 'string') {
+      const byUuid = originalParent.children.find(
+        (child) => child.uuid === sourceUuid
+      );
+      if (byUuid) return byUuid;
+    }
+    const index = cloneChild.parent
+      ? cloneChild.parent.children.indexOf(cloneChild)
+      : -1;
+    if (index < 0 || index >= originalParent.children.length) return null;
+    return originalParent.children[index];
   }
 
   /**

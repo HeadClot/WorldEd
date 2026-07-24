@@ -8,6 +8,7 @@ import { CameraWidget } from '../ui/camera_widget.js';
 import { SelectionManager } from '../managers/selection_manager.js';
 import { SelectionHighlight } from '../selection/selection_highlight.js';
 import { SceneRaycaster } from '../selection/scene_raycaster.js';
+import { SelectionClickThrough } from '../selection/selection_click_through.js';
 import { ViewportShadingController } from './viewport_shading_controller.js';
 import { ShadingMode } from '../types/shading_mode.js';
 import { CameraHeadlight } from './camera_headlight.js';
@@ -255,26 +256,60 @@ export class Viewport3D extends BaseViewport {
 
   /**
    * Handles a mouse click to select or deselect objects.
-   * Shift adds to selection; Ctrl/Meta toggles; empty click clears unless multi-mod.
+   * Plain clicks cycle through overlapping meshes; Shift adds; Ctrl/Meta toggles.
    * @param event The pointer event from the click.
    */
   private handleObjectSelection(event: MouseEvent): void {
+    const stack = this.getObjectPickStack(event);
+    const additive = event.shiftKey;
+    const toggle = event.ctrlKey || event.metaKey;
+    if (stack.length === 0) {
+      if (!additive && !toggle) this.selectionManager?.clearSelection();
+      return;
+    }
+    if (!this.selectionManager) return;
+    const picked = this.resolvePickFromStack(stack, additive, toggle);
+    if (picked) {
+      this.selectionManager.selectFromClick(picked, additive, toggle);
+    }
+  }
+
+  /**
+   * Builds the near-to-far world-mesh pick stack under the pointer.
+   * Used for click-through selection and for bounds/gizmo skip decisions.
+   * @param event The pointer event providing screen coordinates.
+   * @returns Unique world meshes ordered closest to farthest.
+   */
+  getObjectPickStack(event: MouseEvent): THREE.Mesh[] {
     const objects = this.getEffectiveSelectableObjects();
-    if (objects.length === 0) return;
-    const clicked = this.raycaster.cast(
+    if (objects.length === 0) return [];
+    const intersections = this.raycaster.castIntersections(
       this.camera,
       this.renderer,
       event,
       objects
     );
-    if (clicked) {
-      const resolved = this.resolveClickedMesh(clicked);
-      const additive = event.shiftKey;
-      const toggle = event.ctrlKey || event.metaKey;
-      this.selectionManager?.selectFromClick(resolved, additive, toggle);
-    } else if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
-      this.selectionManager?.clearSelection();
-    }
+    return SelectionClickThrough.uniqueMeshesFromHits(
+      intersections,
+      (mesh) => this.resolveClickedMesh(mesh)
+    );
+  }
+
+  /**
+   * Chooses the mesh for a click: frontmost for multi-select, cycle for plain.
+   * @param stack Unique world meshes ordered near-to-far.
+   * @param additive True when Shift is held.
+   * @param toggle True when Ctrl/Meta is held.
+   * @returns Mesh to apply selection to, or null.
+   */
+  private resolvePickFromStack(
+    stack: THREE.Mesh[],
+    additive: boolean,
+    toggle: boolean
+  ): THREE.Mesh | null {
+    if (stack.length === 0 || !this.selectionManager) return null;
+    if (additive || toggle) return stack[0];
+    return SelectionClickThrough.pickFromStack(stack, this.selectionManager);
   }
 
   /**

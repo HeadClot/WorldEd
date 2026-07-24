@@ -159,6 +159,7 @@ export class TransformHandler {
     if (!this.session.dragActive) return;
     this.session.dragCamera = camera;
     this.session.dragRenderer = renderer;
+    this.trackBoundsFacePointerMovement(event);
     const mode = this.transformGizmo.getMode();
     if (mode === TransformMode.BOUNDS) {
       this.boundsDragController.handleMove(camera, renderer, event, selectedObjects);
@@ -180,20 +181,67 @@ export class TransformHandler {
 
   /**
    * Processes a pointer up event to end the drag.
-   * Pushes the accumulated transform command to the undo/redo stack.
+   * Bounds face presses without real movement are treated as selection clicks
+   * so nested objects remain reachable while bounds drag still works.
    * @param pivot The transform pivot point used during the drag.
    * @param selectedObjects The selected meshes that were transformed.
+   * @returns True when the press should run object click-through selection.
    */
   onPointerUp(
     pivot: THREE.Vector3 = new THREE.Vector3(),
     selectedObjects: THREE.Mesh[] = []
-  ): void {
-    if (this.session.dragActive) {
+  ): boolean {
+    const selectionClick = this.isBoundsFaceClickWithoutDrag();
+    if (selectionClick) {
+      this.restoreMeshesFromSnapshot(selectedObjects);
+    } else if (this.session.dragActive) {
       this.commandPusher.pushUndoCommand(pivot, selectedObjects);
     }
     this.transformGizmo.setActiveHandle(null);
     this.transformGizmo.setBoundsGuideLinesVisible(false);
     this.session.clearInteractionTargets();
+    return selectionClick;
+  }
+
+  /**
+   * Returns true for a bounds face press that never moved past the click threshold.
+   * @returns True when pointer-up should cycle object selection instead of commit.
+   */
+  private isBoundsFaceClickWithoutDrag(): boolean {
+    if (!this.session.dragActive) return false;
+    if (!this.session.isBoundsFaceMove) return false;
+    if (this.session.isBoundsResize) return false;
+    return !this.session.boundsPointerMoved;
+  }
+
+  /**
+   * Marks bounds face interaction as a drag once screen movement exceeds threshold.
+   * @param event The pointer move event.
+   */
+  private trackBoundsFacePointerMovement(event: MouseEvent): void {
+    if (!this.session.isBoundsFaceMove) return;
+    if (this.session.boundsPointerMoved) return;
+    const deltaX = event.clientX - this.session.pointerDownClientX;
+    const deltaY = event.clientY - this.session.pointerDownClientY;
+    const clickThresholdPixels = 4;
+    if (deltaX * deltaX + deltaY * deltaY > clickThresholdPixels * clickThresholdPixels) {
+      this.session.boundsPointerMoved = true;
+    }
+  }
+
+  /**
+   * Restores mesh transforms from the pre-drag snapshot (cancelled face click).
+   * @param selectedObjects Meshes that may have been nudged during the press.
+   */
+  private restoreMeshesFromSnapshot(selectedObjects: THREE.Mesh[]): void {
+    selectedObjects.forEach((mesh) => {
+      const position = this.session.initialPositions.get(mesh);
+      const quaternion = this.session.initialQuaternions.get(mesh);
+      const scale = this.session.initialScales.get(mesh);
+      if (position) mesh.position.copy(position);
+      if (quaternion) mesh.quaternion.copy(quaternion);
+      if (scale) mesh.scale.copy(scale);
+    });
   }
 
   /**

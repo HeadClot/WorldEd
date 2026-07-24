@@ -33,6 +33,12 @@ export class TransformDragSession {
   boundsDeltaAlongNormal: number;
   isBoundsFaceMove: boolean;
   isBoundsResize: boolean;
+  /** Screen X at bounds face pointer-down (for click vs drag). */
+  pointerDownClientX: number;
+  /** Screen Y at bounds face pointer-down (for click vs drag). */
+  pointerDownClientY: number;
+  /** True once the pointer moved past the click threshold during bounds face move. */
+  boundsPointerMoved: boolean;
 
   /**
    * Creates an idle drag session with empty snapshots.
@@ -62,6 +68,9 @@ export class TransformDragSession {
     this.boundsDeltaAlongNormal = 0;
     this.isBoundsFaceMove = false;
     this.isBoundsResize = false;
+    this.pointerDownClientX = 0;
+    this.pointerDownClientY = 0;
+    this.boundsPointerMoved = false;
   }
 
   /**
@@ -107,5 +116,8 @@ export class TransformDragSession {
     this.initialRotationDirection = null;
     this.initialScreenPosition = null;
     this.useScreenSpaceRotation = false;
+    this.pointerDownClientX = 0;
+    this.pointerDownClientY = 0;
+    this.boundsPointerMoved = false;
   }
 }

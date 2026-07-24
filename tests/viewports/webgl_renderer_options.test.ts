@@ -4,10 +4,10 @@ import {
 } from '../../src/viewports/webgl_renderer_options.js';
 
 describe('editor WebGL renderer options', () => {
-  it('uses conservative opaque desktop settings', () => {
+  it('enables multisample antialiasing for clean thick lines', () => {
     expect(getEditorWebGLRendererOptions()).toEqual({
       alpha: false,
-      antialias: false,
+      antialias: true,
       failIfMajorPerformanceCaveat: false,
       powerPreference: 'default',
     });
@@ -15,5 +15,6 @@ describe('editor WebGL renderer options', () => {
 
   it('preserves transparency for overlay renderers', () => {
     expect(getEditorWebGLRendererOptions(true).alpha).toBe(true);
+    expect(getEditorWebGLRendererOptions(true).antialias).toBe(true);
   });
 });

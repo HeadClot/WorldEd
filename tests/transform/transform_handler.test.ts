@@ -160,6 +160,56 @@ describe('TransformHandler', () => {
     );
     expect(handler.isDragging()).toBe(false);
   });
+
+  it('treats bounds face press without movement as a selection click', () => {
+    const setup = createBoundsPickSetup(gizmo);
+    // Off-center so the face plane is hit without a resize handle.
+    const downEvent = new MouseEvent('pointerdown', {
+      clientX: 460,
+      clientY: 280
+    });
+    handler.onPointerDown(
+      setup.camera,
+      setup.renderer,
+      downEvent,
+      setup.handles,
+      setup.meshes,
+      setup.pivot,
+      setup.gizmoGroup
+    );
+    expect(handler.isDragging()).toBe(true);
+    const selectionClick = handler.onPointerUp(setup.pivot, setup.meshes);
+    expect(selectionClick).toBe(true);
+    expect(handler.isDragging()).toBe(false);
+  });
+
+  it('commits bounds face drag after the pointer moves past the click threshold', () => {
+    const setup = createBoundsPickSetup(gizmo);
+    const downEvent = new MouseEvent('pointerdown', {
+      clientX: 460,
+      clientY: 280
+    });
+    handler.onPointerDown(
+      setup.camera,
+      setup.renderer,
+      downEvent,
+      setup.handles,
+      setup.meshes,
+      setup.pivot,
+      setup.gizmoGroup
+    );
+    expect(handler.isDragging()).toBe(true);
+    handler.onPointerMove(
+      setup.camera,
+      setup.renderer,
+      new MouseEvent('pointermove', { clientX: 490, clientY: 310 }),
+      setup.pivot,
+      setup.meshes
+    );
+    const selectionClick = handler.onPointerUp(setup.pivot, setup.meshes);
+    expect(selectionClick).toBe(false);
+    expect(handler.isDragging()).toBe(false);
+  });
 });
 
 /**

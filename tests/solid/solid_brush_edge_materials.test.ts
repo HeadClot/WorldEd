@@ -60,6 +60,20 @@ describe('SolidBrushEdgeMaterials', () => {
     expect(shared.uniforms.fadeNear.value).toBe(BRUSH_EDGE_FADE_NEAR);
   });
 
+  it('prepares ortho clones without depth testing so all 2D views show edges', () => {
+    const shared = SolidBrushEdgeMaterials.getFrontMaterial(
+      SolidOperation.Additive
+    );
+    const cloned = shared.clone();
+    SolidBrushEdgeMaterials.prepareForOrthoClone(cloned);
+    expect(cloned.depthTest).toBe(false);
+    expect(cloned.depthWrite).toBe(false);
+    expect(cloned.depthFunc).toBe(THREE.AlwaysDepth);
+    expect(cloned.uniforms.fadeNear.value).toBeGreaterThan(1e6);
+    expect(shared.depthTest).toBe(true);
+    expect(shared.uniforms.fadeNear.value).toBe(BRUSH_EDGE_FADE_NEAR);
+  });
+
   it('returns distinct colors per CSG operation', () => {
     const additive = SolidBrushEdgeMaterials.edgeColorForOperation(
       SolidOperation.Additive

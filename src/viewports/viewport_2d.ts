@@ -6,6 +6,7 @@ import { OrthoPanHandler } from '../managers/ortho_pan_handler.js';
 import { SelectionManager } from '../managers/selection_manager.js';
 import { SelectionHighlight } from '../selection/selection_highlight.js';
 import { SceneRaycaster } from '../selection/scene_raycaster.js';
+import { SelectionClickThrough } from '../selection/selection_click_through.js';
 import { TransformCallback, MeshResolveCallback } from './viewport_3d.js';
 import { FrustumPlanes } from '../types/frustum_planes.js';
 import { ViewportShadingController } from './viewport_shading_controller.js';
@@ -15,10 +16,12 @@ import { clampOrthoZoomFactor } from './ortho_zoom_limits.js';
 import { isEditorHelperObject } from '../utils/mesh_edge_sync.js';
 import { DEFAULT_ORTHO_HALF_EXTENT } from '../types/editor_config.js';
 import { getDefaultSceneFocus } from '../navigation/default_camera_placement.js';
+import { OrthoDepthRanger } from './ortho_depth_ranger.js';
 
 export class Viewport2D extends BaseViewport {
   private camera: THREE.OrthographicCamera;
   private grids: Grids;
+  private gridPlane: GridPlane;
   private selectableObjects: THREE.Mesh[];
   private selectionManager: SelectionManager | null;
   private selectionHighlight: SelectionHighlight | null;
@@ -41,8 +44,9 @@ export class Viewport2D extends BaseViewport {
    */
   constructor(container: HTMLElement, name: string, plane: GridPlane, cameraPosition: THREE.Vector3) {
     super(container, name, ShadingMode.WIREFRAME);
+    this.gridPlane = plane;
     this.grids = new Grids(50, 50, plane, 'orthographic');
-    this.camera = this.createCamera(cameraPosition);
+    this.camera = this.createCamera(cameraPosition, plane);
     this.initializeState();
     this.setupPanHandler();
     this.setupClickSelection();
@@ -196,26 +200,60 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Handles a mouse click to select or deselect objects.
-   * Shift adds to selection; Ctrl/Meta toggles; empty click clears unless multi-mod.
+   * Plain clicks cycle through overlapping meshes; Shift adds; Ctrl/Meta toggles.
    * @param event The pointer event from the click.
    */
   private handleObjectSelection(event: MouseEvent): void {
+    const stack = this.getObjectPickStack(event);
+    const additive = event.shiftKey;
+    const toggle = event.ctrlKey || event.metaKey;
+    if (stack.length === 0) {
+      if (!additive && !toggle) this.selectionManager?.clearSelection();
+      return;
+    }
+    if (!this.selectionManager) return;
+    const picked = this.resolvePickFromStack(stack, additive, toggle);
+    if (picked) {
+      this.selectionManager.selectFromClick(picked, additive, toggle);
+    }
+  }
+
+  /**
+   * Builds the near-to-far world-mesh pick stack under the pointer.
+   * Used for click-through selection and for bounds/gizmo skip decisions.
+   * @param event The pointer event providing screen coordinates.
+   * @returns Unique world meshes ordered closest to farthest.
+   */
+  getObjectPickStack(event: MouseEvent): THREE.Mesh[] {
     const objects = this.getEffectiveSelectableObjects();
-    if (objects.length === 0) return;
-    const clicked = this.raycaster.cast(
+    if (objects.length === 0) return [];
+    const intersections = this.raycaster.castIntersections(
       this.camera,
       this.renderer,
       event,
       objects
     );
-    if (clicked) {
-      const resolved = this.resolveClickedMesh(clicked);
-      const additive = event.shiftKey;
-      const toggle = event.ctrlKey || event.metaKey;
-      this.selectionManager?.selectFromClick(resolved, additive, toggle);
-    } else if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
-      this.selectionManager?.clearSelection();
-    }
+    return SelectionClickThrough.uniqueMeshesFromHits(
+      intersections,
+      (mesh) => this.resolveClickedMesh(mesh)
+    );
+  }
+
+  /**
+   * Chooses the mesh for a click: frontmost for multi-select, cycle for plain.
+   * @param stack Unique world meshes ordered near-to-far.
+   * @param additive True when Shift is held.
+   * @param toggle True when Ctrl/Meta is held.
+   * @returns Mesh to apply selection to, or null.
+   */
+  private resolvePickFromStack(
+    stack: THREE.Mesh[],
+    additive: boolean,
+    toggle: boolean
+  ): THREE.Mesh | null {
+    if (stack.length === 0 || !this.selectionManager) return null;
+    if (additive || toggle) return stack[0];
+    return SelectionClickThrough.pickFromStack(stack, this.selectionManager);
   }
 
   /**
@@ -241,19 +279,41 @@ export class Viewport2D extends BaseViewport {
 
   /**
    * Builds the orthographic camera with the default startup zoom level.
-   * Aims at the default cube center so elevated front/side cameras stay level.
+   * Sets a stable up vector per plane so top-down lookAt is not degenerate.
    * @param position World-space camera position for this orthographic plane.
+   * @param plane Grid plane for this viewport.
    * @returns A configured orthographic camera looking at the default focus.
    */
-  private createCamera(position: THREE.Vector3): THREE.OrthographicCamera {
+  private createCamera(
+    position: THREE.Vector3,
+    plane: GridPlane
+  ): THREE.OrthographicCamera {
     const extent = DEFAULT_ORTHO_HALF_EXTENT;
     const camera = new THREE.OrthographicCamera(
       -extent, extent, extent, -extent, 0.1, 1000
     );
     camera.position.copy(position);
+    this.applyPlaneCameraUp(camera, plane);
     const focus = getDefaultSceneFocus();
     camera.lookAt(focus.x, focus.y, focus.z);
     return camera;
+  }
+
+  /**
+   * Chooses a camera up vector that is never parallel to the look direction.
+   * Top (XZ) looks down -Y, so world +Y cannot be used as up.
+   * @param camera Orthographic camera to configure.
+   * @param plane Viewport grid plane.
+   */
+  private applyPlaneCameraUp(
+    camera: THREE.OrthographicCamera,
+    plane: GridPlane
+  ): void {
+    if (plane === 'xz') {
+      camera.up.set(0, 0, -1);
+      return;
+    }
+    camera.up.set(0, 1, 0);
   }
 
   /**
@@ -304,9 +364,12 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Updates grids and renders the orthographic scene.
+   * Updates depth range, grids, and renders the orthographic scene.
+   * Depth ranging keeps all content in front of the camera (any ±X for side)
+   * without changing zoom or lateral pan.
    */
   render(): void {
+    OrthoDepthRanger.update(this.camera, this.scene);
     this.grids.update(this.camera);
     this.renderer.render(this.scene, this.camera);
   }

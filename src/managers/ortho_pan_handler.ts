@@ -151,7 +151,13 @@ export class OrthoPanHandler {
     const worldX = screenDeltaX * frustumWidth / canvasWidth;
     const worldY = screenDeltaY * frustumHeight / canvasHeight;
     this.camera.getWorldDirection(this.tempForward);
-    this.tempRight.crossVectors(this.tempForward, new THREE.Vector3(0, 1, 0)).normalize();
+    // Use the camera's own up so top-down views (up = -Z) pan correctly.
+    this.tempRight
+      .crossVectors(this.tempForward, this.camera.up)
+      .normalize();
+    if (this.tempRight.lengthSq() < 1e-10) {
+      this.tempRight.set(1, 0, 0);
+    }
     this.tempUp.crossVectors(this.tempRight, this.tempForward).normalize();
     this.camera.position.addScaledVector(this.tempRight, -worldX);
     this.camera.position.addScaledVector(this.tempUp, worldY);

@@ -32,14 +32,55 @@ export class SceneRaycaster {
     event: MouseEvent,
     selectableObjects: THREE.Mesh[]
   ): THREE.Mesh | null {
-    if (selectableObjects.length === 0) return null;
+    const hits = this.castAll(camera, renderer, event, selectableObjects);
+    return hits.length > 0 ? hits[0] : null;
+  }
+
+  /**
+   * Casts a ray and returns every intersected mesh near-to-far (with duplicates).
+   * Callers that need click-through should dedupe via SelectionClickThrough.
+   * @param camera The camera to cast from.
+   * @param renderer The renderer for canvas dimensions.
+   * @param event The mouse event providing the click position.
+   * @param selectableObjects The array of meshes to test against.
+   * @returns Hit meshes ordered by ray distance (closest first).
+   */
+  castAll(
+    camera: THREE.Camera,
+    renderer: THREE.WebGLRenderer,
+    event: MouseEvent,
+    selectableObjects: THREE.Mesh[]
+  ): THREE.Mesh[] {
+    return this.allMeshHits(
+      this.castIntersections(camera, renderer, event, selectableObjects)
+    );
+  }
+
+  /**
+   * Returns raycast intersection records ordered near-to-far for click-through.
+   * @param camera The camera to cast from.
+   * @param renderer The renderer for canvas dimensions.
+   * @param event The mouse event providing the click position.
+   * @param selectableObjects The array of meshes to test against.
+   * @returns Raw Three.js intersections (distance-sorted).
+   */
+  castIntersections(
+    camera: THREE.Camera,
+    renderer: THREE.WebGLRenderer,
+    event: MouseEvent,
+    selectableObjects: THREE.Mesh[]
+  ): THREE.Intersection[] {
+    if (selectableObjects.length === 0) return [];
     this.prepareCameraAndMeshes(camera, selectableObjects);
     pointerEventToNdc(event, renderer.domElement, this.ndcVector);
     this.raycaster.setFromCamera(this.ndcVector, camera);
     const restored = this.enableDoubleSidedPicking(selectableObjects);
-    const intersections = this.raycaster.intersectObjects(selectableObjects, false);
+    const intersections = this.raycaster.intersectObjects(
+      selectableObjects,
+      false
+    );
     this.restoreMaterialSides(restored);
-    return this.firstMeshHit(intersections);
+    return intersections;
   }
 
   /**
@@ -102,17 +143,18 @@ export class SceneRaycaster {
   }
 
   /**
-   * Returns the closest mesh from a sorted intersection list.
+   * Collects every mesh object from a sorted intersection list.
    * @param intersections Raycast hits sorted by distance.
-   * @returns The hit mesh, or null when no mesh was hit.
+   * @returns Hit meshes in the same order (may include the same mesh twice).
    */
-  private firstMeshHit(intersections: THREE.Intersection[]): THREE.Mesh | null {
+  private allMeshHits(intersections: THREE.Intersection[]): THREE.Mesh[] {
+    const meshes: THREE.Mesh[] = [];
     for (const hit of intersections) {
       if (hit.object instanceof THREE.Mesh) {
-        return hit.object;
+        meshes.push(hit.object);
       }
     }
-    return null;
+    return meshes;
   }
 
   /**
