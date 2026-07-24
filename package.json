@@ -11,7 +11,7 @@
     "build": "prettier --write --log-level silent . && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write --log-level silent .",
+    "format": "prettier --write .",
     "format:check": "prettier --check .",
     "ci": "bun run format:check && bun run testrun && bun run build && git diff --exit-code -- docs",
     "typecheck:strict": "tsc --project tsconfig.strict.json --noEmit",
