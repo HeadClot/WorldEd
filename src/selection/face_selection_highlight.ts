@@ -5,10 +5,7 @@ import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
 import { buildFacePickRegionKey } from './solid_triangle_source_index.js';
 import { getTriangleVertexIndices } from './triangle_geometry_utils.js';
 import { GizmoVisualStyle } from '../transform/gizmo_visual_style.js';
-import {
-  isResultMesh,
-  SOLID_TRIANGLE_SOURCES_USERDATA_KEY,
-} from '../solid/model/solid_model_keys.js';
+import { isResultMesh, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../solid/model/solid_model_keys.js';
 
 /**
  * Face-fill opacities for ordinary content meshes (light underlays like default
@@ -58,10 +55,7 @@ export class FaceSelectionHighlight {
   constructor(scene: THREE.Scene) {
     this.scene = scene;
     this.highlightGroup = new THREE.Group();
-    this.contentMaterials = this.createMaterialPair(
-      CONTENT_FACE_FRONT_OPACITY,
-      CONTENT_FACE_OCCLUDED_OPACITY,
-    );
+    this.contentMaterials = this.createMaterialPair(CONTENT_FACE_FRONT_OPACITY, CONTENT_FACE_OCCLUDED_OPACITY);
     this.solidMaterials = this.createMaterialPair(SOLID_FACE_FRONT_OPACITY, SOLID_FACE_OCCLUDED_OPACITY);
     this.regionGroups = new Map();
     this.regionSeeds = new Map();
@@ -317,10 +311,7 @@ export class FaceSelectionHighlight {
    * @param material Occluded-pass material for this underlay class.
    * @returns Occluded highlight mesh.
    */
-  private createOccludedFaceMesh(
-    geometry: THREE.BufferGeometry,
-    material: THREE.MeshBasicMaterial,
-  ): THREE.Mesh {
+  private createOccludedFaceMesh(geometry: THREE.BufferGeometry, material: THREE.MeshBasicMaterial): THREE.Mesh {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = GizmoVisualStyle.occludedRenderOrder;
     mesh.userData.isFaceSelectionHighlight = true;

@@ -67,9 +67,7 @@ export function buildGeometryPickStamp(geometry: THREE.BufferGeometry): string {
  * @param index Geometry index attribute.
  * @returns Fingerprint string.
  */
-function fingerprintIndexContents(
-  index: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-): string {
+function fingerprintIndexContents(index: THREE.BufferAttribute | THREE.InterleavedBufferAttribute): string {
   const array = index.array as ArrayLike<number>;
   const length = array.length;
   if (length === 0) return '0';

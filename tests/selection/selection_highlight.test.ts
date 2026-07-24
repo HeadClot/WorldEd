@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '../../src/theme.js';
-import {
-  SelectionHighlight,
-  SELECTION_HIGHLIGHT_USERDATA_KEY,
-} from '../../src/selection/selection_highlight.js';
+import { SelectionHighlight, SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/selection_highlight.js';
 
 describe('SelectionHighlight', () => {
   let scene: THREE.Scene;
