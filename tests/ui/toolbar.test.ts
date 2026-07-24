@@ -98,6 +98,30 @@ describe('Toolbar', () => {
     expect(toolbar.getButtonIndexByLabel('File')).toBe(0);
   });
 
+  it('should disable dropdown items when isEnabled returns false', () => {
+    const clickHandler = vi.fn();
+    let enabled = false;
+    toolbar.addDropdown('CSG', [
+      {
+        label: 'Union',
+        onClick: clickHandler,
+        isEnabled: () => enabled
+      }
+    ]);
+    const header = container.querySelector('button') as HTMLButtonElement;
+    header.click();
+    const menuItem = container.querySelectorAll('button')[1] as HTMLButtonElement;
+    expect(menuItem.disabled).toBe(true);
+    menuItem.click();
+    expect(clickHandler).not.toHaveBeenCalled();
+    enabled = true;
+    header.click();
+    header.click();
+    expect(menuItem.disabled).toBe(false);
+    menuItem.click();
+    expect(clickHandler).toHaveBeenCalledTimes(1);
+  });
+
   it('should activate buttons by label prefix', () => {
     toolbar.addButton('Move', () => {});
     toolbar.addButton('Rotate', () => {});

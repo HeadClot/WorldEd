@@ -20,14 +20,16 @@ const FACE_HIGHLIGHT_OCCLUDED_OPACITY = 0.18;
 /**
  * Renders orange face-selection overlays with gizmo-style depth treatment.
  * Unoccluded faces stay bright; faces behind other geometry draw as ghosts.
- * Polygon offset avoids z-fighting with the owning mesh surface.
+ * All selected triangles on one mesh share a single dual-pass mesh so complex
+ * CSG faces do not create thousands of draw calls.
  */
 export class FaceSelectionHighlight {
   private scene: THREE.Scene;
   private highlightGroup: THREE.Group;
   private frontMaterial: THREE.MeshBasicMaterial;
   private occludedMaterial: THREE.MeshBasicMaterial;
-  private faceGroups: Map<string, THREE.Group>;
+  /** One dual-pass group per source mesh uuid. */
+  private meshGroups: Map<string, THREE.Group>;
 
   /**
    * Creates a new face highlight renderer and adds it to the scene.
@@ -38,7 +40,7 @@ export class FaceSelectionHighlight {
     this.highlightGroup = new THREE.Group();
     this.frontMaterial = this.createFrontMaterial();
     this.occludedMaterial = this.createOccludedMaterial();
-    this.faceGroups = new Map();
+    this.meshGroups = new Map();
     this.scene.add(this.highlightGroup);
   }
 
@@ -83,90 +85,115 @@ export class FaceSelectionHighlight {
   }
 
   /**
-   * Generates a unique key for a face selection entry.
-   * @param mesh The mesh reference.
-   * @param faceIndex The triangle index.
-   * @returns A unique string key for this face.
-   */
-  private getFaceKey(mesh: THREE.Mesh, faceIndex: number): string {
-    return `${mesh.uuid}_${faceIndex}`;
-  }
-
-  /**
    * Updates the highlight to show the given set of selected faces.
+   * Rebuilds batched mesh overlays (selection changes are infrequent).
    * @param faces The array of face selections to highlight.
    */
   setSelectedFaces(faces: FaceSelection[]): void {
-    const newKeys = new Set<string>();
-    faces.forEach((entry) => {
-      newKeys.add(this.getFaceKey(entry.mesh, entry.faceIndex));
-    });
-    this.removeStaleHighlights(newKeys);
-    this.addNewHighlights(faces);
-  }
-
-  /**
-   * Removes highlights for faces no longer in the selection set.
-   * @param keepKeys The set of keys to preserve.
-   */
-  private removeStaleHighlights(keepKeys: Set<string>): void {
-    this.faceGroups.forEach((group, key) => {
-      if (keepKeys.has(key)) return;
-      this.disposeFaceGroup(group);
-      this.faceGroups.delete(key);
+    this.clearHighlights();
+    if (faces.length === 0) return;
+    const byMesh = this.groupFacesByMesh(faces);
+    byMesh.forEach((faceIndices, mesh) => {
+      const group = this.buildBatchedMeshHighlight(mesh, faceIndices);
+      if (!group) return;
+      this.highlightGroup.add(group);
+      this.meshGroups.set(mesh.uuid, group);
     });
   }
 
   /**
-   * Adds new highlight groups for faces not yet highlighted.
-   * @param faces The face selections to add highlights for.
+   * Buckets face selections by owning mesh.
+   * @param faces Face selection entries.
+   * @returns Map from mesh to triangle indices.
    */
-  private addNewHighlights(faces: FaceSelection[]): void {
-    faces.forEach((entry) => {
-      const key = this.getFaceKey(entry.mesh, entry.faceIndex);
-      if (this.faceGroups.has(key)) return;
-      const faceGroup = this.buildFaceHighlightGroup(entry);
-      if (!faceGroup) return;
-      this.highlightGroup.add(faceGroup);
-      this.faceGroups.set(key, faceGroup);
-    });
+  private groupFacesByMesh(
+    faces: FaceSelection[]
+  ): Map<THREE.Mesh, number[]> {
+    const byMesh = new Map<THREE.Mesh, number[]>();
+    for (const entry of faces) {
+      const list = byMesh.get(entry.mesh);
+      if (list) {
+        if (!list.includes(entry.faceIndex)) list.push(entry.faceIndex);
+      } else {
+        byMesh.set(entry.mesh, [entry.faceIndex]);
+      }
+    }
+    return byMesh;
   }
 
   /**
-   * Builds a dual-pass highlight group for one selected face.
-   * @param entry The face selection to build the group for.
-   * @returns A group with front and occluded meshes, or null on failure.
+   * Builds one dual-pass highlight group for all selected triangles on a mesh.
+   * @param mesh Source mesh.
+   * @param faceIndices Selected triangle indices on that mesh.
+   * @returns Dual-pass group, or null when geometry is empty.
    */
-  private buildFaceHighlightGroup(entry: FaceSelection): THREE.Group | null {
-    const faceGeometry = this.buildWorldSpaceFaceGeometry(entry);
-    if (!faceGeometry) return null;
+  private buildBatchedMeshHighlight(
+    mesh: THREE.Mesh,
+    faceIndices: number[]
+  ): THREE.Group | null {
+    const geometry = this.buildWorldSpaceBatchedGeometry(mesh, faceIndices);
+    if (!geometry) return null;
     const group = new THREE.Group();
     group.userData.isFaceSelectionHighlight = true;
-    group.add(this.createOccludedFaceMesh(faceGeometry));
-    group.add(this.createFrontFaceMesh(faceGeometry));
+    group.add(this.createOccludedFaceMesh(geometry));
+    group.add(this.createFrontFaceMesh(geometry));
     return group;
   }
 
   /**
-   * Builds triangle geometry for a face in world space.
-   * @param entry The face selection to convert.
-   * @returns World-space triangle geometry, or null on failure.
+   * Builds a single non-indexed world-space mesh for many selected triangles.
+   * @param mesh Source mesh.
+   * @param faceIndices Triangle indices to include.
+   * @returns Batched geometry, or null when no valid triangles exist.
    */
-  private buildWorldSpaceFaceGeometry(
-    entry: FaceSelection
+  private buildWorldSpaceBatchedGeometry(
+    mesh: THREE.Mesh,
+    faceIndices: number[]
   ): THREE.BufferGeometry | null {
-    const geometry = entry.mesh.geometry;
-    const positions = geometry.getAttribute('position');
-    if (!positions) return null;
-    const [i0, i1, i2] = getTriangleVertexIndices(geometry, entry.faceIndex);
-    const v0 = getVertexPosition(positions, i0);
-    const v1 = getVertexPosition(positions, i1);
-    const v2 = getVertexPosition(positions, i2);
-    entry.mesh.updateMatrixWorld(true);
-    v0.applyMatrix4(entry.mesh.matrixWorld);
-    v1.applyMatrix4(entry.mesh.matrixWorld);
-    v2.applyMatrix4(entry.mesh.matrixWorld);
-    return this.buildTriangleGeometry(v0, v1, v2);
+    const positions = mesh.geometry.getAttribute('position');
+    if (!positions || faceIndices.length === 0) return null;
+    mesh.updateMatrixWorld(true);
+    const worldMatrix = mesh.matrixWorld;
+    const floats = new Float32Array(faceIndices.length * 9);
+    let write = 0;
+    const scratch = new THREE.Vector3();
+    for (const faceIndex of faceIndices) {
+      const [i0, i1, i2] = getTriangleVertexIndices(mesh.geometry, faceIndex);
+      write = this.writeWorldVertex(positions, i0, worldMatrix, floats, write, scratch);
+      write = this.writeWorldVertex(positions, i1, worldMatrix, floats, write, scratch);
+      write = this.writeWorldVertex(positions, i2, worldMatrix, floats, write, scratch);
+    }
+    if (write === 0) return null;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(floats, 3));
+    geometry.computeBoundingSphere();
+    geometry.computeBoundingBox();
+    return geometry;
+  }
+
+  /**
+   * Writes one transformed vertex into the batch float buffer.
+   * @param positions Position attribute.
+   * @param vertexIndex Attribute vertex index.
+   * @param worldMatrix Mesh world matrix.
+   * @param floats Destination float buffer.
+   * @param write Next float write index.
+   * @param scratch Scratch vector.
+   * @returns Updated write index.
+   */
+  private writeWorldVertex(
+    positions: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+    vertexIndex: number,
+    worldMatrix: THREE.Matrix4,
+    floats: Float32Array,
+    write: number,
+    scratch: THREE.Vector3
+  ): number {
+    scratch.copy(getVertexPosition(positions, vertexIndex)).applyMatrix4(worldMatrix);
+    floats[write] = scratch.x;
+    floats[write + 1] = scratch.y;
+    floats[write + 2] = scratch.z;
+    return write + 3;
   }
 
   /**
@@ -178,7 +205,7 @@ export class FaceSelectionHighlight {
     const mesh = new THREE.Mesh(geometry, this.frontMaterial);
     mesh.renderOrder = GizmoVisualStyle.frontRenderOrder;
     mesh.userData.isFaceSelectionHighlight = true;
-    mesh.frustumCulled = false;
+    mesh.frustumCulled = true;
     return mesh;
   }
 
@@ -192,34 +219,12 @@ export class FaceSelectionHighlight {
     mesh.renderOrder = GizmoVisualStyle.occludedRenderOrder;
     mesh.userData.isFaceSelectionHighlight = true;
     mesh.userData.isFaceSelectionHighlightOccluded = true;
-    mesh.frustumCulled = false;
+    mesh.frustumCulled = true;
     return mesh;
   }
 
   /**
-   * Creates a buffer geometry for a single triangle.
-   * @param v0 First vertex of the triangle.
-   * @param v1 Second vertex of the triangle.
-   * @param v2 Third vertex of the triangle.
-   * @returns A BufferGeometry with three vertices.
-   */
-  private buildTriangleGeometry(
-    v0: THREE.Vector3,
-    v1: THREE.Vector3,
-    v2: THREE.Vector3
-  ): THREE.BufferGeometry {
-    const vertices = new Float32Array([
-      v0.x, v0.y, v0.z,
-      v1.x, v1.y, v1.z,
-      v2.x, v2.y, v2.z
-    ]);
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    return geometry;
-  }
-
-  /**
-   * Removes a face group from the scene and disposes its geometry.
+   * Removes a mesh group from the scene and disposes its geometry.
    * @param group The dual-pass face highlight group.
    */
   private disposeFaceGroup(group: THREE.Group): void {
@@ -246,10 +251,10 @@ export class FaceSelectionHighlight {
    * Removes all face highlights from the scene.
    */
   private clearHighlights(): void {
-    this.faceGroups.forEach((group) => {
+    this.meshGroups.forEach((group) => {
       this.disposeFaceGroup(group);
     });
-    this.faceGroups.clear();
+    this.meshGroups.clear();
   }
 
   /**
@@ -263,10 +268,10 @@ export class FaceSelectionHighlight {
   }
 
   /**
-   * Returns the count of currently highlighted faces.
-   * @returns The number of active face highlight groups.
+   * Returns the count of active highlight mesh groups (one per source mesh).
+   * @returns The number of batched highlight groups.
    */
   getHighlightCount(): number {
-    return this.faceGroups.size;
+    return this.meshGroups.size;
   }
 }

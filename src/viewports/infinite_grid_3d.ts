@@ -162,6 +162,8 @@ export class InfiniteGrid3D {
 
   /**
    * Sets center/edge colors for a line based on minor/section/major hierarchy.
+   * Minor uses minorColor; section and major share sectionColor, with major
+   * getting a stronger center blend (there is no separate majorColor).
    * @param rank World-locked line rank.
    * @param radial Edge falloff 0..1.
    */

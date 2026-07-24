@@ -1,8 +1,6 @@
 import * as THREE from 'three';
-import {
-  computeTriangleNormal,
-  findCoplanarFaceIndices
-} from './triangle_geometry_utils.js';
+import { computeTriangleNormal } from './triangle_geometry_utils.js';
+import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
 
 /**
  * A single face selection entry referencing a mesh and a face index.
@@ -20,7 +18,9 @@ export type FaceSelectionChangedCallback = (selected: FaceSelection[]) => void;
 
 /**
  * Manages selection of polygonal faces on meshes.
- * A click expands to all coplanar triangles so whole box sides select as one face.
+ * Ordinary meshes expand to the edge-connected coplanar polygon.
+ * Solid CSG results expand only within one brush face (brushId + surfaceIndex)
+ * so adjacent walls and carpet/detail brushes stay independently selectable.
  */
 export class FaceSelectionManager {
   private selectedFaces: FaceSelection[];
@@ -35,23 +35,23 @@ export class FaceSelectionManager {
   }
 
   /**
-   * Selects a face on a mesh. Expands to coplanar triangles by default.
+   * Selects a face on a mesh. Expands to a full face unit by default.
    * @param mesh The mesh containing the face.
    * @param faceIndex The triangle index of the face to select.
    * @param addToSelection Whether to add to existing selection or replace it.
-   * @param expandCoplanar When true, selects the whole coplanar polygon face.
+   * @param expandFace When true, expands to the full selectable face unit.
    */
   selectFace(
     mesh: THREE.Mesh,
     faceIndex: number,
     addToSelection: boolean,
-    expandCoplanar: boolean = true
+    expandFace: boolean = true
   ): void {
     if (!addToSelection) {
       this.selectedFaces = [];
     }
-    const faceIndices = expandCoplanar
-      ? findCoplanarFaceIndices(mesh.geometry, faceIndex)
+    const faceIndices = expandFace
+      ? expandFaceSelectionIndices(mesh, faceIndex)
       : [faceIndex];
     let changed = false;
     faceIndices.forEach((index) => {

@@ -20,6 +20,7 @@ interface BrushTextureSnapshot {
 /**
  * Undoable command that assigns a texture to solid brushes (not helper meshes).
  * Textures are stored per brush and baked into the compiled result mesh.
+ * Presentation-only: remeshes painted brushes, never force-rebuilds CSG.
  */
 export class AssignSolidBrushTextureCommand implements UndoCommand {
   private readonly brushMeshes: THREE.Mesh[];
@@ -40,32 +41,32 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
   }
 
   /**
-   * Applies the texture to each brush and rebuilds its solid model.
+   * Applies the texture to each brush and remeshes presentation.
    */
   execute(): void {
     if (this.executed) return;
     this.snapshots = [];
-    const modelsToRebuild = new Set<SolidModel>();
+    const brushesByModel = new Map<SolidModel, Set<string>>();
     for (const mesh of this.brushMeshes) {
       const applied = this.applyToMesh(mesh);
-      if (applied) modelsToRebuild.add(applied);
+      if (!applied) continue;
+      this.addBrush(brushesByModel, applied.model, applied.brushId);
     }
-    this.rebuildModels(modelsToRebuild);
+    this.refreshPresentations(brushesByModel);
     this.executed = true;
   }
 
   /**
-   * Restores prior brush surface and per-face textures, then rebuilds.
+   * Restores prior brush surface and per-face textures, then remeshes.
    */
   undo(): void {
     if (!this.executed) return;
-    const modelsToRebuild = new Set<SolidModel>();
+    const brushesByModel = new Map<SolidModel, Set<string>>();
     for (const snapshot of this.snapshots) {
-      if (this.restoreSnapshot(snapshot)) {
-        modelsToRebuild.add(snapshot.model);
-      }
+      if (!this.restoreSnapshot(snapshot)) continue;
+      this.addBrush(brushesByModel, snapshot.model, snapshot.brushId);
     }
-    this.rebuildModels(modelsToRebuild);
+    this.refreshPresentations(brushesByModel);
     this.snapshots = [];
     this.executed = false;
   }
@@ -82,9 +83,11 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
   /**
    * Snapshots and paints one brush mesh.
    * @param mesh Brush preview mesh.
-   * @returns Solid model when applied, otherwise null.
+   * @returns Model and brush id when applied, otherwise null.
    */
-  private applyToMesh(mesh: THREE.Mesh): SolidModel | null {
+  private applyToMesh(
+    mesh: THREE.Mesh
+  ): { model: SolidModel; brushId: string } | null {
     const model = SolidModel.fromObject(mesh);
     if (!model) return null;
     const brush = model.findBrushByMesh(mesh);
@@ -96,7 +99,7 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
       previousFaceMappings: brush.serializeFaceMappings()
     });
     brush.setAllFacesTextureId(this.textureId);
-    return model;
+    return { model, brushId: brush.id };
   }
 
   /**
@@ -117,13 +120,33 @@ export class AssignSolidBrushTextureCommand implements UndoCommand {
   }
 
   /**
-   * Marks and rebuilds each solid model in the set.
-   * @param models Models that need a CSG rebuild.
+   * Records a brush id under its solid model.
+   * @param brushesByModel Accumulator.
+   * @param model Solid model.
+   * @param brushId Brush id.
    */
-  private rebuildModels(models: Set<SolidModel>): void {
-    for (const model of models) {
-      model.markDirty();
-      model.rebuild(true);
+  private addBrush(
+    brushesByModel: Map<SolidModel, Set<string>>,
+    model: SolidModel,
+    brushId: string
+  ): void {
+    const set = brushesByModel.get(model);
+    if (set) {
+      set.add(brushId);
+      return;
+    }
+    brushesByModel.set(model, new Set([brushId]));
+  }
+
+  /**
+   * Remeshes painted brushes without CSG.
+   * @param brushesByModel Brushes grouped by solid model.
+   */
+  private refreshPresentations(
+    brushesByModel: Map<SolidModel, Set<string>>
+  ): void {
+    for (const [model, brushIds] of brushesByModel) {
+      model.refreshBrushPresentations(Array.from(brushIds));
     }
   }
 }

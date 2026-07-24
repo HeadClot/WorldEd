@@ -1,6 +1,21 @@
 import { Theme } from '../theme.js';
 
 /**
+ * One entry in a toolbar dropdown menu.
+ */
+export interface ToolbarDropdownItem {
+  /** Visible menu label. */
+  label: string;
+  /** Invoked when the enabled item is clicked. */
+  onClick: () => void;
+  /**
+   * Optional live enablement check evaluated when the menu opens.
+   * When omitted or true, the item is clickable.
+   */
+  isEnabled?: () => boolean;
+}
+
+/**
  * Horizontal application toolbar with a compact, modern dark chrome.
  * Supports text buttons, icon buttons, dropdown menus, and active states.
  */
@@ -8,6 +23,7 @@ export class Toolbar {
   private container: HTMLElement;
   private buttons: HTMLButtonElement[];
   private openMenu: HTMLElement | null;
+  private dropdownItemBindings: Map<HTMLElement, ToolbarDropdownItem[]>;
 
   /**
    * Creates a new toolbar and appends it to the given container.
@@ -17,6 +33,7 @@ export class Toolbar {
     this.container = document.createElement('div');
     this.buttons = [];
     this.openMenu = null;
+    this.dropdownItemBindings = new Map();
     this.applyStyles();
     container.appendChild(this.container);
     document.addEventListener('pointerdown', (event) => {
@@ -69,12 +86,12 @@ export class Toolbar {
   /**
    * Adds a dropdown menu with multiple actions under a single header button.
    * @param label The dropdown header label.
-   * @param items The menu item labels and handlers.
+   * @param items The menu item labels, handlers, and optional enablement.
    * @returns The header button element.
    */
   addDropdown(
     label: string,
-    items: Array<{ label: string; onClick: () => void }>
+    items: ToolbarDropdownItem[]
   ): HTMLButtonElement {
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
@@ -153,6 +170,7 @@ export class Toolbar {
     }
     this.buttons = [];
     this.openMenu = null;
+    this.dropdownItemBindings.clear();
   }
 
   /**
@@ -267,10 +285,32 @@ export class Toolbar {
    * @param items The menu items to render.
    * @returns The menu container element.
    */
-  private createDropdownMenu(
-    items: Array<{ label: string; onClick: () => void }>
-  ): HTMLElement {
+  private createDropdownMenu(items: ToolbarDropdownItem[]): HTMLElement {
     const menu = document.createElement('div');
+    this.styleDropdownMenuPanel(menu);
+    this.dropdownItemBindings.set(menu, items);
+    items.forEach((item, index) => {
+      const entry = document.createElement('button');
+      entry.type = 'button';
+      entry.textContent = item.label;
+      entry.dataset.dropdownIndex = String(index);
+      this.applyMenuItemStyles(entry);
+      entry.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (entry.disabled) return;
+        item.onClick();
+        this.closeOpenMenu();
+      });
+      menu.appendChild(entry);
+    });
+    return menu;
+  }
+
+  /**
+   * Applies layout styles to a dropdown menu panel.
+   * @param menu Menu panel element.
+   */
+  private styleDropdownMenuPanel(menu: HTMLElement): void {
     menu.style.display = 'none';
     menu.style.position = 'absolute';
     menu.style.top = 'calc(100% + 4px)';
@@ -282,19 +322,6 @@ export class Toolbar {
     menu.style.borderRadius = '8px';
     menu.style.boxShadow = '0 10px 28px rgba(0,0,0,0.55)';
     menu.style.padding = '4px';
-    items.forEach((item) => {
-      const entry = document.createElement('button');
-      entry.type = 'button';
-      entry.textContent = item.label;
-      this.applyMenuItemStyles(entry);
-      entry.addEventListener('click', (event) => {
-        event.stopPropagation();
-        item.onClick();
-        this.closeOpenMenu();
-      });
-      menu.appendChild(entry);
-    });
-    return menu;
   }
 
   /**
@@ -316,6 +343,7 @@ export class Toolbar {
     entry.style.fontSize = '12px';
     entry.style.fontWeight = '500';
     entry.addEventListener('mouseenter', () => {
+      if (entry.disabled) return;
       entry.style.background = this.hexToRgba(Theme.buttonHoverColor);
     });
     entry.addEventListener('mouseleave', () => {
@@ -333,8 +361,40 @@ export class Toolbar {
       return;
     }
     this.closeOpenMenu();
+    this.refreshDropdownEnabledState(menu);
     menu.style.display = 'block';
     this.openMenu = menu;
+  }
+
+  /**
+   * Re-evaluates isEnabled for each item when a dropdown opens.
+   * @param menu Dropdown menu panel.
+   */
+  private refreshDropdownEnabledState(menu: HTMLElement): void {
+    const items = this.dropdownItemBindings.get(menu);
+    if (!items) return;
+    const buttons = menu.querySelectorAll('button');
+    buttons.forEach((button, index) => {
+      const item = items[index];
+      if (!item) return;
+      const enabled = item.isEnabled ? item.isEnabled() : true;
+      this.applyDropdownItemEnabledState(button as HTMLButtonElement, enabled);
+    });
+  }
+
+  /**
+   * Applies enabled/disabled visuals to one dropdown entry.
+   * @param entry Menu item button.
+   * @param enabled Whether the item can be activated.
+   */
+  private applyDropdownItemEnabledState(
+    entry: HTMLButtonElement,
+    enabled: boolean
+  ): void {
+    entry.disabled = !enabled;
+    entry.style.opacity = enabled ? '1' : '0.4';
+    entry.style.cursor = enabled ? 'pointer' : 'default';
+    entry.style.color = enabled ? Theme.buttonTextColor : '#666666';
   }
 
   /**

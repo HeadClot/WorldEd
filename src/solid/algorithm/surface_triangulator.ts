@@ -43,6 +43,22 @@ export class SurfaceTriangulator {
   }
 
   /**
+   * Fan-triangulates a convex vertex loop into local index triples.
+   * @param vertices Ordered convex polygon vertices.
+   * @returns One [i0, i1, i2] triple per triangle.
+   */
+  static triangulateConvexVertices(
+    vertices: readonly THREE.Vector3[]
+  ): number[][] {
+    const flat = this.fanIndices(vertices.length);
+    const triples: number[][] = [];
+    for (let index = 0; index < flat.length; index += 3) {
+      triples.push([flat[index], flat[index + 1], flat[index + 2]]);
+    }
+    return triples;
+  }
+
+  /**
    * Builds interleaved position/normal arrays and per-face surface regions.
    * Each input polygon becomes one coplanar UV region (never merges cube sides).
    * @param polygons Polygons with vertices, normals, and optional texture ids.

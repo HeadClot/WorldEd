@@ -31,6 +31,20 @@ export function setFaceTextureMaps(
 }
 
 /**
+ * Stores face texture map entries without deep-cloning triangle index arrays.
+ * Use for solid result meshes rebuilt every frame from region tables.
+ * Callers must not mutate the stored arrays after writing.
+ * @param mesh Target mesh.
+ * @param entries Mapping table to store by reference.
+ */
+export function setFaceTextureMapsShared(
+  mesh: THREE.Mesh,
+  entries: FaceTextureMapEntry[]
+): void {
+  mesh.userData[FACE_TEXTURE_MAPS_USERDATA_KEY] = entries;
+}
+
+/**
  * Clears all stored face texture maps on a mesh.
  * @param mesh Target mesh.
  */

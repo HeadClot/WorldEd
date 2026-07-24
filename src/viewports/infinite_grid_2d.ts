@@ -329,9 +329,10 @@ export class InfiniteGrid2D {
 
   /**
    * Returns true when value is an integer multiple of step (float-safe).
+   * Used for minor, section, and major grid steps alike.
    * @param value Coordinate.
    * @param step Step size.
-   * @returns Whether value is on a major step.
+   * @returns True when value is a float-safe integer multiple of step.
    */
   private isMultipleOf(value: number, step: number): boolean {
     if (step <= 0) return false;
@@ -342,7 +343,7 @@ export class InfiniteGrid2D {
   /**
    * Resolves the U-axis accent color for the plane.
    * @param plane Grid plane.
-   * @returns Hex color.
+   * @returns Three.js numeric hex color (e.g. 0xff0000), not a CSS string.
    */
   private resolveAxisUColor(plane: GridPlane): number {
     if (plane === 'yz') return Theme.gridZAxisColor;
@@ -352,7 +353,7 @@ export class InfiniteGrid2D {
   /**
    * Resolves the V-axis accent color for the plane.
    * @param plane Grid plane.
-   * @returns Hex color.
+   * @returns Three.js numeric hex color (e.g. 0xff0000), not a CSS string.
    */
   private resolveAxisVColor(plane: GridPlane): number {
     if (plane === 'xz') return Theme.gridZAxisColor;

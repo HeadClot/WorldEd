@@ -1,22 +1,38 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
+import {
+  BRUSH_EDGE_SHARED_MATERIAL_KEY,
+  SOLID_BRUSH_EDGE_USERDATA_KEY
+} from '../solid/model/solid_brush_edge_materials.js';
 
 /**
- * UserData flag marking decorative mesh edge wireframes (white outlines).
+ * UserData flag marking content decorative edge wireframes (white outlines).
+ * Not used for solid brush helpers or CSG result meshes.
  */
 export const DECORATIVE_EDGE_USERDATA_KEY = 'isDecorativeEdge';
 
 /**
- * Rebuilds decorative edge LineSegments for a mesh from its current geometry.
- * Removes stale edges left over after extrude/CSG/geometry edits.
- * @param mesh The mesh whose decorative edges should match its geometry.
+ * UserData keys that mark meshes which must never receive content outline edges.
+ * Kept as literals here to avoid circular imports with solid modules; must match
+ * SOLID_BRUSH_USERDATA_KEY / SOLID_MODEL_RESULT_USERDATA_KEY in solid model code.
+ */
+const SKIP_CONTENT_EDGE_MESH_KEYS = ['isSolidBrush', 'isSolidModelResult'] as const;
+
+/**
+ * Rebuilds content decorative edge LineSegments for a mesh from its geometry.
+ * No-ops for solid brush previews and solid CSG result meshes (they use other systems).
+ * @param mesh The mesh whose content edges should match its geometry.
  * @param edgeColor Optional edge color (defaults to theme box edge color).
  */
 export function rebuildDecorativeEdges(
   mesh: THREE.Mesh,
   edgeColor: number = Theme.boxEdgeColor
 ): void {
+  if (!usesContentDecorativeEdges(mesh)) {
+    removeDecorativeEdges(mesh);
+    return;
+  }
   removeDecorativeEdges(mesh);
   if (!hasEdgeBuildableGeometry(mesh)) return;
   const edges = new THREE.EdgesGeometry(mesh.geometry, 1);
@@ -26,6 +42,19 @@ export function rebuildDecorativeEdges(
   );
   line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
   mesh.add(line);
+}
+
+/**
+ * Returns whether a mesh should carry white content outline edges.
+ * Solid brush helpers use colored dual-pass edges; CSG results use surface materials only.
+ * @param mesh Candidate mesh.
+ * @returns True for ordinary content meshes.
+ */
+export function usesContentDecorativeEdges(mesh: THREE.Mesh): boolean {
+  for (const key of SKIP_CONTENT_EDGE_MESH_KEYS) {
+    if (mesh.userData[key] === true) return false;
+  }
+  return true;
 }
 
 /**
@@ -97,15 +126,25 @@ export function enableFlatShadingOnMesh(mesh: THREE.Mesh): void {
 }
 
 /**
- * Returns true for decorative edge line children.
+ * Returns true for content decorative edge line children (white outlines).
+ * Solid brush edge helpers are excluded; they use SOLID_BRUSH_EDGE_USERDATA_KEY.
  * @param object The child object to test.
- * @returns True if the object is a decorative edge outline.
+ * @returns True if the object is a content decorative edge outline.
  */
 export function isDecorativeEdge(object: THREE.Object3D): boolean {
   if (!(object instanceof THREE.LineSegments)) return false;
-  if (object.userData[DECORATIVE_EDGE_USERDATA_KEY] === true) return true;
-  if (isEditorOverlayChild(object)) return false;
-  return true;
+  if (object.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true) return false;
+  return object.userData[DECORATIVE_EDGE_USERDATA_KEY] === true;
+}
+
+/**
+ * Returns true for solid brush dual-pass edge line children.
+ * @param object The child object to test.
+ * @returns True if the object is a brush volume edge helper.
+ */
+export function isSolidBrushEdge(object: THREE.Object3D): boolean {
+  if (!(object instanceof THREE.LineSegments)) return false;
+  return object.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true;
 }
 
 /**
@@ -131,19 +170,18 @@ function isEditorOverlayChild(object: THREE.Object3D): boolean {
 export function isEditorHelperObject(object: THREE.Object3D): boolean {
   if (isEditorOverlayChild(object)) return true;
   if (object.userData[DECORATIVE_EDGE_USERDATA_KEY] === true) return true;
+  if (object.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true) return true;
   if (object.userData.isBoundsGuideLines === true) return true;
   if (object.userData.isGizmoOccludedGhost === true) return true;
   if (object.userData.isBoundsFacePick === true) return true;
   if (object.userData.isClipPlanePreview === true) return true;
   if (object.userData.isSolidModelResult === true) return true;
-  if (object instanceof THREE.LineSegments && isDecorativeEdge(object)) {
-    return true;
-  }
   return false;
 }
 
 /**
  * Disposes geometry and material of a line object.
+ * Shared brush edge materials are left alive for reuse.
  * @param object The line object to dispose.
  */
 function disposeLineObject(object: THREE.Object3D): void {
@@ -152,8 +190,17 @@ function disposeLineObject(object: THREE.Object3D): void {
   }
   object.geometry?.dispose();
   if (Array.isArray(object.material)) {
-    object.material.forEach((material) => material.dispose());
-  } else if (object.material) {
-    object.material.dispose();
+    object.material.forEach((material) => disposeOwnedLineMaterial(material));
+    return;
   }
+  if (object.material) disposeOwnedLineMaterial(object.material);
+}
+
+/**
+ * Disposes a line material unless it is a shared brush edge material.
+ * @param material Material to dispose.
+ */
+function disposeOwnedLineMaterial(material: THREE.Material): void {
+  if (material.userData[BRUSH_EDGE_SHARED_MATERIAL_KEY] === true) return;
+  material.dispose();
 }

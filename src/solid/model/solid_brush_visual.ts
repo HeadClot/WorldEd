@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { SolidBrush } from '../brush/solid_brush.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import {
-  DECORATIVE_EDGE_USERDATA_KEY
-} from '../../utils/mesh_edge_sync.js';
-import { Theme } from '../../theme.js';
+  SolidBrushEdgeMaterials,
+  SOLID_BRUSH_EDGE_USERDATA_KEY
+} from './solid_brush_edge_materials.js';
 
 /**
  * UserData key marking a mesh as a solid brush volume helper.
@@ -17,13 +17,41 @@ export const SOLID_BRUSH_USERDATA_KEY = 'isSolidBrush';
 export const SOLID_BRUSH_ID_USERDATA_KEY = 'solidBrushId';
 
 /**
+ * UserData key storing the CSG operation used for preview tinting.
+ */
+export const SOLID_BRUSH_OPERATION_USERDATA_KEY = 'solidBrushOperation';
+
+/**
+ * UserData key tracking whether the translucent hull fill is shown.
+ */
+export const SOLID_BRUSH_HULL_FILL_USERDATA_KEY = 'solidBrushHullFillVisible';
+
+/**
  * UserData key excluding a mesh from face-mode triangle picking.
  * Brush volume helpers use this so only CSG result surfaces are face-selectable.
  */
 export const SKIP_FACE_PICK_USERDATA_KEY = 'skipFacePick';
 
 /**
+ * UserData key marking the dim occluded pass of a brush edge wireframe.
+ */
+export const SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY = 'isSolidBrushOccludedEdge';
+
+/**
+ * Render order for the occluded brush edge pass (drawn before the front pass).
+ */
+const BRUSH_EDGE_OCCLUDED_RENDER_ORDER = 3;
+
+/**
+ * Render order for the front brush edge pass.
+ */
+const BRUSH_EDGE_FRONT_RENDER_ORDER = 4;
+
+/**
  * Builds selectable brush preview meshes for the outliner and transform tools.
+ * Unselected brushes render operation-colored outlines only (no filled hull).
+ * Selected brushes add a cheap translucent fill so the volume is visible.
+ * Edge lines use dual depth passes and distance fade in the 3D viewport.
  */
 export class SolidBrushVisual {
   /**
@@ -43,7 +71,7 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Creates a translucent hull preview matching an arbitrary convex brush.
+   * Creates a hull preview matching an arbitrary convex brush.
    * @param name Display name.
    * @param brush Local convex brush geometry.
    * @param operation CSG operation (affects preview tint).
@@ -88,7 +116,6 @@ export class SolidBrushVisual {
       'position',
       new THREE.Float32BufferAttribute(positions, 3)
     );
-    geometry.computeVertexNormals();
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
     return geometry;
@@ -99,32 +126,21 @@ export class SolidBrushVisual {
    * @param name Display name.
    * @param geometry Mesh geometry.
    * @param operation CSG operation.
-   * @returns Configured preview mesh.
+   * @returns Configured preview mesh (outline-only until selected).
    */
   private static finishPreviewMesh(
     name: string,
     geometry: THREE.BufferGeometry,
     operation: SolidOperation
   ): THREE.Mesh {
-    const material = new THREE.MeshStandardMaterial({
-      color: this.colorForOperation(operation),
-      transparent: true,
-      opacity: 0.22,
-      depthWrite: false,
-      depthTest: true,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
-      metalness: 0,
-      roughness: 0.95,
-      flatShading: true,
-      side: THREE.DoubleSide
-    });
+    const material = this.createOutlineOnlyMaterial();
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = name;
     this.stampBrushHelperMetadata(mesh);
+    this.storeOperation(mesh, operation);
+    mesh.userData[SOLID_BRUSH_HULL_FILL_USERDATA_KEY] = false;
     mesh.renderOrder = 2;
-    this.attachWireframe(mesh, this.edgeColorForOperation(operation));
+    this.attachWireframe(mesh, operation);
     return mesh;
   }
 
@@ -148,54 +164,194 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Updates preview material tint for a brush operation change.
+   * Updates preview edge materials for a brush operation change.
+   * Preserves current hull-fill visibility (selected vs outline-only).
    * @param mesh Brush preview mesh.
    * @param operation New operation.
    */
   static applyOperationStyle(mesh: THREE.Mesh, operation: SolidOperation): void {
-    this.ensurePreviewMaterial(mesh, operation);
-    mesh.traverse((child) => {
-      if (!(child instanceof THREE.LineSegments)) return;
-      if (child.userData[DECORATIVE_EDGE_USERDATA_KEY] !== true) return;
-      const lineMaterial = child.material;
-      if (lineMaterial instanceof THREE.LineBasicMaterial) {
-        lineMaterial.color.setHex(this.edgeColorForOperation(operation));
-        lineMaterial.map = null;
-        lineMaterial.needsUpdate = true;
-      }
-    });
+    this.storeOperation(mesh, operation);
+    if (!this.hasBrushEdges(mesh)) {
+      this.attachWireframe(mesh, operation);
+    } else {
+      this.bindEdgeMaterials(mesh, operation);
+    }
+    const fillVisible = mesh.userData[SOLID_BRUSH_HULL_FILL_USERDATA_KEY] === true;
+    this.setHullFillVisible(mesh, fillVisible);
   }
 
   /**
-   * Forces the translucent operation-colored helper material (never content maps).
+   * Returns whether the mesh already has dual-pass solid brush edge helpers.
    * @param mesh Brush preview mesh.
-   * @param operation Brush CSG operation.
+   * @returns True when at least one brush edge LineSegments child exists.
    */
-  private static ensurePreviewMaterial(
+  private static hasBrushEdges(mesh: THREE.Mesh): boolean {
+    return mesh.children.some(
+      (child) =>
+        child instanceof THREE.LineSegments &&
+        child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true
+    );
+  }
+
+  /**
+   * Shows or hides the translucent volume fill for a brush helper.
+   * Unselected brushes stay outline-only for clarity and draw-call cost.
+   * @param mesh Brush preview mesh.
+   * @param visible True to show the operation-colored translucent hull.
+   */
+  static setHullFillVisible(mesh: THREE.Mesh, visible: boolean): void {
+    if (!this.isBrushObject(mesh)) return;
+    mesh.userData[SOLID_BRUSH_HULL_FILL_USERDATA_KEY] = visible;
+    const operation = this.readOperation(mesh);
+    const material = this.ensureBasicMaterial(mesh);
+    if (visible) {
+      this.applySelectedFillStyle(material, operation);
+    } else {
+      this.applyOutlineOnlyStyle(material);
+    }
+  }
+
+  /**
+   * Returns whether the translucent hull fill is currently shown.
+   * @param mesh Brush preview mesh.
+   * @returns True when fill is visible.
+   */
+  static isHullFillVisible(mesh: THREE.Mesh): boolean {
+    return mesh.userData[SOLID_BRUSH_HULL_FILL_USERDATA_KEY] === true;
+  }
+
+  /**
+   * Applies selected-state fill styling to a brush material.
+   * @param material Brush surface material.
+   * @param operation CSG operation for tint.
+   */
+  private static applySelectedFillStyle(
+    material: THREE.MeshBasicMaterial,
+    operation: SolidOperation
+  ): void {
+    material.visible = true;
+    material.color.setHex(this.colorForOperation(operation));
+    material.transparent = true;
+    material.opacity = 0.22;
+    material.depthWrite = false;
+    material.colorWrite = true;
+    material.side = THREE.FrontSide;
+    material.polygonOffset = true;
+    material.polygonOffsetFactor = -2;
+    material.polygonOffsetUnits = -2;
+    material.needsUpdate = true;
+  }
+
+  /**
+   * Applies outline-only surface styling (not drawn; pick mesh only).
+   * Depth is left to the CSG result so brush volumes do not hide other edges.
+   * @param material Brush surface material.
+   */
+  private static applyOutlineOnlyStyle(material: THREE.MeshBasicMaterial): void {
+    material.visible = false;
+    material.color.setHex(0x000000);
+    material.transparent = false;
+    material.opacity = 1;
+    material.depthWrite = false;
+    material.depthTest = true;
+    material.colorWrite = false;
+    material.side = THREE.FrontSide;
+    material.polygonOffset = false;
+    material.needsUpdate = true;
+  }
+
+  /**
+   * Ensures the brush mesh uses a MeshBasicMaterial suitable for helper fills.
+   * @param mesh Brush preview mesh.
+   * @returns The mesh basic material in use.
+   */
+  private static ensureBasicMaterial(mesh: THREE.Mesh): THREE.MeshBasicMaterial {
+    const current = mesh.material;
+    if (current instanceof THREE.MeshBasicMaterial) {
+      return current;
+    }
+    this.disposeMaterial(current);
+    const material = this.createOutlineOnlyMaterial();
+    mesh.material = material;
+    return material;
+  }
+
+  /**
+   * Creates the default invisible surface material for unselected brushes.
+   * @returns MeshBasicMaterial with color writes disabled.
+   */
+  private static createOutlineOnlyMaterial(): THREE.MeshBasicMaterial {
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      side: THREE.FrontSide,
+      toneMapped: false
+    });
+    this.applyOutlineOnlyStyle(material);
+    return material;
+  }
+
+  /**
+   * Disposes a material or material array unless it is a shared edge material.
+   * @param material Material(s) to dispose.
+   */
+  private static disposeMaterial(
+    material: THREE.Material | THREE.Material[] | undefined
+  ): void {
+    if (Array.isArray(material)) {
+      material.forEach((entry) => this.disposeOwnedMaterial(entry));
+      return;
+    }
+    if (material) this.disposeOwnedMaterial(material);
+  }
+
+  /**
+   * Disposes one material when it is owned by a mesh (not shared).
+   * @param material Material to dispose.
+   */
+  private static disposeOwnedMaterial(material: THREE.Material): void {
+    if (SolidBrushEdgeMaterials.isSharedMaterial(material)) return;
+    material.dispose();
+  }
+
+  /**
+   * Binds shared front/occluded edge materials for the given operation.
+   * @param mesh Brush preview mesh.
+   * @param operation CSG operation.
+   */
+  private static bindEdgeMaterials(
     mesh: THREE.Mesh,
     operation: SolidOperation
   ): void {
-    const previous = mesh.material;
-    if (Array.isArray(previous)) {
-      previous.forEach((entry) => entry.dispose());
-    } else if (previous) {
-      previous.dispose();
+    for (const child of mesh.children) {
+      if (!(child instanceof THREE.LineSegments)) continue;
+      if (child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] !== true) continue;
+      const isOccluded =
+        child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
+      child.material = isOccluded
+        ? SolidBrushEdgeMaterials.getOccludedMaterial(operation)
+        : SolidBrushEdgeMaterials.getFrontMaterial(operation);
     }
-    mesh.material = new THREE.MeshStandardMaterial({
-      color: this.colorForOperation(operation),
-      transparent: true,
-      opacity: 0.22,
-      depthWrite: false,
-      depthTest: true,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
-      metalness: 0,
-      roughness: 0.95,
-      flatShading: true,
-      side: THREE.DoubleSide,
-      map: null
-    });
+  }
+
+  /**
+   * Stores the CSG operation on mesh userData for later style updates.
+   * @param mesh Brush preview mesh.
+   * @param operation CSG operation.
+   */
+  private static storeOperation(mesh: THREE.Mesh, operation: SolidOperation): void {
+    mesh.userData[SOLID_BRUSH_OPERATION_USERDATA_KEY] = operation;
+  }
+
+  /**
+   * Reads the stored CSG operation, defaulting to additive.
+   * @param mesh Brush preview mesh.
+   * @returns Stored operation or Additive.
+   */
+  private static readOperation(mesh: THREE.Mesh): SolidOperation {
+    const value = mesh.userData[SOLID_BRUSH_OPERATION_USERDATA_KEY];
+    if (value === SolidOperation.Subtractive) return SolidOperation.Subtractive;
+    if (value === SolidOperation.Intersecting) return SolidOperation.Intersecting;
+    return SolidOperation.Additive;
   }
 
   /**
@@ -238,35 +394,32 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Preview edge color for a CSG operation.
-   * @param operation Solid operation.
-   * @returns Hex color.
-   */
-  private static edgeColorForOperation(operation: SolidOperation): number {
-    if (operation === SolidOperation.Subtractive) return 0xff6b5a;
-    if (operation === SolidOperation.Intersecting) return 0x5dade2;
-    return 0x58d68d;
-  }
-
-  /**
-   * Attaches decorative edge lines to a brush preview.
+   * Attaches dual-pass operation-colored edge lines to a brush preview.
+   * Uses SOLID_BRUSH_EDGE_USERDATA_KEY so content white outlines never attach here.
+   * Shared materials provide occluded dimming and distance fade in 3D.
    * @param mesh Target mesh.
-   * @param edgeColor Line color.
+   * @param operation CSG operation for edge tint.
    */
-  private static attachWireframe(mesh: THREE.Mesh, edgeColor: number): void {
-    const edges = new THREE.EdgesGeometry(mesh.geometry, 1);
-    const line = new THREE.LineSegments(
-      edges,
-      new THREE.LineBasicMaterial({
-        color: edgeColor,
-        depthTest: true,
-        transparent: true,
-        opacity: 0.95
-      })
+  private static attachWireframe(
+    mesh: THREE.Mesh,
+    operation: SolidOperation
+  ): void {
+    const frontGeometry = new THREE.EdgesGeometry(mesh.geometry, 1);
+    const occludedGeometry = frontGeometry.clone();
+    const occluded = new THREE.LineSegments(
+      occludedGeometry,
+      SolidBrushEdgeMaterials.getOccludedMaterial(operation)
     );
-    line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
-    line.renderOrder = 3;
-    mesh.add(line);
-    void Theme;
+    occluded.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
+    occluded.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] = true;
+    occluded.renderOrder = BRUSH_EDGE_OCCLUDED_RENDER_ORDER;
+    const front = new THREE.LineSegments(
+      frontGeometry,
+      SolidBrushEdgeMaterials.getFrontMaterial(operation)
+    );
+    front.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
+    front.renderOrder = BRUSH_EDGE_FRONT_RENDER_ORDER;
+    mesh.add(occluded);
+    mesh.add(front);
   }
 }

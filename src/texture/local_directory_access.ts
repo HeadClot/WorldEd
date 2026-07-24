@@ -67,8 +67,8 @@ export class FileSystemAccessDirectoryAccess implements LocalDirectoryAccess {
  */
 export class WebkitDirectoryInputAccess implements LocalDirectoryAccess {
   /**
-   * Returns whether a file input can be created (always in browser DOM).
-   * @returns True when document is available.
+   * Returns whether a file input can be created in this environment.
+   * @returns True when document is available (browser DOM); false in Node/SSR.
    */
   isSupported(): boolean {
     return typeof document !== 'undefined';

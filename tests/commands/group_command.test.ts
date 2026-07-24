@@ -123,6 +123,17 @@ describe('GroupCommand', () => {
     expect(parent.children.length).toBe(1);
   });
 
+  it('should no-op undo when execute has not run', () => {
+    const command = new GroupCommand([mesh1, mesh2], parent, 'GuardGroup');
+    const childCountBefore = parent.children.length;
+    command.undo();
+    expect(parent.children.length).toBe(childCountBefore);
+    expect(parent.children[0]).toBe(mesh1);
+    expect(parent.children[1]).toBe(mesh2);
+    expect(mesh1.parent).toBe(parent);
+    expect(mesh2.parent).toBe(parent);
+  });
+
   it('should nest an existing group under a new group without emptying it', () => {
     const inner = new THREE.Group();
     inner.name = 'Inner';

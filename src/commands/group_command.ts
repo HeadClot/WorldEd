@@ -63,6 +63,7 @@ export class GroupCommand implements UndoCommand {
    * Undoes the group by reparenting children to their original parents.
    */
   undo(): void {
+    if (!this.executed) return;
     this.childSnapshots.forEach((snapshot) => {
       if (snapshot.child.parent) {
         snapshot.child.parent.remove(snapshot.child);

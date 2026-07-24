@@ -37,9 +37,11 @@ export interface TransformInteractionDependencies {
   syncPrimitivesToViewports: () => void;
   /**
    * Optional hook after a transform drag commits (solid CSG rebuild, etc.).
+   * Return true when the handler fully synced solid results and the bridge
+   * should skip a full viewport reclone (large-map pointer-up hang).
    * @param meshes Meshes that were transformed.
    */
-  onTransformsCommitted?: (meshes: THREE.Mesh[]) => void;
+  onTransformsCommitted?: (meshes: THREE.Mesh[]) => boolean | void;
   /**
    * Optional hook during transform drag for live solid CSG preview.
    * @param meshes Meshes currently being transformed.
@@ -343,8 +345,15 @@ export class TransformInteractionBridge {
     );
     this.deps.transformHandler.onPointerUp(pivot, selectedObjects);
     this.clearWindowDragCapture();
-    this.deps.onTransformsCommitted?.(selectedObjects);
-    this.deps.syncPrimitivesToViewports();
+    const solidHandled =
+      this.deps.onTransformsCommitted?.(selectedObjects) === true;
+    if (solidHandled) {
+      this.deps.viewportSyncManager.syncClonePositionsToWorldObject(
+        this.deps.worldObject
+      );
+    } else {
+      this.deps.syncPrimitivesToViewports();
+    }
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
     this.deps.transformGizmo.setOrientation(
       this.resolveGizmoOrientation(selectedObjects)

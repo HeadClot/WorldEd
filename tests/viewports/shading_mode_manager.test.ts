@@ -282,5 +282,14 @@ describe('ShadingModeManager', () => {
       expect(manager.isShadingExempt(handleMesh)).toBe(true);
       expect(manager.isShadingExempt(meshA)).toBe(false);
     });
+
+    it('should report solid brush helpers as shading-exempt', () => {
+      const brushMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshBasicMaterial()
+      );
+      brushMesh.userData.isSolidBrush = true;
+      expect(manager.isShadingExempt(brushMesh)).toBe(true);
+    });
   });
 });

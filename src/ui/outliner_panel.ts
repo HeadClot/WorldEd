@@ -333,8 +333,8 @@ export class OutlinerPanel {
   }
 
   /**
-   * Keeps hierarchy selection in sync when the viewport changes mesh selection.
-   * Updates highlights only so rename/double-click DOM stays intact.
+   * Keeps hierarchy selection in sync when the viewport or tools change mesh selection.
+   * Expands groups and scrolls to the last selected object for viewport picks.
    */
   private onMeshSelectionChanged(): void {
     if (this.isDisposed) return;
@@ -342,8 +342,27 @@ export class OutlinerPanel {
       this.hierarchySelection = new Set(
         this.selectionManager.getAllSelectedObjectsAsArray()
       );
+      this.revealLastSelectionInTree();
+      return;
     }
     this.refreshSelectionOnly();
+  }
+
+  /**
+   * Expands ancestors of the last selected mesh and scrolls its outliner row into view.
+   */
+  private revealLastSelectionInTree(): void {
+    if (!this.tree) return;
+    const focus = this.selectionManager.getLastSelectedObject();
+    if (!focus) {
+      this.refreshSelectionOnly();
+      return;
+    }
+    this.tree.revealObject(
+      focus,
+      this.selectionManager.getSelectedObjects(),
+      this.hierarchySelection
+    );
   }
 
   /**

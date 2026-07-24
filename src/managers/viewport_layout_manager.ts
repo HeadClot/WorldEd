@@ -427,6 +427,9 @@ export class ViewportLayoutManager {
       toolbarContainer: this.toolbarContainer,
       solidPanelAnchor: this.viewports[3],
       viewportSyncManager: this.viewportSyncManager,
+      viewport3D: this.viewport3D,
+      gridSnap: this.gridSnap,
+      textureLock: this.textureLock,
       refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
       refreshOutliner: () => this.refreshOutliner(),
       showStatusMessage: (message) => this.showStatusMessage(message)
@@ -918,8 +921,9 @@ export class ViewportLayoutManager {
     else this.commandStack.redo();
     this.selectionManager.pruneSelectionNotInScene(this.worldObject);
     this.snapSettingsController.rebakeWorldTexturesIfLocked();
-    // Outliner reparent undo restores sibling order; rebuild CSG to match.
-    SolidModel.rebuildAllUnder(this.worldObject);
+    // Partial CSG for transform undos; full rebuild only when brush order changed.
+    // Never force-rebuild every solid after texture/presentation undos.
+    SolidModel.refreshAfterHistoryChange(this.worldObject);
     this.refreshAfterWorldMutation();
     this.propertiesPanel.refreshBoundObject();
     // Transforms undo mesh poses without selection change events — re-sync gizmo.

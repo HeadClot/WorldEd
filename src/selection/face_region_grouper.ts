@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { FaceSelection } from './face_selection_manager.js';
-import { findCoplanarFaceIndices } from './triangle_geometry_utils.js';
+import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
 
 /**
  * A distinct coplanar face region on a single mesh, ready for extrusion.
@@ -11,7 +11,8 @@ export interface FaceRegion {
 }
 
 /**
- * Groups selected face triangles into independent coplanar regions.
+ * Groups selected face triangles into independent face regions.
+ * Solid results keep one region per brush face; ordinary meshes use coplanar units.
  * Each region becomes one convex prism when extruded.
  * @param selections The current face selection entries.
  * @returns Ordered face regions (stable per mesh, then by seed face index).
@@ -23,7 +24,7 @@ export function groupSelectionsIntoFaceRegions(
   const byMesh = groupSelectionsByMesh(selections);
   const regions: FaceRegion[] = [];
   byMesh.forEach((faceIndices, mesh) => {
-    const meshRegions = splitMeshFacesIntoCoplanarRegions(mesh, faceIndices);
+    const meshRegions = splitMeshFacesIntoSelectableRegions(mesh, faceIndices);
     meshRegions.forEach((regionIndices) => {
       regions.push({ mesh, faceIndices: regionIndices });
     });
@@ -54,12 +55,13 @@ function groupSelectionsByMesh(
 }
 
 /**
- * Splits selected triangle indices on one mesh into coplanar regions.
+ * Splits selected triangle indices on one mesh into selectable face regions.
+ * Uses solid brush-surface identity when present; otherwise connected coplanar.
  * @param mesh The mesh owning the faces.
  * @param faceIndices Selected triangle indices on that mesh.
- * @returns Arrays of coplanar triangle indices.
+ * @returns Arrays of triangle indices, one region each.
  */
-function splitMeshFacesIntoCoplanarRegions(
+function splitMeshFacesIntoSelectableRegions(
   mesh: THREE.Mesh,
   faceIndices: number[]
 ): number[][] {
@@ -68,7 +70,7 @@ function splitMeshFacesIntoCoplanarRegions(
   const sortedSeeds = faceIndices.slice().sort((a, b) => a - b);
   sortedSeeds.forEach((seed) => {
     if (!remaining.has(seed)) return;
-    const region = findCoplanarFaceIndices(mesh.geometry, seed).filter((index) =>
+    const region = expandFaceSelectionIndices(mesh, seed).filter((index) =>
       remaining.has(index)
     );
     const finalRegion = region.length > 0 ? region : [seed];

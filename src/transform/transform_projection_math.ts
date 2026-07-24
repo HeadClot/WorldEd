@@ -21,9 +21,11 @@ export class TransformProjectionMath {
   }
 
   /**
-   * Computes the forward direction vector of the camera.
+   * Computes the camera's local forward direction (-Z after camera.quaternion).
+   * Uses the camera's local quaternion, not world orientation; nested parents
+   * are not applied. Viewport cameras in this editor are scene roots.
    * @param camera The camera to query.
-   * @returns The normalized forward direction of the camera.
+   * @returns Normalized local-space forward direction.
    */
   static getCameraForwardDirection(camera: THREE.Camera): THREE.Vector3 {
     const direction = new THREE.Vector3(0, 0, -1);

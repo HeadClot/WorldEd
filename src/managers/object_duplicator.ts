@@ -1,14 +1,21 @@
 import * as THREE from 'three';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
-import { DECORATIVE_EDGE_USERDATA_KEY } from '../utils/mesh_edge_sync.js';
+import {
+  rebuildDecorativeEdges,
+  usesContentDecorativeEdges
+} from '../utils/mesh_edge_sync.js';
 import {
   getFaceTextureMaps,
   setFaceTextureMaps
 } from '../texture/face_texture_storage.js';
+import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
+import { SolidOperation } from '../solid/types/solid_operation.js';
+import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_edge_materials.js';
 
 /**
  * Pure utility for deep-cloning meshes.
- * Handles geometry, material, decorative wireframe edges, and naming.
+ * Handles geometry, material, and content decorative edges.
+ * Solid brush meshes keep operation-colored brush edges only (no white outlines).
  * Never copies selection outlines or shading wireframe overlays.
  */
 export class ObjectDuplicator {
@@ -65,9 +72,32 @@ export class ObjectDuplicator {
     clone.quaternion.copy(mesh.quaternion);
     clone.scale.copy(mesh.scale);
     clone.name = mesh.name;
+    this.cloneUserDataMarkers(mesh, clone);
     this.cloneFaceTextureMaps(mesh, clone);
-    this.cloneDecorativeEdges(mesh, clone, clonedGeometry);
+    this.cloneEdgeHelpers(mesh, clone);
     return clone;
+  }
+
+  /**
+   * Copies structural userData markers needed for solid brush / result identity.
+   * @param source Source mesh.
+   * @param target Cloned mesh.
+   */
+  private static cloneUserDataMarkers(
+    source: THREE.Mesh,
+    target: THREE.Mesh
+  ): void {
+    if (SolidBrushVisual.isBrushObject(source)) {
+      SolidBrushVisual.stampBrushHelperMetadata(target);
+      const brushId = SolidBrushVisual.getBrushId(source);
+      if (brushId) SolidBrushVisual.setBrushId(target, brushId);
+      const operation = source.userData.solidBrushOperation;
+      if (typeof operation === 'string') {
+        target.userData.solidBrushOperation = operation;
+      }
+      target.userData.solidBrushHullFillVisible =
+        source.userData.solidBrushHullFillVisible === true;
+    }
   }
 
   /**
@@ -99,26 +129,49 @@ export class ObjectDuplicator {
   }
 
   /**
-   * Recreates decorative wireframe edge lines on the cloned mesh.
-   * Skips selection outlines and shading wireframe overlays.
-   * @param source The original mesh containing wireframe children.
-   * @param target The cloned mesh to add wireframe to.
-   * @param clonedGeometry The cloned geometry for edge derivation.
+   * Recreates the correct edge helpers for content meshes or solid brush previews.
+   * @param source The original mesh.
+   * @param target The cloned mesh.
    */
-  private static cloneDecorativeEdges(
-    source: THREE.Mesh,
-    target: THREE.Mesh,
-    clonedGeometry: THREE.BufferGeometry
-  ): void {
-    source.children.forEach((child) => {
-      if (!(child instanceof THREE.LineSegments)) return;
-      if (this.isEditorOverlayLine(child)) return;
-      const edges = new THREE.EdgesGeometry(clonedGeometry, 1);
-      const lineMaterial = (child.material as THREE.Material).clone();
-      const line = new THREE.LineSegments(edges, lineMaterial);
-      line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
-      target.add(line);
+  private static cloneEdgeHelpers(source: THREE.Mesh, target: THREE.Mesh): void {
+    if (SolidBrushVisual.isBrushObject(source)) {
+      const operation = this.readBrushOperation(source);
+      const fillVisible = source.userData.solidBrushHullFillVisible === true;
+      target.userData.solidBrushHullFillVisible = fillVisible;
+      SolidBrushVisual.applyOperationStyle(target, operation);
+      return;
+    }
+    if (!usesContentDecorativeEdges(target)) return;
+    if (this.sourceHasContentOutlineEdges(source)) {
+      rebuildDecorativeEdges(target);
+    }
+  }
+
+  /**
+   * Returns whether the source mesh carries content outline edges to preserve.
+   * Ignores selection/wireframe overlays and solid brush edge helpers.
+   * @param source Source mesh.
+   * @returns True when content outline edges should be rebuilt on the clone.
+   */
+  private static sourceHasContentOutlineEdges(source: THREE.Mesh): boolean {
+    return source.children.some((child) => {
+      if (!(child instanceof THREE.LineSegments)) return false;
+      if (this.isEditorOverlayLine(child)) return false;
+      if (child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true) return false;
+      return true;
     });
+  }
+
+  /**
+   * Reads CSG operation stored on a brush mesh.
+   * @param mesh Brush preview mesh.
+   * @returns Operation for edge tint.
+   */
+  private static readBrushOperation(mesh: THREE.Mesh): SolidOperation {
+    const value = mesh.userData.solidBrushOperation;
+    if (value === SolidOperation.Subtractive) return SolidOperation.Subtractive;
+    if (value === SolidOperation.Intersecting) return SolidOperation.Intersecting;
+    return SolidOperation.Additive;
   }
 
   /**

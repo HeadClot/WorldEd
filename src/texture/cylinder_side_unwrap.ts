@@ -44,10 +44,11 @@ function isCylinderMesh(mesh: THREE.Mesh): boolean {
 }
 
 /**
- * Collects side-face entries sorted by outward normal angle around Y.
+ * Collects side-face entries sorted by normal angle around Y in the XZ plane.
+ * Order uses atan2(normal.x, normal.z); inverted (inward) normals reverse order.
  * @param mesh Mesh providing world normals.
  * @param entries All face map entries.
- * @returns Sorted side entries only.
+ * @returns Side entries sorted by XZ normal angle around Y.
  */
 function collectSortedSideEntries(
   mesh: THREE.Mesh,

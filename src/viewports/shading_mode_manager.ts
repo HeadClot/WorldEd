@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ShadingMode } from '../types/shading_mode.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
 import { BOUNDS_FACE_USERDATA_KEY } from '../types/bounds_face.js';
+import { SOLID_BRUSH_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 
 /**
  * Content-material snapshot for one mesh (supports multi-material arrays).
@@ -129,13 +130,16 @@ export class ShadingModeManager {
     if (data.isBoundsFacePick === true) return true;
     if (data.isBoundsGuideLines === true) return true;
     if (data.isGizmoOccludedGhost === true) return true;
+    if (data[SOLID_BRUSH_USERDATA_KEY] === true) return true;
     if (data.handleId !== undefined) return true;
     if (data[BOUNDS_FACE_USERDATA_KEY] !== undefined) return true;
     return false;
   }
 
   /**
-   * Checks object names used by bounds gizmo parts.
+   * Checks object names used by bounds gizmo parts and transform/bounds roots.
+   * Matches bounds handle/face/wireframe names and EXEMPT_GROUP_NAMES
+   * (transform_gizmo, transform_gizmo_viewport, bounds_gizmo).
    * @param name The object name.
    * @returns True when the name marks an editor helper.
    */

@@ -19,6 +19,8 @@ export function swizzleSourceToThree(source: VmfVector3): THREE.Vector3 {
 
 /**
  * Converts and scales a Source point into editor meters (Y-up).
+ * Preserves absolute Hammer world coordinates (no recentering). Maps often sit
+ * far from the origin because they were authored that way in Valve's tools.
  * @param source Source-space vector in inches.
  * @param unitScale Inches-to-meters factor (default 1/32).
  * @returns Three-space point in meters.

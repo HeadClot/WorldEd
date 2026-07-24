@@ -32,7 +32,7 @@ export class TerrainGenerator {
       metalness: 0.1,
       roughness: 0.9,
       flatShading: false,
-      side: THREE.DoubleSide
+      side: THREE.FrontSide
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = `Terrain_${segments}x${segments}`;

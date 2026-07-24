@@ -136,4 +136,21 @@ describe('DeleteObjectCommand', () => {
     command.undo();
     expect(orphanMesh.parent).toBe(null);
   });
+
+  it('should no-op undo when execute has not run', () => {
+    const command = new DeleteObjectCommand(snapshots);
+    command.undo();
+    expect(parent.children.length).toBe(2);
+    expect(parent.children[0]).toBe(mesh1);
+    expect(parent.children[1]).toBe(mesh2);
+    expect(parent.children.filter((child) => child === mesh1).length).toBe(1);
+  });
+
+  it('should no-op second execute call', () => {
+    const command = new DeleteObjectCommand(snapshots);
+    command.execute();
+    expect(parent.children.length).toBe(0);
+    command.execute();
+    expect(parent.children.length).toBe(0);
+  });
 });

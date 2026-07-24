@@ -238,7 +238,8 @@ export class FaceExtrusionController {
   }
 
   /**
-   * Selects the coplanar region for a pick, optionally additive while dragging.
+   * Selects the face unit for a pick, optionally additive while dragging.
+   * Solid results expand only within one brush face; ordinary meshes use coplanar.
    * @param result The raycast pick result.
    * @param addToSelection Whether to add to existing selection.
    * @param skipIfSameRegion When true, ignores repeats of the last drag region.

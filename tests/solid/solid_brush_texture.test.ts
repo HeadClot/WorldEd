@@ -29,10 +29,16 @@ describe('Solid brush surface textures', () => {
     expect(maps.some((entry) => entry.mapping.textureId === textureId)).toBe(
       true
     );
-    const brushMaterial = additive.mesh!.material as THREE.MeshStandardMaterial;
+    const brushMaterial = additive.mesh!.material as THREE.MeshBasicMaterial;
+    expect(brushMaterial).toBeInstanceOf(THREE.MeshBasicMaterial);
     expect(brushMaterial.map).toBeNull();
-    expect(brushMaterial.transparent).toBe(true);
+    expect(brushMaterial.colorWrite).toBe(false);
+    expect(brushMaterial.visible).toBe(false);
+    expect(brushMaterial.depthWrite).toBe(false);
+    expect(brushMaterial.transparent).toBe(false);
+    expect(brushMaterial.side).toBe(THREE.FrontSide);
     expect(SolidBrushVisual.isBrushObject(additive.mesh!)).toBe(true);
+    expect(SolidBrushVisual.isHullFillVisible(additive.mesh!)).toBe(false);
   });
 
   it('undo restores prior brush texture ids', () => {

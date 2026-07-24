@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Snapshot of an object's rotation for undo/restore operations.
+ * Snapshot of an object's rotation for SetRotationCommand undo/restore.
  */
-export interface ObjectRotationSnapshot {
+export interface SetRotationSnapshot {
   object: THREE.Object3D;
   rotation: THREE.Euler;
 }
@@ -14,7 +14,7 @@ export interface ObjectRotationSnapshot {
  * Snapshots original rotations on construction and restores them on undo.
  */
 export class SetRotationCommand implements UndoCommand {
-  private snapshots: ObjectRotationSnapshot[];
+  private snapshots: SetRotationSnapshot[];
   private newRotations: THREE.Euler[];
 
   /**

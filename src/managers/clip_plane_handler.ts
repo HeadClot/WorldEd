@@ -402,7 +402,9 @@ export class ClipPlaneHandler {
 
   /**
    * Finalizes selection, sync, and status after a successful commit batch.
-   * @param results Created meshes.
+   * Keeps the clip tool active so the user can place a new plane and cut again.
+   * Selects all result meshes (including both halves after a split).
+   * @param results Created or updated meshes.
    * @param successCount Meshes that produced results.
    * @param totalCount Attempted targets.
    * @param verb Status verb (Clipped / Split).
@@ -417,14 +419,26 @@ export class ClipPlaneHandler {
       this.deps.showStatusMessage('Plane does not cut the selection');
       return;
     }
-    this.deps.selectionManager.setSelection(results);
-    this.deps.clipPlaneTool.deactivate();
+    this.selectCommitResults(results);
+    this.deps.clipPlaneTool.resetPlacementForNextCut();
     this.deps.syncPrimitivesToViewports();
     this.deps.refreshOutliner();
     this.deps.updateShadingMeshes();
     this.deps.showStatusMessage(
-      `${verb} ${successCount}/${totalCount} mesh(es)`
+      `${verb} ${successCount}/${totalCount} · place points to cut again`
     );
+  }
+
+  /**
+   * Selects the meshes produced by a clip or split commit.
+   * @param results Candidate result meshes (nullish entries ignored).
+   */
+  private selectCommitResults(results: THREE.Mesh[]): void {
+    const selectable = results.filter(
+      (mesh) => mesh instanceof THREE.Mesh && mesh.parent !== null
+    );
+    if (selectable.length === 0) return;
+    this.deps.selectionManager.setSelection(selectable);
   }
 
   /**

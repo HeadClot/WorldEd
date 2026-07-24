@@ -18,9 +18,10 @@ import { materialNameToTextureId } from './vmf_material_policy.js';
 export const VMF_DEFAULT_TEXTURE_SIZE = 512;
 
 /**
- * Converts Hammer U/V axes into a face texture mapping approximation.
- * Exact VMF UVs use independent non-orthonormal axes; the editor projects
- * with an orthonormal face-plane basis, so scale/offset/rotation are fitted.
+ * Converts Hammer U/V axes into a face texture mapping.
+ * Stores exact swizzled world axes for Source-accurate projection, plus scale
+ * and offset in the editor's meters-per-tile / meter-offset convention.
+ * V is flipped to match Source (and Chisel) texture orientation.
  */
 export class VmfUvConverter {
   /**
@@ -28,7 +29,7 @@ export class VmfUvConverter {
    * @param materialName VMF material path.
    * @param uAxis Hammer U axis.
    * @param vAxis Hammer V axis.
-   * @param faceNormal Outward face normal in editor space (for rotation fit).
+   * @param _faceNormal Reserved (kept for call-site compatibility).
    * @param textureWidth Assumed texture width in texels.
    * @param textureHeight Assumed texture height in texels.
    * @param unitScale Inches to meters.
@@ -38,7 +39,7 @@ export class VmfUvConverter {
     materialName: string,
     uAxis: VmfTextureAxis,
     vAxis: VmfTextureAxis,
-    faceNormal: THREE.Vector3,
+    _faceNormal: THREE.Vector3,
     textureWidth: number = VMF_DEFAULT_TEXTURE_SIZE,
     textureHeight: number = VMF_DEFAULT_TEXTURE_SIZE,
     unitScale: number = VMF_INCHES_TO_METERS
@@ -47,16 +48,38 @@ export class VmfUvConverter {
       materialNameToTextureId(materialName)
     );
     mapping.align = 'face';
+    mapping.rotationDeg = 0;
+    const worldU = this.swizzleAxisDirection(uAxis);
+    const worldV = this.swizzleAxisDirection(vAxis);
+    // Source V runs opposite our projector when using positive V; flip V like Chisel.
+    worldV.multiplyScalar(-1);
+    mapping.customUAxis = { x: worldU.x, y: worldU.y, z: worldU.z };
+    mapping.customVAxis = { x: worldV.x, y: worldV.y, z: worldV.z };
     mapping.scaleU = this.axisToMetersPerTile(uAxis, textureWidth, unitScale);
     mapping.scaleV = this.axisToMetersPerTile(vAxis, textureHeight, unitScale);
     mapping.offsetU = this.axisToMeterOffset(uAxis, unitScale);
-    mapping.offsetV = this.axisToMeterOffset(vAxis, unitScale);
-    mapping.rotationDeg = this.estimateRotationDegrees(uAxis, faceNormal);
+    // V was flipped; translation sign follows the flipped axis.
+    mapping.offsetV = -this.axisToMeterOffset(vAxis, unitScale);
     return mapping;
   }
 
   /**
+   * Swizzles a Hammer axis direction into editor Y-up and normalizes it.
+   * @param axis Hammer texture axis.
+   * @returns Unit direction in editor space, or zero when degenerate.
+   */
+  private swizzleAxisDirection(axis: VmfTextureAxis): THREE.Vector3 {
+    const direction = swizzleSourceComponentsToThree(axis.x, axis.y, axis.z);
+    if (direction.lengthSq() < 1e-12) {
+      return new THREE.Vector3(0, 0, 0);
+    }
+    return direction.normalize();
+  }
+
+  /**
    * World meters covered by one full texture tile along a VMF axis.
+   * Hammer: u = (dot(pos_in, axis) / scale + translation) / textureSize.
+   * In meters: scaleU = textureSize * scale * unitScale.
    * @param axis Hammer texture axis.
    * @param textureSize Texels along that UV dimension.
    * @param unitScale Inches to meters.
@@ -73,86 +96,15 @@ export class VmfUvConverter {
   }
 
   /**
-   * Converts Hammer texel translation into a world-space UV offset in meters.
+   * Converts Hammer texel translation into a meter offset for projectWorldPositionToUv.
+   * With u = (dot(pos, û) - offsetU) / scaleU and scaleU = texSize * scale * unit,
+   * offsetU = -translation * scale * unitScale matches Hammer phase.
    * @param axis Hammer texture axis.
    * @param unitScale Inches to meters.
-   * @returns Offset matching projectWorldPositionToUv conventions.
+   * @returns Offset in meters.
    */
   private axisToMeterOffset(axis: VmfTextureAxis, unitScale: number): number {
     const scale = axis.scale === 0 ? 0.25 : axis.scale;
     return -axis.translation * scale * unitScale;
-  }
-
-  /**
-   * Estimates projection rotation so the built-in U seed aligns with the
-   * swizzled Hammer U axis as closely as possible.
-   * @param uAxis Hammer U axis.
-   * @param faceNormal Outward face normal in editor space.
-   * @returns Rotation in degrees around the face normal.
-   */
-  private estimateRotationDegrees(
-    uAxis: VmfTextureAxis,
-    faceNormal: THREE.Vector3
-  ): number {
-    const desiredU = swizzleSourceComponentsToThree(uAxis.x, uAxis.y, uAxis.z);
-    if (desiredU.lengthSq() < 1e-12) return 0;
-    desiredU.normalize();
-    const normal = faceNormal.clone().normalize();
-    const projected = this.projectOntoPlane(desiredU, normal);
-    if (!projected) return 0;
-    return this.angleFromSeedU(projected, normal);
-  }
-
-  /**
-   * Projects a direction onto a plane and normalizes it.
-   * @param direction Direction in editor space.
-   * @param normal Unit plane normal.
-   * @returns Unit in-plane vector, or null when degenerate.
-   */
-  private projectOntoPlane(
-    direction: THREE.Vector3,
-    normal: THREE.Vector3
-  ): THREE.Vector3 | null {
-    const projected = direction
-      .clone()
-      .addScaledVector(normal, -direction.dot(normal));
-    if (projected.lengthSq() < 1e-12) return null;
-    return projected.normalize();
-  }
-
-  /**
-   * Measures rotation from the stable U seed to a desired in-plane U.
-   * @param projected Desired unit U on the plane.
-   * @param normal Face normal.
-   * @returns Degrees around the normal.
-   */
-  private angleFromSeedU(
-    projected: THREE.Vector3,
-    normal: THREE.Vector3
-  ): number {
-    const seedU = this.pickStableUAxis(normal);
-    const seedV = new THREE.Vector3().crossVectors(normal, seedU).normalize();
-    const cos = THREE.MathUtils.clamp(seedU.dot(projected), -1, 1);
-    const sin = seedV.dot(projected);
-    return THREE.MathUtils.radToDeg(Math.atan2(sin, cos));
-  }
-
-  /**
-   * Mirrors planar_uv_projector U seed selection for rotation fitting.
-   * @param normal Projection normal.
-   * @returns Unit U seed.
-   */
-  private pickStableUAxis(normal: THREE.Vector3): THREE.Vector3 {
-    if (Math.abs(normal.y) > 0.9) {
-      return new THREE.Vector3(1, 0, 0);
-    }
-    const horizontal = new THREE.Vector3().crossVectors(
-      new THREE.Vector3(0, 1, 0),
-      normal
-    );
-    if (horizontal.lengthSq() < 1e-12) {
-      return new THREE.Vector3(1, 0, 0);
-    }
-    return horizontal.normalize();
   }
 }

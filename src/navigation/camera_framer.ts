@@ -30,7 +30,8 @@ export class CameraFramer {
   /**
    * Computes the target position and look-at point for a perspective camera
    * so that the bounding sphere fits within the viewport.
-   * Keeps the current viewing direction and only adjusts distance and focus.
+   * Preserves the camera's current world view direction: look-at is the sphere
+   * center and position is placed along that direction at the fit distance.
    * @param boundingSphere The sphere enclosing the target objects.
    * @param camera The perspective camera to position.
    * @param paddingFactor The multiplier for extra space around the sphere.

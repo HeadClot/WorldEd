@@ -70,6 +70,8 @@ export class OutlinerTree {
   private contextMenuCallback: TreeContextMenuCallback | null;
   private onReparent: TreeReparentCallback | null;
   private dragSource: THREE.Object3D | null;
+  private lastSelectedObjects: Set<THREE.Mesh>;
+  private lastHierarchySelection: Set<THREE.Object3D>;
 
   /**
    * Creates a new outliner tree bound to a root Three.js object.
@@ -91,6 +93,8 @@ export class OutlinerTree {
     this.contextMenuCallback = null;
     this.onReparent = null;
     this.dragSource = null;
+    this.lastSelectedObjects = new Set();
+    this.lastHierarchySelection = new Set();
     this.treeElement = document.createElement('div');
     this.searchElement = document.createElement('input');
     this.buildSearchBar();
@@ -165,6 +169,8 @@ export class OutlinerTree {
     hierarchySelection: Set<THREE.Object3D> = new Set()
   ): void {
     if (this.isDisposed) return;
+    this.lastSelectedObjects = selectedObjects;
+    this.lastHierarchySelection = hierarchySelection;
     this.clearItems();
     this.renderChildren(
       this.root,
@@ -186,11 +192,71 @@ export class OutlinerTree {
     hierarchySelection: Set<THREE.Object3D>
   ): void {
     if (this.isDisposed) return;
+    this.lastSelectedObjects = selectedObjects;
+    this.lastHierarchySelection = hierarchySelection;
     this.itemMap.forEach((item, obj) => {
       item.setSelectionState(
         this.computeIsSelected(obj, selectedObjects, hierarchySelection)
       );
     });
+  }
+
+  /**
+   * Expands ancestor groups, refreshes if needed, and scrolls to the object row.
+   * Used when viewport/tool selection changes so the outliner shows the pick.
+   * @param focusObject Mesh or hierarchy node to reveal.
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   */
+  revealObject(
+    focusObject: THREE.Object3D,
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>
+  ): void {
+    if (this.isDisposed) return;
+    const expanded = this.expandAncestorsOf(focusObject);
+    if (expanded || !this.itemMap.has(focusObject)) {
+      this.refresh(selectedObjects, hierarchySelection);
+    } else {
+      this.updateSelectionStates(selectedObjects, hierarchySelection);
+    }
+    this.scrollToObject(focusObject);
+  }
+
+  /**
+   * Expands every ancestor of an object up to (and including) the tree root.
+   * @param obj Object whose ancestors should be expanded.
+   * @returns True when the expanded set changed.
+   */
+  expandAncestorsOf(obj: THREE.Object3D): boolean {
+    let changed = false;
+    if (!this.expandedSet.has(this.root.uuid)) {
+      this.expandedSet.add(this.root.uuid);
+      changed = true;
+    }
+    let current: THREE.Object3D | null = obj.parent;
+    while (current) {
+      if (!this.expandedSet.has(current.uuid)) {
+        this.expandedSet.add(current.uuid);
+        changed = true;
+      }
+      if (current === this.root) break;
+      current = current.parent;
+    }
+    return changed;
+  }
+
+  /**
+   * Scrolls the tree so the row for an object is visible.
+   * @param obj Object whose outliner row should scroll into view.
+   */
+  scrollToObject(obj: THREE.Object3D): void {
+    const item = this.itemMap.get(obj);
+    if (!item) return;
+    const row = item.getElement();
+    if (typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
 
   /**
@@ -204,8 +270,7 @@ export class OutlinerTree {
     } else {
       this.expandedSet.add(key);
     }
-    const selected = this.buildEmptySelectionSet();
-    this.refresh(selected);
+    this.refresh(this.lastSelectedObjects, this.lastHierarchySelection);
   }
 
   /**

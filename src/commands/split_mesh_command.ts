@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
+import { restoreObjectAtIndex } from '../utils/hierarchy_utils.js';
 
 /**
  * Undoable command that replaces one source mesh with two split results.
@@ -56,7 +57,12 @@ export class SplitMeshCommand implements UndoCommand {
     if (!this.executed) return;
     this.frontMesh.parent?.remove(this.frontMesh);
     this.backMesh.parent?.remove(this.backMesh);
-    this.restoreMesh(this.sourceMesh, this.parent, this.siblingIndex);
+    restoreObjectAtIndex(
+      this.sourceMesh,
+      this.parent,
+      this.siblingIndex,
+      this.worldGroup
+    );
     this.executed = false;
   }
 
@@ -66,26 +72,5 @@ export class SplitMeshCommand implements UndoCommand {
    */
   getResultMeshes(): THREE.Mesh[] {
     return [this.frontMesh, this.backMesh];
-  }
-
-  /**
-   * Restores a mesh under its original parent at the original sibling index.
-   * @param mesh The mesh to restore.
-   * @param parent The original parent.
-   * @param index The original sibling index.
-   */
-  private restoreMesh(
-    mesh: THREE.Mesh,
-    parent: THREE.Object3D | null,
-    index: number
-  ): void {
-    const targetParent = parent ?? this.worldGroup;
-    targetParent.add(mesh);
-    const currentIndex = targetParent.children.indexOf(mesh);
-    if (currentIndex !== index && currentIndex >= 0) {
-      targetParent.children.splice(currentIndex, 1);
-      targetParent.children.splice(index, 0, mesh);
-      mesh.parent = targetParent;
-    }
   }
 }

@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 import {
   FaceTextureMapEntry,
-  cloneFaceTextureMapEntry
+  FaceTextureMapping,
+  cloneFaceTextureMapEntry,
+  cloneFaceTextureMapping
 } from '../texture/face_texture_mapping.js';
 import {
   getFaceTextureMaps,
@@ -10,6 +12,16 @@ import {
 } from '../texture/face_texture_storage.js';
 import { rebakeStoredFaceTextureMaps } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
+import { SolidModel } from '../solid/model/solid_model.js';
+
+/**
+ * Snapshot of one solid brush's authored UV mappings for smear undo.
+ */
+export interface SmearSolidBrushUvSnapshot {
+  brushId: string;
+  defaultMapping: FaceTextureMapping;
+  faceMappings: (FaceTextureMapping | undefined)[];
+}
 
 /**
  * Snapshot of one mesh surface state for smear stroke undo.
@@ -18,12 +30,14 @@ export interface SmearMeshSnapshot {
   mesh: THREE.Mesh;
   maps: FaceTextureMapEntry[];
   uvArray: Float32Array | null;
+  /** Present when mesh is a solid model result; restores brush faces on undo/redo. */
+  solidBrushUvs: SmearSolidBrushUvSnapshot[] | null;
 }
 
 /**
  * Undoable command for one continuous UV-smear drag stroke.
  * The stroke is applied live during the drag; execute restores the post-stroke
- * state (redo), undo restores the pre-stroke snapshots.
+ * state (redo), undo restores the pre-stroke snapshots including solid brushes.
  */
 export class SmearUvStrokeCommand implements UndoCommand {
   private beforeSnapshots: SmearMeshSnapshot[];
@@ -56,7 +70,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
   }
 
   /**
-   * Restores pre-stroke maps, UVs, and materials.
+   * Restores pre-stroke maps, UVs, materials, and solid brush face mappings.
    */
   undo(): void {
     this.isLive = false;
@@ -64,7 +78,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
   }
 
   /**
-   * Captures maps and UV buffer for one mesh.
+   * Captures maps, UV buffer, and solid brush UV state for one mesh.
    * @param mesh Mesh to snapshot.
    * @returns Snapshot object.
    */
@@ -76,21 +90,54 @@ export class SmearUvStrokeCommand implements UndoCommand {
     const uvArray = uv
       ? new Float32Array(uv.array as ArrayLike<number>)
       : null;
-    return { mesh, maps, uvArray };
+    return {
+      mesh,
+      maps,
+      uvArray,
+      solidBrushUvs: this.captureSolidBrushUvs(mesh)
+    };
   }
 
   /**
-   * Writes a snapshot back onto its mesh.
+   * Captures all brush face mappings when the mesh is a solid result.
+   * @param mesh Candidate mesh.
+   * @returns Brush UV snapshots, or null when not a solid result.
+   */
+  private static captureSolidBrushUvs(
+    mesh: THREE.Mesh
+  ): SmearSolidBrushUvSnapshot[] | null {
+    if (!SolidModel.isResultMesh(mesh)) return null;
+    const model = SolidModel.fromObject(mesh);
+    if (!model) return null;
+    return model.captureBrushUvSnapshots();
+  }
+
+  /**
+   * Writes a snapshot back onto its mesh and owning solid brushes.
    * @param snapshot Prior or post stroke state.
    */
   private restoreSnapshot(snapshot: SmearMeshSnapshot): void {
+    this.restoreSolidBrushUvs(snapshot);
     setFaceTextureMaps(snapshot.mesh, snapshot.maps);
     if (snapshot.uvArray) {
       this.restoreUvArray(snapshot.mesh, snapshot.uvArray);
     } else {
       rebakeStoredFaceTextureMaps(snapshot.mesh);
     }
-    rebuildSurfaceMaterials(snapshot.mesh);
+    rebuildSurfaceMaterials(snapshot.mesh, undefined, undefined, {
+      preserveTriangleOrder: true
+    });
+  }
+
+  /**
+   * Restores solid brush face mappings from a mesh snapshot when present.
+   * @param snapshot Snapshot that may include solid brush UV state.
+   */
+  private restoreSolidBrushUvs(snapshot: SmearMeshSnapshot): void {
+    if (!snapshot.solidBrushUvs) return;
+    const model = SolidModel.fromObject(snapshot.mesh);
+    if (!model) return;
+    model.restoreBrushUvSnapshots(snapshot.solidBrushUvs);
   }
 
   /**

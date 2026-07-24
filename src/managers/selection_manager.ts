@@ -13,6 +13,8 @@ export type SelectionChangedCallback = (selected: Set<THREE.Mesh>) => void;
 export class SelectionManager {
   private selectedObjects: Set<THREE.Mesh>;
   private changeCallbacks: SelectionChangedCallback[];
+  /** Most recently selected mesh (for outliner reveal / multi-select focus). */
+  private lastSelectedMesh: THREE.Mesh | null;
 
   /**
    * Creates a new selection manager with an initially empty selection set.
@@ -20,6 +22,7 @@ export class SelectionManager {
   constructor() {
     this.selectedObjects = new Set();
     this.changeCallbacks = [];
+    this.lastSelectedMesh = null;
   }
 
   /**
@@ -30,6 +33,7 @@ export class SelectionManager {
     if (this.selectedObjects.size === 1 && this.selectedObjects.has(mesh)) return;
     this.selectedObjects.clear();
     this.selectedObjects.add(mesh);
+    this.lastSelectedMesh = mesh;
     this.notifyChange();
   }
 
@@ -42,6 +46,8 @@ export class SelectionManager {
     if (this.isSameSelection(meshes)) return;
     this.selectedObjects.clear();
     meshes.forEach((mesh) => this.selectedObjects.add(mesh));
+    this.lastSelectedMesh =
+      meshes.length > 0 ? meshes[meshes.length - 1] : null;
     this.notifyChange();
   }
 
@@ -62,6 +68,7 @@ export class SelectionManager {
   addToSelection(mesh: THREE.Mesh): void {
     if (this.selectedObjects.has(mesh)) return;
     this.selectedObjects.add(mesh);
+    this.lastSelectedMesh = mesh;
     this.notifyChange();
   }
 
@@ -72,8 +79,12 @@ export class SelectionManager {
   toggleSelection(mesh: THREE.Mesh): void {
     if (this.selectedObjects.has(mesh)) {
       this.selectedObjects.delete(mesh);
+      if (this.lastSelectedMesh === mesh) {
+        this.lastSelectedMesh = this.getFirstSelectedObject();
+      }
     } else {
       this.selectedObjects.add(mesh);
+      this.lastSelectedMesh = mesh;
     }
     this.notifyChange();
   }
@@ -104,6 +115,9 @@ export class SelectionManager {
   removeFromSelection(mesh: THREE.Mesh): void {
     if (!this.selectedObjects.has(mesh)) return;
     this.selectedObjects.delete(mesh);
+    if (this.lastSelectedMesh === mesh) {
+      this.lastSelectedMesh = this.getFirstSelectedObject();
+    }
     this.notifyChange();
   }
 
@@ -113,6 +127,7 @@ export class SelectionManager {
   clearSelection(): void {
     if (this.selectedObjects.size === 0) return;
     this.selectedObjects.clear();
+    this.lastSelectedMesh = null;
     this.notifyChange();
   }
 
@@ -136,6 +151,12 @@ export class SelectionManager {
     if (!removedAny) return false;
     this.selectedObjects.clear();
     survivors.forEach((mesh) => this.selectedObjects.add(mesh));
+    if (
+      !this.lastSelectedMesh ||
+      !this.selectedObjects.has(this.lastSelectedMesh)
+    ) {
+      this.lastSelectedMesh = survivors.length > 0 ? survivors[survivors.length - 1] : null;
+    }
     this.notifyChange();
     return true;
   }
@@ -200,6 +221,18 @@ export class SelectionManager {
    */
   getAllSelectedObjectsAsArray(): THREE.Mesh[] {
     return Array.from(this.selectedObjects);
+  }
+
+  /**
+   * Returns the most recently selected mesh still in the selection set.
+   * Used by the outliner to expand and scroll to the latest pick.
+   * @returns Last selected mesh, or null when selection is empty.
+   */
+  getLastSelectedObject(): THREE.Mesh | null {
+    if (this.lastSelectedMesh && this.selectedObjects.has(this.lastSelectedMesh)) {
+      return this.lastSelectedMesh;
+    }
+    return this.getFirstSelectedObject();
   }
 
   /**

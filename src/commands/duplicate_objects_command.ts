@@ -25,7 +25,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
     parent: THREE.Object3D,
     offset: THREE.Vector3
   ) {
-    this.sourceMeshes = sourceMeshes;
+    this.sourceMeshes = sourceMeshes.slice();
     this.parent = parent;
     this.offset = offset.clone();
     this.clonedMeshes = [];
@@ -48,6 +48,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
    * Undoes the duplication by removing clones and disposing resources.
    */
   undo(): void {
+    if (!this.executed) return;
     this.clonedMeshes.forEach((clone) => {
       if (clone.parent) {
         clone.parent.remove(clone);
@@ -66,14 +67,8 @@ export class DuplicateObjectsCommand implements UndoCommand {
     mesh.children.forEach((child) => {
       this.disposeChildResource(child);
     });
-    mesh.geometry.dispose();
-    if (mesh.material) {
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((mat) => mat.dispose());
-      } else {
-        (mesh.material as THREE.Material).dispose();
-      }
-    }
+    mesh.geometry?.dispose();
+    this.disposeMaterial(mesh.material);
   }
 
   /**
@@ -82,28 +77,35 @@ export class DuplicateObjectsCommand implements UndoCommand {
    */
   private disposeChildResource(child: THREE.Object3D): void {
     if (child instanceof THREE.Mesh) {
-      child.geometry.dispose();
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach((mat) => mat.dispose());
-        } else {
-          (child.material as THREE.Material).dispose();
-        }
-      }
+      child.geometry?.dispose();
+      this.disposeMaterial(child.material);
     }
     if (child instanceof THREE.LineSegments) {
-      child.geometry.dispose();
-      if (child.material) {
-        (child.material as THREE.Material).dispose();
-      }
+      child.geometry?.dispose();
+      this.disposeMaterial(child.material);
     }
   }
 
   /**
-   * Returns the list of cloned meshes created during execution.
+   * Disposes a material or material array when present.
+   * @param material Material, material array, or undefined.
+   */
+  private disposeMaterial(
+    material: THREE.Material | THREE.Material[] | undefined
+  ): void {
+    if (!material) return;
+    if (Array.isArray(material)) {
+      material.forEach((entry) => entry.dispose());
+      return;
+    }
+    material.dispose();
+  }
+
+  /**
+   * Returns a copy of the cloned meshes created during execution.
    * @returns The array of cloned mesh references.
    */
   getClonedMeshes(): THREE.Mesh[] {
-    return this.clonedMeshes;
+    return this.clonedMeshes.slice();
   }
 }

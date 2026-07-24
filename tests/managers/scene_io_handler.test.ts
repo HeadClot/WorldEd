@@ -92,9 +92,9 @@ describe('SceneIOHandler', () => {
     expect(magic).toBe(0x46546c67);
   });
 
-  it('imports a VMF document into a solid model with brushes', () => {
+  it('imports a VMF document into a solid model with brushes', async () => {
     const vmf = buildSimpleBoxVmf();
-    const result = handler.importVmfFromText(vmf, 'room_01.vmf', null);
+    const result = await handler.importVmfFromText(vmf, 'room_01.vmf', null);
     expect(result).not.toBeNull();
     expect(result!.model.root.name).toBe('room_01');
     expect(result!.importedBrushCount).toBe(1);
@@ -102,7 +102,7 @@ describe('SceneIOHandler', () => {
     expect(result!.model.getBrushes()[0].brush.faces.length).toBe(6);
   });
 
-  it('returns null when the VMF has no importable brushes', () => {
+  it('returns null when the VMF has no importable brushes', async () => {
     const emptyWorld = `
 world
 {
@@ -110,7 +110,7 @@ world
 	"classname" "worldspawn"
 }
 `;
-    const result = handler.importVmfFromText(emptyWorld, 'empty.vmf', null);
+    const result = await handler.importVmfFromText(emptyWorld, 'empty.vmf', null);
     expect(result).toBeNull();
   });
 

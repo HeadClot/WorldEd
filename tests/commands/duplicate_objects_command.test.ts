@@ -115,6 +115,30 @@ describe('DuplicateObjectsCommand', () => {
     command.execute();
     expect(parent.children.length).toBe(3);
   });
+
+  it('should no-op undo when execute has not run', () => {
+    const command = new DuplicateObjectsCommand([mesh1], parent, offset);
+    command.undo();
+    expect(parent.children.length).toBe(2);
+    expect(command.getClonedMeshes().length).toBe(0);
+  });
+
+  it('should ignore mutations to the source array after construction', () => {
+    const sources = [mesh1];
+    const command = new DuplicateObjectsCommand(sources, parent, offset);
+    sources.pop();
+    command.execute();
+    expect(parent.children.length).toBe(3);
+    expect(parent.children[2].name).toBe('Cube001_copy');
+  });
+
+  it('should return a defensive copy from getClonedMeshes', () => {
+    const command = new DuplicateObjectsCommand([mesh1], parent, offset);
+    command.execute();
+    const first = command.getClonedMeshes();
+    first.length = 0;
+    expect(command.getClonedMeshes().length).toBe(1);
+  });
 });
 
 /**

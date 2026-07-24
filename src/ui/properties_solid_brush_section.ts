@@ -14,6 +14,10 @@ export interface SolidBrushPropertyHandlers {
   onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) => void;
   onBrushEdited: (meshes: THREE.Mesh[]) => void;
   onAddBoxBrush: () => void;
+  /** Moves brushes to first CSG evaluation slot. */
+  onMoveToFirst: (meshes: THREE.Mesh[]) => void;
+  /** Moves brushes to last CSG evaluation slot. */
+  onMoveToLast: (meshes: THREE.Mesh[]) => void;
 }
 
 /**
@@ -132,7 +136,7 @@ export class PropertiesSolidBrushSection {
   }
 
   /**
-   * Builds the section body with operation icons and add-brush control.
+   * Builds the section body with operation icons, order controls, and add-brush.
    * @returns Content element.
    */
   private createContent(): HTMLElement {
@@ -142,8 +146,74 @@ export class PropertiesSolidBrushSection {
     content.style.flexDirection = 'column';
     content.style.gap = '8px';
     content.appendChild(this.createOperationButtons());
+    content.appendChild(this.createOrderButtons());
     content.appendChild(this.createAddBoxBrushButton());
     return content;
+  }
+
+  /**
+   * Builds To First / To Last CSG order buttons.
+   * @returns Button row element.
+   */
+  private createOrderButtons(): HTMLElement {
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.gap = '6px';
+    row.appendChild(
+      this.createTextActionButton('To First', 'Move brush to first in CSG order', () =>
+        this.onMoveOrderClicked('first')
+      )
+    );
+    row.appendChild(
+      this.createTextActionButton('To Last', 'Move brush to last in CSG order', () =>
+        this.onMoveOrderClicked('last')
+      )
+    );
+    return row;
+  }
+
+  /**
+   * Creates a compact full-width text action button.
+   * @param label Visible label.
+   * @param title Tooltip / aria label.
+   * @param onClick Click handler.
+   * @returns Button element.
+   */
+  private createTextActionButton(
+    label: string,
+    title: string,
+    onClick: () => void
+  ): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.title = title;
+    button.setAttribute('aria-label', title);
+    button.style.flex = '1';
+    button.style.padding = '6px 8px';
+    button.style.fontSize = '11px';
+    button.style.fontFamily = 'monospace';
+    button.style.cursor = 'pointer';
+    button.style.borderRadius = '6px';
+    button.style.border = `1px solid ${this.hexToRgb(Theme.separatorColor)}`;
+    button.style.background = this.hexToRgb(Theme.buttonBackground);
+    button.style.color = this.theme.buttonTextColor;
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  /**
+   * Moves selected brushes to first or last evaluation order.
+   * @param end Target end of the CSG list.
+   */
+  private onMoveOrderClicked(end: 'first' | 'last'): void {
+    if (!this.handlers) return;
+    const meshes =
+      this.getEditableBrushMeshes?.() ??
+      this.collectBrushMeshes(this.boundObjects);
+    if (meshes.length === 0) return;
+    if (end === 'first') this.handlers.onMoveToFirst(meshes);
+    else this.handlers.onMoveToLast(meshes);
   }
 
   /**

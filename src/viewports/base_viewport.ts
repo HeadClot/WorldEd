@@ -26,7 +26,8 @@ export abstract class BaseViewport {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(Theme.viewportBackground);
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    // Cap DPR so large maps remain interactive on high-DPI displays.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.viewportToolbar = new ViewportToolbar(
       container,

@@ -166,3 +166,26 @@ export function getDepth(obj: THREE.Object3D, root: THREE.Object3D): number {
   }
   return depth;
 }
+
+/**
+ * Restores an object under a parent at a specific sibling index.
+ * Falls back to fallbackParent when parent is null.
+ * @param object The object to restore into the hierarchy.
+ * @param parent Preferred parent, or null to use fallbackParent.
+ * @param index Desired sibling index under the chosen parent.
+ * @param fallbackParent Parent used when parent is null.
+ */
+export function restoreObjectAtIndex(
+  object: THREE.Object3D,
+  parent: THREE.Object3D | null,
+  index: number,
+  fallbackParent: THREE.Object3D
+): void {
+  const targetParent = parent ?? fallbackParent;
+  targetParent.add(object);
+  const currentIndex = targetParent.children.indexOf(object);
+  if (currentIndex === index || currentIndex < 0) return;
+  targetParent.children.splice(currentIndex, 1);
+  targetParent.children.splice(index, 0, object);
+  object.parent = targetParent;
+}

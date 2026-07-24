@@ -12,6 +12,16 @@ export type FaceTextureAlign =
   | 'face';
 
 /**
+ * Optional explicit world-space UV axis (Source/VMF style).
+ * When both custom axes are set, they override align/rotation basis.
+ */
+export interface FaceTextureAxis {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
  * Authored texture parameters for one coplanar face region.
  * UVs are baked from these via world-space planar projection.
  * textureId is the durable surface material identity for paint and export.
@@ -34,6 +44,15 @@ export interface FaceTextureMapping {
    * Survives mesh rebuilds when carried through CSG polygons.
    */
   textureId: string;
+  /**
+   * Optional world-space U direction (unit preferred). Used with customVAxis
+   * for Source-accurate VMF projections that need non-fitted axes.
+   */
+  customUAxis?: FaceTextureAxis;
+  /**
+   * Optional world-space V direction (unit preferred). Used with customUAxis.
+   */
+  customVAxis?: FaceTextureAxis;
 }
 
 /**
@@ -76,7 +95,7 @@ export function createDefaultFaceTextureMapping(
 export function cloneFaceTextureMapping(
   mapping: FaceTextureMapping
 ): FaceTextureMapping {
-  return {
+  const copy: FaceTextureMapping = {
     align: mapping.align,
     scaleU: mapping.scaleU,
     scaleV: mapping.scaleV,
@@ -85,6 +104,13 @@ export function cloneFaceTextureMapping(
     rotationDeg: mapping.rotationDeg,
     textureId: mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID
   };
+  if (mapping.customUAxis) {
+    copy.customUAxis = { ...mapping.customUAxis };
+  }
+  if (mapping.customVAxis) {
+    copy.customVAxis = { ...mapping.customVAxis };
+  }
+  return copy;
 }
 
 /**

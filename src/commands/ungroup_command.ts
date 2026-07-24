@@ -2,15 +2,12 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Snapshot capturing the state of a group and its children before ungrouping.
- * Stores all information needed to restore the group structure on undo.
+ * Snapshot capturing a child of a group before ungrouping.
+ * Children are restored in snapshot order on undo.
  */
 export interface UngroupChildSnapshot {
   /** The child object that was in the group. */
   child: THREE.Object3D;
-
-  /** The sibling index of the child within the group. */
-  siblingIndex: number;
 }
 
 /**
@@ -63,6 +60,7 @@ export class UngroupCommand implements UndoCommand {
    * Undoes the ungroup by restoring children to the group and re-adding it.
    */
   undo(): void {
+    if (!this.executed) return;
     this.childSnapshots.forEach((snapshot) => {
       if (snapshot.child.parent) {
         snapshot.child.parent.remove(snapshot.child);
@@ -96,12 +94,8 @@ export class UngroupCommand implements UndoCommand {
    */
   private buildSnapshots(group: THREE.Group): UngroupChildSnapshot[] {
     const snapshots: UngroupChildSnapshot[] = [];
-    group.children.forEach((child, index) => {
-      const snapshot: UngroupChildSnapshot = {
-        child: child,
-        siblingIndex: index
-      };
-      snapshots.push(snapshot);
+    group.children.forEach((child) => {
+      snapshots.push({ child: child });
     });
     return snapshots;
   }

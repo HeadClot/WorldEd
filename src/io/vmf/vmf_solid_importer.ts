@@ -7,6 +7,7 @@ import { VmfBrushFromSides, VmfBuiltBrush } from './vmf_brush_from_sides.js';
 import { isSkippedVolumeMaterial } from './vmf_material_policy.js';
 import { VmfParser } from './vmf_parser.js';
 import { VmfEntity, VmfSolid, VmfWorld } from './vmf_types.js';
+import { forBatchesAsync, yieldToBrowser } from '../../utils/async_yield.js';
 
 /**
  * Options controlling VMF → solid model import.
@@ -25,6 +26,11 @@ export interface VmfImportOptions {
    * Disable for very large maps and call model.rebuild() when ready.
    */
   rebuild?: boolean;
+  /**
+   * Optional progress callback (0..1, status label). Used by async import
+   * so the browser can paint a progress bar between batches.
+   */
+  onProgress?: (ratio: number, label: string) => void;
 }
 
 /**
@@ -85,6 +91,26 @@ export class VmfSolidImporter {
   }
 
   /**
+   * Async import that yields between brush batches and CSG rebuild so the UI
+   * can update a progress bar without freezing the browser.
+   * @param source VMF file contents.
+   * @param options Import options (including onProgress).
+   * @returns Import result with model and counts.
+   */
+  async importFromTextAsync(
+    source: string,
+    options: VmfImportOptions = {}
+  ): Promise<VmfImportResult> {
+    const report = options.onProgress ?? (() => undefined);
+    report(0.02, 'Parsing VMF…');
+    await yieldToBrowser();
+    const world = this.parser.parse(source);
+    report(0.08, 'Collecting solids…');
+    await yieldToBrowser();
+    return this.importWorldAsync(world, options);
+  }
+
+  /**
    * Builds a solid model from an already-parsed VMF world.
    * @param world Parsed world document.
    * @param options Import options.
@@ -106,6 +132,45 @@ export class VmfSolidImporter {
       collected.skippedCount
     );
     model.addBrushInstancesBatch(built.instances, 2, options.rebuild !== false);
+    return {
+      model,
+      importedBrushCount: built.imported,
+      skippedBrushCount: built.skipped,
+      skyName: world.skyName
+    };
+  }
+
+  /**
+   * Async world import with batched brush construction and progressive CSG.
+   * @param world Parsed world document.
+   * @param options Import options.
+   * @returns Import result with model and counts.
+   */
+  async importWorldAsync(
+    world: VmfWorld,
+    options: VmfImportOptions = {}
+  ): Promise<VmfImportResult> {
+    const report = options.onProgress ?? (() => undefined);
+    const unitScale = options.unitScale ?? VMF_INCHES_TO_METERS;
+    const skipVolumes = options.skipVolumeMaterials !== false;
+    const includeEntities = options.includeEntitySolids !== false;
+    const model = new SolidModel(options.modelName ?? this.defaultModelName(world));
+    const collected = this.collectSolids(world, includeEntities);
+    const built = await this.buildAllInstancesAsync(
+      collected.solids,
+      unitScale,
+      skipVolumes,
+      collected.skippedCount,
+      (ratio, label) => report(0.08 + ratio * 0.52, label)
+    );
+    model.addBrushInstancesBatch(built.instances, 2, false);
+    if (options.rebuild !== false && built.instances.length > 0) {
+      await model.rebuildAsync((ratio, label) =>
+        report(0.6 + ratio * 0.4, label)
+      );
+    } else {
+      report(1, 'Done');
+    }
     return {
       model,
       importedBrushCount: built.imported,
@@ -144,6 +209,53 @@ export class VmfSolidImporter {
       instances.push(this.createInstance(built, imported + 1));
       imported += 1;
     }
+    return { instances, imported, skipped };
+  }
+
+  /**
+   * Converts solids in batches, yielding so the UI can paint progress.
+   * @param solids Solids to attempt.
+   * @param unitScale Unit scale.
+   * @param skipVolumes Whether tools volumes are skipped.
+   * @param alreadySkipped Solids already skipped by entity policy.
+   * @param onProgress Progress for the build phase (0..1, label).
+   * @returns Instances and import counters.
+   */
+  private async buildAllInstancesAsync(
+    solids: VmfSolid[],
+    unitScale: number,
+    skipVolumes: boolean,
+    alreadySkipped: number,
+    onProgress?: (ratio: number, label: string) => void
+  ): Promise<{
+    instances: SolidBrushInstance[];
+    imported: number;
+    skipped: number;
+  }> {
+    const instances: SolidBrushInstance[] = [];
+    let imported = 0;
+    let skipped = alreadySkipped;
+    const total = Math.max(1, solids.length);
+    await forBatchesAsync(
+      solids.length,
+      16,
+      (start, end) => {
+        for (let index = start; index < end; index++) {
+          const built = this.tryBuildSolid(solids[index], unitScale, skipVolumes);
+          if (!built) {
+            skipped += 1;
+            continue;
+          }
+          instances.push(this.createInstance(built, imported + 1));
+          imported += 1;
+        }
+      },
+      (ratio) =>
+        onProgress?.(
+          ratio,
+          `Building brushes ${Math.min(solids.length, Math.round(ratio * total))}/${solids.length}`
+        )
+    );
     return { instances, imported, skipped };
   }
 

@@ -38,6 +38,7 @@ export class DeleteObjectCommand implements UndoCommand {
    * Executes the deletion by removing all meshes from their parents.
    */
   execute(): void {
+    if (this.executed) return;
     this.snapshots.forEach((snapshot) => {
       if (snapshot.mesh.parent) {
         snapshot.mesh.parent.remove(snapshot.mesh);
@@ -50,6 +51,7 @@ export class DeleteObjectCommand implements UndoCommand {
    * Undoes the deletion by restoring all meshes to their original state.
    */
   undo(): void {
+    if (!this.executed) return;
     this.snapshots.forEach((snapshot) => {
       if (!snapshot.parent) return;
       snapshot.mesh.position.copy(snapshot.position);

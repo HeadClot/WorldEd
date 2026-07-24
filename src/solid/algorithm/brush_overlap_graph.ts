@@ -1,0 +1,348 @@
+import * as THREE from 'three';
+
+/**
+ * Entry used when building undirected AABB overlap adjacency.
+ */
+export interface OverlapBoundsEntry {
+  /** Axis-aligned bounds in model space. */
+  bounds: THREE.Box3;
+  /** Output list filled with overlapping peer indices. */
+  overlappingPeerIndices: number[];
+}
+
+/**
+ * Builds undirected bounds-overlap adjacency for solid CSG peer filtering.
+ * Uses a uniform grid so sparse maps stay near-linear instead of quadratic.
+ */
+export class BrushOverlapGraph {
+  /**
+   * Fills overlappingPeerIndices for each entry from padded AABB tests.
+   * @param entries Prepared brushes with empty overlap lists.
+   * @param pad Extra margin added to each bounds test.
+   */
+  static build(entries: OverlapBoundsEntry[], pad: number): void {
+    const count = entries.length;
+    if (count === 0) return;
+    if (count <= 32) {
+      this.buildPairwise(entries, pad);
+      return;
+    }
+    this.buildWithGrid(entries, pad);
+  }
+
+  /**
+   * Rebuilds overlaps only for seed brushes against every entry, then restores
+   * cached peers for clean brushes that do not touch any seed.
+   * @param entries Prepared brushes (overlap lists start empty).
+   * @param pad Extra margin.
+   * @param seedIndices Indices that moved or changed shape.
+   * @param previousPeerIndices Previous undirected peer indices per entry.
+   */
+  static buildPartial(
+    entries: OverlapBoundsEntry[],
+    pad: number,
+    seedIndices: ReadonlySet<number>,
+    previousPeerIndices: readonly number[][]
+  ): void {
+    if (seedIndices.size === 0 || seedIndices.size >= entries.length) {
+      this.build(entries, pad);
+      return;
+    }
+    this.restorePreviousPeers(entries, seedIndices, previousPeerIndices);
+    this.linkSeedsAgainstAll(entries, pad, seedIndices);
+  }
+
+  /**
+   * Restores previous peer lists for non-seed brushes, dropping stale seed peers.
+   * @param entries Bounds entries.
+   * @param seedIndices Changed brush indices.
+   * @param previousPeerIndices Previous peer index lists.
+   */
+  private static restorePreviousPeers(
+    entries: OverlapBoundsEntry[],
+    seedIndices: ReadonlySet<number>,
+    previousPeerIndices: readonly number[][]
+  ): void {
+    for (let index = 0; index < entries.length; index++) {
+      if (seedIndices.has(index)) continue;
+      const previous = previousPeerIndices[index] ?? [];
+      for (const peerIndex of previous) {
+        if (seedIndices.has(peerIndex)) continue;
+        if (peerIndex < 0 || peerIndex >= entries.length) continue;
+        entries[index].overlappingPeerIndices.push(peerIndex);
+      }
+    }
+  }
+
+  /**
+   * Links each seed brush against overlapping peers and records undirected edges.
+   * Uses the uniform grid for large scenes instead of O(seed * n) scans.
+   * @param entries Bounds entries.
+   * @param pad Overlap pad.
+   * @param seedIndices Seed indices.
+   */
+  private static linkSeedsAgainstAll(
+    entries: OverlapBoundsEntry[],
+    pad: number,
+    seedIndices: ReadonlySet<number>
+  ): void {
+    if (entries.length <= 32 || seedIndices.size >= entries.length / 2) {
+      this.linkSeedsPairwise(entries, pad, seedIndices);
+      return;
+    }
+    const cellSize = this.chooseCellSize(entries);
+    const cells = this.binEntriesIntoCells(entries, cellSize, pad);
+    for (const seedIndex of seedIndices) {
+      if (seedIndex < 0 || seedIndex >= entries.length) continue;
+      const candidates = this.collectCellCandidates(
+        cells,
+        entries[seedIndex].bounds,
+        cellSize,
+        pad,
+        seedIndex
+      );
+      for (const other of candidates) {
+        if (!this.boundsOverlap(entries[seedIndex].bounds, entries[other].bounds, pad)) {
+          continue;
+        }
+        this.addUndirectedPeer(entries, seedIndex, other);
+      }
+    }
+  }
+
+  /**
+   * Pairwise seed linking for small scenes or large seed sets.
+   * @param entries Bounds entries.
+   * @param pad Overlap pad.
+   * @param seedIndices Seed indices.
+   */
+  private static linkSeedsPairwise(
+    entries: OverlapBoundsEntry[],
+    pad: number,
+    seedIndices: ReadonlySet<number>
+  ): void {
+    for (const seedIndex of seedIndices) {
+      if (seedIndex < 0 || seedIndex >= entries.length) continue;
+      for (let other = 0; other < entries.length; other++) {
+        if (other === seedIndex) continue;
+        if (!this.boundsOverlap(entries[seedIndex].bounds, entries[other].bounds, pad)) {
+          continue;
+        }
+        this.addUndirectedPeer(entries, seedIndex, other);
+      }
+    }
+  }
+
+  /**
+   * Collects unique brush indices from grid cells covered by query bounds.
+   * @param cells Grid buckets.
+   * @param bounds Query bounds.
+   * @param cellSize Grid cell size.
+   * @param pad Bounds pad.
+   * @param excludeIndex Index to skip.
+   * @returns Candidate peer indices.
+   */
+  private static collectCellCandidates(
+    cells: Map<string, number[]>,
+    bounds: THREE.Box3,
+    cellSize: number,
+    pad: number,
+    excludeIndex: number
+  ): number[] {
+    const minX = Math.floor((bounds.min.x - pad) / cellSize);
+    const minY = Math.floor((bounds.min.y - pad) / cellSize);
+    const minZ = Math.floor((bounds.min.z - pad) / cellSize);
+    const maxX = Math.floor((bounds.max.x + pad) / cellSize);
+    const maxY = Math.floor((bounds.max.y + pad) / cellSize);
+    const maxZ = Math.floor((bounds.max.z + pad) / cellSize);
+    const seen = new Set<number>();
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        for (let z = minZ; z <= maxZ; z++) {
+          const bucket = cells.get(`${x},${y},${z}`);
+          if (!bucket) continue;
+          for (const index of bucket) {
+            if (index === excludeIndex) continue;
+            seen.add(index);
+          }
+        }
+      }
+    }
+    return Array.from(seen);
+  }
+
+  /**
+   * Adds an undirected overlap edge when missing.
+   * @param entries Bounds entries.
+   * @param a First index.
+   * @param b Second index.
+   */
+  private static addUndirectedPeer(
+    entries: OverlapBoundsEntry[],
+    a: number,
+    b: number
+  ): void {
+    if (!entries[a].overlappingPeerIndices.includes(b)) {
+      entries[a].overlappingPeerIndices.push(b);
+    }
+    if (!entries[b].overlappingPeerIndices.includes(a)) {
+      entries[b].overlappingPeerIndices.push(a);
+    }
+  }
+
+  /**
+   * Pairwise overlap for very small brush counts.
+   * @param entries Bounds entries.
+   * @param pad Overlap pad.
+   */
+  private static buildPairwise(
+    entries: OverlapBoundsEntry[],
+    pad: number
+  ): void {
+    const count = entries.length;
+    for (let i = 0; i < count; i++) {
+      for (let j = i + 1; j < count; j++) {
+        if (!this.boundsOverlap(entries[i].bounds, entries[j].bounds, pad)) {
+          continue;
+        }
+        entries[i].overlappingPeerIndices.push(j);
+        entries[j].overlappingPeerIndices.push(i);
+      }
+    }
+  }
+
+  /**
+   * Grid-accelerated overlap for larger brush counts.
+   * @param entries Bounds entries.
+   * @param pad Overlap pad.
+   */
+  private static buildWithGrid(
+    entries: OverlapBoundsEntry[],
+    pad: number
+  ): void {
+    const cellSize = this.chooseCellSize(entries);
+    const cells = this.binEntriesIntoCells(entries, cellSize, pad);
+    const seenPairs = new Set<string>();
+    for (const indices of cells.values()) {
+      this.linkPairsInCell(entries, indices, pad, seenPairs);
+    }
+  }
+
+  /**
+   * Picks a grid cell size from average brush extent.
+   * @param entries Bounds entries.
+   * @returns Positive cell edge length.
+   */
+  private static chooseCellSize(entries: OverlapBoundsEntry[]): number {
+    let totalExtent = 0;
+    for (const entry of entries) {
+      const size = new THREE.Vector3();
+      entry.bounds.getSize(size);
+      totalExtent += Math.max(size.x, size.y, size.z, 1e-3);
+    }
+    return Math.max(totalExtent / entries.length, 1e-3);
+  }
+
+  /**
+   * Inserts each brush index into every grid cell its padded bounds cover.
+   * @param entries Bounds entries.
+   * @param cellSize Grid cell edge length.
+   * @param pad Bounds pad.
+   * @returns Map of cell key to brush indices.
+   */
+  private static binEntriesIntoCells(
+    entries: OverlapBoundsEntry[],
+    cellSize: number,
+    pad: number
+  ): Map<string, number[]> {
+    const cells = new Map<string, number[]>();
+    for (let index = 0; index < entries.length; index++) {
+      this.insertEntryIntoCells(cells, entries[index].bounds, index, cellSize, pad);
+    }
+    return cells;
+  }
+
+  /**
+   * Inserts one brush into all overlapped grid cells.
+   * @param cells Grid map.
+   * @param bounds Brush bounds.
+   * @param index Brush index.
+   * @param cellSize Grid cell size.
+   * @param pad Bounds pad.
+   */
+  private static insertEntryIntoCells(
+    cells: Map<string, number[]>,
+    bounds: THREE.Box3,
+    index: number,
+    cellSize: number,
+    pad: number
+  ): void {
+    const minX = Math.floor((bounds.min.x - pad) / cellSize);
+    const minY = Math.floor((bounds.min.y - pad) / cellSize);
+    const minZ = Math.floor((bounds.min.z - pad) / cellSize);
+    const maxX = Math.floor((bounds.max.x + pad) / cellSize);
+    const maxY = Math.floor((bounds.max.y + pad) / cellSize);
+    const maxZ = Math.floor((bounds.max.z + pad) / cellSize);
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        for (let z = minZ; z <= maxZ; z++) {
+          const key = `${x},${y},${z}`;
+          const bucket = cells.get(key);
+          if (bucket) bucket.push(index);
+          else cells.set(key, [index]);
+        }
+      }
+    }
+  }
+
+  /**
+   * Links overlapping pairs within one cell, deduping across cells.
+   * @param entries Bounds entries.
+   * @param indices Brush indices in the cell.
+   * @param pad Bounds pad.
+   * @param seenPairs Pair keys already recorded.
+   */
+  private static linkPairsInCell(
+    entries: OverlapBoundsEntry[],
+    indices: number[],
+    pad: number,
+    seenPairs: Set<string>
+  ): void {
+    for (let i = 0; i < indices.length; i++) {
+      for (let j = i + 1; j < indices.length; j++) {
+        const a = indices[i];
+        const b = indices[j];
+        const pairKey = a < b ? `${a}:${b}` : `${b}:${a}`;
+        if (seenPairs.has(pairKey)) continue;
+        if (!this.boundsOverlap(entries[a].bounds, entries[b].bounds, pad)) {
+          continue;
+        }
+        seenPairs.add(pairKey);
+        entries[a].overlappingPeerIndices.push(b);
+        entries[b].overlappingPeerIndices.push(a);
+      }
+    }
+  }
+
+  /**
+   * Returns whether two bounds overlap with padding.
+   * @param a First bounds.
+   * @param b Second bounds.
+   * @param pad Padding distance.
+   * @returns True when they may touch or intersect.
+   */
+  private static boundsOverlap(
+    a: THREE.Box3,
+    b: THREE.Box3,
+    pad: number
+  ): boolean {
+    return !(
+      a.max.x + pad < b.min.x ||
+      a.min.x - pad > b.max.x ||
+      a.max.y + pad < b.min.y ||
+      a.min.y - pad > b.max.y ||
+      a.max.z + pad < b.min.z ||
+      a.min.z - pad > b.max.z
+    );
+  }
+}

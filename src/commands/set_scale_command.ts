@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
 
 /**
- * Snapshot of an object's scale for undo/restore operations.
+ * Snapshot of an object's scale for SetScaleCommand undo/restore.
  */
-export interface ObjectScaleSnapshot {
+export interface SetScaleSnapshot {
   object: THREE.Object3D;
   scale: THREE.Vector3;
 }
@@ -14,7 +14,7 @@ export interface ObjectScaleSnapshot {
  * Snapshots original scales on construction and restores them on undo.
  */
 export class SetScaleCommand implements UndoCommand {
-  private snapshots: ObjectScaleSnapshot[];
+  private snapshots: SetScaleSnapshot[];
   private newScales: THREE.Vector3[];
 
   /**

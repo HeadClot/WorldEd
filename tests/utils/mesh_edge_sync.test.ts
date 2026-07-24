@@ -5,9 +5,11 @@ import {
   prepareFlatShadedGeometry,
   rebuildDecorativeEdges,
   removeDecorativeEdges,
-  enableFlatShadingOnMesh
+  enableFlatShadingOnMesh,
+  usesContentDecorativeEdges
 } from '../../src/utils/mesh_edge_sync.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/selection_highlight.js';
+import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_edge_materials.js';
 
 describe('mesh_edge_sync', () => {
   let mesh: THREE.Mesh;
@@ -74,5 +76,44 @@ describe('mesh_edge_sync', () => {
     enableFlatShadingOnMesh(mesh);
     const material = mesh.material as THREE.MeshStandardMaterial;
     expect(material.flatShading).toBe(true);
+  });
+
+  it('should not build content edges on solid brush or CSG result meshes', () => {
+    const brush = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial()
+    );
+    brush.userData.isSolidBrush = true;
+    const brushEdge = new THREE.LineSegments(
+      new THREE.EdgesGeometry(brush.geometry),
+      new THREE.LineBasicMaterial({ color: 0x00ff00 })
+    );
+    brushEdge.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
+    brush.add(brushEdge);
+    expect(usesContentDecorativeEdges(brush)).toBe(false);
+    rebuildDecorativeEdges(brush);
+    expect(
+      brush.children.filter(
+        (child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true
+      )
+    ).toHaveLength(0);
+    expect(
+      brush.children.filter(
+        (child) => child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true
+      )
+    ).toHaveLength(1);
+
+    const result = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 2, 2),
+      new THREE.MeshBasicMaterial()
+    );
+    result.userData.isSolidModelResult = true;
+    expect(usesContentDecorativeEdges(result)).toBe(false);
+    rebuildDecorativeEdges(result);
+    expect(
+      result.children.filter(
+        (child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true
+      )
+    ).toHaveLength(0);
   });
 });

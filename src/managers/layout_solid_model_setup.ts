@@ -6,6 +6,9 @@ import { SolidModelController } from './solid_model_controller.js';
 import { PropertiesPanel } from '../ui/properties_panel.js';
 import { SolidOperation } from '../solid/types/solid_operation.js';
 import { ViewportSyncManager } from './viewport_sync_manager.js';
+import { GridSnap } from '../transform/grid_snap.js';
+import { Viewport3D } from '../viewports/viewport_3d.js';
+import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 
 /**
  * Host callbacks used while wiring the solid model panel and controller.
@@ -18,6 +21,9 @@ export interface SolidModelLayoutHost {
   toolbarContainer: HTMLElement;
   solidPanelAnchor: HTMLElement;
   viewportSyncManager: ViewportSyncManager;
+  viewport3D: Viewport3D;
+  gridSnap: GridSnap;
+  textureLock: TextureLockSettings;
   refreshAfterWorldMutation: () => void;
   refreshOutliner: () => void;
   showStatusMessage: (message: string) => void;
@@ -69,6 +75,9 @@ function wireSolidModelController(
   controller.setSyncViewports(() => host.refreshAfterWorldMutation());
   controller.setRefreshOutliner(() => host.refreshOutliner());
   controller.setShowStatus((message) => host.showStatusMessage(message));
+  controller.setTextureLockSettings(host.textureLock);
+  controller.setActiveCameraProvider(() => host.viewport3D.getCamera());
+  controller.setGridIntervalProvider(() => host.gridSnap.getInterval());
   controller.setOnLiveGeometryUpdated((resultMeshes) => {
     host.viewportSyncManager.syncMeshGeometriesToClones(resultMeshes);
   });
@@ -86,8 +95,13 @@ function wireSolidBrushPropertyHandlers(
   propertiesPanel.setSolidBrushHandlers({
     onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) =>
       controller.setBrushOperationForMeshes(meshes, operation),
-    onBrushEdited: (meshes: THREE.Mesh[]) =>
-      controller.onTransformsCommitted(meshes),
-    onAddBoxBrush: () => controller.addBoxBrush()
+    onBrushEdited: (meshes: THREE.Mesh[]) => {
+      controller.onTransformsCommitted(meshes);
+    },
+    onAddBoxBrush: () => controller.addBoxBrush(),
+    onMoveToFirst: (meshes: THREE.Mesh[]) =>
+      controller.moveBrushesInOrder(meshes, 'first'),
+    onMoveToLast: (meshes: THREE.Mesh[]) =>
+      controller.moveBrushesInOrder(meshes, 'last')
   });
 }

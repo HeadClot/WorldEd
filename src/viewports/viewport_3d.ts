@@ -17,6 +17,7 @@ import {
   getDefaultPerspectiveCameraPosition,
   getDefaultSceneFocus
 } from '../navigation/default_camera_placement.js';
+import { SolidBrushEdgeFader } from '../solid/model/solid_brush_edge_fader.js';
 
 /**
  * Ambient fill intensity for the 3D viewport (white content stays readable).
@@ -339,8 +340,17 @@ export class Viewport3D extends BaseViewport {
    */
   render(): void {
     this.grids.update(this.camera);
+    this.updateBrushEdgeDistanceFade();
     this.renderer.render(this.scene, this.camera);
     this.cameraWidget.update(this.camera);
+  }
+
+  /**
+   * Distance-fades and culls solid brush edge helpers for large 3D maps.
+   */
+  private updateBrushEdgeDistanceFade(): void {
+    if (!this.worldGroup) return;
+    SolidBrushEdgeFader.updateForCamera(this.worldGroup, this.camera);
   }
 
   /**
@@ -376,6 +386,7 @@ export class Viewport3D extends BaseViewport {
   update(deltaTime: number): void {
     this.flyingCamera.update(deltaTime);
     this.grids.update(this.camera);
+    this.updateBrushEdgeDistanceFade();
   }
 
   /**

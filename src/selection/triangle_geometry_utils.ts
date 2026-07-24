@@ -97,6 +97,8 @@ export function computeTriangleCentroid(
 /**
  * Finds all triangle indices coplanar with a seed triangle.
  * Used so face selection picks whole flat faces (e.g. both tris of a box side).
+ * Does not require edge connectivity; prefer findConnectedCoplanarFaceIndices for
+ * CSG result meshes where many distant fragments may share a plane.
  * @param geometry The buffer geometry.
  * @param seedFaceIndex The triangle that was clicked.
  * @param normalDotTolerance Minimum |n·seed| for normals to match (default ~5°).
@@ -131,6 +133,164 @@ export function findCoplanarFaceIndices(
     result.push(faceIndex);
   }
   return result;
+}
+
+/**
+ * Finds the edge-connected coplanar polygon containing the seed triangle.
+ * Position-based edge matching works for non-indexed CSG result meshes.
+ * @param geometry The buffer geometry.
+ * @param seedFaceIndex The triangle that was clicked.
+ * @param normalDotTolerance Minimum normal alignment with the seed.
+ * @param planeTolerance Max plane distance error for coplanarity.
+ * @returns Sorted triangle indices of the connected coplanar region.
+ */
+export function findConnectedCoplanarFaceIndices(
+  geometry: THREE.BufferGeometry,
+  seedFaceIndex: number,
+  normalDotTolerance: number = 0.995,
+  planeTolerance: number = 1e-3
+): number[] {
+  const coplanar = findCoplanarFaceIndices(
+    geometry,
+    seedFaceIndex,
+    normalDotTolerance,
+    planeTolerance
+  );
+  if (coplanar.length <= 1) return coplanar;
+  return floodFillConnectedFaces(geometry, seedFaceIndex, new Set(coplanar));
+}
+
+/**
+ * Flood-fills face indices among a candidate set using shared position edges.
+ * @param geometry Source geometry.
+ * @param seedFaceIndex Start triangle (must be in candidates).
+ * @param candidates Allowed triangle indices.
+ * @returns Sorted connected subset including the seed.
+ */
+export function floodFillConnectedFaces(
+  geometry: THREE.BufferGeometry,
+  seedFaceIndex: number,
+  candidates: ReadonlySet<number>
+): number[] {
+  if (!candidates.has(seedFaceIndex)) return [];
+  const adjacency = buildPositionEdgeAdjacency(geometry, candidates);
+  const visited = new Set<number>();
+  const queue = [seedFaceIndex];
+  visited.add(seedFaceIndex);
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const neighbors = adjacency.get(current);
+    if (!neighbors) continue;
+    for (const neighbor of neighbors) {
+      if (visited.has(neighbor)) continue;
+      visited.add(neighbor);
+      queue.push(neighbor);
+    }
+  }
+  return Array.from(visited).sort((a, b) => a - b);
+}
+
+/**
+ * Builds undirected triangle adjacency via quantized shared edges.
+ * @param geometry Source geometry.
+ * @param faceIndices Candidate triangle indices.
+ * @returns Map from face index to neighboring face indices.
+ */
+function buildPositionEdgeAdjacency(
+  geometry: THREE.BufferGeometry,
+  faceIndices: ReadonlySet<number>
+): Map<number, number[]> {
+  const edgeToFaces = new Map<string, number[]>();
+  for (const faceIndex of faceIndices) {
+    const edges = getTrianglePositionEdgeKeys(geometry, faceIndex);
+    for (const edgeKey of edges) {
+      const list = edgeToFaces.get(edgeKey);
+      if (list) list.push(faceIndex);
+      else edgeToFaces.set(edgeKey, [faceIndex]);
+    }
+  }
+  const adjacency = new Map<number, number[]>();
+  for (const faceList of edgeToFaces.values()) {
+    if (faceList.length < 2) continue;
+    for (let i = 0; i < faceList.length; i++) {
+      for (let j = i + 1; j < faceList.length; j++) {
+        addAdjacencyEdge(adjacency, faceList[i], faceList[j]);
+      }
+    }
+  }
+  return adjacency;
+}
+
+/**
+ * Adds an undirected adjacency link between two face indices.
+ * @param adjacency Adjacency map to mutate.
+ * @param a First face index.
+ * @param b Second face index.
+ */
+function addAdjacencyEdge(
+  adjacency: Map<number, number[]>,
+  a: number,
+  b: number
+): void {
+  const listA = adjacency.get(a);
+  if (listA) {
+    if (!listA.includes(b)) listA.push(b);
+  } else {
+    adjacency.set(a, [b]);
+  }
+  const listB = adjacency.get(b);
+  if (listB) {
+    if (!listB.includes(a)) listB.push(a);
+  } else {
+    adjacency.set(b, [a]);
+  }
+}
+
+/**
+ * Returns three quantized edge keys for a triangle (position-based).
+ * @param geometry Source geometry.
+ * @param faceIndex Triangle index.
+ * @returns Edge key strings.
+ */
+function getTrianglePositionEdgeKeys(
+  geometry: THREE.BufferGeometry,
+  faceIndex: number
+): [string, string, string] {
+  const positions = geometry.getAttribute('position');
+  const [i0, i1, i2] = getTriangleVertexIndices(geometry, faceIndex);
+  const p0 = getVertexPosition(positions, i0);
+  const p1 = getVertexPosition(positions, i1);
+  const p2 = getVertexPosition(positions, i2);
+  return [
+    makePositionEdgeKey(p0, p1),
+    makePositionEdgeKey(p1, p2),
+    makePositionEdgeKey(p2, p0)
+  ];
+}
+
+/**
+ * Builds a stable key for an unordered edge from two positions.
+ * @param a First endpoint.
+ * @param b Second endpoint.
+ * @returns Quantized edge key.
+ */
+function makePositionEdgeKey(a: THREE.Vector3, b: THREE.Vector3): string {
+  const qa = quantizePositionKey(a);
+  const qb = quantizePositionKey(b);
+  return qa < qb ? `${qa}|${qb}` : `${qb}|${qa}`;
+}
+
+/**
+ * Quantizes a position for edge matching across non-indexed duplicates.
+ * @param point World/local position.
+ * @returns Compact coordinate key.
+ */
+function quantizePositionKey(point: THREE.Vector3): string {
+  const scale = 1e5;
+  const x = Math.round(point.x * scale);
+  const y = Math.round(point.y * scale);
+  const z = Math.round(point.z * scale);
+  return `${x},${y},${z}`;
 }
 
 /**

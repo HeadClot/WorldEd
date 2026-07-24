@@ -59,6 +59,8 @@ export interface EditorToolbarActions {
   onCsgUnion: () => void;
   onCsgSubtract: () => void;
   onCsgIntersect: () => void;
+  /** True when mesh CSG menu actions apply to the current selection. */
+  canRunCsgBoolean: () => boolean;
   onToggleSnap: () => void;
   onSnapIntervalBackward: () => void;
   onSnapIntervalForward: () => void;
@@ -375,9 +377,21 @@ export class EditorShellBuilder {
       { label: 'Solid Model', onClick: () => actions.onAddSolidModel() }
     ]);
     toolbar.addDropdown('CSG', [
-      { label: 'Union', onClick: () => actions.onCsgUnion() },
-      { label: 'Subtract', onClick: () => actions.onCsgSubtract() },
-      { label: 'Intersect', onClick: () => actions.onCsgIntersect() }
+      {
+        label: 'Union',
+        onClick: () => actions.onCsgUnion(),
+        isEnabled: () => actions.canRunCsgBoolean()
+      },
+      {
+        label: 'Subtract',
+        onClick: () => actions.onCsgSubtract(),
+        isEnabled: () => actions.canRunCsgBoolean()
+      },
+      {
+        label: 'Intersect',
+        onClick: () => actions.onCsgIntersect(),
+        isEnabled: () => actions.canRunCsgBoolean()
+      }
     ]);
     toolbar.addDropdown('Align', [
       { label: 'Origin', onClick: () => actions.onAlignToOrigin() },
@@ -551,17 +565,21 @@ export function applyOutlinerLockToggle(
 
 /**
  * Applies outliner visibility toggle via command stack.
+ * Solid brushes also leave/re-enter CSG evaluation inside the command.
  * @param commandStack Undo stack.
  * @param obj Object whose visibility toggles.
  * @param refreshOutliner Callback after toggle.
+ * @param syncViewports Optional viewport refresh after solid CSG changes.
  */
 export function applyOutlinerVisibilityToggle(
   commandStack: CommandStack,
   obj: THREE.Object3D,
-  refreshOutliner: () => void
+  refreshOutliner: () => void,
+  syncViewports?: () => void
 ): void {
   commandStack.push(new ToggleVisibilityCommand(obj));
   refreshOutliner();
+  syncViewports?.();
 }
 
 /**

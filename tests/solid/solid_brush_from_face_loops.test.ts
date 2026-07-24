@@ -37,6 +37,9 @@ describe('SolidBrushFactory.createFromFaceLoops', () => {
     expect(SolidBrushVisual.isBrushObject(preview)).toBe(true);
     const position = preview.geometry.getAttribute('position');
     expect(position.count).toBeGreaterThanOrEqual(36);
+    expect(SolidBrushVisual.isHullFillVisible(preview)).toBe(false);
+    const material = preview.material as THREE.MeshBasicMaterial;
+    expect(material.colorWrite).toBe(false);
     preview.geometry.dispose();
     if (preview.material instanceof THREE.Material) {
       preview.material.dispose();

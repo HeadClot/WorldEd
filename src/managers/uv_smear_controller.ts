@@ -4,7 +4,7 @@ import {
   SmearMeshSnapshot,
   SmearUvStrokeCommand
 } from '../commands/smear_uv_stroke_command.js';
-import { findCoplanarFaceIndices } from '../selection/triangle_geometry_utils.js';
+import { expandFaceSelectionIndices } from '../selection/solid_result_face_indices.js';
 import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
@@ -25,6 +25,10 @@ import {
 } from '../texture/uv_smear_transfer.js';
 import { getTexturePaintState } from '../texture/texture_paint_state.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/texture_id.js';
+import {
+  SolidModel,
+  SOLID_TRIANGLE_SOURCES_USERDATA_KEY
+} from '../solid/model/solid_model.js';
 
 /**
  * Source face seed for continuous UV smear.
@@ -131,21 +135,29 @@ export class UvSmearController {
   }
 
   /**
-   * Paints continuous UVs onto the coplanar region containing faceIndex.
+   * Paints continuous UVs onto the selectable face unit containing faceIndex.
+   * Solid results stay on one brush face so carpet/detail brushes stay isolated.
    * @param mesh Hit mesh.
    * @param faceIndex Seed triangle.
    */
   private paintFace(mesh: THREE.Mesh, faceIndex: number): void {
     ensureUniqueTriangleVertices(mesh);
-    const triangleIndices = findCoplanarFaceIndices(mesh.geometry, faceIndex);
+    const triangleIndices = expandFaceSelectionIndices(mesh, faceIndex);
     if (triangleIndices.length === 0) return;
     const regionKey = buildRegionKey(mesh, triangleIndices);
     if (regionKey === this.lastRegionKey) return;
     this.captureBeforeIfNeeded(mesh);
-    const mapping = this.resolveMappingForRegion(mesh, triangleIndices);
+    const mapping = this.resolveMappingForRegion(
+      mesh,
+      triangleIndices,
+      faceIndex
+    );
     upsertFaceTextureMap(mesh, triangleIndices, mapping);
     bakeFaceUVs(mesh, triangleIndices, mapping);
-    rebuildSurfaceMaterials(mesh);
+    rebuildSurfaceMaterials(mesh, undefined, undefined, {
+      preserveTriangleOrder: true
+    });
+    this.syncSolidBrushMappings(mesh);
     this.touchedMeshes.add(mesh);
     this.sourceSeed = {
       mesh,
@@ -159,14 +171,16 @@ export class UvSmearController {
    * Builds the mapping for a region: seed from existing maps, or transfer.
    * @param mesh Destination mesh.
    * @param triangleIndices Destination region.
+   * @param seedFaceIndex Original hit triangle (for partial map lookup).
    * @returns Mapping to apply.
    */
   private resolveMappingForRegion(
     mesh: THREE.Mesh,
-    triangleIndices: number[]
+    triangleIndices: number[],
+    seedFaceIndex: number
   ): FaceTextureMapping {
     if (!this.sourceSeed) {
-      return this.readOrCreateSeedMapping(mesh, triangleIndices);
+      return this.readOrCreateSeedMapping(mesh, triangleIndices, seedFaceIndex);
     }
     if (
       this.sourceSeed.mesh === mesh &&
@@ -184,20 +198,41 @@ export class UvSmearController {
   }
 
   /**
-   * Reads an existing face map for the region, or builds a default paint seed.
+   * Reads an existing face map for the region, or a covering entry / solid source.
+   * Avoids falling back to default 1m scale which visually shrinks VMF textures.
    * @param mesh Mesh owner.
    * @param triangleIndices Region triangles.
+   * @param seedFaceIndex Hit triangle index.
    * @returns Mapping seed.
    */
   private readOrCreateSeedMapping(
     mesh: THREE.Mesh,
-    triangleIndices: number[]
+    triangleIndices: number[],
+    seedFaceIndex: number
   ): FaceTextureMapping {
-    const existing = findExactRegionMapping(mesh, triangleIndices);
+    const existing = findBestRegionMapping(
+      mesh,
+      triangleIndices,
+      seedFaceIndex
+    );
     if (existing) return existing;
+    const solidMapping = readSolidBrushMapping(mesh, seedFaceIndex);
+    if (solidMapping) return solidMapping;
     const paintId =
       getTexturePaintState().getLastTextureId() || DEFAULT_CHECKER_TEXTURE_ID;
     return createDefaultFaceTextureMapping(paintId);
+  }
+
+  /**
+   * Writes result-mesh UV maps back onto solid brush faces so CSG rebuilds
+   * keep smear/paint phase and scale.
+   * @param mesh Mesh that may be a solid model result.
+   */
+  private syncSolidBrushMappings(mesh: THREE.Mesh): void {
+    if (!SolidModel.isResultMesh(mesh)) return;
+    const model = SolidModel.fromObject(mesh);
+    if (!model) return;
+    model.syncAuthoredMappingsFromResultMesh();
   }
 
   /**
@@ -245,25 +280,65 @@ function regionKeysEqual(a: number[], b: number[]): boolean {
 }
 
 /**
- * Finds a stored mapping whose triangle set exactly matches the region.
+ * Finds the best stored mapping for a smear seed region.
+ * Prefers exact triangle-set match, then any entry covering the seed triangle,
+ * then any entry overlapping the region.
  * @param mesh Mesh owner.
  * @param triangleIndices Region triangles.
+ * @param seedFaceIndex Hit triangle index.
  * @returns Mapping clone or null.
  */
-function findExactRegionMapping(
+function findBestRegionMapping(
   mesh: THREE.Mesh,
-  triangleIndices: number[]
+  triangleIndices: number[],
+  seedFaceIndex: number
 ): FaceTextureMapping | null {
   const key = triangleIndices.slice().sort((a, b) => a - b).join(',');
   const entries = getFaceTextureMaps(mesh);
+  let coveringSeed: FaceTextureMapping | null = null;
+  let overlapping: FaceTextureMapping | null = null;
+  const regionSet = new Set(triangleIndices);
   for (let i = 0; i < entries.length; i++) {
-    const entryKey = entries[i].triangleIndices
+    const entry = entries[i];
+    const entryKey = entry.triangleIndices
       .slice()
       .sort((a, b) => a - b)
       .join(',');
     if (entryKey === key) {
-      return cloneFaceTextureMapping(entries[i].mapping);
+      return cloneFaceTextureMapping(entry.mapping);
+    }
+    if (entry.triangleIndices.includes(seedFaceIndex) && !coveringSeed) {
+      coveringSeed = cloneFaceTextureMapping(entry.mapping);
+    }
+    if (
+      !overlapping &&
+      entry.triangleIndices.some((index) => regionSet.has(index))
+    ) {
+      overlapping = cloneFaceTextureMapping(entry.mapping);
     }
   }
-  return null;
+  return coveringSeed ?? overlapping;
+}
+
+/**
+ * Reads the authored solid-brush face mapping for a result-mesh triangle.
+ * @param mesh Candidate solid result mesh.
+ * @param triangleIndex Result triangle index.
+ * @returns Brush face mapping or null.
+ */
+function readSolidBrushMapping(
+  mesh: THREE.Mesh,
+  triangleIndex: number
+): FaceTextureMapping | null {
+  if (!SolidModel.isResultMesh(mesh)) return null;
+  const model = SolidModel.fromObject(mesh);
+  if (!model) return null;
+  const sources = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
+    | Array<{ brushId: string; surfaceIndex: number }>
+    | undefined;
+  const source = sources?.[triangleIndex];
+  if (!source?.brushId) return null;
+  const brush = model.findBrush(source.brushId);
+  if (!brush) return null;
+  return brush.getSurfaceMapping(source.surfaceIndex);
 }

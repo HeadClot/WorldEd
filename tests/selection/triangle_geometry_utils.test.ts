@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   findCoplanarFaceIndices,
+  findConnectedCoplanarFaceIndices,
   getTriangleCount,
   getTriangleVertexIndices,
   computeTriangleNormal
@@ -43,5 +44,35 @@ describe('triangle_geometry_utils', () => {
     const faceB = findCoplanarFaceIndices(geometry, 4);
     const overlap = faceA.filter((index) => faceB.includes(index));
     expect(overlap.length).toBe(0);
+  });
+
+  it('should expand a box triangle to a connected coplanar face of two triangles', () => {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const connected = findConnectedCoplanarFaceIndices(geometry, 0);
+    expect(connected.length).toBe(2);
+    expect(connected).toContain(0);
+  });
+
+  it('should not select disconnected coplanar fragments as one face', () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(
+        new Float32Array([
+          0, 0, 0, 1, 0, 0, 0, 1, 0,
+          1, 0, 0, 1, 1, 0, 0, 1, 0,
+          10, 0, 0, 11, 0, 0, 10, 1, 0,
+          11, 0, 0, 11, 1, 0, 10, 1, 0
+        ]),
+        3
+      )
+    );
+    const coplanar = findCoplanarFaceIndices(geometry, 0);
+    expect(coplanar.length).toBe(4);
+    const connected = findConnectedCoplanarFaceIndices(geometry, 0);
+    expect(connected.length).toBe(2);
+    expect(connected).toContain(0);
+    expect(connected).toContain(1);
+    expect(connected).not.toContain(2);
   });
 });

@@ -93,6 +93,54 @@ export function buildProjectionBasis(
 }
 
 /**
+ * Resolves the UV projection basis for a face mapping.
+ * Uses custom Source-style axes when both are present; otherwise align/rotation.
+ * @param faceNormalWorld Face normal in world space.
+ * @param mapping Face texture mapping.
+ * @returns Projection basis in world space.
+ */
+export function resolveProjectionBasis(
+  faceNormalWorld: THREE.Vector3,
+  mapping: FaceTextureMapping
+): ProjectionBasis {
+  if (mapping.customUAxis && mapping.customVAxis) {
+    return buildCustomAxisBasis(
+      faceNormalWorld,
+      mapping.customUAxis,
+      mapping.customVAxis
+    );
+  }
+  const projectionNormal = resolveProjectionNormal(
+    faceNormalWorld,
+    mapping.align
+  );
+  return buildProjectionBasis(projectionNormal, mapping.rotationDeg);
+}
+
+/**
+ * Builds a projection basis from explicit world U/V directions.
+ * @param faceNormalWorld Face normal used when axes are degenerate.
+ * @param customU Custom U axis components.
+ * @param customV Custom V axis components.
+ * @returns Projection basis.
+ */
+function buildCustomAxisBasis(
+  faceNormalWorld: THREE.Vector3,
+  customU: { x: number; y: number; z: number },
+  customV: { x: number; y: number; z: number }
+): ProjectionBasis {
+  const normal = faceNormalWorld.clone().normalize();
+  const uAxis = new THREE.Vector3(customU.x, customU.y, customU.z);
+  const vAxis = new THREE.Vector3(customV.x, customV.y, customV.z);
+  if (uAxis.lengthSq() < 1e-12 || vAxis.lengthSq() < 1e-12) {
+    return buildProjectionBasis(normal, 0);
+  }
+  uAxis.normalize();
+  vAxis.normalize();
+  return { uAxis, vAxis, normal };
+}
+
+/**
  * Chooses a stable U seed: world X on floors/ceilings, wall-horizontal on walls.
  * For walls, U = normalize(worldUp × normal) so texture runs sideways, not up.
  * @param normal Projection normal.
@@ -246,8 +294,7 @@ export function bakeFaceUVs(
 ): void {
   mesh.updateMatrixWorld(true);
   const faceNormal = computeRegionWorldNormal(mesh, triangleIndices);
-  const projectionNormal = resolveProjectionNormal(faceNormal, mapping.align);
-  const basis = buildProjectionBasis(projectionNormal, mapping.rotationDeg);
+  const basis = resolveProjectionBasis(faceNormal, mapping);
   const uv = ensureUvAttribute(mesh.geometry);
   const position = mesh.geometry.getAttribute('position');
   const index = mesh.geometry.getIndex();

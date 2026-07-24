@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
 import { hasEdgeBuildableGeometry } from '../utils/mesh_edge_sync.js';
+import { SOLID_BRUSH_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 
 /**
  * Renders wireframe overlays on top of the viewport scene.
@@ -74,6 +75,7 @@ export class WireframeOverlayRenderer {
   private addMeshOverlay(mesh: THREE.Mesh): void {
     if (!hasEdgeBuildableGeometry(mesh)) return;
     if (mesh.userData[SELECTION_HIGHLIGHT_USERDATA_KEY]) return;
+    if (mesh.userData[SOLID_BRUSH_USERDATA_KEY] === true) return;
     const edgesGeometry = new THREE.EdgesGeometry(mesh.geometry);
     const lineSegments = new THREE.LineSegments(edgesGeometry, this.lineMaterial);
     lineSegments.userData.isWireframeOverlay = true;

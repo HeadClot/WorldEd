@@ -3,10 +3,20 @@ import { CommandStack } from '../commands/command_stack.js';
 import { CreateSolidModelCommand } from '../commands/create_solid_model_command.js';
 import { AddSolidBoxBrushCommand } from '../commands/add_solid_box_brush_command.js';
 import { SetSolidBrushOperationCommand } from '../commands/set_solid_brush_operation_command.js';
+import {
+  ReorderSolidBrushesCommand,
+  SolidBrushOrderEnd
+} from '../commands/reorder_solid_brushes_command.js';
 import { SelectionManager } from './selection_manager.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidModelPanel } from '../ui/solid_model_panel.js';
 import { SolidOperation } from '../solid/types/solid_operation.js';
+import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
+import {
+  computeBrushSpawnPosition,
+  snapPositionToGrid
+} from '../solid/model/brush_spawn_placement.js';
+import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 
 /**
  * Coordinates solid model creation, hierarchy brushes, and rebuild after edits.
@@ -16,13 +26,34 @@ export class SolidModelController {
   private commandStack: CommandStack;
   private selectionManager: SelectionManager;
   private panel: SolidModelPanel;
+  private textureLock: TextureLockSettings | null;
   private syncViewports: (() => void) | null;
   private refreshOutliner: (() => void) | null;
   private showStatus: ((message: string) => void) | null;
+  private getActiveCamera: (() => THREE.Camera | null) | null;
+  private getGridInterval: (() => number) | null;
   private solidModelCounter: number;
+  /** True while a live CSG flush is scheduled on requestAnimationFrame. */
   private liveRebuildQueued: boolean;
+  /** True while rebuildLive is running (may span multiple frames of wall time). */
+  private liveRebuildInProgress: boolean;
+  /** Latest meshes from transform drag; always the most recent pointer sample. */
   private pendingLiveMeshes: THREE.Mesh[] | null;
+  /**
+   * Increments on every live transform sample. Compared to builtLiveGeneration
+   * so moves that arrive during a long CSG flush schedule a catch-up rebuild.
+   */
+  private liveTransformGeneration: number;
+  /** Generation last successfully applied to solid result geometry. */
+  private builtLiveGeneration: number;
+  /** Invalidates in-flight rAF callbacks superseded by a sync flush. */
+  private liveFlushToken: number;
   private onLiveGeometryUpdated: ((meshes: THREE.Mesh[]) => void) | null;
+  /**
+   * Last solid model the user worked with. Kept when selection is cleared
+   * (e.g. after deleting a brush) so + Box Brush still has a target model.
+   */
+  private lastActiveModel: SolidModel | null;
   private readonly selectionChangedHandler: () => void;
 
   /**
@@ -42,13 +73,21 @@ export class SolidModelController {
     this.commandStack = commandStack;
     this.selectionManager = selectionManager;
     this.panel = panel;
+    this.textureLock = null;
     this.syncViewports = null;
     this.refreshOutliner = null;
     this.showStatus = null;
+    this.getActiveCamera = null;
+    this.getGridInterval = null;
     this.solidModelCounter = 0;
     this.liveRebuildQueued = false;
+    this.liveRebuildInProgress = false;
     this.pendingLiveMeshes = null;
+    this.liveTransformGeneration = 0;
+    this.builtLiveGeneration = 0;
+    this.liveFlushToken = 0;
     this.onLiveGeometryUpdated = null;
+    this.lastActiveModel = null;
     this.selectionChangedHandler = () => this.onSelectionChanged();
     this.selectionManager.onSelectionChanged(this.selectionChangedHandler);
   }
@@ -85,6 +124,30 @@ export class SolidModelController {
    */
   setShowStatus(callback: (message: string) => void): void {
     this.showStatus = callback;
+  }
+
+  /**
+   * Sets shared texture lock settings used when solid brushes are transformed.
+   * @param settings Texture lock settings, or null to leave UVs world-sliding.
+   */
+  setTextureLockSettings(settings: TextureLockSettings | null): void {
+    this.textureLock = settings;
+  }
+
+  /**
+   * Provides the active view camera for placing new brushes in view.
+   * @param callback Returns the camera used for spawn placement, or null.
+   */
+  setActiveCameraProvider(callback: (() => THREE.Camera | null) | null): void {
+    this.getActiveCamera = callback;
+  }
+
+  /**
+   * Provides the current grid interval for snapping new brush placement.
+   * @param callback Returns a positive grid step.
+   */
+  setGridIntervalProvider(callback: (() => number) | null): void {
+    this.getGridInterval = callback;
   }
 
   /**
@@ -128,7 +191,7 @@ export class SolidModelController {
     const command = new CreateSolidModelCommand(model, this.worldObject);
     this.commandStack.push(command);
     this.selectionManager.selectObject(selectTarget);
-    this.panel.setModel(model);
+    this.rememberActiveModel(model);
     this.syncViewports?.();
     this.refreshOutliner?.();
     this.showStatus?.(statusMessage);
@@ -146,6 +209,7 @@ export class SolidModelController {
 
   /**
    * Adds a box brush under the active solid model and selects it.
+   * Spawns grid-aligned in front of the active camera (model-local space).
    */
   addBoxBrush(): void {
     const model = this.resolveActiveModel();
@@ -153,8 +217,7 @@ export class SolidModelController {
       this.showStatus?.('Select a solid model or brush first');
       return;
     }
-    const offsetDistance = model.getBrushCount() * 0.5;
-    const offset = new THREE.Vector3(offsetDistance, 0, offsetDistance);
+    const offset = this.computeNewBrushLocalPosition(model);
     const command = new AddSolidBoxBrushCommand(
       model,
       2,
@@ -199,34 +262,65 @@ export class SolidModelController {
   }
 
   /**
-   * After transform tools or inspector edits finish, rebuild affected solids.
+   * After transform tools or inspector edits finish, finalize affected solids.
+   * Uses a light commit when live CSG already updated geometry (avoids a full
+   * second compile and full viewport reclone on pointer-up).
    * @param selectedMeshes Meshes that were edited.
+   * @returns True when only solid-model meshes were handled (caller may skip full sync).
    */
-  onTransformsCommitted(selectedMeshes: THREE.Mesh[]): void {
-    this.pendingLiveMeshes = null;
+  onTransformsCommitted(selectedMeshes: THREE.Mesh[]): boolean {
+    // Invalidate any scheduled live rAF; commit will re-pull transforms and compile once.
+    this.liveFlushToken += 1;
     this.liveRebuildQueued = false;
+    this.pendingLiveMeshes = null;
+    this.builtLiveGeneration = this.liveTransformGeneration;
     const models = this.collectAffectedModels(selectedMeshes);
-    if (models.size === 0) return;
+    if (models.size === 0) return false;
     const selectedSet = new Set(selectedMeshes);
+    const updatedResults: THREE.Mesh[] = [];
     for (const model of models) {
       this.finalizeModelAfterTransform(model, selectedSet);
+      updatedResults.push(model.getResultMeshForSync());
     }
     this.panel.refresh();
-    this.syncViewports?.();
+    this.onLiveGeometryUpdated?.(updatedResults);
     this.refreshOutliner?.();
+    return this.selectionIsSolidOnly(selectedMeshes);
   }
 
   /**
-   * Live CSG update while a solid brush is dragged (Sander-style interactive preview).
-   * Coalesces to one rebuild per animation frame for smooth interaction.
+   * Moves selected solid brushes to first or last CSG evaluation order (undoable).
+   * @param meshes Brush preview meshes.
+   * @param end Target end of the evaluation list.
+   */
+  moveBrushesInOrder(meshes: THREE.Mesh[], end: SolidBrushOrderEnd): void {
+    const brushMeshes = meshes.filter((mesh) =>
+      SolidBrushVisual.isBrushObject(mesh)
+    );
+    if (brushMeshes.length === 0) return;
+    const command = new ReorderSolidBrushesCommand(brushMeshes, end);
+    this.commandStack.push(command);
+    this.panel.refresh();
+    this.syncViewports?.();
+    this.refreshOutliner?.();
+    this.showStatus?.(
+      end === 'first'
+        ? 'Moved brush to first in CSG order'
+        : 'Moved brush to last in CSG order'
+    );
+  }
+
+  /**
+   * Live CSG update while a solid brush is dragged.
+   * Coalesces to one rebuild per animation frame, but never drops samples that
+   * arrive while CSG is still running — those schedule a catch-up flush.
    * @param selectedMeshes Meshes currently being transformed.
    */
   onTransformsLive(selectedMeshes: THREE.Mesh[]): void {
     if (!this.involvesSolidModels(selectedMeshes)) return;
     this.pendingLiveMeshes = selectedMeshes;
-    if (this.liveRebuildQueued) return;
-    this.liveRebuildQueued = true;
-    requestAnimationFrame(() => this.flushLiveRebuild());
+    this.liveTransformGeneration += 1;
+    this.scheduleLiveRebuild();
   }
 
   /**
@@ -239,22 +333,48 @@ export class SolidModelController {
   }
 
   /**
-   * Runs the queued live rebuild for the latest drag sample.
+   * Schedules a live CSG flush on the next animation frame when idle.
+   */
+  private scheduleLiveRebuild(): void {
+    if (this.liveRebuildQueued || this.liveRebuildInProgress) return;
+    this.liveRebuildQueued = true;
+    const token = ++this.liveFlushToken;
+    requestAnimationFrame(() => {
+      if (token !== this.liveFlushToken) return;
+      this.flushLiveRebuild();
+    });
+  }
+
+  /**
+   * Applies the latest pending brush transforms into solid result geometry.
+   * Re-queues itself when newer samples arrived during a long compile.
    */
   private flushLiveRebuild(): void {
     this.liveRebuildQueued = false;
     const meshes = this.pendingLiveMeshes;
-    this.pendingLiveMeshes = null;
     if (!meshes || meshes.length === 0) return;
+    const generationAtStart = this.liveTransformGeneration;
+    this.liveRebuildInProgress = true;
     const models = this.collectAffectedModels(meshes);
-    if (models.size === 0) return;
     const updatedResults: THREE.Mesh[] = [];
-    for (const model of models) {
-      model.syncBrushesFromScene();
-      model.rebuildLive();
-      updatedResults.push(model.getResultMeshForSync());
+    const textureLockEnabled = this.isTextureLockEnabled();
+    try {
+      for (const model of models) {
+        model.setUvStickToBrush(textureLockEnabled);
+        if (!model.prepareLiveBrushEdit(meshes, textureLockEnabled)) continue;
+        model.rebuildLive();
+        updatedResults.push(model.getResultMeshForSync());
+      }
+    } finally {
+      this.liveRebuildInProgress = false;
+      this.builtLiveGeneration = generationAtStart;
     }
-    this.onLiveGeometryUpdated?.(updatedResults);
+    if (updatedResults.length > 0) {
+      this.onLiveGeometryUpdated?.(updatedResults);
+    }
+    if (this.liveTransformGeneration !== this.builtLiveGeneration) {
+      this.scheduleLiveRebuild();
+    }
   }
 
   /**
@@ -266,9 +386,18 @@ export class SolidModelController {
 
   /**
    * Binds the tools panel to the solid model owning the current selection.
+   * Does not clear the last active model when selection is empty (post-delete).
    */
   private bindPanelToSelection(): void {
-    this.panel.setModel(this.findSelectedSolidModel());
+    const selectedModel = this.findSelectedSolidModel();
+    if (selectedModel) {
+      this.rememberActiveModel(selectedModel);
+      return;
+    }
+    const remembered = this.resolveRememberedModel();
+    if (remembered) {
+      this.panel.setModel(remembered);
+    }
   }
 
   /**
@@ -284,11 +413,57 @@ export class SolidModelController {
   }
 
   /**
-   * Resolves the active model from the panel or selection.
+   * Resolves the active model from selection, panel, or last remembered model.
    * @returns Solid model or null.
    */
   private resolveActiveModel(): SolidModel | null {
-    return this.panel.getModel() ?? this.findSelectedSolidModel();
+    const selected = this.findSelectedSolidModel();
+    if (selected) {
+      this.rememberActiveModel(selected);
+      return selected;
+    }
+    const fromPanel = this.panel.getModel();
+    if (fromPanel && this.isModelStillInScene(fromPanel)) {
+      this.lastActiveModel = fromPanel;
+      return fromPanel;
+    }
+    return this.resolveRememberedModel();
+  }
+
+  /**
+   * Stores a model as the current working solid for tools and the panel.
+   * @param model Solid model to remember.
+   */
+  private rememberActiveModel(model: SolidModel): void {
+    this.lastActiveModel = model;
+    this.panel.setModel(model);
+  }
+
+  /**
+   * Returns the last active model when it is still parented in the world.
+   * @returns Solid model or null.
+   */
+  private resolveRememberedModel(): SolidModel | null {
+    if (!this.lastActiveModel) return null;
+    if (!this.isModelStillInScene(this.lastActiveModel)) {
+      this.lastActiveModel = null;
+      return null;
+    }
+    return this.lastActiveModel;
+  }
+
+  /**
+   * Returns whether a solid model root is still attached under the world.
+   * @param model Candidate solid model.
+   * @returns True when the model can still receive new brushes.
+   */
+  private isModelStillInScene(model: SolidModel): boolean {
+    let current: THREE.Object3D | null = model.root;
+    while (current) {
+      if (current === this.worldObject) return true;
+      current = current.parent;
+    }
+    return false;
   }
 
   /**
@@ -306,7 +481,8 @@ export class SolidModelController {
   }
 
   /**
-   * Applies post-transform rules for one solid model and rebuilds CSG.
+   * Applies post-transform rules for one solid model and finalizes geometry.
+   * Prefer selected-brush sync + interactive finalize over a forced full rebuild.
    * @param model Solid model.
    * @param selectedSet Selected meshes from the edit.
    */
@@ -316,16 +492,66 @@ export class SolidModelController {
   ): void {
     const result = model.getResultMesh();
     const resultSelected = selectedSet.has(result);
-    const selectedBrushCount = model
+    const selectedBrushMeshes = model
       .getBrushes()
-      .filter((brush) => brush.mesh && selectedSet.has(brush.mesh)).length;
-    if (resultSelected && selectedBrushCount === 0) {
+      .map((brush) => brush.mesh)
+      .filter((mesh): mesh is THREE.Mesh => !!mesh && selectedSet.has(mesh));
+    if (resultSelected && selectedBrushMeshes.length === 0) {
       this.bakeResultTransformIntoRoot(model);
-    } else if (resultSelected) {
+      model.markDirty();
+      model.rebuild(true);
+      return;
+    }
+    if (resultSelected) {
       this.resetResultLocalTransform(result);
     }
-    model.syncBrushesFromScene();
-    model.rebuild(true);
+    const textureLockEnabled = this.isTextureLockEnabled();
+    model.setUvStickToBrush(textureLockEnabled);
+    if (selectedBrushMeshes.length > 0) {
+      // Always re-pull and dirty selected brushes so commit cannot trust a stale live mesh.
+      model.prepareLiveBrushEdit(selectedBrushMeshes, textureLockEnabled);
+    } else {
+      model.syncBrushesFromScene(textureLockEnabled);
+    }
+    model.finalizeAfterInteractiveEdit();
+  }
+
+  /**
+   * Returns whether toolbar Tex Lock is currently enabled.
+   * @returns True when solid brush UVs should stick on transform.
+   */
+  private isTextureLockEnabled(): boolean {
+    return this.textureLock?.isLocked() === true;
+  }
+
+  /**
+   * Returns whether every selected mesh belongs to a solid model hierarchy.
+   * @param meshes Selection to inspect.
+   * @returns True when a full world reclone can be skipped after solid commit.
+   */
+  private selectionIsSolidOnly(meshes: THREE.Mesh[]): boolean {
+    if (meshes.length === 0) return false;
+    return meshes.every((mesh) => SolidModel.fromObject(mesh) !== null);
+  }
+
+  /**
+   * Computes a grid-snapped local position for a new brush under a solid model.
+   * Uses the active camera forward when available; otherwise model origin.
+   * @param model Target solid model.
+   * @returns Local position relative to the solid model root.
+   */
+  private computeNewBrushLocalPosition(model: SolidModel): THREE.Vector3 {
+    const gridInterval = this.getGridInterval?.() ?? 1;
+    const camera = this.getActiveCamera?.() ?? null;
+    if (!camera) {
+      return new THREE.Vector3(0, 0, 0);
+    }
+    // World point in front of camera, then snap in model-local space.
+    const worldPosition = computeBrushSpawnPosition(camera, 8);
+    model.root.updateMatrixWorld(true);
+    const localPosition = model.root.worldToLocal(worldPosition);
+    snapPositionToGrid(localPosition, gridInterval);
+    return localPosition;
   }
 
   /**

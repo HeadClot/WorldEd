@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { GlbExporter } from '../../src/io/glb_exporter.js';
+import { buildExportScene } from '../../src/io/export_scene_builder.js';
+import { SolidModel } from '../../src/solid/model/solid_model.js';
+import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 
 /** GLB file format magic number (little-endian 'glTF'). */
 const GLB_MAGIC_NUMBER = 0x46546c67;
@@ -80,5 +84,27 @@ describe('GlbExporter', () => {
     const buffer = await exporter.export(worldGroup);
     expect(buffer).toBeInstanceOf(ArrayBuffer);
     expect(buffer.byteLength).toBeGreaterThan(0);
+  });
+
+  it('should export solid models without brush hulls as valid GLB', async () => {
+    const model = new SolidModel('GlbSolid');
+    model.addBoxBrush(2, SolidOperation.Additive);
+    model.addBoxBrush(1, SolidOperation.Subtractive);
+    worldGroup.add(model.root);
+    const liveBrushCount = model.root.children.filter((child) =>
+      SolidBrushVisual.isBrushObject(child)
+    ).length;
+    expect(liveBrushCount).toBeGreaterThanOrEqual(2);
+    const filtered = buildExportScene(worldGroup);
+    const exportMeshes: THREE.Mesh[] = [];
+    filtered.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) exportMeshes.push(obj);
+    });
+    expect(exportMeshes.length).toBe(1);
+    expect(SolidBrushVisual.isBrushObject(exportMeshes[0])).toBe(false);
+    const buffer = await exporter.export(worldGroup);
+    expect(buffer.byteLength).toBeGreaterThan(0);
+    const view = new DataView(buffer);
+    expect(view.getUint32(0, true)).toBe(GLB_MAGIC_NUMBER);
   });
 });

@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { buildExportScene } from './export_scene_builder.js';
 
 /**
  * Exports a Three.js scene group to binary GLB format.
- * Uses the Three.js GLTFExporter addon for binary output.
+ * Filters out solid brush helpers, selection overlays, and other editor
+ * internals so the file contains only final content geometry.
  */
 export class GlbExporter {
   /**
    * Exports the given group to a GLB binary buffer.
-   * @param worldGroup The root group to export.
+   * @param worldGroup The live editor world root to export.
    * @returns A promise resolving to the GLB ArrayBuffer.
    */
   export(worldGroup: THREE.Group): Promise<ArrayBuffer> {
@@ -18,8 +20,8 @@ export class GlbExporter {
   }
 
   /**
-   * Executes the GLTFExporter callback and resolves the promise.
-   * @param worldGroup The group to export.
+   * Builds a filtered export graph and runs GLTFExporter.
+   * @param worldGroup The live world group.
    * @param resolve The promise resolve function.
    * @param reject The promise reject function.
    */
@@ -28,9 +30,10 @@ export class GlbExporter {
     resolve: (buffer: ArrayBuffer) => void,
     reject: (error: Error) => void
   ): void {
+    const exportRoot = buildExportScene(worldGroup);
     const exporter = new GLTFExporter();
     exporter.parse(
-      worldGroup,
+      exportRoot,
       (result) => this.onExportSuccess(result, resolve),
       (error) => this.onExportError(error, reject),
       { binary: true }
@@ -48,9 +51,9 @@ export class GlbExporter {
   ): void {
     if (result instanceof ArrayBuffer) {
       resolve(result);
-    } else {
-      resolve(new ArrayBuffer(0));
+      return;
     }
+    resolve(new ArrayBuffer(0));
   }
 
   /**
@@ -64,8 +67,8 @@ export class GlbExporter {
   ): void {
     if (error instanceof Error) {
       reject(error);
-    } else {
-      reject(new Error(String(error)));
+      return;
     }
+    reject(new Error(String(error)));
   }
 }

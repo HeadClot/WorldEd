@@ -8,7 +8,8 @@ import {
   getAllMeshes,
   getGroupChildren,
   getMeshChildren,
-  getDepth
+  getDepth,
+  restoreObjectAtIndex
 } from '../../src/utils/hierarchy_utils.js';
 
 describe('getDescendants', () => {
@@ -296,5 +297,40 @@ describe('getDepth', () => {
     level3.add(level4);
     expect(getDepth(level3, root)).toBe(2);
     expect(getDepth(level4, root)).toBe(3);
+  });
+});
+
+describe('restoreObjectAtIndex', () => {
+  let parent: THREE.Group;
+  let fallback: THREE.Group;
+  let meshA: THREE.Mesh;
+  let meshB: THREE.Mesh;
+  let meshC: THREE.Mesh;
+
+  beforeEach(() => {
+    parent = new THREE.Group();
+    fallback = new THREE.Group();
+    meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshC = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshA.name = 'A';
+    meshB.name = 'B';
+    meshC.name = 'C';
+    parent.add(meshA);
+    parent.add(meshB);
+  });
+
+  it('should insert an orphan at the requested sibling index', () => {
+    restoreObjectAtIndex(meshC, parent, 1, fallback);
+    expect(meshC.parent).toBe(parent);
+    expect(parent.children[0]).toBe(meshA);
+    expect(parent.children[1]).toBe(meshC);
+    expect(parent.children[2]).toBe(meshB);
+  });
+
+  it('should use fallback parent when preferred parent is null', () => {
+    restoreObjectAtIndex(meshC, null, 0, fallback);
+    expect(meshC.parent).toBe(fallback);
+    expect(fallback.children[0]).toBe(meshC);
   });
 });

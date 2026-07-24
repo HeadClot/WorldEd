@@ -150,11 +150,23 @@ export class ClipPlaneTool {
 
   /**
    * Clears points and plane while remaining active.
+   * Resets keep-front to the default (used when activating the tool).
    */
   clearPlacement(): void {
     this.points = [];
     this.plane = null;
     this.keepFront = true;
+  }
+
+  /**
+   * Clears placement points for another cut while keeping the tool active.
+   * Preserves the keep-front preference so repeated clips stay consistent.
+   */
+  resetPlacementForNextCut(): void {
+    if (!this.active) return;
+    this.points = [];
+    this.plane = null;
+    this.notifyChange();
   }
 
   /**

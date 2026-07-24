@@ -26,6 +26,7 @@ interface FaceTextureSnapshot {
 
 /**
  * Undoable per-face solid texture assignment on brush surfaces.
+ * Presentation-only: remeshes painted brushes, never force-rebuilds CSG.
  */
 export class AssignSolidFaceTextureCommand implements UndoCommand {
   private readonly targets: SolidFaceTextureTarget[];
@@ -46,29 +47,31 @@ export class AssignSolidFaceTextureCommand implements UndoCommand {
   }
 
   /**
-   * Applies per-face textures and rebuilds each affected solid model.
+   * Applies per-face textures and remeshes each affected brush.
    */
   execute(): void {
     if (this.executed) return;
     this.snapshots = [];
-    const models = new Set<SolidModel>();
+    const brushesByModel = new Map<SolidModel, Set<string>>();
     for (const target of this.targets) {
-      if (this.applyToTarget(target)) models.add(target.model);
+      if (!this.applyToTarget(target)) continue;
+      this.addBrush(brushesByModel, target.model, target.brushId);
     }
-    this.rebuildModels(models);
+    this.refreshPresentations(brushesByModel);
     this.executed = true;
   }
 
   /**
-   * Restores prior face mappings and rebuilds.
+   * Restores prior face mappings and remeshes.
    */
   undo(): void {
     if (!this.executed) return;
-    const models = new Set<SolidModel>();
+    const brushesByModel = new Map<SolidModel, Set<string>>();
     for (const snapshot of this.snapshots) {
-      if (this.restoreSnapshot(snapshot)) models.add(snapshot.model);
+      if (!this.restoreSnapshot(snapshot)) continue;
+      this.addBrush(brushesByModel, snapshot.model, snapshot.brushId);
     }
-    this.rebuildModels(models);
+    this.refreshPresentations(brushesByModel);
     this.snapshots = [];
     this.executed = false;
   }
@@ -107,13 +110,33 @@ export class AssignSolidFaceTextureCommand implements UndoCommand {
   }
 
   /**
-   * Rebuilds each solid model in the set.
-   * @param models Models that need a CSG rebuild.
+   * Records a brush id under its solid model.
+   * @param brushesByModel Accumulator.
+   * @param model Solid model.
+   * @param brushId Brush id.
    */
-  private rebuildModels(models: Set<SolidModel>): void {
-    for (const model of models) {
-      model.markDirty();
-      model.rebuild(true);
+  private addBrush(
+    brushesByModel: Map<SolidModel, Set<string>>,
+    model: SolidModel,
+    brushId: string
+  ): void {
+    const set = brushesByModel.get(model);
+    if (set) {
+      set.add(brushId);
+      return;
+    }
+    brushesByModel.set(model, new Set([brushId]));
+  }
+
+  /**
+   * Remeshes painted brushes without CSG.
+   * @param brushesByModel Brushes grouped by solid model.
+   */
+  private refreshPresentations(
+    brushesByModel: Map<SolidModel, Set<string>>
+  ): void {
+    for (const [model, brushIds] of brushesByModel) {
+      model.refreshBrushPresentations(Array.from(brushIds));
     }
   }
 }

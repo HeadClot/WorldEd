@@ -4,6 +4,8 @@ import { SelectionVisualController } from '../../src/managers/selection_visual_c
 import { SelectionManager } from '../../src/managers/selection_manager.js';
 import { ViewportSyncManager } from '../../src/managers/viewport_sync_manager.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/selection_highlight.js';
+import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
+import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 
 /**
  * Minimal viewport stand-in with a scene for selection outline tests.
@@ -32,6 +34,20 @@ class MockViewport {
   }
 }
 
+/**
+ * Builds a viewport sync stub that reports world meshes for hull fill sync.
+ * @param worldMeshes Authoritative selectable meshes.
+ * @returns Partial ViewportSyncManager used by the controller.
+ */
+function createSyncManagerStub(
+  worldMeshes: THREE.Mesh[]
+): ViewportSyncManager {
+  return {
+    findCloneMeshesForWorldUuid: () => [],
+    getWorldSelectableMeshes: () => worldMeshes.slice()
+  } as unknown as ViewportSyncManager;
+}
+
 describe('SelectionVisualController', () => {
   let selectionManager: SelectionManager;
   let world: THREE.Group;
@@ -53,9 +69,7 @@ describe('SelectionVisualController', () => {
     viewport3d = new MockViewport();
     viewport2d = new MockViewport();
     viewport3d.getScene().add(world);
-    syncManager = {
-      findCloneMeshesForWorldUuid: () => []
-    } as unknown as ViewportSyncManager;
+    syncManager = createSyncManagerStub([mesh]);
     controller = new SelectionVisualController(selectionManager, syncManager);
     controller.wireViewports([viewport3d as any, viewport2d as any]);
   });
@@ -95,5 +109,28 @@ describe('SelectionVisualController', () => {
       (child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true
     );
     expect(hasOutline).toBe(false);
+  });
+
+  it('should show solid brush hull fill only while the brush is selected', () => {
+    const brushMesh = SolidBrushVisual.createBoxPreview(
+      'Brush',
+      2,
+      SolidOperation.Subtractive
+    );
+    world.add(brushMesh);
+    syncManager = createSyncManagerStub([mesh, brushMesh]);
+    controller = new SelectionVisualController(selectionManager, syncManager);
+    controller.wireViewports([viewport3d as any, viewport2d as any]);
+    expect(SolidBrushVisual.isHullFillVisible(brushMesh)).toBe(false);
+    selectionManager.selectObject(brushMesh);
+    expect(SolidBrushVisual.isHullFillVisible(brushMesh)).toBe(true);
+    const fillMaterial = brushMesh.material as THREE.MeshBasicMaterial;
+    expect(fillMaterial.colorWrite).toBe(true);
+    expect(fillMaterial.color.getHex()).toBe(0xc0392b);
+    selectionManager.clearSelection();
+    expect(SolidBrushVisual.isHullFillVisible(brushMesh)).toBe(false);
+    expect((brushMesh.material as THREE.MeshBasicMaterial).colorWrite).toBe(
+      false
+    );
   });
 });

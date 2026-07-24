@@ -65,7 +65,7 @@ export class CsgMeshBuilder {
     built.geometry.computeVertexNormals();
     const material = createContentMaterial(color, {
       flatShading: true,
-      side: THREE.DoubleSide
+      side: THREE.FrontSide
     });
     const mesh = new THREE.Mesh(built.geometry, material);
     mesh.name = name;

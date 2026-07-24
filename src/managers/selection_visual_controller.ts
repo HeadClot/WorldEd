@@ -6,10 +6,12 @@ import { ViewportSyncManager } from './viewport_sync_manager.js';
 import { ViewportShadingController } from '../viewports/viewport_shading_controller.js';
 import { Viewport3D } from '../viewports/viewport_3d.js';
 import { Viewport2D } from '../viewports/viewport_2d.js';
+import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 
 /**
  * Owns selection outline instances across all viewports.
  * Keeps orange outlines glued to meshes during live transforms and after clone rebuilds.
+ * Also toggles solid-brush hull fills so only selected brushes draw translucent volumes.
  */
 export class SelectionVisualController {
   private selectionManager: SelectionManager;
@@ -61,6 +63,7 @@ export class SelectionVisualController {
     this.clearAllHighlights();
     const selected = this.selectionManager.getSelectedObjects();
     selected.forEach((mesh) => this.highlightMeshAndClones(mesh));
+    this.syncSolidBrushHullFills();
   }
 
   /**
@@ -123,5 +126,33 @@ export class SelectionVisualController {
    */
   private clearAllHighlights(): void {
     this.selectionHighlights.forEach((highlight) => highlight.clearAll());
+  }
+
+  /**
+   * Shows translucent brush hulls only for selected solid brushes (world + clones).
+   * Unselected brushes keep operation-colored outlines without filled volumes.
+   */
+  private syncSolidBrushHullFills(): void {
+    const selected = this.selectionManager.getSelectedObjects();
+    for (const mesh of this.viewportSyncManager.getWorldSelectableMeshes()) {
+      if (!SolidBrushVisual.isBrushObject(mesh)) continue;
+      const fillVisible = selected.has(mesh);
+      this.applyBrushHullFillToMeshAndClones(mesh, fillVisible);
+    }
+  }
+
+  /**
+   * Applies hull fill visibility to a world brush mesh and its 2D clones.
+   * @param worldMesh Authoritative brush preview mesh.
+   * @param fillVisible Whether the translucent volume should be drawn.
+   */
+  private applyBrushHullFillToMeshAndClones(
+    worldMesh: THREE.Mesh,
+    fillVisible: boolean
+  ): void {
+    SolidBrushVisual.setHullFillVisible(worldMesh, fillVisible);
+    this.viewportSyncManager
+      .findCloneMeshesForWorldUuid(worldMesh.uuid)
+      .forEach((clone) => SolidBrushVisual.setHullFillVisible(clone, fillVisible));
   }
 }

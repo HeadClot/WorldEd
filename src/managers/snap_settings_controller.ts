@@ -8,6 +8,7 @@ import { Toolbar } from '../ui/toolbar.js';
 import { StatusBar } from '../ui/status_bar.js';
 import { KeyboardShortcutHandler } from './keyboard_shortcut_handler.js';
 import { TextureLockSettings } from '../texture/texture_lock_settings.js';
+import { SolidModel } from '../solid/model/solid_model.js';
 
 /**
  * Dependencies for snap interval, snap toggle, and texture lock controls.
@@ -66,19 +67,34 @@ export class SnapSettingsController {
   }
 
   /**
-   * Toggles CSG-style texture lock for bounds resize and scale.
-   * When on, UVs re-bake so texture density stays constant in world space.
+   * Toggles CSG-style texture lock for transforms.
+   * On: solid brush UVs stick when moved; content meshes keep world density on scale.
+   * Off: solid brush UVs slide in world space; content mesh UVs stretch on scale.
    */
   onToggleTextureLock(): void {
     const locked = this.deps.textureLock.toggle();
     this.deps.toolbar.setButtonActiveByLabel('Tex Lock', locked);
+    this.applySolidUvStickMode(locked);
     if (this.deps.statusBar) {
       this.deps.statusBar.setLastAction(
         locked
-          ? 'Texture lock on (world density)'
-          : 'Texture lock off (UVs stretch)'
+          ? 'Texture lock on (stick to brushes)'
+          : 'Texture lock off (world slide / stretch)'
       );
     }
+  }
+
+  /**
+   * Updates all solid models to bake UVs in brush-local or world space.
+   * @param stickToBrush True when Tex Lock is on.
+   */
+  private applySolidUvStickMode(stickToBrush: boolean): void {
+    this.deps.worldObject.traverse((child) => {
+      const model = SolidModel.fromObject(child);
+      if (!model) return;
+      model.setUvStickToBrush(stickToBrush);
+      model.rebuild(true);
+    });
   }
 
   /**

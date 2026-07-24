@@ -180,7 +180,7 @@ export class SceneIOHandler {
         this.showError(statusBar, 'VMF import cancelled');
         return null;
       }
-      return this.importVmfFromText(file.text, file.filename, statusBar);
+      return await this.importVmfFromText(file.text, file.filename, statusBar);
     } catch (error) {
       this.showError(
         statusBar,
@@ -191,24 +191,31 @@ export class SceneIOHandler {
   }
 
   /**
-   * Imports a VMF document from text into a solid model.
+   * Imports a VMF document from text into a solid model (async, non-blocking UI).
    * @param source VMF file contents.
    * @param filename Source filename used for the model name.
    * @param statusBar Status bar for feedback, or null.
    * @returns Import result, or null when no brushes were produced.
    */
-  importVmfFromText(
+  async importVmfFromText(
     source: string,
     filename: string,
     statusBar: StatusBar | null
-  ): VmfImportResult | null {
+  ): Promise<VmfImportResult | null> {
+    const { ImportProgressOverlay } = await import(
+      '../ui/import_progress_overlay.js'
+    );
+    const overlay = new ImportProgressOverlay(`Importing ${filename}`);
+    overlay.show();
+    overlay.setProgress(0, 'Starting…');
     try {
       const modelName = this.modelNameFromVmfFilename(filename);
-      const result = this.vmfImporter.importFromText(source, {
+      const result = await this.vmfImporter.importFromTextAsync(source, {
         modelName,
         includeEntitySolids: true,
         skipVolumeMaterials: true,
-        rebuild: true
+        rebuild: true,
+        onProgress: (ratio, label) => overlay.setProgress(ratio, label)
       });
       if (result.importedBrushCount === 0) {
         this.showError(statusBar, 'VMF contained no importable brushes');
@@ -222,6 +229,8 @@ export class SceneIOHandler {
         `Failed to import VMF: ${this.formatError(error)}`
       );
       return null;
+    } finally {
+      overlay.hide();
     }
   }
 

@@ -300,7 +300,7 @@ export class SceneDeserializer {
     const color = entry.materialColor || 0xffffff;
     return createContentMaterial(color, {
       flatShading: true,
-      side: THREE.DoubleSide
+      side: THREE.FrontSide
     });
   }
 

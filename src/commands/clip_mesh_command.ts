@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { UndoCommand } from './undo_command.js';
+import { restoreObjectAtIndex } from '../utils/hierarchy_utils.js';
 
 /**
  * Undoable command that replaces one source mesh with a single clip result.
@@ -50,7 +51,12 @@ export class ClipMeshCommand implements UndoCommand {
   undo(): void {
     if (!this.executed) return;
     this.resultMesh.parent?.remove(this.resultMesh);
-    this.restoreMesh(this.sourceMesh, this.parent, this.siblingIndex);
+    restoreObjectAtIndex(
+      this.sourceMesh,
+      this.parent,
+      this.siblingIndex,
+      this.worldGroup
+    );
     this.executed = false;
   }
 
@@ -60,26 +66,5 @@ export class ClipMeshCommand implements UndoCommand {
    */
   getResultMesh(): THREE.Mesh {
     return this.resultMesh;
-  }
-
-  /**
-   * Restores a mesh under its original parent at the original sibling index.
-   * @param mesh The mesh to restore.
-   * @param parent The original parent.
-   * @param index The original sibling index.
-   */
-  private restoreMesh(
-    mesh: THREE.Mesh,
-    parent: THREE.Object3D | null,
-    index: number
-  ): void {
-    const targetParent = parent ?? this.worldGroup;
-    targetParent.add(mesh);
-    const currentIndex = targetParent.children.indexOf(mesh);
-    if (currentIndex !== index && currentIndex >= 0) {
-      targetParent.children.splice(currentIndex, 1);
-      targetParent.children.splice(index, 0, mesh);
-      mesh.parent = targetParent;
-    }
   }
 }

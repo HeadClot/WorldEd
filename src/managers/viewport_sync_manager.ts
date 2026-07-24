@@ -3,6 +3,8 @@ import { Viewport3D } from '../viewports/viewport_3d.js';
 import { Viewport2D } from '../viewports/viewport_2d.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
 import { CLIP_PREVIEW_USERDATA_KEY } from './clip_plane_preview.js';
+import { SolidBrushEdgeMaterials } from '../solid/model/solid_brush_edge_materials.js';
+import { SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 
 /**
  * UserData key used to map viewport clone meshes back to world meshes.
@@ -220,7 +222,8 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Replaces a clone's geometry with a copy of the world mesh geometry.
+   * Updates a clone's geometry from the world mesh without a full deep clone
+   * when buffer sizes match (live solid CSG path).
    * @param cloneMesh Viewport clone mesh.
    * @param worldMesh Authoritative world mesh.
    */
@@ -228,9 +231,142 @@ export class ViewportSyncManager {
     cloneMesh: THREE.Mesh,
     worldMesh: THREE.Mesh
   ): void {
+    if (this.copyGeometryAttributesInPlace(cloneMesh.geometry, worldMesh.geometry)) {
+      return;
+    }
     const previous = cloneMesh.geometry;
     cloneMesh.geometry = worldMesh.geometry.clone();
     previous.dispose();
+  }
+
+  /**
+   * Copies position/normal/uv arrays and groups when vertex counts match.
+   * Avoids allocating full geometry clones on every live CSG frame.
+   * @param destination Clone geometry to update.
+   * @param source World geometry to read.
+   * @returns True when an in-place copy was performed.
+   */
+  private copyGeometryAttributesInPlace(
+    destination: THREE.BufferGeometry,
+    source: THREE.BufferGeometry
+  ): boolean {
+    if (!this.canCopyGeometryInPlace(destination, source)) {
+      return false;
+    }
+    this.copyNamedAttribute(destination, source, 'position');
+    this.copyNamedAttribute(destination, source, 'normal');
+    this.copyNamedAttribute(destination, source, 'uv');
+    this.copyGeometryGroups(destination, source);
+    if (source.boundingSphere) {
+      destination.boundingSphere = source.boundingSphere.clone();
+    }
+    if (source.boundingBox) {
+      destination.boundingBox = source.boundingBox.clone();
+    }
+    return true;
+  }
+
+  /**
+   * Returns whether source and destination geometries share compatible layout.
+   * @param destination Clone geometry.
+   * @param source World geometry.
+   * @returns True when in-place attribute copy is safe.
+   */
+  private canCopyGeometryInPlace(
+    destination: THREE.BufferGeometry,
+    source: THREE.BufferGeometry
+  ): boolean {
+    if (source.getIndex() || destination.getIndex()) return false;
+    const sourcePosition = source.getAttribute('position');
+    const destPosition = destination.getAttribute('position');
+    if (!sourcePosition || !destPosition) return false;
+    if (sourcePosition.count !== destPosition.count) return false;
+    if (sourcePosition.count === 0) return false;
+    return true;
+  }
+
+  /**
+   * Copies one named attribute array when both sides exist and match length.
+   * Uses solid mesh update ranges when present to avoid full-buffer copies.
+   * @param destination Destination geometry.
+   * @param source Source geometry.
+   * @param name Attribute name.
+   */
+  private copyNamedAttribute(
+    destination: THREE.BufferGeometry,
+    source: THREE.BufferGeometry,
+    name: string
+  ): void {
+    const sourceAttribute = source.getAttribute(name);
+    const destAttribute = destination.getAttribute(name);
+    if (!sourceAttribute || !destAttribute) return;
+    if (sourceAttribute.array.length !== destAttribute.array.length) return;
+    const sourceArray = sourceAttribute.array as Float32Array;
+    const destArray = destAttribute.array as Float32Array;
+    if (!this.copyAttributeBySolidUpdateRanges(destArray, sourceArray, name, source)) {
+      destArray.set(sourceArray);
+    }
+    destAttribute.needsUpdate = true;
+  }
+
+  /**
+   * Copies only dirty solid-result float ranges when the world mesh exposes them.
+   * @param destArray Destination attribute array.
+   * @param sourceArray Source attribute array.
+   * @param name Attribute name (position/normal/uv).
+   * @param sourceGeometry World geometry carrying optional update ranges.
+   * @returns True when a partial copy was performed.
+   */
+  private copyAttributeBySolidUpdateRanges(
+    destArray: Float32Array,
+    sourceArray: Float32Array,
+    name: string,
+    sourceGeometry: THREE.BufferGeometry
+  ): boolean {
+    const ranges = sourceGeometry.userData.solidMeshUpdateRanges as
+      | Array<{
+          positionFloatStart: number;
+          positionFloatCount: number;
+          uvFloatStart: number;
+          uvFloatCount: number;
+        }>
+      | undefined;
+    if (!ranges || ranges.length === 0) return false;
+    for (const range of ranges) {
+      if (name === 'uv') {
+        destArray.set(
+          sourceArray.subarray(
+            range.uvFloatStart,
+            range.uvFloatStart + range.uvFloatCount
+          ),
+          range.uvFloatStart
+        );
+      } else {
+        destArray.set(
+          sourceArray.subarray(
+            range.positionFloatStart,
+            range.positionFloatStart + range.positionFloatCount
+          ),
+          range.positionFloatStart
+        );
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Mirrors geometry groups used for multi-material draw ranges.
+   * @param destination Destination geometry.
+   * @param source Source geometry.
+   */
+  private copyGeometryGroups(
+    destination: THREE.BufferGeometry,
+    source: THREE.BufferGeometry
+  ): void {
+    destination.clearGroups();
+    for (const group of source.groups) {
+      destination.addGroup(group.start, group.count, group.materialIndex);
+    }
   }
 
   /**
@@ -253,9 +389,29 @@ export class ViewportSyncManager {
     const clone = worldObject.clone(true);
     clone.userData[EDITOR_VIEWPORT_CLONE_KEY] = true;
     this.stripEditorOverlays(clone);
-    this.detachSharedResources(clone);
     this.tagCloneWithSourceUuids(worldObject, clone);
+    this.detachSharedResources(clone);
+    this.stripOccludedBrushEdges(clone);
     return clone;
+  }
+
+  /**
+   * Removes occluded brush edge passes from 2D clones.
+   * Ortho views keep front outlines only, cutting line draw calls roughly in half.
+   * Runs after resource detach so dispose never frees shared 3D materials.
+   * @param root Cloned hierarchy root.
+   */
+  private stripOccludedBrushEdges(root: THREE.Object3D): void {
+    const toRemove: THREE.Object3D[] = [];
+    root.traverse((child) => {
+      if (child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true) {
+        toRemove.push(child);
+      }
+    });
+    toRemove.forEach((child) => {
+      child.parent?.remove(child);
+      this.disposeObject3D(child);
+    });
   }
 
   /**
@@ -318,6 +474,7 @@ export class ViewportSyncManager {
 
   /**
    * Gives a line object its own geometry and material instances.
+   * Brush edge clones disable distance fade so 2D views keep full wire clarity.
    * @param line The line object to detach.
    */
   private detachLineResources(line: THREE.Line | THREE.LineSegments): void {
@@ -325,10 +482,25 @@ export class ViewportSyncManager {
       line.geometry = line.geometry.clone();
     }
     if (Array.isArray(line.material)) {
-      line.material = line.material.map((material) => material.clone());
-    } else if (line.material) {
-      line.material = line.material.clone();
+      line.material = line.material.map((material) =>
+        this.cloneLineMaterial(material)
+      );
+      return;
     }
+    if (line.material) {
+      line.material = this.cloneLineMaterial(line.material);
+    }
+  }
+
+  /**
+   * Clones a line material and disables brush-edge distance fade when present.
+   * @param material Source material.
+   * @returns Independent material for a 2D viewport clone.
+   */
+  private cloneLineMaterial(material: THREE.Material): THREE.Material {
+    const cloned = material.clone();
+    SolidBrushEdgeMaterials.disableDistanceFade(cloned);
+    return cloned;
   }
 
   /**
@@ -502,15 +674,32 @@ export class ViewportSyncManager {
   private disposeObject3D(obj: THREE.Object3D): void {
     if (obj instanceof THREE.Mesh || obj instanceof THREE.Line || obj instanceof THREE.LineSegments) {
       if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) {
-        if (Array.isArray(obj.material)) {
-          obj.material.forEach((mat) => mat.dispose());
-        } else {
-          obj.material.dispose();
-        }
-      }
+      this.disposeCloneMaterials(obj.material);
     }
     const children = obj.children.slice();
     children.forEach((child) => this.disposeObject3D(child));
+  }
+
+  /**
+   * Disposes clone-owned materials, never shared brush edge materials.
+   * @param material Material or material array on a disposed clone object.
+   */
+  private disposeCloneMaterials(
+    material: THREE.Material | THREE.Material[] | undefined
+  ): void {
+    if (Array.isArray(material)) {
+      material.forEach((entry) => this.disposeCloneMaterial(entry));
+      return;
+    }
+    if (material) this.disposeCloneMaterial(material);
+  }
+
+  /**
+   * Disposes one material when it is not a shared brush edge material.
+   * @param material Material to dispose.
+   */
+  private disposeCloneMaterial(material: THREE.Material): void {
+    if (SolidBrushEdgeMaterials.isSharedMaterial(material)) return;
+    material.dispose();
   }
 }

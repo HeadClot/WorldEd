@@ -89,7 +89,12 @@ export function buildOutlinerActions(
     onRenameFromOutliner: (obj, newName) =>
       applyOutlinerRename(host.commandStack, obj, newName, host.refreshOutliner),
     onToggleVisibilityFromOutliner: (obj) =>
-      applyOutlinerVisibilityToggle(host.commandStack, obj, host.refreshOutliner),
+      applyOutlinerVisibilityToggle(
+        host.commandStack,
+        obj,
+        host.refreshOutliner,
+        () => host.syncViewports()
+      ),
     onToggleLockFromOutliner: (obj) => toggleLockFromOutliner(host, obj),
     reparentFromDrop: (dragged, target) => {
       if (!target) return;
@@ -216,6 +221,7 @@ function buildCsgSnapAlignToolbarActions(
   | 'onCsgUnion'
   | 'onCsgSubtract'
   | 'onCsgIntersect'
+  | 'canRunCsgBoolean'
   | 'onToggleSnap'
   | 'onSnapIntervalBackward'
   | 'onSnapIntervalForward'
@@ -234,6 +240,7 @@ function buildCsgSnapAlignToolbarActions(
     onCsgSubtract: () => host.getCsgActionHandler().runBoolean(CsgOperation.SUBTRACT),
     onCsgIntersect: () =>
       host.getCsgActionHandler().runBoolean(CsgOperation.INTERSECT),
+    canRunCsgBoolean: () => host.getCsgActionHandler().canRunMeshBoolean(),
     onToggleSnap: () => host.getSnapSettingsController().onToggleSnap(),
     onSnapIntervalBackward: () =>
       host.getSnapSettingsController().onSnapIntervalBackward(),

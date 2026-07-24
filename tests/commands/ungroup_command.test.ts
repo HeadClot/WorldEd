@@ -118,4 +118,13 @@ describe('UngroupCommand', () => {
     expect(parent.children.length).toBe(2);
     expect(group.parent).toBeNull();
   });
+
+  it('should no-op undo when execute has not run', () => {
+    const command = new UngroupCommand(group);
+    command.undo();
+    expect(parent.children.length).toBe(1);
+    expect(parent.children[0]).toBe(group);
+    expect(parent.children.filter((child) => child === group).length).toBe(1);
+    expect(group.children.length).toBe(2);
+  });
 });

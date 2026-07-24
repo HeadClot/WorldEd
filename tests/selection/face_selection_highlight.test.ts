@@ -93,7 +93,7 @@ describe('FaceSelectionHighlight', () => {
     });
   });
 
-  it('should highlight multiple faces', () => {
+  it('should batch multiple faces on one mesh into a single highlight group', () => {
     const geometry = createMultiFaceGeometry(4);
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
     scene.add(mesh);
@@ -103,17 +103,24 @@ describe('FaceSelectionHighlight', () => {
       { mesh, faceIndex: 2 }
     ];
     highlight.setSelectedFaces(faces);
-    expect(highlight.getHighlightCount()).toBe(3);
+    expect(highlight.getHighlightCount()).toBe(1);
+    const meshes = getHighlightMeshes(highlight);
+    expect(meshes.length).toBe(2);
+    const position = meshes[0].geometry.getAttribute('position');
+    expect(position.count).toBe(9);
   });
 
-  it('should remove stale highlights when selection changes', () => {
+  it('should replace batched highlight when selection changes', () => {
     const geometry = createMultiFaceGeometry(4);
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
     scene.add(mesh);
     highlight.setSelectedFaces([{ mesh, faceIndex: 0 }, { mesh, faceIndex: 1 }]);
-    expect(highlight.getHighlightCount()).toBe(2);
+    expect(highlight.getHighlightCount()).toBe(1);
     highlight.setSelectedFaces([{ mesh, faceIndex: 2 }]);
     expect(highlight.getHighlightCount()).toBe(1);
+    const meshes = getHighlightMeshes(highlight);
+    const position = meshes[0].geometry.getAttribute('position');
+    expect(position.count).toBe(3);
   });
 
   it('should clear all highlights when given empty array', () => {
@@ -188,11 +195,11 @@ function createMultiFaceGeometry(faceCount: number): THREE.BufferGeometry {
  * @returns An array of front and occluded mesh objects.
  */
 function getHighlightMeshes(highlight: FaceSelectionHighlight): THREE.Mesh[] {
-  const faceGroups = (highlight as unknown as {
-    faceGroups: Map<string, THREE.Group>;
-  }).faceGroups;
+  const meshGroups = (highlight as unknown as {
+    meshGroups: Map<string, THREE.Group>;
+  }).meshGroups;
   const meshes: THREE.Mesh[] = [];
-  faceGroups.forEach((group) => {
+  meshGroups.forEach((group) => {
     group.children.forEach((child) => {
       if (child instanceof THREE.Mesh) meshes.push(child);
     });

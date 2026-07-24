@@ -14,6 +14,7 @@ interface OperationSnapshot {
 
 /**
  * Undoable command that sets the CSG operation on one or more solid brushes.
+ * Uses partial CSG via setBrushOperation — never force-rebuilds the entire map.
  */
 export class SetSolidBrushOperationCommand implements UndoCommand {
   private readonly brushMeshes: THREE.Mesh[];
@@ -34,33 +35,29 @@ export class SetSolidBrushOperationCommand implements UndoCommand {
   }
 
   /**
-   * Applies the operation to each brush and rebuilds affected solids.
+   * Applies the operation to each brush (partial CSG rebuild per model).
    */
   execute(): void {
     if (this.executed) return;
     this.snapshots = [];
-    const models = new Set<SolidModel>();
     for (const mesh of this.brushMeshes) {
-      const model = this.applyToMesh(mesh);
-      if (model) models.add(model);
+      this.applyToMesh(mesh);
     }
     if (this.snapshots.length === 0) return;
-    this.rebuildModels(models);
     this.executed = true;
   }
 
   /**
-   * Restores prior operations and rebuilds affected solids.
+   * Restores prior operations with partial CSG rebuilds.
    */
   undo(): void {
     if (!this.executed) return;
-    const models = new Set<SolidModel>();
     for (const snapshot of this.snapshots) {
-      if (snapshot.model.setBrushOperation(snapshot.brushId, snapshot.previousOperation)) {
-        models.add(snapshot.model);
-      }
+      snapshot.model.setBrushOperation(
+        snapshot.brushId,
+        snapshot.previousOperation
+      );
     }
-    this.rebuildModels(models);
     this.snapshots = [];
     this.executed = false;
   }
@@ -68,31 +65,18 @@ export class SetSolidBrushOperationCommand implements UndoCommand {
   /**
    * Snapshots and updates one brush mesh operation.
    * @param mesh Brush preview mesh.
-   * @returns Solid model when updated, otherwise null.
    */
-  private applyToMesh(mesh: THREE.Mesh): SolidModel | null {
+  private applyToMesh(mesh: THREE.Mesh): void {
     const model = SolidModel.fromObject(mesh);
-    if (!model) return null;
+    if (!model) return;
     const brush = model.findBrushByMesh(mesh);
-    if (!brush) return null;
-    if (brush.operation === this.operation) return null;
+    if (!brush) return;
+    if (brush.operation === this.operation) return;
     this.snapshots.push({
       model,
       brushId: brush.id,
       previousOperation: brush.operation
     });
     model.setBrushOperation(brush.id, this.operation);
-    return model;
-  }
-
-  /**
-   * Rebuilds each solid model (setBrushOperation already rebuilds; force sync).
-   * @param models Models touched by this command.
-   */
-  private rebuildModels(models: Set<SolidModel>): void {
-    for (const model of models) {
-      model.markDirty();
-      model.rebuild(true);
-    }
   }
 }

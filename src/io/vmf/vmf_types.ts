@@ -130,8 +130,8 @@ export function createEmptyVmfWorld(): VmfWorld {
 }
 
 /**
- * Creates a default texture axis along +X with unit scale.
- * @returns Default U-style axis.
+ * Creates a default texture axis along +X with Valve-style scale 0.25.
+ * @returns Default U-style axis (direction +X, translation 0, scale 0.25).
  */
 export function createDefaultVmfTextureAxis(): VmfTextureAxis {
   return { x: 1, y: 0, z: 0, translation: 0, scale: 0.25 };
