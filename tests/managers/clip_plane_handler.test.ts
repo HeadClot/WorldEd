@@ -27,7 +27,7 @@ describe('ClipPlaneHandler preview after scene load', () => {
       syncPrimitivesToViewports: vi.fn(),
       refreshOutliner: vi.fn(),
       updateShadingMeshes: vi.fn(),
-      onToolStateChanged: vi.fn()
+      onToolStateChanged: vi.fn(),
     });
   });
 
@@ -59,7 +59,7 @@ describe('ClipPlaneHandler preview after scene load', () => {
     const previewRoot = handler.getPreview().getRoot();
     const contentMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
+      new THREE.MeshBasicMaterial(),
     );
     worldObject.add(contentMesh);
     const deserializer = new SceneDeserializer();

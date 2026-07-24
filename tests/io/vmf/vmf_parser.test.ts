@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { VmfParser } from '../../../src/io/vmf/vmf_parser.js';
-import {
-  buildAxisAlignedSideBlocks,
-  buildAxisAlignedWorldSolidVmf
-} from './vmf_test_solids.js';
+import { buildAxisAlignedSideBlocks, buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 
 /**
  * Unit tests for the VMF text parser.
@@ -13,12 +10,12 @@ describe('VmfParser', () => {
     const worldSolid = buildAxisAlignedSideBlocks(
       { x: -32, y: -32, z: -32 },
       { x: 32, y: 32, z: 32 },
-      'DEV/DEV_MEASUREGENERIC01'
+      'DEV/DEV_MEASUREGENERIC01',
     );
     const entitySolid = buildAxisAlignedSideBlocks(
       { x: 0, y: 0, z: 0 },
       { x: 64, y: 64, z: 64 },
-      'TOOLS/TOOLSNODRAW'
+      'TOOLS/TOOLSNODRAW',
     );
     const source = `
 versioninfo
@@ -75,10 +72,7 @@ ${entitySolid}
 
   it('parses plane points and UV axes from the first side', () => {
     const world = new VmfParser().parse(
-      buildAxisAlignedWorldSolidVmf(
-        { x: -32, y: -32, z: -32 },
-        { x: 32, y: 32, z: 32 }
-      )
+      buildAxisAlignedWorldSolidVmf({ x: -32, y: -32, z: -32 }, { x: 32, y: 32, z: 32 }),
     );
     const side = world.solids[0].sides[0];
     expect(side.plane.p1).toEqual({ x: -32, y: -32, z: 32 });
@@ -90,7 +84,7 @@ ${entitySolid}
       y: 0,
       z: 0,
       translation: 0,
-      scale: 0.25
+      scale: 0.25,
     });
     expect(side.vAxis.scale).toBe(0.25);
   });

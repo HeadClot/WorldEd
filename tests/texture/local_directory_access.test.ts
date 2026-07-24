@@ -3,7 +3,7 @@ import {
   buildListingFromFileList,
   collectFilesFromDirectoryHandle,
   FileSystemAccessDirectoryAccess,
-  WebkitDirectoryInputAccess
+  WebkitDirectoryInputAccess,
 } from '../../src/texture/local_directory_access.js';
 
 describe('local_directory_access', () => {
@@ -15,14 +15,14 @@ describe('local_directory_access', () => {
   it('should report File System Access support from showDirectoryPicker', () => {
     const access = new FileSystemAccessDirectoryAccess();
     expect(access.isSupported()).toBe(false);
-    (window as { showDirectoryPicker?: () => Promise<never> }).showDirectoryPicker =
-      vi.fn();
+    (window as { showDirectoryPicker?: () => Promise<never> }).showDirectoryPicker = vi.fn();
     expect(access.isSupported()).toBe(true);
   });
 
   it('should return null when the directory picker is cancelled', async () => {
-    (window as { showDirectoryPicker?: () => Promise<never> }).showDirectoryPicker =
-      vi.fn().mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+    (window as { showDirectoryPicker?: () => Promise<never> }).showDirectoryPicker = vi
+      .fn()
+      .mockRejectedValue(new DOMException('Aborted', 'AbortError'));
     const access = new FileSystemAccessDirectoryAccess();
     const listing = await access.pickDirectoryAndListFiles();
     expect(listing).toBeNull();
@@ -31,21 +31,17 @@ describe('local_directory_access', () => {
   it('should collect nested files from directory handles', async () => {
     const root = createMockDirectoryHandle('Textures', [
       createMockFileHandle('brick.png', 'png-bytes'),
-      createMockDirectoryHandle('floors', [
-        createMockFileHandle('wood.jpg', 'jpg-bytes')
-      ])
+      createMockDirectoryHandle('floors', [createMockFileHandle('wood.jpg', 'jpg-bytes')]),
     ]);
     const files = await collectFilesFromDirectoryHandle(
       root as unknown as FileSystemDirectoryHandle,
-      ''
+      '',
     );
     expect(files.map((entry) => entry.relativePath).sort()).toEqual([
       'brick.png',
-      'floors/wood.jpg'
+      'floors/wood.jpg',
     ]);
-    expect(files.find((entry) => entry.name === 'wood.jpg')?.file.size).toBe(
-      'jpg-bytes'.length
-    );
+    expect(files.find((entry) => entry.name === 'wood.jpg')?.file.size).toBe('jpg-bytes'.length);
   });
 
   it('should build a listing from a webkitdirectory FileList', () => {
@@ -89,7 +85,7 @@ function createMockFileHandle(name: string, contents: string): MockFsHandle {
   return {
     kind: 'file',
     name,
-    getFile: async () => new File([contents], name)
+    getFile: async () => new File([contents], name),
   };
 }
 
@@ -99,10 +95,7 @@ function createMockFileHandle(name: string, contents: string): MockFsHandle {
  * @param children Nested handles.
  * @returns Mock directory handle cast for the scanner API.
  */
-function createMockDirectoryHandle(
-  name: string,
-  children: MockFsHandle[]
-): MockFsHandle {
+function createMockDirectoryHandle(name: string, children: MockFsHandle[]): MockFsHandle {
   return {
     kind: 'directory',
     name,
@@ -110,7 +103,7 @@ function createMockDirectoryHandle(
       for (const child of children) {
         yield child;
       }
-    }
+    },
   };
 }
 
@@ -124,7 +117,7 @@ function createWebkitFile(name: string, relativePath: string): File {
   const file = new File(['x'], name, { type: 'image/png' });
   Object.defineProperty(file, 'webkitRelativePath', {
     value: relativePath,
-    configurable: true
+    configurable: true,
   });
   return file;
 }
@@ -140,7 +133,7 @@ function createFileList(files: File[]): FileList {
     item: (index: number) => files[index] ?? null,
     [Symbol.iterator]: function* () {
       for (const file of files) yield file;
-    }
+    },
   } as FileList;
   files.forEach((file, index) => {
     Object.defineProperty(list, index, { value: file });

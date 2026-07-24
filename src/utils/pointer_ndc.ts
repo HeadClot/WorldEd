@@ -11,7 +11,7 @@ import * as THREE from 'three';
 export function pointerEventToNdc(
   event: MouseEvent,
   element: HTMLElement,
-  target: THREE.Vector2 = new THREE.Vector2()
+  target: THREE.Vector2 = new THREE.Vector2(),
 ): THREE.Vector2 {
   const rect = element.getBoundingClientRect();
   const width = Math.max(rect.width, 1);

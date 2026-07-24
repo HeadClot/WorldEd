@@ -28,9 +28,7 @@ export class UngroupCommand implements UndoCommand {
   constructor(group: THREE.Group) {
     this.group = group;
     this.originalParent = group.parent;
-    this.groupSiblingIndex = this.originalParent
-      ? this.originalParent.children.indexOf(group)
-      : 0;
+    this.groupSiblingIndex = this.originalParent ? this.originalParent.children.indexOf(group) : 0;
     this.childSnapshots = this.buildSnapshots(group);
     this.executed = false;
   }
@@ -69,9 +67,7 @@ export class UngroupCommand implements UndoCommand {
     });
     if (this.originalParent) {
       if (this.groupSiblingIndex < this.originalParent.children.length) {
-        this.originalParent.children.splice(
-          this.groupSiblingIndex, 0, this.group
-        );
+        this.originalParent.children.splice(this.groupSiblingIndex, 0, this.group);
       } else {
         this.originalParent.add(this.group);
       }

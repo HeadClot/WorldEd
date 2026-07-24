@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {
   getDebugCheckerTexture,
   disposeDebugCheckerTexture,
-  getDebugCheckerCellCount
+  getDebugCheckerCellCount,
 } from '../../src/texture/debug_texture_factory.js';
 
 describe('debug_texture_factory', () => {

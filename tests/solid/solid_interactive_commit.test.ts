@@ -42,11 +42,9 @@ describe('Solid interactive transform commit', () => {
     const liveStats = model.getCompilerStatsForTesting();
     expect(liveStats.fullRebuild).toBe(false);
     expect(liveStats.recompiledBrushCount).toBeLessThanOrEqual(2);
-    const liveCount = model.getResultMesh().geometry.getAttribute('position')
-      .count;
+    const liveCount = model.getResultMesh().geometry.getAttribute('position').count;
     model.finalizeAfterInteractiveEdit();
-    const commitCount = model.getResultMesh().geometry.getAttribute('position')
-      .count;
+    const commitCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(commitCount).toBe(liveCount);
     expect(commitCount).toBeGreaterThan(0);
   });
@@ -60,7 +58,7 @@ describe('Solid interactive transform commit', () => {
       world,
       new CommandStack(8),
       new SelectionManager(),
-      new MockSolidPanel() as never
+      new MockSolidPanel() as never,
     );
     brush.mesh!.position.x += 0.1;
     model.syncSelectedBrushesFromScene([brush.mesh!]);
@@ -79,9 +77,7 @@ describe('Solid interactive transform commit', () => {
     const prepared = model.prepareLiveBrushEdit([brush.mesh!]);
     expect(prepared).toBe(true);
     model.finalizeAfterInteractiveEdit();
-    const sources = model.getResultMesh().userData.solidTriangleSources as
-      | unknown[]
-      | undefined;
+    const sources = model.getResultMesh().userData.solidTriangleSources as unknown[] | undefined;
     expect(sources?.length).toBeGreaterThan(0);
   });
 
@@ -99,7 +95,7 @@ describe('Solid interactive transform commit', () => {
       world,
       new CommandStack(8),
       new SelectionManager(),
-      new MockSolidPanel() as never
+      new MockSolidPanel() as never,
     );
     brush.mesh!.position.x = 0.2;
     controller.onTransformsLive([brush.mesh!]);
@@ -123,8 +119,7 @@ describe('Solid interactive transform commit', () => {
     model.prepareLiveBrushEdit([mover.mesh!]);
     model.rebuildLive();
     const sources = model.getResultMesh().userData.solidTriangleSources as
-      | Array<{ brushId: string }>
-      | undefined;
+      Array<{ brushId: string }> | undefined;
     const brushIds = new Set((sources ?? []).map((source) => source.brushId));
     expect(brushIds.has(base.id)).toBe(true);
     expect(brushIds.has(mover.id)).toBe(true);

@@ -4,7 +4,7 @@ import { FolderTextureScanner } from '../texture/folder_texture_scanner.js';
 import {
   LocalDirectoryAccess,
   BrowserLocalDirectoryAccess,
-  PickedDirectoryListing
+  PickedDirectoryListing,
 } from '../texture/local_directory_access.js';
 import { TextureBrowserEntry } from '../texture/texture_browser_entry.js';
 import { getTextureMapCache } from '../texture/texture_map_cache.js';
@@ -21,9 +21,7 @@ export type TextureBrowserStatusCallback = (message: string) => void;
  * Callback when the user selects a texture in the browser.
  * @param entry Selected entry, or null when cleared.
  */
-export type TextureBrowserSelectionCallback = (
-  entry: TextureBrowserEntry | null
-) => void;
+export type TextureBrowserSelectionCallback = (entry: TextureBrowserEntry | null) => void;
 
 /**
  * Dependencies for the texture browser controller.
@@ -55,8 +53,7 @@ export class TextureBrowserController {
     this.browser = deps.browser;
     this.library = deps.library ?? new TextureLibrary();
     this.scanner = deps.scanner ?? new FolderTextureScanner();
-    this.directoryAccess =
-      deps.directoryAccess ?? new BrowserLocalDirectoryAccess();
+    this.directoryAccess = deps.directoryAccess ?? new BrowserLocalDirectoryAccess();
     this.statusCallback = null;
     this.selectionCallback = null;
     this.isLoading = false;
@@ -80,9 +77,7 @@ export class TextureBrowserController {
    * Registers a selection change callback.
    * @param callback Selection handler, or null.
    */
-  setSelectionCallback(
-    callback: TextureBrowserSelectionCallback | null
-  ): void {
+  setSelectionCallback(callback: TextureBrowserSelectionCallback | null): void {
     this.selectionCallback = callback;
   }
 
@@ -139,7 +134,7 @@ export class TextureBrowserController {
     this.browser.setEntries(
       this.library.getEntries(),
       this.library.getSelectedId(),
-      this.library.getFolderName()
+      this.library.getFolderName(),
     );
   }
 
@@ -163,7 +158,7 @@ export class TextureBrowserController {
       this.browser.setStatusMessage(
         this.library.getEntryCount() > 0
           ? `${this.library.getEntryCount()} texture(s)`
-          : 'Folder open cancelled'
+          : 'Folder open cancelled',
       );
       return;
     }
@@ -189,12 +184,9 @@ export class TextureBrowserController {
    * @param skippedCount Non-image files skipped.
    */
   private reportLoadResult(textureCount: number, skippedCount: number): void {
-    const skipNote =
-      skippedCount > 0 ? ` (${skippedCount} non-image skipped)` : '';
+    const skipNote = skippedCount > 0 ? ` (${skippedCount} non-image skipped)` : '';
     const message = `Loaded ${textureCount} texture(s)${skipNote}`;
-    this.browser.setStatusMessage(
-      `${textureCount} texture(s)${skipNote}`
-    );
+    this.browser.setStatusMessage(`${textureCount} texture(s)${skipNote}`);
     this.statusCallback?.(message);
   }
 
@@ -202,8 +194,7 @@ export class TextureBrowserController {
    * Reports that folder access is not available in this browser.
    */
   private reportUnsupported(): void {
-    const message =
-      'Folder access is not supported in this browser';
+    const message = 'Folder access is not supported in this browser';
     this.browser.setStatusMessage(message);
     this.statusCallback?.(message);
   }

@@ -9,7 +9,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -25,7 +25,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -40,11 +40,17 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-    const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, Math.PI / 4, Math.PI / 6);
+    const flyingCamera = new FlyingCamera(
+      canvas,
+      camera,
+      mockInputManager as any,
+      Math.PI / 4,
+      Math.PI / 6,
+    );
     const forward = flyingCamera.getForwardDirection();
     expect(forward.length()).toBeCloseTo(1, 3);
   });
@@ -56,7 +62,7 @@ describe('FlyingCamera', () => {
       isKeyDown: () => false,
       isShiftDown: () => false,
       isRightMouseDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -73,7 +79,7 @@ describe('FlyingCamera', () => {
       isKeyDown: (code: string) => keys.has(code),
       isShiftDown: () => false,
       isRightMouseDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -91,18 +97,12 @@ describe('FlyingCamera', () => {
       isKeyDown: (code: string) => keys.has(code),
       isShiftDown: () => shiftHeld,
       isRightMouseDown: () => true,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     camera.position.set(0, 0, 0);
-    const flyingCamera = new FlyingCamera(
-      canvas,
-      camera,
-      mockInputManager as any,
-      0,
-      0
-    );
+    const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
     // Simulate RMB fly mode by dispatching pointerdown button 2 is hard in jsdom;
     // call update while forcing internal fly state via repeated frames after lock path.
     // Use public update after marking rotating through private path: hold W only first.
@@ -124,7 +124,7 @@ describe('FlyingCamera', () => {
       isKeyDown: (code: string) => keys.has(code),
       isShiftDown: () => false,
       isRightMouseDown: () => true,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     (canvas as any).requestPointerLock = () => {
@@ -147,7 +147,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -162,7 +162,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -179,7 +179,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -196,7 +196,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -213,7 +213,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -238,7 +238,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -263,7 +263,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -288,7 +288,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -307,7 +307,9 @@ describe('FlyingCamera', () => {
     const initialPos = camera.position.clone();
 
     for (let i = 0; i < steps; i++) {
-      canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: smallStep, movementY: 0, pointerId: 1 }));
+      canvas.dispatchEvent(
+        new PointerEvent('pointermove', { movementX: smallStep, movementY: 0, pointerId: 1 }),
+      );
     }
 
     const totalDistanceAfterSmallSteps = camera.position.distanceTo(initialPos);
@@ -319,7 +321,9 @@ describe('FlyingCamera', () => {
 
     // Simulate one large movement equal to the sum of small steps
     const largeDelta = smallStep * steps;
-    canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: largeDelta, movementY: 0, pointerId: 1 }));
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { movementX: largeDelta, movementY: 0, pointerId: 1 }),
+    );
 
     const totalDistanceAfterLargeStep = camera.position.distanceTo(initialPos);
 
@@ -333,7 +337,7 @@ describe('FlyingCamera', () => {
       setupKeyboardListeners: () => {},
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -342,11 +346,15 @@ describe('FlyingCamera', () => {
     };
     const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
     canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, pointerId: 1 }));
-    canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }));
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }),
+    );
     const yawAfterMove = flyingCamera.getYaw();
     document.pointerLockElement = null;
     document.dispatchEvent(new Event('pointerlockchange'));
-    canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }));
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }),
+    );
     expect(flyingCamera.getYaw()).toBe(yawAfterMove);
   });
 
@@ -354,19 +362,13 @@ describe('FlyingCamera', () => {
     const mockInputManager = {
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     camera.position.set(10, 5, 0);
     camera.lookAt(0, 0, 0);
-    const flyingCamera = new FlyingCamera(
-      canvas,
-      camera,
-      mockInputManager as any,
-      0,
-      0
-    );
+    const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
     const beforeQuat = camera.quaternion.clone();
     flyingCamera.update(0.016);
     expect(camera.quaternion.angleTo(beforeQuat)).toBeLessThan(1e-6);
@@ -376,19 +378,13 @@ describe('FlyingCamera', () => {
     const mockInputManager = {
       isKeyDown: () => false,
       isShiftDown: () => false,
-      reset: () => {}
+      reset: () => {},
     };
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     camera.position.set(0, 0, 5);
     camera.lookAt(0, 0, 0);
-    const flyingCamera = new FlyingCamera(
-      canvas,
-      camera,
-      mockInputManager as any,
-      0,
-      0.5
-    );
+    const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0.5);
     flyingCamera.syncOrientationFromCamera();
     // Looking toward -Z from +Z maps to yaw of ±π with zero pitch.
     expect(Math.abs(flyingCamera.getYaw())).toBeCloseTo(Math.PI, 2);

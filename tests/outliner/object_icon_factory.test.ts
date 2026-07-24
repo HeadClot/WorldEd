@@ -11,30 +11,21 @@ describe('ObjectIconFactory.getIcon', () => {
   });
 
   it('should return box icon for BoxGeometry mesh', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     const icon = ObjectIconFactory.getIcon(mesh);
     expect(icon.character).toBe('◼');
     expect(icon.color).toBe('#3498db');
   });
 
   it('should return sphere icon for SphereGeometry mesh', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 8, 8),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial());
     const icon = ObjectIconFactory.getIcon(mesh);
     expect(icon.character).toBe('●');
     expect(icon.color).toBe('#2ecc71');
   });
 
   it('should return plane icon for PlaneGeometry mesh', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
     const icon = ObjectIconFactory.getIcon(mesh);
     expect(icon.character).toBe('▭');
     expect(icon.color).toBe('#9b59b6');
@@ -43,7 +34,7 @@ describe('ObjectIconFactory.getIcon', () => {
   it('should return cylinder icon for CylinderGeometry mesh', () => {
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(1, 1, 1, 8),
-      new THREE.MeshBasicMaterial()
+      new THREE.MeshBasicMaterial(),
     );
     const icon = ObjectIconFactory.getIcon(mesh);
     expect(icon.character).toBe('⬡');
@@ -51,10 +42,7 @@ describe('ObjectIconFactory.getIcon', () => {
   });
 
   it('should return generic mesh icon for unknown geometry', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BufferGeometry(),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
     const icon = ObjectIconFactory.getIcon(mesh);
     expect(icon.character).toBe('◇');
     expect(icon.color).toBe('#95a5a6');

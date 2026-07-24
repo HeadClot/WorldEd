@@ -15,25 +15,25 @@ describe('ScaleCommand', () => {
   beforeEach(() => {
     mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh1.position.set(2, 0, 0);
     mesh2 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh2.position.set(0, 3, 0);
     snapshots = [
       {
         object: mesh1,
         originalPosition: mesh1.position.clone(),
-        originalScale: mesh1.scale.clone()
+        originalScale: mesh1.scale.clone(),
       },
       {
         object: mesh2,
         originalPosition: mesh2.position.clone(),
-        originalScale: mesh2.scale.clone()
-      }
+        originalScale: mesh2.scale.clone(),
+      },
     ];
     pivot = new THREE.Vector3(0, 0, 0);
     axis = new THREE.Vector3(1, 0, 0);
@@ -80,17 +80,11 @@ describe('ScaleCommand', () => {
       {
         object: mesh2,
         originalPosition: mesh2.position.clone(),
-        originalScale: mesh2.scale.clone()
-      }
+        originalScale: mesh2.scale.clone(),
+      },
     ];
     const yAxis = new THREE.Vector3(0, 1, 0);
-    const command = new ScaleCommand(
-      ySnapshots,
-      pivot,
-      yAxis,
-      3,
-      GizmoAxis.Y
-    );
+    const command = new ScaleCommand(ySnapshots, pivot, yAxis, 3, GizmoAxis.Y);
     command.execute();
     expect(mesh2.position.y).toBeCloseTo(9);
     expect(mesh2.scale.y).toBeCloseTo(3);

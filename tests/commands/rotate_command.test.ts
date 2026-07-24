@@ -14,25 +14,25 @@ describe('RotateCommand', () => {
   beforeEach(() => {
     mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh1.position.set(2, 0, 0);
     mesh2 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh2.position.set(0, 2, 0);
     snapshots = [
       {
         object: mesh1,
         originalPosition: mesh1.position.clone(),
-        originalQuaternion: mesh1.quaternion.clone()
+        originalQuaternion: mesh1.quaternion.clone(),
       },
       {
         object: mesh2,
         originalPosition: mesh2.position.clone(),
-        originalQuaternion: mesh2.quaternion.clone()
-      }
+        originalQuaternion: mesh2.quaternion.clone(),
+      },
     ];
     pivot = new THREE.Vector3(0, 0, 0);
     axis = new THREE.Vector3(0, 0, 1);
@@ -88,8 +88,8 @@ describe('RotateCommand', () => {
       {
         object: mesh1,
         originalPosition: mesh1.position.clone(),
-        originalQuaternion: mesh1.quaternion.clone()
-      }
+        originalQuaternion: mesh1.quaternion.clone(),
+      },
     ];
     const command = new RotateCommand(snapshots2, offPivot, axis, angle);
     command.execute();

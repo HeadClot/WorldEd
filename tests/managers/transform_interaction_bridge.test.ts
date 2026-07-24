@@ -33,7 +33,7 @@ class MockViewport {
     const canvas = {
       getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
       width: 800,
-      height: 600
+      height: 600,
     };
     this.renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
     this.gizmoGroup = gizmoGroup;
@@ -63,10 +63,7 @@ describe('TransformInteractionBridge', () => {
 
   beforeEach(() => {
     selectionManager = new SelectionManager();
-    mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 2, 2),
-      new THREE.MeshBasicMaterial()
-    );
+    mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
     mesh.updateMatrixWorld(true);
     selectionManager.selectObject(mesh);
     transformGizmo = new TransformGizmo(Theme);
@@ -80,7 +77,7 @@ describe('TransformInteractionBridge', () => {
       new GizmoRaycaster(),
       executor,
       new TransformConstraint(),
-      new CommandStack(16)
+      new CommandStack(16),
     );
     const gizmoGroup = transformGizmo.getHandleGroupClone();
     viewport = new MockViewport(gizmoGroup);
@@ -115,10 +112,7 @@ describe('TransformInteractionBridge', () => {
   it('should end a bounds drag when pointerup fires on window outside the canvas', () => {
     const bridge = createBridge(() => true);
     const downEvent = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const started = bridge.onTransformEvent(
-      downEvent,
-      viewport as unknown as Viewport3D
-    );
+    const started = bridge.onTransformEvent(downEvent, viewport as unknown as Viewport3D);
     expect(started).toBe(true);
     expect(transformHandler.isDragging()).toBe(true);
     window.dispatchEvent(new PointerEvent('pointerup', { button: 0 }));
@@ -144,9 +138,7 @@ describe('TransformInteractionBridge', () => {
     const downEvent = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
     bridge.onTransformEvent(downEvent, viewport as unknown as Viewport3D);
     expect(transformHandler.isDragging()).toBe(true);
-    window.dispatchEvent(
-      new PointerEvent('pointermove', { clientX: 420, clientY: 310 })
-    );
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 420, clientY: 310 }));
     expect(onPointerMove).toHaveBeenCalled();
     window.dispatchEvent(new PointerEvent('pointerup', { button: 0 }));
   });
@@ -157,12 +149,12 @@ describe('TransformInteractionBridge', () => {
    * @returns Configured TransformInteractionBridge.
    */
   function createBridge(
-    isInteractionEnabled: (() => boolean) | undefined
+    isInteractionEnabled: (() => boolean) | undefined,
   ): TransformInteractionBridge {
     return new TransformInteractionBridge({
       selectionManager,
       selectionVisualController: {
-        syncDuringTransform: () => undefined
+        syncDuringTransform: () => undefined,
       } as never,
       transformGizmo,
       transformHandler,
@@ -170,18 +162,18 @@ describe('TransformInteractionBridge', () => {
       gridSnap: new GridSnap(false, 1),
       inputManager: { isShiftDown: () => false } as never,
       viewportSyncManager: {
-        syncClonePositionsToWorldObject: () => undefined
+        syncClonePositionsToWorldObject: () => undefined,
       } as never,
       propertiesPanel: { refreshBoundObject: () => undefined } as never,
       worldObject: new THREE.Group(),
       viewport3D: {
-        getCamera: () => viewport.getCamera()
+        getCamera: () => viewport.getCamera(),
       } as never,
       getUserSnapEnabled: () => false,
       isTransformSpaceLocal: () => false,
       syncPrimitivesToViewports: () => undefined,
       isTransformSpaceLocal: () => false,
-      isInteractionEnabled
+      isInteractionEnabled,
     });
   }
 });

@@ -52,9 +52,7 @@ describe('SolidModelCodec', () => {
     expect(json.objects.filter((object) => object.parentId === entry?.uuid).length).toBe(0);
     const loadedWorld = new THREE.Group();
     new SceneDeserializer().deserialize(json, loadedWorld);
-    const loaded = loadedWorld.children.find(
-      (child) => child.name === 'SceneSolid'
-    );
+    const loaded = loadedWorld.children.find((child) => child.name === 'SceneSolid');
     expect(loaded).toBeInstanceOf(THREE.Group);
     expect(SolidModel.isSolidModelObject(loaded as THREE.Object3D)).toBe(true);
     const restoredModel = SolidModel.fromObject(loaded as THREE.Object3D);
@@ -82,7 +80,7 @@ describe('SolidModelCodec', () => {
     mapping.align = 'wall';
     const command = new ApplyFaceTextureCommand(
       [{ mesh: result, triangleIndices: indices, previousMapping: null }],
-      mapping
+      mapping,
     );
     command.execute();
     expect(brush.getSurfaceMapping(0).scaleU).toBeCloseTo(2.5);
@@ -120,10 +118,10 @@ describe('SolidModelCodec', () => {
         {
           mesh: result,
           triangleIndices: firstRegion.triangleIndices.slice(),
-          previousMapping: null
-        }
+          previousMapping: null,
+        },
       ],
-      mapping
+      mapping,
     ).execute();
     world.add(model.root);
     const json = new SceneSerializer().serialize(world);
@@ -131,14 +129,12 @@ describe('SolidModelCodec', () => {
     expect(entry?.solidModel?.brushes[0]).toBeDefined();
     const loadedWorld = new THREE.Group();
     new SceneDeserializer().deserialize(json, loadedWorld);
-    const loadedRoot = loadedWorld.children.find(
-      (child) => child.name === 'SceneUvSolid'
-    );
+    const loadedRoot = loadedWorld.children.find((child) => child.name === 'SceneUvSolid');
     const restoredModel = SolidModel.fromObject(loadedRoot as THREE.Object3D);
     expect(restoredModel).toBeTruthy();
     const restoredMaps = getFaceTextureMaps(restoredModel!.getResultMesh());
     const matching = restoredMaps.find(
-      (entryMap) => entryMap.mapping.textureId === 'folder/face_uv.png'
+      (entryMap) => entryMap.mapping.textureId === 'folder/face_uv.png',
     );
     expect(matching).toBeDefined();
     expect(matching!.mapping.scaleU).toBeCloseTo(3);

@@ -69,10 +69,7 @@ describe('RenameCommand', () => {
   });
 
   it('should handle renaming object with no previous name', () => {
-    const unnamed = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const unnamed = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     const command = new RenameCommand(unnamed, 'NowNamed');
     command.execute();
     expect(unnamed.name).toBe('NowNamed');

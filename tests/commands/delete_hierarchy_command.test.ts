@@ -11,10 +11,7 @@ describe('DeleteHierarchyCommand', () => {
     world = new THREE.Group();
     group = new THREE.Group();
     group.name = 'EmptyGroup';
-    mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'Cube';
     world.add(group);
     world.add(mesh);

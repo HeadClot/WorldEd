@@ -1,7 +1,4 @@
-import {
-  SolidSurfaceRegion,
-  SolidTriangleSource
-} from '../algorithm/surface_triangulator.js';
+import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';
 import { SolidBrushMeshChunk } from './solid_brush_mesh_chunk.js';
 import { SolidMeshChunkCache } from './solid_mesh_chunk_cache.js';
 
@@ -36,7 +33,7 @@ export class SolidResultAssembler {
    */
   static assemble(
     brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache
+    chunkCache: SolidMeshChunkCache,
   ): SolidAssembledMesh {
     const chunks = this.collectChunks(brushIds, chunkCache);
     if (chunks.length === 0) {
@@ -54,12 +51,7 @@ export class SolidResultAssembler {
       positions.set(chunk.positions, vertexOffset * 3);
       normals.set(chunk.normals, vertexOffset * 3);
       uvs.set(chunk.uvs, vertexOffset * 2);
-      this.appendRegions(
-        chunk,
-        triangleOffset,
-        surfaceRegions,
-        triangleSources
-      );
+      this.appendRegions(chunk, triangleOffset, surfaceRegions, triangleSources);
       vertexOffset += chunk.vertexCount;
       triangleOffset += chunk.triangleCount;
     }
@@ -69,7 +61,7 @@ export class SolidResultAssembler {
       uvs,
       triangleCount: totals.triangleCount,
       surfaceRegions,
-      triangleSources
+      triangleSources,
     };
   }
 
@@ -81,7 +73,7 @@ export class SolidResultAssembler {
    */
   private static collectChunks(
     brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache
+    chunkCache: SolidMeshChunkCache,
   ): SolidBrushMeshChunk[] {
     const chunks: SolidBrushMeshChunk[] = [];
     for (const brushId of brushIds) {
@@ -122,16 +114,14 @@ export class SolidResultAssembler {
     chunk: SolidBrushMeshChunk,
     triangleOffset: number,
     surfaceRegions: SolidSurfaceRegion[],
-    triangleSources: SolidTriangleSource[]
+    triangleSources: SolidTriangleSource[],
   ): void {
     for (const region of chunk.regions) {
       surfaceRegions.push({
-        triangleIndices: region.triangleIndices.map(
-          (localIndex) => localIndex + triangleOffset
-        ),
+        triangleIndices: region.triangleIndices.map((localIndex) => localIndex + triangleOffset),
         textureId: region.textureId,
         brushId: region.brushId,
-        surfaceIndex: region.surfaceIndex
+        surfaceIndex: region.surfaceIndex,
       });
     }
     for (const source of chunk.triangleSources) {
@@ -150,7 +140,7 @@ export class SolidResultAssembler {
       uvs: new Float32Array(0),
       triangleCount: 0,
       surfaceRegions: [],
-      triangleSources: []
+      triangleSources: [],
     };
   }
 }

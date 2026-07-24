@@ -1,10 +1,5 @@
 import * as THREE from 'three';
-import {
-  SolidFace,
-  WingEdge,
-  createSolidFace,
-  createWingEdge
-} from '../types/wing_edge.js';
+import { SolidFace, WingEdge, createSolidFace, createWingEdge } from '../types/wing_edge.js';
 import { SolidPlane } from './solid_plane.js';
 
 /**
@@ -36,12 +31,10 @@ export class SolidBrush {
   clone(): SolidBrush {
     const copy = new SolidBrush();
     copy.vertices = this.vertices.map((vertex) => vertex.clone());
-    copy.wingEdges = this.wingEdges.map((edge) =>
-      createWingEdge(edge.vertexIndex, edge.twinIndex)
-    );
+    copy.wingEdges = this.wingEdges.map((edge) => createWingEdge(edge.vertexIndex, edge.twinIndex));
     copy.edgeFaceIndices = this.edgeFaceIndices.slice();
     copy.faces = this.faces.map((face) =>
-      createSolidFace(face.firstEdge, face.edgeCount, face.surfaceIndex)
+      createSolidFace(face.firstEdge, face.edgeCount, face.surfaceIndex),
     );
     copy.planes = this.planes.map((plane) => plane.clone());
     return copy;

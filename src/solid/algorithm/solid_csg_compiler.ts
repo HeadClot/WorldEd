@@ -6,7 +6,7 @@ import { SolidOperation } from '../types/solid_operation.js';
 import { SurfaceCategory } from '../types/surface_category.js';
 import {
   shouldKeepSurfaceCategory,
-  shouldReverseSurfaceWinding
+  shouldReverseSurfaceWinding,
 } from '../types/surface_category.js';
 import { BrushMembership } from './brush_membership.js';
 import { BrushOverlapGraph } from './brush_overlap_graph.js';
@@ -86,7 +86,7 @@ export class SolidCsgCompiler {
     fullRebuild: true,
     recompiledBrushCount: 0,
     reusedBrushCount: 0,
-    preparedBrushCount: 0
+    preparedBrushCount: 0,
   };
 
   /**
@@ -165,7 +165,7 @@ export class SolidCsgCompiler {
    */
   updateCachedPolygonTextures(
     brushId: string,
-    textureForSurface: (surfaceIndex: number) => string
+    textureForSurface: (surfaceIndex: number) => string,
   ): boolean {
     const polygons = this.cache.getPolygons(brushId);
     if (!polygons) return false;
@@ -183,7 +183,7 @@ export class SolidCsgCompiler {
    */
   compile(
     instances: SolidBrushInstance[],
-    options: SolidCompileOptions = {}
+    options: SolidCompileOptions = {},
   ): SolidCompiledPolygon[] {
     const prepared = this.beginCompile(instances, options);
     if (!prepared) return [];
@@ -200,7 +200,7 @@ export class SolidCsgCompiler {
   async compileAsync(
     instances: SolidBrushInstance[],
     options: SolidCompileOptions = {},
-    onProgress?: (ratio: number) => void
+    onProgress?: (ratio: number) => void,
   ): Promise<SolidCompiledPolygon[]> {
     const prepared = this.beginCompile(instances, options);
     if (!prepared) {
@@ -218,7 +218,7 @@ export class SolidCsgCompiler {
    */
   private beginCompile(
     instances: SolidBrushInstance[],
-    options: SolidCompileOptions
+    options: SolidCompileOptions,
   ): PreparedBrush[] | null {
     this.refreshedBrushIds.clear();
     const prepared = this.prepareBrushes(instances, options);
@@ -229,12 +229,12 @@ export class SolidCsgCompiler {
         fullRebuild: true,
         recompiledBrushCount: 0,
         reusedBrushCount: 0,
-        preparedBrushCount: 0
+        preparedBrushCount: 0,
       };
       return null;
     }
     this.hasIntersectingOperations = prepared.some(
-      (entry) => entry.operation === SolidOperation.Intersecting
+      (entry) => entry.operation === SolidOperation.Intersecting,
     );
     this.buildOverlapGraph(prepared, options);
     this.membershipIndex = new BrushSpatialIndex(prepared, this.boundsPad);
@@ -246,10 +246,7 @@ export class SolidCsgCompiler {
    * @param prepared Prepared brushes with empty overlap lists.
    * @param options Compile options with optional dirty seeds.
    */
-  private buildOverlapGraph(
-    prepared: PreparedBrush[],
-    options: SolidCompileOptions
-  ): void {
+  private buildOverlapGraph(prepared: PreparedBrush[], options: SolidCompileOptions): void {
     const brushIds = prepared.map((entry) => entry.instance.id);
     if (this.shouldForceFullRebuild(brushIds, options)) {
       BrushOverlapGraph.build(prepared, this.boundsPad);
@@ -261,12 +258,7 @@ export class SolidCsgCompiler {
       return;
     }
     const previousPeers = this.loadPreviousPeerIndices(prepared);
-    BrushOverlapGraph.buildPartial(
-      prepared,
-      this.boundsPad,
-      seedIndices,
-      previousPeers
-    );
+    BrushOverlapGraph.buildPartial(prepared, this.boundsPad, seedIndices, previousPeers);
   }
 
   /**
@@ -275,10 +267,7 @@ export class SolidCsgCompiler {
    * @param options Compile options.
    * @returns Seed index set.
    */
-  private resolveSeedIndices(
-    prepared: PreparedBrush[],
-    options: SolidCompileOptions
-  ): Set<number> {
+  private resolveSeedIndices(prepared: PreparedBrush[], options: SolidCompileOptions): Set<number> {
     const seedIds = this.collectSeedDirtyIds(options);
     const indices = new Set<number>();
     for (let index = 0; index < prepared.length; index++) {
@@ -322,22 +311,13 @@ export class SolidCsgCompiler {
     prepared: PreparedBrush[],
     options: SolidCompileOptions,
     asyncRecompile: boolean,
-    onProgress?: (ratio: number) => void
+    onProgress?: (ratio: number) => void,
   ): SolidCompiledPolygon[] | Promise<SolidCompiledPolygon[]> {
     const brushIds = prepared.map((entry) => entry.instance.id);
     const forceFull = this.shouldForceFullRebuild(brushIds, options);
-    const updateSet = forceFull
-      ? new Set(brushIds)
-      : this.buildPartialUpdateSet(prepared, options);
+    const updateSet = forceFull ? new Set(brushIds) : this.buildPartialUpdateSet(prepared, options);
     if (asyncRecompile) {
-      return this.finishCompileAsync(
-        prepared,
-        options,
-        forceFull,
-        updateSet,
-        brushIds,
-        onProgress
-      );
+      return this.finishCompileAsync(prepared, options, forceFull, updateSet, brushIds, onProgress);
     }
     this.recompileUpdateSet(prepared, updateSet);
     this.finalizeCompileState(prepared, forceFull, updateSet, brushIds);
@@ -361,7 +341,7 @@ export class SolidCsgCompiler {
     forceFull: boolean,
     updateSet: Set<string>,
     brushIds: string[],
-    onProgress?: (ratio: number) => void
+    onProgress?: (ratio: number) => void,
   ): Promise<SolidCompiledPolygon[]> {
     await this.recompileUpdateSetAsync(prepared, updateSet, onProgress);
     this.finalizeCompileState(prepared, forceFull, updateSet, brushIds);
@@ -380,7 +360,7 @@ export class SolidCsgCompiler {
     prepared: PreparedBrush[],
     forceFull: boolean,
     updateSet: Set<string>,
-    brushIds: string[]
+    brushIds: string[],
   ): void {
     this.storeTouchCaches(prepared);
     this.cache.pruneToIds(new Set(brushIds));
@@ -398,13 +378,13 @@ export class SolidCsgCompiler {
   private recordCompileStats(
     fullRebuild: boolean,
     recompiledBrushCount: number,
-    preparedBrushCount: number
+    preparedBrushCount: number,
   ): void {
     this.lastStats = {
       fullRebuild,
       recompiledBrushCount,
       reusedBrushCount: preparedBrushCount - recompiledBrushCount,
-      preparedBrushCount
+      preparedBrushCount,
     };
   }
 
@@ -414,10 +394,7 @@ export class SolidCsgCompiler {
    * @param options Compile options.
    * @returns True when every brush must be recompiled.
    */
-  private shouldForceFullRebuild(
-    brushIds: string[],
-    options: SolidCompileOptions
-  ): boolean {
+  private shouldForceFullRebuild(brushIds: string[], options: SolidCompileOptions): boolean {
     if (options.forceFull) return true;
     if (!options.dirtyBrushIds) return true;
     if (this.hasIntersectingOperations) return true;
@@ -445,18 +422,13 @@ export class SolidCsgCompiler {
    * @param seedDirtyIds Brushes that will be recompiled.
    * @returns True when partial reuse is safe.
    */
-  private canReuseCachedBrushes(
-    brushIds: string[],
-    seedDirtyIds: ReadonlySet<string>
-  ): boolean {
+  private canReuseCachedBrushes(brushIds: string[], seedDirtyIds: ReadonlySet<string>): boolean {
     const reusableIds = brushIds.filter((id) => !seedDirtyIds.has(id));
     for (const brushId of reusableIds) {
       if (!this.cache.getPolygons(brushId)) return false;
     }
     const reusableSet = new Set(reusableIds);
-    const previousReusable = this.cache
-      .getLastBrushOrder()
-      .filter((id) => reusableSet.has(id));
+    const previousReusable = this.cache.getLastBrushOrder().filter((id) => reusableSet.has(id));
     if (previousReusable.length !== reusableIds.length) return false;
     for (let index = 0; index < reusableIds.length; index++) {
       if (previousReusable[index] !== reusableIds[index]) return false;
@@ -472,18 +444,13 @@ export class SolidCsgCompiler {
    */
   private buildPartialUpdateSet(
     prepared: PreparedBrush[],
-    options: SolidCompileOptions
+    options: SolidCompileOptions,
   ): Set<string> {
     const seed = this.collectSeedDirtyIds(options);
     const brushIds = prepared.map((entry) => entry.instance.id);
     const currentTouches = this.buildCurrentTouchMap(prepared);
     const previousTouches = this.buildPreviousTouchMap(brushIds);
-    return SolidUpdateSetBuilder.build(
-      seed,
-      brushIds,
-      currentTouches,
-      previousTouches
-    );
+    return SolidUpdateSetBuilder.build(seed, brushIds, currentTouches, previousTouches);
   }
 
   /**
@@ -491,14 +458,12 @@ export class SolidCsgCompiler {
    * @param prepared Prepared brushes with overlap indices.
    * @returns Map of brush id to peer ids.
    */
-  private buildCurrentTouchMap(
-    prepared: PreparedBrush[]
-  ): Map<string, string[]> {
+  private buildCurrentTouchMap(prepared: PreparedBrush[]): Map<string, string[]> {
     const map = new Map<string, string[]>();
     for (let index = 0; index < prepared.length; index++) {
       const entry = prepared[index];
       const peerIds = entry.overlappingPeerIndices.map(
-        (peerIndex) => prepared[peerIndex].instance.id
+        (peerIndex) => prepared[peerIndex].instance.id,
       );
       map.set(entry.instance.id, peerIds);
     }
@@ -510,9 +475,7 @@ export class SolidCsgCompiler {
    * @param brushIds Brush ids to look up.
    * @returns Map of brush id to previous peer ids.
    */
-  private buildPreviousTouchMap(
-    brushIds: string[]
-  ): Map<string, string[]> {
+  private buildPreviousTouchMap(brushIds: string[]): Map<string, string[]> {
     const map = new Map<string, string[]>();
     for (const brushId of brushIds) {
       map.set(brushId, this.cache.getTouchPeerIds(brushId));
@@ -525,10 +488,7 @@ export class SolidCsgCompiler {
    * @param prepared All prepared brushes.
    * @param updateSet Brush ids to recompile.
    */
-  private recompileUpdateSet(
-    prepared: PreparedBrush[],
-    updateSet: Set<string>
-  ): void {
+  private recompileUpdateSet(prepared: PreparedBrush[], updateSet: Set<string>): void {
     const indices = this.collectUpdateIndices(prepared, updateSet);
     for (const brushIndex of indices) {
       this.recompileOnePreparedBrush(prepared, brushIndex);
@@ -544,7 +504,7 @@ export class SolidCsgCompiler {
   private async recompileUpdateSetAsync(
     prepared: PreparedBrush[],
     updateSet: Set<string>,
-    onProgress?: (ratio: number) => void
+    onProgress?: (ratio: number) => void,
   ): Promise<void> {
     const indices = this.collectUpdateIndices(prepared, updateSet);
     await forBatchesAsync(
@@ -555,7 +515,7 @@ export class SolidCsgCompiler {
           this.recompileOnePreparedBrush(prepared, indices[i]);
         }
       },
-      onProgress
+      onProgress,
     );
   }
 
@@ -565,10 +525,7 @@ export class SolidCsgCompiler {
    * @param updateSet Brush ids to recompile.
    * @returns Indices into prepared.
    */
-  private collectUpdateIndices(
-    prepared: PreparedBrush[],
-    updateSet: Set<string>
-  ): number[] {
+  private collectUpdateIndices(prepared: PreparedBrush[], updateSet: Set<string>): number[] {
     const indices: number[] = [];
     for (let brushIndex = 0; brushIndex < prepared.length; brushIndex++) {
       if (updateSet.has(prepared[brushIndex].instance.id)) {
@@ -583,10 +540,7 @@ export class SolidCsgCompiler {
    * @param prepared All prepared brushes.
    * @param brushIndex Index of the brush to compile.
    */
-  private recompileOnePreparedBrush(
-    prepared: PreparedBrush[],
-    brushIndex: number
-  ): void {
+  private recompileOnePreparedBrush(prepared: PreparedBrush[], brushIndex: number): void {
     const entry = prepared[brushIndex];
     const polygons: SolidCompiledPolygon[] = [];
     this.compileBrushSurfaces(prepared, brushIndex, polygons);
@@ -600,7 +554,7 @@ export class SolidCsgCompiler {
   private storeTouchCaches(prepared: PreparedBrush[]): void {
     for (const entry of prepared) {
       const peerIds = entry.overlappingPeerIndices.map(
-        (peerIndex) => prepared[peerIndex].instance.id
+        (peerIndex) => prepared[peerIndex].instance.id,
       );
       this.cache.setTouchPeerIds(entry.instance.id, peerIds);
     }
@@ -632,7 +586,7 @@ export class SolidCsgCompiler {
    */
   private prepareBrushes(
     instances: SolidBrushInstance[],
-    options: SolidCompileOptions
+    options: SolidCompileOptions,
   ): PreparedBrush[] {
     const dirtySeeds = options.forceFull
       ? null
@@ -655,12 +609,10 @@ export class SolidCsgCompiler {
    */
   private prepareOneBrush(
     instance: SolidBrushInstance,
-    dirtySeeds: Set<string> | null
+    dirtySeeds: Set<string> | null,
   ): PreparedBrush {
     const mustRefresh =
-      dirtySeeds === null ||
-      dirtySeeds.has(instance.id) ||
-      !this.canReusePrepared(instance);
+      dirtySeeds === null || dirtySeeds.has(instance.id) || !this.canReusePrepared(instance);
     if (!mustRefresh) {
       return this.preparedFromCache(instance);
     }
@@ -698,7 +650,7 @@ export class SolidCsgCompiler {
       brush: cached.brush,
       bounds: cached.bounds,
       overlappingPeerIndices: [],
-      operation: instance.operation
+      operation: instance.operation,
     };
   }
 
@@ -718,14 +670,14 @@ export class SolidCsgCompiler {
       rotation: instance.rotation.clone(),
       scale: instance.scale.clone(),
       visible: instance.visible,
-      shapeFingerprint: BrushShapeFingerprint.fromBrush(instance.brush)
+      shapeFingerprint: BrushShapeFingerprint.fromBrush(instance.brush),
     });
     return {
       instance,
       brush,
       bounds,
       overlappingPeerIndices: [],
-      operation: instance.operation
+      operation: instance.operation,
     };
   }
 
@@ -748,7 +700,7 @@ export class SolidCsgCompiler {
   private compileBrushSurfaces(
     prepared: PreparedBrush[],
     brushIndex: number,
-    output: SolidCompiledPolygon[]
+    output: SolidCompiledPolygon[],
   ): void {
     const subject = prepared[brushIndex];
     if (subject.overlappingPeerIndices.length === 0) {
@@ -771,18 +723,13 @@ export class SolidCsgCompiler {
     prepared: PreparedBrush[],
     brushIndex: number,
     faceIndex: number,
-    output: SolidCompiledPolygon[]
+    output: SolidCompiledPolygon[],
   ): void {
     const subject = prepared[brushIndex];
     const face = subject.brush.faces[faceIndex];
     const faceVertices = subject.brush.getFaceVertices(face);
     const facePlane = subject.brush.planes[faceIndex];
-    const cutPlanes = this.collectCutPlanes(
-      prepared,
-      brushIndex,
-      facePlane,
-      faceVertices
-    );
+    const cutPlanes = this.collectCutPlanes(prepared, brushIndex, facePlane, faceVertices);
     const fragments =
       cutPlanes.length === 0
         ? [faceVertices]
@@ -794,7 +741,7 @@ export class SolidCsgCompiler {
         face.surfaceIndex,
         subject,
         prepared,
-        brushIndex
+        brushIndex,
       );
       if (compiled) output.push(compiled);
     }
@@ -811,7 +758,7 @@ export class SolidCsgCompiler {
     subject: PreparedBrush,
     prepared: PreparedBrush[],
     brushIndex: number,
-    output: SolidCompiledPolygon[]
+    output: SolidCompiledPolygon[],
   ): void {
     if (subject.operation === SolidOperation.Subtractive) return;
     if (subject.operation === SolidOperation.Intersecting) return;
@@ -819,12 +766,7 @@ export class SolidCsgCompiler {
       this.emitIsolatedAdditiveSurfacesDirect(subject, output);
       return;
     }
-    this.emitIsolatedSurfacesWithMembership(
-      subject,
-      prepared,
-      brushIndex,
-      output
-    );
+    this.emitIsolatedSurfacesWithMembership(subject, prepared, brushIndex, output);
   }
 
   /**
@@ -839,7 +781,7 @@ export class SolidCsgCompiler {
     subject: PreparedBrush,
     prepared: PreparedBrush[],
     brushIndex: number,
-    output: SolidCompiledPolygon[]
+    output: SolidCompiledPolygon[],
   ): void {
     for (let faceIndex = 0; faceIndex < subject.brush.faces.length; faceIndex++) {
       const face = subject.brush.faces[faceIndex];
@@ -849,7 +791,7 @@ export class SolidCsgCompiler {
         face.surfaceIndex,
         subject,
         prepared,
-        brushIndex
+        brushIndex,
       );
       if (compiled) output.push(compiled);
     }
@@ -863,7 +805,7 @@ export class SolidCsgCompiler {
    */
   private emitIsolatedAdditiveSurfacesDirect(
     subject: PreparedBrush,
-    output: SolidCompiledPolygon[]
+    output: SolidCompiledPolygon[],
   ): void {
     for (let faceIndex = 0; faceIndex < subject.brush.faces.length; faceIndex++) {
       const face = subject.brush.faces[faceIndex];
@@ -876,7 +818,7 @@ export class SolidCsgCompiler {
         surfaceIndex: face.surfaceIndex,
         brushId: subject.instance.id,
         textureId: subject.instance.getSurfaceTextureId(face.surfaceIndex),
-        category: SurfaceCategory.SelfAligned
+        category: SurfaceCategory.SelfAligned,
       });
     }
   }
@@ -892,7 +834,7 @@ export class SolidCsgCompiler {
     prepared: PreparedBrush[],
     subjectIndex: number,
     facePlane: SolidPlane,
-    faceVertices: THREE.Vector3[]
+    faceVertices: THREE.Vector3[],
   ): SolidPlane[] {
     const planes: SolidPlane[] = [];
     const subject = prepared[subjectIndex];
@@ -915,10 +857,7 @@ export class SolidCsgCompiler {
    * @param plane Candidate cut plane.
    * @returns True when the plane may split the polygon.
    */
-  private planeLikelyCutsPolygon(
-    polygon: THREE.Vector3[],
-    plane: SolidPlane
-  ): boolean {
+  private planeLikelyCutsPolygon(polygon: THREE.Vector3[], plane: SolidPlane): boolean {
     let sawInside = false;
     let sawOutside = false;
     for (const point of polygon) {
@@ -946,26 +885,15 @@ export class SolidCsgCompiler {
     surfaceIndex: number,
     subject: PreparedBrush,
     prepared: PreparedBrush[],
-    subjectIndex: number
+    subjectIndex: number,
   ): SolidCompiledPolygon | null {
     if (fragment.length < 3) return null;
     if (!this.isBoundaryFragment(fragment, facePlane.normal, prepared)) {
       return null;
     }
-    const category = this.routeFragmentCategory(
-      fragment,
-      facePlane.normal,
-      prepared,
-      subjectIndex
-    );
+    const category = this.routeFragmentCategory(fragment, facePlane.normal, prepared, subjectIndex);
     if (!shouldKeepSurfaceCategory(category)) return null;
-    return this.buildCompiledPolygon(
-      fragment,
-      facePlane,
-      surfaceIndex,
-      subject,
-      category
-    );
+    return this.buildCompiledPolygon(fragment, facePlane, surfaceIndex, subject, category);
   }
 
   /**
@@ -982,7 +910,7 @@ export class SolidCsgCompiler {
     facePlane: SolidPlane,
     surfaceIndex: number,
     subject: PreparedBrush,
-    category: SurfaceCategory
+    category: SurfaceCategory,
   ): SolidCompiledPolygon {
     const vertices = fragment.map((point) => point.clone());
     const normal = facePlane.normal.clone();
@@ -996,7 +924,7 @@ export class SolidCsgCompiler {
       surfaceIndex,
       brushId: subject.instance.id,
       textureId: subject.instance.getSurfaceTextureId(surfaceIndex),
-      category
+      category,
     };
   }
 
@@ -1014,22 +942,12 @@ export class SolidCsgCompiler {
     fragment: THREE.Vector3[],
     normal: THREE.Vector3,
     prepared: PreparedBrush[],
-    subjectIndex: number
+    subjectIndex: number,
   ): SurfaceCategory {
     if (this.hasIntersectingOperations) {
-      return this.routeFragmentCategoryFull(
-        fragment,
-        normal,
-        prepared,
-        subjectIndex
-      );
+      return this.routeFragmentCategoryFull(fragment, normal, prepared, subjectIndex);
     }
-    return this.routeFragmentCategoryLocal(
-      fragment,
-      normal,
-      prepared,
-      subjectIndex
-    );
+    return this.routeFragmentCategoryLocal(fragment, normal, prepared, subjectIndex);
   }
 
   /**
@@ -1044,7 +962,7 @@ export class SolidCsgCompiler {
     fragment: THREE.Vector3[],
     normal: THREE.Vector3,
     prepared: PreparedBrush[],
-    subjectIndex: number
+    subjectIndex: number,
   ): SurfaceCategory {
     let category = SurfaceCategory.Outside;
     const subject = prepared[subjectIndex];
@@ -1058,7 +976,7 @@ export class SolidCsgCompiler {
         peer,
         index,
         subjectIndex,
-        overlapSet
+        overlapSet,
       );
       category = CategoryRouter.route(category, relative, peer.operation);
     }
@@ -1077,13 +995,11 @@ export class SolidCsgCompiler {
     fragment: THREE.Vector3[],
     normal: THREE.Vector3,
     prepared: PreparedBrush[],
-    subjectIndex: number
+    subjectIndex: number,
   ): SurfaceCategory {
     let category = SurfaceCategory.Outside;
     const subject = prepared[subjectIndex];
-    const relevant = subject.overlappingPeerIndices
-      .concat(subjectIndex)
-      .sort((a, b) => a - b);
+    const relevant = subject.overlappingPeerIndices.concat(subjectIndex).sort((a, b) => a - b);
     for (const index of relevant) {
       const peer = prepared[index];
       const relative =
@@ -1111,7 +1027,7 @@ export class SolidCsgCompiler {
     peer: PreparedBrush,
     peerIndex: number,
     subjectIndex: number,
-    overlapSet: Set<number>
+    overlapSet: Set<number>,
   ): SurfaceCategory {
     if (peerIndex === subjectIndex) return SurfaceCategory.SelfAligned;
     if (!overlapSet.has(peerIndex)) return SurfaceCategory.Outside;
@@ -1128,24 +1044,14 @@ export class SolidCsgCompiler {
   private isBoundaryFragment(
     fragment: THREE.Vector3[],
     normal: THREE.Vector3,
-    prepared: PreparedBrush[]
+    prepared: PreparedBrush[],
   ): boolean {
     this.computeCentroidInto(fragment, this.scratchCentroid);
     const offset = Math.max(this.membershipEpsilon * 4, 1e-4);
-    this.scratchOutside
-      .copy(this.scratchCentroid)
-      .addScaledVector(normal, offset);
-    this.scratchInside
-      .copy(this.scratchCentroid)
-      .addScaledVector(normal, -offset);
-    const outsideInSolid = this.evaluateSolidMembership(
-      this.scratchOutside,
-      prepared
-    );
-    const insideInSolid = this.evaluateSolidMembership(
-      this.scratchInside,
-      prepared
-    );
+    this.scratchOutside.copy(this.scratchCentroid).addScaledVector(normal, offset);
+    this.scratchInside.copy(this.scratchCentroid).addScaledVector(normal, -offset);
+    const outsideInSolid = this.evaluateSolidMembership(this.scratchOutside, prepared);
+    const insideInSolid = this.evaluateSolidMembership(this.scratchInside, prepared);
     return outsideInSolid !== insideInSolid;
   }
 
@@ -1157,10 +1063,7 @@ export class SolidCsgCompiler {
    * @param prepared Brush list in tree order.
    * @returns True when the point is inside the final solid.
    */
-  private evaluateSolidMembership(
-    point: THREE.Vector3,
-    prepared: PreparedBrush[]
-  ): boolean {
+  private evaluateSolidMembership(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
     if (this.hasIntersectingOperations) {
       return this.evaluateSolidMembershipFull(point, prepared);
     }
@@ -1173,10 +1076,7 @@ export class SolidCsgCompiler {
    * @param prepared Brush list.
    * @returns Solid membership.
    */
-  private evaluateSolidMembershipFull(
-    point: THREE.Vector3,
-    prepared: PreparedBrush[]
-  ): boolean {
+  private evaluateSolidMembershipFull(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
     let inside = false;
     for (const entry of prepared) {
       if (!this.boundsContainPoint(entry.bounds, point)) {
@@ -1186,7 +1086,7 @@ export class SolidCsgCompiler {
       const inBrush = BrushMembership.isInsidePlanes(
         point,
         entry.brush.planes,
-        this.membershipEpsilon
+        this.membershipEpsilon,
       );
       inside = this.applyOperation(inside, inBrush, entry.operation);
     }
@@ -1200,10 +1100,7 @@ export class SolidCsgCompiler {
    * @param prepared Brush list.
    * @returns Solid membership.
    */
-  private evaluateSolidMembershipLocal(
-    point: THREE.Vector3,
-    prepared: PreparedBrush[]
-  ): boolean {
+  private evaluateSolidMembershipLocal(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
     const candidates = this.membershipIndex
       ? this.membershipIndex.queryPoint(point)
       : this.collectContainingBrushIndices(point, prepared);
@@ -1215,7 +1112,7 @@ export class SolidCsgCompiler {
       const inBrush = BrushMembership.isInsidePlanes(
         point,
         entry.brush.planes,
-        this.membershipEpsilon
+        this.membershipEpsilon,
       );
       inside = this.applyOperation(inside, inBrush, entry.operation);
     }
@@ -1228,10 +1125,7 @@ export class SolidCsgCompiler {
    * @param prepared Brush list.
    * @returns Prepared indices.
    */
-  private collectContainingBrushIndices(
-    point: THREE.Vector3,
-    prepared: PreparedBrush[]
-  ): number[] {
+  private collectContainingBrushIndices(point: THREE.Vector3, prepared: PreparedBrush[]): number[] {
     const indices: number[] = [];
     for (let index = 0; index < prepared.length; index++) {
       if (this.boundsContainPoint(prepared[index].bounds, point)) {
@@ -1248,11 +1142,7 @@ export class SolidCsgCompiler {
    * @param operation Operand operation.
    * @returns Updated membership.
    */
-  private applyOperation(
-    current: boolean,
-    inBrush: boolean,
-    operation: SolidOperation
-  ): boolean {
+  private applyOperation(current: boolean, inBrush: boolean, operation: SolidOperation): boolean {
     if (operation === SolidOperation.Additive) return current || inBrush;
     if (operation === SolidOperation.Subtractive) return current && !inBrush;
     return current && inBrush;
@@ -1281,10 +1171,7 @@ export class SolidCsgCompiler {
    * @param polygon Vertices.
    * @param target Output vector.
    */
-  private computeCentroidInto(
-    polygon: THREE.Vector3[],
-    target: THREE.Vector3
-  ): void {
+  private computeCentroidInto(polygon: THREE.Vector3[], target: THREE.Vector3): void {
     target.set(0, 0, 0);
     for (const point of polygon) {
       target.add(point);

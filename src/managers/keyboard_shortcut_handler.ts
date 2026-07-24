@@ -300,7 +300,7 @@ export class KeyboardShortcutHandler {
     onFlip: ActionCallback,
     onCommit: ActionCallback,
     onSplit: ActionCallback,
-    onCancel: ActionCallback
+    onCancel: ActionCallback,
   ): void {
     this.isClipToolActive = isActive;
     this.onClipFlip = onFlip;

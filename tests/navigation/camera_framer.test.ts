@@ -174,7 +174,10 @@ describe('CameraFramer', () => {
       const box = boundingVolumeComputer.computeWorldBoundingBox([mesh]);
       const sphere = boundingVolumeComputer.computeBoundingSphere(box);
       const target = framer.computePerspectiveTarget(sphere, perspectiveCamera, 1.5);
-      const startDir = perspectiveCamera.position.clone().sub(new THREE.Vector3(0, 0, 0)).normalize();
+      const startDir = perspectiveCamera.position
+        .clone()
+        .sub(new THREE.Vector3(0, 0, 0))
+        .normalize();
       const endDir = target.targetPosition.clone().sub(target.targetLookAt).normalize();
       expect(endDir.dot(startDir)).toBeGreaterThan(0.99);
     });
@@ -182,8 +185,12 @@ describe('CameraFramer', () => {
 });
 
 function createBoxMesh(
-  width: number, height: number, depth: number,
-  px: number, py: number, pz: number
+  width: number,
+  height: number,
+  depth: number,
+  px: number,
+  py: number,
+  pz: number,
 ): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(width, height, depth);
   const material = new THREE.MeshStandardMaterial({ color: 0x888888 });

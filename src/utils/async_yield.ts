@@ -24,7 +24,7 @@ export async function forBatchesAsync(
   itemCount: number,
   batchSize: number,
   processBatch: (startIndex: number, endIndex: number) => void,
-  onBatch?: (ratio: number) => void
+  onBatch?: (ratio: number) => void,
 ): Promise<void> {
   if (itemCount <= 0) {
     onBatch?.(1);

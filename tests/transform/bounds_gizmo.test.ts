@@ -42,10 +42,7 @@ describe('BoundsGizmo', () => {
 
   it('should keep resize handles and face picks available together', () => {
     gizmo.createHandles();
-    gizmo.updateFromBounds(
-      createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1)),
-      0.2
-    );
+    gizmo.updateFromBounds(createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1)), 0.2);
     const root = gizmo.getAllSceneObjects()[0];
     let handleCount = 0;
     let facePickCount = 0;
@@ -65,9 +62,7 @@ describe('BoundsGizmo', () => {
 
   it('should keep guide lines hidden until explicitly shown', () => {
     gizmo.createHandles();
-    gizmo.updateFromBounds(
-      createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1))
-    );
+    gizmo.updateFromBounds(createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1)));
     expect(gizmo.areGuideLinesVisible()).toBe(false);
     gizmo.setGuideLinesVisible(true);
     expect(gizmo.areGuideLinesVisible()).toBe(true);
@@ -90,13 +85,10 @@ describe('BoundsGizmo', () => {
  * @param halfExtents Local half extents.
  * @returns Oriented bounds data.
  */
-function createBounds(
-  center: THREE.Vector3,
-  halfExtents: THREE.Vector3
-): OrientedBoundsData {
+function createBounds(center: THREE.Vector3, halfExtents: THREE.Vector3): OrientedBoundsData {
   return {
     center,
     quaternion: new THREE.Quaternion(),
-    halfExtents
+    halfExtents,
   };
 }

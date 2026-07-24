@@ -39,7 +39,7 @@ export class ClipPlanePointDrag {
     event: MouseEvent,
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
-    points: THREE.Vector3[]
+    points: THREE.Vector3[],
   ): number | null {
     if (points.length === 0) return null;
     const element = renderer.domElement;
@@ -48,13 +48,7 @@ export class ClipPlanePointDrag {
     let bestIndex: number | null = null;
     let bestDistance = CLIP_MARKER_PICK_PIXELS;
     points.forEach((point, index) => {
-      const distance = this.screenDistancePixels(
-        point,
-        camera,
-        rect,
-        event.clientX,
-        event.clientY
-      );
+      const distance = this.screenDistancePixels(point, camera, rect, event.clientX, event.clientY);
       if (distance === null || distance > bestDistance) return;
       bestDistance = distance;
       bestIndex = index;
@@ -70,10 +64,7 @@ export class ClipPlanePointDrag {
    */
   createDragPlane(point: THREE.Vector3, camera: THREE.Camera): THREE.Plane {
     camera.getWorldDirection(this.scratchDirection);
-    this.viewPlane.setFromNormalAndCoplanarPoint(
-      this.scratchDirection,
-      point
-    );
+    this.viewPlane.setFromNormalAndCoplanarPoint(this.scratchDirection, point);
     return this.viewPlane.clone();
   }
 
@@ -89,7 +80,7 @@ export class ClipPlanePointDrag {
     event: MouseEvent,
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
-    dragPlane: THREE.Plane
+    dragPlane: THREE.Plane,
   ): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
     pointerEventToNdc(event, renderer.domElement, this.ndc);
@@ -115,7 +106,7 @@ export class ClipPlanePointDrag {
     camera: THREE.Camera,
     rect: DOMRect,
     clientX: number,
-    clientY: number
+    clientY: number,
   ): number | null {
     const projected = point.clone().project(camera);
     if (projected.z < -1 || projected.z > 1) return null;

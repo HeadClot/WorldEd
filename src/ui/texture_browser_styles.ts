@@ -23,9 +23,7 @@ export const TEXTURE_BROWSER_MIN_TRACK_PX = 96;
  */
 export function ensureTextureBrowserStylesheet(): void {
   if (typeof document === 'undefined') return;
-  let style = document.getElementById(
-    TEXTURE_BROWSER_STYLE_ELEMENT_ID
-  ) as HTMLStyleElement | null;
+  let style = document.getElementById(TEXTURE_BROWSER_STYLE_ELEMENT_ID) as HTMLStyleElement | null;
   if (!style) {
     style = document.createElement('style');
     style.id = TEXTURE_BROWSER_STYLE_ELEMENT_ID;
@@ -41,12 +39,7 @@ export function ensureTextureBrowserStylesheet(): void {
  * @returns Stylesheet source.
  */
 function buildTextureBrowserCss(): string {
-  return [
-    buildGridCss(),
-    buildTileCss(),
-    buildThumbCss(),
-    buildNameCss()
-  ].join('\n');
+  return [buildGridCss(), buildTileCss(), buildThumbCss(), buildNameCss()].join('\n');
 }
 
 /**

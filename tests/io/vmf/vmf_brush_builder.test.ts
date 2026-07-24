@@ -22,14 +22,14 @@ describe('VmfBrushFromSides / half-space hull', () => {
       new SolidPlane(new THREE.Vector3(0, 1, 0), -half),
       new SolidPlane(new THREE.Vector3(0, -1, 0), -half),
       new SolidPlane(new THREE.Vector3(0, 0, 1), -half),
-      new SolidPlane(new THREE.Vector3(0, 0, -1), -half)
+      new SolidPlane(new THREE.Vector3(0, 0, -1), -half),
     ];
     const hull = new VmfHalfSpaceHullBuilder().build(planes);
     expect(hull).not.toBeNull();
     expect(hull!.vertices.length).toBe(8);
     expect(hull!.faceLoops.length).toBe(6);
     const brush = SolidBrushFactory.createFromFaceLoops(
-      hull!.faceLoops.map((loop) => loop.vertices)
+      hull!.faceLoops.map((loop) => loop.vertices),
     );
     expect(brush).not.toBeNull();
     const validation = SolidBrushValidator.validate(brush!);
@@ -40,9 +40,7 @@ describe('VmfBrushFromSides / half-space hull', () => {
   it('imports an axis-aligned Source box with correct editor bounds', () => {
     const min = { x: 1568, y: 1792, z: -64 };
     const max = { x: 1728, y: 1920, z: 0 };
-    const world = new VmfParser().parse(
-      buildAxisAlignedWorldSolidVmf(min, max)
-    );
+    const world = new VmfParser().parse(buildAxisAlignedWorldSolidVmf(min, max));
     const built = new VmfBrushFromSides().build(world.solids[0]);
     expect(built).not.toBeNull();
     const validation = SolidBrushValidator.validate(built!.brush);
@@ -51,9 +49,9 @@ describe('VmfBrushFromSides / half-space hull', () => {
     expect(built!.brush.vertices.length).toBe(8);
     const s = VMF_INCHES_TO_METERS;
     const expectedCenter = new THREE.Vector3(
-      ((min.x + max.x) * 0.5) * s,
-      ((min.z + max.z) * 0.5) * s,
-      ((min.y + max.y) * 0.5) * s
+      (min.x + max.x) * 0.5 * s,
+      (min.z + max.z) * 0.5 * s,
+      (min.y + max.y) * 0.5 * s,
     );
     expect(built!.worldCenter.x).toBeCloseTo(expectedCenter.x, 4);
     expect(built!.worldCenter.y).toBeCloseTo(expectedCenter.y, 4);
@@ -68,10 +66,7 @@ describe('VmfBrushFromSides / half-space hull', () => {
 
   it('preserves face materials and UV mapping metadata', () => {
     const world = new VmfParser().parse(
-      buildAxisAlignedWorldSolidVmf(
-        { x: -32, y: -32, z: -32 },
-        { x: 32, y: 32, z: 32 }
-      )
+      buildAxisAlignedWorldSolidVmf({ x: -32, y: -32, z: -32 }, { x: 32, y: 32, z: 32 }),
     );
     const built = new VmfBrushFromSides().build(world.solids[0]);
     expect(built).not.toBeNull();

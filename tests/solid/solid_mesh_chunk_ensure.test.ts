@@ -31,13 +31,10 @@ describe('Solid mesh chunk ensure after mapping sync', () => {
     mapping.scaleU = 4;
     mapping.scaleV = 4;
     const sources = result.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-      | Array<{ brushId: string; surfaceIndex: number }>
-      | undefined;
+      Array<{ brushId: string; surfaceIndex: number }> | undefined;
     expect(sources?.length).toBeGreaterThan(0);
     const allTriangles = sources!.map((_, index) => index);
-    setFaceTextureMaps(result, [
-      { triangleIndices: allTriangles, mapping }
-    ]);
+    setFaceTextureMaps(result, [{ triangleIndices: allTriangles, mapping }]);
     model.syncAuthoredMappingsFromResultMesh();
 
     const mover = brushes[0];
@@ -46,8 +43,7 @@ describe('Solid mesh chunk ensure after mapping sync', () => {
     model.syncBrushesFromScene();
     model.rebuild(true);
 
-    const afterCount = model.getResultMesh().geometry.getAttribute('position')
-      .count;
+    const afterCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(afterCount).toBeGreaterThan(beforeCount * 0.5);
     expect(model.getBrushCount()).toBe(12);
     for (const brush of model.getBrushes()) {
@@ -70,13 +66,12 @@ describe('Solid mesh chunk ensure after mapping sync', () => {
     mapping.scaleU = 2;
     mapping.scaleV = 2;
     const result = model.getResultMesh();
-    const triCount =
-      (result.geometry.getAttribute('position').count as number) / 3;
+    const triCount = (result.geometry.getAttribute('position').count as number) / 3;
     setFaceTextureMaps(result, [
       {
         triangleIndices: Array.from({ length: triCount }, (_, i) => i),
-        mapping
-      }
+        mapping,
+      },
     ]);
     model.syncAuthoredMappingsFromResultMesh();
 

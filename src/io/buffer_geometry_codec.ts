@@ -51,10 +51,7 @@ export class BufferGeometryCodec {
    * @param attributeName The attribute to read.
    * @returns Component values, or an empty array when missing.
    */
-  private readAttributeArray(
-    geometry: THREE.BufferGeometry,
-    attributeName: string
-  ): number[] {
+  private readAttributeArray(geometry: THREE.BufferGeometry, attributeName: string): number[] {
     const attribute = geometry.getAttribute(attributeName);
     if (!attribute) return [];
     return Array.from(attribute.array as ArrayLike<number>);
@@ -76,14 +73,8 @@ export class BufferGeometryCodec {
    * @param geometry The target geometry.
    * @param position Interleaved position components.
    */
-  private applyPositionAttribute(
-    geometry: THREE.BufferGeometry,
-    position: number[]
-  ): void {
-    geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(position, 3)
-    );
+  private applyPositionAttribute(geometry: THREE.BufferGeometry, position: number[]): void {
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
   }
 
   /**
@@ -91,15 +82,9 @@ export class BufferGeometryCodec {
    * @param geometry The target geometry.
    * @param normal Optional interleaved normal components.
    */
-  private applyNormalAttribute(
-    geometry: THREE.BufferGeometry,
-    normal: number[] | undefined
-  ): void {
+  private applyNormalAttribute(geometry: THREE.BufferGeometry, normal: number[] | undefined): void {
     if (normal && normal.length > 0) {
-      geometry.setAttribute(
-        'normal',
-        new THREE.Float32BufferAttribute(normal, 3)
-      );
+      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normal, 3));
       return;
     }
     geometry.computeVertexNormals();
@@ -110,10 +95,7 @@ export class BufferGeometryCodec {
    * @param geometry The target geometry.
    * @param uv Optional interleaved UV components.
    */
-  private applyUvAttribute(
-    geometry: THREE.BufferGeometry,
-    uv: number[] | undefined
-  ): void {
+  private applyUvAttribute(geometry: THREE.BufferGeometry, uv: number[] | undefined): void {
     if (!uv || uv.length === 0) return;
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   }
@@ -123,10 +105,7 @@ export class BufferGeometryCodec {
    * @param geometry The target geometry.
    * @param index Optional index values.
    */
-  private applyIndexAttribute(
-    geometry: THREE.BufferGeometry,
-    index: number[] | undefined
-  ): void {
+  private applyIndexAttribute(geometry: THREE.BufferGeometry, index: number[] | undefined): void {
     if (!index || index.length === 0) return;
     geometry.setIndex(index);
   }

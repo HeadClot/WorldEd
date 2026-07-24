@@ -18,9 +18,7 @@ export function createEditorWebGLCanvas(ownerName: string): HTMLCanvasElement {
  * @param alpha Whether the renderer needs a transparent drawing buffer.
  * @returns Three.js WebGL renderer parameters.
  */
-export function getEditorWebGLRendererOptions(
-  alpha = false
-): THREE.WebGLRendererParameters {
+export function getEditorWebGLRendererOptions(alpha = false): THREE.WebGLRendererParameters {
   return {
     alpha,
     antialias: true,

@@ -24,12 +24,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
    * @param worldPlane World-space clip plane.
    * @param keepFront Whether to keep the Three.js front half-space.
    */
-  constructor(
-    model: SolidModel,
-    brushId: string,
-    worldPlane: THREE.Plane,
-    keepFront: boolean
-  ) {
+  constructor(model: SolidModel, brushId: string, worldPlane: THREE.Plane, keepFront: boolean) {
     this.model = model;
     this.brushId = brushId;
     this.worldPlane = worldPlane.clone();
@@ -49,7 +44,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
     const clipped = SolidBrushPlaneClip.clipKeepThreeHalfSpace(
       instance.brush,
       localPlane,
-      this.keepFront
+      this.keepFront,
     );
     if (!clipped) return;
     this.previousBrush = instance.brush.clone();
@@ -87,10 +82,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
    * @param worldPlane World plane.
    * @returns Local Three.js plane.
    */
-  private worldPlaneToLocal(
-    instance: SolidBrushInstance,
-    worldPlane: THREE.Plane
-  ): THREE.Plane {
+  private worldPlaneToLocal(instance: SolidBrushInstance, worldPlane: THREE.Plane): THREE.Plane {
     instance.pullTransformFromMesh();
     const matrix = instance.getLocalMatrix();
     const inverse = matrix.clone().invert();
@@ -102,10 +94,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
    * @param instance Brush instance.
    * @param brush New local topology.
    */
-  private applyBrushGeometry(
-    instance: SolidBrushInstance,
-    brush: SolidBrush
-  ): void {
+  private applyBrushGeometry(instance: SolidBrushInstance, brush: SolidBrush): void {
     instance.brush = brush;
     if (!instance.mesh) return;
     const previous = instance.mesh;
@@ -114,7 +103,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
     const replacement = SolidBrushVisual.createHullPreview(
       instance.name,
       brush,
-      instance.operation
+      instance.operation,
     );
     replacement.position.copy(previous.position);
     replacement.rotation.copy(previous.rotation);
@@ -134,11 +123,7 @@ export class ClipSolidBrushCommand implements UndoCommand {
    * @param child Child to reorder.
    * @param index Desired sibling index.
    */
-  private restoreSiblingIndex(
-    parent: THREE.Object3D,
-    child: THREE.Object3D,
-    index: number
-  ): void {
+  private restoreSiblingIndex(parent: THREE.Object3D, child: THREE.Object3D, index: number): void {
     const current = parent.children.indexOf(child);
     if (current < 0 || current === index) return;
     parent.children.splice(current, 1);

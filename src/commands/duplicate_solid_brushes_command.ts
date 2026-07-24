@@ -87,7 +87,7 @@ export class DuplicateSolidBrushesCommand implements UndoCommand {
     this.entries.push({
       model,
       sourceBrushId: source.id,
-      createdBrushId: created.id
+      createdBrushId: created.id,
     });
     return created;
   }

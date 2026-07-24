@@ -34,16 +34,8 @@ describe('SceneRaycaster click-through', () => {
     const outer = createMeshAt(4, 4, 1, 0, 0, -1);
     const inner = createMeshAt(1, 1, 1, 0, 0, -1);
     const event = createMockMouseEvent(400, 300);
-    const intersections = raycaster.castIntersections(
-      camera,
-      renderer,
-      event,
-      [outer, inner]
-    );
-    const stack = SelectionClickThrough.uniqueMeshesFromHits(
-      intersections,
-      (mesh) => mesh
-    );
+    const intersections = raycaster.castIntersections(camera, renderer, event, [outer, inner]);
+    const stack = SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) => mesh);
     const selectionManager = new SelectionManager();
     const first = SelectionClickThrough.pickFromStack(stack, selectionManager);
     expect(first).toBe(outer);
@@ -60,7 +52,7 @@ describe('SceneRaycaster click-through', () => {
 function createCanvas(): HTMLElement {
   const canvas = document.createElement('canvas');
   Object.defineProperty(canvas, 'getBoundingClientRect', {
-    value: () => ({ left: 0, top: 0, width: 800, height: 600 })
+    value: () => ({ left: 0, top: 0, width: 800, height: 600 }),
   });
   return canvas;
 }
@@ -72,7 +64,7 @@ function createCanvas(): HTMLElement {
  */
 function createMockRenderer(canvas: HTMLElement): THREE.WebGLRenderer {
   return {
-    domElement: canvas
+    domElement: canvas,
   } as unknown as THREE.WebGLRenderer;
 }
 
@@ -104,11 +96,11 @@ function createMeshAt(
   sizeZ: number,
   posX: number,
   posY: number,
-  posZ: number
+  posZ: number,
 ): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(sizeX, sizeY, sizeZ),
-    new THREE.MeshBasicMaterial()
+    new THREE.MeshBasicMaterial(),
   );
   mesh.position.set(posX, posY, posZ);
   mesh.updateMatrixWorld(true);
@@ -125,6 +117,6 @@ function createMockMouseEvent(clientX: number, clientY: number): MouseEvent {
   return new MouseEvent('click', {
     clientX,
     clientY,
-    bubbles: true
+    bubbles: true,
   });
 }

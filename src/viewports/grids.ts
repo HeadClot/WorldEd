@@ -27,7 +27,7 @@ export class Grids {
     size: number = 50,
     divisions: number = 50,
     plane: GridPlane = 'xz',
-    mode: 'perspective' | 'orthographic' = 'orthographic'
+    mode: 'perspective' | 'orthographic' = 'orthographic',
   ) {
     void size;
     void divisions;

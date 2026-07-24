@@ -24,9 +24,7 @@ describe('FaceSelectionHighlight', () => {
   });
 
   it('should add highlight group to scene', () => {
-    const hasGroup = scene.children.some(
-      (child) => child instanceof THREE.Group
-    );
+    const hasGroup = scene.children.some((child) => child instanceof THREE.Group);
     expect(hasGroup).toBe(true);
   });
 
@@ -52,12 +50,8 @@ describe('FaceSelectionHighlight', () => {
     scene.add(testMesh);
     highlight.setSelectedFaces([{ mesh: testMesh, faceIndex: 0 }]);
     const materials = getHighlightMaterials(highlight);
-    const front = materials.find(
-      (material) => material.depthFunc === THREE.LessEqualDepth
-    );
-    const occluded = materials.find(
-      (material) => material.depthFunc === THREE.GreaterDepth
-    );
+    const front = materials.find((material) => material.depthFunc === THREE.LessEqualDepth);
+    const occluded = materials.find((material) => material.depthFunc === THREE.GreaterDepth);
     expect(front).toBeDefined();
     expect(occluded).toBeDefined();
     expect(front!.depthTest).toBe(true);
@@ -73,11 +67,9 @@ describe('FaceSelectionHighlight', () => {
     scene.add(testMesh);
     highlight.setSelectedFaces([{ mesh: testMesh, faceIndex: 0 }]);
     const meshes = getHighlightMeshes(highlight);
-    const front = meshes.find(
-      (mesh) => mesh.renderOrder === GizmoVisualStyle.frontRenderOrder
-    );
+    const front = meshes.find((mesh) => mesh.renderOrder === GizmoVisualStyle.frontRenderOrder);
     const occluded = meshes.find(
-      (mesh) => mesh.renderOrder === GizmoVisualStyle.occludedRenderOrder
+      (mesh) => mesh.renderOrder === GizmoVisualStyle.occludedRenderOrder,
     );
     expect(front).toBeDefined();
     expect(occluded).toBeDefined();
@@ -100,7 +92,7 @@ describe('FaceSelectionHighlight', () => {
     const faces: FaceSelection[] = [
       { mesh, faceIndex: 0 },
       { mesh, faceIndex: 1 },
-      { mesh, faceIndex: 2 }
+      { mesh, faceIndex: 2 },
     ];
     highlight.setSelectedFaces(faces);
     expect(highlight.getHighlightCount()).toBe(1);
@@ -114,7 +106,10 @@ describe('FaceSelectionHighlight', () => {
     const geometry = createMultiFaceGeometry(4);
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
     scene.add(mesh);
-    highlight.setSelectedFaces([{ mesh, faceIndex: 0 }, { mesh, faceIndex: 1 }]);
+    highlight.setSelectedFaces([
+      { mesh, faceIndex: 0 },
+      { mesh, faceIndex: 1 },
+    ]);
     expect(highlight.getHighlightCount()).toBe(1);
     highlight.setSelectedFaces([{ mesh, faceIndex: 2 }]);
     expect(highlight.getHighlightCount()).toBe(1);
@@ -154,11 +149,7 @@ describe('FaceSelectionHighlight', () => {
  * @returns A buffer geometry with 3 vertices.
  */
 function createTestTriangleGeometry(): THREE.BufferGeometry {
-  const vertices = new Float32Array([
-    0, 0, 0,
-    1, 0, 0,
-    0, 1, 0
-  ]);
+  const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   return geometry;
@@ -195,9 +186,11 @@ function createMultiFaceGeometry(faceCount: number): THREE.BufferGeometry {
  * @returns An array of front and occluded mesh objects.
  */
 function getHighlightMeshes(highlight: FaceSelectionHighlight): THREE.Mesh[] {
-  const meshGroups = (highlight as unknown as {
-    meshGroups: Map<string, THREE.Group>;
-  }).meshGroups;
+  const meshGroups = (
+    highlight as unknown as {
+      meshGroups: Map<string, THREE.Group>;
+    }
+  ).meshGroups;
   const meshes: THREE.Mesh[] = [];
   meshGroups.forEach((group) => {
     group.children.forEach((child) => {
@@ -212,9 +205,7 @@ function getHighlightMeshes(highlight: FaceSelectionHighlight): THREE.Mesh[] {
  * @param highlight The highlight instance to inspect.
  * @returns Distinct basic materials from the highlight passes.
  */
-function getHighlightMaterials(
-  highlight: FaceSelectionHighlight
-): THREE.MeshBasicMaterial[] {
+function getHighlightMaterials(highlight: FaceSelectionHighlight): THREE.MeshBasicMaterial[] {
   const materials = new Set<THREE.MeshBasicMaterial>();
   getHighlightMeshes(highlight).forEach((mesh) => {
     if (mesh.material instanceof THREE.MeshBasicMaterial) {

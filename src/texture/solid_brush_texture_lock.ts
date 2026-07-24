@@ -1,14 +1,8 @@
 import * as THREE from 'three';
 import { SolidBrush } from '../solid/brush/solid_brush.js';
 import { SolidBrushInstance } from '../solid/model/solid_brush_instance.js';
-import {
-  FaceTextureMapping,
-  cloneFaceTextureMapping
-} from './face_texture_mapping.js';
-import {
-  projectWorldPositionToUv,
-  resolveProjectionBasis
-} from './planar_uv_projector.js';
+import { FaceTextureMapping, cloneFaceTextureMapping } from './face_texture_mapping.js';
+import { projectWorldPositionToUv, resolveProjectionBasis } from './planar_uv_projector.js';
 
 const scratchPrevPoint = new THREE.Vector3();
 const scratchNextPoint = new THREE.Vector3();
@@ -40,20 +34,10 @@ export function lockSolidBrushTexturesToTransform(
   previousPosition: THREE.Vector3,
   previousRotation: THREE.Euler,
   previousScale: THREE.Vector3,
-  parentWorldMatrix: THREE.Matrix4
+  parentWorldMatrix: THREE.Matrix4,
 ): void {
-  composeLocalMatrix(
-    previousPosition,
-    previousRotation,
-    previousScale,
-    scratchPrevLocal
-  );
-  composeLocalMatrix(
-    instance.position,
-    instance.rotation,
-    instance.scale,
-    scratchNextLocal
-  );
+  composeLocalMatrix(previousPosition, previousRotation, previousScale, scratchPrevLocal);
+  composeLocalMatrix(instance.position, instance.rotation, instance.scale, scratchNextLocal);
   scratchPrevWorld.multiplyMatrices(parentWorldMatrix, scratchPrevLocal);
   scratchNextWorld.multiplyMatrices(parentWorldMatrix, scratchNextLocal);
   const faceCount = instance.brush.faces.length;
@@ -64,7 +48,7 @@ export function lockSolidBrushTexturesToTransform(
       instance.brush,
       faceIndex,
       scratchPrevWorld,
-      scratchNextWorld
+      scratchNextWorld,
     );
     instance.setFaceMapping(faceIndex, locked);
   }
@@ -88,7 +72,7 @@ export interface SolidBrushTextureLockBaseline {
  * @returns Baseline snapshot.
  */
 export function captureSolidBrushTextureLockBaseline(
-  instance: SolidBrushInstance
+  instance: SolidBrushInstance,
 ): SolidBrushTextureLockBaseline {
   const faceCount = instance.brush.faces.length;
   const faceMappings: FaceTextureMapping[] = [];
@@ -99,7 +83,7 @@ export function captureSolidBrushTextureLockBaseline(
     position: instance.position.clone(),
     rotation: instance.rotation.clone(),
     scale: instance.scale.clone(),
-    faceMappings
+    faceMappings,
   };
 }
 
@@ -113,32 +97,21 @@ export function captureSolidBrushTextureLockBaseline(
 export function lockSolidBrushTexturesFromBaseline(
   instance: SolidBrushInstance,
   baseline: SolidBrushTextureLockBaseline,
-  parentWorldMatrix: THREE.Matrix4
+  parentWorldMatrix: THREE.Matrix4,
 ): void {
-  composeLocalMatrix(
-    baseline.position,
-    baseline.rotation,
-    baseline.scale,
-    scratchPrevLocal
-  );
-  composeLocalMatrix(
-    instance.position,
-    instance.rotation,
-    instance.scale,
-    scratchNextLocal
-  );
+  composeLocalMatrix(baseline.position, baseline.rotation, baseline.scale, scratchPrevLocal);
+  composeLocalMatrix(instance.position, instance.rotation, instance.scale, scratchNextLocal);
   scratchPrevWorld.multiplyMatrices(parentWorldMatrix, scratchPrevLocal);
   scratchNextWorld.multiplyMatrices(parentWorldMatrix, scratchNextLocal);
   const faceCount = instance.brush.faces.length;
   for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
-    const source =
-      baseline.faceMappings[faceIndex] ?? instance.getSurfaceMapping(faceIndex);
+    const source = baseline.faceMappings[faceIndex] ?? instance.getSurfaceMapping(faceIndex);
     const locked = lockFaceMappingForBrushTransform(
       source,
       instance.brush,
       faceIndex,
       scratchPrevWorld,
-      scratchNextWorld
+      scratchNextWorld,
     );
     instance.setFaceMapping(faceIndex, locked);
   }
@@ -158,7 +131,7 @@ export function lockFaceMappingForBrushTransform(
   brush: SolidBrush,
   faceIndex: number,
   previousWorldMatrix: THREE.Matrix4,
-  nextWorldMatrix: THREE.Matrix4
+  nextWorldMatrix: THREE.Matrix4,
 ): FaceTextureMapping {
   const result = cloneFaceTextureMapping(mapping);
   const localPoint = faceLocalCentroid(brush, faceIndex);
@@ -189,7 +162,7 @@ function composeLocalMatrix(
   position: THREE.Vector3,
   rotation: THREE.Euler,
   scale: THREE.Vector3,
-  target: THREE.Matrix4
+  target: THREE.Matrix4,
 ): void {
   scratchQuat.setFromEuler(rotation);
   target.compose(position, scratchQuat, scale);
@@ -204,7 +177,7 @@ function composeLocalMatrix(
 function transformDirection(
   localDirection: THREE.Vector3,
   matrix: THREE.Matrix4,
-  target: THREE.Vector3
+  target: THREE.Vector3,
 ): void {
   scratchNormalMatrix.getNormalMatrix(matrix);
   target.copy(localDirection).applyMatrix3(scratchNormalMatrix).normalize();
@@ -219,14 +192,10 @@ function transformDirection(
 function rotateCustomAxesIfPresent(
   mapping: FaceTextureMapping,
   previousWorldMatrix: THREE.Matrix4,
-  nextWorldMatrix: THREE.Matrix4
+  nextWorldMatrix: THREE.Matrix4,
 ): void {
   if (!mapping.customUAxis || !mapping.customVAxis) return;
-  previousWorldMatrix.decompose(
-    scratchPrevPoint,
-    scratchQuatPrev,
-    scratchNextPoint
-  );
+  previousWorldMatrix.decompose(scratchPrevPoint, scratchQuatPrev, scratchNextPoint);
   nextWorldMatrix.decompose(scratchPrevPoint, scratchQuatNext, scratchNextPoint);
   scratchQuat.copy(scratchQuatPrev).invert();
   scratchQuat.premultiply(scratchQuatNext);
@@ -241,7 +210,7 @@ function rotateCustomAxesIfPresent(
  */
 function rotateAxisRecord(
   axis: { x: number; y: number; z: number },
-  rotation: THREE.Quaternion
+  rotation: THREE.Quaternion,
 ): void {
   scratchAxis.set(axis.x, axis.y, axis.z).applyQuaternion(rotation).normalize();
   axis.x = scratchAxis.x;

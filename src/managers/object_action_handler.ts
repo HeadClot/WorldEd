@@ -8,14 +8,8 @@ import { GroupCommand } from '../commands/group_command.js';
 import { UngroupCommand } from '../commands/ungroup_command.js';
 import { CommandStack } from '../commands/command_stack.js';
 import { SelectionManager } from './selection_manager.js';
-import {
-  collapseToHierarchyRoots,
-  findCommonParent
-} from '../utils/hierarchy_selection.js';
-import {
-  filterUnlockedObjects,
-  isObjectOrAncestorLocked
-} from '../utils/object_lock.js';
+import { collapseToHierarchyRoots, findCommonParent } from '../utils/hierarchy_selection.js';
+import { filterUnlockedObjects, isObjectOrAncestorLocked } from '../utils/object_lock.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 
@@ -57,7 +51,7 @@ export class ObjectActionHandler {
   constructor(
     worldObject: THREE.Group,
     commandStack: CommandStack,
-    selectionManager: SelectionManager
+    selectionManager: SelectionManager,
   ) {
     this.worldObject = worldObject;
     this.commandStack = commandStack;
@@ -114,9 +108,7 @@ export class ObjectActionHandler {
    */
   deleteHierarchyObjects(objects: THREE.Object3D[]): void {
     const roots = filterUnlockedObjects(
-      collapseToHierarchyRoots(objects).filter(
-        (object) => object !== this.worldObject
-      )
+      collapseToHierarchyRoots(objects).filter((object) => object !== this.worldObject),
     );
     if (roots.length === 0) {
       this.showMessage('Cannot delete locked object(s)');
@@ -148,9 +140,7 @@ export class ObjectActionHandler {
    */
   private deleteMeshesWithSolidSupport(meshes: THREE.Mesh[]): void {
     const solidBrushes = DeleteSolidBrushesCommand.filterBrushMeshes(meshes);
-    const regularMeshes = meshes.filter(
-      (mesh) => !SolidBrushVisual.isBrushObject(mesh)
-    );
+    const regularMeshes = meshes.filter((mesh) => !SolidBrushVisual.isBrushObject(mesh));
     if (solidBrushes.length > 0) {
       this.commandStack.push(new DeleteSolidBrushesCommand(solidBrushes));
     }
@@ -174,17 +164,13 @@ export class ObjectActionHandler {
       this.showMessage('Cannot duplicate locked object(s)');
       return;
     }
-    const solidBrushes = meshesToDuplicate.filter((mesh) =>
-      SolidBrushVisual.isBrushObject(mesh)
-    );
-    const regularMeshes = meshesToDuplicate.filter(
-      (mesh) => !SolidBrushVisual.isBrushObject(mesh)
-    );
+    const solidBrushes = meshesToDuplicate.filter((mesh) => SolidBrushVisual.isBrushObject(mesh));
+    const regularMeshes = meshesToDuplicate.filter((mesh) => !SolidBrushVisual.isBrushObject(mesh));
     const clonedMeshes: THREE.Mesh[] = [];
     if (solidBrushes.length > 0) {
       const solidCommand = new DuplicateSolidBrushesCommand(
         solidBrushes,
-        new THREE.Vector3(0, 0, 0)
+        new THREE.Vector3(0, 0, 0),
       );
       this.commandStack.push(solidCommand);
       clonedMeshes.push(...solidCommand.getClonedMeshes());
@@ -193,7 +179,7 @@ export class ObjectActionHandler {
       const regularCommand = new DuplicateObjectsCommand(
         regularMeshes,
         this.worldObject,
-        new THREE.Vector3(0, 0, 0)
+        new THREE.Vector3(0, 0, 0),
       );
       this.commandStack.push(regularCommand);
       clonedMeshes.push(...regularCommand.getClonedMeshes());
@@ -207,8 +193,8 @@ export class ObjectActionHandler {
   }
 
   /**
-    * Handles grouping of selected objects.
-    */
+   * Handles grouping of selected objects.
+   */
   onGroupSelected(): void {
     const selected = this.selectionManager.getSelectedObjects();
     if (selected.size === 0) return;
@@ -221,10 +207,10 @@ export class ObjectActionHandler {
   }
 
   /**
-    * Groups a specific set of objects together.
-    * Used by the outliner context menu to group user-selected items.
-    * @param objects The objects to group together.
-    */
+   * Groups a specific set of objects together.
+   * Used by the outliner context menu to group user-selected items.
+   * @param objects The objects to group together.
+   */
   groupObjects(objects: THREE.Object3D[]): void {
     const unlocked = filterUnlockedObjects(objects);
     if (unlocked.length === 0) {
@@ -235,8 +221,8 @@ export class ObjectActionHandler {
   }
 
   /**
-    * Handles ungrouping of the selected object's parent group.
-    */
+   * Handles ungrouping of the selected object's parent group.
+   */
   onUngroupSelected(): void {
     const firstSelected = this.selectionManager.getFirstSelectedObject();
     if (!firstSelected) return;
@@ -246,10 +232,10 @@ export class ObjectActionHandler {
   }
 
   /**
-    * Ungroups a specific group.
-    * Used by the outliner context menu to ungroup a specific group.
-    * @param group The group to ungroup.
-    */
+   * Ungroups a specific group.
+   * Used by the outliner context menu to ungroup a specific group.
+   * @param group The group to ungroup.
+   */
   ungroupGroup(group: THREE.Group): void {
     if (isObjectOrAncestorLocked(group)) {
       this.showMessage('Cannot ungroup locked group');
@@ -277,7 +263,7 @@ export class ObjectActionHandler {
         scale: mesh.scale.clone(),
         name: mesh.name,
         geometry: mesh.geometry.clone(),
-        material: (mesh.material as THREE.Material).clone()
+        material: (mesh.material as THREE.Material).clone(),
       };
       snapshots.push(snapshot);
     });
@@ -290,9 +276,7 @@ export class ObjectActionHandler {
    * @returns An array of objects to include in the group.
    */
   private buildGroupObjectsFromSelection(): THREE.Object3D[] {
-    return filterUnlockedObjects(
-      this.selectionManager.getAllSelectedObjectsAsArray()
-    );
+    return filterUnlockedObjects(this.selectionManager.getAllSelectedObjectsAsArray());
   }
 
   /**
@@ -314,7 +298,7 @@ export class ObjectActionHandler {
   }
 
   /**
-    * Finds the group target for ungrouping from a selected mesh.
+   * Finds the group target for ungrouping from a selected mesh.
    * @param mesh The selected mesh to find a group for.
    * @returns The group to ungroup, or null if none found.
    */

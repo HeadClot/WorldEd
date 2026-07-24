@@ -11,7 +11,7 @@ import { ToolsPalette } from '../ui/tools_palette.js';
 export function applyTransformModeUi(
   toolsPalette: ToolsPalette | null | undefined,
   statusBar: StatusBar | null,
-  mode: TransformMode
+  mode: TransformMode,
 ): void {
   toolsPalette?.setActiveTransformMode(mode);
   updateStatusBarTransformMode(statusBar, mode);
@@ -22,10 +22,7 @@ export function applyTransformModeUi(
  * @param statusBar Status bar instance, or null when unavailable.
  * @param mode The active transform mode.
  */
-function updateStatusBarTransformMode(
-  statusBar: StatusBar | null,
-  mode: TransformMode
-): void {
+function updateStatusBarTransformMode(statusBar: StatusBar | null, mode: TransformMode): void {
   if (!statusBar) return;
   if (mode === TransformMode.TRANSLATE) {
     statusBar.setTransformMode('Move');

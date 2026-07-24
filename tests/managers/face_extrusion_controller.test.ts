@@ -157,10 +157,7 @@ describe('FaceExtrusionController', () => {
  * @returns A mesh with a box geometry.
  */
 function createTestMesh(): THREE.Mesh {
-  return new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial()
-  );
+  return new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
 }
 
 /**
@@ -175,7 +172,7 @@ function createMockPointerEvent(x: number, y: number): MouseEvent {
     clientX: x,
     clientY: y,
     shiftKey: false,
-    preventDefault: () => {}
+    preventDefault: () => {},
   } as MouseEvent;
 }
 
@@ -194,6 +191,6 @@ function createMockRenderer(): THREE.WebGLRenderer {
     setPixelRatio: () => {},
     setSize: () => {},
     dispose: () => {},
-    getContext: () => null
+    getContext: () => null,
   } as unknown as THREE.WebGLRenderer;
 }

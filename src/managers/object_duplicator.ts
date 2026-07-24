@@ -1,13 +1,7 @@
 import * as THREE from 'three';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
-import {
-  rebuildDecorativeEdges,
-  usesContentDecorativeEdges
-} from '../utils/mesh_edge_sync.js';
-import {
-  getFaceTextureMaps,
-  setFaceTextureMaps
-} from '../texture/face_texture_storage.js';
+import { rebuildDecorativeEdges, usesContentDecorativeEdges } from '../utils/mesh_edge_sync.js';
+import { getFaceTextureMaps, setFaceTextureMaps } from '../texture/face_texture_storage.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidOperation } from '../solid/types/solid_operation.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_edge_materials.js';
@@ -19,7 +13,6 @@ import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../solid/model/solid_brush_edge_m
  * Never copies selection outlines or shading wireframe overlays.
  */
 export class ObjectDuplicator {
-
   /**
    * Deep clones an array of meshes with positional offset.
    * @param meshes The source meshes to duplicate.
@@ -83,10 +76,7 @@ export class ObjectDuplicator {
    * @param source Source mesh.
    * @param target Cloned mesh.
    */
-  private static cloneUserDataMarkers(
-    source: THREE.Mesh,
-    target: THREE.Mesh
-  ): void {
+  private static cloneUserDataMarkers(source: THREE.Mesh, target: THREE.Mesh): void {
     if (SolidBrushVisual.isBrushObject(source)) {
       SolidBrushVisual.stampBrushHelperMetadata(target);
       const brushId = SolidBrushVisual.getBrushId(source);
@@ -105,10 +95,7 @@ export class ObjectDuplicator {
    * @param source Source mesh.
    * @param target Cloned mesh.
    */
-  private static cloneFaceTextureMaps(
-    source: THREE.Mesh,
-    target: THREE.Mesh
-  ): void {
+  private static cloneFaceTextureMaps(source: THREE.Mesh, target: THREE.Mesh): void {
     const maps = getFaceTextureMaps(source);
     if (maps.length === 0) return;
     setFaceTextureMaps(target, maps);
@@ -120,7 +107,7 @@ export class ObjectDuplicator {
    * @returns Cloned material instance(s).
    */
   private static cloneMaterial(
-    material: THREE.Material | THREE.Material[]
+    material: THREE.Material | THREE.Material[],
   ): THREE.Material | THREE.Material[] {
     if (Array.isArray(material)) {
       return material.map((entry) => entry.clone());

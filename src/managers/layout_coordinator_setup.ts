@@ -11,10 +11,7 @@ import { FaceModeCoordinator } from './face_mode_coordinator.js';
 import { CommandStack } from '../commands/command_stack.js';
 import { GridSnap } from '../transform/grid_snap.js';
 import { ToolsPaletteController } from './tools_palette_controller.js';
-import {
-  setupClipToolsAndPalette,
-  cancelClipAndSelectObject
-} from './layout_clip_tools_setup.js';
+import { setupClipToolsAndPalette, cancelClipAndSelectObject } from './layout_clip_tools_setup.js';
 import { ClipPlaneTool } from './clip_plane_tool.js';
 import { ClipPlaneHandler } from './clip_plane_handler.js';
 import { ToolsPalette } from '../ui/tools_palette.js';
@@ -46,18 +43,17 @@ export function setupCameraAndShadingCoordinators(parts: {
     parts.viewport3D,
     parts.viewports,
     parts.selectionVisualController,
-    parts.statusBar
+    parts.statusBar,
   );
   const cameraFitCoordinator = new CameraFitCoordinator(
     parts.selectionManager,
     parts.statusBar,
     () => shadingModeCoordinator.getOrderedViewports(),
-    () => shadingModeCoordinator.getActiveViewportIndex()
+    () => shadingModeCoordinator.getActiveViewportIndex(),
   );
   cameraFitCoordinator.bindKeyboardShortcuts(parts.keyboardShortcutHandler);
-  shadingModeCoordinator.wireControls(
-    parts.keyboardShortcutHandler,
-    (viewport) => cameraFitCoordinator.fitSpecificViewport(viewport)
+  shadingModeCoordinator.wireControls(parts.keyboardShortcutHandler, (viewport) =>
+    cameraFitCoordinator.fitSpecificViewport(viewport),
   );
   return { cameraFitCoordinator, shadingModeCoordinator };
 }
@@ -100,7 +96,7 @@ export function setupFaceModeCoordinator(parts: {
     syncPrimitivesToViewports: parts.syncPrimitivesToViewports,
     updateShadingMeshes: parts.updateShadingMeshes,
     refreshOutliner: parts.refreshOutliner,
-    onSelectionModeUiChanged: () => parts.onSelectionModeUiChanged()
+    onSelectionModeUiChanged: () => parts.onSelectionModeUiChanged(),
   });
 }
 
@@ -142,8 +138,7 @@ export function setupToolsPaletteAndClipWiring(parts: {
     selectionManager: parts.selectionManager,
     gridSnap: parts.gridSnap,
     clipPlaneTool: parts.clipPlaneTool,
-    faceExtrusionController:
-      parts.faceModeCoordinator.getFaceExtrusionController(),
+    faceExtrusionController: parts.faceModeCoordinator.getFaceExtrusionController(),
     toolbarContainer: parts.toolbarContainer,
     anchorViewport: parts.anchorViewport,
     viewport3D: parts.viewport3D,
@@ -159,7 +154,7 @@ export function setupToolsPaletteAndClipWiring(parts: {
     onClipCancel: parts.onClipCancel,
     onTransformMode: parts.onTransformMode,
     onOpenUvEditor: parts.onOpenUvEditor,
-    onExtrudeFaces: () => parts.faceModeCoordinator.onExtrudeFaces()
+    onExtrudeFaces: () => parts.faceModeCoordinator.onExtrudeFaces(),
   });
 }
 
@@ -170,7 +165,7 @@ export function setupToolsPaletteAndClipWiring(parts: {
  */
 export function cancelClipToolSelection(
   clipPlaneHandler: ClipPlaneHandler | null,
-  toolsPaletteController: ToolsPaletteController | null
+  toolsPaletteController: ToolsPaletteController | null,
 ): void {
   cancelClipAndSelectObject(clipPlaneHandler, toolsPaletteController);
 }

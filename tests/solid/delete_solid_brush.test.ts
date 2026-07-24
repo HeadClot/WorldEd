@@ -15,9 +15,7 @@ describe('Delete solid brushes', () => {
     remove.mesh!.position.set(0.5, 0, 0);
     remove.pushTransformToMesh();
     model.rebuild(true);
-    const beforeCount = model
-      .getResultMesh()
-      .geometry.getAttribute('position').count;
+    const beforeCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(model.getBrushCount()).toBe(2);
     const command = new DeleteSolidBrushesCommand([remove.mesh!]);
     command.execute();
@@ -25,9 +23,7 @@ describe('Delete solid brushes', () => {
     expect(model.findBrush(remove.id)).toBeUndefined();
     expect(model.findBrush(keep.id)).toBeDefined();
     expect(remove.mesh!.parent).toBeNull();
-    const afterCount = model
-      .getResultMesh()
-      .geometry.getAttribute('position').count;
+    const afterCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(afterCount).not.toBe(beforeCount);
     expect(afterCount).toBeGreaterThan(0);
   });
@@ -51,27 +47,16 @@ describe('Delete solid brushes', () => {
     const first = model.addBoxBrush(4, SolidOperation.Additive);
     const middle = model.addBoxBrush(2, SolidOperation.Subtractive);
     const last = model.addBoxBrush(2, SolidOperation.Intersecting);
-    expect(model.getBrushes().map((brush) => brush.id)).toEqual([
-      first.id,
-      middle.id,
-      last.id
-    ]);
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([first.id, middle.id, last.id]);
     const command = new DeleteSolidBrushesCommand([middle.mesh!]);
     command.execute();
-    expect(model.getBrushes().map((brush) => brush.id)).toEqual([
-      first.id,
-      last.id
-    ]);
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([first.id, last.id]);
     command.undo();
-    expect(model.getBrushes().map((brush) => brush.id)).toEqual([
-      first.id,
-      middle.id,
-      last.id
-    ]);
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([first.id, middle.id, last.id]);
     expect(model.getBrushes().map((brush) => brush.operation)).toEqual([
       SolidOperation.Additive,
       SolidOperation.Subtractive,
-      SolidOperation.Intersecting
+      SolidOperation.Intersecting,
     ]);
   });
 });

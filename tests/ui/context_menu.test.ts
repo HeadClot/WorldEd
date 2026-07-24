@@ -15,7 +15,7 @@ describe('ContextMenu', () => {
     callback2 = vi.fn();
     items = [
       { label: 'Duplicate', callback: callback1 },
-      { label: 'Delete', callback: callback2 }
+      { label: 'Delete', callback: callback2 },
     ];
     menu = new ContextMenu(container, items);
   });
@@ -78,7 +78,7 @@ describe('ContextMenu', () => {
   it('should not invoke callback for disabled items', () => {
     const disabledCallback = vi.fn();
     const disabledItems: ContextMenuItem[] = [
-      { label: 'Disabled Item', callback: disabledCallback, disabled: true }
+      { label: 'Disabled Item', callback: disabledCallback, disabled: true },
     ];
     const disabledMenu = new ContextMenu(container, disabledItems);
     disabledMenu.show(100, 100);

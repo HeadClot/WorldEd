@@ -25,16 +25,14 @@ export class SplitMeshCommand implements UndoCommand {
     sourceMesh: THREE.Mesh,
     frontMesh: THREE.Mesh,
     backMesh: THREE.Mesh,
-    worldGroup: THREE.Group
+    worldGroup: THREE.Group,
   ) {
     this.sourceMesh = sourceMesh;
     this.frontMesh = frontMesh;
     this.backMesh = backMesh;
     this.worldGroup = worldGroup;
     this.parent = sourceMesh.parent;
-    this.siblingIndex = sourceMesh.parent
-      ? sourceMesh.parent.children.indexOf(sourceMesh)
-      : 0;
+    this.siblingIndex = sourceMesh.parent ? sourceMesh.parent.children.indexOf(sourceMesh) : 0;
     this.executed = false;
   }
 
@@ -57,12 +55,7 @@ export class SplitMeshCommand implements UndoCommand {
     if (!this.executed) return;
     this.frontMesh.parent?.remove(this.frontMesh);
     this.backMesh.parent?.remove(this.backMesh);
-    restoreObjectAtIndex(
-      this.sourceMesh,
-      this.parent,
-      this.siblingIndex,
-      this.worldGroup
-    );
+    restoreObjectAtIndex(this.sourceMesh, this.parent, this.siblingIndex, this.worldGroup);
     this.executed = false;
   }
 

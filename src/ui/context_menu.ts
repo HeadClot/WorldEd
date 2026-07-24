@@ -173,9 +173,9 @@ export class ContextMenu {
   }
 
   /**
-    * Handles keyboard events to detect Escape key presses.
-    * @param event The keyboard event to inspect.
-    */
+   * Handles keyboard events to detect Escape key presses.
+   * @param event The keyboard event to inspect.
+   */
   private onKeyDown(event: KeyboardEvent): void {
     if (event.code === 'Escape') {
       this.hide();

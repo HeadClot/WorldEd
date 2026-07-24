@@ -6,13 +6,13 @@ import { SelectionMode } from '../types/selection_mode.js';
 import {
   FaceTextureAlign,
   FaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../texture/face_texture_mapping.js';
 import {
   TextureApplyTarget,
   buildTargetsFromFaceSelection,
   buildTargetsFromMeshes,
-  getCommonMapping
+  getCommonMapping,
 } from '../texture/face_texture_applier.js';
 
 /**
@@ -28,7 +28,7 @@ export type UvEditorStatusCallback = (message: string) => void;
  */
 export type UvEditorUiRefreshCallback = (
   mapping: FaceTextureMapping | null,
-  targetCount: number
+  targetCount: number,
 ) => void;
 
 /**
@@ -50,7 +50,7 @@ export class UvEditorController {
   constructor(
     selectionManager: SelectionManager,
     faceExtrusionController: FaceExtrusionController,
-    commandStack: CommandStack
+    commandStack: CommandStack,
   ) {
     this.selectionManager = selectionManager;
     this.faceExtrusionController = faceExtrusionController;
@@ -96,11 +96,9 @@ export class UvEditorController {
       this.reportNoSelection();
       return;
     }
-    const command = new ApplyFaceTextureCommand(
-      targets,
-      createDefaultFaceTextureMapping(),
-      { alignOnly: align }
-    );
+    const command = new ApplyFaceTextureCommand(targets, createDefaultFaceTextureMapping(), {
+      alignOnly: align,
+    });
     this.commandStack.push(command);
     this.statusCallback?.(`Aligned ${targets.length} face region(s) to ${align}`);
     this.refreshFromSelection();
@@ -130,15 +128,11 @@ export class UvEditorController {
       this.reportNoSelection();
       return;
     }
-    const command = new ApplyFaceTextureCommand(
-      targets,
-      createDefaultFaceTextureMapping(),
-      { resetUvOnly: true }
-    );
+    const command = new ApplyFaceTextureCommand(targets, createDefaultFaceTextureMapping(), {
+      resetUvOnly: true,
+    });
     this.commandStack.push(command);
-    this.statusCallback?.(
-      `Reset UVs on ${targets.length} face region(s)`
-    );
+    this.statusCallback?.(`Reset UVs on ${targets.length} face region(s)`);
     this.refreshFromSelection();
   }
 
@@ -162,10 +156,7 @@ export class UvEditorController {
    * @param targets Regions.
    * @param mapping Mapping to apply.
    */
-  private pushApplyCommand(
-    targets: TextureApplyTarget[],
-    mapping: FaceTextureMapping
-  ): void {
+  private pushApplyCommand(targets: TextureApplyTarget[], mapping: FaceTextureMapping): void {
     const command = new ApplyFaceTextureCommand(targets, mapping);
     this.commandStack.push(command);
   }
@@ -174,8 +165,6 @@ export class UvEditorController {
    * Reports that no valid selection is available.
    */
   private reportNoSelection(): void {
-    this.statusCallback?.(
-      'Select face(s) in Face mode, or object(s) in Object mode'
-    );
+    this.statusCallback?.('Select face(s) in Face mode, or object(s) in Object mode');
   }
 }

@@ -7,7 +7,7 @@ import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
 import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../../texture/face_texture_mapping.js';
 
 /**
@@ -42,7 +42,7 @@ export class SolidBrushInstance {
     id: string,
     name: string,
     brush: SolidBrush,
-    operation: SolidOperation = SolidOperation.Additive
+    operation: SolidOperation = SolidOperation.Additive,
   ) {
     this.id = id;
     this.name = name;
@@ -53,9 +53,7 @@ export class SolidBrushInstance {
     this.scale = new THREE.Vector3(1, 1, 1);
     this.visible = true;
     this.mesh = null;
-    this.defaultMapping = createDefaultFaceTextureMapping(
-      DEFAULT_CHECKER_TEXTURE_ID
-    );
+    this.defaultMapping = createDefaultFaceTextureMapping(DEFAULT_CHECKER_TEXTURE_ID);
     this.faceMappings = [];
   }
 
@@ -123,9 +121,7 @@ export class SolidBrushInstance {
    * @param textureId Texture identity.
    */
   setAllFacesTextureId(textureId: string): void {
-    this.defaultMapping = createDefaultFaceTextureMapping(
-      textureId || DEFAULT_CHECKER_TEXTURE_ID
-    );
+    this.defaultMapping = createDefaultFaceTextureMapping(textureId || DEFAULT_CHECKER_TEXTURE_ID);
     this.faceMappings = [];
   }
 
@@ -168,7 +164,7 @@ export class SolidBrushInstance {
    */
   serializeFaceMappings(): (FaceTextureMapping | undefined)[] {
     return this.faceMappings.map((mapping) =>
-      mapping ? cloneFaceTextureMapping(mapping) : undefined
+      mapping ? cloneFaceTextureMapping(mapping) : undefined,
     );
   }
 
@@ -187,7 +183,7 @@ export class SolidBrushInstance {
    */
   restoreFaceMappings(
     defaultMapping: FaceTextureMapping | undefined,
-    faceMappings: (FaceTextureMapping | undefined)[] | undefined
+    faceMappings: (FaceTextureMapping | undefined)[] | undefined,
   ): void {
     this.defaultMapping = defaultMapping
       ? cloneFaceTextureMapping(defaultMapping)
@@ -196,9 +192,7 @@ export class SolidBrushInstance {
       this.defaultMapping.textureId = DEFAULT_CHECKER_TEXTURE_ID;
     }
     this.faceMappings = faceMappings
-      ? faceMappings.map((mapping) =>
-          mapping ? cloneFaceTextureMapping(mapping) : undefined
-        )
+      ? faceMappings.map((mapping) => (mapping ? cloneFaceTextureMapping(mapping) : undefined))
       : [];
   }
 
@@ -208,12 +202,8 @@ export class SolidBrushInstance {
    * @param defaultTextureId Default surface texture id.
    * @param faceTextureIds Sparse per-face texture ids.
    */
-  restoreTextureIdsOnly(
-    defaultTextureId: string,
-    faceTextureIds: (string | undefined)[]
-  ): void {
-    this.defaultMapping.textureId =
-      defaultTextureId || DEFAULT_CHECKER_TEXTURE_ID;
+  restoreTextureIdsOnly(defaultTextureId: string, faceTextureIds: (string | undefined)[]): void {
+    this.defaultMapping.textureId = defaultTextureId || DEFAULT_CHECKER_TEXTURE_ID;
     this.faceMappings = faceTextureIds.map((textureId, index) => {
       if (typeof textureId !== 'string' || textureId.length === 0) {
         return undefined;
@@ -274,7 +264,7 @@ export class SolidBrushInstance {
     return new THREE.Matrix4().compose(
       this.position,
       new THREE.Quaternion().setFromEuler(this.rotation),
-      this.scale
+      this.scale,
     );
   }
 
@@ -312,20 +302,12 @@ export class SolidBrushInstance {
    */
   cloneWithId(newId: string, newName: string): SolidBrushInstance {
     this.pullTransformFromMesh();
-    const copy = new SolidBrushInstance(
-      newId,
-      newName,
-      this.brush.clone(),
-      this.operation
-    );
+    const copy = new SolidBrushInstance(newId, newName, this.brush.clone(), this.operation);
     copy.position.copy(this.position);
     copy.rotation.copy(this.rotation);
     copy.scale.copy(this.scale);
     copy.visible = this.visible;
-    copy.restoreFaceMappings(
-      this.serializeDefaultMapping(),
-      this.serializeFaceMappings()
-    );
+    copy.restoreFaceMappings(this.serializeDefaultMapping(), this.serializeFaceMappings());
     return copy;
   }
 }

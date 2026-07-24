@@ -5,11 +5,11 @@ import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { applyCylinderSideUnwrapOffsets } from '../../src/texture/cylinder_side_unwrap.js';
 import {
   cloneFaceTextureMapEntry,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../../src/texture/face_texture_mapping.js';
 import {
   computeRegionWorldNormal,
-  splitMeshIntoCoplanarRegions
+  splitMeshIntoCoplanarRegions,
 } from '../../src/texture/planar_uv_projector.js';
 import { captureGeometrySourceIfNeeded } from '../../src/texture/geometry_source.js';
 
@@ -23,7 +23,7 @@ describe('cylinder_side_unwrap', () => {
     const regions = splitMeshIntoCoplanarRegions(mesh);
     const entries = regions.map((triangleIndices) => ({
       triangleIndices,
-      mapping: createDefaultFaceTextureMapping()
+      mapping: createDefaultFaceTextureMapping(),
     }));
     applyCylinderSideUnwrapOffsets(mesh, entries);
     const sideOffsets = entries
@@ -44,8 +44,8 @@ describe('cylinder_side_unwrap', () => {
     const entries = regions.map((triangleIndices) =>
       cloneFaceTextureMapEntry({
         triangleIndices,
-        mapping: createDefaultFaceTextureMapping()
-      })
+        mapping: createDefaultFaceTextureMapping(),
+      }),
     );
     applyCylinderSideUnwrapOffsets(mesh, entries);
     entries.forEach((entry) => {

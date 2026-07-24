@@ -8,7 +8,7 @@ import { BoundsFacePicker } from './bounds_face_picker.js';
 import {
   computeOneSidedMeshResize,
   computeOneSidedMultiMeshResize,
-  snapBoundsFaceDelta
+  snapBoundsFaceDelta,
 } from './bounds_resize_math.js';
 import { OrientedBoundsData } from './oriented_bounds.js';
 import { TextureLockSettings } from '../texture/texture_lock_settings.js';
@@ -37,7 +37,7 @@ export class BoundsDragController {
     session: TransformDragSession,
     transformGizmo: TransformGizmo,
     gizmoRaycaster: GizmoRaycaster,
-    transformExecutor: TransformExecutor
+    transformExecutor: TransformExecutor,
   ) {
     this.session = session;
     this.transformGizmo = transformGizmo;
@@ -72,16 +72,14 @@ export class BoundsDragController {
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[],
     pivot: THREE.Vector3,
-    gizmoGroup: THREE.Group
+    gizmoGroup: THREE.Group,
   ): void {
-    if (this.tryBeginResizeDrag(
-      camera, renderer, event, handles, selectedObjects, pivot, gizmoGroup
-    )) {
+    if (
+      this.tryBeginResizeDrag(camera, renderer, event, handles, selectedObjects, pivot, gizmoGroup)
+    ) {
       return;
     }
-    this.beginFaceMoveDrag(
-      camera, renderer, event, selectedObjects, pivot, gizmoGroup
-    );
+    this.beginFaceMoveDrag(camera, renderer, event, selectedObjects, pivot, gizmoGroup);
   }
 
   /**
@@ -95,7 +93,7 @@ export class BoundsDragController {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    objects: THREE.Mesh[]
+    objects: THREE.Mesh[],
   ): void {
     if (this.session.isBoundsFaceMove) {
       this.handleFaceTranslate(camera, renderer, event, objects);
@@ -124,11 +122,9 @@ export class BoundsDragController {
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[],
     pivot: THREE.Vector3,
-    gizmoGroup: THREE.Group
+    gizmoGroup: THREE.Group,
   ): boolean {
-    const picked = this.gizmoRaycaster.pickHandle(
-      handles, camera, renderer, event, gizmoGroup
-    );
+    const picked = this.gizmoRaycaster.pickHandle(handles, camera, renderer, event, gizmoGroup);
     if (!picked) return false;
     const face = this.readBoundsFaceFromHandle(picked);
     if (!face) return false;
@@ -165,11 +161,9 @@ export class BoundsDragController {
     event: MouseEvent,
     selectedObjects: THREE.Mesh[],
     pivot: THREE.Vector3,
-    gizmoGroup: THREE.Group
+    gizmoGroup: THREE.Group,
   ): void {
-    const pick = this.boundsFacePicker.pickFace(
-      event, camera, renderer, gizmoGroup
-    );
+    const pick = this.boundsFacePicker.pickFace(event, camera, renderer, gizmoGroup);
     if (!pick) return;
     this.session.snapshotPreDragState(selectedObjects);
     this.session.resetDragAccumulator();
@@ -177,9 +171,7 @@ export class BoundsDragController {
     this.session.dragActive = true;
     this.session.isBoundsFaceMove = true;
     this.session.activeBoundsFace = pick.face;
-    this.session.boundsMovePlane.setFromNormalAndCoplanarPoint(
-      pick.normal, pick.point
-    );
+    this.session.boundsMovePlane.setFromNormalAndCoplanarPoint(pick.normal, pick.point);
     this.session.dragCamera = camera;
     this.session.dragRenderer = renderer;
     this.session.initialMousePosition = pick.point.clone();
@@ -200,11 +192,14 @@ export class BoundsDragController {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    objects: THREE.Mesh[]
+    objects: THREE.Mesh[],
   ): void {
     if (!this.session.initialMousePosition) return;
     const current = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, this.session.boundsMovePlane
+      camera,
+      renderer,
+      event,
+      this.session.boundsMovePlane,
     );
     if (!current) return;
     const totalDelta = current.clone().sub(this.session.initialMousePosition);
@@ -212,7 +207,7 @@ export class BoundsDragController {
     this.transformExecutor.applyAbsoluteTranslation(
       objects,
       this.session.initialPositions,
-      totalDelta
+      totalDelta,
     );
   }
 
@@ -227,21 +222,20 @@ export class BoundsDragController {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    objects: THREE.Mesh[]
+    objects: THREE.Mesh[],
   ): void {
     if (
-      !this.session.initialMousePosition
-      || !this.session.activeBoundsFace
-      || !this.session.startBounds
+      !this.session.initialMousePosition ||
+      !this.session.activeBoundsFace ||
+      !this.session.startBounds
     ) {
       return;
     }
     const plane = TransformProjectionMath.buildCameraPlane(
-      camera, this.session.initialMousePosition
+      camera,
+      this.session.initialMousePosition,
     );
-    const current = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, plane
-    );
+    const current = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
     if (!current) return;
     const outward = this.getActiveFaceWorldNormal();
     const rawDelta = current.clone().sub(this.session.initialMousePosition).dot(outward);
@@ -251,7 +245,7 @@ export class BoundsDragController {
       rawDelta,
       gridSnap.isEnabled(),
       gridSnap.getInterval(),
-      startFaceCoordinate
+      startFaceCoordinate,
     );
     this.session.boundsDeltaAlongNormal = snappedDelta;
     this.applyResizeToObjects(objects, snappedDelta);
@@ -264,12 +258,8 @@ export class BoundsDragController {
    */
   private getActiveFaceStartCoordinate(outward: THREE.Vector3): number {
     if (!this.session.startBounds || !this.session.activeBoundsFace) return 0;
-    const half = this.getFaceHalfExtent(
-      this.session.startBounds, this.session.activeBoundsFace
-    );
-    const faceCenter = this.session.startBounds.center
-      .clone()
-      .addScaledVector(outward, half);
+    const half = this.getFaceHalfExtent(this.session.startBounds, this.session.activeBoundsFace);
+    const faceCenter = this.session.startBounds.center.clone().addScaledVector(outward, half);
     return faceCenter.dot(outward);
   }
 
@@ -279,10 +269,7 @@ export class BoundsDragController {
    * @param face The face being resized.
    * @returns Half-extent along that face's axis.
    */
-  private getFaceHalfExtent(
-    bounds: OrientedBoundsData,
-    face: BoundsFace
-  ): number {
+  private getFaceHalfExtent(bounds: OrientedBoundsData, face: BoundsFace): number {
     if (face === BoundsFace.POS_X || face === BoundsFace.NEG_X) {
       return bounds.halfExtents.x;
     }
@@ -297,10 +284,7 @@ export class BoundsDragController {
    * @param objects Selected meshes.
    * @param deltaAlongNormal Snapped face displacement.
    */
-  private applyResizeToObjects(
-    objects: THREE.Mesh[],
-    deltaAlongNormal: number
-  ): void {
+  private applyResizeToObjects(objects: THREE.Mesh[], deltaAlongNormal: number): void {
     if (!this.session.activeBoundsFace || !this.session.startBounds) return;
     const multi = objects.length > 1;
     objects.forEach((mesh) => {
@@ -309,19 +293,19 @@ export class BoundsDragController {
       if (!startPos || !startScale) return;
       const result = multi
         ? computeOneSidedMultiMeshResize(
-          startPos,
-          startScale,
-          this.session.startBounds!,
-          this.session.activeBoundsFace!,
-          deltaAlongNormal
-        )
+            startPos,
+            startScale,
+            this.session.startBounds!,
+            this.session.activeBoundsFace!,
+            deltaAlongNormal,
+          )
         : computeOneSidedMeshResize(
-          startPos,
-          startScale,
-          this.session.startBounds!,
-          this.session.activeBoundsFace!,
-          deltaAlongNormal
-        );
+            startPos,
+            startScale,
+            this.session.startBounds!,
+            this.session.activeBoundsFace!,
+            deltaAlongNormal,
+          );
       mesh.position.copy(result.position);
       mesh.scale.copy(result.scale);
     });
@@ -360,14 +344,17 @@ export class BoundsDragController {
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
     bounds: OrientedBoundsData,
-    face: BoundsFace
+    face: BoundsFace,
   ): void {
     const outward = this.computeFaceWorldNormal(bounds, face);
     const half = this.getFaceHalfExtent(bounds, face);
     const faceCenter = bounds.center.clone().addScaledVector(outward, half);
     const plane = TransformProjectionMath.buildCameraPlane(camera, faceCenter);
     this.session.initialMousePosition = this.gizmoRaycaster.projectMouseToPlane(
-      camera, renderer, event, plane
+      camera,
+      renderer,
+      event,
+      plane,
     );
   }
 
@@ -379,9 +366,7 @@ export class BoundsDragController {
     if (!this.session.startBounds || !this.session.activeBoundsFace) {
       return new THREE.Vector3(1, 0, 0);
     }
-    return this.computeFaceWorldNormal(
-      this.session.startBounds, this.session.activeBoundsFace
-    );
+    return this.computeFaceWorldNormal(this.session.startBounds, this.session.activeBoundsFace);
   }
 
   /**
@@ -390,10 +375,7 @@ export class BoundsDragController {
    * @param face Face identifier.
    * @returns Normalized world normal.
    */
-  private computeFaceWorldNormal(
-    bounds: OrientedBoundsData,
-    face: BoundsFace
-  ): THREE.Vector3 {
+  private computeFaceWorldNormal(bounds: OrientedBoundsData, face: BoundsFace): THREE.Vector3 {
     const local = new THREE.Vector3();
     if (face === BoundsFace.POS_X) local.set(1, 0, 0);
     else if (face === BoundsFace.NEG_X) local.set(-1, 0, 0);
@@ -413,7 +395,7 @@ export class BoundsDragController {
     return {
       center: bounds.center.clone(),
       quaternion: bounds.quaternion.clone(),
-      halfExtents: bounds.halfExtents.clone()
+      halfExtents: bounds.halfExtents.clone(),
     };
   }
 }

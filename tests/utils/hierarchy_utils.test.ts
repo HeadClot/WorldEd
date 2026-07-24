@@ -9,7 +9,7 @@ import {
   getGroupChildren,
   getMeshChildren,
   getDepth,
-  restoreObjectAtIndex
+  restoreObjectAtIndex,
 } from '../../src/utils/hierarchy_utils.js';
 
 describe('getDescendants', () => {
@@ -44,10 +44,7 @@ describe('getDescendants', () => {
 
   it('should include deeply nested descendants', () => {
     const level2 = new THREE.Group();
-    const level3 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const level3 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     level2.add(level3);
     child1.add(level2);
     const descendants = getDescendants(root);
@@ -167,10 +164,7 @@ describe('reparentSafely', () => {
   });
 
   it('should handle reparenting orphan object', () => {
-    const orphan = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const orphan = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     const result = reparentSafely(orphan, rootB);
     expect(result).toBe(true);
     expect(orphan.parent).toBe(rootB);
@@ -289,10 +283,7 @@ describe('getDepth', () => {
 
   it('should return increasing depth for deeper nesting', () => {
     const level3 = new THREE.Group();
-    const level4 = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const level4 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     grandchild.add(level3);
     level3.add(level4);
     expect(getDepth(level3, root)).toBe(2);

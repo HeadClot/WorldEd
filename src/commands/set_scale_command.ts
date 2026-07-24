@@ -29,7 +29,7 @@ export class SetScaleCommand implements UndoCommand {
     for (let i = 0; i < objects.length; i++) {
       this.snapshots.push({
         object: objects[i],
-        scale: objects[i].scale.clone()
+        scale: objects[i].scale.clone(),
       });
       this.newScales.push(newScales[i].clone());
     }

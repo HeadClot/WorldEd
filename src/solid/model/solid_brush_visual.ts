@@ -3,7 +3,7 @@ import { SolidBrush } from '../brush/solid_brush.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import {
   SolidBrushEdgeMaterials,
-  SOLID_BRUSH_EDGE_USERDATA_KEY
+  SOLID_BRUSH_EDGE_USERDATA_KEY,
 } from './solid_brush_edge_materials.js';
 
 /**
@@ -61,11 +61,7 @@ export class SolidBrushVisual {
    * @param operation CSG operation (affects preview tint).
    * @returns Configured mesh with decorative edges.
    */
-  static createBoxPreview(
-    name: string,
-    size: number,
-    operation: SolidOperation
-  ): THREE.Mesh {
+  static createBoxPreview(name: string, size: number, operation: SolidOperation): THREE.Mesh {
     const geometry = new THREE.BoxGeometry(size, size, size);
     return this.finishPreviewMesh(name, geometry, operation);
   }
@@ -77,11 +73,7 @@ export class SolidBrushVisual {
    * @param operation CSG operation (affects preview tint).
    * @returns Configured mesh with decorative edges.
    */
-  static createHullPreview(
-    name: string,
-    brush: SolidBrush,
-    operation: SolidOperation
-  ): THREE.Mesh {
+  static createHullPreview(name: string, brush: SolidBrush, operation: SolidOperation): THREE.Mesh {
     const geometry = this.buildHullGeometry(brush);
     return this.finishPreviewMesh(name, geometry, operation);
   }
@@ -107,15 +99,12 @@ export class SolidBrushVisual {
           points[index].z,
           points[index + 1].x,
           points[index + 1].y,
-          points[index + 1].z
+          points[index + 1].z,
         );
       }
     }
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(positions, 3)
-    );
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
     return geometry;
@@ -131,7 +120,7 @@ export class SolidBrushVisual {
   private static finishPreviewMesh(
     name: string,
     geometry: THREE.BufferGeometry,
-    operation: SolidOperation
+    operation: SolidOperation,
   ): THREE.Mesh {
     const material = this.createOutlineOnlyMaterial();
     const mesh = new THREE.Mesh(geometry, material);
@@ -189,7 +178,7 @@ export class SolidBrushVisual {
     return mesh.children.some(
       (child) =>
         child instanceof THREE.LineSegments &&
-        child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true
+        child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true,
     );
   }
 
@@ -227,7 +216,7 @@ export class SolidBrushVisual {
    */
   private static applySelectedFillStyle(
     material: THREE.MeshBasicMaterial,
-    operation: SolidOperation
+    operation: SolidOperation,
   ): void {
     material.visible = true;
     material.color.setHex(this.colorForOperation(operation));
@@ -284,7 +273,7 @@ export class SolidBrushVisual {
     const material = new THREE.MeshBasicMaterial({
       color: 0x000000,
       side: THREE.FrontSide,
-      toneMapped: false
+      toneMapped: false,
     });
     this.applyOutlineOnlyStyle(material);
     return material;
@@ -294,9 +283,7 @@ export class SolidBrushVisual {
    * Disposes a material or material array unless it is a shared edge material.
    * @param material Material(s) to dispose.
    */
-  private static disposeMaterial(
-    material: THREE.Material | THREE.Material[] | undefined
-  ): void {
+  private static disposeMaterial(material: THREE.Material | THREE.Material[] | undefined): void {
     if (Array.isArray(material)) {
       material.forEach((entry) => this.disposeOwnedMaterial(entry));
       return;
@@ -318,15 +305,11 @@ export class SolidBrushVisual {
    * @param mesh Brush preview mesh.
    * @param operation CSG operation.
    */
-  private static bindEdgeMaterials(
-    mesh: THREE.Mesh,
-    operation: SolidOperation
-  ): void {
+  private static bindEdgeMaterials(mesh: THREE.Mesh, operation: SolidOperation): void {
     for (const child of mesh.children) {
       if (!(child instanceof THREE.LineSegments)) continue;
       if (child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] !== true) continue;
-      const isOccluded =
-        child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
+      const isOccluded = child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
       child.material = isOccluded
         ? SolidBrushEdgeMaterials.getOccludedMaterial(operation)
         : SolidBrushEdgeMaterials.getFrontMaterial(operation);
@@ -400,22 +383,19 @@ export class SolidBrushVisual {
    * @param mesh Target mesh.
    * @param operation CSG operation for edge tint.
    */
-  private static attachWireframe(
-    mesh: THREE.Mesh,
-    operation: SolidOperation
-  ): void {
+  private static attachWireframe(mesh: THREE.Mesh, operation: SolidOperation): void {
     const frontGeometry = new THREE.EdgesGeometry(mesh.geometry, 1);
     const occludedGeometry = frontGeometry.clone();
     const occluded = new THREE.LineSegments(
       occludedGeometry,
-      SolidBrushEdgeMaterials.getOccludedMaterial(operation)
+      SolidBrushEdgeMaterials.getOccludedMaterial(operation),
     );
     occluded.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
     occluded.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] = true;
     occluded.renderOrder = BRUSH_EDGE_OCCLUDED_RENDER_ORDER;
     const front = new THREE.LineSegments(
       frontGeometry,
-      SolidBrushEdgeMaterials.getFrontMaterial(operation)
+      SolidBrushEdgeMaterials.getFrontMaterial(operation),
     );
     front.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
     front.renderOrder = BRUSH_EDGE_FRONT_RENDER_ORDER;

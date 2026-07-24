@@ -49,10 +49,7 @@ describe('SolidModel', () => {
     const outer = model.addBoxBrush(4, SolidOperation.Additive);
     const cutter = model.addBoxBrush(2, SolidOperation.Subtractive);
     expect(outer.mesh && cutter.mesh).toBeTruthy();
-    const before = model
-      .getResultMesh()
-      .geometry.getAttribute('position')
-      .array.slice(0);
+    const before = model.getResultMesh().geometry.getAttribute('position').array.slice(0);
     cutter.mesh!.position.set(0.75, 0, 0);
     model.rebuildLive();
     const after = model.getResultMesh().geometry.getAttribute('position');
@@ -79,9 +76,7 @@ describe('SolidModel', () => {
     const position = result.geometry.getAttribute('position');
     expect(position.count).toBeGreaterThan(0);
     const material = result.material;
-    const hasMaterial = Array.isArray(material)
-      ? material.length > 0
-      : material != null;
+    const hasMaterial = Array.isArray(material) ? material.length > 0 : material != null;
     expect(hasMaterial).toBe(true);
     const uv = result.geometry.getAttribute('uv');
     expect(uv).toBeDefined();

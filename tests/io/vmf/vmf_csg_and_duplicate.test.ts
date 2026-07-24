@@ -16,12 +16,12 @@ function buildNestedBoxVmf(): string {
   const outer = buildAxisAlignedSideBlocks(
     { x: -128, y: -128, z: -128 },
     { x: 128, y: 128, z: 128 },
-    'DEV/OUTER'
+    'DEV/OUTER',
   );
   const inner = buildAxisAlignedSideBlocks(
     { x: -32, y: -32, z: -32 },
     { x: 32, y: 32, z: 32 },
-    'DEV/INNER'
+    'DEV/INNER',
   );
   return `
 world
@@ -50,9 +50,7 @@ ${inner}
  */
 function isInsideSolid(
   point: THREE.Vector3,
-  brushes: ReturnType<
-    import('../../../src/solid/model/solid_model.js').SolidModel['getBrushes']
-  >
+  brushes: ReturnType<import('../../../src/solid/model/solid_model.js').SolidModel['getBrushes']>,
 ): boolean {
   let inside = false;
   for (const instance of brushes) {
@@ -75,7 +73,7 @@ function isInsideSolid(
 describe('VMF import CSG and duplicate', () => {
   it('subtracts an imported brush from another creating a cavity', () => {
     const result = new VmfSolidImporter().importFromText(buildNestedBoxVmf(), {
-      rebuild: true
+      rebuild: true,
     });
     expect(result.importedBrushCount).toBe(2);
     const brushes = result.model.getBrushes();
@@ -102,9 +100,9 @@ describe('VMF import CSG and duplicate', () => {
         { x: 1568, y: 1792, z: -64 },
         { x: 1728, y: 1920, z: 0 },
         'DEV/A',
-        99
+        99,
       ),
-      { rebuild: false }
+      { rebuild: false },
     );
     const source = result.model.getBrushes()[0];
     const sourceBounds = source.brush.computeLocalBounds();
@@ -135,19 +133,14 @@ describe('VMF import CSG and duplicate', () => {
 
   it('places imported brush position at the world center of the solid', () => {
     const result = new VmfSolidImporter().importFromText(
-      buildAxisAlignedWorldSolidVmf(
-        { x: -64, y: -64, z: 0 },
-        { x: 64, y: 64, z: 128 }
-      ),
-      { rebuild: false }
+      buildAxisAlignedWorldSolidVmf({ x: -64, y: -64, z: 0 }, { x: 64, y: 64, z: 128 }),
+      { rebuild: false },
     );
     const brush = result.model.getBrushes()[0];
     expect(brush.position.x).toBeCloseTo(0, 4);
     expect(brush.position.y).toBeCloseTo(2, 4);
     expect(brush.position.z).toBeCloseTo(0, 4);
-    const localCenter = brush.brush
-      .computeLocalBounds()
-      .getCenter(new THREE.Vector3());
+    const localCenter = brush.brush.computeLocalBounds().getCenter(new THREE.Vector3());
     expect(localCenter.length()).toBeLessThan(1e-4);
   });
 });

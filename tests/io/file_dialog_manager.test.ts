@@ -12,13 +12,16 @@ describe('FileDialogManager', () => {
     savedCreateElement = document.createElement.bind(document);
     savedAppendChild = document.body.appendChild.bind(document.body);
     savedRemoveChild = document.body.removeChild.bind(document.body);
-    vi.stubGlobal('URL', new Proxy(window.URL, {
-      get(target, prop) {
-        if (prop === 'createObjectURL') return vi.fn(() => 'blob://mock-url');
-        if (prop === 'revokeObjectURL') return vi.fn();
-        return Reflect.get(target, prop);
-      },
-    }));
+    vi.stubGlobal(
+      'URL',
+      new Proxy(window.URL, {
+        get(target, prop) {
+          if (prop === 'createObjectURL') return vi.fn(() => 'blob://mock-url');
+          if (prop === 'revokeObjectURL') return vi.fn();
+          return Reflect.get(target, prop);
+        },
+      }),
+    );
   });
 
   afterEach(() => {
@@ -92,7 +95,7 @@ describe('FileDialogManager', () => {
       accept: '',
       files: [new File(['solid\n{\n}\n'], 'map.vmf', { type: 'text/plain' })],
       click: vi.fn(),
-      onchange: null as null | (() => void)
+      onchange: null as null | (() => void),
     };
     document.createElement = vi.fn((tagName: string) => {
       if (tagName === 'input') {

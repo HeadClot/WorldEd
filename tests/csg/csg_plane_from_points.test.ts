@@ -5,7 +5,7 @@ import {
   buildPlaneFromThreePoints,
   buildPlaneFromPlacementPoints,
   flipPlane,
-  planeToCsgForm
+  planeToCsgForm,
 } from '../../src/csg/csg_plane_from_points.js';
 
 describe('csg_plane_from_points', () => {
@@ -48,7 +48,7 @@ describe('csg_plane_from_points', () => {
     const points = [
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(1, 0, 0),
-      new THREE.Vector3(0, 0, 1)
+      new THREE.Vector3(0, 0, 1),
     ];
     const plane = buildPlaneFromPlacementPoints(points);
     expect(plane).not.toBeNull();
@@ -68,7 +68,7 @@ describe('csg_plane_from_points', () => {
     const point = new THREE.Vector3(2, 0, 0);
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
       new THREE.Vector3(1, 0, 0),
-      point
+      point,
     );
     const csg = planeToCsgForm(plane);
     expect(csg.normal.x).toBeCloseTo(1);

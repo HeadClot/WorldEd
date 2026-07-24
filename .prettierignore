@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+docs/
+desktop_build/
+desktop_artifacts/
+dist/
+bun.lock

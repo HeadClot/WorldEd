@@ -47,7 +47,7 @@ function createCheckerTexture(): THREE.CanvasTexture {
 function paintChecker(
   context: CanvasRenderingContext2D,
   pixelSize: number,
-  cellCount: number
+  cellCount: number,
 ): void {
   const cellPixels = pixelSize / cellCount;
   for (let y = 0; y < cellCount; y++) {

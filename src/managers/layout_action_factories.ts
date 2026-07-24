@@ -6,7 +6,7 @@ import {
   applyOutlinerRename,
   applyOutlinerVisibilityToggle,
   applyOutlinerLockToggle,
-  handleOutlinerDuplicate
+  handleOutlinerDuplicate,
 } from './editor_shell_builder.js';
 import { SelectionManager } from './selection_manager.js';
 import { ObjectActionHandler } from './object_action_handler.js';
@@ -72,29 +72,18 @@ export interface ToolbarActionHost {
  * @param host Layout manager callbacks and shared services.
  * @returns Outliner action callback bundle.
  */
-export function buildOutlinerActions(
-  host: OutlinerActionHost
-): EditorShellOutlinerActions {
+export function buildOutlinerActions(host: OutlinerActionHost): EditorShellOutlinerActions {
   return {
     onDuplicateFromOutliner: (obj) =>
-      handleOutlinerDuplicate(
-        obj,
-        host.selectionManager,
-        host.getObjectActionHandler()
-      ),
+      handleOutlinerDuplicate(obj, host.selectionManager, host.getObjectActionHandler()),
     onDeleteFromOutliner: (obj) => deleteFromOutliner(host, obj),
-    onGroupFromOutliner: (objects) =>
-      host.getObjectActionHandler().groupObjects(objects),
-    onUngroupFromOutliner: (group) =>
-      host.getObjectActionHandler().ungroupGroup(group),
+    onGroupFromOutliner: (objects) => host.getObjectActionHandler().groupObjects(objects),
+    onUngroupFromOutliner: (group) => host.getObjectActionHandler().ungroupGroup(group),
     onRenameFromOutliner: (obj, newName) =>
       applyOutlinerRename(host.commandStack, obj, newName, host.refreshOutliner),
     onToggleVisibilityFromOutliner: (obj) =>
-      applyOutlinerVisibilityToggle(
-        host.commandStack,
-        obj,
-        host.refreshOutliner,
-        () => host.syncViewports()
+      applyOutlinerVisibilityToggle(host.commandStack, obj, host.refreshOutliner, () =>
+        host.syncViewports(),
       ),
     onToggleLockFromOutliner: (obj) => toggleLockFromOutliner(host, obj),
     reparentFromDrop: (dragged, target) => {
@@ -103,7 +92,7 @@ export function buildOutlinerActions(
     },
     syncViewports: () => host.syncViewports(),
     refreshOutliner: () => host.refreshOutliner(),
-    showStatusMessage: (message) => host.showStatusMessage(message)
+    showStatusMessage: (message) => host.showStatusMessage(message),
   };
 }
 
@@ -126,10 +115,7 @@ function deleteFromOutliner(host: OutlinerActionHost, obj: THREE.Object3D): void
  * @param host Outliner action host.
  * @param obj Object whose lock state is toggled.
  */
-function toggleLockFromOutliner(
-  host: OutlinerActionHost,
-  obj: THREE.Object3D
-): void {
+function toggleLockFromOutliner(host: OutlinerActionHost, obj: THREE.Object3D): void {
   applyOutlinerLockToggle(obj, host.refreshOutliner, host.showStatusMessage);
   host.onSelectionChanged();
 }
@@ -144,7 +130,7 @@ export function buildToolbarActions(host: ToolbarActionHost): EditorToolbarActio
     ...buildPrimitiveToolbarActions(host),
     ...buildEditToolbarActions(host),
     ...buildCsgSnapAlignToolbarActions(host),
-    ...buildIoToolbarActions(host)
+    ...buildIoToolbarActions(host),
   };
 }
 
@@ -154,7 +140,7 @@ export function buildToolbarActions(host: ToolbarActionHost): EditorToolbarActio
  * @returns Partial toolbar action bundle.
  */
 function buildPrimitiveToolbarActions(
-  host: ToolbarActionHost
+  host: ToolbarActionHost,
 ): Pick<
   EditorToolbarActions,
   | 'onAddCube'
@@ -182,7 +168,7 @@ function buildPrimitiveToolbarActions(
     onToggleToolsPalette: () => host.onToggleToolsPalette(),
     onToggleSolidModelPanel: () => host.onToggleSolidModelPanel(),
     onToggleSettingsDialog: () => host.onToggleSettingsDialog(),
-    onOpenAboutDialog: () => host.onOpenAboutDialog()
+    onOpenAboutDialog: () => host.onOpenAboutDialog(),
   };
 }
 
@@ -192,7 +178,7 @@ function buildPrimitiveToolbarActions(
  * @returns Partial toolbar action bundle.
  */
 function buildEditToolbarActions(
-  host: ToolbarActionHost
+  host: ToolbarActionHost,
 ): Pick<
   EditorToolbarActions,
   | 'onUndo'
@@ -208,7 +194,7 @@ function buildEditToolbarActions(
     onDeleteSelected: () => host.onDeleteSelected(),
     onDuplicateSelected: () => host.getObjectActionHandler().onDuplicateSelected(),
     onGroupSelected: () => host.onGroupSelected(),
-    onUngroupSelected: () => host.getObjectActionHandler().onUngroupSelected()
+    onUngroupSelected: () => host.getObjectActionHandler().onUngroupSelected(),
   };
 }
 
@@ -218,7 +204,7 @@ function buildEditToolbarActions(
  * @returns Partial toolbar action bundle.
  */
 function buildCsgSnapAlignToolbarActions(
-  host: ToolbarActionHost
+  host: ToolbarActionHost,
 ): Pick<
   EditorToolbarActions,
   | 'onCsgUnion'
@@ -241,16 +227,12 @@ function buildCsgSnapAlignToolbarActions(
   return {
     onCsgUnion: () => host.getCsgActionHandler().runBoolean(CsgOperation.UNION),
     onCsgSubtract: () => host.getCsgActionHandler().runBoolean(CsgOperation.SUBTRACT),
-    onCsgIntersect: () =>
-      host.getCsgActionHandler().runBoolean(CsgOperation.INTERSECT),
+    onCsgIntersect: () => host.getCsgActionHandler().runBoolean(CsgOperation.INTERSECT),
     canRunCsgBoolean: () => host.getCsgActionHandler().canRunMeshBoolean(),
     onToggleSnap: () => host.getSnapSettingsController().onToggleSnap(),
-    onSnapIntervalBackward: () =>
-      host.getSnapSettingsController().onSnapIntervalBackward(),
-    onSnapIntervalForward: () =>
-      host.getSnapSettingsController().onSnapIntervalForward(),
-    onToggleTextureLock: () =>
-      host.getSnapSettingsController().onToggleTextureLock(),
+    onSnapIntervalBackward: () => host.getSnapSettingsController().onSnapIntervalBackward(),
+    onSnapIntervalForward: () => host.getSnapSettingsController().onSnapIntervalForward(),
+    onToggleTextureLock: () => host.getSnapSettingsController().onToggleTextureLock(),
     onAlignToOrigin: () => host.getAlignmentHandler().onAlignToOrigin(),
     onAlignToGridCenter: () => host.getAlignmentHandler().onAlignToGridCenter(),
     onAlignToObject: () => host.getAlignmentHandler().onAlignToObject(),
@@ -258,7 +240,7 @@ function buildCsgSnapAlignToolbarActions(
     onSetTransformSpaceLocal: () => host.onSetTransformSpaceLocal(),
     isUserSnapEnabled: () => host.isUserSnapEnabled(),
     isTextureLockEnabled: () => host.textureLock.isLocked(),
-    isTransformSpaceLocal: () => host.isTransformSpaceLocal()
+    isTransformSpaceLocal: () => host.isTransformSpaceLocal(),
   };
 }
 
@@ -268,15 +250,12 @@ function buildCsgSnapAlignToolbarActions(
  * @returns Partial toolbar action bundle.
  */
 function buildIoToolbarActions(
-  host: ToolbarActionHost
-): Pick<
-  EditorToolbarActions,
-  'onSaveScene' | 'onLoadScene' | 'onImportVmf' | 'onExportGlb'
-> {
+  host: ToolbarActionHost,
+): Pick<EditorToolbarActions, 'onSaveScene' | 'onLoadScene' | 'onImportVmf' | 'onExportGlb'> {
   return {
     onSaveScene: () => host.onSaveScene(),
     onLoadScene: () => host.onLoadScene(),
     onImportVmf: () => host.onImportVmf(),
-    onExportGlb: () => host.onExportGlb()
+    onExportGlb: () => host.onExportGlb(),
   };
 }

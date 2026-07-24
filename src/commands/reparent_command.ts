@@ -23,7 +23,7 @@ export class ReparentCommand implements UndoCommand {
   constructor(
     object: THREE.Object3D,
     newParent: THREE.Object3D,
-    insertBefore: THREE.Object3D | null = null
+    insertBefore: THREE.Object3D | null = null,
   ) {
     this.object = object;
     this.newParent = newParent;
@@ -71,10 +71,7 @@ export class ReparentCommand implements UndoCommand {
    * @param parent The destination parent.
    * @param before Optional sibling to insert before.
    */
-  private applyReparent(
-    parent: THREE.Object3D,
-    before: THREE.Object3D | null
-  ): void {
+  private applyReparent(parent: THREE.Object3D, before: THREE.Object3D | null): void {
     const success = this.restoreWorldTransformWhileReparenting(parent);
     if (!success) return;
     if (before && before.parent === parent) {
@@ -102,11 +99,7 @@ export class ReparentCommand implements UndoCommand {
     const localMatrix = new THREE.Matrix4()
       .compose(worldPosition, worldQuaternion, worldScale)
       .premultiply(parentInverse);
-    localMatrix.decompose(
-      this.object.position,
-      this.object.quaternion,
-      this.object.scale
-    );
+    localMatrix.decompose(this.object.position, this.object.quaternion, this.object.scale);
     return true;
   }
 
@@ -116,11 +109,7 @@ export class ReparentCommand implements UndoCommand {
    * @param child The child to move.
    * @param index The destination index.
    */
-  private moveChildToIndex(
-    parent: THREE.Object3D,
-    child: THREE.Object3D,
-    index: number
-  ): void {
+  private moveChildToIndex(parent: THREE.Object3D, child: THREE.Object3D, index: number): void {
     const currentIndex = parent.children.indexOf(child);
     if (currentIndex < 0) return;
     parent.children.splice(currentIndex, 1);

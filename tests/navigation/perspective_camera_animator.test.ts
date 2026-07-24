@@ -12,7 +12,7 @@ describe('PerspectiveCameraAnimator', () => {
   beforeEach(() => {
     mockTime = 0;
     vi.stubGlobal('performance', {
-      now: () => mockTime
+      now: () => mockTime,
     });
     animator = new PerspectiveCameraAnimator();
     config = new CameraAnimationConfig();
@@ -36,7 +36,7 @@ describe('PerspectiveCameraAnimator', () => {
       camera,
       new THREE.Vector3(10, 10, 10),
       new THREE.Vector3(0, 0, 0),
-      config
+      config,
     );
     expect(result).toBe(true);
     expect(animator.isAnimating()).toBe(true);
@@ -48,7 +48,7 @@ describe('PerspectiveCameraAnimator', () => {
       camera,
       new THREE.Vector3(10, 10, 10),
       new THREE.Vector3(0, 0, 0),
-      config
+      config,
     );
     mockTime += 200;
     const stillRunning = animator.update();
@@ -62,7 +62,7 @@ describe('PerspectiveCameraAnimator', () => {
       camera,
       new THREE.Vector3(10, 10, 10),
       new THREE.Vector3(0, 0, 0),
-      config
+      config,
     );
     expect(result).toBe(false);
     expect(animator.isAnimating()).toBe(false);
@@ -78,7 +78,7 @@ describe('PerspectiveCameraAnimator', () => {
       camera,
       new THREE.Vector3(20, 20, 20),
       new THREE.Vector3(0, 0, 0),
-      config
+      config,
     );
     mockTime += 50;
     animator.update();
@@ -122,7 +122,7 @@ describe('PerspectiveCameraAnimator', () => {
       camera,
       new THREE.Vector3(10, 10, 10),
       new THREE.Vector3(0, 0, 0),
-      config
+      config,
     );
     mockTime += 200;
     animator.update();

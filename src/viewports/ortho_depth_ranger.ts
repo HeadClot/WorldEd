@@ -41,7 +41,7 @@ export class OrthoDepthRanger {
    */
   private static measureContentDepthRange(
     scene: THREE.Scene,
-    camera: THREE.OrthographicCamera
+    camera: THREE.OrthographicCamera,
   ): { minDot: number; maxDot: number } | null {
     camera.updateMatrixWorld(true);
     camera.getWorldDirection(this.viewDirection);
@@ -72,7 +72,7 @@ export class OrthoDepthRanger {
   private static expandRangeFromMesh(
     mesh: THREE.Mesh,
     viewDirection: THREE.Vector3,
-    includeDot: (dot: number) => void
+    includeDot: (dot: number) => void,
   ): void {
     this.worldBox.setFromObject(mesh);
     if (this.worldBox.isEmpty()) return;
@@ -86,7 +86,7 @@ export class OrthoDepthRanger {
           this.corner.set(
             ix === 0 ? min.x : max.x,
             iy === 0 ? min.y : max.y,
-            iz === 0 ? min.z : max.z
+            iz === 0 ? min.z : max.z,
           );
           includeDot(this.corner.dot(viewDirection));
         }
@@ -103,7 +103,7 @@ export class OrthoDepthRanger {
   private static applyDepthRange(
     camera: THREE.OrthographicCamera,
     minDot: number,
-    maxDot: number
+    maxDot: number,
   ): void {
     camera.getWorldDirection(this.viewDirection);
     const depth = Math.max(maxDot - minDot, 0.001);
@@ -111,10 +111,7 @@ export class OrthoDepthRanger {
     // Content is in front when contentDot > cameraDot.
     const desiredCameraDot = minDot - standOff;
     const currentCameraDot = camera.position.dot(this.viewDirection);
-    camera.position.addScaledVector(
-      this.viewDirection,
-      desiredCameraDot - currentCameraDot
-    );
+    camera.position.addScaledVector(this.viewDirection, desiredCameraDot - currentCameraDot);
     camera.near = Math.max(0.1, standOff * 0.25);
     camera.far = standOff + depth + DEPTH_MARGIN;
     camera.updateMatrixWorld(true);

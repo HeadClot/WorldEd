@@ -7,7 +7,7 @@ import {
   projectWorldPositionToUv,
   resolveProjectionNormal,
   splitMeshIntoCoplanarRegions,
-  computeRegionWorldNormal
+  computeRegionWorldNormal,
 } from '../../src/texture/planar_uv_projector.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
 import { transferUvMappingAcrossFaces } from '../../src/texture/uv_smear_transfer.js';
@@ -16,10 +16,7 @@ import { createContentMaterial } from '../../src/materials/content_material_fact
 
 describe('uv_smear_transfer', () => {
   it('should match UVs on a shared edge after transfer between box sides', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 2, 2),
-      createContentMaterial(0xffffff)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), createContentMaterial(0xffffff));
     mesh.position.set(0, 1, 0);
     mesh.updateMatrixWorld(true);
     ensureUniqueTriangleVertices(mesh);
@@ -45,7 +42,7 @@ describe('uv_smear_transfer', () => {
       sourceRegion,
       sourceMapping,
       mesh,
-      destRegion
+      destRegion,
     );
     bakeFaceUVs(mesh, destRegion, destMapping);
     const shared = findSharedWorldPoints(mesh, sourceRegion, destRegion);
@@ -54,11 +51,11 @@ describe('uv_smear_transfer', () => {
     const destNormal = computeRegionWorldNormal(mesh, destRegion);
     const sourceBasis = buildProjectionBasis(
       resolveProjectionNormal(sourceNormal, sourceMapping.align),
-      sourceMapping.rotationDeg
+      sourceMapping.rotationDeg,
     );
     const destBasis = buildProjectionBasis(
       resolveProjectionNormal(destNormal, destMapping.align),
-      destMapping.rotationDeg
+      destMapping.rotationDeg,
     );
     shared.slice(0, 2).forEach((point) => {
       const sourceUv = projectWorldPositionToUv(point, sourceBasis, sourceMapping);
@@ -81,7 +78,7 @@ describe('uv_smear_transfer', () => {
       regions[0],
       sourceMapping,
       mesh,
-      regions[1]
+      regions[1],
     );
     expect(destMapping.textureId).toBe('brick.png');
     expect(Math.abs(destMapping.scaleU)).toBeCloseTo(2, 5);
@@ -93,7 +90,7 @@ describe('uv_smear_transfer', () => {
     const segments = 8;
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(1, 1, 2, segments),
-      createContentMaterial(0xffffff)
+      createContentMaterial(0xffffff),
     );
     mesh.position.set(0, 1, 0);
     mesh.updateMatrixWorld(true);
@@ -114,13 +111,7 @@ describe('uv_smear_transfer', () => {
     mapping.align = 'face';
     bakeFaceUVs(mesh, sides[0], mapping);
     for (let i = 1; i < sides.length; i++) {
-      mapping = transferUvMappingAcrossFaces(
-        mesh,
-        sides[i - 1],
-        mapping,
-        mesh,
-        sides[i]
-      );
+      mapping = transferUvMappingAcrossFaces(mesh, sides[i - 1], mapping, mesh, sides[i]);
       bakeFaceUVs(mesh, sides[i], mapping);
     }
     for (let i = 1; i < sides.length; i++) {
@@ -151,7 +142,7 @@ describe('uv_smear_transfer', () => {
  */
 function findAdjacentRegionPair(
   mesh: THREE.Mesh,
-  walls: number[][]
+  walls: number[][],
 ): { source: number[]; dest: number[] } | null {
   for (let i = 0; i < walls.length; i++) {
     for (let j = i + 1; j < walls.length; j++) {
@@ -174,7 +165,7 @@ function findAdjacentRegionPair(
 function findSharedWorldPoints(
   mesh: THREE.Mesh,
   regionA: number[],
-  regionB: number[]
+  regionB: number[],
 ): THREE.Vector3[] {
   const pointsA = collectRegionWorldPoints(mesh, regionA);
   const pointsB = collectRegionWorldPoints(mesh, regionB);
@@ -192,10 +183,7 @@ function findSharedWorldPoints(
  * @param triangleIndices Region triangles.
  * @returns World points.
  */
-function collectRegionWorldPoints(
-  mesh: THREE.Mesh,
-  triangleIndices: number[]
-): THREE.Vector3[] {
+function collectRegionWorldPoints(mesh: THREE.Mesh, triangleIndices: number[]): THREE.Vector3[] {
   const position = mesh.geometry.getAttribute('position');
   const results: THREE.Vector3[] = [];
   const seen = new Set<string>();
@@ -227,7 +215,7 @@ function sampleRegionUvsNearPoint(
   region: number[],
   worldPoint: THREE.Vector3,
   uv: THREE.BufferAttribute,
-  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute
+  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
 ): Array<{ u: number; v: number }> {
   const samples: Array<{ u: number; v: number }> = [];
   region.forEach((faceIndex) => {

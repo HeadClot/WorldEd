@@ -18,17 +18,15 @@ describe('Solid brush outliner reorder', () => {
     const additive = model.addBoxBrush(4, SolidOperation.Additive);
     const subtractive = model.addBoxBrush(2, SolidOperation.Subtractive);
     model.rebuild(true);
-    const holeVertexCount =
-      model.getResultMesh().geometry.getAttribute('position').count;
+    const holeVertexCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(holeVertexCount).toBeGreaterThan(0);
     // Drop subtractive onto additive → insert before → first in CSG order.
     handler.reparentFromDrop(subtractive.mesh!, additive.mesh!);
     expect(model.getBrushes().map((b) => b.operation)).toEqual([
       SolidOperation.Subtractive,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     ]);
-    const solidVertexCount =
-      model.getResultMesh().geometry.getAttribute('position').count;
+    const solidVertexCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(solidVertexCount).toBeLessThan(holeVertexCount);
   });
 
@@ -55,10 +53,7 @@ describe('Solid brush outliner reorder', () => {
     const model = new SolidModel('SolidNoGuest');
     world.add(model.root);
     model.addBoxBrush(2, SolidOperation.Additive);
-    const guest = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial()
-    );
+    const guest = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
     world.add(guest);
     handler.reparentFromDrop(guest, model.root);
     expect(guest.parent).toBe(world);

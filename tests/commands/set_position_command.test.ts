@@ -10,12 +10,12 @@ describe('SetPositionCommand', () => {
   beforeEach(() => {
     mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh1.position.set(1, 2, 3);
     mesh2 = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     mesh2.position.set(4, 5, 6);
   });
@@ -23,10 +23,7 @@ describe('SetPositionCommand', () => {
   it('should snapshot original positions on construction', () => {
     const newPosition1 = new THREE.Vector3(10, 20, 30);
     const newPosition2 = new THREE.Vector3(40, 50, 60);
-    const command = new SetPositionCommand(
-      [mesh1, mesh2],
-      [newPosition1, newPosition2]
-    );
+    const command = new SetPositionCommand([mesh1, mesh2], [newPosition1, newPosition2]);
     expect(mesh1.position.x).toBeCloseTo(1);
     expect(mesh1.position.y).toBeCloseTo(2);
     expect(mesh1.position.z).toBeCloseTo(3);
@@ -38,10 +35,7 @@ describe('SetPositionCommand', () => {
   it('should execute and set new positions', () => {
     const newPosition1 = new THREE.Vector3(10, 20, 30);
     const newPosition2 = new THREE.Vector3(40, 50, 60);
-    const command = new SetPositionCommand(
-      [mesh1, mesh2],
-      [newPosition1, newPosition2]
-    );
+    const command = new SetPositionCommand([mesh1, mesh2], [newPosition1, newPosition2]);
     command.execute();
     expect(mesh1.position.x).toBeCloseTo(10);
     expect(mesh1.position.y).toBeCloseTo(20);
@@ -76,10 +70,7 @@ describe('SetPositionCommand', () => {
   it('should handle multiple objects independently', () => {
     const newPosition1 = new THREE.Vector3(10, 20, 30);
     const newPosition2 = new THREE.Vector3(40, 50, 60);
-    const command = new SetPositionCommand(
-      [mesh1, mesh2],
-      [newPosition1, newPosition2]
-    );
+    const command = new SetPositionCommand([mesh1, mesh2], [newPosition1, newPosition2]);
     command.execute();
     command.undo();
     expect(mesh1.position.x).toBeCloseTo(1);

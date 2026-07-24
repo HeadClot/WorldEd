@@ -43,14 +43,8 @@ describe('TransformProjectionMath', () => {
   });
 
   it('should map gizmo axes to unit direction vectors', () => {
-    expect(TransformProjectionMath.axisToVector3(GizmoAxis.X)).toEqual(
-      new THREE.Vector3(1, 0, 0)
-    );
-    expect(TransformProjectionMath.axisToVector3(GizmoAxis.Y)).toEqual(
-      new THREE.Vector3(0, 1, 0)
-    );
-    expect(TransformProjectionMath.axisToVector3(GizmoAxis.Z)).toEqual(
-      new THREE.Vector3(0, 0, 1)
-    );
+    expect(TransformProjectionMath.axisToVector3(GizmoAxis.X)).toEqual(new THREE.Vector3(1, 0, 0));
+    expect(TransformProjectionMath.axisToVector3(GizmoAxis.Y)).toEqual(new THREE.Vector3(0, 1, 0));
+    expect(TransformProjectionMath.axisToVector3(GizmoAxis.Z)).toEqual(new THREE.Vector3(0, 0, 1));
   });
 });

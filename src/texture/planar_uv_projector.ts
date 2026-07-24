@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {
   FaceTextureAlign,
   FaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from './face_texture_mapping.js';
 import { getFaceTextureMaps } from './face_texture_storage.js';
 import { captureGeometrySourceIfNeeded } from './geometry_source.js';
@@ -39,7 +39,7 @@ const scratchWorld = new THREE.Vector3();
  */
 export function resolveProjectionNormal(
   faceNormal: THREE.Vector3,
-  align: FaceTextureAlign
+  align: FaceTextureAlign,
 ): THREE.Vector3 {
   if (align === 'floor') return new THREE.Vector3(0, 1, 0);
   if (align === 'ceiling') return new THREE.Vector3(0, -1, 0);
@@ -82,7 +82,7 @@ function resolveWallNormal(faceNormal: THREE.Vector3): THREE.Vector3 {
  */
 export function buildProjectionBasis(
   projectionNormal: THREE.Vector3,
-  rotationDeg: number
+  rotationDeg: number,
 ): ProjectionBasis {
   const normal = projectionNormal.clone().normalize();
   const uAxis = pickStableUAxis(normal);
@@ -101,19 +101,12 @@ export function buildProjectionBasis(
  */
 export function resolveProjectionBasis(
   faceNormalWorld: THREE.Vector3,
-  mapping: FaceTextureMapping
+  mapping: FaceTextureMapping,
 ): ProjectionBasis {
   if (mapping.customUAxis && mapping.customVAxis) {
-    return buildCustomAxisBasis(
-      faceNormalWorld,
-      mapping.customUAxis,
-      mapping.customVAxis
-    );
+    return buildCustomAxisBasis(faceNormalWorld, mapping.customUAxis, mapping.customVAxis);
   }
-  const projectionNormal = resolveProjectionNormal(
-    faceNormalWorld,
-    mapping.align
-  );
+  const projectionNormal = resolveProjectionNormal(faceNormalWorld, mapping.align);
   return buildProjectionBasis(projectionNormal, mapping.rotationDeg);
 }
 
@@ -127,7 +120,7 @@ export function resolveProjectionBasis(
 function buildCustomAxisBasis(
   faceNormalWorld: THREE.Vector3,
   customU: { x: number; y: number; z: number },
-  customV: { x: number; y: number; z: number }
+  customV: { x: number; y: number; z: number },
 ): ProjectionBasis {
   const normal = faceNormalWorld.clone().normalize();
   const uAxis = new THREE.Vector3(customU.x, customU.y, customU.z);
@@ -168,7 +161,7 @@ function applyRotationAroundNormal(
   uAxis: THREE.Vector3,
   vAxis: THREE.Vector3,
   normal: THREE.Vector3,
-  rotationDeg: number
+  rotationDeg: number,
 ): void {
   if (Math.abs(rotationDeg) < 1e-8) return;
   const radians = THREE.MathUtils.degToRad(rotationDeg);
@@ -189,7 +182,7 @@ function applyRotationAroundNormal(
 export function projectWorldPositionToUv(
   worldPos: THREE.Vector3,
   basis: ProjectionBasis,
-  mapping: FaceTextureMapping
+  mapping: FaceTextureMapping,
 ): { u: number; v: number } {
   const scaleU = mapping.scaleU === 0 ? 1 : mapping.scaleU;
   const scaleV = mapping.scaleV === 0 ? 1 : mapping.scaleV;
@@ -203,9 +196,7 @@ export function projectWorldPositionToUv(
  * @param geometry Buffer geometry to prepare.
  * @returns The UV attribute.
  */
-export function ensureUvAttribute(
-  geometry: THREE.BufferGeometry
-): THREE.BufferAttribute {
+export function ensureUvAttribute(geometry: THREE.BufferGeometry): THREE.BufferAttribute {
   const position = geometry.getAttribute('position');
   const vertexCount = position.count;
   const existing = geometry.getAttribute('uv');
@@ -243,7 +234,7 @@ export function ensureUniqueTriangleVertices(mesh: THREE.Mesh): void {
  */
 export function computeRegionWorldNormal(
   mesh: THREE.Mesh,
-  triangleIndices: number[]
+  triangleIndices: number[],
 ): THREE.Vector3 {
   mesh.updateMatrixWorld(true);
   const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
@@ -265,7 +256,7 @@ export function computeRegionWorldNormal(
  */
 function computeLocalTriangleNormal(
   geometry: THREE.BufferGeometry,
-  faceIndex: number
+  faceIndex: number,
 ): THREE.Vector3 {
   const position = geometry.getAttribute('position');
   const index = geometry.getIndex();
@@ -290,7 +281,7 @@ function computeLocalTriangleNormal(
 export function bakeFaceUVs(
   mesh: THREE.Mesh,
   triangleIndices: number[],
-  mapping: FaceTextureMapping
+  mapping: FaceTextureMapping,
 ): void {
   mesh.updateMatrixWorld(true);
   const faceNormal = computeRegionWorldNormal(mesh, triangleIndices);
@@ -322,12 +313,10 @@ function writeTriangleUvs(
   position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   uv: THREE.BufferAttribute,
   basis: ProjectionBasis,
-  mapping: FaceTextureMapping
+  mapping: FaceTextureMapping,
 ): void {
   for (let corner = 0; corner < 3; corner++) {
-    const vertexIndex = index
-      ? index.getX(faceIndex * 3 + corner)
-      : faceIndex * 3 + corner;
+    const vertexIndex = index ? index.getX(faceIndex * 3 + corner) : faceIndex * 3 + corner;
     scratchLocal.fromBufferAttribute(position, vertexIndex);
     scratchWorld.copy(scratchLocal).applyMatrix4(mesh.matrixWorld);
     const coords = projectWorldPositionToUv(scratchWorld, basis, mapping);
@@ -343,7 +332,7 @@ function writeTriangleUvs(
  */
 export function bakeAllFacesDefaultUVs(
   mesh: THREE.Mesh,
-  mapping: FaceTextureMapping = createDefaultFaceTextureMapping()
+  mapping: FaceTextureMapping = createDefaultFaceTextureMapping(),
 ): void {
   ensureUniqueTriangleVertices(mesh);
   const triangleCount = countTriangles(mesh.geometry);
@@ -385,10 +374,7 @@ export function splitMeshIntoCoplanarRegions(mesh: THREE.Mesh): number[][] {
  * @param triangleIndices Triangles to group.
  * @returns Arrays of coplanar triangle indices.
  */
-export function splitIntoCoplanarRegions(
-  mesh: THREE.Mesh,
-  triangleIndices: number[]
-): number[][] {
+export function splitIntoCoplanarRegions(mesh: THREE.Mesh, triangleIndices: number[]): number[][] {
   const remaining = new Set(triangleIndices);
   const regions: number[][] = [];
   const sorted = triangleIndices.slice().sort((a, b) => a - b);
@@ -412,7 +398,7 @@ function growCoplanarRegion(
   mesh: THREE.Mesh,
   seed: number,
   remaining: Set<number>,
-  triangleIndices: number[]
+  triangleIndices: number[],
 ): number[] {
   const region = [seed];
   remaining.delete(seed);
@@ -439,7 +425,7 @@ function isCoplanar(
   geometry: THREE.BufferGeometry,
   faceIndex: number,
   seedNormal: THREE.Vector3,
-  seedPoint: THREE.Vector3
+  seedPoint: THREE.Vector3,
 ): boolean {
   const normal = computeLocalTriangleNormal(geometry, faceIndex);
   if (Math.abs(normal.dot(seedNormal)) < COPLANAR_NORMAL_DOT) return false;
@@ -453,10 +439,7 @@ function isCoplanar(
  * @param faceIndex Triangle index.
  * @returns Local centroid.
  */
-function getTriangleCentroid(
-  geometry: THREE.BufferGeometry,
-  faceIndex: number
-): THREE.Vector3 {
+function getTriangleCentroid(geometry: THREE.BufferGeometry, faceIndex: number): THREE.Vector3 {
   const position = geometry.getAttribute('position');
   const index = geometry.getIndex();
   const ia = index ? index.getX(faceIndex * 3) : faceIndex * 3;
@@ -465,7 +448,10 @@ function getTriangleCentroid(
   const a = new THREE.Vector3().fromBufferAttribute(position, ia);
   const b = new THREE.Vector3().fromBufferAttribute(position, ib);
   const c = new THREE.Vector3().fromBufferAttribute(position, ic);
-  return a.add(b).add(c).multiplyScalar(1 / 3);
+  return a
+    .add(b)
+    .add(c)
+    .multiplyScalar(1 / 3);
 }
 
 /**
@@ -490,9 +476,7 @@ export function rebakeStoredFaceTextureMaps(mesh: THREE.Mesh): void {
  * @param mesh Source mesh.
  * @returns Map of triangle index → mapping (defaults filled for unmapped).
  */
-export function buildTriangleMappingLookup(
-  mesh: THREE.Mesh
-): Map<number, FaceTextureMapping> {
+export function buildTriangleMappingLookup(mesh: THREE.Mesh): Map<number, FaceTextureMapping> {
   const lookup = new Map<number, FaceTextureMapping>();
   const entries = getFaceTextureMaps(mesh);
   entries.forEach((entry) => {

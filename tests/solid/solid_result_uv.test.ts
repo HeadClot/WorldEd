@@ -72,14 +72,12 @@ describe('Solid result UV projection', () => {
       offsetU: 0.1,
       offsetV: 0.2,
       rotationDeg: 15,
-      textureId: 'folder/rebuild.png'
+      textureId: 'folder/rebuild.png',
     });
     model.markDirty();
     model.rebuild(true);
     const maps = getFaceTextureMaps(model.getResultMesh());
-    const matching = maps.find(
-      (entry) => entry.mapping.textureId === 'folder/rebuild.png'
-    );
+    const matching = maps.find((entry) => entry.mapping.textureId === 'folder/rebuild.png');
     expect(matching).toBeDefined();
     expect(matching!.mapping.scaleU).toBeCloseTo(4);
     expect(matching!.mapping.scaleV).toBeCloseTo(2);

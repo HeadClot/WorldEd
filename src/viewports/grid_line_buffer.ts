@@ -20,7 +20,7 @@ export class GridLineBuffer {
     this.material = new THREE.LineBasicMaterial({
       vertexColors: true,
       toneMapped: false,
-      depthWrite: false
+      depthWrite: false,
     });
     this.lineSegments = new THREE.LineSegments(this.geometry, this.material);
     this.lineSegments.frustumCulled = false;
@@ -62,7 +62,7 @@ export class GridLineBuffer {
     by: number,
     bz: number,
     colorA: THREE.Color,
-    colorB: THREE.Color
+    colorB: THREE.Color,
   ): void {
     this.positions.push(ax, ay, az, bx, by, bz);
     this.colors.push(colorA.r, colorA.g, colorA.b, colorB.r, colorB.g, colorB.b);
@@ -72,14 +72,8 @@ export class GridLineBuffer {
    * Uploads queued data to GPU attributes.
    */
   endFrame(): void {
-    this.geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(this.positions, 3)
-    );
-    this.geometry.setAttribute(
-      'color',
-      new THREE.Float32BufferAttribute(this.colors, 3)
-    );
+    this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(this.positions, 3));
+    this.geometry.setAttribute('color', new THREE.Float32BufferAttribute(this.colors, 3));
     this.geometry.computeBoundingSphere();
   }
 

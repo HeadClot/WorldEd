@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  TransformSpace,
-  transformSpaceLabel
-} from '../../src/types/transform_space.js';
+import { TransformSpace, transformSpaceLabel } from '../../src/types/transform_space.js';
 
 /**
  * Unit tests for transform space enum helpers.

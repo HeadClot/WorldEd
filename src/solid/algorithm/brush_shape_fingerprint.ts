@@ -26,7 +26,7 @@ export class BrushShapeFingerprint {
       edgeCount,
       this.formatVertex(first),
       this.formatVertex(mid),
-      this.formatVertex(last)
+      this.formatVertex(last),
     ].join(':');
   }
 
@@ -35,11 +35,7 @@ export class BrushShapeFingerprint {
    * @param vertex Vertex position.
    * @returns Compact coordinate string.
    */
-  private static formatVertex(vertex: {
-    x: number;
-    y: number;
-    z: number;
-  }): string {
+  private static formatVertex(vertex: { x: number; y: number; z: number }): string {
     return `${vertex.x.toFixed(5)},${vertex.y.toFixed(5)},${vertex.z.toFixed(5)}`;
   }
 }

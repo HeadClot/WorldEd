@@ -49,20 +49,16 @@ export function createAndRegisterKeyboardShortcuts(
  */
 function bindPrimaryKeyboardShortcuts(
   handler: KeyboardShortcutHandler,
-  host: LayoutKeyboardBindingHost
+  host: LayoutKeyboardBindingHost,
 ): void {
   handler.setOnTransformMode((mode) => host.onTransformMode(mode));
   handler.setOnDeleteSelected(() => host.onDeleteSelected());
   handler.setOnEscape(() => host.onEscapeCancel());
   handler.setOnUndo(() => host.onUndo());
   handler.setOnRedo(() => host.onRedo());
-  handler.setOnDuplicateSelected(
-    () => host.getObjectActionHandler().onDuplicateSelected()
-  );
+  handler.setOnDuplicateSelected(() => host.getObjectActionHandler().onDuplicateSelected());
   handler.setOnGroupSelected(() => host.onGroupSelected());
-  handler.setOnUngroupSelected(
-    () => host.getObjectActionHandler().onUngroupSelected()
-  );
+  handler.setOnUngroupSelected(() => host.getObjectActionHandler().onUngroupSelected());
   handler.setOnAlignToOrigin(() => host.getAlignmentHandler().onAlignToOrigin());
   handler.setOnAxisCycle(() => host.getAlignmentHandler().onAxisCycle());
 }
@@ -74,7 +70,7 @@ function bindPrimaryKeyboardShortcuts(
  */
 function bindIoKeyboardShortcuts(
   handler: KeyboardShortcutHandler,
-  host: LayoutKeyboardBindingHost
+  host: LayoutKeyboardBindingHost,
 ): void {
   handler.setOnSaveScene(() => host.onSaveScene());
   handler.setOnLoadScene(() => host.onLoadScene());

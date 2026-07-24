@@ -7,6 +7,6 @@ new BrowserWindow({
     x: 80,
     y: 60,
     width: 1600,
-    height: 1000
-  }
+    height: 1000,
+  },
 });

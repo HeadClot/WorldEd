@@ -84,10 +84,7 @@ const EDGE_FRAGMENT_SHADER = `
  */
 export class SolidBrushEdgeMaterials {
   private static frontByOperation = new Map<SolidOperation, THREE.ShaderMaterial>();
-  private static occludedByOperation = new Map<
-    SolidOperation,
-    THREE.ShaderMaterial
-  >();
+  private static occludedByOperation = new Map<SolidOperation, THREE.ShaderMaterial>();
 
   /**
    * Returns the shared front-pass edge material for a CSG operation.
@@ -99,7 +96,7 @@ export class SolidBrushEdgeMaterials {
       this.frontByOperation,
       operation,
       BRUSH_EDGE_FRONT_OPACITY,
-      THREE.LessEqualDepth
+      THREE.LessEqualDepth,
     );
   }
 
@@ -113,7 +110,7 @@ export class SolidBrushEdgeMaterials {
       this.occludedByOperation,
       operation,
       BRUSH_EDGE_OCCLUDED_OPACITY,
-      THREE.GreaterDepth
+      THREE.GreaterDepth,
     );
   }
 
@@ -177,7 +174,7 @@ export class SolidBrushEdgeMaterials {
     cache: Map<SolidOperation, THREE.ShaderMaterial>,
     operation: SolidOperation,
     opacity: number,
-    depthFunc: THREE.DepthModes
+    depthFunc: THREE.DepthModes,
   ): THREE.ShaderMaterial {
     const existing = cache.get(operation);
     if (existing) return existing;
@@ -196,7 +193,7 @@ export class SolidBrushEdgeMaterials {
   private static createMaterial(
     operation: SolidOperation,
     opacity: number,
-    depthFunc: THREE.DepthModes
+    depthFunc: THREE.DepthModes,
   ): THREE.ShaderMaterial {
     const color = new THREE.Color(this.edgeColorForOperation(operation));
     const material = new THREE.ShaderMaterial({
@@ -204,7 +201,7 @@ export class SolidBrushEdgeMaterials {
         diffuse: { value: color },
         opacity: { value: opacity },
         fadeNear: { value: BRUSH_EDGE_FADE_NEAR },
-        fadeFar: { value: BRUSH_EDGE_FADE_FAR }
+        fadeFar: { value: BRUSH_EDGE_FADE_FAR },
       },
       vertexShader: EDGE_VERTEX_SHADER,
       fragmentShader: EDGE_FRAGMENT_SHADER,
@@ -212,7 +209,7 @@ export class SolidBrushEdgeMaterials {
       depthTest: true,
       depthWrite: false,
       depthFunc,
-      toneMapped: false
+      toneMapped: false,
     });
     material.userData[BRUSH_EDGE_SHARED_MATERIAL_KEY] = true;
     material.userData[BRUSH_EDGE_DISTANCE_FADE_KEY] = true;

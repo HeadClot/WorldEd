@@ -39,10 +39,7 @@ describe('ClipPlanePreview', () => {
     tool.addPoint(new THREE.Vector3(0, 0, 0));
     tool.addPoint(new THREE.Vector3(1, 0, 0));
     preview.syncFromTool(tool);
-    const markerGroups = preview
-      .getRoot()
-      .children
-      .filter((child) => child instanceof THREE.Group);
+    const markerGroups = preview.getRoot().children.filter((child) => child instanceof THREE.Group);
     expect(markerGroups.length).toBe(2);
   });
 
@@ -54,9 +51,9 @@ describe('ClipPlanePreview', () => {
     camera.position.set(0, 0, 10);
     camera.updateMatrixWorld(true);
     preview.updateMarkerScalesForCamera(camera);
-    const group = preview.getRoot().children.find(
-      (child) => child instanceof THREE.Group
-    ) as THREE.Group;
+    const group = preview
+      .getRoot()
+      .children.find((child) => child instanceof THREE.Group) as THREE.Group;
     expect(group.scale.x).toBeGreaterThan(0);
     expect(group.scale.x).toBeLessThan(5);
   });

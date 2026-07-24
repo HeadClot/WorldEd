@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {
   SOLID_FAT_PLANE_EPSILON,
   SOLID_NORMAL_ALIGN_EPSILON,
-  SOLID_PLANE_D_ALIGN_EPSILON
+  SOLID_PLANE_D_ALIGN_EPSILON,
 } from '../algorithm/solid_math_constants.js';
 
 /**

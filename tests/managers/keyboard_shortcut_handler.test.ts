@@ -103,9 +103,7 @@ describe('KeyboardShortcutHandler', () => {
     expect(onMode).toHaveBeenCalledWith(TransformMode.ROTATE);
     expect(onExtrude).not.toHaveBeenCalled();
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft' }));
-    window.dispatchEvent(
-      new KeyboardEvent('keydown', { code: 'KeyE', shiftKey: true })
-    );
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', shiftKey: true }));
     expect(onExtrude).toHaveBeenCalled();
   });
 
@@ -114,9 +112,7 @@ describe('KeyboardShortcutHandler', () => {
     handler.setOnDuplicateSelected(onDuplicate);
     window.dispatchEvent(new PointerEvent('pointerdown', { button: 2 }));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ControlLeft' }));
-    window.dispatchEvent(
-      new KeyboardEvent('keydown', { code: 'KeyD', ctrlKey: true })
-    );
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyD', ctrlKey: true }));
     expect(onDuplicate).toHaveBeenCalled();
   });
 
@@ -140,18 +136,14 @@ describe('KeyboardShortcutHandler', () => {
   it('should undo on Ctrl+Z', () => {
     const onUndo = vi.fn();
     handler.setOnUndo(onUndo);
-    window.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', ctrlKey: true })
-    );
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', ctrlKey: true }));
     expect(onUndo).toHaveBeenCalled();
   });
 
   it('should redo on Ctrl+Y', () => {
     const onRedo = vi.fn();
     handler.setOnRedo(onRedo);
-    window.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'y', code: 'KeyY', ctrlKey: true })
-    );
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', code: 'KeyY', ctrlKey: true }));
     expect(onRedo).toHaveBeenCalled();
   });
 
@@ -163,8 +155,8 @@ describe('KeyboardShortcutHandler', () => {
         key: 'Z',
         code: 'KeyZ',
         ctrlKey: true,
-        shiftKey: true
-      })
+        shiftKey: true,
+      }),
     );
     expect(onRedo).toHaveBeenCalled();
   });
@@ -174,9 +166,7 @@ describe('KeyboardShortcutHandler', () => {
     const onRedo = vi.fn();
     handler.setOnUndo(onUndo);
     handler.setOnRedo(onRedo);
-    window.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'z', code: 'KeyY', ctrlKey: true })
-    );
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyY', ctrlKey: true }));
     expect(onUndo).toHaveBeenCalled();
     expect(onRedo).not.toHaveBeenCalled();
   });

@@ -52,16 +52,16 @@ describe('Solid live rebuild performance', () => {
     mover.pushTransformToMesh();
     model.syncBrushesFromScene();
     model.rebuildLive();
-    const liveSources = model
-      .getResultMesh()
-      .userData.solidTriangleSources as Array<{ brushId: string }>;
+    const liveSources = model.getResultMesh().userData.solidTriangleSources as Array<{
+      brushId: string;
+    }>;
     model.rebuild(true);
-    const fullSources = model
-      .getResultMesh()
-      .userData.solidTriangleSources as Array<{ brushId: string }>;
+    const fullSources = model.getResultMesh().userData.solidTriangleSources as Array<{
+      brushId: string;
+    }>;
     expect(liveSources.length).toBe(fullSources.length);
     expect(liveSources.map((s) => s.brushId).sort()).toEqual(
-      fullSources.map((s) => s.brushId).sort()
+      fullSources.map((s) => s.brushId).sort(),
     );
   });
 });
@@ -78,8 +78,8 @@ describe('BrushSpatialIndex', () => {
       entries.push({
         bounds: new THREE.Box3(
           new THREE.Vector3(x - 1, -1, z - 1),
-          new THREE.Vector3(x + 1, 1, z + 1)
-        )
+          new THREE.Vector3(x + 1, 1, z + 1),
+        ),
       });
     }
     const index = new BrushSpatialIndex(entries, 0.01);
@@ -98,11 +98,7 @@ describe('BrushSpatialIndex', () => {
  * @param size Box size.
  * @returns Built solid model after full rebuild.
  */
-function buildGridModel(
-  count: number,
-  spacing: number,
-  size: number
-): SolidModel {
+function buildGridModel(count: number, spacing: number, size: number): SolidModel {
   const model = new SolidModel(`Perf${count}`);
   const columns = Math.ceil(Math.sqrt(count));
   const instances: SolidBrushInstance[] = [];
@@ -114,7 +110,7 @@ function buildGridModel(
       `brush-${index}`,
       `Brush${index}`,
       brush,
-      SolidOperation.Additive
+      SolidOperation.Additive,
     );
     instance.position.set(column * spacing, 0, row * spacing);
     instances.push(instance);

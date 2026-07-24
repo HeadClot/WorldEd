@@ -19,7 +19,7 @@ const FACE_NORMAL_MATCH_DOT = 0.9;
 export function mapPreviewTriangleToBrushFace(
   mesh: THREE.Mesh,
   triangleIndex: number,
-  brush: SolidBrushInstance
+  brush: SolidBrushInstance,
 ): number {
   const localNormal = computeTriangleNormal(mesh.geometry, triangleIndex);
   if (localNormal.lengthSq() < 1e-12) return -1;
@@ -43,10 +43,7 @@ export function mapPreviewTriangleToBrushFace(
  * @param localDirection Direction in mesh local space.
  * @returns Unit direction in the solid model local space.
  */
-function transformDirectionByMesh(
-  mesh: THREE.Mesh,
-  localDirection: THREE.Vector3
-): THREE.Vector3 {
+function transformDirectionByMesh(mesh: THREE.Mesh, localDirection: THREE.Vector3): THREE.Vector3 {
   const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrix);
   return localDirection.clone().applyMatrix3(normalMatrix).normalize();
 }

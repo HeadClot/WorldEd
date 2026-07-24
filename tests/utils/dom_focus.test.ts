@@ -25,7 +25,7 @@ describe('blurActiveFormField', () => {
     button.focus();
     blurActiveFormField();
     expect(document.activeElement === button || document.activeElement === document.body).toBe(
-      true
+      true,
     );
   });
 });

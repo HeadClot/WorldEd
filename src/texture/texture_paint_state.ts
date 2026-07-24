@@ -55,8 +55,6 @@ export function getTexturePaintState(): TexturePaintState {
  * Replaces the shared paint state (tests only).
  * @param state State to install, or null to clear.
  */
-export function setTexturePaintStateForTests(
-  state: TexturePaintState | null
-): void {
+export function setTexturePaintStateForTests(state: TexturePaintState | null): void {
   sharedPaintState = state;
 }

@@ -76,11 +76,7 @@ export class VmfHalfSpaceHullBuilder {
    * @param c Third plane.
    * @returns Intersection point, or null when planes are parallel / coplanar.
    */
-  private intersectThreePlanes(
-    a: SolidPlane,
-    b: SolidPlane,
-    c: SolidPlane
-  ): THREE.Vector3 | null {
+  private intersectThreePlanes(a: SolidPlane, b: SolidPlane, c: SolidPlane): THREE.Vector3 | null {
     const n1 = a.normal;
     const n2 = b.normal;
     const n3 = c.normal;
@@ -133,10 +129,7 @@ export class VmfHalfSpaceHullBuilder {
    * @param point Candidate.
    * @returns Matching vertex or null.
    */
-  private findNearVertex(
-    welded: THREE.Vector3[],
-    point: THREE.Vector3
-  ): THREE.Vector3 | null {
+  private findNearVertex(welded: THREE.Vector3[], point: THREE.Vector3): THREE.Vector3 | null {
     for (const existing of welded) {
       if (existing.distanceTo(point) <= VERTEX_WELD_EPSILON) {
         return existing;
@@ -151,15 +144,12 @@ export class VmfHalfSpaceHullBuilder {
    * @param vertices Welded hull vertices.
    * @returns Face loops with stable plane indices.
    */
-  private buildFaceLoops(
-    planes: SolidPlane[],
-    vertices: THREE.Vector3[]
-  ): HalfSpaceFaceLoop[] {
+  private buildFaceLoops(planes: SolidPlane[], vertices: THREE.Vector3[]): HalfSpaceFaceLoop[] {
     const loops: HalfSpaceFaceLoop[] = [];
     for (let planeIndex = 0; planeIndex < planes.length; planeIndex++) {
       const plane = planes[planeIndex];
       const onPlane = vertices.filter(
-        (vertex) => Math.abs(plane.signedDistance(vertex)) <= SOLID_FAT_PLANE_EPSILON
+        (vertex) => Math.abs(plane.signedDistance(vertex)) <= SOLID_FAT_PLANE_EPSILON,
       );
       if (onPlane.length < 3) continue;
       const ordered = this.orderPolygonOnPlane(onPlane, plane);
@@ -176,10 +166,7 @@ export class VmfHalfSpaceHullBuilder {
    * @param plane Face plane with outward normal.
    * @returns Ordered polygon ring.
    */
-  private orderPolygonOnPlane(
-    points: THREE.Vector3[],
-    plane: SolidPlane
-  ): THREE.Vector3[] {
+  private orderPolygonOnPlane(points: THREE.Vector3[], plane: SolidPlane): THREE.Vector3[] {
     const center = this.computeCentroid(points);
     const basis = this.buildTangentBasis(plane.normal);
     const scored = points.map((point) => {
@@ -213,10 +200,7 @@ export class VmfHalfSpaceHullBuilder {
     u: THREE.Vector3;
     v: THREE.Vector3;
   } {
-    const seed =
-      Math.abs(normal.y) < 0.9
-        ? new THREE.Vector3(0, 1, 0)
-        : new THREE.Vector3(1, 0, 0);
+    const seed = Math.abs(normal.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
     const u = new THREE.Vector3().crossVectors(seed, normal).normalize();
     const v = new THREE.Vector3().crossVectors(normal, u).normalize();
     return { u, v };

@@ -21,7 +21,7 @@ export class SolidUpdateSetBuilder {
     seedDirtyIds: ReadonlySet<string>,
     preparedBrushIds: readonly string[],
     currentTouchIdsByBrushId: ReadonlyMap<string, readonly string[]>,
-    previousTouchIdsByBrushId: ReadonlyMap<string, readonly string[]>
+    previousTouchIdsByBrushId: ReadonlyMap<string, readonly string[]>,
   ): Set<string> {
     const preparedIdSet = new Set(preparedBrushIds);
     const updateSet = new Set<string>();
@@ -40,10 +40,7 @@ export class SolidUpdateSetBuilder {
    * @param updateSet Accumulator set.
    * @param peerIds Optional peer list.
    */
-  private static addPeers(
-    updateSet: Set<string>,
-    peerIds: readonly string[] | undefined
-  ): void {
+  private static addPeers(updateSet: Set<string>, peerIds: readonly string[] | undefined): void {
     if (!peerIds) return;
     for (const peerId of peerIds) {
       updateSet.add(peerId);

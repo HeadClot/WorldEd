@@ -35,7 +35,7 @@ export class SolidModelPanel {
   constructor(
     host: HTMLElement,
     handlers: SolidModelPanelHandlers,
-    defaultAnchor: HTMLElement | null = null
+    defaultAnchor: HTMLElement | null = null,
   ) {
     this.host = host;
     this.handlers = handlers;
@@ -87,8 +87,7 @@ export class SolidModelPanel {
     }
     this.titleLabel.textContent = this.model.root.name;
     const count = this.model.getBrushCount();
-    this.statusLabel.textContent =
-      `${count} brush${count === 1 ? '' : 'es'} — edit ops in Inspector`;
+    this.statusLabel.textContent = `${count} brush${count === 1 ? '' : 'es'} — edit ops in Inspector`;
   }
 
   /**

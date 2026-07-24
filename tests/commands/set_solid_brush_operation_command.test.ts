@@ -10,14 +10,9 @@ describe('SetSolidBrushOperationCommand', () => {
   it('changes operation and restores the prior value on undo', () => {
     const model = new SolidModel('OpSolid');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const command = new SetSolidBrushOperationCommand(
-      [brush.mesh!],
-      SolidOperation.Subtractive
-    );
+    const command = new SetSolidBrushOperationCommand([brush.mesh!], SolidOperation.Subtractive);
     command.execute();
-    expect(model.findBrush(brush.id)?.operation).toBe(
-      SolidOperation.Subtractive
-    );
+    expect(model.findBrush(brush.id)?.operation).toBe(SolidOperation.Subtractive);
     command.undo();
     expect(model.findBrush(brush.id)?.operation).toBe(SolidOperation.Additive);
   });
@@ -25,10 +20,7 @@ describe('SetSolidBrushOperationCommand', () => {
   it('is a no-op when the operation is already active', () => {
     const model = new SolidModel('OpNoop');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const command = new SetSolidBrushOperationCommand(
-      [brush.mesh!],
-      SolidOperation.Additive
-    );
+    const command = new SetSolidBrushOperationCommand([brush.mesh!], SolidOperation.Additive);
     command.execute();
     command.undo();
     expect(model.findBrush(brush.id)?.operation).toBe(SolidOperation.Additive);

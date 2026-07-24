@@ -13,10 +13,7 @@ import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 import { RenameCommand } from '../commands/rename_command.js';
 import { ToggleVisibilityCommand } from '../commands/toggle_visibility_command.js';
 import { ObjectActionHandler } from './object_action_handler.js';
-import {
-  isObjectOrAncestorLocked,
-  toggleObjectLocked
-} from '../utils/object_lock.js';
+import { isObjectOrAncestorLocked, toggleObjectLocked } from '../utils/object_lock.js';
 
 /**
  * Callbacks the shell builder needs from the layout manager for outliner actions.
@@ -120,7 +117,7 @@ export class EditorShellBuilder {
     textureLock: TextureLockSettings,
     hierarchyReparentHandler: HierarchyReparentHandler,
     outlinerActions: EditorShellOutlinerActions,
-    toolbarActions: EditorToolbarActions
+    toolbarActions: EditorToolbarActions,
   ): EditorShellElements {
     const toolbarContainer = this.createToolbarContainer(editorContainer);
     const toolbar = new Toolbar(toolbarContainer);
@@ -133,13 +130,13 @@ export class EditorShellBuilder {
       selectionManager,
       worldObject,
       hierarchyReparentHandler,
-      outlinerActions
+      outlinerActions,
     );
     const propertiesPanel = this.createPropertiesPanel(
       mainLayout,
       selectionManager,
       commandStack,
-      textureLock
+      textureLock,
     );
     const statusBar = this.createStatusBar(toolbarContainer, gridSnap, commandStack);
     return {
@@ -150,7 +147,7 @@ export class EditorShellBuilder {
       toolbar,
       outlinerPanel,
       propertiesPanel,
-      statusBar
+      statusBar,
     };
   }
 
@@ -194,8 +191,7 @@ export class EditorShellBuilder {
     viewportArea.style.display = 'grid';
     viewportArea.style.gridTemplateColumns = '1fr 1fr';
     viewportArea.style.gridTemplateRows = '1fr 1fr';
-    viewportArea.style.gridTemplateAreas =
-      '"top front"\n"side perspective"';
+    viewportArea.style.gridTemplateAreas = '"top front"\n"side perspective"';
     viewportArea.style.background = `#${Theme.separatorColor.toString(16).padStart(6, '0')}`;
     viewportArea.style.gap = `${Theme.separatorGapPx}px`;
     viewportArea.style.padding = `${Theme.separatorGapPx}px`;
@@ -215,7 +211,7 @@ export class EditorShellBuilder {
       this.createContainer(viewportArea, 'top'),
       this.createContainer(viewportArea, 'front'),
       this.createContainer(viewportArea, 'side'),
-      this.createContainer(viewportArea, 'perspective')
+      this.createContainer(viewportArea, 'perspective'),
     ];
   }
 
@@ -248,39 +244,27 @@ export class EditorShellBuilder {
     selectionManager: SelectionManager,
     worldObject: THREE.Group,
     hierarchyReparentHandler: HierarchyReparentHandler,
-    outlinerActions: EditorShellOutlinerActions
+    outlinerActions: EditorShellOutlinerActions,
   ): OutlinerPanel {
-    const outlinerPanel = new OutlinerPanel(
-      mainLayout,
-      selectionManager,
-      worldObject
-    );
+    const outlinerPanel = new OutlinerPanel(mainLayout, selectionManager, worldObject);
     outlinerPanel.setContextCallbacks(
       (mesh) => outlinerActions.onDuplicateFromOutliner(mesh),
-      (mesh) => outlinerActions.onDeleteFromOutliner(mesh)
+      (mesh) => outlinerActions.onDeleteFromOutliner(mesh),
     );
-    outlinerPanel.setGroupCallback(
-      (objects) => outlinerActions.onGroupFromOutliner(objects)
+    outlinerPanel.setGroupCallback((objects) => outlinerActions.onGroupFromOutliner(objects));
+    outlinerPanel.setUngroupCallback((group) => outlinerActions.onUngroupFromOutliner(group));
+    outlinerPanel.setRenameCallback((obj, newName) =>
+      outlinerActions.onRenameFromOutliner(obj, newName),
     );
-    outlinerPanel.setUngroupCallback(
-      (group) => outlinerActions.onUngroupFromOutliner(group)
+    outlinerPanel.setVisibilityCallback((obj) =>
+      outlinerActions.onToggleVisibilityFromOutliner(obj),
     );
-    outlinerPanel.setRenameCallback(
-      (obj, newName) => outlinerActions.onRenameFromOutliner(obj, newName)
-    );
-    outlinerPanel.setVisibilityCallback(
-      (obj) => outlinerActions.onToggleVisibilityFromOutliner(obj)
-    );
-    outlinerPanel.setLockCallback(
-      (obj) => outlinerActions.onToggleLockFromOutliner(obj)
-    );
+    outlinerPanel.setLockCallback((obj) => outlinerActions.onToggleLockFromOutliner(obj));
     hierarchyReparentHandler.setSyncViewports(() => outlinerActions.syncViewports());
     hierarchyReparentHandler.setRefreshOutliner(() => outlinerActions.refreshOutliner());
-    hierarchyReparentHandler.setShowStatus(
-      (message) => outlinerActions.showStatusMessage(message)
-    );
+    hierarchyReparentHandler.setShowStatus((message) => outlinerActions.showStatusMessage(message));
     outlinerPanel.setReparentCallback((dragged, target) =>
-      outlinerActions.reparentFromDrop(dragged, target)
+      outlinerActions.reparentFromDrop(dragged, target),
     );
     return outlinerPanel;
   }
@@ -297,13 +281,9 @@ export class EditorShellBuilder {
     mainLayout: HTMLElement,
     selectionManager: SelectionManager,
     commandStack: CommandStack,
-    textureLock: TextureLockSettings
+    textureLock: TextureLockSettings,
   ): PropertiesPanel {
-    const propertiesPanel = new PropertiesPanel(
-      mainLayout,
-      Theme,
-      selectionManager
-    );
+    const propertiesPanel = new PropertiesPanel(mainLayout, Theme, selectionManager);
     propertiesPanel.setCommandStack(commandStack);
     propertiesPanel.setTextureLockSettings(textureLock);
     return propertiesPanel;
@@ -319,7 +299,7 @@ export class EditorShellBuilder {
   private createStatusBar(
     toolbarContainer: HTMLElement,
     gridSnap: GridSnap,
-    commandStack: CommandStack
+    commandStack: CommandStack,
   ): StatusBar {
     const statusBar = new StatusBar(toolbarContainer, Theme);
     statusBar.setUndoRedoCounts(0, 0);
@@ -338,10 +318,7 @@ export class EditorShellBuilder {
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
-  private createToolbarButtons(
-    toolbar: Toolbar,
-    actions: EditorToolbarActions
-  ): void {
+  private createToolbarButtons(toolbar: Toolbar, actions: EditorToolbarActions): void {
     this.addMenuControls(toolbar, actions);
     this.addHistoryControls(toolbar, actions);
     this.addPrimitiveControls(toolbar, actions);
@@ -354,21 +331,18 @@ export class EditorShellBuilder {
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
-  private addMenuControls(
-    toolbar: Toolbar,
-    actions: EditorToolbarActions
-  ): void {
+  private addMenuControls(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addDropdown('File', [
       { label: 'Save', onClick: () => actions.onSaveScene() },
       { label: 'Load', onClick: () => actions.onLoadScene() },
       { label: 'Import VMF…', onClick: () => actions.onImportVmf() },
-      { label: 'Export GLB', onClick: () => actions.onExportGlb() }
+      { label: 'Export GLB', onClick: () => actions.onExportGlb() },
     ]);
     toolbar.addDropdown('Edit', [
       { label: 'Delete', onClick: () => actions.onDeleteSelected() },
       { label: 'Duplicate', onClick: () => actions.onDuplicateSelected() },
       { label: 'Group', onClick: () => actions.onGroupSelected() },
-      { label: 'Ungroup', onClick: () => actions.onUngroupSelected() }
+      { label: 'Ungroup', onClick: () => actions.onUngroupSelected() },
     ]);
     toolbar.addDropdown('Add', [
       { label: 'Cube', onClick: () => actions.onAddCube() },
@@ -376,29 +350,29 @@ export class EditorShellBuilder {
       { label: 'Cylinder', onClick: () => actions.onAddCylinder() },
       { label: 'Plane', onClick: () => actions.onAddPlane() },
       { label: 'Terrain', onClick: () => actions.onAddTerrain() },
-      { label: 'Solid Model', onClick: () => actions.onAddSolidModel() }
+      { label: 'Solid Model', onClick: () => actions.onAddSolidModel() },
     ]);
     toolbar.addDropdown('CSG', [
       {
         label: 'Union',
         onClick: () => actions.onCsgUnion(),
-        isEnabled: () => actions.canRunCsgBoolean()
+        isEnabled: () => actions.canRunCsgBoolean(),
       },
       {
         label: 'Subtract',
         onClick: () => actions.onCsgSubtract(),
-        isEnabled: () => actions.canRunCsgBoolean()
+        isEnabled: () => actions.canRunCsgBoolean(),
       },
       {
         label: 'Intersect',
         onClick: () => actions.onCsgIntersect(),
-        isEnabled: () => actions.canRunCsgBoolean()
-      }
+        isEnabled: () => actions.canRunCsgBoolean(),
+      },
     ]);
     toolbar.addDropdown('Align', [
       { label: 'Origin', onClick: () => actions.onAlignToOrigin() },
       { label: 'Grid Center', onClick: () => actions.onAlignToGridCenter() },
-      { label: 'To Object', onClick: () => actions.onAlignToObject() }
+      { label: 'To Object', onClick: () => actions.onAlignToObject() },
     ]);
   }
 
@@ -407,10 +381,7 @@ export class EditorShellBuilder {
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
-  private addHistoryControls(
-    toolbar: Toolbar,
-    actions: EditorToolbarActions
-  ): void {
+  private addHistoryControls(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addSeparator();
     toolbar.addIconButton('Undo', ToolbarIcons.undo(), () => actions.onUndo());
     toolbar.addIconButton('Redo', ToolbarIcons.redo(), () => actions.onRedo());
@@ -421,28 +392,21 @@ export class EditorShellBuilder {
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
-  private addPrimitiveControls(
-    toolbar: Toolbar,
-    actions: EditorToolbarActions
-  ): void {
+  private addPrimitiveControls(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addSeparator();
-    toolbar.addIconButton('Add Cube', ToolbarIcons.primitiveCube(), () =>
-      actions.onAddCube()
-    );
+    toolbar.addIconButton('Add Cube', ToolbarIcons.primitiveCube(), () => actions.onAddCube());
     toolbar.addIconButton('Add Sphere', ToolbarIcons.primitiveSphere(), () =>
-      actions.onAddSphere()
+      actions.onAddSphere(),
     );
     toolbar.addIconButton('Add Cylinder', ToolbarIcons.primitiveCylinder(), () =>
-      actions.onAddCylinder()
+      actions.onAddCylinder(),
     );
-    toolbar.addIconButton('Add Plane', ToolbarIcons.primitivePlane(), () =>
-      actions.onAddPlane()
-    );
+    toolbar.addIconButton('Add Plane', ToolbarIcons.primitivePlane(), () => actions.onAddPlane());
     toolbar.addIconButton('Add Terrain', ToolbarIcons.primitiveTerrain(), () =>
-      actions.onAddTerrain()
+      actions.onAddTerrain(),
     );
     toolbar.addIconButton('Add Solid Model', ToolbarIcons.solidModel(), () =>
-      actions.onAddSolidModel()
+      actions.onAddSolidModel(),
     );
   }
 
@@ -451,17 +415,12 @@ export class EditorShellBuilder {
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
-  private addSnapControls(
-    toolbar: Toolbar,
-    actions: EditorToolbarActions
-  ): void {
+  private addSnapControls(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addSeparator();
     toolbar.addIconButton('Snap', ToolbarIcons.snap(), () => actions.onToggleSnap());
     toolbar.setButtonActiveByLabel('Snap', actions.isUserSnapEnabled());
-    toolbar.addButton('−', () => actions.onSnapIntervalBackward()).title =
-      'Decrease snap interval';
-    toolbar.addButton('+', () => actions.onSnapIntervalForward()).title =
-      'Increase snap interval';
+    toolbar.addButton('−', () => actions.onSnapIntervalBackward()).title = 'Decrease snap interval';
+    toolbar.addButton('+', () => actions.onSnapIntervalForward()).title = 'Increase snap interval';
     toolbar.addSeparator();
     toolbar.addButton('Global', () => actions.onSetTransformSpaceGlobal()).title =
       'Gizmo axes: world (global)';
@@ -478,10 +437,7 @@ export class EditorShellBuilder {
    * @param toolbar Toolbar with Global/Local buttons.
    * @param isLocal Whether local space is active.
    */
-  private applyTransformSpaceButtonState(
-    toolbar: Toolbar,
-    isLocal: boolean
-  ): void {
+  private applyTransformSpaceButtonState(toolbar: Toolbar, isLocal: boolean): void {
     toolbar.setButtonActiveByLabel('Global', !isLocal);
     toolbar.setButtonActiveByLabel('Local', isLocal);
   }
@@ -491,30 +447,15 @@ export class EditorShellBuilder {
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
-  private addPanelToggleControls(
-    toolbar: Toolbar,
-    actions: EditorToolbarActions
-  ): void {
+  private addPanelToggleControls(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addSeparator();
-    toolbar.addIconButton(
-      'UV Editor',
-      ToolbarIcons.uvEditor(),
-      () => actions.onToggleUvEditor()
+    toolbar.addIconButton('UV Editor', ToolbarIcons.uvEditor(), () => actions.onToggleUvEditor());
+    toolbar.addIconButton('Texture Browser', ToolbarIcons.textureBrowser(), () =>
+      actions.onToggleTextureBrowser(),
     );
-    toolbar.addIconButton(
-      'Texture Browser',
-      ToolbarIcons.textureBrowser(),
-      () => actions.onToggleTextureBrowser()
-    );
-    toolbar.addIconButton(
-      'Tools',
-      ToolbarIcons.toolsPanel(),
-      () => actions.onToggleToolsPalette()
-    );
-    toolbar.addIconButton(
-      'Solid Model',
-      ToolbarIcons.solidModel(),
-      () => actions.onToggleSolidModelPanel()
+    toolbar.addIconButton('Tools', ToolbarIcons.toolsPanel(), () => actions.onToggleToolsPalette());
+    toolbar.addIconButton('Solid Model', ToolbarIcons.solidModel(), () =>
+      actions.onToggleSolidModelPanel(),
     );
     toolbar.addIconButton(
       'Settings',
@@ -522,11 +463,7 @@ export class EditorShellBuilder {
       () => actions.onToggleSettingsDialog()
     );
     toolbar.addSeparator();
-    toolbar.addIconButton(
-      'About',
-      ToolbarIcons.about(),
-      () => actions.onOpenAboutDialog()
-    );
+    toolbar.addIconButton('About', ToolbarIcons.about(), () => actions.onOpenAboutDialog());
   }
 }
 
@@ -541,7 +478,7 @@ export function applyOutlinerRename(
   commandStack: CommandStack,
   obj: THREE.Object3D,
   newName: string,
-  refreshOutliner: () => void
+  refreshOutliner: () => void,
 ): void {
   if (newName.trim().length === 0) return;
   if (isObjectOrAncestorLocked(obj)) return;
@@ -559,7 +496,7 @@ export function applyOutlinerRename(
 export function applyOutlinerLockToggle(
   obj: THREE.Object3D,
   refreshOutliner: () => void,
-  showStatusMessage?: (message: string) => void
+  showStatusMessage?: (message: string) => void,
 ): boolean {
   const locked = toggleObjectLocked(obj);
   refreshOutliner();
@@ -582,7 +519,7 @@ export function applyOutlinerVisibilityToggle(
   commandStack: CommandStack,
   obj: THREE.Object3D,
   refreshOutliner: () => void,
-  syncViewports?: () => void
+  syncViewports?: () => void,
 ): void {
   commandStack.push(new ToggleVisibilityCommand(obj));
   refreshOutliner();
@@ -598,7 +535,7 @@ export function applyOutlinerVisibilityToggle(
 export function handleOutlinerDuplicate(
   obj: THREE.Object3D,
   selectionManager: SelectionManager,
-  objectActionHandler: ObjectActionHandler
+  objectActionHandler: ObjectActionHandler,
 ): void {
   if (obj instanceof THREE.Mesh) {
     selectionManager.selectObject(obj);

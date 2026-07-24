@@ -59,17 +59,17 @@ describe('Face mode excludes solid brush helpers', () => {
       worldObject,
       selectionManager: new SelectionManager(),
       statusBar: {
-        setSelectionModeInfo: () => undefined
+        setSelectionModeInfo: () => undefined,
       } as never,
       keyboardShortcutHandler: {
         setOnSelectionModeToggle: () => undefined,
         setOnExtrudeFaces: () => undefined,
-        isKeyDown: () => false
+        isKeyDown: () => false,
       } as never,
       showStatusMessage: vi.fn(),
       syncPrimitivesToViewports: () => undefined,
       updateShadingMeshes: () => undefined,
-      refreshOutliner: () => undefined
+      refreshOutliner: () => undefined,
     });
   });
 

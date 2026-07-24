@@ -20,7 +20,7 @@ function makeBoxBrush(
   id: string,
   size: number,
   operation: SolidOperation,
-  position?: THREE.Vector3
+  position?: THREE.Vector3,
 ): SolidBrushInstance {
   const brush = SolidBrushFactory.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
@@ -35,11 +35,7 @@ function makeBoxBrush(
  * @param size Box edge length.
  * @returns Brush instances in tree order.
  */
-function makeGridBrushes(
-  count: number,
-  spacing: number,
-  size: number
-): SolidBrushInstance[] {
+function makeGridBrushes(count: number, spacing: number, size: number): SolidBrushInstance[] {
   const brushes: SolidBrushInstance[] = [];
   const columns = Math.ceil(Math.sqrt(count));
   for (let index = 0; index < count; index++) {
@@ -50,8 +46,8 @@ function makeGridBrushes(
         `brush-${index}`,
         size,
         SolidOperation.Additive,
-        new THREE.Vector3(column * spacing, 0, row * spacing)
-      )
+        new THREE.Vector3(column * spacing, 0, row * spacing),
+      ),
     );
   }
   return brushes;
@@ -78,7 +74,7 @@ function polygonSignature(polygons: SolidCompiledPolygon[]): string[] {
         polygon.normal.x.toFixed(4),
         polygon.normal.y.toFixed(4),
         polygon.normal.z.toFixed(4),
-        polygon.vertices.length
+        polygon.vertices.length,
       ].join('|');
     })
     .sort();
@@ -98,7 +94,7 @@ describe('SolidCsgCompiler partial updates', () => {
 
     brushes[0].position.x += 0.25;
     const partial = compiler.compile(brushes, {
-      dirtyBrushIds: [brushes[0].id]
+      dirtyBrushIds: [brushes[0].id],
     });
     const partialStats = compiler.getLastCompileStats();
     expect(partialStats.fullRebuild).toBe(false);
@@ -111,24 +107,9 @@ describe('SolidCsgCompiler partial updates', () => {
   });
 
   it('recompiles previous and new neighbors when a brush enters contact', () => {
-    const left = makeBoxBrush(
-      'left',
-      2,
-      SolidOperation.Additive,
-      new THREE.Vector3(-3, 0, 0)
-    );
-    const right = makeBoxBrush(
-      'right',
-      2,
-      SolidOperation.Additive,
-      new THREE.Vector3(3, 0, 0)
-    );
-    const mover = makeBoxBrush(
-      'mover',
-      2,
-      SolidOperation.Additive,
-      new THREE.Vector3(0, 0, 0)
-    );
+    const left = makeBoxBrush('left', 2, SolidOperation.Additive, new THREE.Vector3(-3, 0, 0));
+    const right = makeBoxBrush('right', 2, SolidOperation.Additive, new THREE.Vector3(3, 0, 0));
+    const mover = makeBoxBrush('mover', 2, SolidOperation.Additive, new THREE.Vector3(0, 0, 0));
     const brushes = [left, right, mover];
     const compiler = new SolidCsgCompiler();
     compiler.compile(brushes, { forceFull: true });
@@ -146,23 +127,13 @@ describe('SolidCsgCompiler partial updates', () => {
   });
 
   it('matches full rebuild after subtractive carve moves between targets', () => {
-    const baseA = makeBoxBrush(
-      'base-a',
-      4,
-      SolidOperation.Additive,
-      new THREE.Vector3(-3, 0, 0)
-    );
-    const baseB = makeBoxBrush(
-      'base-b',
-      4,
-      SolidOperation.Additive,
-      new THREE.Vector3(3, 0, 0)
-    );
+    const baseA = makeBoxBrush('base-a', 4, SolidOperation.Additive, new THREE.Vector3(-3, 0, 0));
+    const baseB = makeBoxBrush('base-b', 4, SolidOperation.Additive, new THREE.Vector3(3, 0, 0));
     const cutter = makeBoxBrush(
       'cutter',
       2,
       SolidOperation.Subtractive,
-      new THREE.Vector3(-3, 0, 0)
+      new THREE.Vector3(-3, 0, 0),
     );
     const brushes = [baseA, baseB, cutter];
     const compiler = new SolidCsgCompiler();
@@ -179,18 +150,8 @@ describe('SolidCsgCompiler partial updates', () => {
   });
 
   it('forces a full rebuild when an intersecting brush is present', () => {
-    const a = makeBoxBrush(
-      'a',
-      2,
-      SolidOperation.Additive,
-      new THREE.Vector3(-0.5, 0, 0)
-    );
-    const b = makeBoxBrush(
-      'b',
-      2,
-      SolidOperation.Intersecting,
-      new THREE.Vector3(0.5, 0, 0)
-    );
+    const a = makeBoxBrush('a', 2, SolidOperation.Additive, new THREE.Vector3(-0.5, 0, 0));
+    const b = makeBoxBrush('b', 2, SolidOperation.Intersecting, new THREE.Vector3(0.5, 0, 0));
     const brushes = [a, b];
     const compiler = new SolidCsgCompiler();
     compiler.compile(brushes, { forceFull: true });
@@ -212,14 +173,14 @@ describe('SolidUpdateSetBuilder', () => {
         ['a', ['c']],
         ['b', []],
         ['c', ['a']],
-        ['d', []]
+        ['d', []],
       ]),
       new Map([
         ['a', ['b']],
         ['b', ['a']],
         ['c', []],
-        ['d', []]
-      ])
+        ['d', []],
+      ]),
     );
     expect(updateSet.has('a')).toBe(true);
     expect(updateSet.has('b')).toBe(true);
@@ -240,19 +201,11 @@ describe('BrushOverlapGraph', () => {
     for (let index = 0; index < count; index++) {
       const column = index % 8;
       const row = Math.floor(index / 8);
-      const min = new THREE.Vector3(
-        column * spacing - size,
-        -size,
-        row * spacing - size
-      );
-      const max = new THREE.Vector3(
-        column * spacing + size,
-        size,
-        row * spacing + size
-      );
+      const min = new THREE.Vector3(column * spacing - size, -size, row * spacing - size);
+      const max = new THREE.Vector3(column * spacing + size, size, row * spacing + size);
       entries.push({
         bounds: new THREE.Box3(min, max),
-        overlappingPeerIndices: [] as number[]
+        overlappingPeerIndices: [] as number[],
       });
     }
     entries[0].bounds.translate(new THREE.Vector3(spacing - 0.5, 0, 0));

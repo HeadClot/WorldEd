@@ -47,17 +47,19 @@ describe('TransformHandler undo/redo', () => {
   it('should onPointerDown not produce a command without a handle pick', () => {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x888888 })
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
     const handles = gizmo.getHandles();
-    const mockCanvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+    const mockCanvas = {
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    };
     const mockRenderer = { domElement: mockCanvas } as unknown as THREE.WebGLRenderer;
     handler.onPointerDown(
       new THREE.PerspectiveCamera(),
       mockRenderer,
       new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
       handles,
-      [mesh]
+      [mesh],
     );
     handler.onPointerUp(new THREE.Vector3(), [mesh]);
     expect(commandStack.getUndoCount()).toBe(0);

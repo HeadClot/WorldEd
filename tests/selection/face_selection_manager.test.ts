@@ -9,14 +9,8 @@ describe('FaceSelectionManager', () => {
 
   beforeEach(() => {
     manager = new FaceSelectionManager();
-    meshA = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
-    meshB = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
   });
 
   it('should start with empty selection', () => {
@@ -93,14 +87,18 @@ describe('FaceSelectionManager', () => {
 
   it('should fire callback on selection change', () => {
     let callbackCount = 0;
-    manager.setSelectionChangedCallback(() => { callbackCount++; });
+    manager.setSelectionChangedCallback(() => {
+      callbackCount++;
+    });
     manager.selectFace(meshA, 0, false, false);
     expect(callbackCount).toBe(1);
   });
 
   it('should fire callback with correct selection array', () => {
     let capturedFaces: ReturnType<typeof manager.getSelectedFaces> | null = null;
-    manager.setSelectionChangedCallback((faces) => { capturedFaces = faces; });
+    manager.setSelectionChangedCallback((faces) => {
+      capturedFaces = faces;
+    });
     manager.selectFace(meshA, 0, false, false);
     expect(capturedFaces).not.toBeNull();
     expect(capturedFaces?.length).toBe(1);
@@ -137,7 +135,9 @@ describe('FaceSelectionManager', () => {
   it('should clear all state', () => {
     manager.selectFace(meshA, 0, false);
     let callbackFired = false;
-    manager.setSelectionChangedCallback(() => { callbackFired = true; });
+    manager.setSelectionChangedCallback(() => {
+      callbackFired = true;
+    });
     manager.clear();
     expect(manager.getSelectedFaceCount()).toBe(0);
     manager.selectFace(meshA, 0, false);
@@ -150,13 +150,8 @@ describe('FaceSelectionManager', () => {
  * @returns A buffer geometry with 3 vertices forming one triangle.
  */
 function createTriangleOnXZPlane(): THREE.BufferGeometry {
-  const vertices = new Float32Array([
-    0, 0, 0,
-    1, 0, 0,
-    0.5, 0, 1
-  ]);
+  const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 0.5, 0, 1]);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   return geometry;
 }
-

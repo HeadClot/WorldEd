@@ -4,12 +4,9 @@ import {
   FaceTextureMapEntry,
   FaceTextureMapping,
   cloneFaceTextureMapEntry,
-  cloneFaceTextureMapping
+  cloneFaceTextureMapping,
 } from '../texture/face_texture_mapping.js';
-import {
-  getFaceTextureMaps,
-  setFaceTextureMaps
-} from '../texture/face_texture_storage.js';
+import { getFaceTextureMaps, setFaceTextureMaps } from '../texture/face_texture_storage.js';
 import { rebakeStoredFaceTextureMaps } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
 import { SolidModel } from '../solid/model/solid_model.js';
@@ -49,10 +46,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
    * @param beforeSnapshots Mesh state before the stroke began.
    * @param afterSnapshots Mesh state after the stroke finished.
    */
-  constructor(
-    beforeSnapshots: SmearMeshSnapshot[],
-    afterSnapshots: SmearMeshSnapshot[]
-  ) {
+  constructor(beforeSnapshots: SmearMeshSnapshot[], afterSnapshots: SmearMeshSnapshot[]) {
     this.beforeSnapshots = beforeSnapshots;
     this.afterSnapshots = afterSnapshots;
     this.isLive = true;
@@ -83,18 +77,14 @@ export class SmearUvStrokeCommand implements UndoCommand {
    * @returns Snapshot object.
    */
   public static captureMesh(mesh: THREE.Mesh): SmearMeshSnapshot {
-    const maps = getFaceTextureMaps(mesh).map((entry) =>
-      cloneFaceTextureMapEntry(entry)
-    );
+    const maps = getFaceTextureMaps(mesh).map((entry) => cloneFaceTextureMapEntry(entry));
     const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute | null;
-    const uvArray = uv
-      ? new Float32Array(uv.array as ArrayLike<number>)
-      : null;
+    const uvArray = uv ? new Float32Array(uv.array as ArrayLike<number>) : null;
     return {
       mesh,
       maps,
       uvArray,
-      solidBrushUvs: this.captureSolidBrushUvs(mesh)
+      solidBrushUvs: this.captureSolidBrushUvs(mesh),
     };
   }
 
@@ -103,9 +93,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
    * @param mesh Candidate mesh.
    * @returns Brush UV snapshots, or null when not a solid result.
    */
-  private static captureSolidBrushUvs(
-    mesh: THREE.Mesh
-  ): SmearSolidBrushUvSnapshot[] | null {
+  private static captureSolidBrushUvs(mesh: THREE.Mesh): SmearSolidBrushUvSnapshot[] | null {
     if (!SolidModel.isResultMesh(mesh)) return null;
     const model = SolidModel.fromObject(mesh);
     if (!model) return null;
@@ -125,7 +113,7 @@ export class SmearUvStrokeCommand implements UndoCommand {
       rebakeStoredFaceTextureMaps(snapshot.mesh);
     }
     rebuildSurfaceMaterials(snapshot.mesh, undefined, undefined, {
-      preserveTriangleOrder: true
+      preserveTriangleOrder: true,
     });
   }
 
@@ -152,9 +140,6 @@ export class SmearUvStrokeCommand implements UndoCommand {
       uv.needsUpdate = true;
       return;
     }
-    mesh.geometry.setAttribute(
-      'uv',
-      new THREE.BufferAttribute(uvArray.slice(), 2)
-    );
+    mesh.geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray.slice(), 2));
   }
 }

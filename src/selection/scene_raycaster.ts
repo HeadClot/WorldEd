@@ -30,7 +30,7 @@ export class SceneRaycaster {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    selectableObjects: THREE.Mesh[]
+    selectableObjects: THREE.Mesh[],
   ): THREE.Mesh | null {
     const hits = this.castAll(camera, renderer, event, selectableObjects);
     return hits.length > 0 ? hits[0] : null;
@@ -49,11 +49,9 @@ export class SceneRaycaster {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    selectableObjects: THREE.Mesh[]
+    selectableObjects: THREE.Mesh[],
   ): THREE.Mesh[] {
-    return this.allMeshHits(
-      this.castIntersections(camera, renderer, event, selectableObjects)
-    );
+    return this.allMeshHits(this.castIntersections(camera, renderer, event, selectableObjects));
   }
 
   /**
@@ -68,17 +66,14 @@ export class SceneRaycaster {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    selectableObjects: THREE.Mesh[]
+    selectableObjects: THREE.Mesh[],
   ): THREE.Intersection[] {
     if (selectableObjects.length === 0) return [];
     this.prepareCameraAndMeshes(camera, selectableObjects);
     pointerEventToNdc(event, renderer.domElement, this.ndcVector);
     this.raycaster.setFromCamera(this.ndcVector, camera);
     const restored = this.enableDoubleSidedPicking(selectableObjects);
-    const intersections = this.raycaster.intersectObjects(
-      selectableObjects,
-      false
-    );
+    const intersections = this.raycaster.intersectObjects(selectableObjects, false);
     this.restoreMaterialSides(restored);
     return intersections;
   }
@@ -88,10 +83,7 @@ export class SceneRaycaster {
    * @param camera The camera used for the ray.
    * @param meshes The meshes that will be tested.
    */
-  private prepareCameraAndMeshes(
-    camera: THREE.Camera,
-    meshes: THREE.Mesh[]
-  ): void {
+  private prepareCameraAndMeshes(camera: THREE.Camera, meshes: THREE.Mesh[]): void {
     camera.updateMatrixWorld(true);
     meshes.forEach((mesh) => {
       mesh.updateMatrixWorld(true);
@@ -104,7 +96,7 @@ export class SceneRaycaster {
    * @returns Previous side values for restoration.
    */
   private enableDoubleSidedPicking(
-    meshes: THREE.Mesh[]
+    meshes: THREE.Mesh[],
   ): Array<{ material: THREE.Material; side: THREE.Side }> {
     const restored: Array<{ material: THREE.Material; side: THREE.Side }> = [];
     meshes.forEach((mesh) => {
@@ -120,7 +112,7 @@ export class SceneRaycaster {
    */
   private snapshotAndForceDoubleSide(
     mesh: THREE.Mesh,
-    restored: Array<{ material: THREE.Material; side: THREE.Side }>
+    restored: Array<{ material: THREE.Material; side: THREE.Side }>,
   ): void {
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     materials.forEach((material) => {
@@ -135,7 +127,7 @@ export class SceneRaycaster {
    * @param restored Previous material side snapshots.
    */
   private restoreMaterialSides(
-    restored: Array<{ material: THREE.Material; side: THREE.Side }>
+    restored: Array<{ material: THREE.Material; side: THREE.Side }>,
   ): void {
     restored.forEach((entry) => {
       entry.material.side = entry.side;
@@ -161,6 +153,5 @@ export class SceneRaycaster {
    * Disposes internal Three.js resources.
    * Raycaster and Vector2 do not require explicit disposal.
    */
-  dispose(): void {
-  }
+  dispose(): void {}
 }

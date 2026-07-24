@@ -31,11 +31,7 @@ describe('Toolbar', () => {
 
   it('should add an icon button with accessible label', () => {
     const clickHandler = vi.fn();
-    const button = toolbar.addIconButton(
-      'Undo',
-      '<svg></svg>',
-      clickHandler
-    );
+    const button = toolbar.addIconButton('Undo', '<svg></svg>', clickHandler);
     expect(button.getAttribute('aria-label')).toBe('Undo');
     button.click();
     expect(clickHandler).toHaveBeenCalledTimes(1);
@@ -70,7 +66,7 @@ describe('Toolbar', () => {
     toolbar.addButton('After', () => {});
     const toolbarElement = container.children[0] as HTMLElement;
     const separatorCount = Array.from(toolbarElement.children).filter(
-      (child) => child.tagName === 'DIV'
+      (child) => child.tagName === 'DIV',
     ).length;
     expect(separatorCount).toBe(1);
   });
@@ -105,8 +101,8 @@ describe('Toolbar', () => {
       {
         label: 'Union',
         onClick: clickHandler,
-        isEnabled: () => enabled
-      }
+        isEnabled: () => enabled,
+      },
     ]);
     const header = container.querySelector('button') as HTMLButtonElement;
     header.click();

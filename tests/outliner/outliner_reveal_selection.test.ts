@@ -31,10 +31,7 @@ describe('Outliner reveal selection', () => {
     outer.name = 'Outer';
     const inner = new THREE.Group();
     inner.name = 'Inner';
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'DeepCube';
     inner.add(mesh);
     outer.add(inner);
@@ -67,14 +64,8 @@ describe('Outliner reveal selection', () => {
 
   it('tracks last selected mesh for multi-select reveal focus', () => {
     const selectionManager = new SelectionManager();
-    const a = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
-    const b = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    const a = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    const b = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     selectionManager.selectObject(a);
     expect(selectionManager.getLastSelectedObject()).toBe(a);
     selectionManager.addToSelection(b);

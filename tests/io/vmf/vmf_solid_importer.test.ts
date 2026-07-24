@@ -3,10 +3,7 @@ import { VmfSolidImporter } from '../../../src/io/vmf/vmf_solid_importer.js';
 import { VmfParser } from '../../../src/io/vmf/vmf_parser.js';
 import { SolidBrushValidator } from '../../../src/solid/brush/solid_brush_validator.js';
 import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import {
-  buildAxisAlignedSideBlocks,
-  buildAxisAlignedWorldSolidVmf
-} from './vmf_test_solids.js';
+import { buildAxisAlignedSideBlocks, buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 
 /**
  * Unit tests for full VMF → solid model import.
@@ -16,12 +13,12 @@ describe('VmfSolidImporter', () => {
     const good = buildAxisAlignedSideBlocks(
       { x: -32, y: -32, z: -32 },
       { x: 32, y: 32, z: 32 },
-      'DEV/DEV_MEASUREGENERIC01'
+      'DEV/DEV_MEASUREGENERIC01',
     );
     const trigger = buildAxisAlignedSideBlocks(
       { x: 100, y: 100, z: 100 },
       { x: 164, y: 164, z: 132 },
-      'TOOLS/TOOLSTRIGGER'
+      'TOOLS/TOOLSTRIGGER',
     );
     const source = `
 world
@@ -58,7 +55,7 @@ ${trigger}
     const detailSides = buildAxisAlignedSideBlocks(
       { x: -16, y: -16, z: -16 },
       { x: 16, y: 16, z: 16 },
-      'BRICK/BRICKWALL001A'
+      'BRICK/BRICKWALL001A',
     );
     const text = `
 world
@@ -78,11 +75,11 @@ ${detailSides}
 }
 `;
     const withEntities = new VmfSolidImporter().importFromText(text, {
-      includeEntitySolids: true
+      includeEntitySolids: true,
     });
     expect(withEntities.importedBrushCount).toBe(1);
     const withoutEntities = new VmfSolidImporter().importFromText(text, {
-      includeEntitySolids: false
+      includeEntitySolids: false,
     });
     expect(withoutEntities.importedBrushCount).toBe(0);
   });
@@ -93,8 +90,8 @@ ${detailSides}
         { x: -64, y: -64, z: 0 },
         { x: 64, y: 64, z: 128 },
         'CONCRETE/CONCRETEWALL001A',
-        7
-      )
+        7,
+      ),
     );
     expect(result.importedBrushCount).toBe(1);
     expect(result.model.getBrushes()[0].name).toBe('Solid 7');
@@ -111,11 +108,8 @@ ${detailSides}
     expect(result.model.root.name).toBe('Representative VMF');
     expect(result.importedBrushCount).toBeGreaterThan(0);
     const totalSolids =
-      parsed.solids.length +
-      parsed.entities.reduce((sum, entity) => sum + entity.solids.length, 0);
-    expect(result.importedBrushCount + result.skippedBrushCount).toBe(
-      totalSolids
-    );
+      parsed.solids.length + parsed.entities.reduce((sum, entity) => sum + entity.solids.length, 0);
+    expect(result.importedBrushCount + result.skippedBrushCount).toBe(totalSolids);
     const sampleCount = Math.min(12, result.model.getBrushCount());
     for (let index = 0; index < sampleCount; index++) {
       const brush = result.model.getBrushes()[index];
@@ -160,4 +154,3 @@ function createVmfSolidBlock(
 ): string {
   return `\tsolid\n\t{\n\t\t"id" "${id}"\n${buildAxisAlignedSideBlocks(min, max, material)}\n\t}`;
 }
-

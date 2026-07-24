@@ -34,7 +34,7 @@ describe('ToolsPalette', () => {
       onCommitClip: onClip,
       onCommitSplit: onSplit,
       onOpenUvEditor,
-      onExtrudeFaces
+      onExtrudeFaces,
     });
   });
 
@@ -68,8 +68,8 @@ describe('ToolsPalette', () => {
         height: 300,
         x: 400,
         y: 300,
-        toJSON: () => ({})
-      })
+        toJSON: () => ({}),
+      }),
     });
     palette.setDefaultAnchor(anchor);
     palette.show();
@@ -88,9 +88,7 @@ describe('ToolsPalette', () => {
 
   it('should report tool selection when an icon is clicked', () => {
     palette.show();
-    const clipButton = host.querySelector(
-      'button[aria-label="Clip Plane"]'
-    ) as HTMLButtonElement;
+    const clipButton = host.querySelector('button[aria-label="Clip Plane"]') as HTMLButtonElement;
     clipButton.click();
     expect(onSelectTool).toHaveBeenCalledWith(EditorToolId.CLIP_PLANE);
   });
@@ -105,17 +103,11 @@ describe('ToolsPalette', () => {
   it('should show transform modes only in object select context', () => {
     palette.show();
     palette.setActiveTool(EditorToolId.OBJECT);
-    const objectContext = host.querySelector(
-      '[data-context="object"]'
-    ) as HTMLElement;
-    const faceContext = host.querySelector(
-      '[data-context="face"]'
-    ) as HTMLElement;
+    const objectContext = host.querySelector('[data-context="object"]') as HTMLElement;
+    const faceContext = host.querySelector('[data-context="face"]') as HTMLElement;
     expect(objectContext.style.display).toBe('flex');
     expect(faceContext.style.display).toBe('none');
-    const moveButton = host.querySelector(
-      'button[aria-label="Move (W)"]'
-    ) as HTMLButtonElement;
+    const moveButton = host.querySelector('button[aria-label="Move (W)"]') as HTMLButtonElement;
     moveButton.click();
     expect(onTransformMode).toHaveBeenCalledWith(TransformMode.TRANSLATE);
     palette.setActiveTool(EditorToolId.FACE);
@@ -125,9 +117,7 @@ describe('ToolsPalette', () => {
 
   it('should hide clip actions outside clip tool and show them when active', () => {
     palette.show();
-    const clipContext = host.querySelector(
-      '[data-context="clip"]'
-    ) as HTMLElement;
+    const clipContext = host.querySelector('[data-context="clip"]') as HTMLElement;
     palette.setActiveTool(EditorToolId.OBJECT);
     expect(clipContext.style.display).toBe('none');
     palette.setActiveTool(EditorToolId.CLIP_PLANE);
@@ -137,15 +127,13 @@ describe('ToolsPalette', () => {
   it('should offer UV Editor and Extrude in face select context', () => {
     palette.show();
     palette.setActiveTool(EditorToolId.FACE);
-    const faceContext = host.querySelector(
-      '[data-context="face"]'
-    ) as HTMLElement;
+    const faceContext = host.querySelector('[data-context="face"]') as HTMLElement;
     expect(faceContext.style.display).toBe('flex');
     const uvButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent === 'UV Editor'
+      (button) => button.textContent === 'UV Editor',
     ) as HTMLButtonElement;
     const extrudeButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Extrude'
+      (button) => button.textContent === 'Extrude',
     ) as HTMLButtonElement;
     uvButton.click();
     extrudeButton.click();
@@ -183,19 +171,15 @@ describe('ToolsPalette', () => {
     const uvEditor = new UvEditor(host, {
       onAlign: vi.fn(),
       onApplyMapping: vi.fn(),
-      onReset: vi.fn()
+      onReset: vi.fn(),
     });
     palette.show();
     uvEditor.show();
     const toolsRoot = host.children[0] as HTMLElement;
     const uvEditorRoot = host.children[1] as HTMLElement;
-    expect(Number(uvEditorRoot.style.zIndex)).toBeGreaterThan(
-      Number(toolsRoot.style.zIndex)
-    );
+    expect(Number(uvEditorRoot.style.zIndex)).toBeGreaterThan(Number(toolsRoot.style.zIndex));
     toolsRoot.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-    expect(Number(toolsRoot.style.zIndex)).toBeGreaterThan(
-      Number(uvEditorRoot.style.zIndex)
-    );
+    expect(Number(toolsRoot.style.zIndex)).toBeGreaterThan(Number(uvEditorRoot.style.zIndex));
     uvEditor.dispose();
   });
 });

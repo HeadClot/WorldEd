@@ -18,7 +18,7 @@ describe('UvEditor', () => {
     editor = new UvEditor(host, {
       onAlign,
       onApplyMapping,
-      onReset
+      onReset,
     });
   });
 
@@ -70,12 +70,12 @@ describe('UvEditor', () => {
         height: 300,
         x: 400,
         y: 300,
-        toJSON: () => ({})
-      })
+        toJSON: () => ({}),
+      }),
     });
     Object.defineProperty(window, 'innerHeight', {
       configurable: true,
-      value: 900
+      value: 900,
     });
     editor.setDefaultAnchor(anchor);
     editor.show();

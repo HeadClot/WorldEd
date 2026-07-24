@@ -125,8 +125,12 @@ describe('BoundingVolumeComputer', () => {
 });
 
 function createBoxMesh(
-  width: number, height: number, depth: number,
-  px: number, py: number, pz: number
+  width: number,
+  height: number,
+  depth: number,
+  px: number,
+  py: number,
+  pz: number,
 ): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(width, height, depth);
   const material = new THREE.MeshStandardMaterial({ color: 0x888888 });

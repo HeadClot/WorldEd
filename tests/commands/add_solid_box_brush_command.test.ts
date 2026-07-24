@@ -15,7 +15,7 @@ describe('AddSolidBoxBrushCommand', () => {
       model,
       2,
       SolidOperation.Subtractive,
-      new THREE.Vector3(1, 0, 0)
+      new THREE.Vector3(1, 0, 0),
     );
     command.execute();
     const created = command.getCreatedBrush();
@@ -34,7 +34,7 @@ describe('AddSolidBoxBrushCommand', () => {
       model,
       2,
       SolidOperation.Additive,
-      new THREE.Vector3()
+      new THREE.Vector3(),
     );
     command.execute();
     const createdId = command.getCreatedBrush()!.id;

@@ -16,7 +16,7 @@ const PLANE_POINT_EPSILON = 1e-8;
 export function buildVerticalPlaneFromTwoPoints(
   pointA: THREE.Vector3,
   pointB: THREE.Vector3,
-  worldUp: THREE.Vector3 = new THREE.Vector3(0, 1, 0)
+  worldUp: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
 ): THREE.Plane | null {
   const edge = new THREE.Vector3().subVectors(pointB, pointA);
   if (edge.lengthSq() < PLANE_POINT_EPSILON) return null;
@@ -36,7 +36,7 @@ export function buildVerticalPlaneFromTwoPoints(
 export function buildPlaneFromThreePoints(
   pointA: THREE.Vector3,
   pointB: THREE.Vector3,
-  pointC: THREE.Vector3
+  pointC: THREE.Vector3,
 ): THREE.Plane | null {
   const ab = new THREE.Vector3().subVectors(pointB, pointA);
   const ac = new THREE.Vector3().subVectors(pointC, pointA);
@@ -57,7 +57,7 @@ export function buildPlaneFromThreePoints(
  */
 export function buildPlaneFromPlacementPoints(
   points: THREE.Vector3[],
-  worldUp: THREE.Vector3 = new THREE.Vector3(0, 1, 0)
+  worldUp: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
 ): THREE.Plane | null {
   if (points.length >= 3) {
     return buildPlaneFromThreePoints(points[0], points[1], points[2]);
@@ -83,12 +83,10 @@ export function flipPlane(plane: THREE.Plane): THREE.Plane {
  * @param plane The Three.js plane.
  * @returns Normal and plane constant for CsgClipper.
  */
-export function planeToCsgForm(
-  plane: THREE.Plane
-): { normal: THREE.Vector3; constant: number } {
+export function planeToCsgForm(plane: THREE.Plane): { normal: THREE.Vector3; constant: number } {
   return {
     normal: plane.normal.clone().normalize(),
-    constant: -plane.constant
+    constant: -plane.constant,
   };
 }
 
@@ -98,10 +96,7 @@ export function planeToCsgForm(
  * @param worldUp Preferred world up axis.
  * @returns Unnormalized normal, or zero if fully degenerate.
  */
-function computeVerticalPlaneNormal(
-  edge: THREE.Vector3,
-  worldUp: THREE.Vector3
-): THREE.Vector3 {
+function computeVerticalPlaneNormal(edge: THREE.Vector3, worldUp: THREE.Vector3): THREE.Vector3 {
   const primary = new THREE.Vector3().crossVectors(edge, worldUp);
   if (primary.lengthSq() >= PLANE_POINT_EPSILON) {
     return primary;

@@ -107,7 +107,9 @@ describe('OutlinerItem', () => {
 
   it('should fire selection callback on click', () => {
     let selectedObj: THREE.Object3D | null = null;
-    item.onSelection((obj) => { selectedObj = obj; });
+    item.onSelection((obj) => {
+      selectedObj = obj;
+    });
     const element = item.getElement();
     container.appendChild(element);
     element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -116,7 +118,9 @@ describe('OutlinerItem', () => {
 
   it('should fire visibility callback on visibility icon click', () => {
     let toggledObj: THREE.Object3D | null = null;
-    item.onVisibilityToggle((obj) => { toggledObj = obj; });
+    item.onVisibilityToggle((obj) => {
+      toggledObj = obj;
+    });
     const element = item.getElement();
     container.appendChild(element);
     const visSpan = element.querySelector('span:nth-child(4)') as HTMLElement;
@@ -127,7 +131,9 @@ describe('OutlinerItem', () => {
   it('should fire expand callback on chevron click', () => {
     let expandedObj: THREE.Object3D | null = null;
     const expandedItem = new OutlinerItem(mesh, 0, true);
-    expandedItem.onExpandToggle((obj) => { expandedObj = obj; });
+    expandedItem.onExpandToggle((obj) => {
+      expandedObj = obj;
+    });
     const element = expandedItem.getElement();
     container.appendChild(element);
     const chevron = element.querySelector('span:nth-child(1)') as HTMLElement;
@@ -147,11 +153,13 @@ describe('OutlinerItem', () => {
     });
     const element = item.getElement();
     container.appendChild(element);
-    element.dispatchEvent(new MouseEvent('contextmenu', {
-      bubbles: true,
-      clientX: 100,
-      clientY: 200
-    }));
+    element.dispatchEvent(
+      new MouseEvent('contextmenu', {
+        bubbles: true,
+        clientX: 100,
+        clientY: 200,
+      }),
+    );
     expect(contextObj).toBe(mesh);
     expect(contextX).toBe(100);
     expect(contextY).toBe(200);

@@ -13,11 +13,11 @@ import { getDefaultCheckerBrowserEntry } from '../../src/texture/default_checker
 import {
   setTexturePaintStateForTests,
   TexturePaintState,
-  getTexturePaintState
+  getTexturePaintState,
 } from '../../src/texture/texture_paint_state.js';
 import {
   setTextureMapCacheForTests,
-  TextureMapCache
+  TextureMapCache,
 } from '../../src/texture/texture_map_cache.js';
 import { createTextureBrowserEntry } from '../../src/texture/texture_browser_entry.js';
 import { mockObjectUrlApis } from '../texture/object_url_test_utils.js';
@@ -42,13 +42,9 @@ describe('TextureAssignmentController', () => {
       scene,
       commandStack,
       new GridSnap(false, 1),
-      world
+      world,
     );
-    controller = new TextureAssignmentController(
-      selection,
-      faceController,
-      commandStack
-    );
+    controller = new TextureAssignmentController(selection, faceController, commandStack);
   });
 
   afterEach(() => {
@@ -62,32 +58,25 @@ describe('TextureAssignmentController', () => {
     controller.setStatusCallback(status);
     const entry = getDefaultCheckerBrowserEntry();
     controller.onTextureSelected(entry);
-    expect(getTexturePaintState().getLastTextureId()).toBe(
-      DEFAULT_CHECKER_TEXTURE_ID
-    );
+    expect(getTexturePaintState().getLastTextureId()).toBe(DEFAULT_CHECKER_TEXTURE_ID);
     expect(status).toHaveBeenCalled();
     expect(commandStack.getUndoCount()).toBe(0);
   });
 
   it('should assign texture to a selected object with undo', () => {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      createContentMaterial(0x888888)
-    );
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0x888888));
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);
     world.add(mesh);
     selection.selectObject(mesh);
     const entry = createTextureBrowserEntry(
       new File(['x'], 'rock.png', { type: 'image/png' }),
-      'rock.png'
+      'rock.png',
     );
     controller.onTextureSelected(entry);
     expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe('rock.png');
     expect(commandStack.getUndoCount()).toBe(1);
     commandStack.undo();
-    expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe(
-      DEFAULT_CHECKER_TEXTURE_ID
-    );
+    expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe(DEFAULT_CHECKER_TEXTURE_ID);
   });
 });

@@ -27,7 +27,7 @@ export class ConvexPolygonClipper {
   static clipByPlane(
     polygon: THREE.Vector3[],
     plane: SolidPlane,
-    epsilon: number = SOLID_FAT_PLANE_EPSILON
+    epsilon: number = SOLID_FAT_PLANE_EPSILON,
   ): PolygonClipResult {
     if (polygon.length < 3) {
       return { inside: [], outside: [] };
@@ -51,12 +51,12 @@ export class ConvexPolygonClipper {
         nextInside,
         plane,
         inside,
-        outside
+        outside,
       );
     }
     return {
       inside: this.dedupeClosedRing(inside),
-      outside: this.dedupeClosedRing(outside)
+      outside: this.dedupeClosedRing(outside),
     };
   }
 
@@ -66,10 +66,7 @@ export class ConvexPolygonClipper {
    * @param planes Outward planes of the solid.
    * @returns Clipped polygon inside the solid, or empty if none.
    */
-  static clipInsideAllPlanes(
-    polygon: THREE.Vector3[],
-    planes: SolidPlane[]
-  ): THREE.Vector3[] {
+  static clipInsideAllPlanes(polygon: THREE.Vector3[], planes: SolidPlane[]): THREE.Vector3[] {
     let current = polygon.map((point) => point.clone());
     for (const plane of planes) {
       current = this.clipByPlane(current, plane).inside;
@@ -99,7 +96,7 @@ export class ConvexPolygonClipper {
     nextInside: boolean,
     plane: SolidPlane,
     inside: THREE.Vector3[],
-    outside: THREE.Vector3[]
+    outside: THREE.Vector3[],
   ): void {
     if (currentInside && nextInside) {
       inside.push(next.clone());
@@ -114,7 +111,7 @@ export class ConvexPolygonClipper {
       next,
       currentDistance,
       nextDistance,
-      plane
+      plane,
     );
     if (currentInside) {
       inside.push(intersection.clone());
@@ -141,7 +138,7 @@ export class ConvexPolygonClipper {
     b: THREE.Vector3,
     distanceA: number,
     distanceB: number,
-    plane: SolidPlane
+    plane: SolidPlane,
   ): THREE.Vector3 {
     void plane;
     const denom = distanceA - distanceB;
@@ -162,10 +159,7 @@ export class ConvexPolygonClipper {
       if (previous && previous.distanceToSquared(point) < 1e-16) continue;
       cleaned.push(point);
     }
-    if (
-      cleaned.length > 1 &&
-      cleaned[0].distanceToSquared(cleaned[cleaned.length - 1]) < 1e-16
-    ) {
+    if (cleaned.length > 1 && cleaned[0].distanceToSquared(cleaned[cleaned.length - 1]) < 1e-16) {
       cleaned.pop();
     }
     return cleaned.length >= 3 ? cleaned : [];

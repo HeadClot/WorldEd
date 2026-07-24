@@ -5,7 +5,7 @@ import {
   findConnectedCoplanarFaceIndices,
   getTriangleCount,
   getTriangleVertexIndices,
-  computeTriangleNormal
+  computeTriangleNormal,
 } from '../../src/selection/triangle_geometry_utils.js';
 
 describe('triangle_geometry_utils', () => {
@@ -59,13 +59,11 @@ describe('triangle_geometry_utils', () => {
       'position',
       new THREE.BufferAttribute(
         new Float32Array([
-          0, 0, 0, 1, 0, 0, 0, 1, 0,
-          1, 0, 0, 1, 1, 0, 0, 1, 0,
-          10, 0, 0, 11, 0, 0, 10, 1, 0,
-          11, 0, 0, 11, 1, 0, 10, 1, 0
+          0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 10, 0, 0, 11, 0, 0, 10, 1, 0, 11, 0,
+          0, 11, 1, 0, 10, 1, 0,
         ]),
-        3
-      )
+        3,
+      ),
     );
     const coplanar = findCoplanarFaceIndices(geometry, 0);
     expect(coplanar.length).toBe(4);

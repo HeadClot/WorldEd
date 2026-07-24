@@ -54,7 +54,7 @@ export class CameraFitController {
   fitViewportToSelection(
     viewport: FitViewport,
     meshes: THREE.Mesh[],
-    config: CameraAnimationConfig
+    config: CameraAnimationConfig,
   ): number {
     this.config = config;
     const targetMeshes = this.resolveTargetMeshes(viewport, meshes);
@@ -78,7 +78,7 @@ export class CameraFitController {
   fitAllViewportsToSelection(
     viewports: FitViewport[],
     meshes: THREE.Mesh[],
-    config: CameraAnimationConfig
+    config: CameraAnimationConfig,
   ): number {
     this.config = config;
     let totalCount = 0;
@@ -105,10 +105,7 @@ export class CameraFitController {
    * @param meshes The provided mesh array.
    * @returns The resolved mesh array to frame.
    */
-  private resolveTargetMeshes(
-    viewport: FitViewport,
-    meshes: THREE.Mesh[]
-  ): THREE.Mesh[] {
+  private resolveTargetMeshes(viewport: FitViewport, meshes: THREE.Mesh[]): THREE.Mesh[] {
     if (meshes.length > 0) return meshes;
     return this.collectAllMeshesFromScene(viewport);
   }
@@ -136,22 +133,17 @@ export class CameraFitController {
    * @param camera The perspective camera to animate.
    * @param meshes The meshes to frame.
    */
-  private fitPerspectiveViewport(
-    camera: THREE.PerspectiveCamera,
-    meshes: THREE.Mesh[]
-  ): void {
+  private fitPerspectiveViewport(camera: THREE.PerspectiveCamera, meshes: THREE.Mesh[]): void {
     if (meshes.length === 0) return;
     const boundingBox = this.boundingVolumeComputer.computeWorldBoundingBox(meshes);
     const boundingSphere = this.boundingVolumeComputer.computeBoundingSphere(boundingBox);
     const padding = this.config.getPaddingFactor();
-    const target = this.cameraFramer.computePerspectiveTarget(
-      boundingSphere, camera, padding
-    );
+    const target = this.cameraFramer.computePerspectiveTarget(boundingSphere, camera, padding);
     this.perspectiveAnimator.animateToTarget(
       camera,
       target.targetPosition,
       target.targetLookAt,
-      this.config
+      this.config,
     );
   }
 
@@ -160,16 +152,11 @@ export class CameraFitController {
    * @param camera The orthographic camera to animate.
    * @param meshes The meshes to frame.
    */
-  private fitOrthographicViewport(
-    camera: THREE.OrthographicCamera,
-    meshes: THREE.Mesh[]
-  ): void {
+  private fitOrthographicViewport(camera: THREE.OrthographicCamera, meshes: THREE.Mesh[]): void {
     if (meshes.length === 0) return;
     const boundingBox = this.boundingVolumeComputer.computeWorldBoundingBox(meshes);
     const padding = this.config.getPaddingFactor();
-    const target = this.cameraFramer.computeOrthographicTarget(
-      boundingBox, camera, padding
-    );
+    const target = this.cameraFramer.computeOrthographicTarget(boundingBox, camera, padding);
     const animator = this.createOrthographicAnimator();
     animator.animateToFrustum(camera, target, this.config);
     this.activeOrthographicAnimations.push(animator);

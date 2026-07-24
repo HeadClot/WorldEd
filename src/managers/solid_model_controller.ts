@@ -5,7 +5,7 @@ import { AddSolidBoxBrushCommand } from '../commands/add_solid_box_brush_command
 import { SetSolidBrushOperationCommand } from '../commands/set_solid_brush_operation_command.js';
 import {
   ReorderSolidBrushesCommand,
-  SolidBrushOrderEnd
+  SolidBrushOrderEnd,
 } from '../commands/reorder_solid_brushes_command.js';
 import { SelectionManager } from './selection_manager.js';
 import { SolidModel } from '../solid/model/solid_model.js';
@@ -14,7 +14,7 @@ import { SolidOperation } from '../solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import {
   computeBrushSpawnPosition,
-  snapPositionToGrid
+  snapPositionToGrid,
 } from '../solid/model/brush_spawn_placement.js';
 import { TextureLockSettings } from '../texture/texture_lock_settings.js';
 
@@ -67,7 +67,7 @@ export class SolidModelController {
     worldObject: THREE.Group,
     commandStack: CommandStack,
     selectionManager: SelectionManager,
-    panel: SolidModelPanel
+    panel: SolidModelPanel,
   ) {
     this.worldObject = worldObject;
     this.commandStack = commandStack;
@@ -96,9 +96,7 @@ export class SolidModelController {
    * Sets a callback that pushes live result geometry into viewport clones.
    * @param callback Receives updated result meshes after a live rebuild.
    */
-  setOnLiveGeometryUpdated(
-    callback: ((meshes: THREE.Mesh[]) => void) | null
-  ): void {
+  setOnLiveGeometryUpdated(callback: ((meshes: THREE.Mesh[]) => void) | null): void {
     this.onLiveGeometryUpdated = callback;
   }
 
@@ -155,9 +153,7 @@ export class SolidModelController {
    */
   createSolidModel(): void {
     this.solidModelCounter += 1;
-    const model = new SolidModel(
-      `SolidModel${this.padNumber(this.solidModelCounter)}`
-    );
+    const model = new SolidModel(`SolidModel${this.padNumber(this.solidModelCounter)}`);
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
     this.placeModelInScene(model, brush.mesh ?? model.root, `Created ${model.root.name}`);
   }
@@ -172,8 +168,7 @@ export class SolidModelController {
     const firstBrush = model.getBrushes()[0];
     const selectTarget = firstBrush?.mesh ?? model.root;
     const message =
-      statusMessage ??
-      `Imported ${model.root.name} (${model.getBrushCount()} brushes)`;
+      statusMessage ?? `Imported ${model.root.name} (${model.getBrushCount()} brushes)`;
     this.placeModelInScene(model, selectTarget, message);
   }
 
@@ -186,7 +181,7 @@ export class SolidModelController {
   private placeModelInScene(
     model: SolidModel,
     selectTarget: THREE.Object3D,
-    statusMessage: string
+    statusMessage: string,
   ): void {
     const command = new CreateSolidModelCommand(model, this.worldObject);
     this.commandStack.push(command);
@@ -218,12 +213,7 @@ export class SolidModelController {
       return;
     }
     const offset = this.computeNewBrushLocalPosition(model);
-    const command = new AddSolidBoxBrushCommand(
-      model,
-      2,
-      SolidOperation.Additive,
-      offset
-    );
+    const command = new AddSolidBoxBrushCommand(model, 2, SolidOperation.Additive, offset);
     this.commandStack.push(command);
     const brush = command.getCreatedBrush();
     if (brush?.mesh) {
@@ -240,10 +230,7 @@ export class SolidModelController {
    * @param meshes Brush preview meshes.
    * @param operation New operation.
    */
-  setBrushOperationForMeshes(
-    meshes: THREE.Mesh[],
-    operation: SolidOperation
-  ): void {
+  setBrushOperationForMeshes(meshes: THREE.Mesh[], operation: SolidOperation): void {
     if (meshes.length === 0) return;
     const command = new SetSolidBrushOperationCommand(meshes, operation);
     this.commandStack.push(command);
@@ -294,9 +281,7 @@ export class SolidModelController {
    * @param end Target end of the evaluation list.
    */
   moveBrushesInOrder(meshes: THREE.Mesh[], end: SolidBrushOrderEnd): void {
-    const brushMeshes = meshes.filter((mesh) =>
-      SolidBrushVisual.isBrushObject(mesh)
-    );
+    const brushMeshes = meshes.filter((mesh) => SolidBrushVisual.isBrushObject(mesh));
     if (brushMeshes.length === 0) return;
     const command = new ReorderSolidBrushesCommand(brushMeshes, end);
     this.commandStack.push(command);
@@ -304,9 +289,7 @@ export class SolidModelController {
     this.syncViewports?.();
     this.refreshOutliner?.();
     this.showStatus?.(
-      end === 'first'
-        ? 'Moved brush to first in CSG order'
-        : 'Moved brush to last in CSG order'
+      end === 'first' ? 'Moved brush to first in CSG order' : 'Moved brush to last in CSG order',
     );
   }
 
@@ -486,10 +469,7 @@ export class SolidModelController {
    * @param model Solid model.
    * @param selectedSet Selected meshes from the edit.
    */
-  private finalizeModelAfterTransform(
-    model: SolidModel,
-    selectedSet: Set<THREE.Mesh>
-  ): void {
+  private finalizeModelAfterTransform(model: SolidModel, selectedSet: Set<THREE.Mesh>): void {
     const result = model.getResultMesh();
     const resultSelected = selectedSet.has(result);
     const selectedBrushMeshes = model
@@ -564,12 +544,10 @@ export class SolidModelController {
     const resultMatrix = new THREE.Matrix4().compose(
       result.position.clone(),
       new THREE.Quaternion().setFromEuler(result.rotation),
-      result.scale.clone()
+      result.scale.clone(),
     );
     root.updateMatrix();
-    const combined = new THREE.Matrix4()
-      .copy(root.matrix)
-      .multiply(resultMatrix);
+    const combined = new THREE.Matrix4().copy(root.matrix).multiply(resultMatrix);
     const position = new THREE.Vector3();
     const quaternion = new THREE.Quaternion();
     const scale = new THREE.Vector3();

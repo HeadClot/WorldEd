@@ -61,14 +61,14 @@ export class GlbExporter {
   private executeExport(
     exportRoot: THREE.Group,
     resolve: (buffer: ArrayBuffer) => void,
-    reject: (error: Error) => void
+    reject: (error: Error) => void,
   ): void {
     const exporter = new GLTFExporter();
     exporter.parse(
       exportRoot,
       (result) => this.onExportSuccess(result, resolve),
       (error) => this.onExportError(error, reject),
-      { binary: true }
+      { binary: true },
     );
   }
 
@@ -79,7 +79,7 @@ export class GlbExporter {
    */
   private onExportSuccess(
     result: ArrayBuffer | object,
-    resolve: (buffer: ArrayBuffer) => void
+    resolve: (buffer: ArrayBuffer) => void,
   ): void {
     if (result instanceof ArrayBuffer) {
       resolve(result);
@@ -93,10 +93,7 @@ export class GlbExporter {
    * @param error The error thrown by GLTFExporter.
    * @param reject The promise reject function.
    */
-  private onExportError(
-    error: unknown,
-    reject: (error: Error) => void
-  ): void {
+  private onExportError(error: unknown, reject: (error: Error) => void): void {
     if (error instanceof Error) {
       reject(error);
       return;

@@ -112,7 +112,9 @@ export class InputManager {
    * @returns True if left or right control is held down.
    */
   isCtrlDown(): boolean {
-    return this.keyStates.get('ControlLeft') === true || this.keyStates.get('ControlRight') === true;
+    return (
+      this.keyStates.get('ControlLeft') === true || this.keyStates.get('ControlRight') === true
+    );
   }
 
   /**

@@ -9,7 +9,7 @@ import { CsgBspNode } from './csg_bsp_node.js';
 export enum CsgOperation {
   UNION = 'union',
   SUBTRACT = 'subtract',
-  INTERSECT = 'intersect'
+  INTERSECT = 'intersect',
 }
 
 /**
@@ -38,18 +38,14 @@ export class CsgBooleanOps {
     meshA: THREE.Mesh,
     meshB: THREE.Mesh,
     operation: CsgOperation,
-    resultName: string
+    resultName: string,
   ): THREE.Mesh | null {
     meshA.updateMatrixWorld(true);
     meshB.updateMatrixWorld(true);
     const polygonsA = this.meshBuilder.meshToPolygons(meshA);
     const polygonsB = this.meshBuilder.meshToPolygons(meshB);
     if (polygonsA.length === 0 || polygonsB.length === 0) return null;
-    const resultPolygons = this.computeResultPolygons(
-      polygonsA,
-      polygonsB,
-      operation
-    );
+    const resultPolygons = this.computeResultPolygons(polygonsA, polygonsB, operation);
     if (resultPolygons.length === 0) return null;
     const color = this.extractMeshColor(meshA);
     return this.meshBuilder.polygonsToMesh(resultPolygons, color, resultName);
@@ -65,7 +61,7 @@ export class CsgBooleanOps {
   private computeResultPolygons(
     polygonsA: CsgPolygon[],
     polygonsB: CsgPolygon[],
-    operation: CsgOperation
+    operation: CsgOperation,
   ): CsgPolygon[] {
     const a = new CsgBspNode(polygonsA.map((polygon) => polygon.clone()));
     const b = new CsgBspNode(polygonsB.map((polygon) => polygon.clone()));

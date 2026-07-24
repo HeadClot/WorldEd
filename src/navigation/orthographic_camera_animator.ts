@@ -49,7 +49,7 @@ export class OrthographicCameraAnimator {
   animateToFrustum(
     camera: THREE.OrthographicCamera,
     targetFrustum: FrustumPlanes,
-    config: CameraAnimationConfig
+    config: CameraAnimationConfig,
   ): boolean {
     this.camera = camera;
     this.startLeft = camera.left;

@@ -76,10 +76,7 @@ export function reparentSafely(child: THREE.Object3D, newParent: THREE.Object3D)
  * @param ancestor The potential ancestor object.
  * @returns True if candidate is a descendant of ancestor.
  */
-export function isDescendantOf(
-  candidate: THREE.Object3D,
-  ancestor: THREE.Object3D
-): boolean {
+export function isDescendantOf(candidate: THREE.Object3D, ancestor: THREE.Object3D): boolean {
   let current = candidate.parent;
   while (current) {
     if (current === ancestor) return true;
@@ -179,7 +176,7 @@ export function restoreObjectAtIndex(
   object: THREE.Object3D,
   parent: THREE.Object3D | null,
   index: number,
-  fallbackParent: THREE.Object3D
+  fallbackParent: THREE.Object3D,
 ): void {
   const targetParent = parent ?? fallbackParent;
   targetParent.add(object);

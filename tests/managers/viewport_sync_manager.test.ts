@@ -15,7 +15,7 @@ import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush
 function createViewport2DMock(scene: THREE.Scene): Viewport2D {
   return {
     getScene: () => scene,
-    setSelectableObjects: vi.fn()
+    setSelectableObjects: vi.fn(),
   } as unknown as Viewport2D;
 }
 
@@ -27,7 +27,7 @@ function createViewport2DMock(scene: THREE.Scene): Viewport2D {
 function createViewport3DMock(scene: THREE.Scene): Viewport3D {
   return {
     getScene: () => scene,
-    setSelectableObjects: vi.fn()
+    setSelectableObjects: vi.fn(),
   } as unknown as Viewport3D;
 }
 
@@ -36,9 +36,7 @@ function createViewport3DMock(scene: THREE.Scene): Viewport3D {
  * @param positions Array of position tuples for child meshes.
  * @returns The populated group.
  */
-function createWorldGroupWithChildren(
-  positions: [number, number, number][]
-): THREE.Group {
+function createWorldGroupWithChildren(positions: [number, number, number][]): THREE.Group {
   const group = new THREE.Group();
   positions.forEach(([x, y, z]) => {
     const geo = new THREE.BoxGeometry(1, 1, 1);
@@ -83,12 +81,7 @@ describe('ViewportSyncManager', () => {
     viewportFront = createViewport2DMock(sceneFront);
     viewportSide = createViewport2DMock(sceneSide);
     viewport3D = createViewport3DMock(scene3D);
-    syncManager = new ViewportSyncManager(
-      viewportTop,
-      viewportFront,
-      viewportSide,
-      viewport3D
-    );
+    syncManager = new ViewportSyncManager(viewportTop, viewportFront, viewportSide, viewport3D);
   });
 
   describe('syncWorldObjectToViewports', () => {
@@ -117,7 +110,7 @@ describe('ViewportSyncManager', () => {
     it('should mirror child positions from original to all 2D viewport clones', () => {
       const worldObject = createWorldGroupWithChildren([
         [1, 2, 3],
-        [4, 5, 6]
+        [4, 5, 6],
       ]);
       syncManager.syncWorldObjectToViewports(worldObject);
 
@@ -142,33 +135,25 @@ describe('ViewportSyncManager', () => {
       const worldObject = createWorldGroupWithChildren([[0, 0, 0]]);
       syncManager.syncWorldObjectToViewports(worldObject);
 
-      worldObject.children[0].quaternion.setFromAxisAngle(
-        new THREE.Vector3(0, 1, 0),
-        Math.PI / 4
-      );
+      worldObject.children[0].quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4);
       worldObject.children[0].scale.set(2, 3, 4);
       syncManager.syncClonePositionsToWorldObject(worldObject);
 
       const clone = findCloneGroup(sceneTop);
-      expect(clone.children[0].quaternion.x).toBeCloseTo(
-        worldObject.children[0].quaternion.x
-      );
-      expect(clone.children[0].quaternion.y).toBeCloseTo(
-        worldObject.children[0].quaternion.y
-      );
-      expect(clone.children[0].quaternion.z).toBeCloseTo(
-        worldObject.children[0].quaternion.z
-      );
-      expect(clone.children[0].quaternion.w).toBeCloseTo(
-        worldObject.children[0].quaternion.w
-      );
+      expect(clone.children[0].quaternion.x).toBeCloseTo(worldObject.children[0].quaternion.x);
+      expect(clone.children[0].quaternion.y).toBeCloseTo(worldObject.children[0].quaternion.y);
+      expect(clone.children[0].quaternion.z).toBeCloseTo(worldObject.children[0].quaternion.z);
+      expect(clone.children[0].quaternion.w).toBeCloseTo(worldObject.children[0].quaternion.w);
       expect(clone.children[0].scale.x).toBe(2);
       expect(clone.children[0].scale.y).toBe(3);
       expect(clone.children[0].scale.z).toBe(4);
     });
 
     it('should sync matching children when clone child counts differ', () => {
-      const worldObject = createWorldGroupWithChildren([[0, 0, 0], [1, 1, 1]]);
+      const worldObject = createWorldGroupWithChildren([
+        [0, 0, 0],
+        [1, 1, 1],
+      ]);
       syncManager.syncWorldObjectToViewports(worldObject);
       const clone = findCloneGroup(sceneTop);
       clone.remove(clone.children[1]);
@@ -190,19 +175,13 @@ describe('ViewportSyncManager', () => {
 
       worldObject.children[0].position.set(100, 200, 300);
 
-      expect(() =>
-        syncManager.syncClonePositionsToWorldObject(worldObject)
-      ).not.toThrow();
+      expect(() => syncManager.syncClonePositionsToWorldObject(worldObject)).not.toThrow();
       expect(findCloneGroup(sceneTop).children[0].position.x).toBe(100);
     });
 
     it('keeps solid brush edge wireframes visible in 2D after 3D edge culling', () => {
       const worldObject = new THREE.Group();
-      const brush = SolidBrushVisual.createBoxPreview(
-        'Brush',
-        2,
-        SolidOperation.Additive
-      );
+      const brush = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
       worldObject.add(brush);
       hideAllBrushEdges(brush);
       syncManager.syncWorldObjectToViewports(worldObject);
@@ -214,11 +193,7 @@ describe('ViewportSyncManager', () => {
 
     it('does not hide 2D brush edges when world edges stay culled during transform sync', () => {
       const worldObject = new THREE.Group();
-      const brush = SolidBrushVisual.createBoxPreview(
-        'Brush',
-        2,
-        SolidOperation.Additive
-      );
+      const brush = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
       worldObject.add(brush);
       syncManager.syncWorldObjectToViewports(worldObject);
       hideAllBrushEdges(brush);
@@ -233,11 +208,7 @@ describe('ViewportSyncManager', () => {
 
     it('disables depth testing on brush edges in every 2D clone including side', () => {
       const worldObject = new THREE.Group();
-      const brush = SolidBrushVisual.createBoxPreview(
-        'Brush',
-        2,
-        SolidOperation.Additive
-      );
+      const brush = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
       worldObject.add(brush);
       syncManager.syncWorldObjectToViewports(worldObject);
       const scenes = [sceneTop, sceneFront, sceneSide];
@@ -274,7 +245,6 @@ function hideAllBrushEdges(brush: THREE.Mesh): void {
 function collectBrushEdges(mesh: THREE.Mesh): THREE.LineSegments[] {
   return mesh.children.filter(
     (child): child is THREE.LineSegments =>
-      child instanceof THREE.LineSegments &&
-      child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true
+      child instanceof THREE.LineSegments && child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true,
   );
 }

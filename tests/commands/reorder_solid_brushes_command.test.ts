@@ -13,24 +13,12 @@ describe('ReorderSolidBrushesCommand', () => {
     const a = model.addBoxBrush(2, SolidOperation.Additive);
     const b = model.addBoxBrush(2, SolidOperation.Subtractive);
     const c = model.addBoxBrush(2, SolidOperation.Additive);
-    expect(model.getBrushes().map((brush) => brush.id)).toEqual([
-      a.id,
-      b.id,
-      c.id
-    ]);
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([a.id, b.id, c.id]);
     const stack = new CommandStack(8);
     stack.push(new ReorderSolidBrushesCommand([c.mesh!], 'first'));
-    expect(model.getBrushes().map((brush) => brush.id)).toEqual([
-      c.id,
-      a.id,
-      b.id
-    ]);
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([c.id, a.id, b.id]);
     stack.undo();
-    expect(model.getBrushes().map((brush) => brush.id)).toEqual([
-      a.id,
-      b.id,
-      c.id
-    ]);
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([a.id, b.id, c.id]);
   });
 
   it('moves a brush to last and preserves multi-select relative order', () => {
@@ -41,18 +29,8 @@ describe('ReorderSolidBrushesCommand', () => {
     const d = model.addBoxBrush(2, SolidOperation.Additive);
     const stack = new CommandStack(8);
     stack.push(new ReorderSolidBrushesCommand([a.mesh!, b.mesh!], 'last'));
-    expect(model.getBrushes().map((brush) => brush.id)).toEqual([
-      c.id,
-      d.id,
-      a.id,
-      b.id
-    ]);
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([c.id, d.id, a.id, b.id]);
     stack.undo();
-    expect(model.getBrushes().map((brush) => brush.id)).toEqual([
-      a.id,
-      b.id,
-      c.id,
-      d.id
-    ]);
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([a.id, b.id, c.id, d.id]);
   });
 });

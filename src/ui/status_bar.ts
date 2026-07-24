@@ -153,9 +153,9 @@ export class StatusBar {
   }
 
   /**
-    * Updates the last action feedback message.
-    * @param message The action message to display, or empty string to clear.
-    */
+   * Updates the last action feedback message.
+   * @param message The action message to display, or empty string to clear.
+   */
   setLastAction(message: string): void {
     if (this.isDisposed) return;
     this.lastActionText.textContent = message;
@@ -182,8 +182,8 @@ export class StatusBar {
   }
 
   /**
-    * Schedules clearing the error color after a short delay.
-    */
+   * Schedules clearing the error color after a short delay.
+   */
   private clearErrorColor(): void {
     setTimeout(() => {
       if (!this.isDisposed) {
@@ -216,7 +216,7 @@ export class StatusBar {
   }
 
   /**
-      * Returns the root DOM element of the status bar.
+   * Returns the root DOM element of the status bar.
    * @returns The container element.
    */
   getRootElement(): HTMLElement {

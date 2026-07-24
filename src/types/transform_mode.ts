@@ -6,7 +6,7 @@ export enum TransformMode {
   TRANSLATE = 'translate',
   ROTATE = 'rotate',
   SCALE = 'scale',
-  BOUNDS = 'bounds'
+  BOUNDS = 'bounds',
 }
 
 /**
@@ -19,5 +19,5 @@ export enum GizmoAxis {
   Z = 'z',
   XY_PLANE = 'xy_plane',
   YZ_PLANE = 'yz_plane',
-  XZ_PLANE = 'xz_plane'
+  XZ_PLANE = 'xz_plane',
 }

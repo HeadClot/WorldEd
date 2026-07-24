@@ -59,7 +59,12 @@ describe('GizmoRaycaster', () => {
     cameraAtOrigin.position.set(0, 0, 0);
     cameraAtOrigin.lookAt(1, 0, 0);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.projectMouseToPlane(cameraAtOrigin, mockRenderer, event, parallelPlane);
+    const result = raycaster.projectMouseToPlane(
+      cameraAtOrigin,
+      mockRenderer,
+      event,
+      parallelPlane,
+    );
     expect(result).toBeNull();
   });
 
@@ -83,7 +88,7 @@ describe('GizmoRaycaster', () => {
     cam.position.set(0, 0, 10);
     cam.lookAt(0, 0, 0);
     const mockCanvasWide = {
-      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
     };
     const mockRendererWide = { domElement: mockCanvasWide } as unknown as THREE.WebGLRenderer;
     const pivot = new THREE.Vector3(0, 0, 0);
@@ -107,7 +112,7 @@ describe('GizmoRaycaster', () => {
       setup.camera,
       setup.renderer,
       event,
-      setup.gizmoGroup
+      setup.gizmoGroup,
     );
     expect(result).toBeNull();
   });
@@ -122,7 +127,7 @@ describe('GizmoRaycaster', () => {
       setup.camera,
       setup.renderer,
       event,
-      setup.gizmoGroup
+      setup.gizmoGroup,
     );
     expect(result).toBe(setup.handles[0]);
   });
@@ -135,7 +140,7 @@ describe('GizmoRaycaster', () => {
       setup.camera,
       setup.renderer,
       event,
-      setup.gizmoGroup
+      setup.gizmoGroup,
     );
     expect(result).toBe(setup.handles[0]);
   });
@@ -152,10 +157,7 @@ function createPickableGizmoSetup(): {
   renderer: THREE.WebGLRenderer;
   gizmoGroup: THREE.Group;
 } {
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(2, 2, 2),
-    new THREE.MeshBasicMaterial()
-  );
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
   const handle = new GizmoHandle(GizmoAxis.X, 0xff0000, mesh);
   mesh.userData.handleId = handle.getHandleId();
   const gizmoGroup = new THREE.Group();
@@ -165,14 +167,14 @@ function createPickableGizmoSetup(): {
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld(true);
   const canvas = {
-    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
   };
   const renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
   return {
     handles: [handle],
     camera,
     renderer,
-    gizmoGroup
+    gizmoGroup,
   };
 }
 
@@ -189,14 +191,11 @@ function createFarHandleBehindFacePickSetup(): {
 } {
   const facePick = new THREE.Mesh(
     new THREE.PlaneGeometry(4, 4),
-    new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
   );
   facePick.position.set(0, 0, 1);
   facePick.userData.isBoundsFacePick = true;
-  const handleMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial()
-  );
+  const handleMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
   handleMesh.position.set(0, 0, -2);
   const handle = new GizmoHandle(GizmoAxis.Z, 0x00ff00, handleMesh);
   handleMesh.userData.handleId = handle.getHandleId();
@@ -210,13 +209,13 @@ function createFarHandleBehindFacePickSetup(): {
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld(true);
   const canvas = {
-    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
   };
   const renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
   return {
     handles: [handle],
     camera,
     renderer,
-    gizmoGroup
+    gizmoGroup,
   };
 }

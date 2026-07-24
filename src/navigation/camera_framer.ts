@@ -40,7 +40,7 @@ export class CameraFramer {
   computePerspectiveTarget(
     boundingSphere: THREE.Sphere,
     camera: THREE.PerspectiveCamera,
-    paddingFactor: number
+    paddingFactor: number,
   ): { targetPosition: THREE.Vector3; targetLookAt: THREE.Vector3 } {
     const targetLookAt = boundingSphere.center.clone();
     const scaledRadius = boundingSphere.radius * paddingFactor;
@@ -48,9 +48,7 @@ export class CameraFramer {
     const distance = scaledRadius / Math.sin(halfFov);
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
-    const targetPosition = targetLookAt.clone().sub(
-      forward.multiplyScalar(distance)
-    );
+    const targetPosition = targetLookAt.clone().sub(forward.multiplyScalar(distance));
     return { targetPosition, targetLookAt };
   }
 
@@ -66,7 +64,7 @@ export class CameraFramer {
   computeOrthographicTarget(
     boundingBox: THREE.Box3,
     camera: THREE.OrthographicCamera,
-    paddingFactor: number
+    paddingFactor: number,
   ): FrustumPlanes {
     camera.updateMatrixWorld(true);
     const extents = this.computeViewSpaceExtents(boundingBox, camera);
@@ -80,7 +78,7 @@ export class CameraFramer {
       left: extents.centerX - halfWidth,
       right: extents.centerX + halfWidth,
       top: extents.centerY + halfHeight,
-      bottom: extents.centerY - halfHeight
+      bottom: extents.centerY - halfHeight,
     };
   }
 
@@ -92,7 +90,7 @@ export class CameraFramer {
    */
   private computeViewSpaceExtents(
     boundingBox: THREE.Box3,
-    camera: THREE.OrthographicCamera
+    camera: THREE.OrthographicCamera,
   ): { centerX: number; centerY: number; width: number; height: number } {
     this.fillBoxCorners(boundingBox);
     const inverse = camera.matrixWorldInverse;
@@ -111,7 +109,7 @@ export class CameraFramer {
       centerX: (minX + maxX) * 0.5,
       centerY: (minY + maxY) * 0.5,
       width: maxX - minX,
-      height: maxY - minY
+      height: maxY - minY,
     };
   }
 
@@ -155,7 +153,7 @@ export class CameraFramer {
   private expandExtentsToAspect(
     contentWidth: number,
     contentHeight: number,
-    aspect: number
+    aspect: number,
   ): { halfWidth: number; halfHeight: number } {
     let halfWidth = contentWidth * 0.5;
     let halfHeight = contentHeight * 0.5;

@@ -1,13 +1,7 @@
 import * as THREE from 'three';
-import {
-  SolidSurfaceRegion,
-  SolidTriangleSource
-} from '../algorithm/surface_triangulator.js';
+import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';
 import { SolidBrushMeshChunk } from './solid_brush_mesh_chunk.js';
-import {
-  SolidBrushMeshRange,
-  SolidMeshUpdateRange
-} from './solid_brush_mesh_range.js';
+import { SolidBrushMeshRange, SolidMeshUpdateRange } from './solid_brush_mesh_range.js';
 import { SolidMeshChunkCache } from './solid_mesh_chunk_cache.js';
 
 /**
@@ -79,10 +73,7 @@ export class SolidResultBuffer {
    * @param brushIds Evaluation order.
    * @param chunkCache Per-brush chunks.
    */
-  rebuildFull(
-    brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache
-  ): void {
+  rebuildFull(brushIds: readonly string[], chunkCache: SolidMeshChunkCache): void {
     const chunks = this.collectOrderedChunks(brushIds, chunkCache);
     const vertexCount = this.sumVertexCount(chunks);
     this.allocateExact(vertexCount);
@@ -91,12 +82,7 @@ export class SolidResultBuffer {
     let triangleOffset = 0;
     for (const entry of chunks) {
       this.writeChunkAt(entry.chunk, vertexOffset);
-      this.recordRange(
-        entry.brushId,
-        vertexOffset,
-        entry.chunk,
-        triangleOffset
-      );
+      this.recordRange(entry.brushId, vertexOffset, entry.chunk, triangleOffset);
       this.appendRegions(entry.chunk, triangleOffset);
       vertexOffset += entry.chunk.vertexCount;
       triangleOffset += entry.chunk.triangleCount;
@@ -116,7 +102,7 @@ export class SolidResultBuffer {
   tryPatchDirty(
     dirtyBrushIds: readonly string[],
     brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache
+    chunkCache: SolidMeshChunkCache,
   ): boolean {
     if (!this.canPatchDirty(dirtyBrushIds, brushIds, chunkCache)) {
       return false;
@@ -145,14 +131,14 @@ export class SolidResultBuffer {
   tryRebuildFromFirstChanged(
     dirtyBrushIds: readonly string[],
     brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache
+    chunkCache: SolidMeshChunkCache,
   ): boolean {
     if (this.ranges.length === 0) return false;
     if (!this.orderMatches(brushIds)) return false;
     const firstChangedOrderIndex = this.findFirstLayoutChangeOrderIndex(
       dirtyBrushIds,
       brushIds,
-      chunkCache
+      chunkCache,
     );
     if (firstChangedOrderIndex < 0) return false;
     if (firstChangedOrderIndex === 0) return false;
@@ -177,12 +163,7 @@ export class SolidResultBuffer {
     let triangleOffset = prefixTriangleEnd;
     for (const entry of suffixChunks) {
       this.writeChunkAt(entry.chunk, vertexOffset);
-      this.recordRange(
-        entry.brushId,
-        vertexOffset,
-        entry.chunk,
-        triangleOffset
-      );
+      this.recordRange(entry.brushId, vertexOffset, entry.chunk, triangleOffset);
       this.appendRegions(entry.chunk, triangleOffset);
       vertexOffset += entry.chunk.vertexCount;
       triangleOffset += entry.chunk.triangleCount;
@@ -193,8 +174,8 @@ export class SolidResultBuffer {
         positionFloatStart: prefixVertexEnd * 3,
         positionFloatCount: suffixVertexCount * 3,
         uvFloatStart: prefixVertexEnd * 2,
-        uvFloatCount: suffixVertexCount * 2
-      }
+        uvFloatCount: suffixVertexCount * 2,
+      },
     ];
     this.partialWrite = false;
     return true;
@@ -271,7 +252,7 @@ export class SolidResultBuffer {
   private canPatchDirty(
     dirtyBrushIds: readonly string[],
     brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache
+    chunkCache: SolidMeshChunkCache,
   ): boolean {
     if (this.ranges.length === 0) return false;
     if (!this.orderMatches(brushIds)) return false;
@@ -292,7 +273,7 @@ export class SolidResultBuffer {
   private findFirstLayoutChangeOrderIndex(
     dirtyBrushIds: readonly string[],
     brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache
+    chunkCache: SolidMeshChunkCache,
   ): number {
     const dirtySet = new Set(dirtyBrushIds);
     for (let orderIndex = 0; orderIndex < brushIds.length; orderIndex++) {
@@ -307,10 +288,7 @@ export class SolidResultBuffer {
         if (dirtySet.has(brushId)) return orderIndex;
         return orderIndex;
       }
-      if (
-        chunk.vertexCount !== range.vertexCount ||
-        chunk.triangleCount !== range.triangleCount
-      ) {
+      if (chunk.vertexCount !== range.vertexCount || chunk.triangleCount !== range.triangleCount) {
         return orderIndex;
       }
     }
@@ -348,19 +326,14 @@ export class SolidResultBuffer {
    * @param prefixBrushIds Brush ids to keep.
    * @param prefixTriangleEnd Triangle count of the prefix.
    */
-  private trimLayoutToPrefix(
-    prefixBrushIds: readonly string[],
-    prefixTriangleEnd: number
-  ): void {
+  private trimLayoutToPrefix(prefixBrushIds: readonly string[], prefixTriangleEnd: number): void {
     const keep = new Set(prefixBrushIds);
     this.ranges = this.ranges.filter((range) => keep.has(range.brushId));
     this.rangeByBrushId.clear();
     for (const range of this.ranges) {
       this.rangeByBrushId.set(range.brushId, range);
     }
-    this.surfaceRegions = this.surfaceRegions.filter((region) =>
-      keep.has(region.brushId)
-    );
+    this.surfaceRegions = this.surfaceRegions.filter((region) => keep.has(region.brushId));
     this.triangleSources = this.triangleSources.slice(0, prefixTriangleEnd);
   }
 
@@ -370,17 +343,11 @@ export class SolidResultBuffer {
    * @param chunkCache Chunk cache.
    * @returns True when vertex and triangle counts match.
    */
-  private dirtyBrushFitsRange(
-    brushId: string,
-    chunkCache: SolidMeshChunkCache
-  ): boolean {
+  private dirtyBrushFitsRange(brushId: string, chunkCache: SolidMeshChunkCache): boolean {
     const range = this.rangeByBrushId.get(brushId);
     const chunk = chunkCache.get(brushId);
     if (!range || !chunk) return false;
-    return (
-      chunk.vertexCount === range.vertexCount &&
-      chunk.triangleCount === range.triangleCount
-    );
+    return chunk.vertexCount === range.vertexCount && chunk.triangleCount === range.triangleCount;
   }
 
   /**
@@ -404,7 +371,7 @@ export class SolidResultBuffer {
    */
   private collectOrderedChunks(
     brushIds: readonly string[],
-    chunkCache: SolidMeshChunkCache
+    chunkCache: SolidMeshChunkCache,
   ): Array<{ brushId: string; chunk: SolidBrushMeshChunk }> {
     const result: Array<{ brushId: string; chunk: SolidBrushMeshChunk }> = [];
     for (const brushId of brushIds) {
@@ -420,9 +387,7 @@ export class SolidResultBuffer {
    * @param chunks Chunk entries.
    * @returns Total vertex count.
    */
-  private sumVertexCount(
-    chunks: Array<{ chunk: SolidBrushMeshChunk }>
-  ): number {
+  private sumVertexCount(chunks: Array<{ chunk: SolidBrushMeshChunk }>): number {
     let vertexCount = 0;
     for (const entry of chunks) {
       vertexCount += entry.chunk.vertexCount;
@@ -472,14 +437,14 @@ export class SolidResultBuffer {
     brushId: string,
     vertexOffset: number,
     chunk: SolidBrushMeshChunk,
-    triangleOffset: number
+    triangleOffset: number,
   ): void {
     const range: SolidBrushMeshRange = {
       brushId,
       vertexStart: vertexOffset,
       vertexCount: chunk.vertexCount,
       triangleStart: triangleOffset,
-      triangleCount: chunk.triangleCount
+      triangleCount: chunk.triangleCount,
     };
     this.ranges.push(range);
     this.rangeByBrushId.set(brushId, range);
@@ -495,7 +460,7 @@ export class SolidResultBuffer {
       positionFloatStart: range.vertexStart * 3,
       positionFloatCount: range.vertexCount * 3,
       uvFloatStart: range.vertexStart * 2,
-      uvFloatCount: range.vertexCount * 2
+      uvFloatCount: range.vertexCount * 2,
     };
   }
 
@@ -504,18 +469,13 @@ export class SolidResultBuffer {
    * @param chunk Source chunk.
    * @param triangleOffset Global triangle base.
    */
-  private appendRegions(
-    chunk: SolidBrushMeshChunk,
-    triangleOffset: number
-  ): void {
+  private appendRegions(chunk: SolidBrushMeshChunk, triangleOffset: number): void {
     for (const region of chunk.regions) {
       this.surfaceRegions.push({
-        triangleIndices: region.triangleIndices.map(
-          (localIndex) => localIndex + triangleOffset
-        ),
+        triangleIndices: region.triangleIndices.map((localIndex) => localIndex + triangleOffset),
         textureId: region.textureId,
         brushId: region.brushId,
-        surfaceIndex: region.surfaceIndex
+        surfaceIndex: region.surfaceIndex,
       });
     }
     for (const source of chunk.triangleSources) {
@@ -528,26 +488,17 @@ export class SolidResultBuffer {
    * @param range Brush range in the combined mesh.
    * @param chunk Updated chunk.
    */
-  private replaceBrushRegions(
-    range: SolidBrushMeshRange,
-    chunk: SolidBrushMeshChunk
-  ): void {
-    this.surfaceRegions = this.surfaceRegions.filter(
-      (region) => region.brushId !== range.brushId
-    );
-    this.triangleSources.splice(
-      range.triangleStart,
-      range.triangleCount,
-      ...chunk.triangleSources
-    );
+  private replaceBrushRegions(range: SolidBrushMeshRange, chunk: SolidBrushMeshChunk): void {
+    this.surfaceRegions = this.surfaceRegions.filter((region) => region.brushId !== range.brushId);
+    this.triangleSources.splice(range.triangleStart, range.triangleCount, ...chunk.triangleSources);
     for (const region of chunk.regions) {
       this.surfaceRegions.push({
         triangleIndices: region.triangleIndices.map(
-          (localIndex) => localIndex + range.triangleStart
+          (localIndex) => localIndex + range.triangleStart,
         ),
         textureId: region.textureId,
         brushId: region.brushId,
-        surfaceIndex: region.surfaceIndex
+        surfaceIndex: region.surfaceIndex,
       });
     }
   }
@@ -558,10 +509,7 @@ export class SolidResultBuffer {
    * @param vertexCount Combined vertex count.
    * @returns True when upload finished without rebinding attributes.
    */
-  private tryUploadSharedOrInPlace(
-    geometry: THREE.BufferGeometry,
-    vertexCount: number
-  ): boolean {
+  private tryUploadSharedOrInPlace(geometry: THREE.BufferGeometry, vertexCount: number): boolean {
     const position = geometry.getAttribute('position');
     const normal = geometry.getAttribute('normal');
     const uv = geometry.getAttribute('uv');
@@ -588,7 +536,7 @@ export class SolidResultBuffer {
   private copyBuffersIntoAttributes(
     position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
     normal: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-    uv: THREE.BufferAttribute | THREE.InterleavedBufferAttribute
+    uv: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   ): void {
     const posArray = position.array as Float32Array;
     const normArray = normal.array as Float32Array;
@@ -603,23 +551,20 @@ export class SolidResultBuffer {
       posArray.set(
         this.positions.subarray(
           range.positionFloatStart,
-          range.positionFloatStart + range.positionFloatCount
+          range.positionFloatStart + range.positionFloatCount,
         ),
-        range.positionFloatStart
+        range.positionFloatStart,
       );
       normArray.set(
         this.normals.subarray(
           range.positionFloatStart,
-          range.positionFloatStart + range.positionFloatCount
+          range.positionFloatStart + range.positionFloatCount,
         ),
-        range.positionFloatStart
+        range.positionFloatStart,
       );
       uvArray.set(
-        this.uvs.subarray(
-          range.uvFloatStart,
-          range.uvFloatStart + range.uvFloatCount
-        ),
-        range.uvFloatStart
+        this.uvs.subarray(range.uvFloatStart, range.uvFloatStart + range.uvFloatCount),
+        range.uvFloatStart,
       );
     }
   }
@@ -633,7 +578,7 @@ export class SolidResultBuffer {
   private markAttributesDirty(
     position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
     normal: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-    uv: THREE.BufferAttribute | THREE.InterleavedBufferAttribute
+    uv: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   ): void {
     if (!this.partialWrite || this.lastUpdateRanges.length === 0) {
       position.needsUpdate = true;
@@ -645,16 +590,8 @@ export class SolidResultBuffer {
     this.clearUpdateRanges(normal);
     this.clearUpdateRanges(uv);
     for (const range of this.lastUpdateRanges) {
-      this.addUpdateRange(
-        position,
-        range.positionFloatStart,
-        range.positionFloatCount
-      );
-      this.addUpdateRange(
-        normal,
-        range.positionFloatStart,
-        range.positionFloatCount
-      );
+      this.addUpdateRange(position, range.positionFloatStart, range.positionFloatCount);
+      this.addUpdateRange(normal, range.positionFloatStart, range.positionFloatCount);
       this.addUpdateRange(uv, range.uvFloatStart, range.uvFloatCount);
     }
     position.needsUpdate = true;
@@ -667,7 +604,7 @@ export class SolidResultBuffer {
    * @param attribute Geometry attribute.
    */
   private clearUpdateRanges(
-    attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute
+    attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   ): void {
     const buffered = attribute as THREE.BufferAttribute & {
       clearUpdateRanges?: () => void;
@@ -684,7 +621,7 @@ export class SolidResultBuffer {
   private addUpdateRange(
     attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
     start: number,
-    count: number
+    count: number,
   ): void {
     const buffered = attribute as THREE.BufferAttribute & {
       addUpdateRange?: (start: number, count: number) => void;
@@ -697,14 +634,8 @@ export class SolidResultBuffer {
    * @param geometry Target geometry.
    */
   private bindFreshAttributes(geometry: THREE.BufferGeometry): void {
-    geometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(this.positions, 3)
-    );
-    geometry.setAttribute(
-      'normal',
-      new THREE.BufferAttribute(this.normals, 3)
-    );
+    geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(this.normals, 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(this.uvs, 2));
   }
 
@@ -713,17 +644,8 @@ export class SolidResultBuffer {
    * @param geometry Target geometry.
    */
   private writeEmptyAttributes(geometry: THREE.BufferGeometry): void {
-    geometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(new Float32Array(0), 3)
-    );
-    geometry.setAttribute(
-      'normal',
-      new THREE.BufferAttribute(new Float32Array(0), 3)
-    );
-    geometry.setAttribute(
-      'uv',
-      new THREE.BufferAttribute(new Float32Array(0), 2)
-    );
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(0), 3));
+    geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(0), 2));
   }
 }

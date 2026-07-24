@@ -42,8 +42,7 @@ export class FileSystemAccessDirectoryAccess implements LocalDirectoryAccess {
    * @returns True in supporting browsers.
    */
   isSupported(): boolean {
-    return typeof window !== 'undefined'
-      && typeof window.showDirectoryPicker === 'function';
+    return typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function';
   }
 
   /**
@@ -147,13 +146,11 @@ export class BrowserLocalDirectoryAccess implements LocalDirectoryAccess {
  */
 export async function collectFilesFromDirectoryHandle(
   directoryHandle: FileSystemDirectoryHandle,
-  pathPrefix: string
+  pathPrefix: string,
 ): Promise<PickedDirectoryFile[]> {
   const results: PickedDirectoryFile[] = [];
   for await (const handle of directoryHandle.values()) {
-    const relativePath = pathPrefix
-      ? `${pathPrefix}/${handle.name}`
-      : handle.name;
+    const relativePath = pathPrefix ? `${pathPrefix}/${handle.name}` : handle.name;
     if (handle.kind === 'file') {
       const fileHandle = handle as FileSystemFileHandle;
       const file = await fileHandle.getFile();
@@ -163,7 +160,7 @@ export async function collectFilesFromDirectoryHandle(
     if (handle.kind === 'directory') {
       const nested = await collectFilesFromDirectoryHandle(
         handle as FileSystemDirectoryHandle,
-        relativePath
+        relativePath,
       );
       results.push(...nested);
     }
@@ -176,9 +173,7 @@ export async function collectFilesFromDirectoryHandle(
  * @param fileList Selected files, or null.
  * @returns Listing with folder name derived from the first path, or null.
  */
-export function buildListingFromFileList(
-  fileList: FileList | null
-): PickedDirectoryListing | null {
+export function buildListingFromFileList(fileList: FileList | null): PickedDirectoryListing | null {
   if (!fileList || fileList.length === 0) return null;
   const files: PickedDirectoryFile[] = [];
   for (let index = 0; index < fileList.length; index++) {
@@ -190,7 +185,7 @@ export function buildListingFromFileList(
   if (files.length === 0) return null;
   return {
     folderName: extractRootFolderName(files[0].relativePath),
-    files
+    files,
   };
 }
 
@@ -200,8 +195,7 @@ export function buildListingFromFileList(
  * @returns Relative path string.
  */
 function resolveRelativePath(file: File): string {
-  const relative = (file as File & { webkitRelativePath?: string })
-    .webkitRelativePath;
+  const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
   if (relative && relative.length > 0) return relative;
   return file.name;
 }

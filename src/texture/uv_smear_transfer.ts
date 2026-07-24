@@ -2,18 +2,18 @@ import * as THREE from 'three';
 import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from './face_texture_mapping.js';
 import {
   ProjectionBasis,
   buildProjectionBasis,
   computeRegionWorldNormal,
   projectWorldPositionToUv,
-  resolveProjectionNormal
+  resolveProjectionNormal,
 } from './planar_uv_projector.js';
 import {
   getTriangleVertexIndices,
-  getVertexPosition
+  getVertexPosition,
 } from '../selection/triangle_geometry_utils.js';
 
 /** Edge coincidence tolerance in world units. */
@@ -45,7 +45,7 @@ export function transferUvMappingAcrossFaces(
   sourceTriangles: number[],
   sourceMapping: FaceTextureMapping,
   destMesh: THREE.Mesh,
-  destTriangles: number[]
+  destTriangles: number[],
 ): FaceTextureMapping {
   sourceMesh.updateMatrixWorld(true);
   destMesh.updateMatrixWorld(true);
@@ -57,7 +57,7 @@ export function transferUvMappingAcrossFaces(
     sourceNormal,
     destMesh,
     destTriangles,
-    destNormal
+    destNormal,
   );
   const sourceBasis = buildSourceBasis(sourceNormal, sourceMapping);
   const uvA = projectWorldPositionToUv(points.pointA, sourceBasis, sourceMapping);
@@ -69,7 +69,7 @@ export function transferUvMappingAcrossFaces(
     points.pointB,
     uvA,
     uvB,
-    points.flipU
+    points.flipU,
   );
 }
 
@@ -90,19 +90,14 @@ function resolveAlignmentWorldPoints(
   sourceNormal: THREE.Vector3,
   destMesh: THREE.Mesh,
   destTriangles: number[],
-  destNormal: THREE.Vector3
+  destNormal: THREE.Vector3,
 ): { pointA: THREE.Vector3; pointB: THREE.Vector3; flipU: boolean } {
-  const shared = findSharedWorldEdge(
-    sourceMesh,
-    sourceTriangles,
-    destMesh,
-    destTriangles
-  );
+  const shared = findSharedWorldEdge(sourceMesh, sourceTriangles, destMesh, destTriangles);
   if (shared) {
     return {
       pointA: shared.a,
       pointB: shared.b,
-      flipU: sourceNormal.dot(destNormal) < 0
+      flipU: sourceNormal.dot(destNormal) < 0,
     };
   }
   return buildPlaneAlignmentPoints(sourceMesh, sourceTriangles, sourceNormal, destNormal);
@@ -120,7 +115,7 @@ function findSharedWorldEdge(
   sourceMesh: THREE.Mesh,
   sourceTriangles: number[],
   destMesh: THREE.Mesh,
-  destTriangles: number[]
+  destTriangles: number[],
 ): WorldEdge | null {
   const sourceEdges = collectRegionWorldEdges(sourceMesh, sourceTriangles);
   const destEdges = collectRegionWorldEdges(destMesh, destTriangles);
@@ -139,10 +134,7 @@ function findSharedWorldEdge(
  * @param triangleIndices Region triangles.
  * @returns Edge list.
  */
-function collectRegionWorldEdges(
-  mesh: THREE.Mesh,
-  triangleIndices: number[]
-): WorldEdge[] {
+function collectRegionWorldEdges(mesh: THREE.Mesh, triangleIndices: number[]): WorldEdge[] {
   const edges: WorldEdge[] = [];
   const seen = new Set<string>();
   const position = mesh.geometry.getAttribute('position');
@@ -170,7 +162,7 @@ function pushUniqueEdge(
   edges: WorldEdge[],
   seen: Set<string>,
   a: THREE.Vector3,
-  b: THREE.Vector3
+  b: THREE.Vector3,
 ): void {
   const key = edgeKey(a, b);
   if (seen.has(key)) return;
@@ -197,16 +189,10 @@ function edgeKey(a: THREE.Vector3, b: THREE.Vector3): string {
  * @returns Canonical edge, or null.
  */
 function matchEdges(edgeA: WorldEdge, edgeB: WorldEdge): WorldEdge | null {
-  if (
-    pointsNear(edgeA.a, edgeB.a) &&
-    pointsNear(edgeA.b, edgeB.b)
-  ) {
+  if (pointsNear(edgeA.a, edgeB.a) && pointsNear(edgeA.b, edgeB.b)) {
     return { a: edgeA.a.clone(), b: edgeA.b.clone() };
   }
-  if (
-    pointsNear(edgeA.a, edgeB.b) &&
-    pointsNear(edgeA.b, edgeB.a)
-  ) {
+  if (pointsNear(edgeA.a, edgeB.b) && pointsNear(edgeA.b, edgeB.a)) {
     return { a: edgeA.a.clone(), b: edgeA.b.clone() };
   }
   return null;
@@ -234,7 +220,7 @@ function buildPlaneAlignmentPoints(
   sourceMesh: THREE.Mesh,
   sourceTriangles: number[],
   sourceNormal: THREE.Vector3,
-  destNormal: THREE.Vector3
+  destNormal: THREE.Vector3,
 ): { pointA: THREE.Vector3; pointB: THREE.Vector3; flipU: boolean } {
   const pointOnSource = computeRegionWorldCentroid(sourceMesh, sourceTriangles);
   const edgeDirection = new THREE.Vector3().crossVectors(sourceNormal, destNormal);
@@ -258,10 +244,7 @@ function buildPlaneAlignmentPoints(
  * @returns Unit tangent.
  */
 function pickStableTangent(normal: THREE.Vector3): THREE.Vector3 {
-  const helper =
-    Math.abs(normal.y) < 0.9
-      ? new THREE.Vector3(0, 1, 0)
-      : new THREE.Vector3(1, 0, 0);
+  const helper = Math.abs(normal.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
   return new THREE.Vector3().crossVectors(normal, helper).normalize();
 }
 
@@ -271,10 +254,7 @@ function pickStableTangent(normal: THREE.Vector3): THREE.Vector3 {
  * @param triangleIndices Region triangles.
  * @returns World centroid.
  */
-function computeRegionWorldCentroid(
-  mesh: THREE.Mesh,
-  triangleIndices: number[]
-): THREE.Vector3 {
+function computeRegionWorldCentroid(mesh: THREE.Mesh, triangleIndices: number[]): THREE.Vector3 {
   const position = mesh.geometry.getAttribute('position');
   const accumulator = new THREE.Vector3();
   let count = 0;
@@ -296,10 +276,7 @@ function computeRegionWorldCentroid(
  * @param mapping Source mapping.
  * @returns Projection basis.
  */
-function buildSourceBasis(
-  faceNormal: THREE.Vector3,
-  mapping: FaceTextureMapping
-): ProjectionBasis {
+function buildSourceBasis(faceNormal: THREE.Vector3, mapping: FaceTextureMapping): ProjectionBasis {
   const projectionNormal = resolveProjectionNormal(faceNormal, mapping.align);
   return buildProjectionBasis(projectionNormal, mapping.rotationDeg);
 }
@@ -322,7 +299,7 @@ function solveDestinationMapping(
   pointB: THREE.Vector3,
   uvA: { u: number; v: number },
   uvB: { u: number; v: number },
-  flipU: boolean
+  flipU: boolean,
 ): FaceTextureMapping {
   const mapping = createDefaultFaceTextureMapping(sourceMapping.textureId);
   mapping.align = 'face';
@@ -333,14 +310,7 @@ function solveDestinationMapping(
   mapping.offsetV = 0;
   const projectionNormal = resolveProjectionNormal(destNormal, 'face');
   applyOffsetToMatchPoint(mapping, projectionNormal, pointA, uvA);
-  const rotationDeg = measureRequiredRotation(
-    mapping,
-    projectionNormal,
-    pointA,
-    pointB,
-    uvA,
-    uvB
-  );
+  const rotationDeg = measureRequiredRotation(mapping, projectionNormal, pointA, pointB, uvA, uvB);
   mapping.rotationDeg = rotationDeg;
   applyOffsetToMatchPoint(mapping, projectionNormal, pointA, uvA);
   return mapping;
@@ -357,7 +327,7 @@ function applyOffsetToMatchPoint(
   mapping: FaceTextureMapping,
   projectionNormal: THREE.Vector3,
   worldPoint: THREE.Vector3,
-  targetUv: { u: number; v: number }
+  targetUv: { u: number; v: number },
 ): void {
   const basis = buildProjectionBasis(projectionNormal, mapping.rotationDeg);
   const scaleU = mapping.scaleU === 0 ? 1 : mapping.scaleU;
@@ -384,7 +354,7 @@ function measureRequiredRotation(
   pointA: THREE.Vector3,
   pointB: THREE.Vector3,
   uvA: { u: number; v: number },
-  uvB: { u: number; v: number }
+  uvB: { u: number; v: number },
 ): number {
   const basis = buildProjectionBasis(projectionNormal, mapping.rotationDeg);
   const destA = projectWorldPositionToUv(pointA, basis, mapping);
@@ -399,11 +369,11 @@ function measureRequiredRotation(
   // Angle that rotates destDir onto sourceDir in UV space.
   const angleRad = Math.atan2(
     destDir.x * sourceDir.y - destDir.y * sourceDir.x,
-    destDir.x * sourceDir.x + destDir.y * sourceDir.y
+    destDir.x * sourceDir.x + destDir.y * sourceDir.y,
   );
   // Rotating the projection basis by θ rotates UV samples by -θ, so invert.
   let angleDeg = -THREE.MathUtils.radToDeg(angleRad);
-  if ((mapping.scaleU < 0) !== (mapping.scaleV < 0)) {
+  if (mapping.scaleU < 0 !== mapping.scaleV < 0) {
     angleDeg = -angleDeg;
   }
   return angleDeg;
@@ -414,8 +384,6 @@ function measureRequiredRotation(
  * @param mapping Source mapping.
  * @returns Independent copy.
  */
-export function cloneSmearSourceMapping(
-  mapping: FaceTextureMapping
-): FaceTextureMapping {
+export function cloneSmearSourceMapping(mapping: FaceTextureMapping): FaceTextureMapping {
   return cloneFaceTextureMapping(mapping);
 }

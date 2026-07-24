@@ -19,7 +19,6 @@ export interface ObjectIcon {
  * Provides consistent visual identification of object categories.
  */
 export class ObjectIconFactory {
-
   /**
    * Returns the icon configuration for a given Three.js object.
    * @param obj The Three.js object to get the icon for.

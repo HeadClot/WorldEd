@@ -23,9 +23,7 @@ export interface WebGLContextCreationError {
  * Callback invoked when a monitored canvas changes WebGL context state.
  * @param change Context owner and new state.
  */
-export type WebGLContextStateChangeHandler = (
-  change: WebGLContextStateChange
-) => void;
+export type WebGLContextStateChangeHandler = (change: WebGLContextStateChange) => void;
 
 /**
  * Installs context-loss and context-restored diagnostics on a canvas.
@@ -36,7 +34,7 @@ export type WebGLContextStateChangeHandler = (
 export function attachWebGLContextDiagnostics(
   canvas: HTMLCanvasElement,
   ownerName: string,
-  onStateChange: WebGLContextStateChangeHandler = logWebGLContextStateChange
+  onStateChange: WebGLContextStateChangeHandler = logWebGLContextStateChange,
 ): void {
   canvas.addEventListener('webglcontextlost', (event) => {
     event.preventDefault();
@@ -60,18 +58,18 @@ export function attachWebGLContextDiagnostics(
  */
 function getWebGLContextCreationStatus(event: Event): string {
   const contextEvent = event as WebGLContextEvent;
-  return contextEvent.statusMessage?.trim() || 'The desktop backend did not provide a status message.';
+  return (
+    contextEvent.statusMessage?.trim() || 'The desktop backend did not provide a status message.'
+  );
 }
 
 /**
  * Logs a WebGL context creation failure with desktop troubleshooting context.
  * @param error Context owner and browser-provided failure status.
  */
-function logWebGLContextCreationError(
-  error: WebGLContextCreationError
-): void {
+function logWebGLContextCreationError(error: WebGLContextCreationError): void {
   console.error(
-    `[AiWorldEd] WebGL context creation failed for ${error.ownerName}: ${error.statusMessage}. Check WebGL2 support, GPU drivers, and desktop hardware acceleration.`
+    `[AiWorldEd] WebGL context creation failed for ${error.ownerName}: ${error.statusMessage}. Check WebGL2 support, GPU drivers, and desktop hardware acceleration.`,
   );
 }
 

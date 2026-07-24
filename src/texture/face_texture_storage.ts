@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {
   FACE_TEXTURE_MAPS_USERDATA_KEY,
   FaceTextureMapEntry,
-  cloneFaceTextureMapEntry
+  cloneFaceTextureMapEntry,
 } from './face_texture_mapping.js';
 
 /**
@@ -21,12 +21,9 @@ export function getFaceTextureMaps(mesh: THREE.Mesh): FaceTextureMapEntry[] {
  * @param mesh Target mesh.
  * @param entries Mapping table to store (cloned).
  */
-export function setFaceTextureMaps(
-  mesh: THREE.Mesh,
-  entries: FaceTextureMapEntry[]
-): void {
+export function setFaceTextureMaps(mesh: THREE.Mesh, entries: FaceTextureMapEntry[]): void {
   mesh.userData[FACE_TEXTURE_MAPS_USERDATA_KEY] = entries.map((entry) =>
-    cloneFaceTextureMapEntry(entry)
+    cloneFaceTextureMapEntry(entry),
   );
 }
 
@@ -37,10 +34,7 @@ export function setFaceTextureMaps(
  * @param mesh Target mesh.
  * @param entries Mapping table to store by reference.
  */
-export function setFaceTextureMapsShared(
-  mesh: THREE.Mesh,
-  entries: FaceTextureMapEntry[]
-): void {
+export function setFaceTextureMapsShared(mesh: THREE.Mesh, entries: FaceTextureMapEntry[]): void {
   mesh.userData[FACE_TEXTURE_MAPS_USERDATA_KEY] = entries;
 }
 
@@ -61,7 +55,7 @@ export function clearFaceTextureMaps(mesh: THREE.Mesh): void {
 export function upsertFaceTextureMap(
   mesh: THREE.Mesh,
   triangleIndices: number[],
-  mapping: FaceTextureMapEntry['mapping']
+  mapping: FaceTextureMapEntry['mapping'],
 ): void {
   const sorted = triangleIndices.slice().sort((a, b) => a - b);
   const indexSet = new Set(sorted);
@@ -70,7 +64,7 @@ export function upsertFaceTextureMap(
   });
   existing.push({
     triangleIndices: sorted,
-    mapping: { ...mapping }
+    mapping: { ...mapping },
   });
   setFaceTextureMaps(mesh, existing);
 }

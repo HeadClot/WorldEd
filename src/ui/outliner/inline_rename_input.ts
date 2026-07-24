@@ -29,11 +29,7 @@ export class InlineRenameInput {
    * @param textSpan The span element displaying the current name.
    * @param originalText The current name of the object.
    */
-  constructor(
-    parentElement: HTMLElement,
-    textSpan: HTMLSpanElement,
-    originalText: string
-  ) {
+  constructor(parentElement: HTMLElement, textSpan: HTMLSpanElement, originalText: string) {
     this.parentElement = parentElement;
     this.textSpan = textSpan;
     this.originalText = originalText;

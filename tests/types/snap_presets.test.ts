@@ -21,20 +21,7 @@ describe('SNAP_PRESETS', () => {
   });
 
   it('should contain only power-of-two values', () => {
-    const expected = [
-      0.03125,
-      0.0625,
-      0.125,
-      0.25,
-      0.5,
-      1.0,
-      2.0,
-      4.0,
-      8.0,
-      16.0,
-      32.0,
-      64.0
-    ];
+    const expected = [0.03125, 0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0];
     expect(SNAP_PRESETS).toEqual(expected);
   });
 

@@ -43,9 +43,9 @@ describe('InfiniteGrid3D', () => {
   it('should not leave a gap in X-lines under the camera patch center', () => {
     camera.position.set(10.3, 5, 20.7);
     grid.update(camera);
-    const positions = (
-      grid.getObject().children[0] as THREE.LineSegments
-    ).geometry.getAttribute('position') as THREE.BufferAttribute;
+    const positions = (grid.getObject().children[0] as THREE.LineSegments).geometry.getAttribute(
+      'position',
+    ) as THREE.BufferAttribute;
     const centerX = 10;
     const centerZ = 20;
     let crossesPatchCenter = false;
@@ -78,9 +78,9 @@ describe('InfiniteGrid3D', () => {
     grid.setCellSize(0.25);
     camera.position.set(0.1, 10, 0.1);
     grid.update(camera);
-    const positions = (
-      grid.getObject().children[0] as THREE.LineSegments
-    ).geometry.getAttribute('position') as THREE.BufferAttribute;
+    const positions = (grid.getObject().children[0] as THREE.LineSegments).geometry.getAttribute(
+      'position',
+    ) as THREE.BufferAttribute;
     const xLines = new Set<number>();
     for (let i = 0; i < positions.count; i += 2) {
       const ax = positions.getX(i);
@@ -100,9 +100,9 @@ describe('InfiniteGrid3D', () => {
     grid.setCellSize(1);
     camera.position.set(0, 10, 0);
     grid.update(camera);
-    const colors = (
-      grid.getObject().children[0] as THREE.LineSegments
-    ).geometry.getAttribute('color') as THREE.BufferAttribute;
+    const colors = (grid.getObject().children[0] as THREE.LineSegments).geometry.getAttribute(
+      'color',
+    ) as THREE.BufferAttribute;
     let minLuma = Infinity;
     let maxLuma = -Infinity;
     for (let i = 0; i < colors.count; i++) {
@@ -127,7 +127,6 @@ describe('InfiniteGrid3D', () => {
     expect(lumaAtOriginA).toBeGreaterThan(lumaAtOffsetA);
     expect(lumaAtOriginB).toBeGreaterThan(lumaAtOffsetB);
   });
-
 });
 
 /**
@@ -159,9 +158,9 @@ describe('InfiniteGrid3D fade', () => {
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     camera.position.set(0, 5, 0);
     grid.update(camera);
-    const colors = (
-      grid.getObject().children[0] as THREE.LineSegments
-    ).geometry.getAttribute('color') as THREE.BufferAttribute;
+    const colors = (grid.getObject().children[0] as THREE.LineSegments).geometry.getAttribute(
+      'color',
+    ) as THREE.BufferAttribute;
     const bg = new THREE.Color(0x232323);
     let matchedBackground = false;
     for (let i = 0; i < colors.count; i++) {

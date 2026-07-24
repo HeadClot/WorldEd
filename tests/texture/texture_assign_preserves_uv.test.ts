@@ -3,18 +3,18 @@ import * as THREE from 'three';
 import {
   applyTextureIdToTargets,
   buildTargetsFromMeshes,
-  initializeMeshTextureUVs
+  initializeMeshTextureUVs,
 } from '../../src/texture/face_texture_applier.js';
 import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
 import { computeRegionWorldNormal } from '../../src/texture/planar_uv_projector.js';
 import { createContentMaterial } from '../../src/materials/content_material_factory.js';
 import {
   setTexturePaintStateForTests,
-  TexturePaintState
+  TexturePaintState,
 } from '../../src/texture/texture_paint_state.js';
 import {
   setTextureMapCacheForTests,
-  TextureMapCache
+  TextureMapCache,
 } from '../../src/texture/texture_map_cache.js';
 
 describe('texture assign preserves cylinder UVs', () => {
@@ -31,7 +31,7 @@ describe('texture assign preserves cylinder UVs', () => {
   it('should keep cylinder side offsetU when assigning a texture id', () => {
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 0.5, 1, 8),
-      createContentMaterial(0x888888)
+      createContentMaterial(0x888888),
     );
     mesh.position.set(0, 0.5, 0);
     mesh.updateMatrixWorld(true);
@@ -61,7 +61,7 @@ describe('texture assign preserves cylinder UVs', () => {
     const segments = 8;
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(1, 1, 2, segments),
-      createContentMaterial(0x888888)
+      createContentMaterial(0x888888),
     );
     mesh.position.set(0, 1, 0);
     mesh.updateMatrixWorld(true);
@@ -82,7 +82,7 @@ describe('texture assign preserves cylinder UVs', () => {
   it('should not rewrite UV buffer when only the texture id changes', () => {
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 0.5, 1, 12),
-      createContentMaterial(0x888888)
+      createContentMaterial(0x888888),
     );
     mesh.position.set(1, 0.5, -2);
     mesh.updateMatrixWorld(true);
@@ -126,9 +126,7 @@ function captureUv(mesh: THREE.Mesh): number[] {
  * @param mesh Mesh with baked UVs.
  * @returns min/max U per side.
  */
-function sideURanges(
-  mesh: THREE.Mesh
-): Array<{ minU: number; maxU: number }> {
+function sideURanges(mesh: THREE.Mesh): Array<{ minU: number; maxU: number }> {
   const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
   return getFaceTextureMaps(mesh)
     .filter((entry) => {

@@ -116,9 +116,7 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     const panelElement = container.children[0] as HTMLElement;
     const treeElement = panelElement.children[1] as HTMLElement;
-    treeElement.children[0].dispatchEvent(
-      new MouseEvent('click', { bubbles: true, detail: 1 })
-    );
+    treeElement.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
     const objects = panel.getObjectsForGrouping();
     expect(objects).toContain(group);
     expect(objects.length).toBe(1);
@@ -155,25 +153,33 @@ describe('OutlinerPanel', () => {
 
   it('should support group callback registration', () => {
     let grouped = false;
-    panel.setGroupCallback(() => { grouped = true; });
+    panel.setGroupCallback(() => {
+      grouped = true;
+    });
     expect(() => panel.dispose()).not.toThrow();
   });
 
   it('should support ungroup callback registration', () => {
     let ungrouped = false;
-    panel.setUngroupCallback(() => { ungrouped = true; });
+    panel.setUngroupCallback(() => {
+      ungrouped = true;
+    });
     expect(() => panel.dispose()).not.toThrow();
   });
 
   it('should support rename callback registration', () => {
     let renamed = false;
-    panel.setRenameCallback(() => { renamed = true; });
+    panel.setRenameCallback(() => {
+      renamed = true;
+    });
     expect(() => panel.dispose()).not.toThrow();
   });
 
   it('should support visibility callback registration', () => {
     let toggled = false;
-    panel.setVisibilityCallback(() => { toggled = true; });
+    panel.setVisibilityCallback(() => {
+      toggled = true;
+    });
     expect(() => panel.dispose()).not.toThrow();
   });
 
@@ -181,8 +187,12 @@ describe('OutlinerPanel', () => {
     let duplicated = false;
     let deleted = false;
     panel.setContextCallbacks(
-      () => { duplicated = true; },
-      () => { deleted = true; }
+      () => {
+        duplicated = true;
+      },
+      () => {
+        deleted = true;
+      },
     );
     expect(() => panel.dispose()).not.toThrow();
   });

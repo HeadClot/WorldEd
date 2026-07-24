@@ -26,7 +26,7 @@ export function createContentMaterial(
   options: {
     flatShading?: boolean;
     side?: THREE.Side;
-  } = {}
+  } = {},
 ): THREE.MeshStandardMaterial {
   const flatShading = options.flatShading !== false;
   const side = options.side ?? THREE.FrontSide;
@@ -36,6 +36,6 @@ export function createContentMaterial(
     metalness: CONTENT_METALNESS,
     roughness: CONTENT_ROUGHNESS,
     flatShading,
-    side
+    side,
   });
 }

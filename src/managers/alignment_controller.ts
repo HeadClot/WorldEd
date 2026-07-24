@@ -13,7 +13,7 @@ export class AlignmentController {
     AlignmentAxis.ALL,
     AlignmentAxis.X,
     AlignmentAxis.Y,
-    AlignmentAxis.Z
+    AlignmentAxis.Z,
   ];
 
   /**
@@ -48,11 +48,7 @@ export class AlignmentController {
    * @param axis The axis restriction to apply.
    * @param commandStack The command stack to push the undoable command onto.
    */
-  alignToOrigin(
-    objects: THREE.Mesh[],
-    axis: AlignmentAxis,
-    commandStack: CommandStack
-  ): void {
+  alignToOrigin(objects: THREE.Mesh[], axis: AlignmentAxis, commandStack: CommandStack): void {
     if (objects.length === 0) return;
     const snapshots = this.buildSnapshots(objects);
     const targetPositions = this.computeOriginTargets(objects, axis);
@@ -71,7 +67,7 @@ export class AlignmentController {
     objects: THREE.Mesh[],
     axis: AlignmentAxis,
     snapInterval: number,
-    commandStack: CommandStack
+    commandStack: CommandStack,
   ): void {
     if (objects.length === 0) return;
     const snapshots = this.buildSnapshots(objects);
@@ -91,7 +87,7 @@ export class AlignmentController {
     sources: THREE.Mesh[],
     target: THREE.Mesh,
     axis: AlignmentAxis,
-    commandStack: CommandStack
+    commandStack: CommandStack,
   ): void {
     if (sources.length === 0) return;
     const snapshots = this.buildSnapshots(sources);
@@ -108,7 +104,7 @@ export class AlignmentController {
   private buildSnapshots(objects: THREE.Mesh[]): ObjectAlignSnapshot[] {
     return objects.map((mesh) => ({
       mesh: mesh,
-      originalPosition: mesh.position.clone()
+      originalPosition: mesh.position.clone(),
     }));
   }
 
@@ -120,7 +116,7 @@ export class AlignmentController {
    */
   private computeOriginTargets(
     objects: THREE.Mesh[],
-    axis: AlignmentAxis
+    axis: AlignmentAxis,
   ): Map<THREE.Mesh, THREE.Vector3> {
     const targets = new Map<THREE.Mesh, THREE.Vector3>();
     objects.forEach((mesh) => {
@@ -144,7 +140,7 @@ export class AlignmentController {
   private computeGridCenterTargets(
     objects: THREE.Mesh[],
     axis: AlignmentAxis,
-    snapInterval: number
+    snapInterval: number,
   ): Map<THREE.Mesh, THREE.Vector3> {
     const targets = new Map<THREE.Mesh, THREE.Vector3>();
     objects.forEach((mesh) => {
@@ -168,7 +164,7 @@ export class AlignmentController {
   private computeObjectTargets(
     sources: THREE.Mesh[],
     target: THREE.Mesh,
-    axis: AlignmentAxis
+    axis: AlignmentAxis,
   ): Map<THREE.Mesh, THREE.Vector3> {
     const targetBox = this.getWorldBoundingBox(target);
     const targetMin = targetBox.min.clone();
@@ -232,7 +228,7 @@ export class AlignmentController {
   private snapToGrid(
     center: THREE.Vector3,
     axis: AlignmentAxis,
-    snapInterval: number
+    snapInterval: number,
   ): THREE.Vector3 {
     const result = center.clone();
     if (axis === AlignmentAxis.ALL || axis === AlignmentAxis.X) {
@@ -255,7 +251,7 @@ export class AlignmentController {
    */
   private computePositionOffset(
     currentCenter: THREE.Vector3,
-    targetCenter: THREE.Vector3
+    targetCenter: THREE.Vector3,
   ): THREE.Vector3 {
     return targetCenter.clone().sub(currentCenter);
   }
@@ -266,10 +262,7 @@ export class AlignmentController {
    * @param offset The displacement to apply.
    * @returns The final position.
    */
-  private applyOffsetToCurrentPosition(
-    mesh: THREE.Mesh,
-    offset: THREE.Vector3
-  ): THREE.Vector3 {
+  private applyOffsetToCurrentPosition(mesh: THREE.Mesh, offset: THREE.Vector3): THREE.Vector3 {
     return mesh.position.clone().add(offset);
   }
 
@@ -283,7 +276,7 @@ export class AlignmentController {
   private computeAlignmentDelta(
     sourceMin: THREE.Vector3,
     targetMin: THREE.Vector3,
-    axis: AlignmentAxis
+    axis: AlignmentAxis,
   ): THREE.Vector3 {
     const delta = new THREE.Vector3();
     if (axis === AlignmentAxis.ALL || axis === AlignmentAxis.X) {

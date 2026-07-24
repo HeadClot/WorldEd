@@ -12,7 +12,7 @@ describe('SolidBrushFactory', () => {
     const half = size * 0.5;
     const brush = SolidBrushFactory.createBox(
       new THREE.Vector3(-half, -half, -half),
-      new THREE.Vector3(half, half, half)
+      new THREE.Vector3(half, half, half),
     );
     expect(brush.faces.length).toBe(6);
     expect(brush.vertices.length).toBe(8);

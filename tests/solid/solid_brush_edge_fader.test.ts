@@ -4,7 +4,7 @@ import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 import { SolidBrushEdgeFader } from '../../src/solid/model/solid_brush_edge_fader.js';
 import {
   BRUSH_EDGE_FADE_FAR,
-  BRUSH_EDGE_FADE_NEAR
+  BRUSH_EDGE_FADE_NEAR,
 } from '../../src/solid/model/solid_brush_edge_materials.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_edge_materials.js';
@@ -16,11 +16,7 @@ import { SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../../src/solid/model/so
 describe('SolidBrushEdgeFader', () => {
   it('hides edge passes for brushes beyond the fade distance', () => {
     const root = new THREE.Group();
-    const brush = SolidBrushVisual.createBoxPreview(
-      'Far',
-      2,
-      SolidOperation.Additive
-    );
+    const brush = SolidBrushVisual.createBoxPreview('Far', 2, SolidOperation.Additive);
     brush.position.set(0, 0, BRUSH_EDGE_FADE_FAR + 40);
     root.add(brush);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -33,18 +29,10 @@ describe('SolidBrushEdgeFader', () => {
 
   it('shows front edges for nearby brushes and occluded only when close', () => {
     const root = new THREE.Group();
-    const nearBrush = SolidBrushVisual.createBoxPreview(
-      'Near',
-      2,
-      SolidOperation.Additive
-    );
+    const nearBrush = SolidBrushVisual.createBoxPreview('Near', 2, SolidOperation.Additive);
     nearBrush.position.set(0, 0, BRUSH_EDGE_FADE_NEAR * 0.25);
     root.add(nearBrush);
-    const midBrush = SolidBrushVisual.createBoxPreview(
-      'Mid',
-      2,
-      SolidOperation.Subtractive
-    );
+    const midBrush = SolidBrushVisual.createBoxPreview('Mid', 2, SolidOperation.Subtractive);
     midBrush.position.set(0, 0, BRUSH_EDGE_FADE_NEAR * 1.6);
     root.add(midBrush);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -62,11 +50,7 @@ describe('SolidBrushEdgeFader', () => {
 
   it('keeps selected brush edges visible farther than unselected ones', () => {
     const root = new THREE.Group();
-    const brush = SolidBrushVisual.createBoxPreview(
-      'Selected',
-      2,
-      SolidOperation.Additive
-    );
+    const brush = SolidBrushVisual.createBoxPreview('Selected', 2, SolidOperation.Additive);
     const distance = BRUSH_EDGE_FADE_FAR + 20;
     brush.position.set(0, 0, distance);
     root.add(brush);
@@ -86,8 +70,7 @@ describe('SolidBrushEdgeFader', () => {
 function collectEdges(mesh: THREE.Mesh): THREE.LineSegments[] {
   return mesh.children.filter(
     (child): child is THREE.LineSegments =>
-      child instanceof THREE.LineSegments &&
-      child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true
+      child instanceof THREE.LineSegments && child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true,
   );
 }
 
@@ -98,7 +81,7 @@ function collectEdges(mesh: THREE.Mesh): THREE.LineSegments[] {
  */
 function findFrontEdge(mesh: THREE.Mesh): THREE.LineSegments {
   const edge = collectEdges(mesh).find(
-    (child) => child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] !== true
+    (child) => child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] !== true,
   );
   if (!edge) throw new Error('missing front edge');
   return edge;
@@ -111,7 +94,7 @@ function findFrontEdge(mesh: THREE.Mesh): THREE.LineSegments {
  */
 function findOccludedEdge(mesh: THREE.Mesh): THREE.LineSegments {
   const edge = collectEdges(mesh).find(
-    (child) => child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true
+    (child) => child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true,
   );
   if (!edge) throw new Error('missing occluded edge');
   return edge;

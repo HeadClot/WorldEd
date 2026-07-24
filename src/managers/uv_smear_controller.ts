@@ -1,34 +1,22 @@
 import * as THREE from 'three';
 import { CommandStack } from '../commands/command_stack.js';
-import {
-  SmearMeshSnapshot,
-  SmearUvStrokeCommand
-} from '../commands/smear_uv_stroke_command.js';
+import { SmearMeshSnapshot, SmearUvStrokeCommand } from '../commands/smear_uv_stroke_command.js';
 import { expandFaceSelectionIndices } from '../selection/solid_result_face_indices.js';
 import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
-  createDefaultFaceTextureMapping
+  createDefaultFaceTextureMapping,
 } from '../texture/face_texture_mapping.js';
-import {
-  getFaceTextureMaps,
-  upsertFaceTextureMap
-} from '../texture/face_texture_storage.js';
-import {
-  bakeFaceUVs,
-  ensureUniqueTriangleVertices
-} from '../texture/planar_uv_projector.js';
+import { getFaceTextureMaps, upsertFaceTextureMap } from '../texture/face_texture_storage.js';
+import { bakeFaceUVs, ensureUniqueTriangleVertices } from '../texture/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
 import {
   cloneSmearSourceMapping,
-  transferUvMappingAcrossFaces
+  transferUvMappingAcrossFaces,
 } from '../texture/uv_smear_transfer.js';
 import { getTexturePaintState } from '../texture/texture_paint_state.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/texture_id.js';
-import {
-  SolidModel,
-  SOLID_TRIANGLE_SOURCES_USERDATA_KEY
-} from '../solid/model/solid_model.js';
+import { SolidModel, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../solid/model/solid_model.js';
 
 /**
  * Source face seed for continuous UV smear.
@@ -120,9 +108,7 @@ export class UvSmearController {
     });
     this.resetStrokeState();
     if (beforeSnapshots.length === 0) return;
-    this.commandStack.push(
-      new SmearUvStrokeCommand(beforeSnapshots, afterSnapshots)
-    );
+    this.commandStack.push(new SmearUvStrokeCommand(beforeSnapshots, afterSnapshots));
   }
 
   /**
@@ -147,22 +133,18 @@ export class UvSmearController {
     const regionKey = buildRegionKey(mesh, triangleIndices);
     if (regionKey === this.lastRegionKey) return;
     this.captureBeforeIfNeeded(mesh);
-    const mapping = this.resolveMappingForRegion(
-      mesh,
-      triangleIndices,
-      faceIndex
-    );
+    const mapping = this.resolveMappingForRegion(mesh, triangleIndices, faceIndex);
     upsertFaceTextureMap(mesh, triangleIndices, mapping);
     bakeFaceUVs(mesh, triangleIndices, mapping);
     rebuildSurfaceMaterials(mesh, undefined, undefined, {
-      preserveTriangleOrder: true
+      preserveTriangleOrder: true,
     });
     this.syncSolidBrushMappings(mesh);
     this.touchedMeshes.add(mesh);
     this.sourceSeed = {
       mesh,
       triangleIndices: triangleIndices.slice(),
-      mapping: cloneSmearSourceMapping(mapping)
+      mapping: cloneSmearSourceMapping(mapping),
     };
     this.lastRegionKey = regionKey;
   }
@@ -177,7 +159,7 @@ export class UvSmearController {
   private resolveMappingForRegion(
     mesh: THREE.Mesh,
     triangleIndices: number[],
-    seedFaceIndex: number
+    seedFaceIndex: number,
   ): FaceTextureMapping {
     if (!this.sourceSeed) {
       return this.readOrCreateSeedMapping(mesh, triangleIndices, seedFaceIndex);
@@ -193,7 +175,7 @@ export class UvSmearController {
       this.sourceSeed.triangleIndices,
       this.sourceSeed.mapping,
       mesh,
-      triangleIndices
+      triangleIndices,
     );
   }
 
@@ -208,18 +190,13 @@ export class UvSmearController {
   private readOrCreateSeedMapping(
     mesh: THREE.Mesh,
     triangleIndices: number[],
-    seedFaceIndex: number
+    seedFaceIndex: number,
   ): FaceTextureMapping {
-    const existing = findBestRegionMapping(
-      mesh,
-      triangleIndices,
-      seedFaceIndex
-    );
+    const existing = findBestRegionMapping(mesh, triangleIndices, seedFaceIndex);
     if (existing) return existing;
     const solidMapping = readSolidBrushMapping(mesh, seedFaceIndex);
     if (solidMapping) return solidMapping;
-    const paintId =
-      getTexturePaintState().getLastTextureId() || DEFAULT_CHECKER_TEXTURE_ID;
+    const paintId = getTexturePaintState().getLastTextureId() || DEFAULT_CHECKER_TEXTURE_ID;
     return createDefaultFaceTextureMapping(paintId);
   }
 
@@ -262,7 +239,10 @@ export class UvSmearController {
  * @returns Key string.
  */
 function buildRegionKey(mesh: THREE.Mesh, triangleIndices: number[]): string {
-  const sorted = triangleIndices.slice().sort((a, b) => a - b).join(',');
+  const sorted = triangleIndices
+    .slice()
+    .sort((a, b) => a - b)
+    .join(',');
   return `${mesh.uuid}:${sorted}`;
 }
 
@@ -274,8 +254,14 @@ function buildRegionKey(mesh: THREE.Mesh, triangleIndices: number[]): string {
  */
 function regionKeysEqual(a: number[], b: number[]): boolean {
   if (a.length !== b.length) return false;
-  const sa = a.slice().sort((x, y) => x - y).join(',');
-  const sb = b.slice().sort((x, y) => x - y).join(',');
+  const sa = a
+    .slice()
+    .sort((x, y) => x - y)
+    .join(',');
+  const sb = b
+    .slice()
+    .sort((x, y) => x - y)
+    .join(',');
   return sa === sb;
 }
 
@@ -291,9 +277,12 @@ function regionKeysEqual(a: number[], b: number[]): boolean {
 function findBestRegionMapping(
   mesh: THREE.Mesh,
   triangleIndices: number[],
-  seedFaceIndex: number
+  seedFaceIndex: number,
 ): FaceTextureMapping | null {
-  const key = triangleIndices.slice().sort((a, b) => a - b).join(',');
+  const key = triangleIndices
+    .slice()
+    .sort((a, b) => a - b)
+    .join(',');
   const entries = getFaceTextureMaps(mesh);
   let coveringSeed: FaceTextureMapping | null = null;
   let overlapping: FaceTextureMapping | null = null;
@@ -310,10 +299,7 @@ function findBestRegionMapping(
     if (entry.triangleIndices.includes(seedFaceIndex) && !coveringSeed) {
       coveringSeed = cloneFaceTextureMapping(entry.mapping);
     }
-    if (
-      !overlapping &&
-      entry.triangleIndices.some((index) => regionSet.has(index))
-    ) {
+    if (!overlapping && entry.triangleIndices.some((index) => regionSet.has(index))) {
       overlapping = cloneFaceTextureMapping(entry.mapping);
     }
   }
@@ -326,16 +312,12 @@ function findBestRegionMapping(
  * @param triangleIndex Result triangle index.
  * @returns Brush face mapping or null.
  */
-function readSolidBrushMapping(
-  mesh: THREE.Mesh,
-  triangleIndex: number
-): FaceTextureMapping | null {
+function readSolidBrushMapping(mesh: THREE.Mesh, triangleIndex: number): FaceTextureMapping | null {
   if (!SolidModel.isResultMesh(mesh)) return null;
   const model = SolidModel.fromObject(mesh);
   if (!model) return null;
   const sources = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-    | Array<{ brushId: string; surfaceIndex: number }>
-    | undefined;
+    Array<{ brushId: string; surfaceIndex: number }> | undefined;
   const source = sources?.[triangleIndex];
   if (!source?.brushId) return null;
   const brush = model.findBrush(source.brushId);

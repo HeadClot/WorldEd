@@ -5,11 +5,11 @@ import {
   getDefaultPerspectiveCameraPosition,
   getDefaultSceneFocus,
   getDefaultSideCameraPosition,
-  getDefaultTopCameraPosition
+  getDefaultTopCameraPosition,
 } from '../../src/navigation/default_camera_placement.js';
 import {
   DEFAULT_CUBE_CENTER_Y,
-  DEFAULT_PERSPECTIVE_CAMERA_OFFSET
+  DEFAULT_PERSPECTIVE_CAMERA_OFFSET,
 } from '../../src/types/editor_config.js';
 
 /**
@@ -20,7 +20,7 @@ import {
  */
 function projectToViewSpace(
   camera: THREE.OrthographicCamera,
-  worldPoint: THREE.Vector3
+  worldPoint: THREE.Vector3,
 ): THREE.Vector3 {
   camera.updateMatrixWorld(true);
   return worldPoint.clone().applyMatrix4(camera.matrixWorldInverse);

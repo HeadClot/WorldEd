@@ -3,10 +3,7 @@ import { SolidBrush } from '../../solid/brush/solid_brush.js';
 import { SolidBrushFactory } from '../../solid/brush/solid_brush_factory.js';
 import { SolidPlane } from '../../solid/brush/solid_plane.js';
 import { FaceTextureMapping } from '../../texture/face_texture_mapping.js';
-import {
-  VMF_INCHES_TO_METERS,
-  sourcePointToEditorMeters
-} from './vmf_coordinates.js';
+import { VMF_INCHES_TO_METERS, sourcePointToEditorMeters } from './vmf_coordinates.js';
 import { VmfHalfSpaceHullBuilder } from './vmf_half_space_hull.js';
 import { VmfSolid, VmfSolidSide } from './vmf_types.js';
 import { VmfUvConverter } from './vmf_uv_converter.js';
@@ -40,18 +37,13 @@ export class VmfBrushFromSides {
    * @param unitScale Inches to meters.
    * @returns Built brush with mappings, or null when the solid is degenerate.
    */
-  build(
-    solid: VmfSolid,
-    unitScale: number = VMF_INCHES_TO_METERS
-  ): VmfBuiltBrush | null {
+  build(solid: VmfSolid, unitScale: number = VMF_INCHES_TO_METERS): VmfBuiltBrush | null {
     if (solid.sides.length < 4) return null;
-    const planes = solid.sides.map((side) =>
-      this.sideToOutwardPlane(side, unitScale)
-    );
+    const planes = solid.sides.map((side) => this.sideToOutwardPlane(side, unitScale));
     const hull = this.hullBuilder.build(planes);
     if (!hull) return null;
     const brush = SolidBrushFactory.createFromFaceLoops(
-      hull.faceLoops.map((loop) => loop.vertices)
+      hull.faceLoops.map((loop) => loop.vertices),
     );
     if (!brush) return null;
     return this.packageBuiltBrush(solid, brush, planes, hull.faceLoops, unitScale);
@@ -71,22 +63,20 @@ export class VmfBrushFromSides {
     brush: SolidBrush,
     planes: SolidPlane[],
     faceLoops: Array<{ planeIndex: number }>,
-    unitScale: number
+    unitScale: number,
   ): VmfBuiltBrush {
     const planeIndices = faceLoops.map((loop) => loop.planeIndex);
     const faceMappings = planeIndices.map((planeIndex, faceIndex) =>
-      this.mapFace(solid.sides[planeIndex], brush, planes, faceIndex, planeIndex, unitScale)
+      this.mapFace(solid.sides[planeIndex], brush, planes, faceIndex, planeIndex, unitScale),
     );
-    const materials = planeIndices.map(
-      (planeIndex) => solid.sides[planeIndex].material
-    );
+    const materials = planeIndices.map((planeIndex) => solid.sides[planeIndex].material);
     const worldCenter = this.centerBrushAtOrigin(brush);
     return {
       brush,
       worldCenter,
       faceMappings,
       solidId: solid.id,
-      materials
+      materials,
     };
   }
 
@@ -123,7 +113,7 @@ export class VmfBrushFromSides {
     planes: SolidPlane[],
     faceIndex: number,
     planeIndex: number,
-    unitScale: number
+    unitScale: number,
   ): FaceTextureMapping {
     const plane = brush.planes[faceIndex] ?? planes[planeIndex];
     return this.uvConverter.convertSideMapping(
@@ -133,7 +123,7 @@ export class VmfBrushFromSides {
       plane.normal,
       undefined,
       undefined,
-      unitScale
+      unitScale,
     );
   }
 
@@ -145,10 +135,7 @@ export class VmfBrushFromSides {
    * @param unitScale Inches to meters.
    * @returns Outward plane in editor space.
    */
-  private sideToOutwardPlane(
-    side: VmfSolidSide,
-    unitScale: number
-  ): SolidPlane {
+  private sideToOutwardPlane(side: VmfSolidSide, unitScale: number): SolidPlane {
     const p1 = sourcePointToEditorMeters(side.plane.p1, unitScale);
     const p2 = sourcePointToEditorMeters(side.plane.p2, unitScale);
     const p3 = sourcePointToEditorMeters(side.plane.p3, unitScale);

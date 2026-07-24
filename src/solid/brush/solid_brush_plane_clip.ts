@@ -18,10 +18,7 @@ export class SolidBrushPlaneClip {
    * @param plane Outward clip plane in the same local space.
    * @returns Clipped brush, or null when the kept region is empty.
    */
-  static clipKeepInside(
-    brush: SolidBrush,
-    plane: SolidPlane
-  ): SolidBrush | null {
+  static clipKeepInside(brush: SolidBrush, plane: SolidPlane): SolidBrush | null {
     const faceLoops: THREE.Vector3[][] = [];
     const capPoints: THREE.Vector3[] = [];
     for (const face of brush.faces) {
@@ -51,7 +48,7 @@ export class SolidBrushPlaneClip {
   static clipKeepThreeHalfSpace(
     brush: SolidBrush,
     localThreePlane: THREE.Plane,
-    keepFront: boolean
+    keepFront: boolean,
   ): SolidBrush | null {
     const solidPlane = this.threePlaneToSolidKeepPlane(localThreePlane, keepFront);
     return this.clipKeepInside(brush, solidPlane);
@@ -65,7 +62,7 @@ export class SolidBrushPlaneClip {
    */
   private static threePlaneToSolidKeepPlane(
     threePlane: THREE.Plane,
-    keepFront: boolean
+    keepFront: boolean,
   ): SolidPlane {
     const normal = threePlane.normal.clone().normalize();
     const offset = threePlane.constant;
@@ -84,7 +81,7 @@ export class SolidBrushPlaneClip {
   private static collectCapEdgePoints(
     polygon: THREE.Vector3[],
     plane: SolidPlane,
-    capPoints: THREE.Vector3[]
+    capPoints: THREE.Vector3[],
   ): void {
     const count = polygon.length;
     for (let index = 0; index < count; index++) {
@@ -107,10 +104,7 @@ export class SolidBrushPlaneClip {
    * @param points Cap point list.
    * @param point Candidate.
    */
-  private static pushUniquePoint(
-    points: THREE.Vector3[],
-    point: THREE.Vector3
-  ): void {
+  private static pushUniquePoint(points: THREE.Vector3[], point: THREE.Vector3): void {
     for (const existing of points) {
       if (existing.distanceToSquared(point) < 1e-12) return;
     }
@@ -123,10 +117,7 @@ export class SolidBrushPlaneClip {
    * @param plane Clip plane (outward for the kept solid).
    * @returns Ordered cap loop, or null when degenerate.
    */
-  private static buildCapLoop(
-    points: THREE.Vector3[],
-    plane: SolidPlane
-  ): THREE.Vector3[] | null {
+  private static buildCapLoop(points: THREE.Vector3[], plane: SolidPlane): THREE.Vector3[] | null {
     if (points.length < 3) return null;
     const center = new THREE.Vector3();
     for (const point of points) {
@@ -152,10 +143,7 @@ export class SolidBrushPlaneClip {
     u: THREE.Vector3;
     v: THREE.Vector3;
   } {
-    const seed =
-      Math.abs(normal.y) < 0.9
-        ? new THREE.Vector3(0, 1, 0)
-        : new THREE.Vector3(1, 0, 0);
+    const seed = Math.abs(normal.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
     const u = new THREE.Vector3().crossVectors(seed, normal).normalize();
     const v = new THREE.Vector3().crossVectors(normal, u).normalize();
     return { u, v };
