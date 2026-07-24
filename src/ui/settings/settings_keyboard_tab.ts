@@ -51,6 +51,15 @@ const CLIP_SHORTCUT_ROWS: ReadonlyArray<readonly [KeyboardShortcutAction, string
   ['clip_split', 'Split Clip'],
 ];
 
+/** Fixed keyboard reminders for face editing and 3D fly navigation. */
+const KEYBOARD_REMINDER_ROWS: ReadonlyArray<readonly [string, string, string]> = [
+  ['uv-smear', 'UV Smear (hold while dragging faces)', 'G'],
+  ['fly-forward-backward', '3D Fly Forward / Backward (hold RMB)', 'W / S'],
+  ['fly-left-right', '3D Fly Left / Right (hold RMB)', 'A / D'],
+  ['fly-down-up', '3D Fly Down / Up (hold RMB)', 'Q / E'],
+  ['fly-speed-boost', '3D Fly Speed Boost (hold RMB)', 'Shift'],
+];
+
 /** Keyboard tab content for rebinding primary editor actions. */
 export class SettingsKeyboardTab {
   private readonly store: EditorSettingsStore;
@@ -86,6 +95,7 @@ export class SettingsKeyboardTab {
       this.buildCategory('Commands', EDITOR_SHORTCUT_ROWS, settings),
       this.buildCategory('Shading', SHADING_SHORTCUT_ROWS, settings),
       this.buildCategory('Clip Plane Tool', CLIP_SHORTCUT_ROWS, settings),
+      this.buildReminderCategory(),
     );
   }
 
@@ -128,6 +138,36 @@ export class SettingsKeyboardTab {
     input.readOnly = true;
     input.dataset.settingsField = `keyboard-shortcut-${action}`;
     input.addEventListener('keydown', (event) => this.captureShortcut(event, action));
+    return createSettingsControlRow(label, input);
+  }
+
+  /**
+   * Builds read-only reminders for fixed navigation and editing keys.
+   *
+   * @returns Completed keyboard reminder category.
+   */
+  private buildReminderCategory(): HTMLElement {
+    const { section, body } = createSettingsCategory('Navigation & Modifiers (Fixed)');
+    KEYBOARD_REMINDER_ROWS.forEach(([id, label, shortcut]) => {
+      body.appendChild(this.createReminderRow(id, label, shortcut));
+    });
+    return section;
+  }
+
+  /**
+   * Creates one read-only keyboard reminder row.
+   *
+   * @param id Stable reminder identifier for tests and accessibility hooks.
+   * @param label User-facing reminder description.
+   * @param shortcut User-facing key or key combination.
+   * @returns Labeled read-only reminder control row.
+   */
+  private createReminderRow(id: string, label: string, shortcut: string): HTMLElement {
+    const input = createSettingsTextInput(shortcut, `${label} key reminder`, () => undefined);
+    input.readOnly = true;
+    input.tabIndex = -1;
+    input.setAttribute('aria-readonly', 'true');
+    input.dataset.settingsReminder = `keyboard-reminder-${id}`;
     return createSettingsControlRow(label, input);
   }
 
