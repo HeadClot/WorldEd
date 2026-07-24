@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { ViewportToolbar } from '../ui/viewport_toolbar.js';
 import { ShadingMode } from '../types/shading_mode.js';
+import {
+  createEditorWebGLCanvas,
+  getEditorWebGLRendererOptions,
+} from './webgl_renderer_options.js';
 
 export abstract class BaseViewport {
   protected container: HTMLElement;
@@ -25,8 +29,10 @@ export abstract class BaseViewport {
     this.name = name;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(Theme.viewportBackground);
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    // Cap DPR so large maps remain interactive on high-DPI displays.
+    this.renderer = new THREE.WebGLRenderer({
+      ...getEditorWebGLRendererOptions(),
+      canvas: createEditorWebGLCanvas(`viewport:${name}`),
+    });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.viewportToolbar = new ViewportToolbar(

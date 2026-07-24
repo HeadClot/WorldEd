@@ -195,12 +195,19 @@ Escape  Deselect / exit tool
 ## Development
 
 ```bash
-npm install
-npm run dev          # Start development server
-npm run testrun      # Run all tests
-npm run build        # Production build
-npm run typecheck    # TypeScript type checking
+bun install
+bun run dev          # Start development server
+bun run testrun      # Run all tests
+bun run build        # Production build
+bun run typecheck    # TypeScript type checking
+bun run desktop:dev  # Watch and launch the Electrobun desktop app
+bun run desktop:build # Build the Windows desktop app into desktop_build/
+bun run desktop:run  # Relaunch the last Electrobun build
 ```
+
+The desktop build uses Electrobun with Bun and the native Windows WebView2
+renderer. The desktop view bundles the same `src/app.ts` editor entrypoint as
+the browser build, so editor behavior remains shared between both targets.
 
 ---
 

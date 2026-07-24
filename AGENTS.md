@@ -12,9 +12,9 @@ must create what they need, test the result, check the result).
 
 ## After making changes
 
-`npm run testrun` (vitest is used) must pass all checks.
+`bun run testrun` (vitest is used) must pass all checks.
 
-`npm run build` must pass.
+`bun run build` must pass.
 
 PowerShell is janky, use cmd.
 
