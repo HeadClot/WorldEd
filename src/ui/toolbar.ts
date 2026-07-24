@@ -21,6 +21,7 @@ export class Toolbar {
   private container: HTMLElement;
   private buttons: HTMLButtonElement[];
   private openMenu: HTMLElement | null;
+  private openMenuButton: HTMLButtonElement | null;
   private dropdownItemBindings: Map<HTMLElement, ToolbarDropdownItem[]>;
 
   /**
@@ -33,6 +34,7 @@ export class Toolbar {
     this.container.classList.add('editor-toolbar');
     this.buttons = [];
     this.openMenu = null;
+    this.openMenuButton = null;
     this.dropdownItemBindings = new Map();
     this.applyStyles();
     container.appendChild(this.container);
@@ -90,18 +92,25 @@ export class Toolbar {
    */
   addDropdown(label: string, items: ToolbarDropdownItem[]): HTMLButtonElement {
     const wrapper = document.createElement('div');
+    wrapper.classList.add('editor-toolbar-dropdown');
     wrapper.style.position = 'relative';
     wrapper.style.display = 'inline-flex';
     const button = document.createElement('button');
+    button.classList.add('editor-toolbar-menu-button');
     button.type = 'button';
     button.textContent = label;
     button.title = label;
+    button.setAttribute('aria-haspopup', 'menu');
+    button.setAttribute('aria-expanded', 'false');
     this.applyButtonStyles(button, false);
     this.appendDropdownCaret(button);
     const menu = this.createDropdownMenu(items);
     button.addEventListener('click', (event) => {
       event.stopPropagation();
-      this.toggleDropdownMenu(menu);
+      this.toggleDropdownMenu(menu, button);
+    });
+    button.addEventListener('mouseenter', () => {
+      this.openDropdownOnHover(menu, button);
     });
     wrapper.appendChild(button);
     wrapper.appendChild(menu);
@@ -167,6 +176,7 @@ export class Toolbar {
     }
     this.buttons = [];
     this.openMenu = null;
+    this.openMenuButton = null;
     this.dropdownItemBindings.clear();
   }
 
@@ -287,13 +297,17 @@ export class Toolbar {
    */
   private createDropdownMenu(items: ToolbarDropdownItem[]): HTMLElement {
     const menu = document.createElement('div');
+    menu.classList.add('editor-toolbar-dropdown-menu');
+    menu.setAttribute('role', 'menu');
     this.styleDropdownMenuPanel(menu);
     this.dropdownItemBindings.set(menu, items);
     items.forEach((item, index) => {
       const entry = document.createElement('button');
+      entry.classList.add('editor-toolbar-dropdown-item');
       entry.type = 'button';
       entry.textContent = item.label;
       entry.dataset.dropdownIndex = String(index);
+      entry.setAttribute('role', 'menuitem');
       this.applyMenuItemStyles(entry);
       entry.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -357,16 +371,41 @@ export class Toolbar {
    * Toggles a dropdown menu open or closed.
    *
    * @param menu The menu element to toggle.
+   * @param button The header button that owns the menu.
    */
-  private toggleDropdownMenu(menu: HTMLElement): void {
+  private toggleDropdownMenu(menu: HTMLElement, button: HTMLButtonElement): void {
     if (this.openMenu === menu) {
       this.closeOpenMenu();
       return;
     }
+    this.openDropdownMenu(menu, button);
+  }
+
+  /**
+   * Opens a different dropdown after the pointer enters its header.
+   *
+   * @param menu The menu element to open.
+   * @param button The header button that owns the menu.
+   */
+  private openDropdownOnHover(menu: HTMLElement, button: HTMLButtonElement): void {
+    if (this.openMenu && this.openMenu !== menu) {
+      this.openDropdownMenu(menu, button);
+    }
+  }
+
+  /**
+   * Opens a dropdown after closing whichever menu is currently visible.
+   *
+   * @param menu The menu element to open.
+   * @param button The header button that owns the menu.
+   */
+  private openDropdownMenu(menu: HTMLElement, button: HTMLButtonElement): void {
     this.closeOpenMenu();
     this.refreshDropdownEnabledState(menu);
     menu.style.display = 'block';
     this.openMenu = menu;
+    this.openMenuButton = button;
+    button.setAttribute('aria-expanded', 'true');
   }
 
   /**
@@ -403,7 +442,9 @@ export class Toolbar {
   private closeOpenMenu(): void {
     if (!this.openMenu) return;
     this.openMenu.style.display = 'none';
+    this.openMenuButton?.setAttribute('aria-expanded', 'false');
     this.openMenu = null;
+    this.openMenuButton = null;
   }
 
   /**

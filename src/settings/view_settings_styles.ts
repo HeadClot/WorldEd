@@ -81,10 +81,29 @@ function buildLightThemeCss(): string {
     buildLightThemeSettingsContentCss(),
     buildLightThemeInteractionCss(),
     buildLightThemeChromeCss(),
+    buildLightThemeDropdownCss(),
     buildLightThemeContextMenuCss(),
     buildLightThemeFocusCss(),
     buildLightThemeActiveTabCss(),
   ].join('\n');
+}
+
+/** Builds light-theme surfaces and states for toolbar dropdown menus. */
+function buildLightThemeDropdownCss(): string {
+  return `html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-menu {
+  background: #ffffff !important;
+  border-color: #767676 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
+}
+html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-item {
+  background: transparent !important;
+  color: #0a0a0a !important;
+  border-color: transparent !important;
+}
+html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-item:hover {
+  background: #e5f3ff !important;
+  border-color: #0078d4 !important;
+}`;
 }
 
 /**
