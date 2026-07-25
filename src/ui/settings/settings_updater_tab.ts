@@ -63,12 +63,21 @@ export class SettingsUpdaterTab {
   /** Rebuilds static content without starting another network request. */
   rebuild(): void {
     this.refreshAutomaticChecksToggle();
-    this.statusLabel.textContent = `Installed version: ${this.serviceVersion()}`;
+    this.statusLabel.textContent = `${this.versionStatusLabel()}: ${this.serviceVersion()}`;
     if (!this.service.isStandaloneBuild()) {
       this.renderBrowserMessage();
       return;
     }
     this.renderResult();
+  }
+
+  /**
+   * Chooses the version label for browser builds versus installed desktops.
+   *
+   * @returns Status label text before the version number.
+   */
+  private versionStatusLabel(): string {
+    return this.service.isStandaloneBuild() ? 'Installed version' : 'Version';
   }
 
   /** Starts an automatic check when the Update tab becomes visible. */

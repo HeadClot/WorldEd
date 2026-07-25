@@ -15,7 +15,7 @@ describe('Electrobun desktop build configuration', () => {
     expect(electrobunConfig.build?.win).toMatchObject({
       defaultRenderer: 'native',
       bundleCEF: false,
-      icon: 'public/favicon.ico',
+      icon: 'public/app_icon.ico',
     });
     expect(electrobunConfig.build?.linux).toMatchObject({
       icon: 'public/android-chrome-512x512.png',
@@ -38,7 +38,7 @@ describe('Electrobun desktop build configuration', () => {
   });
 
   it('keeps platform icon sources on disk for Electrobun packaging', () => {
-    expect(existsSync(resolve(process.cwd(), 'public/favicon.ico'))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'public/app_icon.ico'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/android-chrome-512x512.png'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/app_icon.iconset/icon_512x512.png'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/app_icon.iconset/icon_16x16.png'))).toBe(true);

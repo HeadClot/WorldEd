@@ -6,11 +6,12 @@ import { MemorySettingsStorage } from '../../src/settings/settings_storage.js';
 import { SettingsUpdaterTab } from '../../src/ui/settings/settings_updater_tab.js';
 
 describe('SettingsUpdaterTab', () => {
-  it('explains browser limitations and links to standalone releases', () => {
+  it('explains browser limitations, shows the embedded app version, and links to releases', () => {
     const store = new EditorSettingsStore(new MemorySettingsStorage());
-    const tab = new SettingsUpdaterTab(store, new StandaloneUpdateService({ bridge: null }));
+    const tab = new SettingsUpdaterTab(store, new StandaloneUpdateService({ bridge: null, currentVersion: '1.24.0' }));
     const link = tab.getElement().querySelector('a');
 
+    expect(tab.getElement().textContent).toContain('Version: 1.24.0');
     expect(tab.getElement().textContent).toContain('standalone executable builds');
     expect(link?.href).toBe(GITHUB_RELEASES_PAGE_URL);
   });

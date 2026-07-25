@@ -13,6 +13,9 @@ const PUBLIC_FAVICON_FILES = [
   'site.webmanifest',
 ] as const;
 
+/** Multi-size Windows application icon used by Electrobun packaging. */
+const WINDOWS_APP_ICON = 'app_icon.ico';
+
 /** Base macOS Electrobun iconset sizes (logical 1x names). */
 const MAC_ICONSET_BASE_SIZES = ['16x16', '32x32', '128x128', '256x256', '512x512'] as const;
 
@@ -49,6 +52,10 @@ describe('favicon assets', () => {
     expect(manifest).toContain('./android-chrome-192x192.png');
     expect(manifest).toContain('./android-chrome-512x512.png');
     expect(manifest).not.toMatch(/"src"\s*:\s*"\//);
+  });
+
+  it('keeps a multi-size Windows application icon under public/', () => {
+    expect(existsSync(resolve(process.cwd(), 'public', WINDOWS_APP_ICON))).toBe(true);
   });
 
   it('keeps a macOS iconset under public/ for Electrobun packaging', () => {

@@ -31,7 +31,7 @@ const electrobunConfig: ElectrobunConfig = {
     win: {
       defaultRenderer: 'native',
       bundleCEF: false,
-      icon: 'public/favicon.ico',
+      icon: 'public/app_icon.ico',
     },
     mac: {
       defaultRenderer: 'native',
