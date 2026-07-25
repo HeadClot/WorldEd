@@ -161,6 +161,7 @@ describe('TransformInteractionBridge', () => {
       inputManager: { isShiftDown: () => false } as never,
       viewportSyncManager: {
         syncClonePositionsToWorldObject: () => undefined,
+        syncCloneTransformsForWorldObjects: () => undefined,
       } as never,
       propertiesPanel: { refreshBoundObject: () => undefined } as never,
       worldObject: new THREE.Group(),

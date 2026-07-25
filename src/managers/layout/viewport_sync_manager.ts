@@ -35,6 +35,11 @@ export class ViewportSyncManager {
   private viewport2DSide: Viewport2D;
   private viewport3D: Viewport3D;
   private worldObject: THREE.Group | null;
+  /**
+   * Maps world-object UUID to 2D clone objects (all three ortho scenes).
+   * Rebuilt after full world reclone so live transforms stay O(selection).
+   */
+  private clonesBySourceUuid = new Map<string, THREE.Object3D[]>();
 
   /**
    * Creates a new viewport sync manager for the given viewports.
@@ -153,17 +158,16 @@ export class ViewportSyncManager {
    * @returns Matching clone meshes.
    */
   findCloneMeshesForWorldUuid(worldUuid: string): THREE.Mesh[] {
-    const clones: THREE.Mesh[] = [];
-    [this.viewport2DTop.getScene(), this.viewport2DFront.getScene(), this.viewport2DSide.getScene()].forEach(
-      (scene) => {
-        scene.traverse((child) => {
-          if (child instanceof THREE.Mesh && child.userData[EDITOR_SOURCE_UUID_KEY] === worldUuid) {
-            clones.push(child);
-          }
-        });
-      },
-    );
-    return clones;
+    if (this.clonesBySourceUuid.size === 0) {
+      this.rebuildCloneSourceIndex();
+    }
+    const indexed = this.clonesBySourceUuid.get(worldUuid);
+    if (!indexed) return [];
+    const meshes: THREE.Mesh[] = [];
+    for (const object of indexed) {
+      if (object instanceof THREE.Mesh) meshes.push(object);
+    }
+    return meshes;
   }
 
   /**
@@ -176,6 +180,7 @@ export class ViewportSyncManager {
     this.replaceCloneInScene(this.viewport2DTop.getScene(), worldObject);
     this.replaceCloneInScene(this.viewport2DFront.getScene(), worldObject);
     this.replaceCloneInScene(this.viewport2DSide.getScene(), worldObject);
+    this.rebuildCloneSourceIndex();
     this.setupViewportSelectableObjects();
   }
 
@@ -595,6 +600,8 @@ export class ViewportSyncManager {
 
   /**
    * Mirrors transforms from the original world object into 2D viewport clones.
+   * Prefer {@link syncCloneTransformsForWorldObjects} during live drags so large
+   * maps only update selected subtrees.
    *
    * @param worldObject The original world object whose children serve as
    *   source.
@@ -603,6 +610,56 @@ export class ViewportSyncManager {
     this.syncSingleViewportClone(this.viewport2DTop.getScene(), worldObject);
     this.syncSingleViewportClone(this.viewport2DFront.getScene(), worldObject);
     this.syncSingleViewportClone(this.viewport2DSide.getScene(), worldObject);
+  }
+
+  /**
+   * Copies local transforms from selected world objects (and their descendants)
+   * onto matching 2D clones via the source-UUID index. Cost scales with
+   * selection size, not total brush count.
+   *
+   * @param worldObjects World objects that moved (typically the selection).
+   */
+  syncCloneTransformsForWorldObjects(worldObjects: readonly THREE.Object3D[]): void {
+    if (worldObjects.length === 0) return;
+    if (this.clonesBySourceUuid.size === 0) {
+      this.rebuildCloneSourceIndex();
+    }
+    for (const worldObject of worldObjects) {
+      this.syncWorldSubtreeTransformsToClones(worldObject);
+    }
+  }
+
+  /** Rebuilds the source-UUID → clone object index from all ortho scenes. */
+  rebuildCloneSourceIndex(): void {
+    this.clonesBySourceUuid.clear();
+    const scenes = [this.viewport2DTop.getScene(), this.viewport2DFront.getScene(), this.viewport2DSide.getScene()];
+    for (const scene of scenes) {
+      scene.traverse((child) => {
+        const sourceUuid = child.userData[EDITOR_SOURCE_UUID_KEY];
+        if (typeof sourceUuid !== 'string') return;
+        const list = this.clonesBySourceUuid.get(sourceUuid);
+        if (list) list.push(child);
+        else this.clonesBySourceUuid.set(sourceUuid, [child]);
+      });
+    }
+  }
+
+  /**
+   * Syncs one world object tree onto indexed clones.
+   *
+   * @param worldObject Root of the moved world subtree.
+   */
+  private syncWorldSubtreeTransformsToClones(worldObject: THREE.Object3D): void {
+    worldObject.traverse((original) => {
+      const clones = this.clonesBySourceUuid.get(original.uuid);
+      if (!clones) return;
+      for (const clone of clones) {
+        clone.position.copy(original.position);
+        clone.quaternion.copy(original.quaternion);
+        clone.scale.copy(original.scale);
+        this.syncCloneVisibility(original, clone);
+      }
+    });
   }
 
   /**

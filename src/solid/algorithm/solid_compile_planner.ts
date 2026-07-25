@@ -79,11 +79,14 @@ export class SolidCompilePlanner {
   }
 
   /**
-   * Returns whether a full rebuild is required for this pass.
+   * Returns whether a full rebuild is required for this pass. Intersecting
+   * operations no longer force a full map recompile — partial touch expansion
+   * plus full membership walks on the recompile set match Sander-style
+   * iterative updates (only dirty brushes and their neighbors).
    *
    * @param brushIds Visible brush ids in order.
    * @param options Compile options.
-   * @param hasIntersectingOperations Whether intersecting ops are present.
+   * @param hasIntersectingOperations Unused; kept for call-site compatibility.
    * @param refreshedBrushIds Brushes refreshed during prepare.
    * @returns True when every brush must be recompiled.
    */
@@ -93,9 +96,9 @@ export class SolidCompilePlanner {
     hasIntersectingOperations: boolean,
     refreshedBrushIds: ReadonlySet<string>,
   ): boolean {
+    void hasIntersectingOperations;
     if (options.forceFull) return true;
     if (!options.dirtyBrushIds) return true;
-    if (hasIntersectingOperations) return true;
     const seed = this.collectSeedDirtyIds(options, refreshedBrushIds);
     return !this.canReuseCachedBrushes(brushIds, seed);
   }

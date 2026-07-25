@@ -303,7 +303,7 @@ export class TransformInteractionBridge {
     const selected = filterUnlockedObjects(Array.from(this.deps.selectionManager.getSelectedObjects()));
     this.updateSnapFromShiftKey();
     this.deps.transformHandler.onPointerMove(camera, renderer, event, pivot, selected);
-    this.deps.viewportSyncManager.syncClonePositionsToWorldObject(this.deps.worldObject);
+    this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(selected);
     this.deps.onTransformsLive?.(selected);
     this.deps.selectionVisualController.syncDuringTransform();
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
@@ -366,7 +366,7 @@ export class TransformInteractionBridge {
   private commitTransformAfterDrag(selectedObjects: THREE.Mesh[]): void {
     const solidHandled = this.deps.onTransformsCommitted?.(selectedObjects) === true;
     if (solidHandled) {
-      this.deps.viewportSyncManager.syncClonePositionsToWorldObject(this.deps.worldObject);
+      this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(selectedObjects);
     } else {
       this.deps.syncPrimitivesToViewports();
     }

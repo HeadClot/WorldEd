@@ -146,15 +146,37 @@ describe('SolidCsgCompiler partial updates', () => {
     expect(polygonSignature(partial)).toEqual(polygonSignature(full));
   });
 
-  it('forces a full rebuild when an intersecting brush is present', () => {
+  it('partially recompiles when an intersecting brush is present', () => {
+    const far = makeBoxBrush('far', 2, SolidOperation.Additive, new THREE.Vector3(40, 0, 0));
     const a = makeBoxBrush('a', 2, SolidOperation.Additive, new THREE.Vector3(-0.5, 0, 0));
     const b = makeBoxBrush('b', 2, SolidOperation.Intersecting, new THREE.Vector3(0.5, 0, 0));
-    const brushes = [a, b];
+    const brushes = [far, a, b];
     const compiler = new SolidCsgCompiler();
     compiler.compile(brushes, { forceFull: true });
     a.position.x -= 0.1;
-    compiler.compile(brushes, { dirtyBrushIds: ['a'] });
-    expect(compiler.getLastCompileStats().fullRebuild).toBe(true);
+    const partial = compiler.compile(brushes, { dirtyBrushIds: ['a'] });
+    const stats = compiler.getLastCompileStats();
+    expect(stats.fullRebuild).toBe(false);
+    expect(stats.recompiledBrushCount).toBeLessThan(brushes.length);
+    expect(stats.reusedBrushCount).toBeGreaterThan(0);
+    const full = new SolidCsgCompiler().compile(brushes, { forceFull: true });
+    expect(polygonSignature(partial)).toEqual(polygonSignature(full));
+  });
+
+  it('matches full rebuild when only the intersecting brush moves', () => {
+    const far = makeBoxBrush('far', 2, SolidOperation.Additive, new THREE.Vector3(40, 0, 0));
+    const a = makeBoxBrush('a', 2, SolidOperation.Additive, new THREE.Vector3(-0.5, 0, 0));
+    const b = makeBoxBrush('b', 2, SolidOperation.Intersecting, new THREE.Vector3(0.5, 0, 0));
+    const brushes = [far, a, b];
+    const compiler = new SolidCsgCompiler();
+    compiler.compile(brushes, { forceFull: true });
+    b.position.x += 0.15;
+    const partial = compiler.compile(brushes, { dirtyBrushIds: ['b'] });
+    const stats = compiler.getLastCompileStats();
+    expect(stats.fullRebuild).toBe(false);
+    expect(stats.reusedBrushCount).toBeGreaterThan(0);
+    const full = new SolidCsgCompiler().compile(brushes, { forceFull: true });
+    expect(polygonSignature(partial)).toEqual(polygonSignature(full));
   });
 });
 

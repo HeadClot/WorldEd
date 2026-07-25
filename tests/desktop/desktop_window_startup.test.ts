@@ -20,6 +20,6 @@ describe('desktop window startup', () => {
     notifyReady();
     expect(maximize).toHaveBeenCalledOnce();
     expect(show).toHaveBeenCalledOnce();
-    expect(maximize.mock.invocationCallOrder[0]).toBeLessThan(show.mock.invocationCallOrder[0]);
+    expect(maximize.mock.invocationCallOrder[0]!).toBeLessThan(show.mock.invocationCallOrder[0]!);
   });
 });
