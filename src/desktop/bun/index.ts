@@ -1,11 +1,12 @@
 import { buildDesktopWindowTitle } from '../../application_identity.js';
 import type { ElectrobunUpdaterRpcSchema } from '../../updater/electrobun_updater_rpc.js';
 import type { StandaloneHostUpdateCheck } from '../../updater/update_types.js';
+import { buildDesktopWindowFrame, maximizeDesktopWindow } from '../desktop_window_maximize.js';
 import { enableWindowsPerMonitorDpiAwareness } from '../windows_dpi_awareness.js';
 
 await enableWindowsPerMonitorDpiAwareness();
 
-const { BrowserView, BrowserWindow, Updater } = await import('electrobun/bun');
+const { BrowserView, BrowserWindow, Screen, Updater } = await import('electrobun/bun');
 
 const updaterRpc = BrowserView.defineRPC<ElectrobunUpdaterRpcSchema>({
   handlers: {
@@ -18,18 +19,15 @@ const updaterRpc = BrowserView.defineRPC<ElectrobunUpdaterRpcSchema>({
 
 const localInfo = await Updater.getLocalInfo();
 const windowTitle = buildDesktopWindowTitle(localInfo.version);
+const desktopFrame = buildDesktopWindowFrame(Screen.getPrimaryDisplay().workArea);
 
-new BrowserWindow({
+const desktopWindow = new BrowserWindow({
   title: windowTitle,
   url: 'views://main_ui/index.html',
-  frame: {
-    x: 80,
-    y: 60,
-    width: 1600,
-    height: 1000,
-  },
+  frame: desktopFrame,
   rpc: updaterRpc,
 });
+maximizeDesktopWindow(desktopWindow);
 
 /** Checks Electrobun's configured release channel. */
 async function checkForUpdate(): Promise<StandaloneHostUpdateCheck> {

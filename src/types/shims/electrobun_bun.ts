@@ -23,6 +23,11 @@ export type ElectrobunWindowFrame = {
   height: number;
 };
 
+/** Native display information used to size desktop windows. */
+export type ElectrobunDisplay = {
+  workArea: ElectrobunWindowFrame;
+};
+
 /** Browser window construction options. */
 export type ElectrobunWindowOptions = {
   title?: string;
@@ -56,7 +61,18 @@ export class BrowserView {
 export class BrowserWindow {
   /** @param _options Window title, URL, frame, and RPC binding. */
   constructor(_options: ElectrobunWindowOptions) {}
+
+  /** Expands the native window to the available desktop size. */
+  maximize(): void {}
 }
+
+/** Native screen information exposed by Electrobun. */
+export const Screen = {
+  /** @returns Primary display bounds and usable work area. */
+  getPrimaryDisplay(): ElectrobunDisplay {
+    return { workArea: { x: 0, y: 0, width: 800, height: 600 } };
+  },
+};
 
 /** Electrobun built-in updater API. */
 export const Updater = {
