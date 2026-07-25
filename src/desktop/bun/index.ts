@@ -1,7 +1,8 @@
 import { buildDesktopWindowTitle } from '../../application_identity.js';
 import type { ElectrobunUpdaterRpcSchema } from '../../updater/electrobun_updater_rpc.js';
 import type { StandaloneHostUpdateCheck } from '../../updater/update_types.js';
-import { buildDesktopWindowFrame, maximizeDesktopWindow } from '../desktop_window_maximize.js';
+import { buildDesktopWindowFrame } from '../desktop_window_maximize.js';
+import { showMaximizedWhenReady } from '../desktop_window_startup.js';
 import { enableWindowsPerMonitorDpiAwareness } from '../windows_dpi_awareness.js';
 
 await enableWindowsPerMonitorDpiAwareness();
@@ -25,9 +26,11 @@ const desktopWindow = new BrowserWindow({
   title: windowTitle,
   url: 'views://main_ui/index.html',
   frame: desktopFrame,
+  hidden: true,
+  activate: false,
   rpc: updaterRpc,
 });
-maximizeDesktopWindow(desktopWindow);
+showMaximizedWhenReady(desktopWindow);
 
 /** Checks Electrobun's configured release channel. */
 async function checkForUpdate(): Promise<StandaloneHostUpdateCheck> {
