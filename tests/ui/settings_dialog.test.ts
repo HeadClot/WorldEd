@@ -175,12 +175,17 @@ describe('SettingsDialog', () => {
     dialog.show();
     dialog.showTab('keyboard');
     const content = dialog.getContentElement();
+    const categoryTitles = Array.from(content.querySelectorAll('.settings-dialog-category-title')).map((element) =>
+      (element.textContent || '').trim(),
+    );
     const reminders = Array.from(content.querySelectorAll('[data-settings-reminder]')).map((element) => ({
       id: element.getAttribute('data-settings-reminder'),
       value: (element as HTMLInputElement).value,
       readOnly: (element as HTMLInputElement).readOnly,
     }));
 
+    expect(categoryTitles).toContain('Navigation & Modifiers');
+    expect(categoryTitles).not.toContain('Navigation & Modifiers (Fixed)');
     expect(reminders).toEqual([
       { id: 'keyboard-reminder-uv-smear', value: 'G', readOnly: true },
       { id: 'keyboard-reminder-fly-forward-backward', value: 'W / S', readOnly: true },

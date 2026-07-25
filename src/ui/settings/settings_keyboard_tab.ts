@@ -147,7 +147,7 @@ export class SettingsKeyboardTab {
    * @returns Completed keyboard reminder category.
    */
   private buildReminderCategory(): HTMLElement {
-    const { section, body } = createSettingsCategory('Navigation & Modifiers (Fixed)');
+    const { section, body } = createSettingsCategory('Navigation & Modifiers');
     KEYBOARD_REMINDER_ROWS.forEach(([id, label, shortcut]) => {
       body.appendChild(this.createReminderRow(id, label, shortcut));
     });
