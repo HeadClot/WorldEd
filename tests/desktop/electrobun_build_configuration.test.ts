@@ -59,6 +59,7 @@ describe('Electrobun desktop build configuration', () => {
 
   it('keeps platform icon sources on disk for Electrobun packaging', () => {
     expect(existsSync(resolve(process.cwd(), 'public/app_icon.ico'))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'node_modules/rcedit/bin/rcedit-x64.exe'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/android-chrome-512x512.png'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/app_icon.iconset/icon_512x512.png'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/app_icon.iconset/icon_16x16.png'))).toBe(true);
