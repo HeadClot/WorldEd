@@ -14,14 +14,17 @@ describe('about_license_text', () => {
     expect(HENRYS_TOOLS_DISCORD_URL).toBe('https://discord.gg/sKEvrBwHtq');
   });
 
-  it('should embed the three.js MIT license without reference-project names', () => {
+  it('should combine Chisel, RealtimeCSG, SabreCSG, and three.js MIT licenses', () => {
     const text = getAboutLicenseText();
+    expect(text).toContain('=== Chisel Editor (MIT) ===');
+    expect(text).toContain('=== RealtimeCSG (MIT) ===');
+    expect(text).toContain('=== SabreCSG (MIT) ===');
     expect(text).toContain('=== three.js (MIT) ===');
+    expect(text).toContain('Copyright (c) 2024 Chisel');
+    expect(text).toContain('Copyright (c) 2019 Sander van Rossen');
+    expect(text).toContain('Copyright (c) 2016 Sabresaurus');
     expect(text).toContain('Copyright © 2010-2026 three.js authors');
     expect(text).toContain('Permission is hereby granted, free of charge');
     expect(text).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
-    expect(text.toLowerCase()).not.toContain('chisel');
-    expect(text.toLowerCase()).not.toContain('realtimecsg');
-    expect(text.toLowerCase()).not.toContain('sabrecsg');
   });
 });
