@@ -67,12 +67,12 @@ export class ConvexPolygonClipper {
    * @returns Clipped polygon inside the solid, or empty if none.
    */
   static clipInsideAllPlanes(polygon: THREE.Vector3[], planes: SolidPlane[]): THREE.Vector3[] {
-    let current = polygon.map((point) => point.clone());
+    let current = polygon;
     for (const plane of planes) {
       current = this.clipByPlane(current, plane).inside;
       if (current.length < 3) return [];
     }
-    return current;
+    return current.map((point) => point.clone());
   }
 
   /**
@@ -100,23 +100,23 @@ export class ConvexPolygonClipper {
     outside: THREE.Vector3[],
   ): void {
     if (currentInside && nextInside) {
-      inside.push(next.clone());
+      inside.push(next);
       return;
     }
     if (!currentInside && !nextInside) {
-      outside.push(next.clone());
+      outside.push(next);
       return;
     }
     const intersection = this.intersectSegmentPlane(current, next, currentDistance, nextDistance, plane);
     if (currentInside) {
-      inside.push(intersection.clone());
-      outside.push(intersection.clone());
-      outside.push(next.clone());
+      inside.push(intersection);
+      outside.push(intersection);
+      outside.push(next);
       return;
     }
-    outside.push(intersection.clone());
-    inside.push(intersection.clone());
-    inside.push(next.clone());
+    outside.push(intersection);
+    inside.push(intersection);
+    inside.push(next);
   }
 
   /**

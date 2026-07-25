@@ -57,6 +57,7 @@ import { applyTransformModeUi } from './layout_transform_mode_ui.js';
 import {
   createOutlinerShellActions,
   createToolbarShellActions,
+  mergeLayoutShellActionSourceParts,
   type LayoutShellActionSource,
 } from './layout_shell_action_builders.js';
 import { setupUvEditorPanel } from './layout_uv_editor_setup.js';
@@ -552,18 +553,19 @@ export class ViewportLayoutManager {
 
   /**
    * Builds a late-bound shell action source so handlers may be wired after the
-   * shell.
+   * shell. Merges property descriptors so getters stay live (object spread
+   * would snapshot undefined handlers at shell-build time).
    *
    * @returns Layout shell action surface.
    */
   private buildShellActionSource(): LayoutShellActionSource {
-    return {
-      ...this.buildShellCoreFields(),
-      ...this.buildShellHandlerFields(),
-      ...this.buildShellPanelCallbacks(),
-      ...this.buildShellEditCallbacks(),
-      ...this.buildShellIoCallbacks(),
-    };
+    return mergeLayoutShellActionSourceParts(
+      this.buildShellCoreFields(),
+      this.buildShellHandlerFields(),
+      this.buildShellPanelCallbacks(),
+      this.buildShellEditCallbacks(),
+      this.buildShellIoCallbacks(),
+    );
   }
 
   /**

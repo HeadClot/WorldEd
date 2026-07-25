@@ -419,8 +419,6 @@ export class Viewport3D extends BaseViewport {
    */
   update(deltaTime: number): void {
     this.flyingCamera.update(deltaTime);
-    this.grids.update(this.camera);
-    this.updateBrushEdgeDistanceFade();
   }
 
   /**

@@ -49,6 +49,24 @@ export interface LayoutShellActionSource {
 }
 
 /**
+ * Merges shell action source parts while preserving getters. Object spread
+ * evaluates accessors immediately and would freeze late-bound handlers as
+ * undefined when the shell is built before those handlers exist.
+ *
+ * @param parts Partial source objects (often getter maps).
+ * @returns Combined late-bound shell action source.
+ */
+export function mergeLayoutShellActionSourceParts(
+  ...parts: Array<Partial<LayoutShellActionSource>>
+): LayoutShellActionSource {
+  const descriptors: PropertyDescriptorMap = {};
+  for (const part of parts) {
+    Object.assign(descriptors, Object.getOwnPropertyDescriptors(part));
+  }
+  return Object.defineProperties({}, descriptors) as LayoutShellActionSource;
+}
+
+/**
  * Builds outliner action callbacks for the shell builder.
  *
  * @param source Layout manager surface.

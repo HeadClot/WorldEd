@@ -100,8 +100,8 @@ export class SolidBrushMeshChunkBuilder {
   private countVertices(polygons: SolidCompiledPolygon[]): number {
     let count = 0;
     for (const polygon of polygons) {
-      const tris = SurfaceTriangulator.triangulateConvexVertices(polygon.vertices);
-      count += tris.length * 3;
+      const triangleCount = Math.max(0, polygon.vertices.length - 2);
+      count += triangleCount * 3;
     }
     return count;
   }
@@ -131,19 +131,31 @@ export class SolidBrushMeshChunkBuilder {
     triangleCount: number,
     vertexWrite: number,
   ): number {
-    const tris = SurfaceTriangulator.triangulateConvexVertices(polygon.vertices);
-    if (tris.length < 1) return triangleCount;
+    const fanIndices = SurfaceTriangulator.fanIndices(polygon.vertices.length);
+    const triangleSteps = fanIndices.length / 3;
+    if (triangleSteps < 1) return triangleCount;
     const surface = resolveSurface(polygon.surfaceIndex) ?? createDefaultFaceSurface();
     const textureId = polygon.textureId || surface.textureId || DEFAULT_CHECKER_TEXTURE_ID;
     const regionIndices: number[] = [];
-    for (let step = 0; step < tris.length; step++) {
+    for (let step = 0; step < triangleSteps; step++) {
       regionIndices.push(triangleCount + step);
       triangleSources.push({
         brushId: polygon.brushId,
         surfaceIndex: polygon.surfaceIndex,
         textureId,
       });
-      vertexWrite = this.writeTriangleCorners(polygon, tris[step]!, surface, positions, normals, uvs, vertexWrite);
+      const base = step * 3;
+      vertexWrite = this.writeTriangleCorners(
+        polygon,
+        fanIndices[base]!,
+        fanIndices[base + 1]!,
+        fanIndices[base + 2]!,
+        surface,
+        positions,
+        normals,
+        uvs,
+        vertexWrite,
+      );
     }
     regions.push({
       triangleIndices: regionIndices,
@@ -151,14 +163,16 @@ export class SolidBrushMeshChunkBuilder {
       brushId: polygon.brushId,
       surfaceIndex: polygon.surfaceIndex,
     });
-    return triangleCount + tris.length;
+    return triangleCount + triangleSteps;
   }
 
   /**
    * Writes one triangle's three corners into the buffers.
    *
    * @param polygon Source polygon.
-   * @param cornerIndices Three local vertex indices into the polygon.
+   * @param indexA First local vertex index into the polygon.
+   * @param indexB Second local vertex index into the polygon.
+   * @param indexC Third local vertex index into the polygon.
    * @param surface Authored face surface.
    * @param positions Position buffer.
    * @param normals Normal buffer.
@@ -168,26 +182,51 @@ export class SolidBrushMeshChunkBuilder {
    */
   private writeTriangleCorners(
     polygon: SolidCompiledPolygon,
-    cornerIndices: number[],
+    indexA: number,
+    indexB: number,
+    indexC: number,
     surface: FaceSurfaceDescription,
     positions: Float32Array,
     normals: Float32Array,
     uvs: Float32Array,
     vertexWrite: number,
   ): number {
-    for (const localIndex of cornerIndices) {
-      const vertex = polygon.vertices[localIndex]!;
-      const base = vertexWrite * 3;
-      positions[base] = vertex.x;
-      positions[base + 1] = vertex.y;
-      positions[base + 2] = vertex.z;
-      normals[base] = polygon.normal.x;
-      normals[base + 1] = polygon.normal.y;
-      normals[base + 2] = polygon.normal.z;
-      this.projectVertexToUv(vertex, surface, uvs, vertexWrite);
-      vertexWrite += 1;
-    }
-    return vertexWrite;
+    vertexWrite = this.writeOneCorner(polygon, indexA, surface, positions, normals, uvs, vertexWrite);
+    vertexWrite = this.writeOneCorner(polygon, indexB, surface, positions, normals, uvs, vertexWrite);
+    return this.writeOneCorner(polygon, indexC, surface, positions, normals, uvs, vertexWrite);
+  }
+
+  /**
+   * Writes a single polygon corner into position, normal, and UV buffers.
+   *
+   * @param polygon Source polygon.
+   * @param localIndex Local vertex index into the polygon.
+   * @param surface Authored face surface.
+   * @param positions Position buffer.
+   * @param normals Normal buffer.
+   * @param uvs UV buffer.
+   * @param vertexWrite Next vertex index.
+   * @returns Updated vertex write index.
+   */
+  private writeOneCorner(
+    polygon: SolidCompiledPolygon,
+    localIndex: number,
+    surface: FaceSurfaceDescription,
+    positions: Float32Array,
+    normals: Float32Array,
+    uvs: Float32Array,
+    vertexWrite: number,
+  ): number {
+    const vertex = polygon.vertices[localIndex]!;
+    const base = vertexWrite * 3;
+    positions[base] = vertex.x;
+    positions[base + 1] = vertex.y;
+    positions[base + 2] = vertex.z;
+    normals[base] = polygon.normal.x;
+    normals[base + 1] = polygon.normal.y;
+    normals[base + 2] = polygon.normal.z;
+    this.projectVertexToUv(vertex, surface, uvs, vertexWrite);
+    return vertexWrite + 1;
   }
 
   /**

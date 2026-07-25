@@ -65,7 +65,7 @@ export class SolidBrushEdgeFader {
    * @returns Non-negative distance in world units.
    */
   private static estimateNearestDistance(brushMesh: THREE.Mesh): number {
-    brushMesh.updateWorldMatrix(true, false);
+    brushMesh.updateMatrixWorld(false);
     const sphere = brushMesh.geometry.boundingSphere;
     if (!sphere) {
       brushMesh.getWorldPosition(brushWorldCenter);

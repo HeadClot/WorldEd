@@ -80,8 +80,8 @@ export class BrushMembership {
    * @returns Category of the polygon relative to the brush.
    */
   static classifyPolygon(polygon: THREE.Vector3[], brush: SolidBrush, surfaceNormal: THREE.Vector3): SurfaceCategory {
-    const centroid = this.polygonCentroid(polygon);
-    return this.classifyPoint(centroid, brush, surfaceNormal);
+    this.polygonCentroidInto(polygon, scratchCentroid);
+    return this.classifyPoint(scratchCentroid, brush, surfaceNormal);
   }
 
   /**
@@ -91,13 +91,27 @@ export class BrushMembership {
    * @returns Centroid point.
    */
   static polygonCentroid(polygon: THREE.Vector3[]): THREE.Vector3 {
-    const centroid = new THREE.Vector3();
+    return this.polygonCentroidInto(polygon, new THREE.Vector3());
+  }
+
+  /**
+   * Writes the arithmetic centroid of a polygon into a target vector.
+   *
+   * @param polygon Vertex list.
+   * @param target Output vector.
+   * @returns The target vector for chaining.
+   */
+  static polygonCentroidInto(polygon: THREE.Vector3[], target: THREE.Vector3): THREE.Vector3 {
+    target.set(0, 0, 0);
     for (const point of polygon) {
-      centroid.add(point);
+      target.add(point);
     }
     if (polygon.length > 0) {
-      centroid.multiplyScalar(1 / polygon.length);
+      target.multiplyScalar(1 / polygon.length);
     }
-    return centroid;
+    return target;
   }
 }
+
+/** Shared scratch centroid for classifyPolygon hot-path reuse. */
+const scratchCentroid = new THREE.Vector3();

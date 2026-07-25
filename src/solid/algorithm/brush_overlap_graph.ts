@@ -24,9 +24,10 @@ export class BrushOverlapGraph {
     if (count === 0) return;
     if (count <= 32) {
       this.buildPairwise(entries, pad);
-      return;
+    } else {
+      this.buildWithGrid(entries, pad);
     }
-    this.buildWithGrid(entries, pad);
+    this.sortPeerLists(entries);
   }
 
   /**
@@ -50,6 +51,21 @@ export class BrushOverlapGraph {
     }
     this.restorePreviousPeers(entries, seedIndices, previousPeerIndices);
     this.linkSeedsAgainstAll(entries, pad, seedIndices);
+    this.sortPeerLists(entries);
+  }
+
+  /**
+   * Sorts each peer list ascending so CSG local walks stay in tree order
+   * without per-fragment sorts.
+   *
+   * @param entries Bounds entries with filled peer lists.
+   */
+  private static sortPeerLists(entries: OverlapBoundsEntry[]): void {
+    for (const entry of entries) {
+      if (entry.overlappingPeerIndices.length > 1) {
+        entry.overlappingPeerIndices.sort((left, right) => left - right);
+      }
+    }
   }
 
   /**

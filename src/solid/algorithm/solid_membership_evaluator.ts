@@ -14,6 +14,7 @@ export class SolidMembershipEvaluator {
   private readonly scratchCentroid = new THREE.Vector3();
   private readonly scratchOutside = new THREE.Vector3();
   private readonly scratchInside = new THREE.Vector3();
+  private readonly scratchCandidates: number[] = [];
   private hasIntersectingOperations = false;
   private membershipIndex: BrushSpatialIndex | null = null;
 
@@ -104,14 +105,28 @@ export class SolidMembershipEvaluator {
   evaluateSolidMembershipLocal(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
     const candidates = this.resolveMembershipCandidates(point, prepared);
     if (candidates.length === 0) return false;
-    candidates.sort((a, b) => a - b);
+    this.copyAndSortCandidates(candidates);
     let inside = false;
-    for (const index of candidates) {
+    for (const index of this.scratchCandidates) {
       const entry = prepared[index]!;
       const inBrush = BrushMembership.isInsidePlanes(point, entry.brush.planes, this.membershipEpsilon);
       inside = this.applyOperation(inside, inBrush, entry.operation);
     }
     return inside;
+  }
+
+  /**
+   * Copies candidate indices into reusable storage and sorts them in tree
+   * order.
+   *
+   * @param candidates Unsorted candidate prepared indices.
+   */
+  private copyAndSortCandidates(candidates: readonly number[]): void {
+    this.scratchCandidates.length = 0;
+    for (const index of candidates) {
+      this.scratchCandidates.push(index);
+    }
+    this.scratchCandidates.sort((left, right) => left - right);
   }
 
   /**

@@ -243,7 +243,7 @@ export class SolidSurfaceEmitter {
     const facePlane = subject.brush.planes[faceIndex]!;
     if (faceVertices.length < 3) return;
     output.push({
-      vertices: faceVertices.map((point) => point.clone()),
+      vertices: faceVertices,
       normal: facePlane.normal.clone(),
       surfaceIndex: face.surfaceIndex,
       brushId: subject.instance.id,

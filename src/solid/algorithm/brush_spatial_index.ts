@@ -205,8 +205,11 @@ export class BrushSpatialIndex {
     if (entries.length === 0) return 1;
     let totalExtent = 0;
     for (const entry of entries) {
-      const size = entry.bounds.getSize(new THREE.Vector3());
-      totalExtent += Math.max(size.x, size.y, size.z, 1e-3);
+      const bounds = entry.bounds;
+      const extentX = bounds.max.x - bounds.min.x;
+      const extentY = bounds.max.y - bounds.min.y;
+      const extentZ = bounds.max.z - bounds.min.z;
+      totalExtent += Math.max(extentX, extentY, extentZ, 1e-3);
     }
     return Math.max(totalExtent / entries.length, 1e-3);
   }

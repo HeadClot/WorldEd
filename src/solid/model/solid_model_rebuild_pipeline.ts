@@ -38,6 +38,9 @@ export class SolidModelRebuildPipeline {
   private interactiveGeometryCurrent = false;
   private lastSurfaceRegions: SolidSurfaceRegion[] = [];
   private uvStickToBrush = true;
+  private readonly scratchBrushMatrix = new THREE.Matrix4();
+  private readonly scratchBrushQuaternion = new THREE.Quaternion();
+  private readonly identityBrushMatrix = new THREE.Matrix4();
 
   /**
    * Creates a rebuild pipeline bound to host accessors.
@@ -556,12 +559,9 @@ export class SolidModelRebuildPipeline {
    * @returns Model matrix.
    */
   private composeBrushModelMatrix(brush: SolidBrushInstance | undefined): THREE.Matrix4 {
-    if (!brush) return new THREE.Matrix4();
-    return new THREE.Matrix4().compose(
-      brush.position,
-      new THREE.Quaternion().setFromEuler(brush.rotation),
-      brush.scale,
-    );
+    if (!brush) return this.identityBrushMatrix;
+    this.scratchBrushQuaternion.setFromEuler(brush.rotation);
+    return this.scratchBrushMatrix.compose(brush.position, this.scratchBrushQuaternion, brush.scale);
   }
 
   /**
