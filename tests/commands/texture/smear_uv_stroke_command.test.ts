@@ -4,15 +4,33 @@ import { CommandStack } from '../../../src/commands/command_stack.js';
 import { SmearUvStrokeCommand } from '../../../src/commands/texture/smear_uv_stroke_command.js';
 import { SolidModel } from '../../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
+import {
+  createDefaultFaceTextureMapping,
+  FaceTextureMapping,
+  FaceTextureMappingTrs,
+  getFaceTextureMappingTrs,
+} from '../../../src/texture/uv/face_texture_mapping.js';
 import { setFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
+
+/** Runtime TRS proxy fields used by texture mapping tests. */
+type MappingWithTrs = FaceTextureMapping & FaceTextureMappingTrs;
+
+/**
+ * Reads meters-per-tile TRS from a mapping.
+ *
+ * @param mapping Face texture mapping.
+ * @returns TRS fields.
+ */
+function mappingTrs(mapping: FaceTextureMapping): FaceTextureMappingTrs {
+  return getFaceTextureMappingTrs(mapping, new THREE.Vector3(0, 1, 0));
+}
 
 /** Unit tests for UV smear undo/redo including solid brush mapping restore. */
 describe('SmearUvStrokeCommand', () => {
   it('undo restores solid brush face mappings after a live smear stroke', () => {
     const model = new SolidModel('SmearUndo');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const original = createDefaultFaceTextureMapping('original.png');
+    const original = createDefaultFaceTextureMapping('original.png') as MappingWithTrs;
     original.scaleU = 4;
     original.scaleV = 4;
     original.offsetU = 0.1;
@@ -25,7 +43,7 @@ describe('SmearUvStrokeCommand', () => {
     const before = SmearUvStrokeCommand.captureMesh(result);
     expect(before.solidBrushUvs).not.toBeNull();
 
-    const smeared = createDefaultFaceTextureMapping('smeared.png');
+    const smeared = createDefaultFaceTextureMapping('smeared.png') as MappingWithTrs;
     smeared.scaleU = 1;
     smeared.scaleV = 1;
     for (let i = 0; i < brush.brush.faces.length; i++) {
@@ -38,7 +56,7 @@ describe('SmearUvStrokeCommand', () => {
       },
     ]);
     const after = SmearUvStrokeCommand.captureMesh(result);
-    expect(after.solidBrushUvs![0].faceMappings[0]?.textureId).toBe('smeared.png');
+    expect(after.solidBrushUvs![0]!.faceMappings[0]?.textureId).toBe('smeared.png');
 
     const stack = new CommandStack(16);
     stack.recordExecuted(new SmearUvStrokeCommand([before], [after]));
@@ -46,12 +64,11 @@ describe('SmearUvStrokeCommand', () => {
 
     stack.undo();
     expect(brush.getSurfaceMapping(0).textureId).toBe('original.png');
-    expect(brush.getSurfaceMapping(0).scaleU).toBeCloseTo(4, 5);
+    expect(mappingTrs(brush.getSurfaceMapping(0)).scaleU).toBeCloseTo(4, 5);
 
-    // History handler rebuilds solids from brush maps after every undo.
     SolidModel.rebuildAllUnder(model.root);
     expect(brush.getSurfaceMapping(0).textureId).toBe('original.png');
-    expect(brush.getSurfaceMapping(0).scaleU).toBeCloseTo(4, 5);
+    expect(mappingTrs(brush.getSurfaceMapping(0)).scaleU).toBeCloseTo(4, 5);
 
     stack.redo();
     expect(brush.getSurfaceMapping(0).textureId).toBe('smeared.png');
@@ -62,14 +79,14 @@ describe('SmearUvStrokeCommand', () => {
   it('captures solid brush UVs in mesh snapshots', () => {
     const model = new SolidModel('CaptureSolid');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const mapping = createDefaultFaceTextureMapping('cap.png');
+    const mapping = createDefaultFaceTextureMapping('cap.png') as MappingWithTrs;
     mapping.scaleU = 2.5;
     brush.setFaceMapping(0, mapping);
     model.rebuild(true);
     const snapshot = SmearUvStrokeCommand.captureMesh(model.getResultMesh());
     expect(snapshot.solidBrushUvs).not.toBeNull();
     expect(snapshot.solidBrushUvs!.length).toBe(1);
-    expect(snapshot.solidBrushUvs![0].brushId).toBe(brush.id);
+    expect(snapshot.solidBrushUvs![0]!.brushId).toBe(brush.id);
   });
 
   it('undo restores UV maps on a plain mesh without solid brushes', () => {

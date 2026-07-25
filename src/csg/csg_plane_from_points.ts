@@ -61,10 +61,10 @@ export function buildPlaneFromPlacementPoints(
   worldUp: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
 ): THREE.Plane | null {
   if (points.length >= 3) {
-    return buildPlaneFromThreePoints(points[0], points[1], points[2]);
+    return buildPlaneFromThreePoints(points[0]!, points[1]!, points[2]!);
   }
   if (points.length === 2) {
-    return buildVerticalPlaneFromTwoPoints(points[0], points[1], worldUp);
+    return buildVerticalPlaneFromTwoPoints(points[0]!, points[1]!, worldUp);
   }
   return null;
 }

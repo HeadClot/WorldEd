@@ -4,8 +4,8 @@ import { FileDialogManager } from '../../src/io/file_dialog_manager.js';
 describe('FileDialogManager', () => {
   let manager: FileDialogManager;
   let savedCreateElement: typeof document.createElement;
-  let savedAppendChild: (node: Node) => Node;
-  let savedRemoveChild: (node: Node) => Node;
+  let savedAppendChild: typeof document.body.appendChild;
+  let savedRemoveChild: typeof document.body.removeChild;
 
   beforeEach(() => {
     manager = new FileDialogManager();
@@ -54,11 +54,11 @@ describe('FileDialogManager', () => {
       click: vi.fn(),
     };
     document.createElement = vi.fn((tagName: string) => {
-      if (tagName === 'a') return mockAnchor as HTMLElement;
+      if (tagName === 'a') return mockAnchor as unknown as HTMLElement;
       return savedCreateElement(tagName);
     });
-    document.body.appendChild = vi.fn();
-    document.body.removeChild = vi.fn();
+    document.body.appendChild = vi.fn() as typeof document.body.appendChild;
+    document.body.removeChild = vi.fn() as typeof document.body.removeChild;
     const result = await manager.saveJSON('{}', 'test.json');
     expect(result).toBe('test.json');
   });
@@ -71,11 +71,11 @@ describe('FileDialogManager', () => {
       click: vi.fn(),
     };
     document.createElement = vi.fn((tagName: string) => {
-      if (tagName === 'a') return mockAnchor as HTMLElement;
+      if (tagName === 'a') return mockAnchor as unknown as HTMLElement;
       return savedCreateElement(tagName);
     });
-    document.body.appendChild = vi.fn();
-    document.body.removeChild = vi.fn();
+    document.body.appendChild = vi.fn() as typeof document.body.appendChild;
+    document.body.removeChild = vi.fn() as typeof document.body.removeChild;
     const buffer = new ArrayBuffer(32);
     const result = await manager.saveBinary(buffer, 'scene.glb');
     expect(result).toBe('scene.glb');

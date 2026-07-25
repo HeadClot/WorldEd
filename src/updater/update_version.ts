@@ -52,7 +52,7 @@ function parseVersion(version: string): ParsedVersion | null {
  */
 function compareNumericParts(first: ParsedVersion, second: ParsedVersion): number {
   for (let index = 0; index < first.numbers.length; index++) {
-    const difference = first.numbers[index] - second.numbers[index];
+    const difference = first.numbers[index]! - second.numbers[index]!;
     if (difference !== 0) return difference;
   }
   return 0;

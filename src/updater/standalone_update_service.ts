@@ -175,7 +175,9 @@ export class StandaloneUpdateService {
    * @returns Status result.
    */
   private createResult(status: UpdateCheckResult['status'], message?: string): UpdateCheckResult {
-    return { status, currentVersion: this.currentVersion, message };
+    const result: UpdateCheckResult = { status, currentVersion: this.currentVersion };
+    if (message !== undefined) result.message = message;
+    return result;
   }
 
   /**

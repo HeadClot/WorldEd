@@ -41,8 +41,8 @@ export type UpdateCheckStatus =
 export interface UpdateCheckResult {
   status: UpdateCheckStatus;
   currentVersion: string;
-  latestRelease?: StandaloneUpdateRelease;
-  message?: string;
+  latestRelease?: StandaloneUpdateRelease | undefined;
+  message?: string | undefined;
 }
 
 /** Payload sent to the standalone shell to install and restart. */

@@ -19,7 +19,7 @@ describe('brush_preview_face_map', () => {
       expect(surfaceIndex).toBeLessThan(6);
       const triNormal = computeTriangleNormal(mesh.geometry, triangleIndex);
       const solidNormal = triNormal.clone().applyMatrix3(new THREE.Matrix3().getNormalMatrix(mesh.matrix)).normalize();
-      const planeNormal = modelBrush.planes[surfaceIndex].normal;
+      const planeNormal = modelBrush.planes[surfaceIndex!]!.normal;
       expect(planeNormal.dot(solidNormal)).toBeGreaterThan(0.9);
     }
   });
@@ -37,7 +37,7 @@ describe('brush_preview_face_map', () => {
     expect(topTriangles.length).toBe(2);
     const mapped = topTriangles.map((t) => mapPreviewTriangleToBrushFace(mesh, t, brush));
     expect(mapped[0]).toBe(mapped[1]);
-    const plane = brush.getModelSpaceBrush().planes[mapped[0]];
+    const plane = brush.getModelSpaceBrush().planes[mapped[0]!]!;
     expect(plane.normal.y).toBeGreaterThan(0.9);
   });
 });

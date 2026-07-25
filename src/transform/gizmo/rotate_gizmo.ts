@@ -74,7 +74,7 @@ export class RotateGizmo {
     applyGizmoFrontRenderOrder(frontMesh);
     const handle = new GizmoHandle(axis, color, frontMesh);
     const handleId = handle.getHandleId();
-    frontMesh.userData.handleId = handleId;
+    frontMesh.userData['handleId'] = handleId;
     const ghostMesh = createGizmoOccludedMesh(geometry, color, handleId);
     group.add(ghostMesh);
     group.add(frontMesh);
@@ -117,9 +117,9 @@ export class RotateGizmo {
    * @param mesh The mesh to dispose.
    */
   private disposeMesh(mesh: THREE.Mesh): void {
-    if (mesh.geometry && !mesh.userData.geometryDisposed) {
+    if (mesh.geometry && !mesh.userData['geometryDisposed']) {
       mesh.geometry.dispose();
-      mesh.userData.geometryDisposed = true;
+      mesh.userData['geometryDisposed'] = true;
     }
     if (mesh.material) {
       if (Array.isArray(mesh.material)) {

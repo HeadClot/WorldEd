@@ -11,9 +11,9 @@ export class CameraWidget {
   private widgetCamera: THREE.OrthographicCamera;
   private widgetScene: THREE.Scene;
   private arrowGroup: THREE.Group;
-  private arrowX: THREE.ArrowHelper;
-  private arrowY: THREE.ArrowHelper;
-  private arrowZ: THREE.ArrowHelper;
+  private arrowX!: THREE.ArrowHelper;
+  private arrowY!: THREE.ArrowHelper;
+  private arrowZ!: THREE.ArrowHelper;
 
   private readonly canvasSize: number;
   private readonly arrowLength: number;

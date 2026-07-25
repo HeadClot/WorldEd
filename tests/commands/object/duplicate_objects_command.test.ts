@@ -22,7 +22,7 @@ describe('DuplicateObjectsCommand', () => {
     const command = new DuplicateObjectsCommand([mesh1], parent, offset);
     command.execute();
     expect(parent.children.length).toBe(3);
-    const clone = parent.children[2];
+    const clone = parent.children[2]!;
     expect(clone.name).toBe('Cube001_copy');
     expect(clone.position.x).toBeCloseTo(1);
   });
@@ -33,7 +33,7 @@ describe('DuplicateObjectsCommand', () => {
     expect(parent.children.length).toBe(3);
     command.undo();
     expect(parent.children.length).toBe(2);
-    expect(parent.children[0].name).toBe('Cube001');
+    expect(parent.children[0]!.name).toBe('Cube001');
   });
 
   it('should redo and re-add clones after undo', () => {
@@ -48,12 +48,12 @@ describe('DuplicateObjectsCommand', () => {
   it('should produce independent objects with separate resources', () => {
     const command = new DuplicateObjectsCommand([mesh1], parent, offset);
     command.execute();
-    const clone = parent.children[2];
+    const clone = parent.children[2] as THREE.Mesh;
     mesh1.geometry.dispose();
     expect(clone.geometry).toBeDefined();
-    const originalMaterial = mesh1.material as THREE.Material;
+    const originalMaterial = mesh1.material as THREE.MeshStandardMaterial;
     originalMaterial.color.set(0xff0000);
-    const cloneMaterial = (clone.material as THREE.Material).color;
+    const cloneMaterial = (clone.material as THREE.MeshStandardMaterial).color;
     expect(cloneMaterial.getHex()).toBe(0x888888);
   });
 
@@ -61,8 +61,8 @@ describe('DuplicateObjectsCommand', () => {
     const command = new DuplicateObjectsCommand([mesh1, mesh2], parent, offset);
     command.execute();
     expect(parent.children.length).toBe(4);
-    expect(parent.children[2].name).toBe('Cube001_copy');
-    expect(parent.children[3].name).toBe('Sphere001_copy');
+    expect(parent.children[2]!.name).toBe('Cube001_copy');
+    expect(parent.children[3]!.name).toBe('Sphere001_copy');
   });
 
   it('should dispose resources on undo', () => {
@@ -71,8 +71,8 @@ describe('DuplicateObjectsCommand', () => {
     const clonedMeshes = command.getClonedMeshes();
     expect(clonedMeshes.length).toBe(1);
     command.undo();
-    const clonedMesh = clonedMeshes[0];
-    expect(clonedMesh.geometry.parameters).toBeDefined();
+    const clonedMesh = clonedMeshes[0]!;
+    expect((clonedMesh.geometry as THREE.BoxGeometry).parameters).toBeDefined();
     expect(clonedMesh.parent).toBeNull();
   });
 
@@ -100,7 +100,7 @@ describe('DuplicateObjectsCommand', () => {
     mesh1.rotation.set(0.5, 0.5, 0);
     const command = new DuplicateObjectsCommand([mesh1], parent, offset);
     command.execute();
-    const clone = parent.children[2];
+    const clone = parent.children[2]!;
     expect(clone.scale.x).toBeCloseTo(3);
     expect(clone.scale.y).toBeCloseTo(3);
     expect(clone.scale.z).toBeCloseTo(3);
@@ -129,7 +129,7 @@ describe('DuplicateObjectsCommand', () => {
     sources.pop();
     command.execute();
     expect(parent.children.length).toBe(3);
-    expect(parent.children[2].name).toBe('Cube001_copy');
+    expect(parent.children[2]!.name).toBe('Cube001_copy');
   });
 
   it('should return a defensive copy from getClonedMeshes', () => {

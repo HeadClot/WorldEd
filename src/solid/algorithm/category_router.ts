@@ -177,7 +177,7 @@ export class CategoryRouter {
     operation: SolidOperation,
   ): SurfaceCategory {
     const table = this.tableForOperation(operation);
-    return table[leftCategory][rightCategory];
+    return table[leftCategory]![rightCategory]!;
   }
 
   /**

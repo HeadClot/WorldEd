@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { getFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
+import { createDefaultFaceTextureMapping } from '../../src/texture/uv/face_texture_mapping.js';
 
 /**
  * Solid result UVs must be baked per coplanar face, not one projection for the
@@ -66,23 +67,22 @@ describe('Solid result UV projection', () => {
   it('keeps authored UV scale after a CSG rebuild', () => {
     const model = new SolidModel('UvRebuild');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    brush.setFaceMapping(0, {
-      align: 'face',
-      scaleU: 4,
-      scaleV: 2,
-      offsetU: 0.1,
-      offsetV: 0.2,
-      rotationDeg: 15,
-      textureId: 'folder/rebuild.png',
-    });
+    const mapping = createDefaultFaceTextureMapping('folder/rebuild.png');
+    mapping.align = 'face';
+    mapping.scaleU = 4;
+    mapping.scaleV = 2;
+    mapping.offsetU = 0.1;
+    mapping.offsetV = 0.2;
+    mapping.rotationDeg = 15;
+    brush.setFaceMapping(0, mapping);
     model.markDirty();
     model.rebuild(true);
     const maps = getFaceTextureMaps(model.getResultMesh());
     const matching = maps.find((entry) => entry.mapping.textureId === 'folder/rebuild.png');
     expect(matching).toBeDefined();
-    expect(matching!.mapping.scaleU).toBeCloseTo(4, 1);
-    expect(matching!.mapping.scaleV).toBeCloseTo(2, 1);
-    expect(matching!.mapping.offsetU).toBeCloseTo(0.1, 1);
+    expect(matching!.mapping.scaleU!).toBeCloseTo(4, 1);
+    expect(matching!.mapping.scaleV!).toBeCloseTo(2, 1);
+    expect(matching!.mapping.offsetU!).toBeCloseTo(0.1, 1);
     // Rotation is encoded in the UV matrix / custom axes, not rotationDeg.
     const surface = brush.getFaceSurface(0);
     const sample = new THREE.Vector3(0.5, 0.5, 1);

@@ -1,5 +1,4 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import * as THREE from 'three';
 import {
   CONTENT_METALNESS,
   CONTENT_ROUGHNESS,

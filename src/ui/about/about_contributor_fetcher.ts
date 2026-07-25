@@ -62,14 +62,14 @@ function normalizeContributor(raw: unknown): GithubContributorInfo | null {
 
   const obj = raw as Record<string, unknown>;
 
-  const login = typeof obj.login === 'string' ? obj.login : null;
-  const avatarUrl = typeof obj.avatar_url === 'string' ? obj.avatar_url : null;
-  const htmlUrl = typeof obj.html_url === 'string' ? obj.html_url : null;
-  const contributions = typeof obj.contributions === 'number' ? obj.contributions : 0;
+  const login = typeof obj['login'] === 'string' ? obj['login'] : null;
+  const avatarUrl = typeof obj['avatar_url'] === 'string' ? obj['avatar_url'] : null;
+  const htmlUrl = typeof obj['html_url'] === 'string' ? obj['html_url'] : null;
+  const contributions = typeof obj['contributions'] === 'number' ? obj['contributions'] : 0;
 
   if (!login || !avatarUrl || !htmlUrl) return null;
 
-  const nameField = obj.name;
+  const nameField = obj['name'];
   const displayName = typeof nameField === 'string' && nameField.trim().length > 0 ? nameField.trim() : login;
 
   return {

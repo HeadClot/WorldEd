@@ -94,13 +94,13 @@ describe('SelectionManager', () => {
   });
 
   it('should fire callback with correct selection set', () => {
-    let capturedSet: Set<THREE.Mesh> | null = null;
+    let capturedSet: Set<THREE.Mesh> | undefined;
     manager.onSelectionChanged((selected) => {
       capturedSet = selected;
     });
     manager.selectObject(meshA);
-    expect(capturedSet).not.toBeNull();
-    expect(capturedSet?.has(meshA)).toBe(true);
+    expect(capturedSet).toBeDefined();
+    expect(capturedSet!.has(meshA)).toBe(true);
   });
 
   it('should support multiple change callbacks', () => {

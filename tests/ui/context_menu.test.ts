@@ -44,7 +44,7 @@ describe('ContextMenu', () => {
   it('should invoke correct callback on item click', () => {
     menu.show(100, 100);
     const menuEl = container.children[0] as HTMLElement;
-    menuEl.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    menuEl.children[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(callback1).toHaveBeenCalled();
     expect(callback2).not.toHaveBeenCalled();
   });
@@ -53,7 +53,7 @@ describe('ContextMenu', () => {
     menu.show(100, 100);
     const menuEl = container.children[0] as HTMLElement;
     expect(menuEl.style.display).toBe('block');
-    menuEl.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    menuEl.children[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(menuEl.style.display).toBe('none');
   });
 
@@ -81,8 +81,8 @@ describe('ContextMenu', () => {
     const disabledMenu = new ContextMenu(container, disabledItems);
     disabledMenu.show(100, 100);
     const menuEl = container.children[1] as HTMLElement;
-    expect(menuEl.children[0].classList.contains('editor-context-menu-item-disabled')).toBe(true);
-    menuEl.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(menuEl.children[0]!.classList.contains('editor-context-menu-item-disabled')).toBe(true);
+    menuEl.children[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(disabledCallback).not.toHaveBeenCalled();
     disabledMenu.dispose();
   });

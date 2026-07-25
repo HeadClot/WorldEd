@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { GridSnap } from '../../src/transform/snap/grid_snap.js';
 import { TransformExecutor } from '../../src/transform/transform_executor.js';

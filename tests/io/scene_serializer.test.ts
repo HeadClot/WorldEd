@@ -26,9 +26,9 @@ describe('SceneSerializer', () => {
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
     expect(result.objects.length).toBe(1);
-    expect(result.objects[0].position.x).toBe(1);
-    expect(result.objects[0].position.y).toBe(2);
-    expect(result.objects[0].position.z).toBe(3);
+    expect(result.objects[0]!.position.x).toBe(1);
+    expect(result.objects[0]!.position.y).toBe(2);
+    expect(result.objects[0]!.position.z).toBe(3);
   });
 
   it('should serialize single mesh with correct rotation', () => {
@@ -36,9 +36,9 @@ describe('SceneSerializer', () => {
     mesh.rotation.set(Math.PI / 6, Math.PI / 4, 0);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].rotation.x).toBeCloseTo(Math.PI / 6);
-    expect(result.objects[0].rotation.y).toBeCloseTo(Math.PI / 4);
-    expect(result.objects[0].rotation.z).toBe(0);
+    expect(result.objects[0]!.rotation.x).toBeCloseTo(Math.PI / 6);
+    expect(result.objects[0]!.rotation.y).toBeCloseTo(Math.PI / 4);
+    expect(result.objects[0]!.rotation.z).toBe(0);
   });
 
   it('should serialize single mesh with correct scale', () => {
@@ -46,9 +46,9 @@ describe('SceneSerializer', () => {
     mesh.scale.set(2, 3, 4);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].scale.x).toBe(2);
-    expect(result.objects[0].scale.y).toBe(3);
-    expect(result.objects[0].scale.z).toBe(4);
+    expect(result.objects[0]!.scale.x).toBe(2);
+    expect(result.objects[0]!.scale.y).toBe(3);
+    expect(result.objects[0]!.scale.z).toBe(4);
   });
 
   it('should serialize mesh name correctly', () => {
@@ -56,7 +56,7 @@ describe('SceneSerializer', () => {
     mesh.name = 'MyCube';
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].name).toBe('MyCube');
+    expect(result.objects[0]!.name).toBe('MyCube');
   });
 
   it('should serialize mesh visibility correctly', () => {
@@ -64,28 +64,28 @@ describe('SceneSerializer', () => {
     mesh.visible = false;
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].visible).toBe(false);
+    expect(result.objects[0]!.visible).toBe(false);
   });
 
   it('should preserve UUID from the mesh', () => {
     const mesh = createBoxAtPosition(0, 0, 0);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].uuid).toBe(mesh.uuid);
+    expect(result.objects[0]!.uuid).toBe(mesh.uuid);
   });
 
   it('should serialize mesh type as mesh', () => {
     const mesh = createBoxAtPosition(0, 0, 0);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].type).toBe('mesh');
+    expect(result.objects[0]!.type).toBe('mesh');
   });
 
   it('should serialize box geometry type correctly', () => {
     const mesh = createBoxAtPosition(0, 0, 0);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].geometryType).toBe('box');
+    expect(result.objects[0]!.geometryType).toBe('box');
   });
 
   it('should serialize box geometry parameters', () => {
@@ -93,38 +93,38 @@ describe('SceneSerializer', () => {
     mesh.geometry = new THREE.BoxGeometry(2, 3, 4);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].geometryParams?.width).toBe(2);
-    expect(result.objects[0].geometryParams?.height).toBe(3);
-    expect(result.objects[0].geometryParams?.depth).toBe(4);
+    expect(result.objects[0]!.geometryParams?.['width']).toBe(2);
+    expect(result.objects[0]!.geometryParams?.['height']).toBe(3);
+    expect(result.objects[0]!.geometryParams?.['depth']).toBe(4);
   });
 
   it('should serialize sphere geometry type and parameters', () => {
     const mesh = createSphereAtPosition(1.5, 0, 0, 0);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].geometryType).toBe('sphere');
-    expect(result.objects[0].geometryParams?.radius).toBe(1.5);
-    expect(result.objects[0].geometryParams?.widthSegments).toBe(32);
-    expect(result.objects[0].geometryParams?.heightSegments).toBe(32);
+    expect(result.objects[0]!.geometryType).toBe('sphere');
+    expect(result.objects[0]!.geometryParams?.['radius']).toBe(1.5);
+    expect(result.objects[0]!.geometryParams?.['widthSegments']).toBe(32);
+    expect(result.objects[0]!.geometryParams?.['heightSegments']).toBe(32);
   });
 
   it('should serialize cylinder geometry type and parameters', () => {
     const mesh = createCylinderAtPosition(0, 0, 0);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].geometryType).toBe('cylinder');
-    expect(result.objects[0].geometryParams?.radiusTop).toBe(0.5);
-    expect(result.objects[0].geometryParams?.radiusBottom).toBe(1.0);
-    expect(result.objects[0].geometryParams?.height).toBe(2);
+    expect(result.objects[0]!.geometryType).toBe('cylinder');
+    expect(result.objects[0]!.geometryParams?.['radiusTop']).toBe(0.5);
+    expect(result.objects[0]!.geometryParams?.['radiusBottom']).toBe(1.0);
+    expect(result.objects[0]!.geometryParams?.['height']).toBe(2);
   });
 
   it('should serialize plane geometry type and parameters', () => {
     const mesh = createPlaneAtPosition(0, 0, 0);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].geometryType).toBe('plane');
-    expect(result.objects[0].geometryParams?.width).toBe(3);
-    expect(result.objects[0].geometryParams?.height).toBe(2);
+    expect(result.objects[0]!.geometryType).toBe('plane');
+    expect(result.objects[0]!.geometryParams?.['width']).toBe(3);
+    expect(result.objects[0]!.geometryParams?.['height']).toBe(2);
   });
 
   it('should serialize material color', () => {
@@ -133,7 +133,7 @@ describe('SceneSerializer', () => {
     material.color.setHex(0xff0000);
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].materialColor).toBe(0xff0000);
+    expect(result.objects[0]!.materialColor).toBe(0xff0000);
   });
 
   it('should serialize nested groups with correct parent ID', () => {
@@ -159,7 +159,7 @@ describe('SceneSerializer', () => {
     group.name = 'TestGroup';
     worldGroup.add(group);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].type).toBe('group');
+    expect(result.objects[0]!.type).toBe('group');
   });
 
   it('should serialize group with transform data', () => {
@@ -169,10 +169,10 @@ describe('SceneSerializer', () => {
     group.scale.set(2, 2, 2);
     worldGroup.add(group);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].position.x).toBe(5);
-    expect(result.objects[0].position.y).toBe(10);
-    expect(result.objects[0].position.z).toBe(15);
-    expect(result.objects[0].scale.x).toBe(2);
+    expect(result.objects[0]!.position.x).toBe(5);
+    expect(result.objects[0]!.position.y).toBe(10);
+    expect(result.objects[0]!.position.z).toBe(15);
+    expect(result.objects[0]!.scale.x).toBe(2);
   });
 
   it('should serialize multiple meshes independently', () => {
@@ -212,9 +212,9 @@ describe('SceneSerializer', () => {
     mesh.name = 'CsgResult';
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
-    expect(result.objects[0].geometryType).toBe('buffer');
-    expect(result.objects[0].geometryData).toBeDefined();
-    expect(result.objects[0].geometryData!.position.length).toBeGreaterThan(0);
+    expect(result.objects[0]!.geometryType).toBe('buffer');
+    expect(result.objects[0]!.geometryData).toBeDefined();
+    expect(result.objects[0]!.geometryData!.position.length).toBeGreaterThan(0);
   });
 
   it('should not serialize decorative edge line children as objects', () => {
@@ -227,7 +227,7 @@ describe('SceneSerializer', () => {
     worldGroup.add(mesh);
     const result = serializer.serialize(worldGroup);
     expect(result.objects.length).toBe(1);
-    expect(result.objects[0].type).toBe('mesh');
+    expect(result.objects[0]!.type).toBe('mesh');
   });
 });
 

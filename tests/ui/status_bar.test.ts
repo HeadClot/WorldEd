@@ -110,7 +110,7 @@ describe('StatusBar', () => {
   it('should clear last action with empty string', () => {
     statusBar.setLastAction('Some action');
     statusBar.setLastAction('');
-    const lastActionSpan = statusBar.getRootElement().querySelectorAll('span')[1];
+    const lastActionSpan = statusBar.getRootElement().querySelectorAll('span')[1]!;
     expect(lastActionSpan.textContent).toBe('');
   });
 

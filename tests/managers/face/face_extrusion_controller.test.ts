@@ -56,8 +56,8 @@ describe('FaceExtrusionController', () => {
       controller.selectFace(mesh, 0, false);
       const created = controller.extrudeSelectedFaces(1.0);
       expect(created.length).toBe(1);
-      expect(world.children.includes(created[0])).toBe(true);
-      expect(created[0]).not.toBe(mesh);
+      expect(world.children.includes(created[0]!)).toBe(true);
+      expect(created[0]!).not.toBe(mesh);
     });
 
     it('should leave the source mesh geometry triangle count unchanged', () => {
@@ -87,9 +87,9 @@ describe('FaceExtrusionController', () => {
       controller.setSelectionMode(SelectionMode.FACE);
       controller.selectFace(mesh, 0, false);
       const created = controller.extrudeSelectedFaces(1.0);
-      expect(world.children.includes(created[0])).toBe(true);
+      expect(world.children.includes(created[0]!)).toBe(true);
       commandStack.undo();
-      expect(world.children.includes(created[0])).toBe(false);
+      expect(world.children.includes(created[0]!)).toBe(false);
     });
 
     it('should create one solid per distinct selected face', () => {
@@ -101,9 +101,9 @@ describe('FaceExtrusionController', () => {
       controller.selectFace(mesh, 4, true);
       const created = controller.extrudeSelectedFaces(1.0);
       expect(created.length).toBe(2);
-      expect(world.children.includes(created[0])).toBe(true);
-      expect(world.children.includes(created[1])).toBe(true);
-      expect(created[0]).not.toBe(created[1]);
+      expect(world.children.includes(created[0]!)).toBe(true);
+      expect(world.children.includes(created[1]!)).toBe(true);
+      expect(created[0]!).not.toBe(created[1]!);
     });
   });
 

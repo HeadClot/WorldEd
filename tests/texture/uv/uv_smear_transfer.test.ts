@@ -5,7 +5,6 @@ import {
   buildProjectionBasis,
   ensureUniqueTriangleVertices,
   projectWorldPositionToUv,
-  resolveProjectionNormal,
   splitMeshIntoCoplanarRegions,
   computeRegionWorldNormal,
 } from '../../../src/texture/uv/planar_uv_projector.js';
@@ -64,10 +63,10 @@ describe('uv_smear_transfer', () => {
     const sourceMapping = createDefaultFaceTextureMapping('brick.png');
     sourceMapping.scaleU = 2;
     sourceMapping.scaleV = 0.5;
-    const destMapping = transferUvMappingAcrossFaces(mesh, regions[0], sourceMapping, mesh, regions[1]);
+    const destMapping = transferUvMappingAcrossFaces(mesh, regions[0]!, sourceMapping, mesh, regions[1]!);
     expect(destMapping.textureId).toBe('brick.png');
-    expect(Math.abs(destMapping.scaleU)).toBeCloseTo(2, 5);
-    expect(destMapping.scaleV).toBeCloseTo(0.5, 5);
+    expect(Math.abs(destMapping.scaleU!)).toBeCloseTo(2, 5);
+    expect(destMapping.scaleV!).toBeCloseTo(0.5, 5);
     expect(destMapping.align).toBe('face');
   });
 
@@ -89,27 +88,28 @@ describe('uv_smear_transfer', () => {
         return Math.atan2(na.x, na.z) - Math.atan2(nb.x, nb.z);
       });
     expect(sides.length).toBe(segments);
-    let mapping = createDefaultFaceTextureMapping('shell.png');
+    let mapping: import('../../../src/texture/uv/face_texture_mapping.js').FaceTextureMapping =
+      createDefaultFaceTextureMapping('shell.png');
     mapping.align = 'face';
-    bakeFaceUVs(mesh, sides[0], mapping);
+    bakeFaceUVs(mesh, sides[0]!, mapping);
     for (let i = 1; i < sides.length; i++) {
-      mapping = transferUvMappingAcrossFaces(mesh, sides[i - 1], mapping, mesh, sides[i]);
-      bakeFaceUVs(mesh, sides[i], mapping);
+      mapping = transferUvMappingAcrossFaces(mesh, sides[i - 1]!, mapping, mesh, sides[i]!);
+      bakeFaceUVs(mesh, sides[i]!, mapping);
     }
     for (let i = 1; i < sides.length; i++) {
-      const shared = findSharedWorldPoints(mesh, sides[i - 1], sides[i]);
+      const shared = findSharedWorldPoints(mesh, sides[i - 1]!, sides[i]!);
       if (shared.length < 2) continue;
-      const prevNormal = computeRegionWorldNormal(mesh, sides[i - 1]);
-      const nextNormal = computeRegionWorldNormal(mesh, sides[i]);
+      const prevNormal = computeRegionWorldNormal(mesh, sides[i - 1]!);
+      const nextNormal = computeRegionWorldNormal(mesh, sides[i]!);
       // Recover mappings by re-transfer is heavy; compare baked UV attribute.
       const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
       const pos = mesh.geometry.getAttribute('position');
-      const prevSamples = sampleRegionUvsNearPoint(mesh, sides[i - 1], shared[0], uv, pos);
-      const nextSamples = sampleRegionUvsNearPoint(mesh, sides[i], shared[0], uv, pos);
+      const prevSamples = sampleRegionUvsNearPoint(mesh, sides[i - 1]!, shared[0]!, uv, pos);
+      const nextSamples = sampleRegionUvsNearPoint(mesh, sides[i]!, shared[0]!, uv, pos);
       expect(prevSamples.length).toBeGreaterThan(0);
       expect(nextSamples.length).toBeGreaterThan(0);
-      expect(nextSamples[0].u).toBeCloseTo(prevSamples[0].u, 1);
-      expect(nextSamples[0].v).toBeCloseTo(prevSamples[0].v, 1);
+      expect(nextSamples[0]!.u).toBeCloseTo(prevSamples[0]!.u, 1);
+      expect(nextSamples[0]!.v).toBeCloseTo(prevSamples[0]!.v, 1);
       void prevNormal;
       void nextNormal;
     }
@@ -126,9 +126,9 @@ describe('uv_smear_transfer', () => {
 function findAdjacentRegionPair(mesh: THREE.Mesh, walls: number[][]): { source: number[]; dest: number[] } | null {
   for (let i = 0; i < walls.length; i++) {
     for (let j = i + 1; j < walls.length; j++) {
-      const shared = findSharedWorldPoints(mesh, walls[i], walls[j]);
+      const shared = findSharedWorldPoints(mesh, walls[i]!, walls[j]!);
       if (shared.length >= 2) {
-        return { source: walls[i], dest: walls[j] };
+        return { source: walls[i]!, dest: walls[j]! };
       }
     }
   }

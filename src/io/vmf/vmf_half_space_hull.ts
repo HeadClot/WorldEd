@@ -57,7 +57,11 @@ export class VmfHalfSpaceHullBuilder {
     for (let i = 0; i < count; i++) {
       for (let j = i + 1; j < count; j++) {
         for (let k = j + 1; k < count; k++) {
-          const point = this.intersectThreePlanes(planes[i], planes[j], planes[k]);
+          const planeA = planes[i];
+          const planeB = planes[j];
+          const planeC = planes[k];
+          if (!planeA || !planeB || !planeC) continue;
+          const point = this.intersectThreePlanes(planeA, planeB, planeC);
           if (!point) continue;
           if (this.isInsideAllPlanes(point, planes)) {
             points.push(point);
@@ -153,6 +157,7 @@ export class VmfHalfSpaceHullBuilder {
     const loops: HalfSpaceFaceLoop[] = [];
     for (let planeIndex = 0; planeIndex < planes.length; planeIndex++) {
       const plane = planes[planeIndex];
+      if (!plane) continue;
       const onPlane = vertices.filter((vertex) => Math.abs(plane.signedDistance(vertex)) <= SOLID_FAT_PLANE_EPSILON);
       if (onPlane.length < 3) continue;
       const ordered = this.orderPolygonOnPlane(onPlane, plane);

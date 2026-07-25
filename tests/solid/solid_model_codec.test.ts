@@ -83,19 +83,19 @@ describe('SolidModelCodec', () => {
     command.execute();
     expect(brush.getSurfaceMapping(0).scaleU).toBeCloseTo(2.5);
     const encoded = SolidModelCodec.encode(model);
-    const stored = encoded.brushes[0];
+    const stored = encoded.brushes[0]!;
     expect(stored.defaultMapping || stored.faceMappings).toBeTruthy();
     const restored = SolidModelCodec.decode(encoded, 'UvRestored');
     const restoredMaps = getFaceTextureMaps(restored.getResultMesh());
     expect(restoredMaps.length).toBeGreaterThan(0);
-    const sample = restoredMaps[0].mapping;
+    const sample = restoredMaps[0]!.mapping;
     expect(sample.textureId).toBe('folder/uv_wall.png');
-    expect(sample.scaleU).toBeCloseTo(2.5, 1);
-    expect(sample.scaleV).toBeCloseTo(0.5, 1);
+    expect(sample.scaleU!).toBeCloseTo(2.5, 1);
+    expect(sample.scaleV!).toBeCloseTo(0.5, 1);
     // UV matrix is the source of truth; align/rotation enums are not stored.
     // Custom axes or equivalent scale/offset must preserve projection phase.
-    expect(Math.abs(sample.offsetU) + Math.abs(sample.scaleU)).toBeGreaterThan(0);
-    const restoredBrush = restored.getBrushes()[0];
+    expect(Math.abs(sample.offsetU!) + Math.abs(sample.scaleU!)).toBeGreaterThan(0);
+    const restoredBrush = restored.getBrushes()[0]!;
     const surface = restoredBrush.getFaceSurface(0);
     expect(surface.textureId).toBe('folder/uv_wall.png');
     expect(surface.uv).toBeTruthy();
@@ -109,7 +109,7 @@ describe('SolidModelCodec', () => {
     const result = model.getResultMesh();
     const mapsBefore = getFaceTextureMaps(result);
     expect(mapsBefore.length).toBeGreaterThan(0);
-    const firstRegion = mapsBefore[0];
+    const firstRegion = mapsBefore[0]!;
     const mapping = createDefaultFaceTextureMapping('folder/face_uv.png');
     mapping.scaleU = 3;
     mapping.offsetU = 0.5;
@@ -136,9 +136,9 @@ describe('SolidModelCodec', () => {
     const restoredMaps = getFaceTextureMaps(restoredModel!.getResultMesh());
     const matching = restoredMaps.find((entryMap) => entryMap.mapping.textureId === 'folder/face_uv.png');
     expect(matching).toBeDefined();
-    expect(matching!.mapping.scaleU).toBeCloseTo(3, 1);
-    expect(matching!.mapping.offsetU).toBeCloseTo(0.5, 1);
-    const restoredBrush = restoredModel!.getBrushes()[0];
+    expect(matching!.mapping.scaleU!).toBeCloseTo(3, 1);
+    expect(matching!.mapping.offsetU!).toBeCloseTo(0.5, 1);
+    const restoredBrush = restoredModel!.getBrushes()[0]!;
     expect(restoredBrush.getFaceSurface(0).textureId).toBe('folder/face_uv.png');
   });
 });

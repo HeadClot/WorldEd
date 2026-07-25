@@ -34,13 +34,13 @@ describe('RotateGizmo', () => {
 
   it('should use the shared stem radius as the ring tube thickness', () => {
     const handles = gizmo.createHandles();
-    const torus = handles[0].getVisualMesh().geometry as THREE.TorusGeometry;
+    const torus = handles[0]!.getVisualMesh().geometry as THREE.TorusGeometry;
     expect(torus.parameters.tube).toBeCloseTo(0.045, 5);
   });
 
   it('should enable depth testing so occluded ring parts can fade', () => {
     const handles = gizmo.createHandles();
-    const material = handles[0].getVisualMesh().material as THREE.MeshBasicMaterial;
+    const material = handles[0]!.getVisualMesh().material as THREE.MeshBasicMaterial;
     expect(material.depthTest).toBe(true);
     expect(material.depthWrite).toBe(false);
   });

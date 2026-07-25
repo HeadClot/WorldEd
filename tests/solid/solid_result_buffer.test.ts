@@ -67,7 +67,7 @@ describe('SolidResultBuffer', () => {
     buffer.rebuildFull(compiler.getLastBrushOrder(), chunkCache);
     const before = buffer.getTriangleSources().map((source) => source.brushId);
 
-    brushes[1].position.x += 0.4;
+    brushes[1]!.position.x += 0.4;
     compiler.compile(brushes, {
       dirtyBrushIds: ['b'],
       skipPolygonAssembly: true,
@@ -91,7 +91,7 @@ describe('SolidResultBuffer', () => {
     const fullPos = fullGeometry.getAttribute('position').array as Float32Array;
     expect(patchedPos.length).toBe(fullPos.length);
     for (let index = 0; index < patchedPos.length; index++) {
-      expect(patchedPos[index]).toBeCloseTo(fullPos[index], 5);
+      expect(patchedPos[index]!).toBeCloseTo(fullPos[index]!, 5);
     }
   });
 
@@ -106,7 +106,7 @@ describe('SolidResultBuffer', () => {
     model.markDirty();
     model.rebuild(true);
     const beforeCount = model.getResultMesh().geometry.getAttribute('position').count;
-    const mover = model.getBrushes()[3];
+    const mover = model.getBrushes()[3]!;
     mover.mesh!.position.x += 0.2;
     model.syncBrushesFromScene();
     model.rebuildLive();
@@ -131,7 +131,7 @@ describe('SolidResultBuffer', () => {
     buffer.rebuildFull(compiler.getLastBrushOrder(), chunkCache);
     const prefixA = Array.from(buffer.getTriangleSources().filter((source) => source.brushId === 'a'));
 
-    brushes[2].position.copy(brushes[3].position);
+    brushes[2]!.position.copy(brushes[3]!.position);
     compiler.compile(brushes, {
       dirtyBrushIds: ['c'],
       skipPolygonAssembly: true,

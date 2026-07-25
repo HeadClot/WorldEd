@@ -152,7 +152,7 @@ export class SceneDeserializer {
    * @returns Solid model root group with transforms applied.
    */
   private createSolidModelFromEntry(entry: ObjectEntry): THREE.Object3D {
-    const model = SolidModelCodec.decode(entry.solidModel as SerializedSolidModel, entry.name);
+    const model = SolidModelCodec.decode(entry.solidModel as unknown as SerializedSolidModel, entry.name);
     this.applyTransformToObject(model.root, entry);
     if (entry.uuid) {
       model.root.uuid = entry.uuid;
@@ -168,7 +168,7 @@ export class SceneDeserializer {
    */
   private applyFaceTextureData(mesh: THREE.Mesh, entry: ObjectEntry): void {
     if (entry.faceTextureMaps && entry.faceTextureMaps.length > 0) {
-      const maps = (entry.faceTextureMaps as FaceTextureMapEntry[]).map((mapEntry) => ({
+      const maps = (entry.faceTextureMaps as unknown as FaceTextureMapEntry[]).map((mapEntry) => ({
         triangleIndices: mapEntry.triangleIndices.slice(),
         mapping: {
           ...mapEntry.mapping,
@@ -252,9 +252,9 @@ export class SceneDeserializer {
    * @returns A box geometry instance.
    */
   private buildBoxGeometry(params: Record<string, number>): THREE.BufferGeometry {
-    const width = params.width || 1;
-    const height = params.height || 1;
-    const depth = params.depth || 1;
+    const width = params['width'] || 1;
+    const height = params['height'] || 1;
+    const depth = params['depth'] || 1;
     return new THREE.BoxGeometry(width, height, depth);
   }
 
@@ -265,9 +265,9 @@ export class SceneDeserializer {
    * @returns A sphere geometry instance.
    */
   private buildSphereGeometry(params: Record<string, number>): THREE.BufferGeometry {
-    const radius = params.radius || 1;
-    const widthSegments = Math.floor(params.widthSegments) || 32;
-    const heightSegments = Math.floor(params.heightSegments) || 32;
+    const radius = params['radius'] || 1;
+    const widthSegments = Math.floor(params['widthSegments'] ?? 0) || 32;
+    const heightSegments = Math.floor(params['heightSegments'] ?? 0) || 32;
     return new THREE.SphereGeometry(radius, widthSegments, heightSegments);
   }
 
@@ -278,10 +278,10 @@ export class SceneDeserializer {
    * @returns A cylinder geometry instance.
    */
   private buildCylinderGeometry(params: Record<string, number>): THREE.BufferGeometry {
-    const radiusTop = params.radiusTop || 1;
-    const radiusBottom = params.radiusBottom || 1;
-    const height = params.height || 1;
-    const radialSegments = Math.floor(params.radialSegments) || 32;
+    const radiusTop = params['radiusTop'] || 1;
+    const radiusBottom = params['radiusBottom'] || 1;
+    const height = params['height'] || 1;
+    const radialSegments = Math.floor(params['radialSegments'] ?? 0) || 32;
     return new THREE.CylinderGeometry(radiusTop, radiusBottom, height, radialSegments);
   }
 
@@ -292,8 +292,8 @@ export class SceneDeserializer {
    * @returns A plane geometry instance.
    */
   private buildPlaneGeometry(params: Record<string, number>): THREE.BufferGeometry {
-    const width = params.width || 1;
-    const height = params.height || 1;
+    const width = params['width'] || 1;
+    const height = params['height'] || 1;
     return new THREE.PlaneGeometry(width, height);
   }
 

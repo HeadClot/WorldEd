@@ -104,7 +104,7 @@ export class AlignmentHandler {
   onAlignToObject(): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     if (selected.length < 2) return;
-    const target = selected[selected.length - 1];
+    const target = selected[selected.length - 1]!;
     const sources = selected.slice(0, selected.length - 1);
     const axis = this.alignmentController.getAxisRestriction();
     this.alignmentController.alignToObject(sources, target, axis, this.commandStack);

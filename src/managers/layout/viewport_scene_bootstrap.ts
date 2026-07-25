@@ -32,10 +32,10 @@ export class ViewportSceneBootstrap {
    */
   createViewports(viewportContainers: HTMLElement[], inputManager: InputManager): BootstrappedViewports {
     return {
-      viewport2DTop: new Viewport2D(viewportContainers[0], 'Top', 'xz', getDefaultTopCameraPosition()),
-      viewport2DFront: new Viewport2D(viewportContainers[1], 'Front', 'xy', getDefaultFrontCameraPosition()),
-      viewport2DSide: new Viewport2D(viewportContainers[2], 'Side', 'yz', getDefaultSideCameraPosition()),
-      viewport3D: new Viewport3D(viewportContainers[3], inputManager),
+      viewport2DTop: new Viewport2D(viewportContainers[0]!, 'Top', 'xz', getDefaultTopCameraPosition()),
+      viewport2DFront: new Viewport2D(viewportContainers[1]!, 'Front', 'xy', getDefaultFrontCameraPosition()),
+      viewport2DSide: new Viewport2D(viewportContainers[2]!, 'Side', 'yz', getDefaultSideCameraPosition()),
+      viewport3D: new Viewport3D(viewportContainers[3]!, inputManager),
     };
   }
 

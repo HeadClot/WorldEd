@@ -208,7 +208,9 @@ export class SolidModelController {
   private placeModelInScene(model: SolidModel, selectTarget: THREE.Object3D, statusMessage: string): void {
     const command = new CreateSolidModelCommand(model, this.worldObject);
     this.commandStack.push(command);
-    this.selectionManager.selectObject(selectTarget);
+    if (selectTarget instanceof THREE.Mesh) {
+      this.selectionManager.selectObject(selectTarget);
+    }
     this.rememberActiveModel(model);
     this.syncViewports?.();
     this.refreshOutliner?.();

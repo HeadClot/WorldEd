@@ -325,9 +325,9 @@ export class TransformInteractionBridge {
     if (!this.deps.isTransformSpaceLocal() || selected.length !== 1) {
       return new THREE.Quaternion();
     }
-    selected[0].updateMatrixWorld(true);
+    selected[0]!.updateMatrixWorld(true);
     const orientation = new THREE.Quaternion();
-    selected[0].getWorldQuaternion(orientation);
+    selected[0]!.getWorldQuaternion(orientation);
     return orientation;
   }
 

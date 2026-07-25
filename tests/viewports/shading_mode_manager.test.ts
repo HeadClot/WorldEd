@@ -64,8 +64,8 @@ describe('ShadingModeManager', () => {
 
     it('should not use triangle wireframe on content materials', () => {
       manager.setMode(ShadingMode.WIREFRAME);
-      expect(meshA.material.wireframe).toBe(false);
-      expect(meshB.material.wireframe).toBe(false);
+      expect((meshA.material as THREE.MeshBasicMaterial).wireframe).toBe(false);
+      expect((meshB.material as THREE.MeshBasicMaterial).wireframe).toBe(false);
     });
 
     it('should keep writing depth so outlines occlude correctly', () => {
@@ -79,7 +79,7 @@ describe('ShadingModeManager', () => {
         new THREE.EdgesGeometry(meshA.geometry),
         new THREE.LineBasicMaterial({ color: 0xffffff }),
       );
-      edge.userData.isDecorativeEdge = true;
+      edge.userData['isDecorativeEdge'] = true;
       meshA.add(edge);
       manager.setMode(ShadingMode.WIREFRAME);
       expect(edge.visible).toBe(true);
@@ -140,8 +140,8 @@ describe('ShadingModeManager', () => {
       manager.setMode(ShadingMode.SOLID);
       expect(meshA.material).toBe(materialA);
       expect(meshB.material).toBe(materialB);
-      expect(meshA.material.wireframe).toBe(false);
-      expect(meshB.material.wireframe).toBe(false);
+      expect(materialA.wireframe).toBe(false);
+      expect(materialB.wireframe).toBe(false);
     });
 
     it('should restore original materials after FLAT', () => {
@@ -154,14 +154,14 @@ describe('ShadingModeManager', () => {
     it('should restore original color after FLAT mode', () => {
       manager.setMode(ShadingMode.FLAT);
       manager.setMode(ShadingMode.SOLID);
-      expect(meshA.material.color.getHex()).toBe(0xff0000);
-      expect(meshB.material.color.getHex()).toBe(0x00ff00);
+      expect(materialA.color.getHex()).toBe(0xff0000);
+      expect(materialB.color.getHex()).toBe(0x00ff00);
     });
 
     it('should be a no-op when already in SOLID mode', () => {
       manager.setMode(ShadingMode.SOLID);
       expect(meshA.material).toBe(materialA);
-      expect(meshA.material.wireframe).toBe(false);
+      expect(materialA.wireframe).toBe(false);
     });
   });
 
@@ -177,7 +177,7 @@ describe('ShadingModeManager', () => {
       expect((meshA.material as THREE.Material).colorWrite).toBe(false);
       manager.setMode(ShadingMode.SOLID);
       expect(meshA.material).toBe(materialA);
-      expect(meshA.material.wireframe).toBe(false);
+      expect(materialA.wireframe).toBe(false);
       expect((meshA.material as THREE.Material).colorWrite).toBe(true);
     });
 
@@ -186,7 +186,7 @@ describe('ShadingModeManager', () => {
       expect(meshA.material instanceof THREE.MeshBasicMaterial).toBe(true);
       manager.setMode(ShadingMode.SOLID);
       expect(meshA.material).toBe(materialA);
-      expect(meshA.material.color.getHex()).toBe(0xff0000);
+      expect(materialA.color.getHex()).toBe(0xff0000);
     });
 
     it('should survive SOLID to WIREFRAME to FLAT to SOLID roundtrip', () => {
@@ -195,7 +195,7 @@ describe('ShadingModeManager', () => {
       manager.setMode(ShadingMode.SOLID);
       expect(meshA.material).toBe(materialA);
       expect(meshB.material).toBe(materialB);
-      expect(meshA.material.wireframe).toBe(false);
+      expect(materialA.wireframe).toBe(false);
     });
 
     it('should survive FLAT to WIREFRAME to FLAT roundtrip', () => {
@@ -223,7 +223,7 @@ describe('ShadingModeManager', () => {
       const handleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
       const handleMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), handleMaterial);
       handleMesh.name = 'bounds_handle_pos_x';
-      handleMesh.userData.handleId = 1;
+      handleMesh.userData['handleId'] = 1;
       gizmoRoot.add(handleMesh);
       scene.add(meshA);
       scene.add(gizmoRoot);
@@ -241,7 +241,7 @@ describe('ShadingModeManager', () => {
       gizmoRoot.name = 'bounds_gizmo';
       const handleMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
       const handleMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), handleMaterial);
-      handleMesh.userData.handleId = 2;
+      handleMesh.userData['handleId'] = 2;
       gizmoRoot.add(handleMesh);
       scene.add(meshA);
       scene.add(gizmoRoot);
@@ -254,7 +254,7 @@ describe('ShadingModeManager', () => {
     it('should leave shared gizmo materials solid after content wireframe roundtrip', () => {
       const masterMaterial = new THREE.MeshBasicMaterial({ color: 0x3366ff });
       const masterHandle = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), masterMaterial);
-      masterHandle.userData.handleId = 3;
+      masterHandle.userData['handleId'] = 3;
       const viewportClone = masterHandle.clone(true);
       const gizmoRoot = new THREE.Group();
       gizmoRoot.name = 'transform_gizmo_viewport';
@@ -265,19 +265,19 @@ describe('ShadingModeManager', () => {
       manager.setMode(ShadingMode.WIREFRAME);
       manager.setMode(ShadingMode.SOLID);
       expect(masterMaterial.wireframe).toBe(false);
-      expect((viewportClone.material as THREE.Material).wireframe).toBe(false);
+      expect((viewportClone.material as THREE.MeshBasicMaterial).wireframe).toBe(false);
     });
 
     it('should report bounds handles as shading-exempt', () => {
       const handleMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
-      handleMesh.userData.handleId = 9;
+      handleMesh.userData['handleId'] = 9;
       expect(manager.isShadingExempt(handleMesh)).toBe(true);
       expect(manager.isShadingExempt(meshA)).toBe(false);
     });
 
     it('should report solid brush helpers as shading-exempt', () => {
       const brushMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
-      brushMesh.userData.isSolidBrush = true;
+      brushMesh.userData['isSolidBrush'] = true;
       expect(manager.isShadingExempt(brushMesh)).toBe(true);
     });
   });

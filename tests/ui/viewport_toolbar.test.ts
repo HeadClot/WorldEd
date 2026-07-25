@@ -36,7 +36,7 @@ describe('ViewportToolbar', () => {
   it('should highlight the initial shading mode', () => {
     expect(toolbar.getActiveShadingMode()).toBe(ShadingMode.WIREFRAME);
     const wireButton = toolbar.getShadingButton(ShadingMode.WIREFRAME);
-    expect(wireButton?.dataset.active).toBe('true');
+    expect(wireButton?.dataset['active']).toBe('true');
   });
 
   it('should expose solid, wireframe, and flat buttons', () => {

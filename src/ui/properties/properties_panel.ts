@@ -277,7 +277,7 @@ export class PropertiesPanel {
     const input = inputMap.get(axis);
     if (!input) return;
     if (this.areValuesShared(values)) {
-      input.value = values[0].toFixed(decimals);
+      input.value = values[0]!.toFixed(decimals);
       return;
     }
     input.value = MIXED_VALUE_DISPLAY;
@@ -291,7 +291,7 @@ export class PropertiesPanel {
    */
   private areValuesShared(values: number[]): boolean {
     if (values.length === 0) return true;
-    const first = values[0];
+    const first = values[0]!;
     return values.every((value) => Math.abs(value - first) <= VALUE_EPSILON);
   }
 
@@ -417,7 +417,7 @@ export class PropertiesPanel {
    */
   private areObjectPositionsUnchanged(objects: THREE.Object3D[], positions: THREE.Vector3[]): boolean {
     return objects.every((object, index) => {
-      return object.position.distanceToSquared(positions[index]) < 1e-12;
+      return object.position.distanceToSquared(positions[index]!) < 1e-12;
     });
   }
 
@@ -431,7 +431,7 @@ export class PropertiesPanel {
   private areObjectRotationsUnchanged(objects: THREE.Object3D[], rotations: THREE.Euler[]): boolean {
     return objects.every((object, index) => {
       const current = object.rotation;
-      const next = rotations[index];
+      const next = rotations[index]!;
       return (
         Math.abs(current.x - next.x) < 1e-8 &&
         Math.abs(current.y - next.y) < 1e-8 &&
@@ -449,7 +449,7 @@ export class PropertiesPanel {
    */
   private areObjectScalesUnchanged(objects: THREE.Object3D[], scales: THREE.Vector3[]): boolean {
     return objects.every((object, index) => {
-      return object.scale.distanceToSquared(scales[index]) < 1e-12;
+      return object.scale.distanceToSquared(scales[index]!) < 1e-12;
     });
   }
 
@@ -617,7 +617,7 @@ export class PropertiesPanel {
       return;
     }
     if (this.areColorsShared(colors)) {
-      this.colorInput.value = `#${colors[0].toString(16).padStart(6, '0')}`;
+      this.colorInput.value = `#${colors[0]!.toString(16).padStart(6, '0')}`;
       this.colorInput.style.opacity = '1';
       return;
     }

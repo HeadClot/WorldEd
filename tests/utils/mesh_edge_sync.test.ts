@@ -69,7 +69,7 @@ describe('mesh_edge_sync', () => {
 
   it('should not build content edges on solid brush or CSG result meshes', () => {
     const brush = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
-    brush.userData.isSolidBrush = true;
+    brush.userData['isSolidBrush'] = true;
     const brushEdge = new THREE.LineSegments(
       new THREE.EdgesGeometry(brush.geometry),
       new THREE.LineBasicMaterial({ color: 0x00ff00 }),
@@ -82,7 +82,7 @@ describe('mesh_edge_sync', () => {
     expect(brush.children.filter((child) => child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true)).toHaveLength(1);
 
     const result = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
-    result.userData.isSolidModelResult = true;
+    result.userData['isSolidModelResult'] = true;
     expect(usesContentDecorativeEdges(result)).toBe(false);
     rebuildDecorativeEdges(result);
     expect(result.children.filter((child) => child.userData[DECORATIVE_EDGE_USERDATA_KEY] === true)).toHaveLength(0);

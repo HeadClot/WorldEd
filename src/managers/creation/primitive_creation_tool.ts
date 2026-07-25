@@ -9,7 +9,6 @@ import { initializeMeshTextureUVs } from '../../texture/uv/face_texture_applier.
  * Each primitive receives a standard material and edge wireframe.
  */
 export class PrimitiveCreationTool {
-  private targetContainer: THREE.Object3D;
   private lastCreated: THREE.Mesh | null;
   private cubeCount: number;
   private sphereCount: number;
@@ -19,11 +18,10 @@ export class PrimitiveCreationTool {
   /**
    * Creates a new primitive creation tool for the given container.
    *
-   * @param targetContainer The Three.js object into which primitives will be
-   *   added.
+   * @param _targetContainer The Three.js object into which primitives will be
+   *   added (callers add returned meshes; reserved for future ownership).
    */
-  constructor(targetContainer: THREE.Object3D) {
-    this.targetContainer = targetContainer;
+  constructor(_targetContainer: THREE.Object3D) {
     this.lastCreated = null;
     this.cubeCount = 0;
     this.sphereCount = 0;

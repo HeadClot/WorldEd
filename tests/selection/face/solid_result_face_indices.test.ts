@@ -37,7 +37,7 @@ describe('solid result face indices', () => {
     const expandedIds = uniqueBrushIds(sources, expanded);
     expect(expandedIds.size).toBe(1);
     expect(expandedIds.has(leftId)).toBe(true);
-    expect(expanded.every((index) => sources[index].surfaceIndex === sources[leftSeed].surfaceIndex)).toBe(true);
+    expect(expanded.every((index) => sources[index]!.surfaceIndex === sources[leftSeed]!.surfaceIndex)).toBe(true);
 
     const other = expandFaceSelectionIndices(result, rightSeed);
     expect(uniqueBrushIds(sources, other).has(rightId)).toBe(true);
@@ -199,7 +199,7 @@ function findSeedForBrush(sources: SourceRow[], brushId: string): number {
 function findTopFaceSeed(mesh: THREE.Mesh, sources: SourceRow[], brushId: string): number {
   const up = new THREE.Vector3(0, 1, 0);
   for (let index = 0; index < sources.length; index++) {
-    if (sources[index].brushId !== brushId) continue;
+    if (sources[index]!.brushId !== brushId) continue;
     const normal = new THREE.Vector3();
     const positions = mesh.geometry.getAttribute('position');
     const base = index * 3;

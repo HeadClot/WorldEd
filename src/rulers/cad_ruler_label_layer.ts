@@ -47,12 +47,12 @@ export class CadRulerLabelLayer {
     const width = renderer.domElement.clientWidth;
     const height = renderer.domElement.clientHeight;
     for (let index = 0; index < this.chips.length; index += 1) {
-      const chip = this.chips[index];
+      const chip = this.chips[index]!;
       if (index >= labels.length) {
         chip.element.style.display = 'none';
         continue;
       }
-      this.placeChip(chip, labels[index], camera, width, height);
+      this.placeChip(chip, labels[index]!, camera, width, height);
     }
   }
 

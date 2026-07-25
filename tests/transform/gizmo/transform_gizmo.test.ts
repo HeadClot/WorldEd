@@ -69,24 +69,25 @@ describe('TransformGizmo', () => {
 
   it('should set active handle correctly', () => {
     const handles = gizmo.getHandles();
-    gizmo.setActiveHandle(handles[0]);
+    gizmo.setActiveHandle(handles[0] ?? null);
     expect(gizmo.getActiveHandle()).toBe(handles[0]);
   });
 
   it('should clear active handle on setMode', () => {
     const handles = gizmo.getHandles();
-    gizmo.setActiveHandle(handles[0]);
+    gizmo.setActiveHandle(handles[0] ?? null);
     gizmo.setMode(TransformMode.ROTATE);
     expect(gizmo.getActiveHandle()).toBeNull();
   });
 
   it('should report active handle correctly via isHandleActive', () => {
     const handles = gizmo.getHandles();
-    expect(gizmo.isHandleActive(handles[0])).toBe(false);
-    gizmo.setActiveHandle(handles[0]);
-    expect(gizmo.isHandleActive(handles[0])).toBe(true);
+    const firstHandle = handles[0]!;
+    expect(gizmo.isHandleActive(firstHandle)).toBe(false);
+    gizmo.setActiveHandle(firstHandle);
+    expect(gizmo.isHandleActive(firstHandle)).toBe(true);
     if (handles.length > 1) {
-      expect(gizmo.isHandleActive(handles[1])).toBe(false);
+      expect(gizmo.isHandleActive(handles[1]!)).toBe(false);
     }
   });
 
@@ -102,21 +103,24 @@ describe('TransformGizmo', () => {
 
   it('should clear active highlight when setting new handle', () => {
     const handles = gizmo.getHandles();
-    gizmo.setActiveHandle(handles[0]);
-    expect(handles[0].isHoveredState()).toBe(true);
+    const firstHandle = handles[0]!;
+    gizmo.setActiveHandle(firstHandle);
+    expect(firstHandle.isHoveredState()).toBe(true);
     if (handles.length > 1) {
-      gizmo.setActiveHandle(handles[1]);
-      expect(handles[0].isHoveredState()).toBe(false);
-      expect(handles[1].isHoveredState()).toBe(true);
+      const secondHandle = handles[1]!;
+      gizmo.setActiveHandle(secondHandle);
+      expect(firstHandle.isHoveredState()).toBe(false);
+      expect(secondHandle.isHoveredState()).toBe(true);
     }
   });
 
   it('should clear active highlight when handle is cleared', () => {
     const handles = gizmo.getHandles();
-    gizmo.setActiveHandle(handles[0]);
-    expect(handles[0].isHoveredState()).toBe(true);
+    const firstHandle = handles[0]!;
+    gizmo.setActiveHandle(firstHandle);
+    expect(firstHandle.isHoveredState()).toBe(true);
     gizmo.setActiveHandle(null);
-    expect(handles[0].isHoveredState()).toBe(false);
+    expect(firstHandle.isHoveredState()).toBe(false);
     expect(gizmo.getActiveHandle()).toBeNull();
   });
 
@@ -195,8 +199,8 @@ describe('TransformGizmo', () => {
   });
 
   it('should dispose all viewport group clones without errors', () => {
-    const cloneA = gizmo.getHandleGroupClone();
-    const cloneB = gizmo.getHandleGroupClone();
+    gizmo.getHandleGroupClone();
+    gizmo.getHandleGroupClone();
     expect(() => gizmo.dispose()).not.toThrow();
     expect(gizmo.getHandles().length).toBe(0);
     expect(gizmo.getActiveHandle()).toBeNull();

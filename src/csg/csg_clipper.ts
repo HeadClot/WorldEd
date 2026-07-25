@@ -115,10 +115,10 @@ export class CsgClipper {
     const frontVertices: THREE.Vector3[] = [];
     for (let index = 0; index < vertices.length; index++) {
       const nextIndex = (index + 1) % vertices.length;
-      const type = types[index];
-      const nextType = types[nextIndex];
-      const vertex = vertices[index];
-      const nextVertex = vertices[nextIndex];
+      const type = types[index]!;
+      const nextType = types[nextIndex]!;
+      const vertex = vertices[index]!;
+      const nextVertex = vertices[nextIndex]!;
       if (type !== BACK) {
         frontVertices.push(vertex.clone());
       }

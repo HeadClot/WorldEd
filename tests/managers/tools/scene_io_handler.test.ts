@@ -21,10 +21,10 @@ describe('SceneIOHandler', () => {
     const sceneData = serializer.serialize(worldGroup);
     expect(sceneData.version).toBe(3);
     expect(sceneData.objects.length).toBe(1);
-    expect(sceneData.objects[0].name).toBe('SavedCube');
-    expect(sceneData.objects[0].position.x).toBe(1);
-    expect(sceneData.objects[0].position.y).toBe(2);
-    expect(sceneData.objects[0].position.z).toBe(3);
+    expect(sceneData.objects[0]!.name).toBe('SavedCube');
+    expect(sceneData.objects[0]!.position.x).toBe(1);
+    expect(sceneData.objects[0]!.position.y).toBe(2);
+    expect(sceneData.objects[0]!.position.z).toBe(3);
   });
 
   it('should handle empty group serialization correctly', () => {
@@ -43,10 +43,10 @@ describe('SceneIOHandler', () => {
     const deserializer = new SceneDeserializer();
     deserializer.deserialize(data, target);
     expect(target.children.length).toBe(1);
-    expect(target.children[0].name).toBe('RestoredMesh');
-    expect(target.children[0].position.x).toBeCloseTo(5);
-    expect(target.children[0].position.y).toBeCloseTo(10);
-    expect(target.children[0].position.z).toBeCloseTo(15);
+    expect(target.children[0]!.name).toBe('RestoredMesh');
+    expect(target.children[0]!.position.x).toBeCloseTo(5);
+    expect(target.children[0]!.position.y).toBeCloseTo(10);
+    expect(target.children[0]!.position.z).toBeCloseTo(15);
   });
 
   it('should round-trip save payload through JSON parse', () => {
@@ -58,8 +58,8 @@ describe('SceneIOHandler', () => {
     const target = new THREE.Group();
     const deserializer = new SceneDeserializer();
     deserializer.deserialize(JSON.parse(json), target);
-    expect(target.children[0].name).toBe('RoundTrip');
-    expect(target.children[0].position.x).toBeCloseTo(3);
+    expect(target.children[0]!.name).toBe('RoundTrip');
+    expect(target.children[0]!.position.x).toBeCloseTo(3);
   });
 
   it('should load scene with null status bar without aborting', async () => {
@@ -84,7 +84,7 @@ describe('SceneIOHandler', () => {
     );
     expect(loaded).toBe(true);
     expect(target.children.length).toBe(1);
-    expect(target.children[0].name).toBe('LoadNoStatus');
+    expect(target.children[0]!.name).toBe('LoadNoStatus');
   });
 
   it('should export GLB and produce non-empty buffer for real meshes', async () => {
@@ -107,7 +107,7 @@ describe('SceneIOHandler', () => {
     expect(result!.model.root.name).toBe('room_01');
     expect(result!.importedBrushCount).toBe(1);
     expect(result!.model.getBrushCount()).toBe(1);
-    expect(result!.model.getBrushes()[0].brush.faces.length).toBe(6);
+    expect(result!.model.getBrushes()[0]!.brush.faces.length).toBe(6);
   });
 
   it('returns null when the VMF has no importable brushes', async () => {

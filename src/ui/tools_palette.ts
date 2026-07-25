@@ -410,7 +410,7 @@ export class ToolsPalette {
    * @param contextName Stable data attribute used by tests and tooling.
    */
   private styleContextPanel(panel: HTMLElement, contextName: string): void {
-    panel.dataset.context = contextName;
+    panel.dataset['context'] = contextName;
     panel.style.display = 'none';
     panel.style.flexDirection = 'column';
     panel.style.gap = '4px';

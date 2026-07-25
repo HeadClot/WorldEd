@@ -65,7 +65,6 @@ export class KeyboardShortcutHandler {
   private onClipFlip: ActionCallback | null;
   private onClipCommit: ActionCallback | null;
   private onClipSplit: ActionCallback | null;
-  private onClipCancel: ActionCallback | null;
   private onEscape: ActionCallback | null;
   private isClipToolActive: (() => boolean) | null;
   private isNavigationActive: NavigationActiveCallback | null;
@@ -115,7 +114,6 @@ export class KeyboardShortcutHandler {
     this.onClipFlip = null;
     this.onClipCommit = null;
     this.onClipSplit = null;
-    this.onClipCancel = null;
     this.onEscape = null;
     this.isClipToolActive = null;
     this.isNavigationActive = null;
@@ -328,13 +326,12 @@ export class KeyboardShortcutHandler {
     onFlip: ActionCallback,
     onCommit: ActionCallback,
     onSplit: ActionCallback,
-    onCancel: ActionCallback,
+    _onCancel: ActionCallback,
   ): void {
     this.isClipToolActive = isActive;
     this.onClipFlip = onFlip;
     this.onClipCommit = onCommit;
     this.onClipSplit = onSplit;
-    this.onClipCancel = onCancel;
   }
 
   /** Registers the window keydown listener for all keyboard shortcuts. */

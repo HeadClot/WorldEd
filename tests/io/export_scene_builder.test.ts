@@ -21,7 +21,7 @@ describe('export_scene_builder', () => {
     const exportRoot = buildExportScene(world);
     expect(exportRoot.children.length).toBe(1);
     expect(exportRoot.children[0]).toBeInstanceOf(THREE.Mesh);
-    expect(exportRoot.children[0].name).toBe('Cube');
+    expect(exportRoot.children[0]!.name).toBe('Cube');
   });
 
   it('omits solid brush helpers and keeps only CSG result under solid models', () => {
@@ -72,7 +72,7 @@ describe('export_scene_builder', () => {
 
   it('omits clip plane previews and bare brush objects', () => {
     const preview = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
-    preview.userData.isClipPlanePreview = true;
+    preview.userData['isClipPlanePreview'] = true;
     const brush = SolidBrushVisual.createBoxPreview('Helper', 1, SolidOperation.Additive);
     world.add(preview);
     world.add(brush);
@@ -90,7 +90,7 @@ describe('export_scene_builder', () => {
     world.add(group);
     const exportRoot = buildExportScene(world);
     expect(exportRoot.children.length).toBe(1);
-    expect(exportRoot.children[0].name).toBe('Props');
+    expect(exportRoot.children[0]!.name).toBe('Props');
     expect((exportRoot.children[0] as THREE.Group).children.length).toBe(1);
   });
 });

@@ -236,7 +236,7 @@ export class CadRulerSystem {
    */
   getDimensionSegmentCount(): number {
     if (this.viewports.length === 0) return 0;
-    return this.viewports[0].getDimensionSegmentCount();
+    return this.viewports[0]!.getDimensionSegmentCount();
   }
 
   /**
@@ -246,7 +246,7 @@ export class CadRulerSystem {
    */
   getGhostSegmentCount(): number {
     if (this.viewports.length === 0) return 0;
-    return this.viewports[0].getGhostSegmentCount();
+    return this.viewports[0]!.getGhostSegmentCount();
   }
 
   /**

@@ -132,7 +132,7 @@ export class SettingsMouseTab {
       this.store.updateMouseSettings({ moveSpeed: nextValue }),
     );
     const input = slider.querySelector('input') as HTMLInputElement;
-    input.dataset.settingsField = 'move-speed';
+    input.dataset['settingsField'] = 'move-speed';
     return createSettingsControlRow('Speed', slider);
   }
 
@@ -149,7 +149,7 @@ export class SettingsMouseTab {
       this.store.updateMouseSettings({ [settingKey]: nextValue }),
     );
     const input = slider.querySelector('input') as HTMLInputElement;
-    input.dataset.settingsField = fieldId;
+    input.dataset['settingsField'] = fieldId;
     return createSettingsControlRow('Sensitivity', slider);
   }
 
@@ -171,7 +171,7 @@ export class SettingsMouseTab {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = checked;
-    checkbox.dataset.settingsField = fieldId;
+    checkbox.dataset['settingsField'] = fieldId;
     checkbox.addEventListener('change', () => this.store.updateMouseSettings({ [settingKey]: checkbox.checked }));
     return createSettingsControlRow(label, checkbox);
   }

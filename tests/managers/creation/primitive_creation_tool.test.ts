@@ -33,9 +33,9 @@ describe('PrimitiveCreationTool', () => {
   it('should create a box with correct dimensions', () => {
     const mesh = tool.createBox(2, 3, 4);
     const source = getGeometrySource(mesh.geometry);
-    expect(source?.params.width).toBe(2);
-    expect(source?.params.height).toBe(3);
-    expect(source?.params.depth).toBe(4);
+    expect(source?.params['width']).toBe(2);
+    expect(source?.params['height']).toBe(3);
+    expect(source?.params['depth']).toBe(4);
   });
 
   it('should name box with auto-incremented number', () => {
@@ -53,7 +53,7 @@ describe('PrimitiveCreationTool', () => {
   it('should create a sphere with correct radius', () => {
     const mesh = tool.createSphere(2.5);
     const source = getGeometrySource(mesh.geometry);
-    expect(source?.params.radius).toBe(2.5);
+    expect(source?.params['radius']).toBe(2.5);
   });
 
   it('should name sphere with auto-incremented number', () => {
@@ -71,9 +71,9 @@ describe('PrimitiveCreationTool', () => {
   it('should create a cylinder with correct dimensions', () => {
     const mesh = tool.createCylinder(0.5, 1.0, 3);
     const source = getGeometrySource(mesh.geometry);
-    expect(source?.params.radiusTop).toBe(0.5);
-    expect(source?.params.radiusBottom).toBe(1.0);
-    expect(source?.params.height).toBe(3);
+    expect(source?.params['radiusTop']).toBe(0.5);
+    expect(source?.params['radiusBottom']).toBe(1.0);
+    expect(source?.params['height']).toBe(3);
   });
 
   it('should name cylinder with auto-incremented number', () => {
@@ -119,7 +119,7 @@ describe('PrimitiveCreationTool', () => {
   });
 
   it('should track last created object', () => {
-    const mesh1 = tool.createBox(1, 1, 1);
+    tool.createBox(1, 1, 1);
     const mesh2 = tool.createSphere(1);
     expect(tool.getLastCreatedObject()).toBe(mesh2);
   });

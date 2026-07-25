@@ -112,10 +112,15 @@ export function buildElectrobunPortableFileName(
 export function parseElectrobunArtifactFileName(fileName: string): ParsedElectrobunArtifact | null {
   const match = /^(?<channel>[^-]+)-(?<os>win|linux|macos)-(?<arch>x64|arm64)-(?<rest>.+)$/i.exec(fileName);
   if (!match?.groups) return null;
-  const channel = match.groups.channel.toLowerCase();
-  const os = match.groups.os.toLowerCase() as ElectrobunArtifactOs;
-  const arch = match.groups.arch.toLowerCase() as ElectrobunArtifactArch;
-  const rest = match.groups.rest.toLowerCase();
+  const channelGroup = match.groups['channel'];
+  const osGroup = match.groups['os'];
+  const archGroup = match.groups['arch'];
+  const restGroup = match.groups['rest'];
+  if (!channelGroup || !osGroup || !archGroup || !restGroup) return null;
+  const channel = channelGroup.toLowerCase();
+  const os = osGroup.toLowerCase() as ElectrobunArtifactOs;
+  const arch = archGroup.toLowerCase() as ElectrobunArtifactArch;
+  const rest = restGroup.toLowerCase();
   return {
     channel,
     os,

@@ -17,7 +17,7 @@ describe('SetPositionCommand', () => {
   it('should snapshot original positions on construction', () => {
     const newPosition1 = new THREE.Vector3(10, 20, 30);
     const newPosition2 = new THREE.Vector3(40, 50, 60);
-    const command = new SetPositionCommand([mesh1, mesh2], [newPosition1, newPosition2]);
+    new SetPositionCommand([mesh1, mesh2], [newPosition1, newPosition2]);
     expect(mesh1.position.x).toBeCloseTo(1);
     expect(mesh1.position.y).toBeCloseTo(2);
     expect(mesh1.position.z).toBeCloseTo(3);

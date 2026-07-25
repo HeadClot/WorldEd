@@ -96,7 +96,7 @@ describe('AboutDialog', () => {
     expect(spheres?.length).toBeGreaterThanOrEqual(1);
 
     if (spheres && spheres.length > 0) {
-      const img = spheres[0].querySelector('img');
+      const img = spheres[0]!.querySelector('img');
       expect(img).toBeTruthy();
       expect(img?.src).toContain('avatars.githubusercontent.com');
     }

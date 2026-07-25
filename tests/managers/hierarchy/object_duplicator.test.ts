@@ -24,9 +24,10 @@ describe('ObjectDuplicator', () => {
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
     expect(clones.length).toBe(1);
-    const cloneGeometry = clones[0].geometry;
-    const originalPositions = originalGeometry.attributes.position;
-    const clonePositions = cloneGeometry.attributes.position;
+    const clone = clones[0]!;
+    const cloneGeometry = clone.geometry;
+    const originalPositions = originalGeometry.attributes['position']!;
+    const clonePositions = cloneGeometry.attributes['position']!;
     originalPositions.setX(0, 999);
     expect(clonePositions.getX(0)).not.toBe(999);
   });
@@ -34,15 +35,15 @@ describe('ObjectDuplicator', () => {
   it('should produce independent material clone', () => {
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
-    const cloneMaterial = clones[0].material as THREE.Material;
-    originalMaterial.color.set(0xff0000);
+    const cloneMaterial = clones[0]!.material as THREE.MeshStandardMaterial;
+    (originalMaterial as THREE.MeshStandardMaterial).color.set(0xff0000);
     expect(cloneMaterial.color.getHex()).toBe(0x888888);
   });
 
   it('should preserve wireframe edges on clone', () => {
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
-    const clone = clones[0];
+    const clone = clones[0]!;
     const lineChildren = clone.children.filter((c) => c instanceof THREE.LineSegments);
     expect(lineChildren.length).toBe(1);
   });
@@ -50,13 +51,13 @@ describe('ObjectDuplicator', () => {
   it('should not copy selection highlight overlays onto the clone', () => {
     const highlightEdges = new THREE.EdgesGeometry(originalGeometry);
     const highlight = new THREE.LineSegments(highlightEdges, new THREE.LineBasicMaterial({ color: 0xe86a17 }));
-    highlight.userData.isSelectionHighlight = true;
+    highlight.userData['isSelectionHighlight'] = true;
     originalMesh.add(highlight);
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
-    const clone = clones[0];
+    const clone = clones[0]!;
     const highlightCopies = clone.children.filter(
-      (child) => child instanceof THREE.LineSegments && child.userData.isSelectionHighlight === true,
+      (child) => child instanceof THREE.LineSegments && child.userData['isSelectionHighlight'] === true,
     );
     expect(highlightCopies.length).toBe(0);
     const decorativeLines = clone.children.filter((child) => child instanceof THREE.LineSegments);
@@ -66,7 +67,7 @@ describe('ObjectDuplicator', () => {
   it('should keep the same position when offset is zero', () => {
     const offset = new THREE.Vector3(0, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
-    const clone = clones[0];
+    const clone = clones[0]!;
     expect(clone.position.x).toBeCloseTo(2);
     expect(clone.position.y).toBeCloseTo(3);
     expect(clone.position.z).toBeCloseTo(4);
@@ -75,7 +76,7 @@ describe('ObjectDuplicator', () => {
   it('should still apply a non-zero offset when one is provided', () => {
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
-    const clone = clones[0];
+    const clone = clones[0]!;
     expect(clone.position.x).toBeCloseTo(3);
     expect(clone.position.y).toBeCloseTo(3);
     expect(clone.position.z).toBeCloseTo(4);
@@ -105,23 +106,23 @@ describe('ObjectDuplicator', () => {
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh, mesh2], offset);
     expect(clones.length).toBe(2);
-    expect(clones[0].name).toBe('Cube001_copy');
-    expect(clones[1].name).toBe('Sphere001_copy');
-    expect(clones[0].position.x).toBeCloseTo(3);
-    expect(clones[1].position.x).toBeCloseTo(6);
+    expect(clones[0]!.name).toBe('Cube001_copy');
+    expect(clones[1]!.name).toBe('Sphere001_copy');
+    expect(clones[0]!.position.x).toBeCloseTo(3);
+    expect(clones[1]!.position.x).toBeCloseTo(6);
   });
 
   it('should duplicate single object and not add to any parent', () => {
     const offset = new THREE.Vector3(0, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
     expect(clones.length).toBe(1);
-    expect(clones[0].parent).toBeNull();
+    expect(clones[0]!.parent).toBeNull();
   });
 
   it('should preserve rotation and scale on clone', () => {
     const offset = new THREE.Vector3(0, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh], offset);
-    const clone = clones[0];
+    const clone = clones[0]!;
     expect(clone.scale.x).toBeCloseTo(2);
     expect(clone.scale.y).toBeCloseTo(2);
     expect(clone.scale.z).toBeCloseTo(2);

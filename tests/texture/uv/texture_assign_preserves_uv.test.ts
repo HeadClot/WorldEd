@@ -60,9 +60,9 @@ describe('texture assign preserves cylinder UVs', () => {
     expect(ranges.length).toBe(segments);
     ranges.sort((a, b) => a.minU - b.minU);
     for (let i = 1; i < ranges.length; i++) {
-      expect(ranges[i].minU).toBeGreaterThanOrEqual(ranges[i - 1].maxU - 1e-3);
+      expect(ranges[i]!.minU).toBeGreaterThanOrEqual(ranges[i - 1]!.maxU - 1e-3);
     }
-    const totalSpan = ranges[ranges.length - 1].maxU - ranges[0].minU;
+    const totalSpan = ranges[ranges.length - 1]!.maxU - ranges[0]!.minU;
     const sideLength = 2 * Math.sin(Math.PI / segments);
     expect(totalSpan).toBeCloseTo(segments * sideLength, 2);
   });
@@ -93,8 +93,8 @@ function sideOffsets(mesh: THREE.Mesh): number[] {
       const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
       return Math.abs(normal.y) <= 0.35;
     })
-    .sort((a, b) => a.triangleIndices[0] - b.triangleIndices[0])
-    .map((entry) => entry.mapping.offsetU);
+    .sort((a, b) => a.triangleIndices[0]! - b.triangleIndices[0]!)
+    .map((entry) => entry.mapping.offsetU!);
 }
 
 /**

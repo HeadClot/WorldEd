@@ -34,8 +34,8 @@ describe('GizmoVisualStyle', () => {
   it('should mark occluded ghost meshes for helper exclusion', () => {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const mesh = createGizmoOccludedMesh(geometry, 0x0000ff, 42);
-    expect(mesh.userData.isGizmoOccludedGhost).toBe(true);
-    expect(mesh.userData.handleId).toBe(42);
+    expect(mesh.userData['isGizmoOccludedGhost']).toBe(true);
+    expect(mesh.userData['handleId']).toBe(42);
     geometry.dispose();
     (mesh.material as THREE.Material).dispose();
   });

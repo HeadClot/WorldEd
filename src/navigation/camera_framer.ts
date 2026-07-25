@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { BoundingVolumeComputer } from './bounding_volume_computer.js';
 import { FrustumPlanes } from '../types/frustum_planes.js';
 import { clampOrthoHalfExtent } from '../viewports/ortho_zoom_limits.js';
 
@@ -8,7 +7,6 @@ import { clampOrthoHalfExtent } from '../viewports/ortho_zoom_limits.js';
  * Delegates actual animation to dedicated animator classes.
  */
 export class CameraFramer {
-  private boundingVolumeComputer: BoundingVolumeComputer;
   private readonly cornerScratch: THREE.Vector3[];
   private readonly scratchForward: THREE.Vector3;
   private readonly scratchRight: THREE.Vector3;
@@ -16,9 +14,8 @@ export class CameraFramer {
   private readonly scratchOffset: THREE.Vector3;
   private readonly scratchLookAt: THREE.Vector3;
 
-  /** Creates a new camera framer with a fresh bounding volume computer. */
+  /** Creates a new camera framer with reusable scratch vectors. */
   constructor() {
-    this.boundingVolumeComputer = new BoundingVolumeComputer();
     this.cornerScratch = this.createCornerScratchVectors();
     this.scratchForward = new THREE.Vector3();
     this.scratchRight = new THREE.Vector3();
@@ -190,14 +187,14 @@ export class CameraFramer {
   private fillBoxCorners(boundingBox: THREE.Box3): void {
     const min = boundingBox.min;
     const max = boundingBox.max;
-    this.cornerScratch[0].set(min.x, min.y, min.z);
-    this.cornerScratch[1].set(min.x, min.y, max.z);
-    this.cornerScratch[2].set(min.x, max.y, min.z);
-    this.cornerScratch[3].set(min.x, max.y, max.z);
-    this.cornerScratch[4].set(max.x, min.y, min.z);
-    this.cornerScratch[5].set(max.x, min.y, max.z);
-    this.cornerScratch[6].set(max.x, max.y, min.z);
-    this.cornerScratch[7].set(max.x, max.y, max.z);
+    this.cornerScratch[0]!.set(min.x, min.y, min.z);
+    this.cornerScratch[1]!.set(min.x, min.y, max.z);
+    this.cornerScratch[2]!.set(min.x, max.y, min.z);
+    this.cornerScratch[3]!.set(min.x, max.y, max.z);
+    this.cornerScratch[4]!.set(max.x, min.y, min.z);
+    this.cornerScratch[5]!.set(max.x, min.y, max.z);
+    this.cornerScratch[6]!.set(max.x, max.y, min.z);
+    this.cornerScratch[7]!.set(max.x, max.y, max.z);
   }
 
   /**

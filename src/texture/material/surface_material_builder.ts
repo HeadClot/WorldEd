@@ -46,7 +46,7 @@ export function rebuildSurfaceMaterials(
   const materials = materialSlots.map((textureId) => createSurfaceMaterial(color, cache.resolve(textureId)));
   applyMaterialLayout(mesh, perTriangle, materialSlots, options.preserveTriangleOrder === true);
   disposeOwnedMaterials(mesh);
-  mesh.material = materials.length === 1 ? materials[0] : materials;
+  mesh.material = pickMaterialAssignment(materials);
 }
 
 /** Region input for solid-result material rebuild (avoids map clone thrash). */
@@ -94,7 +94,7 @@ export function rebuildSolidResultMaterials(
   }
   const materials = materialSlots.map((textureId) => createSurfaceMaterial(color, cache.resolve(textureId)));
   disposeOwnedMaterials(mesh);
-  mesh.material = materials.length === 1 ? materials[0] : materials;
+  mesh.material = pickMaterialAssignment(materials);
 }
 
 /**
@@ -164,7 +164,7 @@ function applyMaterialLayout(
     remapFaceTextureMaps(mesh, order);
     remapTriangleSources(mesh, order);
   }
-  const sortedIds = order.map((oldIndex) => perTriangle[oldIndex]);
+  const sortedIds = order.map((oldIndex) => perTriangle[oldIndex] ?? DEFAULT_CHECKER_TEXTURE_ID);
   applyMergedGeometryGroups(mesh.geometry, sortedIds, materialSlots);
 }
 
@@ -221,8 +221,10 @@ function buildMaterialSortedOrder(perTriangle: string[], materialSlots: string[]
   materialSlots.forEach((id, index) => slotIndex.set(id, index));
   const buckets: number[][] = materialSlots.map(() => []);
   for (let triangleIndex = 0; triangleIndex < perTriangle.length; triangleIndex++) {
-    const slot = slotIndex.get(perTriangle[triangleIndex]) ?? 0;
-    buckets[slot].push(triangleIndex);
+    const textureId = perTriangle[triangleIndex] ?? DEFAULT_CHECKER_TEXTURE_ID;
+    const slot = slotIndex.get(textureId) ?? 0;
+    const bucket = buckets[slot];
+    if (bucket) bucket.push(triangleIndex);
   }
   const order: number[] = [];
   buckets.forEach((bucket) => {
@@ -275,11 +277,12 @@ function reorderIndexedTriangles(geometry: THREE.BufferGeometry, order: number[]
   const next = new Array<number>(source.length);
   for (let newTriangle = 0; newTriangle < order.length; newTriangle++) {
     const oldTriangle = order[newTriangle];
+    if (oldTriangle === undefined) continue;
     const dst = newTriangle * 3;
     const src = oldTriangle * 3;
-    next[dst] = source[src];
-    next[dst + 1] = source[src + 1];
-    next[dst + 2] = source[src + 2];
+    next[dst] = source[src] ?? 0;
+    next[dst + 1] = source[src + 1] ?? 0;
+    next[dst + 2] = source[src + 2] ?? 0;
   }
   geometry.setIndex(next);
 }
@@ -294,9 +297,21 @@ function reorderNonIndexedTriangles(geometry: THREE.BufferGeometry, order: numbe
   const names = Object.keys(geometry.attributes);
   names.forEach((name) => {
     const attribute = geometry.getAttribute(name);
-    if (!attribute || attribute.isInterleavedBufferAttribute) return;
+    if (!attribute || isInterleavedAttribute(attribute)) return;
     geometry.setAttribute(name, reorderAttributeByTriangles(attribute, order));
   });
+}
+
+/**
+ * Returns whether a geometry attribute is interleaved.
+ *
+ * @param attribute Attribute to inspect.
+ * @returns True for InterleavedBufferAttribute.
+ */
+function isInterleavedAttribute(
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+): attribute is THREE.InterleavedBufferAttribute {
+  return (attribute as THREE.InterleavedBufferAttribute).isInterleavedBufferAttribute === true;
 }
 
 /**
@@ -314,7 +329,9 @@ function reorderAttributeByTriangles(
   const source = attribute.array as ArrayLike<number>;
   const next = new Float32Array(source.length);
   for (let newTriangle = 0; newTriangle < order.length; newTriangle++) {
-    copyTriangleAttribute(source, next, order[newTriangle], newTriangle, itemSize);
+    const oldTriangle = order[newTriangle];
+    if (oldTriangle === undefined) continue;
+    copyTriangleAttribute(source, next, oldTriangle, newTriangle, itemSize);
   }
   const rebuilt = new THREE.BufferAttribute(next, itemSize);
   rebuilt.normalized = attribute.normalized;
@@ -343,7 +360,7 @@ function copyTriangleAttribute(
     const dst = (dstVertex + corner) * itemSize;
     const src = (srcVertex + corner) * itemSize;
     for (let component = 0; component < itemSize; component++) {
-      destination[dst + component] = source[src + component];
+      destination[dst + component] = source[src + component] ?? 0;
     }
   }
 }
@@ -389,7 +406,9 @@ function remapTriangleSources(mesh: THREE.Mesh, order: number[]): void {
 function buildOldToNewMap(order: number[]): number[] {
   const oldToNew = new Array<number>(order.length);
   for (let newIndex = 0; newIndex < order.length; newIndex++) {
-    oldToNew[order[newIndex]] = newIndex;
+    const oldIndex = order[newIndex];
+    if (oldIndex === undefined) continue;
+    oldToNew[oldIndex] = newIndex;
   }
   return oldToNew;
 }
@@ -411,17 +430,29 @@ function applyMergedGeometryGroups(
   materialSlots.forEach((id, index) => slotIndex.set(id, index));
   let runStartTriangle = 0;
   while (runStartTriangle < sortedPerTriangle.length) {
-    const materialIndex = slotIndex.get(sortedPerTriangle[runStartTriangle]) ?? 0;
+    const runTextureId = sortedPerTriangle[runStartTriangle] ?? DEFAULT_CHECKER_TEXTURE_ID;
+    const materialIndex = slotIndex.get(runTextureId) ?? 0;
     let runEndTriangle = runStartTriangle + 1;
-    while (
-      runEndTriangle < sortedPerTriangle.length &&
-      (slotIndex.get(sortedPerTriangle[runEndTriangle]) ?? 0) === materialIndex
-    ) {
+    while (runEndTriangle < sortedPerTriangle.length) {
+      const nextTextureId = sortedPerTriangle[runEndTriangle] ?? DEFAULT_CHECKER_TEXTURE_ID;
+      if ((slotIndex.get(nextTextureId) ?? 0) !== materialIndex) break;
       runEndTriangle += 1;
     }
     geometry.addGroup(runStartTriangle * 3, (runEndTriangle - runStartTriangle) * 3, materialIndex);
     runStartTriangle = runEndTriangle;
   }
+}
+
+/**
+ * Picks a single material or the full array for mesh assignment.
+ *
+ * @param materials Built surface materials (non-empty when geometry has tris).
+ * @returns Material or material array suitable for mesh.material.
+ */
+function pickMaterialAssignment(materials: THREE.MeshStandardMaterial[]): THREE.Material | THREE.Material[] {
+  const first = materials[0];
+  if (materials.length === 1 && first !== undefined) return first;
+  return materials;
 }
 
 /**

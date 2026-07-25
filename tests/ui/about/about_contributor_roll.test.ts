@@ -47,15 +47,14 @@ describe('ContributorRoll', () => {
     const container = roll.getContainerElement();
 
     await waitForSpheresToRender(container);
-    const spheres = container.querySelectorAll('.contributor-sphere');
 
     const images = container.querySelectorAll('img');
     expect(images.length).toBe(2);
 
-    expect(images[0].src).toBe('https://avatars.githubusercontent.com/alice');
-    expect(images[0].alt).toBe('Alice Dev');
-    expect(images[1].src).toBe('https://avatars.githubusercontent.com/bob');
-    expect(images[1].alt).toBe('Bob Builder');
+    expect(images[0]!.src).toBe('https://avatars.githubusercontent.com/alice');
+    expect(images[0]!.alt).toBe('Alice Dev');
+    expect(images[1]!.src).toBe('https://avatars.githubusercontent.com/bob');
+    expect(images[1]!.alt).toBe('Bob Builder');
   });
 
   it('should set tooltip with display name on each sphere', async () => {
@@ -65,8 +64,8 @@ describe('ContributorRoll', () => {
     await waitForSpheresToRender(container);
     const spheres = container.querySelectorAll('.contributor-sphere');
 
-    expect(spheres[0].title).toBe('Alice Dev');
-    expect(spheres[1].title).toBe('Bob Builder');
+    expect((spheres[0] as HTMLElement).title).toBe('Alice Dev');
+    expect((spheres[1] as HTMLElement).title).toBe('Bob Builder');
   });
 
   it('should open contributor profile on sphere click', async () => {
@@ -78,10 +77,10 @@ describe('ContributorRoll', () => {
     await waitForSpheresToRender(container);
     const spheres = container.querySelectorAll('.contributor-sphere');
 
-    spheres[0].dispatchEvent(new PointerEvent('click', { bubbles: true }));
+    spheres[0]!.dispatchEvent(new PointerEvent('click', { bubbles: true }));
     expect(openSpy).toHaveBeenCalledWith('https://github.com/alice', '_blank', 'noopener,noreferrer');
 
-    spheres[1].dispatchEvent(new PointerEvent('click', { bubbles: true }));
+    spheres[1]!.dispatchEvent(new PointerEvent('click', { bubbles: true }));
     expect(openSpy).toHaveBeenCalledWith('https://github.com/bob', '_blank', 'noopener,noreferrer');
 
     openSpy.mockRestore();
@@ -94,8 +93,8 @@ describe('ContributorRoll', () => {
     await waitForSpheresToRender(container);
     const spheres = container.querySelectorAll('.contributor-sphere');
 
-    const anim0 = spheres[0].style.animation;
-    const anim1 = spheres[1].style.animation;
+    const anim0 = (spheres[0] as HTMLElement).style.animation;
+    const anim1 = (spheres[1] as HTMLElement).style.animation;
 
     expect(anim0).toContain('contributorSphereRollIn');
     expect(anim0).toContain(' 0ms ');

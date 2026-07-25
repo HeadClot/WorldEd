@@ -49,7 +49,7 @@ export class SolidBrush {
   rebuildEdgeFaceIndices(): void {
     this.edgeFaceIndices = new Array(this.wingEdges.length).fill(0);
     for (let faceIndex = 0; faceIndex < this.faces.length; faceIndex++) {
-      const face = this.faces[faceIndex];
+      const face = this.faces[faceIndex]!;
       const lastEdge = face.firstEdge + face.edgeCount;
       for (let edgeIndex = face.firstEdge; edgeIndex < lastEdge; edgeIndex++) {
         this.edgeFaceIndices[edgeIndex] = faceIndex;
@@ -67,8 +67,8 @@ export class SolidBrush {
     const points: THREE.Vector3[] = [];
     const lastEdge = face.firstEdge + face.edgeCount;
     for (let edgeIndex = face.firstEdge; edgeIndex < lastEdge; edgeIndex++) {
-      const vertexIndex = this.wingEdges[edgeIndex].vertexIndex;
-      points.push(this.vertices[vertexIndex].clone());
+      const vertexIndex = this.wingEdges[edgeIndex]!.vertexIndex;
+      points.push(this.vertices[vertexIndex]!.clone());
     }
     return points;
   }
@@ -83,7 +83,7 @@ export class SolidBrush {
     const indices: number[] = [];
     const lastEdge = face.firstEdge + face.edgeCount;
     for (let edgeIndex = face.firstEdge; edgeIndex < lastEdge; edgeIndex++) {
-      indices.push(this.wingEdges[edgeIndex].vertexIndex);
+      indices.push(this.wingEdges[edgeIndex]!.vertexIndex);
     }
     return indices;
   }

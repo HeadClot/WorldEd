@@ -12,7 +12,7 @@ import {
   getDefaultSideCameraPosition,
 } from '../../src/navigation/default_camera_placement.js';
 
-/** Startup solid model must sit at the world origin with a unit brush. */
+/** Startup solid model must sit at the world origin with a unit brush!. */
 describe('createDefaultStartupSolidModel', () => {
   it('creates a solid model with one additive unit brush at the origin', () => {
     const model = createDefaultStartupSolidModel();
@@ -20,7 +20,7 @@ describe('createDefaultStartupSolidModel', () => {
     expect(model.root.name).toBe('DefaultModel');
     expect(model.getBrushCount()).toBe(1);
     expect(DEFAULT_STARTUP_BRUSH_SIZE).toBe(1);
-    const brush = model.getBrushes()[0];
+    const brush = model.getBrushes()[0]!;
     expect(brush.operation).toBe(SolidOperation.Additive);
     expect(brush.position.x).toBeCloseTo(0, 5);
     expect(brush.position.y).toBeCloseTo(0, 5);
@@ -64,7 +64,7 @@ describe('createDefaultStartupSolidModel', () => {
 
   it('includes a brush preview child and a result mesh under the root', () => {
     const model = createDefaultStartupSolidModel();
-    const brush = model.getBrushes()[0];
+    const brush = model.getBrushes()[0]!;
     expect(brush.mesh).toBeTruthy();
     expect(brush.mesh!.parent).toBe(model.root);
     expect(model.getResultMesh().parent).toBe(model.root);

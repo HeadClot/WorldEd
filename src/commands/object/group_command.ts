@@ -25,7 +25,6 @@ export class GroupCommand implements UndoCommand {
   private group: THREE.Group;
   private newParent: THREE.Object3D;
   private childSnapshots: GroupChildSnapshot[];
-  private groupName: string;
   private executed: boolean;
 
   /**
@@ -40,7 +39,6 @@ export class GroupCommand implements UndoCommand {
     this.group.name = groupName;
     this.newParent = parent;
     this.childSnapshots = this.buildSnapshots(objects);
-    this.groupName = groupName;
     this.executed = false;
   }
 

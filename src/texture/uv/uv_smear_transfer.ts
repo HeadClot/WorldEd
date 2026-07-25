@@ -133,6 +133,7 @@ function collectWorldEdges(mesh: THREE.Mesh, triangles: number[]): WorldEdge[] {
     for (let corner = 0; corner < 3; corner++) {
       const ia = indices[corner];
       const ib = indices[(corner + 1) % 3];
+      if (ia === undefined || ib === undefined) continue;
       const a = getVertexPosition(positions, ia).applyMatrix4(mesh.matrixWorld);
       const b = getVertexPosition(positions, ib).applyMatrix4(mesh.matrixWorld);
       const key = edgeKey(a, b);
@@ -247,7 +248,7 @@ function solveDestinationMapping(
   const scaleU = flipU ? -Math.abs(sourceTrs.scaleU) : Math.abs(sourceTrs.scaleU);
   const scaleV = Math.abs(sourceTrs.scaleV);
   const projectionNormal = resolveProjectionNormal(destNormal, 'face');
-  let mapping = createFaceTextureMappingFromTrs(
+  let mapping: FaceTextureMapping = createFaceTextureMappingFromTrs(
     sourceMapping.textureId,
     projectionNormal,
     { scaleU, scaleV, offsetU: 0, offsetV: 0, rotationDeg: 0 },

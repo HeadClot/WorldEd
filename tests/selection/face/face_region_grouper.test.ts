@@ -14,7 +14,7 @@ describe('groupSelectionsIntoFaceRegions', () => {
     }));
     const regions = groupSelectionsIntoFaceRegions(selections);
     expect(regions.length).toBe(1);
-    expect(regions[0].faceIndices.length).toBe(faceIndices.length);
+    expect(regions[0]!.faceIndices.length).toBe(faceIndices.length);
   });
 
   it('should return two regions when two different box faces are selected', () => {
@@ -27,8 +27,8 @@ describe('groupSelectionsIntoFaceRegions', () => {
     ];
     const regions = groupSelectionsIntoFaceRegions(selections);
     expect(regions.length).toBe(2);
-    expect(regions[0].mesh).toBe(mesh);
-    expect(regions[1].mesh).toBe(mesh);
+    expect(regions[0]!.mesh).toBe(mesh);
+    expect(regions[1]!.mesh).toBe(mesh);
   });
 
   it('should group regions across multiple meshes independently', () => {

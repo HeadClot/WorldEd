@@ -57,8 +57,8 @@ export class SolidPlane {
     const normal = new THREE.Vector3();
     const count = points.length;
     for (let index = 0; index < count; index++) {
-      const current = points[index];
-      const next = points[(index + 1) % count];
+      const current = points[index]!;
+      const next = points[(index + 1) % count]!;
       normal.x += (current.y - next.y) * (current.z + next.z);
       normal.y += (current.z - next.z) * (current.x + next.x);
       normal.z += (current.x - next.x) * (current.y + next.y);

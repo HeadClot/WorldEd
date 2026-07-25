@@ -85,7 +85,9 @@ export function buildTargetsFromMeshes(meshes: THREE.Mesh[]): TextureApplyTarget
  */
 function findExistingMapping(mesh: THREE.Mesh, triangleIndices: number[]): FaceTextureMapping | null {
   if (triangleIndices.length === 0) return null;
-  const solidMapping = findSolidSurfaceMapping(mesh, triangleIndices[0]);
+  const seedIndex = triangleIndices[0];
+  if (seedIndex === undefined) return null;
+  const solidMapping = findSolidSurfaceMapping(mesh, seedIndex);
   if (solidMapping) return solidMapping;
   return findOrdinaryMeshMapping(mesh, triangleIndices);
 }
@@ -106,6 +108,7 @@ function findSolidSurfaceMapping(mesh: THREE.Mesh, seedFaceIndex: number): FaceT
   const entries = getFaceTextureMapsLive(mesh);
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
+    if (!entry) continue;
     const sampleIndex = entry.triangleIndices[0];
     if (sampleIndex === undefined) continue;
     const sample = sources[sampleIndex] as { brushId?: string; surfaceIndex?: number } | undefined;
@@ -130,20 +133,26 @@ function findOrdinaryMeshMapping(mesh: THREE.Mesh, triangleIndices: number[]): F
   const indexSet = new Set(sorted);
   const entries = getFaceTextureMapsLive(mesh);
   for (let i = 0; i < entries.length; i++) {
-    const entryKey = entries[i].triangleIndices
+    const entry = entries[i];
+    if (!entry) continue;
+    const entryKey = entry.triangleIndices
       .slice()
       .sort((a, b) => a - b)
       .join(',');
-    if (entryKey === key) return cloneFaceTextureMapping(entries[i].mapping);
+    if (entryKey === key) return cloneFaceTextureMapping(entry.mapping);
   }
   for (let i = 0; i < entries.length; i++) {
-    if (regionFullyCoveredByEntry(sorted, entries[i].triangleIndices)) {
-      return cloneFaceTextureMapping(entries[i].mapping);
+    const entry = entries[i];
+    if (!entry) continue;
+    if (regionFullyCoveredByEntry(sorted, entry.triangleIndices)) {
+      return cloneFaceTextureMapping(entry.mapping);
     }
   }
   for (let i = 0; i < entries.length; i++) {
-    if (entries[i].triangleIndices.some((index) => indexSet.has(index))) {
-      return cloneFaceTextureMapping(entries[i].mapping);
+    const entry = entries[i];
+    if (!entry) continue;
+    if (entry.triangleIndices.some((index) => indexSet.has(index))) {
+      return cloneFaceTextureMapping(entry.mapping);
     }
   }
   return null;
@@ -434,14 +443,18 @@ export function initializeMeshTextureUVs(mesh: THREE.Mesh, textureId?: string, a
  */
 export function getCommonMapping(targets: TextureApplyTarget[]): FaceTextureMapping | null {
   if (targets.length === 0) return null;
-  const first = resolveTargetMapping(targets[0]);
-  const firstNormal = computeRegionWorldNormal(targets[0].mesh, targets[0].triangleIndices);
+  const firstTarget = targets[0];
+  if (!firstTarget) return null;
+  const first = resolveTargetMapping(firstTarget);
+  const firstNormal = computeRegionWorldNormal(firstTarget.mesh, firstTarget.triangleIndices);
   const firstTrs = getFaceTextureMappingTrs(first, firstNormal);
   const firstTextureId = first.textureId || DEFAULT_CHECKER_TEXTURE_ID;
   for (let i = 1; i < targets.length; i++) {
-    const next = resolveTargetMapping(targets[i]);
+    const target = targets[i];
+    if (!target) continue;
+    const next = resolveTargetMapping(target);
     if ((next.textureId || DEFAULT_CHECKER_TEXTURE_ID) !== firstTextureId) return null;
-    const nextNormal = computeRegionWorldNormal(targets[i].mesh, targets[i].triangleIndices);
+    const nextNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
     const nextTrs = getFaceTextureMappingTrs(next, nextNormal);
     if (!faceTextureTrsEqual(firstTrs, nextTrs)) return null;
   }

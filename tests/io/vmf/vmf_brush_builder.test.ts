@@ -37,7 +37,7 @@ describe('VmfBrushFromSides / half-space hull', () => {
     const min = { x: 1568, y: 1792, z: -64 };
     const max = { x: 1728, y: 1920, z: 0 };
     const world = new VmfParser().parse(buildAxisAlignedWorldSolidVmf(min, max));
-    const built = new VmfBrushFromSides().build(world.solids[0]);
+    const built = new VmfBrushFromSides().build(world.solids[0]!);
     expect(built).not.toBeNull();
     const validation = SolidBrushValidator.validate(built!.brush);
     expect(validation.valid).toBe(true);
@@ -64,13 +64,13 @@ describe('VmfBrushFromSides / half-space hull', () => {
     const world = new VmfParser().parse(
       buildAxisAlignedWorldSolidVmf({ x: -32, y: -32, z: -32 }, { x: 32, y: 32, z: 32 }),
     );
-    const built = new VmfBrushFromSides().build(world.solids[0]);
+    const built = new VmfBrushFromSides().build(world.solids[0]!);
     expect(built).not.toBeNull();
     expect(built!.faceMappings.length).toBe(built!.brush.faces.length);
     expect(built!.materials.every((name) => name.length > 0)).toBe(true);
-    expect(built!.faceMappings[0].textureId).toBe('dev/dev_measuregeneric01');
-    expect(built!.faceMappings[0].align).toBe('face');
-    expect(built!.faceMappings[0].scaleU).toBeGreaterThan(0);
+    expect(built!.faceMappings[0]!.textureId).toBe('dev/dev_measuregeneric01');
+    expect(built!.faceMappings[0]!.align).toBe('face');
+    expect((built!.faceMappings[0]! as unknown as { scaleU: number }).scaleU).toBeGreaterThan(0);
   });
 
   it('rejects solids with fewer than four sides', () => {
@@ -96,7 +96,7 @@ world
 	}
 }
 `);
-    const built = new VmfBrushFromSides().build(world.solids[0]);
+    const built = new VmfBrushFromSides().build(world.solids[0]!);
     expect(built).toBeNull();
   });
 });

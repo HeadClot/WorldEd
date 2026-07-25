@@ -120,39 +120,39 @@ describe('ViewportSyncManager', () => {
       ]);
       syncManager.syncWorldObjectToViewports(worldObject);
 
-      worldObject.children[0].position.set(10, 20, 30);
-      worldObject.children[1].position.set(40, 50, 60);
+      worldObject.children[0]!.position.set(10, 20, 30);
+      worldObject.children[1]!.position.set(40, 50, 60);
       syncManager.syncClonePositionsToWorldObject(worldObject);
 
       const clone1 = findCloneGroup(sceneTop);
       const clone2 = findCloneGroup(sceneFront);
       const clone3 = findCloneGroup(sceneSide);
-      expect(clone1.children[0].position.x).toBe(10);
-      expect(clone1.children[0].position.y).toBe(20);
-      expect(clone1.children[0].position.z).toBe(30);
-      expect(clone2.children[1].position.x).toBe(40);
-      expect(clone2.children[1].position.y).toBe(50);
-      expect(clone2.children[1].position.z).toBe(60);
-      expect(clone3.children[0].position.x).toBe(10);
-      expect(clone3.children[1].position.y).toBe(50);
+      expect(clone1.children[0]!.position.x).toBe(10);
+      expect(clone1.children[0]!.position.y).toBe(20);
+      expect(clone1.children[0]!.position.z).toBe(30);
+      expect(clone2.children[1]!.position.x).toBe(40);
+      expect(clone2.children[1]!.position.y).toBe(50);
+      expect(clone2.children[1]!.position.z).toBe(60);
+      expect(clone3.children[0]!.position.x).toBe(10);
+      expect(clone3.children[1]!.position.y).toBe(50);
     });
 
     it('should mirror rotation and scale from original to clones', () => {
       const worldObject = createWorldGroupWithChildren([[0, 0, 0]]);
       syncManager.syncWorldObjectToViewports(worldObject);
 
-      worldObject.children[0].quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4);
-      worldObject.children[0].scale.set(2, 3, 4);
+      worldObject.children[0]!.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4);
+      worldObject.children[0]!.scale.set(2, 3, 4);
       syncManager.syncClonePositionsToWorldObject(worldObject);
 
       const clone = findCloneGroup(sceneTop);
-      expect(clone.children[0].quaternion.x).toBeCloseTo(worldObject.children[0].quaternion.x);
-      expect(clone.children[0].quaternion.y).toBeCloseTo(worldObject.children[0].quaternion.y);
-      expect(clone.children[0].quaternion.z).toBeCloseTo(worldObject.children[0].quaternion.z);
-      expect(clone.children[0].quaternion.w).toBeCloseTo(worldObject.children[0].quaternion.w);
-      expect(clone.children[0].scale.x).toBe(2);
-      expect(clone.children[0].scale.y).toBe(3);
-      expect(clone.children[0].scale.z).toBe(4);
+      expect(clone.children[0]!.quaternion.x).toBeCloseTo(worldObject.children[0]!.quaternion.x);
+      expect(clone.children[0]!.quaternion.y).toBeCloseTo(worldObject.children[0]!.quaternion.y);
+      expect(clone.children[0]!.quaternion.z).toBeCloseTo(worldObject.children[0]!.quaternion.z);
+      expect(clone.children[0]!.quaternion.w).toBeCloseTo(worldObject.children[0]!.quaternion.w);
+      expect(clone.children[0]!.scale.x).toBe(2);
+      expect(clone.children[0]!.scale.y).toBe(3);
+      expect(clone.children[0]!.scale.z).toBe(4);
     });
 
     it('should sync matching children when clone child counts differ', () => {
@@ -162,12 +162,12 @@ describe('ViewportSyncManager', () => {
       ]);
       syncManager.syncWorldObjectToViewports(worldObject);
       const clone = findCloneGroup(sceneTop);
-      clone.remove(clone.children[1]);
+      clone.remove(clone.children[1]!);
 
-      worldObject.children[0].position.set(99, 99, 99);
+      worldObject.children[0]!.position.set(99, 99, 99);
       syncManager.syncClonePositionsToWorldObject(worldObject);
 
-      expect(clone.children[0].position.x).toBe(99);
+      expect(clone.children[0]!.position.x).toBe(99);
       expect(clone.children.length).toBe(1);
     });
 
@@ -179,10 +179,10 @@ describe('ViewportSyncManager', () => {
       sceneFront.add(new THREE.AmbientLight());
       sceneSide.add(new THREE.DirectionalLight());
 
-      worldObject.children[0].position.set(100, 200, 300);
+      worldObject.children[0]!.position.set(100, 200, 300);
 
       expect(() => syncManager.syncClonePositionsToWorldObject(worldObject)).not.toThrow();
-      expect(findCloneGroup(sceneTop).children[0].position.x).toBe(100);
+      expect(findCloneGroup(sceneTop).children[0]!.position.x).toBe(100);
     });
 
     it('keeps solid brush edge wireframes visible in 2D after 3D edge culling', () => {

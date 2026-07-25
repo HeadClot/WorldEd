@@ -64,7 +64,7 @@ describe('BoundsGuideLines', () => {
   it('should expose a group containing front and occluded line passes', () => {
     const root = guides.getObject();
     expect(root).toBeInstanceOf(THREE.Group);
-    expect(root.userData.isBoundsGuideLines).toBe(true);
+    expect(root.userData['isBoundsGuideLines']).toBe(true);
     const linePasses = root.children.filter((child) => child instanceof THREE.LineSegments);
     expect(linePasses).toHaveLength(2);
   });
@@ -89,12 +89,12 @@ describe('BoundsGuideLines', () => {
     const linePasses = guides
       .getObject()
       .children.filter((child) => child instanceof THREE.LineSegments) as THREE.LineSegments[];
-    expect(linePasses[0].geometry).toBe(linePasses[1].geometry);
-    expect(linePasses[0].geometry).toBe(guides.getGeometry());
+    expect(linePasses[0]!.geometry).toBe(linePasses[1]!.geometry);
+    expect(linePasses[0]!.geometry).toBe(guides.getGeometry());
   });
 
   it('should mark the occluded pass as a gizmo ghost', () => {
-    const occluded = guides.getObject().children.find((child) => child.userData.isGizmoOccludedGhost === true);
+    const occluded = guides.getObject().children.find((child) => child.userData['isGizmoOccludedGhost'] === true);
     expect(occluded).toBeInstanceOf(THREE.LineSegments);
   });
 

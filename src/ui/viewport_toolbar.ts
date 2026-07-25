@@ -194,12 +194,12 @@ export class ViewportToolbar {
     button.innerHTML = iconSvg;
     this.applyButtonBaseStyles(button);
     button.addEventListener('mouseenter', () => {
-      if (button.dataset.active !== 'true') {
+      if (button.dataset['active'] !== 'true') {
         button.style.background = Theme.viewportToolbarButtonHover;
       }
     });
     button.addEventListener('mouseleave', () => {
-      if (button.dataset.active !== 'true') {
+      if (button.dataset['active'] !== 'true') {
         button.style.background = 'transparent';
       }
     });
@@ -233,7 +233,7 @@ export class ViewportToolbar {
    * @param active Whether the button should appear selected.
    */
   private applyActiveState(button: HTMLButtonElement, active: boolean): void {
-    button.dataset.active = active ? 'true' : 'false';
+    button.dataset['active'] = active ? 'true' : 'false';
     if (active) {
       button.style.background = this.hexToRgba(Theme.selectionColor, 0.28);
       button.style.borderColor = this.hexToRgba(Theme.selectionColor, 0.85);

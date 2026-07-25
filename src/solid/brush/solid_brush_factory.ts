@@ -82,7 +82,7 @@ export class SolidBrushFactory {
   private static weldVertex(vertices: THREE.Vector3[], point: THREE.Vector3): number {
     const epsilon = 1e-4;
     for (let index = 0; index < vertices.length; index++) {
-      if (vertices[index].distanceTo(point) <= epsilon) return index;
+      if (vertices[index]!.distanceTo(point) <= epsilon) return index;
     }
     vertices.push(point.clone());
     return vertices.length - 1;
@@ -100,8 +100,8 @@ export class SolidBrushFactory {
     for (const faceVerts of faceVertexIndices) {
       const count = faceVerts.length;
       for (let i = 0; i < count; i++) {
-        const from = faceVerts[i];
-        const to = faceVerts[(i + 1) % count];
+        const from = faceVerts[i]!;
+        const to = faceVerts[(i + 1) % count]!;
         const edgeIndex = brush.wingEdges.length;
         brush.wingEdges.push(createWingEdge(to, -1));
         edgeKeyToIndex.set(`${from}->${to}`, edgeIndex);
@@ -123,7 +123,7 @@ export class SolidBrushFactory {
       if (twinIndex === undefined) {
         throw new Error(`Missing twin edge for ${key}`);
       }
-      brush.wingEdges[edgeIndex].twinIndex = twinIndex;
+      brush.wingEdges[edgeIndex]!.twinIndex = twinIndex;
     }
   }
 
@@ -137,7 +137,7 @@ export class SolidBrushFactory {
     brush.faces = [];
     let firstEdge = 0;
     for (let faceIndex = 0; faceIndex < faceVertexIndices.length; faceIndex++) {
-      const edgeCount = faceVertexIndices[faceIndex].length;
+      const edgeCount = faceVertexIndices[faceIndex]!.length;
       brush.faces.push(createSolidFace(firstEdge, edgeCount, faceIndex));
       firstEdge += edgeCount;
     }

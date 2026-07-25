@@ -43,7 +43,7 @@ export class TerrainGenerator {
    * @param heightScale Peak height multiplier.
    * @param seed Deterministic seed.
    */
-  private applyHeightfield(geometry: THREE.PlaneGeometry, segments: number, heightScale: number, seed: number): void {
+  private applyHeightfield(geometry: THREE.PlaneGeometry, _segments: number, heightScale: number, seed: number): void {
     const position = geometry.getAttribute('position');
     for (let index = 0; index < position.count; index++) {
       const x = position.getX(index);

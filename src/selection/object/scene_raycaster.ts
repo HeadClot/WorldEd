@@ -33,7 +33,7 @@ export class SceneRaycaster {
     selectableObjects: THREE.Mesh[],
   ): THREE.Mesh | null {
     const hits = this.castAll(camera, renderer, event, selectableObjects);
-    return hits.length > 0 ? hits[0] : null;
+    return hits.length > 0 ? hits[0]! : null;
   }
 
   /**

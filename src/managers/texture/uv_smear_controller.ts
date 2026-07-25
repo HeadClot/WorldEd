@@ -292,7 +292,7 @@ function findBestRegionMapping(
   let overlapping: FaceTextureMapping | null = null;
   const regionSet = new Set(triangleIndices);
   for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
+    const entry = entries[i]!;
     const entryKey = entry.triangleIndices
       .slice()
       .sort((a, b) => a - b)

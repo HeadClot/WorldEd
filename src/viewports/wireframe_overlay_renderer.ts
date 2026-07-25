@@ -10,7 +10,6 @@ import { SOLID_BRUSH_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
  * operations without waiting for a full rebuild.
  */
 export class WireframeOverlayRenderer {
-  private viewportScene: THREE.Scene;
   private overlayEntries: Map<THREE.Mesh, THREE.LineSegments>;
   private lineMaterial: THREE.LineBasicMaterial;
   private overlaysVisible: boolean;
@@ -18,10 +17,9 @@ export class WireframeOverlayRenderer {
   /**
    * Creates a new wireframe overlay renderer for the given scene.
    *
-   * @param viewportScene The Three.js scene that owns the target meshes.
+   * @param _viewportScene The Three.js scene that owns the target meshes.
    */
-  constructor(viewportScene: THREE.Scene) {
-    this.viewportScene = viewportScene;
+  constructor(_viewportScene: THREE.Scene) {
     this.overlayEntries = new Map();
     this.overlaysVisible = true;
     this.lineMaterial = new THREE.LineBasicMaterial({
@@ -79,7 +77,7 @@ export class WireframeOverlayRenderer {
     if (mesh.userData[SOLID_BRUSH_USERDATA_KEY] === true) return;
     const edgesGeometry = new THREE.EdgesGeometry(mesh.geometry);
     const lineSegments = new THREE.LineSegments(edgesGeometry, this.lineMaterial);
-    lineSegments.userData.isWireframeOverlay = true;
+    lineSegments.userData['isWireframeOverlay'] = true;
     lineSegments.renderOrder = 997;
     lineSegments.visible = this.overlaysVisible;
     mesh.add(lineSegments);

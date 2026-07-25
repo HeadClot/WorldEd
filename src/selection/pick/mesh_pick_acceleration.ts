@@ -74,10 +74,10 @@ function fingerprintIndexContents(index: THREE.BufferAttribute | THREE.Interleav
   let hash = length;
   const step = Math.max(1, Math.floor(length / 16));
   for (let i = 0; i < length; i += step) {
-    hash = (hash * 31 + (array[i] | 0)) | 0;
+    hash = (hash * 31 + (array[i]! | 0)) | 0;
   }
-  hash = (hash * 31 + (array[length - 1] | 0)) | 0;
-  hash = (hash * 31 + (array[Math.floor(length / 2)] | 0)) | 0;
+  hash = (hash * 31 + (array[length - 1]! | 0)) | 0;
+  hash = (hash * 31 + (array[Math.floor(length / 2)]! | 0)) | 0;
   return String(hash);
 }
 

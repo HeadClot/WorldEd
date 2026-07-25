@@ -94,9 +94,9 @@ describe('SolidCsgCompiler partial updates', () => {
     expect(firstStats.fullRebuild).toBe(true);
     expect(firstStats.recompiledBrushCount).toBe(64);
 
-    brushes[0].position.x += 0.25;
+    brushes[0]!.position.x += 0.25;
     const partial = compiler.compile(brushes, {
-      dirtyBrushIds: [brushes[0].id],
+      dirtyBrushIds: [brushes[0]!.id],
     });
     const partialStats = compiler.getLastCompileStats();
     expect(partialStats.fullRebuild).toBe(false);
@@ -201,12 +201,12 @@ describe('BrushOverlapGraph', () => {
         overlappingPeerIndices: [] as number[],
       });
     }
-    entries[0].bounds.translate(new THREE.Vector3(spacing - 0.5, 0, 0));
+    entries[0]!.bounds.translate(new THREE.Vector3(spacing - 0.5, 0, 0));
     BrushOverlapGraph.build(entries, 0.01);
-    expect(entries[0].overlappingPeerIndices).toContain(1);
-    expect(entries[1].overlappingPeerIndices).toContain(0);
+    expect(entries[0]!.overlappingPeerIndices).toContain(1);
+    expect(entries[1]!.overlappingPeerIndices).toContain(0);
     for (let index = 2; index < count; index++) {
-      expect(entries[index].overlappingPeerIndices).toHaveLength(0);
+      expect(entries[index]!.overlappingPeerIndices).toHaveLength(0);
     }
   });
 });

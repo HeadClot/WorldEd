@@ -26,25 +26,27 @@ export class SetScaleCommand implements UndoCommand {
     this.snapshots = [];
     this.newScales = [];
     for (let i = 0; i < objects.length; i++) {
+      const object = objects[i]!;
       this.snapshots.push({
-        object: objects[i],
-        scale: objects[i].scale.clone(),
+        object,
+        scale: object.scale.clone(),
       });
-      this.newScales.push(newScales[i].clone());
+      this.newScales.push(newScales[i]!.clone());
     }
   }
 
   /** Executes the command by setting each object's scale to its new value. */
   execute(): void {
     for (let i = 0; i < this.snapshots.length; i++) {
-      this.snapshots[i].object.scale.copy(this.newScales[i]);
+      this.snapshots[i]!.object.scale.copy(this.newScales[i]!);
     }
   }
 
   /** Undoes the command by restoring each object's original scale. */
   undo(): void {
     for (let i = 0; i < this.snapshots.length; i++) {
-      this.snapshots[i].object.scale.copy(this.snapshots[i].scale);
+      const snapshot = this.snapshots[i]!;
+      snapshot.object.scale.copy(snapshot.scale);
     }
   }
 }

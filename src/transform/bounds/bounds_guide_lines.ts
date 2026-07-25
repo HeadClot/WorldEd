@@ -70,7 +70,7 @@ export class BoundsGuideLines {
     lines.name = 'bounds_guide_lines_occluded';
     lines.renderOrder = GizmoVisualStyle.occludedRenderOrder;
     lines.frustumCulled = false;
-    lines.userData.isGizmoOccludedGhost = true;
+    lines.userData['isGizmoOccludedGhost'] = true;
     return lines;
   }
 
@@ -82,7 +82,7 @@ export class BoundsGuideLines {
   private createRootGroup(): THREE.Group {
     const group = new THREE.Group();
     group.name = 'bounds_guide_lines';
-    group.userData.isBoundsGuideLines = true;
+    group.userData['isBoundsGuideLines'] = true;
     group.visible = false;
     group.add(this.occludedLines);
     group.add(this.frontLines);

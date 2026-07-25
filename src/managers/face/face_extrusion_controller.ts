@@ -358,7 +358,7 @@ export class FaceExtrusionController {
    * @returns The first extruded mesh, or null.
    */
   getLastCreatedMesh(): THREE.Mesh | null {
-    return this.lastCreatedMeshes.length > 0 ? this.lastCreatedMeshes[0] : null;
+    return this.lastCreatedMeshes.length > 0 ? this.lastCreatedMeshes[0]! : null;
   }
 
   /**

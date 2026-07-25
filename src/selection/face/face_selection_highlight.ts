@@ -209,7 +209,7 @@ export class FaceSelectionHighlight {
     if (!geometry) return null;
     const materials = this.materialsForMesh(mesh);
     const group = new THREE.Group();
-    group.userData.isFaceSelectionHighlight = true;
+    group.userData['isFaceSelectionHighlight'] = true;
     group.add(this.createOccludedFaceMesh(geometry, materials.occluded));
     group.add(this.createFrontFaceMesh(geometry, materials.front));
     return group;
@@ -299,7 +299,7 @@ export class FaceSelectionHighlight {
   private createFrontFaceMesh(geometry: THREE.BufferGeometry, material: THREE.MeshBasicMaterial): THREE.Mesh {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = GizmoVisualStyle.frontRenderOrder;
-    mesh.userData.isFaceSelectionHighlight = true;
+    mesh.userData['isFaceSelectionHighlight'] = true;
     mesh.frustumCulled = true;
     return mesh;
   }
@@ -314,8 +314,8 @@ export class FaceSelectionHighlight {
   private createOccludedFaceMesh(geometry: THREE.BufferGeometry, material: THREE.MeshBasicMaterial): THREE.Mesh {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = GizmoVisualStyle.occludedRenderOrder;
-    mesh.userData.isFaceSelectionHighlight = true;
-    mesh.userData.isFaceSelectionHighlightOccluded = true;
+    mesh.userData['isFaceSelectionHighlight'] = true;
+    mesh.userData['isFaceSelectionHighlightOccluded'] = true;
     mesh.frustumCulled = true;
     return mesh;
   }

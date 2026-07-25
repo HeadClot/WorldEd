@@ -55,12 +55,12 @@ export class SolidBrushValidator {
    */
   private static checkTwinPairs(brush: SolidBrush, errors: string[]): void {
     for (let edgeIndex = 0; edgeIndex < brush.wingEdges.length; edgeIndex++) {
-      const twinIndex = brush.wingEdges[edgeIndex].twinIndex;
+      const twinIndex = brush.wingEdges[edgeIndex]!.twinIndex;
       if (twinIndex < 0 || twinIndex >= brush.wingEdges.length) {
         errors.push(`Edge ${edgeIndex} has invalid twin index`);
         continue;
       }
-      if (brush.wingEdges[twinIndex].twinIndex !== edgeIndex) {
+      if (brush.wingEdges[twinIndex]!.twinIndex !== edgeIndex) {
         errors.push(`Edge ${edgeIndex} twin is not mutual`);
       }
       if (twinIndex === edgeIndex) {
@@ -77,7 +77,7 @@ export class SolidBrushValidator {
    */
   private static checkFaceRanges(brush: SolidBrush, errors: string[]): void {
     for (let faceIndex = 0; faceIndex < brush.faces.length; faceIndex++) {
-      const face = brush.faces[faceIndex];
+      const face = brush.faces[faceIndex]!;
       if (face.edgeCount < 3) {
         errors.push(`Face ${faceIndex} has fewer than 3 edges`);
       }
@@ -96,9 +96,9 @@ export class SolidBrushValidator {
    */
   private static checkVertexInsidePlanes(brush: SolidBrush, errors: string[]): void {
     for (let vertexIndex = 0; vertexIndex < brush.vertices.length; vertexIndex++) {
-      const vertex = brush.vertices[vertexIndex];
+      const vertex = brush.vertices[vertexIndex]!;
       for (let planeIndex = 0; planeIndex < brush.planes.length; planeIndex++) {
-        const distance = brush.planes[planeIndex].signedDistance(vertex);
+        const distance = brush.planes[planeIndex]!.signedDistance(vertex);
         if (distance > SOLID_FAT_PLANE_EPSILON) {
           errors.push(`Vertex ${vertexIndex} is outside plane ${planeIndex}`);
         }

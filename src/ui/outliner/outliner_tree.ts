@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OutlinerItem } from './outliner_item.js';
-import { getDepth, getDescendants, getAllMeshes } from '../../utils/hierarchy_utils.js';
+import { getDescendants, getAllMeshes } from '../../utils/hierarchy_utils.js';
 import { isEditorHelperObject } from '../../utils/mesh_edge_sync.js';
 import { isObjectLocked } from '../../utils/object_lock.js';
 import { Theme } from '../../theme.js';

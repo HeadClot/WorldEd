@@ -45,7 +45,7 @@ export class SolidSurfaceEmitter {
    * @param output Accumulator for compiled polygons.
    */
   compileBrushSurfaces(prepared: PreparedBrush[], brushIndex: number, output: SolidCompiledPolygon[]): void {
-    const subject = prepared[brushIndex];
+    const subject = prepared[brushIndex]!;
     if (subject.overlappingPeerIndices.length === 0) {
       this.emitIsolatedBrushSurfaces(subject, prepared, brushIndex, output);
       return;
@@ -69,10 +69,10 @@ export class SolidSurfaceEmitter {
     faceIndex: number,
     output: SolidCompiledPolygon[],
   ): void {
-    const subject = prepared[brushIndex];
-    const face = subject.brush.faces[faceIndex];
+    const subject = prepared[brushIndex]!;
+    const face = subject.brush.faces[faceIndex]!;
     const faceVertices = subject.brush.getFaceVertices(face);
-    const facePlane = subject.brush.planes[faceIndex];
+    const facePlane = subject.brush.planes[faceIndex]!;
     const cutPlanes = this.collectCutPlanes(prepared, brushIndex, facePlane, faceVertices);
     const fragments = this.splitFaceFragments(faceVertices, cutPlanes);
     this.finalizeFaceFragments(fragments, facePlane, face.surfaceIndex, subject, prepared, brushIndex, output);
@@ -116,10 +116,10 @@ export class SolidSurfaceEmitter {
     output: SolidCompiledPolygon[],
   ): void {
     for (let faceIndex = 0; faceIndex < subject.brush.faces.length; faceIndex++) {
-      const face = subject.brush.faces[faceIndex];
+      const face = subject.brush.faces[faceIndex]!;
       const compiled = this.finalizer.finalizeFragment(
         subject.brush.getFaceVertices(face),
-        subject.brush.planes[faceIndex],
+        subject.brush.planes[faceIndex]!,
         face.surfaceIndex,
         subject,
         prepared,
@@ -159,9 +159,9 @@ export class SolidSurfaceEmitter {
     faceVertices: THREE.Vector3[],
   ): SolidPlane[] {
     const planes: SolidPlane[] = [];
-    const subject = prepared[subjectIndex];
+    const subject = prepared[subjectIndex]!;
     for (const peerIndex of subject.overlappingPeerIndices) {
-      this.collectPeerCutPlanes(prepared[peerIndex], facePlane, faceVertices, planes);
+      this.collectPeerCutPlanes(prepared[peerIndex]!, facePlane, faceVertices, planes);
     }
     return planes;
   }
@@ -238,9 +238,9 @@ export class SolidSurfaceEmitter {
    * @param output Polygon accumulator.
    */
   private emitOneIsolatedAdditiveFace(subject: PreparedBrush, faceIndex: number, output: SolidCompiledPolygon[]): void {
-    const face = subject.brush.faces[faceIndex];
+    const face = subject.brush.faces[faceIndex]!;
     const faceVertices = subject.brush.getFaceVertices(face);
-    const facePlane = subject.brush.planes[faceIndex];
+    const facePlane = subject.brush.planes[faceIndex]!;
     if (faceVertices.length < 3) return;
     output.push({
       vertices: faceVertices.map((point) => point.clone()),

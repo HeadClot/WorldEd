@@ -39,7 +39,7 @@ export function createConvexPrismFromFace(
   sourceMesh.updateMatrixWorld(true);
   const worldPolygon = collectWorldFacePolygon(sourceMesh, faceIndices);
   if (worldPolygon.length < 3) return null;
-  const worldNormal = computeWorldFaceNormal(sourceMesh, faceIndices[0]);
+  const worldNormal = computeWorldFaceNormal(sourceMesh, faceIndices[0]!);
   if (worldNormal.lengthSq() < 1e-10) return null;
   const orderedPolygon = orderConvexPolygon(worldPolygon, worldNormal);
   if (orderedPolygon.length < 3) return null;
@@ -188,10 +188,10 @@ function appendPrismSides(
   for (let i = 0; i < count; i++) {
     const next = (i + 1) % count;
     const baseIndex = positions.length / 3;
-    const a = basePolygon[i];
-    const b = basePolygon[next];
-    const c = topPolygon[next];
-    const d = topPolygon[i];
+    const a = basePolygon[i]!;
+    const b = basePolygon[next]!;
+    const c = topPolygon[next]!;
+    const d = topPolygon[i]!;
     positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z, d.x, d.y, d.z);
     triangles.push(baseIndex, baseIndex + 1, baseIndex + 2);
     triangles.push(baseIndex, baseIndex + 2, baseIndex + 3);

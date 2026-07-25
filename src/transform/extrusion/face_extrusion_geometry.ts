@@ -255,14 +255,14 @@ function buildMergeMap(positions: THREE.BufferAttribute, vertexCount: number, th
  */
 function applyMergeMap(
   positions: THREE.BufferAttribute,
-  vertexCount: number,
+  _vertexCount: number,
   mergeMap: Map<number, number>,
 ): Float32Array {
   const newPositions = new Float32Array(positions.array as ArrayLike<number>);
   mergeMap.forEach((targetIndex, sourceIndex) => {
-    newPositions[sourceIndex * 3] = newPositions[targetIndex * 3];
-    newPositions[sourceIndex * 3 + 1] = newPositions[targetIndex * 3 + 1];
-    newPositions[sourceIndex * 3 + 2] = newPositions[targetIndex * 3 + 2];
+    newPositions[sourceIndex * 3] = newPositions[targetIndex * 3]!;
+    newPositions[sourceIndex * 3 + 1] = newPositions[targetIndex * 3 + 1]!;
+    newPositions[sourceIndex * 3 + 2] = newPositions[targetIndex * 3 + 2]!;
   });
   return newPositions;
 }

@@ -43,9 +43,9 @@ describe('SolidBrushVisual', () => {
     const occludedMaterial = occluded!.material as THREE.ShaderMaterial;
     expect(frontMaterial.depthFunc).toBe(THREE.LessEqualDepth);
     expect(occludedMaterial.depthFunc).toBe(THREE.GreaterDepth);
-    expect(frontMaterial.uniforms.fadeNear.value).toBe(BRUSH_EDGE_FADE_NEAR);
-    expect(frontMaterial.uniforms.fadeFar.value).toBe(BRUSH_EDGE_FADE_FAR);
-    expect(occludedMaterial.uniforms.opacity.value).toBeLessThan(frontMaterial.uniforms.opacity.value);
+    expect(frontMaterial.uniforms['fadeNear']!.value).toBe(BRUSH_EDGE_FADE_NEAR);
+    expect(frontMaterial.uniforms['fadeFar']!.value).toBe(BRUSH_EDGE_FADE_FAR);
+    expect(occludedMaterial.uniforms['opacity']!.value).toBeLessThan(frontMaterial.uniforms['opacity']!.value);
     disposeBrushPreview(mesh);
   });
 
@@ -123,7 +123,7 @@ describe('SolidBrushVisual', () => {
     rebuildDecorativeEdges(mesh);
     expect(collectDecorativeEdges(mesh).length).toBe(brushEdgeCount);
     const whiteEdges = mesh.children.filter(
-      (child) => child instanceof THREE.LineSegments && child.userData.isDecorativeEdge === true,
+      (child) => child instanceof THREE.LineSegments && child.userData['isDecorativeEdge'] === true,
     );
     expect(whiteEdges).toHaveLength(0);
     disposeBrushPreview(mesh);

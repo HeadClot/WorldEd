@@ -105,7 +105,7 @@ export class SettingsUpdaterTab {
   /** Creates the persisted automatic-check preference row. */
   private createAutomaticChecksRow(): HTMLElement {
     this.automaticChecksToggle.type = 'checkbox';
-    this.automaticChecksToggle.dataset.settingsField = 'auto-updater';
+    this.automaticChecksToggle.dataset['settingsField'] = 'auto-updater';
     this.automaticChecksToggle.setAttribute('role', 'switch');
     this.automaticChecksToggle.setAttribute('aria-label', 'Auto updater');
     this.automaticChecksToggle.addEventListener('change', () => {

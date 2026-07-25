@@ -70,7 +70,7 @@ function sideOffsetSignature(mesh: THREE.Mesh): string {
       const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
       return Math.abs(normal.y) <= 0.35;
     })
-    .map((entry) => entry.mapping.offsetU.toFixed(4))
+    .map((entry) => entry.mapping.offsetU!.toFixed(4))
     .sort()
     .join('|');
 }

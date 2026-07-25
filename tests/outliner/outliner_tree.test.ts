@@ -24,8 +24,8 @@ describe('OutlinerTree', () => {
 
   it('should create tree and append to container', () => {
     expect(container.children.length).toBe(2);
-    expect(container.children[0].tagName).toBe('INPUT');
-    expect(container.children[1].tagName).toBe('DIV');
+    expect(container.children[0]!.tagName).toBe('INPUT');
+    expect(container.children[1]!.tagName).toBe('DIV');
   });
 
   it('should return the root object', () => {
@@ -49,10 +49,10 @@ describe('OutlinerTree', () => {
     mesh.name = 'CubeWithHelpers';
     const decorative = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial());
     decorative.name = 'DecorativeEdge';
-    decorative.userData.isDecorativeEdge = true;
+    decorative.userData['isDecorativeEdge'] = true;
     const outline = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial());
     outline.name = 'SelectionOutline';
-    outline.userData.isSelectionHighlight = true;
+    outline.userData['isSelectionHighlight'] = true;
     const realChild = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial());
     realChild.name = 'RealChild';
     mesh.add(decorative);
@@ -73,7 +73,7 @@ describe('OutlinerTree', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     mesh.name = 'LeafCube';
     const decorative = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial());
-    decorative.userData.isDecorativeEdge = true;
+    decorative.userData['isDecorativeEdge'] = true;
     mesh.add(decorative);
     root.add(mesh);
     tree.refresh(new Set());
@@ -122,7 +122,7 @@ describe('OutlinerTree', () => {
     selectionSet.add(mesh);
     tree.refresh(selectionSet);
     const treeElement = container.children[1] as HTMLElement;
-    expect(treeElement.children[0].style.background).toBe('rgba(232, 106, 23, 0.3)');
+    expect((treeElement.children[0] as HTMLElement).style.background).toBe('rgba(232, 106, 23, 0.3)');
   });
 
   it('should not highlight unselected objects', () => {
@@ -131,7 +131,7 @@ describe('OutlinerTree', () => {
     root.add(mesh);
     tree.refresh(new Set());
     const treeElement = container.children[1] as HTMLElement;
-    expect(treeElement.children[0].style.background).toBe('transparent');
+    expect((treeElement.children[0] as HTMLElement).style.background).toBe('transparent');
   });
 
   it('should filter objects by search query', () => {

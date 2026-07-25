@@ -13,7 +13,6 @@ export class CadRulerViewport {
   private scene: THREE.Scene;
   private camera: THREE.Camera;
   private renderer: THREE.WebGLRenderer;
-  private container: HTMLElement;
   private dimensionBatch: CadRulerLineBatch;
   private ghostBatch: CadRulerLineBatch;
   private labelLayer: CadRulerLabelLayer;
@@ -31,7 +30,6 @@ export class CadRulerViewport {
     this.scene = scene;
     this.camera = camera;
     this.renderer = renderer;
-    this.container = container;
     this.dimensionBatch = new CadRulerLineBatch(
       'cad_ruler_dimensions',
       CadRulerStyle.lineFrontOpacity,

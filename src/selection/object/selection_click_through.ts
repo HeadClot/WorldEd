@@ -17,11 +17,11 @@ export class SelectionClickThrough {
    */
   static pickFromStack(depthSortedMeshes: THREE.Mesh[], selectionManager: SelectionManager): THREE.Mesh | null {
     if (depthSortedMeshes.length === 0) return null;
-    if (depthSortedMeshes.length === 1) return depthSortedMeshes[0];
+    if (depthSortedMeshes.length === 1) return depthSortedMeshes[0]!;
     const currentIndex = this.findSelectedIndex(depthSortedMeshes, selectionManager);
-    if (currentIndex < 0) return depthSortedMeshes[0];
+    if (currentIndex < 0) return depthSortedMeshes[0]!;
     const nextIndex = (currentIndex + 1) % depthSortedMeshes.length;
-    return depthSortedMeshes[nextIndex];
+    return depthSortedMeshes[nextIndex]!;
   }
 
   /**
@@ -59,7 +59,7 @@ export class SelectionClickThrough {
       if (lastIndex >= 0) return lastIndex;
     }
     for (let index = 0; index < depthSortedMeshes.length; index++) {
-      if (selectionManager.isObjectSelected(depthSortedMeshes[index])) {
+      if (selectionManager.isObjectSelected(depthSortedMeshes[index]!)) {
         return index;
       }
     }

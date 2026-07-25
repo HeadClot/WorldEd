@@ -65,10 +65,16 @@ export class VmfBrushFromSides {
     const planeIndices = faceLoops.map((loop) => loop.planeIndex);
     // Hammer axes are world-space; convert to brush-local after centering so
     // chunk bake (inv(L)*modelVertex) matches Source UV phase.
-    const worldFaceMappings = planeIndices.map((planeIndex, faceIndex) =>
-      this.mapFace(solid.sides[planeIndex], brush, planes, faceIndex, planeIndex, unitScale),
-    );
-    const materials = planeIndices.map((planeIndex) => solid.sides[planeIndex].material);
+    const worldFaceMappings = planeIndices.map((planeIndex, faceIndex) => {
+      const side = solid.sides[planeIndex];
+      if (!side) throw new Error(`Missing solid side at plane index ${planeIndex}`);
+      return this.mapFace(side, brush, planes, faceIndex, planeIndex, unitScale);
+    });
+    const materials = planeIndices.map((planeIndex) => {
+      const side = solid.sides[planeIndex];
+      if (!side) throw new Error(`Missing solid side at plane index ${planeIndex}`);
+      return side.material;
+    });
     const worldCenter = this.centerBrushAtOrigin(brush);
     const faceMappings = worldFaceMappings.map((mapping) =>
       convertWorldFaceMappingForCenteredBrush(mapping, worldCenter),
@@ -120,6 +126,7 @@ export class VmfBrushFromSides {
     unitScale: number,
   ): FaceTextureMapping {
     const plane = brush.planes[faceIndex] ?? planes[planeIndex];
+    if (!plane) throw new Error(`Missing plane for face ${faceIndex}`);
     return this.uvConverter.convertSideMapping(
       side.material,
       side.uAxis,

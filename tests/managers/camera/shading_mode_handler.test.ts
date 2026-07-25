@@ -4,6 +4,7 @@ import { ShadingModeHandler } from '../../../src/managers/camera/shading_mode_ha
 import { ViewportShadingController } from '../../../src/viewports/viewport_shading_controller.js';
 import { ShadingMode } from '../../../src/types/shading_mode.js';
 import { ShadableViewport } from '../../../src/viewports/viewport_shading_controller.js';
+import { StatusBar } from '../../../src/ui/status_bar.js';
 
 class MockViewport implements ShadableViewport {
   private scene: THREE.Scene;
@@ -18,7 +19,7 @@ class MockViewport implements ShadableViewport {
 }
 
 class MockStatusBar {
-  shadingMode: string | null;
+  shadingMode: string | null = null;
 
   setShadingMode(mode: string): void {
     this.shadingMode = mode;
@@ -52,9 +53,9 @@ describe('ShadingModeHandler', () => {
   describe('applyShadingMode', () => {
     it('should apply mode only to active viewport', () => {
       handler.applyShadingMode(ShadingMode.WIREFRAME);
-      expect(controllers[0].getShadingMode()).toBe(ShadingMode.WIREFRAME);
-      expect(controllers[1].getShadingMode()).toBe(ShadingMode.SOLID);
-      expect(controllers[2].getShadingMode()).toBe(ShadingMode.SOLID);
+      expect(controllers[0]!.getShadingMode()).toBe(ShadingMode.WIREFRAME);
+      expect(controllers[1]!.getShadingMode()).toBe(ShadingMode.SOLID);
+      expect(controllers[2]!.getShadingMode()).toBe(ShadingMode.SOLID);
     });
 
     it('should update status bar with mode name', () => {
@@ -64,7 +65,7 @@ describe('ShadingModeHandler', () => {
 
     it('should apply WIREFRAME_OVERLAY to active viewport', () => {
       handler.applyShadingMode(ShadingMode.WIREFRAME_OVERLAY);
-      expect(controllers[0].getShadingMode()).toBe(ShadingMode.WIREFRAME_OVERLAY);
+      expect(controllers[0]!.getShadingMode()).toBe(ShadingMode.WIREFRAME_OVERLAY);
     });
 
     it('should get active mode after applying', () => {
@@ -81,9 +82,9 @@ describe('ShadingModeHandler', () => {
   describe('applyShadingModeToAll', () => {
     it('should apply mode to all viewports', () => {
       handler.applyShadingModeToAll(ShadingMode.FLAT);
-      expect(controllers[0].getShadingMode()).toBe(ShadingMode.FLAT);
-      expect(controllers[1].getShadingMode()).toBe(ShadingMode.FLAT);
-      expect(controllers[2].getShadingMode()).toBe(ShadingMode.FLAT);
+      expect(controllers[0]!.getShadingMode()).toBe(ShadingMode.FLAT);
+      expect(controllers[1]!.getShadingMode()).toBe(ShadingMode.FLAT);
+      expect(controllers[2]!.getShadingMode()).toBe(ShadingMode.FLAT);
     });
 
     it('should update status bar after applying to all', () => {
@@ -93,8 +94,8 @@ describe('ShadingModeHandler', () => {
 
     it('should handle WIREFRAME_OVERLAY for all viewports', () => {
       handler.applyShadingModeToAll(ShadingMode.WIREFRAME_OVERLAY);
-      expect(controllers[0].getShadingMode()).toBe(ShadingMode.WIREFRAME_OVERLAY);
-      expect(controllers[1].getShadingMode()).toBe(ShadingMode.WIREFRAME_OVERLAY);
+      expect(controllers[0]!.getShadingMode()).toBe(ShadingMode.WIREFRAME_OVERLAY);
+      expect(controllers[1]!.getShadingMode()).toBe(ShadingMode.WIREFRAME_OVERLAY);
     });
   });
 
@@ -102,9 +103,9 @@ describe('ShadingModeHandler', () => {
     it('should change which viewport receives shading changes', () => {
       handler.setActiveViewportIndex(1);
       handler.applyShadingMode(ShadingMode.WIREFRAME);
-      expect(controllers[0].getShadingMode()).toBe(ShadingMode.SOLID);
-      expect(controllers[1].getShadingMode()).toBe(ShadingMode.WIREFRAME);
-      expect(controllers[2].getShadingMode()).toBe(ShadingMode.SOLID);
+      expect(controllers[0]!.getShadingMode()).toBe(ShadingMode.SOLID);
+      expect(controllers[1]!.getShadingMode()).toBe(ShadingMode.WIREFRAME);
+      expect(controllers[2]!.getShadingMode()).toBe(ShadingMode.SOLID);
     });
 
     it('should update active mode after changing index', () => {
@@ -136,9 +137,9 @@ describe('ShadingModeHandler', () => {
       handler.applyShadingMode(ShadingMode.WIREFRAME);
       handler.setActiveViewportIndex(2);
       handler.applyShadingMode(ShadingMode.FLAT);
-      expect(controllers[0].getShadingMode()).toBe(ShadingMode.SOLID);
-      expect(controllers[1].getShadingMode()).toBe(ShadingMode.WIREFRAME);
-      expect(controllers[2].getShadingMode()).toBe(ShadingMode.FLAT);
+      expect(controllers[0]!.getShadingMode()).toBe(ShadingMode.SOLID);
+      expect(controllers[1]!.getShadingMode()).toBe(ShadingMode.WIREFRAME);
+      expect(controllers[2]!.getShadingMode()).toBe(ShadingMode.FLAT);
     });
   });
 });

@@ -20,7 +20,7 @@ describe('TextureLibrary', () => {
   it('should always include the built-in checker as the first entry', () => {
     expect(library.getEntryCount()).toBe(1);
     expect(library.getSelectedId()).toBe(DEFAULT_CHECKER_TEXTURE_ID);
-    expect(library.getEntries()[0].id).toBe(DEFAULT_CHECKER_TEXTURE_ID);
+    expect(library.getEntries()[0]!.id).toBe(DEFAULT_CHECKER_TEXTURE_ID);
     expect(library.getFolderName()).toBeNull();
   });
 
@@ -30,15 +30,15 @@ describe('TextureLibrary', () => {
     expect(library.getFolderName()).toBe('MyFolder');
     expect(library.getEntryCount()).toBe(3);
     const listed = library.getEntries();
-    expect(listed[0].id).toBe(DEFAULT_CHECKER_TEXTURE_ID);
-    expect(listed[1].id).toBe('b.png');
-    expect(listed[2].id).toBe('a.png');
+    expect(listed[0]!.id).toBe(DEFAULT_CHECKER_TEXTURE_ID);
+    expect(listed[1]!.id).toBe('b.png');
+    expect(listed[2]!.id).toBe('a.png');
   });
 
   it('should revoke previous folder object URLs when replaced', () => {
     const first = [createEntry('old.png', 'old.png')];
     library.replaceAll('Old', first);
-    const oldUrl = first[0].previewObjectUrl;
+    const oldUrl = first[0]!.previewObjectUrl;
     library.replaceAll('New', [createEntry('new.png', 'new.png')]);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith(oldUrl);
     expect(library.getEntryCount()).toBe(2);
@@ -58,7 +58,7 @@ describe('TextureLibrary', () => {
     library.replaceAll('Empty', []);
     expect(library.getSelectedId()).toBe(DEFAULT_CHECKER_TEXTURE_ID);
     expect(library.getEntryById('only.png')).toBeNull();
-    expect(library.getEntries()[0].id).toBe(DEFAULT_CHECKER_TEXTURE_ID);
+    expect(library.getEntries()[0]!.id).toBe(DEFAULT_CHECKER_TEXTURE_ID);
   });
 });
 

@@ -34,7 +34,7 @@ describe('face_texture_applier', () => {
     applyMappingToTargets(targets, mapping);
     const maps = getFaceTextureMaps(mesh);
     expect(maps.length).toBeGreaterThan(0);
-    expect(maps[0].mapping.align).toBe('wall');
+    expect(maps[0]!.mapping.align).toBe('wall');
   });
 
   it('should report a common mapping after uniform apply', () => {
@@ -45,6 +45,6 @@ describe('face_texture_applier', () => {
     applyMappingToTargets(targets, mapping);
     const common = getCommonMapping(targets);
     expect(common).not.toBeNull();
-    expect(common!.offsetU).toBeCloseTo(0.25, 5);
+    expect(common!.offsetU!).toBeCloseTo(0.25, 5);
   });
 });

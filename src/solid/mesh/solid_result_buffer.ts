@@ -290,7 +290,7 @@ export class SolidResultBuffer {
   ): number {
     const dirtySet = new Set(dirtyBrushIds);
     for (let orderIndex = 0; orderIndex < brushIds.length; orderIndex++) {
-      const brushId = brushIds[orderIndex];
+      const brushId = brushIds[orderIndex]!;
       const chunk = chunkCache.get(brushId);
       const range = this.rangeByBrushId.get(brushId);
       if (!chunk || chunk.triangleCount === 0) {
@@ -316,7 +316,7 @@ export class SolidResultBuffer {
    */
   private vertexEndAfterBrushes(prefixBrushIds: readonly string[]): number {
     for (let index = prefixBrushIds.length - 1; index >= 0; index--) {
-      const range = this.rangeByBrushId.get(prefixBrushIds[index]);
+      const range = this.rangeByBrushId.get(prefixBrushIds[index]!);
       if (range) return range.vertexStart + range.vertexCount;
     }
     return 0;
@@ -330,7 +330,7 @@ export class SolidResultBuffer {
    */
   private triangleEndAfterBrushes(prefixBrushIds: readonly string[]): number {
     for (let index = prefixBrushIds.length - 1; index >= 0; index--) {
-      const range = this.rangeByBrushId.get(prefixBrushIds[index]);
+      const range = this.rangeByBrushId.get(prefixBrushIds[index]!);
       if (range) return range.triangleStart + range.triangleCount;
     }
     return 0;

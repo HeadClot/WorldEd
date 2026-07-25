@@ -309,7 +309,7 @@ export class ViewportSyncManager {
     name: string,
     sourceGeometry: THREE.BufferGeometry,
   ): boolean {
-    const ranges = sourceGeometry.userData.solidMeshUpdateRanges as
+    const ranges = sourceGeometry.userData['solidMeshUpdateRanges'] as
       | Array<{
           positionFloatStart: number;
           positionFloatCount: number;
@@ -446,7 +446,7 @@ export class ViewportSyncManager {
    */
   private isEditorOverlayObject(object: THREE.Object3D): boolean {
     if (object.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true) return true;
-    if (object.userData.isWireframeOverlay === true) return true;
+    if (object.userData['isWireframeOverlay'] === true) return true;
     return false;
   }
 
@@ -540,7 +540,7 @@ export class ViewportSyncManager {
     clone.userData[EDITOR_SOURCE_UUID_KEY] = original.uuid;
     const childCount = Math.min(original.children.length, clone.children.length);
     for (let index = 0; index < childCount; index++) {
-      this.tagCloneWithSourceUuids(original.children[index], clone.children[index]);
+      this.tagCloneWithSourceUuids(original.children[index]!, clone.children[index]!);
     }
   }
 
@@ -579,9 +579,9 @@ export class ViewportSyncManager {
   private isHelperMesh(mesh: THREE.Object3D): boolean {
     if (mesh.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true) return true;
     if (mesh.userData[CLIP_PREVIEW_USERDATA_KEY] === true) return true;
-    if (mesh.userData.isWireframeOverlay === true) return true;
-    if (mesh.userData.isSelectionHighlight) return true;
-    if (mesh.userData.isSolidModelResult === true) return true;
+    if (mesh.userData['isWireframeOverlay'] === true) return true;
+    if (mesh.userData['isSelectionHighlight']) return true;
+    if (mesh.userData['isSolidModelResult'] === true) return true;
     if (mesh instanceof THREE.LineSegments && mesh.parent instanceof THREE.Mesh) {
       return true;
     }
@@ -679,7 +679,7 @@ export class ViewportSyncManager {
     }
     const index = cloneChild.parent ? cloneChild.parent.children.indexOf(cloneChild) : -1;
     if (index < 0 || index >= originalParent.children.length) return null;
-    return originalParent.children[index];
+    return originalParent.children[index] ?? null;
   }
 
   /**

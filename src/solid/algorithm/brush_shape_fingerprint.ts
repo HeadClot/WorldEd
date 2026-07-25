@@ -18,9 +18,9 @@ export class BrushShapeFingerprint {
     if (vertexCount === 0) {
       return `${vertexCount}:${faceCount}:${edgeCount}`;
     }
-    const first = brush.vertices[0];
-    const last = brush.vertices[vertexCount - 1];
-    const mid = brush.vertices[Math.floor(vertexCount / 2)];
+    const first = brush.vertices[0]!;
+    const last = brush.vertices[vertexCount - 1]!;
+    const mid = brush.vertices[Math.floor(vertexCount / 2)]!;
     return [
       vertexCount,
       faceCount,

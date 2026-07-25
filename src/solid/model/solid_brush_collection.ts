@@ -318,7 +318,7 @@ export class SolidBrushCollection {
    */
   private listOrderDiffers(next: SolidBrushInstance[]): boolean {
     for (let index = 0; index < next.length; index++) {
-      if (next[index].id !== this.brushes[index].id) return true;
+      if (next[index]!.id !== this.brushes[index]!.id) return true;
     }
     return false;
   }

@@ -202,7 +202,7 @@ export class BoundsGizmo {
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData[BOUNDS_FACE_USERDATA_KEY] = face;
-    mesh.userData.isBoundsFacePick = true;
+    mesh.userData['isBoundsFacePick'] = true;
     mesh.name = `bounds_face_pick_${face}`;
     this.orientFaceMesh(mesh, face);
     return mesh;
@@ -215,7 +215,7 @@ export class BoundsGizmo {
       const mesh = this.createHandleMesh(face, color);
       const axis = this.axisForFace(face);
       const handle = new GizmoHandle(axis, color, mesh);
-      mesh.userData.handleId = handle.getHandleId();
+      mesh.userData['handleId'] = handle.getHandleId();
       mesh.userData[BOUNDS_FACE_USERDATA_KEY] = face;
       this.handleMeshes.set(face, mesh);
       this.rootGroup.add(mesh);
@@ -401,7 +401,7 @@ export class BoundsGizmo {
       }
     });
     while (root.children.length > 0) {
-      root.remove(root.children[0]);
+      root.remove(root.children[0]!);
     }
   }
 

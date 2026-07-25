@@ -54,7 +54,7 @@ export class DuplicateSolidBrushesCommand implements UndoCommand {
   /** Removes created brushes and rebuilds each affected solid model. */
   undo(): void {
     for (let index = this.entries.length - 1; index >= 0; index--) {
-      const entry = this.entries[index];
+      const entry = this.entries[index]!;
       entry.model.removeBrush(entry.createdBrushId);
     }
     this.entries.length = 0;

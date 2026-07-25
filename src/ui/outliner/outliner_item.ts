@@ -109,7 +109,7 @@ export class OutlinerItem {
     this.isSelected = false;
     this.isExpanded = true;
     this.isVisible = object.visible;
-    this.isLocked = object.userData.editorLocked === true;
+    this.isLocked = object.userData['editorLocked'] === true;
     this.isDisposed = false;
     this.renameInput = null;
     this.onSelect = null;

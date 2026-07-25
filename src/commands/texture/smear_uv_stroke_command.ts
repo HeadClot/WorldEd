@@ -4,7 +4,6 @@ import {
   FaceTextureMapEntry,
   FaceTextureMapping,
   cloneFaceTextureMapEntry,
-  cloneFaceTextureMapping,
 } from '../../texture/uv/face_texture_mapping.js';
 import { getFaceTextureMaps, setFaceTextureMaps } from '../../texture/uv/face_texture_storage.js';
 import { rebakeStoredFaceTextureMaps } from '../../texture/uv/planar_uv_projector.js';

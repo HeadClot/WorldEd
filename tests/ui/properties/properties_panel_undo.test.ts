@@ -4,9 +4,6 @@ import { Theme } from '../../../src/theme.js';
 import { SelectionManager } from '../../../src/selection/object/selection_manager.js';
 import { PropertiesPanel } from '../../../src/ui/properties/properties_panel.js';
 import { CommandStack } from '../../../src/commands/command_stack.js';
-import { SetPositionCommand } from '../../../src/commands/transform/set_position_command.js';
-import { SetRotationCommand } from '../../../src/commands/transform/set_rotation_command.js';
-import { SetScaleCommand } from '../../../src/commands/transform/set_scale_command.js';
 
 describe('PropertiesPanel Undo Integration', () => {
   let container: HTMLElement;
@@ -38,44 +35,44 @@ describe('PropertiesPanel Undo Integration', () => {
 
   it('should push command on position input change', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     expect(commandStack.getUndoCount()).toBe(0);
     expect(inputs.length).toBeGreaterThanOrEqual(1);
-    inputs[0].value = '42.5';
-    inputs[0].dispatchEvent(new Event('change'));
+    inputs[0]!.value = '42.5';
+    inputs[0]!.dispatchEvent(new Event('change'));
     expect(commandStack.getUndoCount()).toBe(1);
   });
 
   it('should push command on rotation input change', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const rotationSection = panelElement.children[1];
+    const rotationSection = panelElement.children[1]!;
     const inputs = rotationSection.querySelectorAll('input');
     expect(commandStack.getUndoCount()).toBe(0);
     expect(inputs.length).toBeGreaterThanOrEqual(1);
-    inputs[0].value = '45';
-    inputs[0].dispatchEvent(new Event('change'));
+    inputs[0]!.value = '45';
+    inputs[0]!.dispatchEvent(new Event('change'));
     expect(commandStack.getUndoCount()).toBe(1);
   });
 
   it('should push command on scale input change', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const scaleSection = panelElement.children[2];
+    const scaleSection = panelElement.children[2]!;
     const inputs = scaleSection.querySelectorAll('input');
     expect(commandStack.getUndoCount()).toBe(0);
     expect(inputs.length).toBeGreaterThanOrEqual(1);
-    inputs[0].value = '3.5';
-    inputs[0].dispatchEvent(new Event('change'));
+    inputs[0]!.value = '3.5';
+    inputs[0]!.dispatchEvent(new Event('change'));
     expect(commandStack.getUndoCount()).toBe(1);
   });
 
   it('should undo restore original position value', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     expect(inputs.length).toBeGreaterThanOrEqual(1);
-    inputs[0].value = '99.9';
-    inputs[0].dispatchEvent(new Event('change'));
+    inputs[0]!.value = '99.9';
+    inputs[0]!.dispatchEvent(new Event('change'));
     expect(mesh.position.x).toBeCloseTo(99.9);
     commandStack.undo();
     expect(mesh.position.x).toBeCloseTo(1);
@@ -83,11 +80,11 @@ describe('PropertiesPanel Undo Integration', () => {
 
   it('should redo re-apply position value after undo', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     expect(inputs.length).toBeGreaterThanOrEqual(1);
-    inputs[0].value = '99.9';
-    inputs[0].dispatchEvent(new Event('change'));
+    inputs[0]!.value = '99.9';
+    inputs[0]!.dispatchEvent(new Event('change'));
     expect(mesh.position.x).toBeCloseTo(99.9);
     commandStack.undo();
     expect(mesh.position.x).toBeCloseTo(1);
@@ -97,11 +94,11 @@ describe('PropertiesPanel Undo Integration', () => {
 
   it('should NOT push command when input is NaN', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     if (inputs.length >= 1) {
-      inputs[0].value = '';
-      inputs[0].dispatchEvent(new Event('change'));
+      inputs[0]!.value = '';
+      inputs[0]!.dispatchEvent(new Event('change'));
     }
     expect(commandStack.getUndoCount()).toBe(0);
   });
@@ -112,11 +109,11 @@ describe('PropertiesPanel Undo Integration', () => {
     unboundMesh.position.set(0, 0, 0);
     unboundPanel.bindObject(unboundMesh);
     const panelElement = unboundPanel.getContainer();
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     if (inputs.length >= 1) {
-      inputs[0].value = '50';
-      inputs[0].dispatchEvent(new Event('change'));
+      inputs[0]!.value = '50';
+      inputs[0]!.dispatchEvent(new Event('change'));
     }
     expect(unboundMesh.position.x).toBe(50);
     unboundPanel.dispose();
@@ -124,11 +121,11 @@ describe('PropertiesPanel Undo Integration', () => {
 
   it('should undo rotation changes', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const rotationSection = panelElement.children[1];
+    const rotationSection = panelElement.children[1]!;
     const inputs = rotationSection.querySelectorAll('input');
     if (inputs.length >= 1) {
-      inputs[1].value = '90';
-      inputs[1].dispatchEvent(new Event('change'));
+      inputs[1]!.value = '90';
+      inputs[1]!.dispatchEvent(new Event('change'));
     }
     expect(mesh.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(90));
     commandStack.undo();
@@ -137,11 +134,11 @@ describe('PropertiesPanel Undo Integration', () => {
 
   it('should undo scale changes', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const scaleSection = panelElement.children[2];
+    const scaleSection = panelElement.children[2]!;
     const inputs = scaleSection.querySelectorAll('input');
     if (inputs.length >= 1) {
-      inputs[2].value = '10.0';
-      inputs[2].dispatchEvent(new Event('change'));
+      inputs[2]!.value = '10.0';
+      inputs[2]!.dispatchEvent(new Event('change'));
     }
     expect(mesh.scale.z).toBeCloseTo(10);
     commandStack.undo();
@@ -150,24 +147,24 @@ describe('PropertiesPanel Undo Integration', () => {
 
   it('should update inputs to normalized precision after command', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     if (inputs.length >= 1) {
-      inputs[0].value = '12.345678';
-      inputs[0].dispatchEvent(new Event('change'));
+      inputs[0]!.value = '12.345678';
+      inputs[0]!.dispatchEvent(new Event('change'));
     }
-    expect(inputs[0].value).toBe('12.35');
+    expect(inputs[0]!.value).toBe('12.35');
   });
 
   it('should handle multiple sequential edits as separate commands', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     if (inputs.length >= 1) {
-      inputs[0].value = '10';
-      inputs[0].dispatchEvent(new Event('change'));
-      inputs[0].value = '20';
-      inputs[0].dispatchEvent(new Event('change'));
+      inputs[0]!.value = '10';
+      inputs[0]!.dispatchEvent(new Event('change'));
+      inputs[0]!.value = '20';
+      inputs[0]!.dispatchEvent(new Event('change'));
     }
     expect(commandStack.getUndoCount()).toBe(2);
     expect(mesh.position.x).toBeCloseTo(20);

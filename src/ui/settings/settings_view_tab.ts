@@ -103,7 +103,7 @@ export class SettingsViewTab {
     const select = createSettingsSelect(options, String(paneCount), (value) => {
       this.store.setViewportPaneCount(Number(value));
     });
-    select.dataset.settingsField = 'viewport-pane-count';
+    select.dataset['settingsField'] = 'viewport-pane-count';
     return createSettingsControlRow('Visible panes', select);
   }
 
@@ -133,7 +133,7 @@ export class SettingsViewTab {
     const select = createSettingsSelect(options, theme, (value) => {
       this.store.setTheme(value as UiThemePreference);
     });
-    select.dataset.settingsField = 'theme';
+    select.dataset['settingsField'] = 'theme';
     return createSettingsControlRow('Theme', select);
   }
 
@@ -154,7 +154,7 @@ export class SettingsViewTab {
     );
     const range = slider.querySelector('input[type="range"]') as HTMLInputElement;
     if (range) {
-      range.dataset.settingsField = 'brightness';
+      range.dataset['settingsField'] = 'brightness';
     }
     return createSettingsControlRow('Brightness', slider);
   }
@@ -173,7 +173,7 @@ export class SettingsViewTab {
     const select = createSettingsSelect(options, String(percent), (value) => {
       this.store.setMaterialBrowserIconSizePercent(Number(value));
     });
-    select.dataset.settingsField = 'material-icon-size';
+    select.dataset['settingsField'] = 'material-icon-size';
     return createSettingsControlRow('Icon Size', select);
   }
 
@@ -191,7 +191,7 @@ export class SettingsViewTab {
     const select = createSettingsSelect(options, String(fontSize), (value) => {
       this.store.setRendererFontSize(Number(value));
     });
-    select.dataset.settingsField = 'renderer-font-size';
+    select.dataset['settingsField'] = 'renderer-font-size';
     return createSettingsControlRow('Renderer font size', select);
   }
 }

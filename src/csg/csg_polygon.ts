@@ -96,9 +96,9 @@ export class CsgPolygon {
     normal: THREE.Vector3;
     constant: number;
   } {
-    const a = vertices[0];
-    const b = vertices[1];
-    const c = vertices[2];
+    const a = vertices[0]!;
+    const b = vertices[1]!;
+    const c = vertices[2]!;
     const normal = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)).normalize();
     const constant = normal.dot(a);
     return { normal, constant };

@@ -26,25 +26,27 @@ export class SetPositionCommand implements UndoCommand {
     this.snapshots = [];
     this.newPositions = [];
     for (let i = 0; i < objects.length; i++) {
+      const object = objects[i]!;
       this.snapshots.push({
-        object: objects[i],
-        position: objects[i].position.clone(),
+        object,
+        position: object.position.clone(),
       });
-      this.newPositions.push(newPositions[i].clone());
+      this.newPositions.push(newPositions[i]!.clone());
     }
   }
 
   /** Executes the command by setting each object's position to its new value. */
   execute(): void {
     for (let i = 0; i < this.snapshots.length; i++) {
-      this.snapshots[i].object.position.copy(this.newPositions[i]);
+      this.snapshots[i]!.object.position.copy(this.newPositions[i]!);
     }
   }
 
   /** Undoes the command by restoring each object's original position. */
   undo(): void {
     for (let i = 0; i < this.snapshots.length; i++) {
-      this.snapshots[i].object.position.copy(this.snapshots[i].position);
+      const snapshot = this.snapshots[i]!;
+      snapshot.object.position.copy(snapshot.position);
     }
   }
 }

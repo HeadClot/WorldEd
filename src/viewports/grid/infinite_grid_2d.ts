@@ -335,7 +335,7 @@ export class InfiniteGrid2D {
    */
   private colorForCoordinate(
     coordinate: number,
-    cell: number,
+    _cell: number,
     cell4: number,
     cell8: number,
     minorFade: number,

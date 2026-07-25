@@ -86,11 +86,11 @@ export class ObjectDuplicator {
       SolidBrushVisual.stampBrushHelperMetadata(target);
       const brushId = SolidBrushVisual.getBrushId(source);
       if (brushId) SolidBrushVisual.setBrushId(target, brushId);
-      const operation = source.userData.solidBrushOperation;
+      const operation = source.userData['solidBrushOperation'];
       if (typeof operation === 'string') {
-        target.userData.solidBrushOperation = operation;
+        target.userData['solidBrushOperation'] = operation;
       }
-      target.userData.solidBrushHullFillVisible = source.userData.solidBrushHullFillVisible === true;
+      target.userData['solidBrushHullFillVisible'] = source.userData['solidBrushHullFillVisible'] === true;
     }
   }
 
@@ -129,8 +129,8 @@ export class ObjectDuplicator {
   private static cloneEdgeHelpers(source: THREE.Mesh, target: THREE.Mesh): void {
     if (SolidBrushVisual.isBrushObject(source)) {
       const operation = this.readBrushOperation(source);
-      const fillVisible = source.userData.solidBrushHullFillVisible === true;
-      target.userData.solidBrushHullFillVisible = fillVisible;
+      const fillVisible = source.userData['solidBrushHullFillVisible'] === true;
+      target.userData['solidBrushHullFillVisible'] = fillVisible;
       SolidBrushVisual.applyOperationStyle(target, operation);
       return;
     }
@@ -163,7 +163,7 @@ export class ObjectDuplicator {
    * @returns Operation for edge tint.
    */
   private static readBrushOperation(mesh: THREE.Mesh): SolidOperation {
-    const value = mesh.userData.solidBrushOperation;
+    const value = mesh.userData['solidBrushOperation'];
     if (value === SolidOperation.Subtractive) return SolidOperation.Subtractive;
     if (value === SolidOperation.Intersecting) return SolidOperation.Intersecting;
     return SolidOperation.Additive;
@@ -178,8 +178,8 @@ export class ObjectDuplicator {
    */
   private static isEditorOverlayLine(line: THREE.LineSegments): boolean {
     if (line.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true) return true;
-    if (line.userData.isSelectionHighlight === true) return true;
-    if (line.userData.isWireframeOverlay === true) return true;
+    if (line.userData['isSelectionHighlight'] === true) return true;
+    if (line.userData['isWireframeOverlay'] === true) return true;
     return false;
   }
 
@@ -192,7 +192,7 @@ export class ObjectDuplicator {
   private static extractCopySuffix(name: string): number {
     const match = name.match(/_copy(\d+)$/);
     if (match) {
-      return parseInt(match[1], 10);
+      return parseInt(match[1]!, 10);
     }
     return 0;
   }

@@ -143,7 +143,7 @@ export class SolidBrushMeshChunkBuilder {
         surfaceIndex: polygon.surfaceIndex,
         textureId,
       });
-      vertexWrite = this.writeTriangleCorners(polygon, tris[step], surface, positions, normals, uvs, vertexWrite);
+      vertexWrite = this.writeTriangleCorners(polygon, tris[step]!, surface, positions, normals, uvs, vertexWrite);
     }
     regions.push({
       triangleIndices: regionIndices,
@@ -176,7 +176,7 @@ export class SolidBrushMeshChunkBuilder {
     vertexWrite: number,
   ): number {
     for (const localIndex of cornerIndices) {
-      const vertex = polygon.vertices[localIndex];
+      const vertex = polygon.vertices[localIndex]!;
       const base = vertexWrite * 3;
       positions[base] = vertex.x;
       positions[base + 1] = vertex.y;

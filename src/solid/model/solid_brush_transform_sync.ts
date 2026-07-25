@@ -29,7 +29,7 @@ export function eulerEquals(a: THREE.Euler, b: THREE.Euler): boolean {
 export function sameBrushOrder(before: string[], brushes: readonly SolidBrushInstance[]): boolean {
   if (before.length !== brushes.length) return false;
   for (let index = 0; index < before.length; index++) {
-    if (before[index] !== brushes[index].id) return false;
+    if (before[index] !== brushes[index]!.id) return false;
   }
   return true;
 }

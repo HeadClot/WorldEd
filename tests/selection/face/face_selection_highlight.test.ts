@@ -110,7 +110,7 @@ describe('FaceSelectionHighlight', () => {
     highlight.setSelectedFaces([{ mesh, faceIndex: 2 }]);
     expect(highlight.getHighlightCount()).toBe(1);
     const meshes = getHighlightMeshes(highlight);
-    const position = meshes[0].geometry.getAttribute('position');
+    const position = meshes[0]!.geometry.getAttribute('position');
     expect(position.count).toBe(3);
   });
 

@@ -23,7 +23,7 @@ describe('isEditorHelperObject', () => {
 
   it('should treat wireframe overlays as helpers', () => {
     const line = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial());
-    line.userData.isWireframeOverlay = true;
+    line.userData['isWireframeOverlay'] = true;
     expect(isEditorHelperObject(line)).toBe(true);
   });
 
@@ -34,7 +34,7 @@ describe('isEditorHelperObject', () => {
 
   it('should treat CAD ruler overlays as helpers', () => {
     const group = new THREE.Group();
-    group.userData.isCadRuler = true;
+    group.userData['isCadRuler'] = true;
     expect(isEditorHelperObject(group)).toBe(true);
   });
 });

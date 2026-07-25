@@ -55,7 +55,7 @@ describe('cylinder_side_unwrap', () => {
     );
     applyCylinderSideUnwrapOffsets(mesh, entries);
     entries.forEach((entry) => {
-      expect(entry.mapping.offsetU).toBeCloseTo(0, 5);
+      expect(entry.mapping.offsetU!).toBeCloseTo(0, 5);
     });
   });
 
@@ -70,7 +70,7 @@ describe('cylinder_side_unwrap', () => {
       return Math.abs(normal.y) <= 0.35;
     });
     expect(sideMaps.length).toBe(8);
-    const offsets = sideMaps.map((entry) => entry.mapping.offsetU);
+    const offsets = sideMaps.map((entry) => entry.mapping.offsetU!);
     const unique = new Set(offsets.map((value) => value.toFixed(5)));
     expect(unique.size).toBe(8);
   });

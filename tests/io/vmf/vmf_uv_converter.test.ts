@@ -57,7 +57,7 @@ describe('VmfUvConverter', () => {
     const world = new VmfParser().parse(
       buildAxisAlignedWorldSolidVmf({ x: -32, y: -32, z: -32 }, { x: 32, y: 32, z: 32 }),
     );
-    const built = new VmfBrushFromSides().build(world.solids[0]);
+    const built = new VmfBrushFromSides().build(world.solids[0]!);
     expect(built).not.toBeNull();
     expect(built!.faceMappings.every((m) => m.uv && m.uv.u && m.uv.v)).toBe(true);
     const model = new SolidModel('VmfUv');
@@ -66,7 +66,7 @@ describe('VmfUvConverter', () => {
     instance.brush = built!.brush;
     instance.position.copy(built!.worldCenter);
     for (let i = 0; i < built!.faceMappings.length; i++) {
-      instance.setFaceMapping(i, built!.faceMappings[i]);
+      instance.setFaceMapping(i, built!.faceMappings[i]!);
     }
     instance.pushTransformToMesh();
     model.markDirty();

@@ -91,7 +91,7 @@ describe('InfiniteGrid3D', () => {
     const sorted = Array.from(xLines).sort((a, b) => a - b);
     let minStep = Infinity;
     for (let i = 1; i < sorted.length; i++) {
-      minStep = Math.min(minStep, sorted[i] - sorted[i - 1]);
+      minStep = Math.min(minStep, sorted[i]! - sorted[i - 1]!);
     }
     expect(minStep).toBeCloseTo(0.25, 5);
   });

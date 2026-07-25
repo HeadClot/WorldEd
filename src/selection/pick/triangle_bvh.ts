@@ -90,7 +90,7 @@ export class TriangleBvh {
     const stack: number[] = [0];
     while (stack.length > 0) {
       const nodeIndex = stack.pop()!;
-      const node = this.nodes[nodeIndex];
+      const node = this.nodes[nodeIndex]!;
       if (!this.rayIntersectsAabb(localOrigin, localDirection, node, bestDistance)) {
         continue;
       }
@@ -151,7 +151,7 @@ export class TriangleBvh {
   private expandNodeBounds(node: TriangleBvhNode): void {
     const end = node.start + node.count;
     for (let index = node.start; index < end; index++) {
-      this.expandBoundsWithTriangle(node, this.triangleIndices[index]);
+      this.expandBoundsWithTriangle(node, this.triangleIndices[index]!);
     }
   }
 
@@ -200,7 +200,7 @@ export class TriangleBvh {
     const range = this.triangleIndices.slice(start, end);
     range.sort((left, right) => this.centroidAxisComponent(left, axis) - this.centroidAxisComponent(right, axis));
     for (let index = 0; index < range.length; index++) {
-      this.triangleIndices[start + index] = range[index];
+      this.triangleIndices[start + index] = range[index]!;
     }
     return start + (count >> 1);
   }
@@ -220,7 +220,7 @@ export class TriangleBvh {
     let maxY = -Infinity;
     let maxZ = -Infinity;
     for (let index = start; index < end; index++) {
-      this.loadTriangleCentroid(this.triangleIndices[index], this.centroid);
+      this.loadTriangleCentroid(this.triangleIndices[index]!, this.centroid);
       minX = Math.min(minX, this.centroid.x);
       minY = Math.min(minY, this.centroid.y);
       minZ = Math.min(minZ, this.centroid.z);
@@ -314,7 +314,7 @@ export class TriangleBvh {
     let distance = bestDistance;
     let faceIndex = -1;
     for (let index = node.start; index < end; index++) {
-      const candidate = this.triangleIndices[index];
+      const candidate = this.triangleIndices[index]!;
       const hitDistance = this.intersectFrontFacingTriangle(candidate, origin, direction, distance);
       if (hitDistance === null) continue;
       distance = hitDistance;

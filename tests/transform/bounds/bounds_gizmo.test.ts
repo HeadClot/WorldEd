@@ -37,19 +37,19 @@ describe('BoundsGizmo', () => {
     gizmo.createHandles();
     gizmo.updateFromBounds(createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1)));
     gizmo.updateFromBounds(null);
-    expect(gizmo.getAllSceneObjects()[0].visible).toBe(false);
+    expect(gizmo.getAllSceneObjects()[0]!.visible).toBe(false);
   });
 
   it('should keep resize handles and face picks available together', () => {
     gizmo.createHandles();
     gizmo.updateFromBounds(createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1)), 0.2);
-    const root = gizmo.getAllSceneObjects()[0];
+    const root = gizmo.getAllSceneObjects()[0]!;
     let handleCount = 0;
     let facePickCount = 0;
     root.traverse((child) => {
       if (!(child instanceof THREE.Mesh) || !child.visible) return;
-      if (child.userData.isBoundsFacePick === true) facePickCount += 1;
-      if (child.userData.handleId !== undefined) handleCount += 1;
+      if (child.userData['isBoundsFacePick'] === true) facePickCount += 1;
+      if (child.userData['handleId'] !== undefined) handleCount += 1;
     });
     expect(handleCount).toBe(6);
     expect(facePickCount).toBe(6);
@@ -70,10 +70,10 @@ describe('BoundsGizmo', () => {
 
   it('should include guide line object under the root group', () => {
     gizmo.createHandles();
-    const root = gizmo.getAllSceneObjects()[0];
+    const root = gizmo.getAllSceneObjects()[0]!;
     let found = false;
     root.traverse((child) => {
-      if (child.userData.isBoundsGuideLines === true) found = true;
+      if (child.userData['isBoundsGuideLines'] === true) found = true;
     });
     expect(found).toBe(true);
   });

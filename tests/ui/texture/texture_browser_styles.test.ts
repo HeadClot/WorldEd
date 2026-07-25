@@ -18,8 +18,8 @@ describe('texture_browser_styles', () => {
     ensureTextureBrowserStylesheet();
     const sheets = document.querySelectorAll('#tb-browser-stylesheet');
     expect(sheets).toHaveLength(1);
-    expect(sheets[0].textContent).toContain(`.${TEXTURE_BROWSER_THUMB_CLASS}`);
-    expect(sheets[0].textContent).toContain(`.${TEXTURE_BROWSER_GRID_CLASS}`);
+    expect(sheets[0]!.textContent).toContain(`.${TEXTURE_BROWSER_THUMB_CLASS}`);
+    expect(sheets[0]!.textContent).toContain(`.${TEXTURE_BROWSER_GRID_CLASS}`);
   });
 
   it('should size thumbs with container-query height matching tile width', () => {

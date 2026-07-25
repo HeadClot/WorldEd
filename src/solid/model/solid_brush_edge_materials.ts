@@ -114,8 +114,8 @@ export class SolidBrushEdgeMaterials {
   static disableDistanceFade(material: THREE.Material): void {
     if (material.userData[BRUSH_EDGE_DISTANCE_FADE_KEY] !== true) return;
     if (!(material instanceof THREE.ShaderMaterial)) return;
-    const fadeNear = material.uniforms.fadeNear;
-    const fadeFar = material.uniforms.fadeFar;
+    const fadeNear = material.uniforms['fadeNear'];
+    const fadeFar = material.uniforms['fadeFar'];
     if (fadeNear) fadeNear.value = FADE_DISABLED_NEAR;
     if (fadeFar) fadeFar.value = FADE_DISABLED_FAR;
   }

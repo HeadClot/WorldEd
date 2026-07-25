@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { Theme } from '../theme.js';
 import { BaseViewport } from './base_viewport.js';
 import { Grids, GridPlane } from './grid/grids.js';
 import { OrthoPanHandler } from '../managers/camera/ortho_pan_handler.js';
@@ -21,17 +20,15 @@ import { OrthoDepthRanger } from './ortho_depth_ranger.js';
 export class Viewport2D extends BaseViewport {
   private camera: THREE.OrthographicCamera;
   private grids: Grids;
-  private gridPlane: GridPlane;
-  private selectableObjects: THREE.Mesh[];
-  private selectionManager: SelectionManager | null;
-  private selectionHighlight: SelectionHighlight | null;
-  private raycaster: SceneRaycaster;
-  private worldGroup: THREE.Group | null;
-  private gizmoGroup: THREE.Group | null;
-  private transformCallback: TransformCallback | null;
-  private faceSelectionCallback: ((event: MouseEvent) => boolean) | null;
-  private clipPlaneCallback: ((event: MouseEvent) => boolean) | null;
-  private meshResolveCallback: MeshResolveCallback | null;
+  private selectableObjects!: THREE.Mesh[];
+  private selectionManager!: SelectionManager | null;
+  private raycaster!: SceneRaycaster;
+  private worldGroup!: THREE.Group | null;
+  private gizmoGroup!: THREE.Group | null;
+  private transformCallback!: TransformCallback | null;
+  private faceSelectionCallback!: ((event: MouseEvent) => boolean) | null;
+  private clipPlaneCallback!: ((event: MouseEvent) => boolean) | null;
+  private meshResolveCallback!: MeshResolveCallback | null;
   private shadingController: ViewportShadingController;
 
   /**
@@ -45,7 +42,6 @@ export class Viewport2D extends BaseViewport {
    */
   constructor(container: HTMLElement, name: string, plane: GridPlane, cameraPosition: THREE.Vector3) {
     super(container, name, ShadingMode.WIREFRAME);
-    this.gridPlane = plane;
     this.grids = new Grids(50, 50, plane, 'orthographic');
     this.camera = this.createCamera(cameraPosition, plane);
     this.initializeState();
@@ -60,8 +56,9 @@ export class Viewport2D extends BaseViewport {
   private initializeState(): void {
     this.selectableObjects = [];
     this.selectionManager = null;
-    this.selectionHighlight = null;
     this.worldGroup = null;
+    this.gizmoGroup = null;
+    this.transformCallback = null;
     this.raycaster = new SceneRaycaster();
     this.faceSelectionCallback = null;
     this.clipPlaneCallback = null;
@@ -107,9 +104,7 @@ export class Viewport2D extends BaseViewport {
    *
    * @param highlight The selection highlight instance.
    */
-  setSelectionHighlight(highlight: SelectionHighlight): void {
-    this.selectionHighlight = highlight;
-  }
+  setSelectionHighlight(_highlight: SelectionHighlight): void {}
 
   /**
    * Sets the selectable objects for raycasting.
@@ -252,7 +247,7 @@ export class Viewport2D extends BaseViewport {
    */
   private resolvePickFromStack(stack: THREE.Mesh[], additive: boolean, toggle: boolean): THREE.Mesh | null {
     if (stack.length === 0 || !this.selectionManager) return null;
-    if (additive || toggle) return stack[0];
+    if (additive || toggle) return stack[0] ?? null;
     return SelectionClickThrough.pickFromStack(stack, this.selectionManager);
   }
 

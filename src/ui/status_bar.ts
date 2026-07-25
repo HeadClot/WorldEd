@@ -8,17 +8,16 @@ export class StatusBar {
   private container: HTMLElement;
   private leftPanel: HTMLElement;
   private rightPanel: HTMLElement;
-  private undoRedoText: HTMLElement;
-  private lastActionText: HTMLElement;
-  private modeText: HTMLElement;
-  private snapText: HTMLElement;
-  private snapInterval: number;
+  private undoRedoText!: HTMLElement;
+  private lastActionText!: HTMLElement;
+  private modeText!: HTMLElement;
+  private snapText!: HTMLElement;
   private snapIntervalFormatted: string;
-  private axisText: HTMLElement;
-  private savedInfoText: HTMLElement;
-  private fitFeedbackText: HTMLElement;
-  private shadingModeText: HTMLElement;
-  private selectionModeText: HTMLElement;
+  private axisText!: HTMLElement;
+  private savedInfoText!: HTMLElement;
+  private fitFeedbackText!: HTMLElement;
+  private shadingModeText!: HTMLElement;
+  private selectionModeText!: HTMLElement;
   private isDisposed: boolean;
 
   /**
@@ -32,7 +31,6 @@ export class StatusBar {
     this.leftPanel = document.createElement('div');
     this.rightPanel = document.createElement('div');
     this.createTextElements();
-    this.snapInterval = 0.25;
     this.snapIntervalFormatted = this.formatSnapInterval(0.25);
     this.isDisposed = false;
     this.applyContainerStyles(theme);
@@ -154,7 +152,6 @@ export class StatusBar {
    */
   setSnapInterval(interval: number): void {
     if (this.isDisposed) return;
-    this.snapInterval = interval;
     this.snapIntervalFormatted = this.formatSnapInterval(interval);
     this.snapText.textContent = ` | Snap: On (${this.snapIntervalFormatted})`;
   }

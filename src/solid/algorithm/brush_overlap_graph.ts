@@ -71,7 +71,7 @@ export class BrushOverlapGraph {
       for (const peerIndex of previous) {
         if (seedIndices.has(peerIndex)) continue;
         if (peerIndex < 0 || peerIndex >= entries.length) continue;
-        entries[index].overlappingPeerIndices.push(peerIndex);
+        entries[index]!.overlappingPeerIndices.push(peerIndex);
       }
     }
   }
@@ -98,9 +98,10 @@ export class BrushOverlapGraph {
     const cells = this.binEntriesIntoCells(entries, cellSize, pad);
     for (const seedIndex of seedIndices) {
       if (seedIndex < 0 || seedIndex >= entries.length) continue;
-      const candidates = this.collectCellCandidates(cells, entries[seedIndex].bounds, cellSize, pad, seedIndex);
+      const seedEntry = entries[seedIndex]!;
+      const candidates = this.collectCellCandidates(cells, seedEntry.bounds, cellSize, pad, seedIndex);
       for (const other of candidates) {
-        if (!this.boundsOverlap(entries[seedIndex].bounds, entries[other].bounds, pad)) {
+        if (!this.boundsOverlap(seedEntry.bounds, entries[other]!.bounds, pad)) {
           continue;
         }
         this.addUndirectedPeer(entries, seedIndex, other);
@@ -118,9 +119,10 @@ export class BrushOverlapGraph {
   private static linkSeedsPairwise(entries: OverlapBoundsEntry[], pad: number, seedIndices: ReadonlySet<number>): void {
     for (const seedIndex of seedIndices) {
       if (seedIndex < 0 || seedIndex >= entries.length) continue;
+      const seedEntry = entries[seedIndex]!;
       for (let other = 0; other < entries.length; other++) {
         if (other === seedIndex) continue;
-        if (!this.boundsOverlap(entries[seedIndex].bounds, entries[other].bounds, pad)) {
+        if (!this.boundsOverlap(seedEntry.bounds, entries[other]!.bounds, pad)) {
           continue;
         }
         this.addUndirectedPeer(entries, seedIndex, other);
@@ -175,11 +177,13 @@ export class BrushOverlapGraph {
    * @param b Second index.
    */
   private static addUndirectedPeer(entries: OverlapBoundsEntry[], a: number, b: number): void {
-    if (!entries[a].overlappingPeerIndices.includes(b)) {
-      entries[a].overlappingPeerIndices.push(b);
+    const entryA = entries[a]!;
+    const entryB = entries[b]!;
+    if (!entryA.overlappingPeerIndices.includes(b)) {
+      entryA.overlappingPeerIndices.push(b);
     }
-    if (!entries[b].overlappingPeerIndices.includes(a)) {
-      entries[b].overlappingPeerIndices.push(a);
+    if (!entryB.overlappingPeerIndices.includes(a)) {
+      entryB.overlappingPeerIndices.push(a);
     }
   }
 
@@ -192,12 +196,14 @@ export class BrushOverlapGraph {
   private static buildPairwise(entries: OverlapBoundsEntry[], pad: number): void {
     const count = entries.length;
     for (let i = 0; i < count; i++) {
+      const entryI = entries[i]!;
       for (let j = i + 1; j < count; j++) {
-        if (!this.boundsOverlap(entries[i].bounds, entries[j].bounds, pad)) {
+        const entryJ = entries[j]!;
+        if (!this.boundsOverlap(entryI.bounds, entryJ.bounds, pad)) {
           continue;
         }
-        entries[i].overlappingPeerIndices.push(j);
-        entries[j].overlappingPeerIndices.push(i);
+        entryI.overlappingPeerIndices.push(j);
+        entryJ.overlappingPeerIndices.push(i);
       }
     }
   }
@@ -248,7 +254,7 @@ export class BrushOverlapGraph {
   ): Map<string, number[]> {
     const cells = new Map<string, number[]>();
     for (let index = 0; index < entries.length; index++) {
-      this.insertEntryIntoCells(cells, entries[index].bounds, index, cellSize, pad);
+      this.insertEntryIntoCells(cells, entries[index]!.bounds, index, cellSize, pad);
     }
     return cells;
   }
@@ -303,16 +309,16 @@ export class BrushOverlapGraph {
   ): void {
     for (let i = 0; i < indices.length; i++) {
       for (let j = i + 1; j < indices.length; j++) {
-        const a = indices[i];
-        const b = indices[j];
+        const a = indices[i]!;
+        const b = indices[j]!;
         const pairKey = a < b ? `${a}:${b}` : `${b}:${a}`;
         if (seenPairs.has(pairKey)) continue;
-        if (!this.boundsOverlap(entries[a].bounds, entries[b].bounds, pad)) {
+        if (!this.boundsOverlap(entries[a]!.bounds, entries[b]!.bounds, pad)) {
           continue;
         }
         seenPairs.add(pairKey);
-        entries[a].overlappingPeerIndices.push(b);
-        entries[b].overlappingPeerIndices.push(a);
+        entries[a]!.overlappingPeerIndices.push(b);
+        entries[b]!.overlappingPeerIndices.push(a);
       }
     }
   }

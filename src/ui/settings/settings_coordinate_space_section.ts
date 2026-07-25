@@ -69,7 +69,7 @@ export class SettingsCoordinateSpaceSection {
     const select = createSettingsSelect(options, profile.coordinateSpace.presetId, (value) =>
       this.handlePresetSelection(profile.id, value),
     );
-    select.dataset.settingsField = 'coordinate-space-preset';
+    select.dataset['settingsField'] = 'coordinate-space-preset';
     return createSettingsControlRow('Preset', select);
   }
 
@@ -113,7 +113,7 @@ export class SettingsCoordinateSpaceSection {
    */
   private createSummaryRow(space: CoordinateSpaceDefinition): HTMLElement {
     const summary = document.createElement('div');
-    summary.dataset.settingsField = 'coordinate-space-summary';
+    summary.dataset['settingsField'] = 'coordinate-space-summary';
     summary.textContent = formatCoordinateSpaceSummary(space);
     summary.style.fontSize = '11px';
     summary.style.fontFamily = 'monospace';
@@ -133,7 +133,7 @@ export class SettingsCoordinateSpaceSection {
     const input = createSettingsTextInput(profile.coordinateSpace.name, 'Custom coordinate space name', (value) => {
       this.store.renameCustomCoordinateSpace(profile.coordinateSpace.presetId, value);
     });
-    input.dataset.settingsField = 'coordinate-space-name';
+    input.dataset['settingsField'] = 'coordinate-space-name';
     return createSettingsControlRow('Preset name', input);
   }
 
@@ -153,7 +153,7 @@ export class SettingsCoordinateSpaceSection {
     const select = createSettingsSelect(options, profile.coordinateSpace[axis], (value) => {
       this.store.setCustomCoordinateSpaceAxis(profile.coordinateSpace.presetId, axis, value as AxisDirection);
     });
-    select.dataset.settingsField = `coordinate-space-${axis}`;
+    select.dataset['settingsField'] = `coordinate-space-${axis}`;
     return createSettingsControlRow(label, select);
   }
 
@@ -167,7 +167,7 @@ export class SettingsCoordinateSpaceSection {
     const button = createSettingsSecondaryButton('Remove Custom Preset', () => {
       this.store.removeCustomCoordinateSpace(profile.coordinateSpace.presetId);
     });
-    button.dataset.settingsAction = 'remove-coordinate-space';
+    button.dataset['settingsAction'] = 'remove-coordinate-space';
     return createSettingsControlRow('Manage', button);
   }
 }

@@ -79,7 +79,7 @@ describe('mesh texture isolation', () => {
     const source = createCube();
     initializeMeshTextureUVs(source, DEFAULT_CHECKER_TEXTURE_ID);
     applyTextureIdToTargets(buildTargetsFromMeshes([source]), 'wood.png');
-    const [clone] = ObjectDuplicator.duplicate([source], new THREE.Vector3(2, 0, 0));
+    const clone = ObjectDuplicator.duplicate([source], new THREE.Vector3(2, 0, 0))[0]!;
     applyTextureIdToTargets(buildTargetsFromMeshes([clone]), 'stone.png');
     getFaceTextureMaps(source).forEach((entry) => {
       expect(entry.mapping.textureId).toBe('wood.png');

@@ -52,7 +52,7 @@ export function resolveLayoutGizmoOrientation(
   if (context.transformSpace !== TransformSpace.Local || selected.length !== 1) {
     return new THREE.Quaternion();
   }
-  const target = selected[0];
+  const target = selected[0]!;
   target.updateMatrixWorld(true);
   const orientation = new THREE.Quaternion();
   target.getWorldQuaternion(orientation);

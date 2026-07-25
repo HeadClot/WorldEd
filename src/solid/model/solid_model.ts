@@ -8,7 +8,6 @@ import { getFaceTextureMaps } from '../../texture/uv/face_texture_storage.js';
 import { removeDecorativeEdges } from '../../utils/mesh_edge_sync.js';
 import {
   SOLID_MODEL_USERDATA_KEY,
-  SOLID_MODEL_RESULT_USERDATA_KEY,
   SOLID_TRIANGLE_SOURCES_USERDATA_KEY,
   isSolidModelObject as isSolidModelObjectKey,
   isResultMesh as isResultMeshKey,

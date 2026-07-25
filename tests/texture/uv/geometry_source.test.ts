@@ -26,8 +26,8 @@ describe('geometry_source', () => {
     expect(mesh.geometry).not.toBeInstanceOf(THREE.CylinderGeometry);
     expect(resolveGeometrySourceType(mesh.geometry)).toBe('cylinder');
     const source = getGeometrySource(mesh.geometry);
-    expect(source?.params.radiusTop).toBe(0.5);
-    expect(source?.params.radiusBottom).toBe(1);
-    expect(source?.params.height).toBe(2);
+    expect(source?.params['radiusTop']).toBe(0.5);
+    expect(source?.params['radiusBottom']).toBe(1);
+    expect(source?.params['height']).toBe(2);
   });
 });

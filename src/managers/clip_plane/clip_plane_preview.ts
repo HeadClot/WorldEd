@@ -16,8 +16,6 @@ export const CLIP_PREVIEW_USERDATA_KEY = 'isClipPlanePreview';
 export class ClipPlanePreview {
   private root: THREE.Group;
   private markerGroups: THREE.Group[];
-  private planeMesh: THREE.Mesh | null;
-  private arrowHelper: THREE.ArrowHelper | null;
 
   /** Creates a preview group that should be added to the world or scene. */
   constructor() {
@@ -25,8 +23,6 @@ export class ClipPlanePreview {
     this.root.name = 'clip_plane_preview';
     this.root.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
     this.markerGroups = [];
-    this.planeMesh = null;
-    this.arrowHelper = null;
   }
 
   /**
@@ -76,13 +72,11 @@ export class ClipPlanePreview {
   /** Clears markers, plane, and arrow. */
   private clearVisuals(): void {
     while (this.root.children.length > 0) {
-      const child = this.root.children[0];
+      const child = this.root.children[0]!;
       this.root.remove(child);
       this.disposeObject(child);
     }
     this.markerGroups = [];
-    this.planeMesh = null;
-    this.arrowHelper = null;
   }
 
   /**
@@ -127,7 +121,7 @@ export class ClipPlanePreview {
    */
   private computeMarkerScale(camera: THREE.Camera): number {
     if (this.markerGroups.length === 0) return 1;
-    const anchor = this.markerGroups[0].position;
+    const anchor = this.markerGroups[0]!.position;
     let raw = 1;
     if (camera instanceof THREE.PerspectiveCamera) {
       const distance = camera.position.distanceTo(anchor);
@@ -159,7 +153,6 @@ export class ClipPlanePreview {
     mesh.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
     this.orientPlaneMesh(mesh, plane, points);
     this.root.add(mesh);
-    this.planeMesh = mesh;
   }
 
   /**
@@ -198,7 +191,6 @@ export class ClipPlanePreview {
     arrow.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
     this.styleKeepArrowAsOverlay(arrow);
     this.root.add(arrow);
-    this.arrowHelper = arrow;
   }
 
   /**
@@ -245,7 +237,7 @@ export class ClipPlanePreview {
     let maxDistance = 0;
     for (let i = 0; i < points.length; i++) {
       for (let j = i + 1; j < points.length; j++) {
-        maxDistance = Math.max(maxDistance, points[i].distanceTo(points[j]));
+        maxDistance = Math.max(maxDistance, points[i]!.distanceTo(points[j]!));
       }
     }
     return Math.max(3, maxDistance * 2.2);

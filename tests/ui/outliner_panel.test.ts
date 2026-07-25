@@ -69,7 +69,7 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     const panelElement = container.children[0] as HTMLElement;
     const treeElement = panelElement.children[1] as HTMLElement;
-    const nameSpan = treeElement.children[0].querySelector('span:nth-child(3)') as HTMLSpanElement;
+    const nameSpan = treeElement.children[0]!.querySelector('span:nth-child(3)') as HTMLSpanElement;
     expect(nameSpan.textContent).toBe('TestCube');
   });
 
@@ -81,7 +81,7 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     const panelElement = container.children[0] as HTMLElement;
     const treeElement = panelElement.children[1] as HTMLElement;
-    expect(treeElement.children[0].style.background).toBe(Theme.outlinerSelectedColor);
+    expect((treeElement.children[0] as HTMLElement).style.background).toBe(Theme.outlinerSelectedColor);
   });
 
   it('should not highlight unselected objects in the tree', () => {
@@ -95,7 +95,7 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     const panelElement = container.children[0] as HTMLElement;
     const treeElement = panelElement.children[1] as HTMLElement;
-    expect(treeElement.children[1].style.background).not.toBe(Theme.outlinerSelectedColor);
+    expect((treeElement.children[1] as HTMLElement).style.background).not.toBe(Theme.outlinerSelectedColor);
   });
 
   it('should select object on click of tree item', () => {
@@ -105,7 +105,7 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     const panelElement = container.children[0] as HTMLElement;
     const treeElement = panelElement.children[1] as HTMLElement;
-    treeElement.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    treeElement.children[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
     expect(selectionManager.isObjectSelected(mesh)).toBe(true);
   });
 
@@ -116,7 +116,7 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     const panelElement = container.children[0] as HTMLElement;
     const treeElement = panelElement.children[1] as HTMLElement;
-    treeElement.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    treeElement.children[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
     const objects = panel.getObjectsForGrouping();
     expect(objects).toContain(group);
     expect(objects.length).toBe(1);
@@ -152,47 +152,29 @@ describe('OutlinerPanel', () => {
   });
 
   it('should support group callback registration', () => {
-    let grouped = false;
-    panel.setGroupCallback(() => {
-      grouped = true;
-    });
+    panel.setGroupCallback(() => {});
     expect(() => panel.dispose()).not.toThrow();
   });
 
   it('should support ungroup callback registration', () => {
-    let ungrouped = false;
-    panel.setUngroupCallback(() => {
-      ungrouped = true;
-    });
+    panel.setUngroupCallback(() => {});
     expect(() => panel.dispose()).not.toThrow();
   });
 
   it('should support rename callback registration', () => {
-    let renamed = false;
-    panel.setRenameCallback(() => {
-      renamed = true;
-    });
+    panel.setRenameCallback(() => {});
     expect(() => panel.dispose()).not.toThrow();
   });
 
   it('should support visibility callback registration', () => {
-    let toggled = false;
-    panel.setVisibilityCallback(() => {
-      toggled = true;
-    });
+    panel.setVisibilityCallback(() => {});
     expect(() => panel.dispose()).not.toThrow();
   });
 
   it('should maintain backward compatible setContextCallbacks', () => {
-    let duplicated = false;
-    let deleted = false;
     panel.setContextCallbacks(
-      () => {
-        duplicated = true;
-      },
-      () => {
-        deleted = true;
-      },
+      () => {},
+      () => {},
     );
     expect(() => panel.dispose()).not.toThrow();
   });

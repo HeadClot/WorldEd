@@ -11,10 +11,10 @@ describe('solid_brush_surface_transfer', () => {
   it('matches coplanar faces and leaves cap faces with new defaults', () => {
     const source = SolidBrushFactory.createCenteredBox(2, 2, 2);
     const sideIndex = source.planes.findIndex((plane) => plane.normal.z > 0.9);
-    const custom = createFaceSurfaceFromTileSize(source.planes[sideIndex].normal, 'side.png', 2, 1);
-    custom.uv = SurfaceUvMatrix.fromTrs(new THREE.Vector2(0.1, 0), source.planes[sideIndex].normal, 0, 0.5, 1);
+    const custom = createFaceSurfaceFromTileSize(source.planes[sideIndex!]!.normal, 'side.png', 2, 1);
+    custom.uv = SurfaceUvMatrix.fromTrs(new THREE.Vector2(0.1, 0), source.planes[sideIndex!]!.normal, 0, 0.5, 1);
     const faceSurfaces = source.faces.map((_, index) =>
-      index === sideIndex ? custom : createFaceSurfaceFromTileSize(source.planes[index].normal, 'default.png'),
+      index === sideIndex ? custom : createFaceSurfaceFromTileSize(source.planes[index!]!.normal, 'default.png'),
     );
     // Keep y <= 0.25; side planes (constant z) survive, new cap appears at y=0.25.
     const clipPlane = new SolidPlane(new THREE.Vector3(0, 1, 0), -0.25);

@@ -35,7 +35,7 @@ describe('CadRulerLineBatch', () => {
   });
 
   it('should mark the root as a CAD ruler helper', () => {
-    expect(batch.getObject().userData.isCadRuler).toBe(true);
+    expect(batch.getObject().userData['isCadRuler']).toBe(true);
   });
 
   it('should grow capacity for large segment uploads without throwing', () => {

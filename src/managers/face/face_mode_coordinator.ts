@@ -116,7 +116,7 @@ export class FaceModeCoordinator {
     this.updateSelectionModeStatus();
     const label =
       createdMeshes.length === 1
-        ? `Created convex solid ${createdMeshes[0].name}`
+        ? `Created convex solid ${createdMeshes[0]!.name}`
         : `Created ${createdMeshes.length} convex solids`;
     this.deps.showStatusMessage(label);
   }

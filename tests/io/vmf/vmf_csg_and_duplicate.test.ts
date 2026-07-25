@@ -73,7 +73,7 @@ describe('VMF import CSG and duplicate', () => {
       const validation = SolidBrushValidator.validate(brush.brush);
       expect(validation.valid, validation.errors.join('; ')).toBe(true);
     }
-    brushes[1].operation = SolidOperation.Subtractive;
+    brushes[1]!.operation = SolidOperation.Subtractive;
     result.model.markDirty();
     result.model.rebuild(true);
     const origin = new THREE.Vector3(0, 0, 0);
@@ -91,7 +91,7 @@ describe('VMF import CSG and duplicate', () => {
       buildAxisAlignedWorldSolidVmf({ x: 1568, y: 1792, z: -64 }, { x: 1728, y: 1920, z: 0 }, 'DEV/A', 99),
       { rebuild: false },
     );
-    const source = result.model.getBrushes()[0];
+    const source = result.model.getBrushes()[0]!;
     const sourceBounds = source.brush.computeLocalBounds();
     const sourceSize = sourceBounds.getSize(new THREE.Vector3());
     const sourceWorldCenter = source.position.clone();
@@ -123,7 +123,7 @@ describe('VMF import CSG and duplicate', () => {
       buildAxisAlignedWorldSolidVmf({ x: -64, y: -64, z: 0 }, { x: 64, y: 64, z: 128 }),
       { rebuild: false },
     );
-    const brush = result.model.getBrushes()[0];
+    const brush = result.model.getBrushes()[0]!;
     expect(brush.position.x).toBeCloseTo(0, 4);
     expect(brush.position.y).toBeCloseTo(2, 4);
     expect(brush.position.z).toBeCloseTo(0, 4);

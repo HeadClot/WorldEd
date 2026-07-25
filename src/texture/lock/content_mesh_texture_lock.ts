@@ -127,17 +127,20 @@ function collectRegionWorldUvSamples(mesh: THREE.Mesh, triangleIndices: number[]
  * @returns Fitted UV matrix.
  */
 function fitUvMatrixFromSamples(samples: WorldUvSample[], faceNormal: THREE.Vector3): SurfaceUvMatrix {
-  const a = samples[0];
-  let b = samples[1];
-  let c = samples[2];
+  const a = samples[0]!;
+  let b = samples[1] ?? a;
+  let c = samples[2] ?? a;
   for (let index = 1; index < samples.length; index++) {
-    if (samples[index].world.distanceToSquared(a.world) > 1e-8) {
-      b = samples[index];
+    const sample = samples[index];
+    if (!sample) continue;
+    if (sample.world.distanceToSquared(a.world) > 1e-8) {
+      b = sample;
       break;
     }
   }
   for (let index = 0; index < samples.length; index++) {
     const candidate = samples[index];
+    if (!candidate) continue;
     const ab = new THREE.Vector3().subVectors(b.world, a.world);
     const ac = new THREE.Vector3().subVectors(candidate.world, a.world);
     if (new THREE.Vector3().crossVectors(ab, ac).lengthSq() > 1e-10) {

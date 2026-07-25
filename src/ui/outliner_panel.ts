@@ -320,7 +320,7 @@ export class OutlinerPanel {
     const meshes: THREE.Mesh[] = [];
     this.hierarchySelection.forEach((object) => {
       collectMeshesUnder(object).forEach((mesh) => {
-        if (mesh.userData.isSolidModelResult === true) return;
+        if (mesh.userData['isSolidModelResult'] === true) return;
         if (!meshes.includes(mesh)) meshes.push(mesh);
       });
     });
@@ -452,16 +452,18 @@ export class OutlinerPanel {
    */
   private buildEditMenuItems(obj: THREE.Object3D): ContextMenuItem[] {
     const items: ContextMenuItem[] = [];
-    if (this.duplicateCallback) {
+    const duplicateCallback = this.duplicateCallback;
+    if (duplicateCallback) {
       items.push({
         label: 'Duplicate',
-        callback: () => this.duplicateCallback(obj),
+        callback: () => duplicateCallback(obj),
       });
     }
-    if (this.deleteCallback) {
+    const deleteCallback = this.deleteCallback;
+    if (deleteCallback) {
       items.push({
         label: 'Delete',
-        callback: () => this.deleteCallback(obj),
+        callback: () => deleteCallback(obj),
       });
     }
     return items;
@@ -481,10 +483,11 @@ export class OutlinerPanel {
         callback: () => this.onGroup(obj),
       });
     }
-    if (this.ungroupCallback && obj instanceof THREE.Group) {
+    const ungroupCallback = this.ungroupCallback;
+    if (ungroupCallback && obj instanceof THREE.Group) {
       items.push({
         label: 'Ungroup',
-        callback: () => this.ungroupCallback(obj),
+        callback: () => ungroupCallback(obj),
       });
     }
     return items;

@@ -67,7 +67,7 @@ export class SceneSerializer {
    * @returns True for meshes and groups that represent scene content.
    */
   private shouldSerializeChild(child: THREE.Object3D): boolean {
-    if (child.userData.isClipPlanePreview === true) return false;
+    if (child.userData['isClipPlanePreview'] === true) return false;
     if (child instanceof THREE.Mesh) return true;
     if (child instanceof THREE.Group) return true;
     return false;
@@ -196,7 +196,8 @@ export class SceneSerializer {
     if (!SolidModel.isSolidModelObject(object)) return;
     const model = SolidModel.fromObject(object);
     if (!model || model.root !== object) return;
-    entry.solidModel = SolidModelCodec.encode(model);
+    const solidModel = SolidModelCodec.encode(model) as unknown as NonNullable<ObjectEntry['solidModel']>;
+    entry.solidModel = solidModel;
   }
 
   /**
@@ -208,7 +209,7 @@ export class SceneSerializer {
   private attachFaceTextureMaps(mesh: THREE.Mesh, entry: ObjectEntry): void {
     const maps = getFaceTextureMaps(mesh);
     if (maps.length === 0) return;
-    entry.faceTextureMaps = maps;
+    entry.faceTextureMaps = maps as unknown as NonNullable<ObjectEntry['faceTextureMaps']>;
   }
 
   /**

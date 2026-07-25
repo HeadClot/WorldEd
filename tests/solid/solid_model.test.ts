@@ -55,7 +55,7 @@ describe('SolidModel', () => {
     let changed = before.length !== after.array.length;
     if (!changed) {
       for (let i = 0; i < before.length; i++) {
-        if (Math.abs(before[i] - after.array[i]) > 1e-6) {
+        if (Math.abs(before[i]! - after.array[i]!) > 1e-6) {
           changed = true;
           break;
         }
@@ -68,7 +68,7 @@ describe('SolidModel', () => {
     const model = new SolidModel();
     model.addBoxBrush(2, SolidOperation.Additive);
     model.addBoxBrush(1, SolidOperation.Subtractive);
-    model.getBrushes()[1].mesh!.position.set(0.5, 0, 0);
+    model.getBrushes()[1]!.mesh!.position.set(0.5, 0, 0);
     model.rebuildLive();
     const result = model.getResultMesh();
     const position = result.geometry.getAttribute('position');

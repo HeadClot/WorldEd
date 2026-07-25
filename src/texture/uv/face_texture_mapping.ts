@@ -11,7 +11,8 @@ export type FaceTextureAlign = 'auto' | 'floor' | 'ceiling' | 'wall' | 'face';
 /**
  * Authored surface texture + UV matrix for one coplanar face region. UVs are
  * projected as u = U·p + Uw, v = V·p + Vw (SurfaceUvMatrix). Solids use
- * brush-local positions; content meshes use world positions at bake time.
+ * brush-local positions; content meshes use world positions at bake time. TRS
+ * fields are optional on the type; withTrsAccessors provides live getters.
  */
 export interface FaceTextureMapping {
   /** Durable texture identity. */
@@ -20,18 +21,17 @@ export interface FaceTextureMapping {
   uv: SurfaceUvMatrix;
   /** Optional UI align preset used when rebuilding the matrix from TRS. */
   align?: FaceTextureAlign;
+  /** World meters per texture tile on U (TRS proxy accessor). */
+  scaleU?: number;
+  /** World meters per texture tile on V (TRS proxy accessor). */
+  scaleV?: number;
+  /** UV phase shift along U in meters (TRS proxy accessor). */
+  offsetU?: number;
+  /** UV phase shift along V in meters (TRS proxy accessor). */
+  offsetV?: number;
+  /** UV rotation around the face normal in degrees (TRS proxy accessor). */
+  rotationDeg?: number;
 }
-
-/** Stored mapping for a coplanar set of triangles on a mesh. */
-export interface FaceTextureMapEntry {
-  /** Triangle indices that share this mapping. */
-  triangleIndices: number[];
-  /** UV matrix + texture for this region. */
-  mapping: FaceTextureMapping;
-}
-
-/** UserData key for face texture map tables on content meshes. */
-export const FACE_TEXTURE_MAPS_USERDATA_KEY = 'faceTextureMaps';
 
 /** TRS fields shown in the UV editor (meters-per-tile scale convention). */
 export interface FaceTextureMappingTrs {
@@ -46,6 +46,23 @@ export interface FaceTextureMappingTrs {
   /** Rotation of U/V around the face normal (degrees). */
   rotationDeg: number;
 }
+
+/**
+ * Face mapping with TRS field accessors (via withTrsAccessors proxy).
+ * scaleU/V/offsetU/V/rotationDeg read and write meters-per-tile TRS.
+ */
+export type FaceTextureMappingWithTrs = FaceTextureMapping & FaceTextureMappingTrs;
+
+/** Stored mapping for a coplanar set of triangles on a mesh. */
+export interface FaceTextureMapEntry {
+  /** Triangle indices that share this mapping. */
+  triangleIndices: number[];
+  /** UV matrix + texture for this region. */
+  mapping: FaceTextureMapping;
+}
+
+/** UserData key for face texture map tables on content meshes. */
+export const FACE_TEXTURE_MAPS_USERDATA_KEY = 'faceTextureMaps';
 
 /** Plain JSON form of a face texture mapping. */
 export interface FaceTextureMappingSerialized {
@@ -71,7 +88,9 @@ const DEFAULT_TRS_NORMAL = new THREE.Vector3(0, 1, 0);
  * @param textureId Optional texture id.
  * @returns New default mapping with TRS accessors.
  */
-export function createDefaultFaceTextureMapping(textureId: string = DEFAULT_CHECKER_TEXTURE_ID): FaceTextureMapping {
+export function createDefaultFaceTextureMapping(
+  textureId: string = DEFAULT_CHECKER_TEXTURE_ID,
+): FaceTextureMappingWithTrs {
   return withTrsAccessors({
     textureId: textureId || DEFAULT_CHECKER_TEXTURE_ID,
     uv: SurfaceUvMatrix.identity(),
@@ -94,7 +113,7 @@ export function createFaceTextureMappingFromTrs(
   faceNormal: THREE.Vector3,
   trs: FaceTextureMappingTrs,
   align: FaceTextureAlign = 'face',
-): FaceTextureMapping {
+): FaceTextureMappingWithTrs {
   const metersU = trs.scaleU === 0 ? 1 : trs.scaleU;
   const metersV = trs.scaleV === 0 ? 1 : trs.scaleV;
   const matrixScaleU = 1 / metersU;
@@ -114,14 +133,16 @@ export function createFaceTextureMappingFromTrs(
  * @param mapping Source mapping.
  * @returns Proxied mapping with TRS field accessors.
  */
-export function withTrsAccessors(mapping: FaceTextureMapping): FaceTextureMapping {
-  if ((mapping as { __trsProxy?: boolean }).__trsProxy) return mapping;
-  const target = {
+export function withTrsAccessors(mapping: FaceTextureMapping): FaceTextureMappingWithTrs {
+  if ((mapping as { __trsProxy?: boolean }).__trsProxy) {
+    return mapping as unknown as FaceTextureMappingWithTrs;
+  }
+  const target: FaceTextureMapping & { __trsProxy: boolean } = {
     textureId: mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID,
     uv: mapping.uv.clone(),
-    align: mapping.align,
     __trsProxy: true,
-  } as FaceTextureMapping & { __trsProxy: boolean };
+  };
+  if (mapping.align !== undefined) target.align = mapping.align;
   return new Proxy(target, {
     get(obj, prop) {
       if (
@@ -160,7 +181,7 @@ export function withTrsAccessors(mapping: FaceTextureMapping): FaceTextureMappin
       }
       return Reflect.set(obj, prop, value);
     },
-  });
+  }) as unknown as FaceTextureMappingWithTrs;
 }
 
 /**
@@ -194,12 +215,13 @@ export function getFaceTextureMappingTrs(
  * @param mapping Source mapping.
  * @returns Independent copy.
  */
-export function cloneFaceTextureMapping(mapping: FaceTextureMapping): FaceTextureMapping {
-  return withTrsAccessors({
+export function cloneFaceTextureMapping(mapping: FaceTextureMapping): FaceTextureMappingWithTrs {
+  const cloned: FaceTextureMapping = {
     textureId: mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID,
     uv: mapping.uv.clone(),
-    align: mapping.align,
-  });
+  };
+  if (mapping.align !== undefined) cloned.align = mapping.align;
+  return withTrsAccessors(cloned);
 }
 
 /**
@@ -222,11 +244,12 @@ export function cloneFaceTextureMapEntry(entry: FaceTextureMapEntry): FaceTextur
  * @returns Plain JSON object.
  */
 export function serializeFaceTextureMapping(mapping: FaceTextureMapping): FaceTextureMappingSerialized {
-  return {
+  const serialized: FaceTextureMappingSerialized = {
     textureId: mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID,
     uv: mapping.uv.serialize(),
-    align: mapping.align,
   };
+  if (mapping.align !== undefined) serialized.align = mapping.align;
+  return serialized;
 }
 
 /**
@@ -239,18 +262,19 @@ export function serializeFaceTextureMapping(mapping: FaceTextureMapping): FaceTe
 export function deserializeFaceTextureMapping(
   data: FaceTextureMappingSerialized | FaceTextureMapping | undefined,
   faceNormal: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
-): FaceTextureMapping {
+): FaceTextureMappingWithTrs {
   if (!data) return createDefaultFaceTextureMapping();
   if (isMatrixMapping(data)) {
     return cloneFaceTextureMapping(data);
   }
   const record = data as FaceTextureMappingSerialized;
   if (record.uv && Array.isArray(record.uv.u) && Array.isArray(record.uv.v)) {
-    return withTrsAccessors({
+    const restored: FaceTextureMapping = {
       textureId: record.textureId || DEFAULT_CHECKER_TEXTURE_ID,
       uv: SurfaceUvMatrix.fromSerialized(record.uv),
-      align: record.align,
-    });
+    };
+    if (record.align !== undefined) restored.align = record.align;
+    return withTrsAccessors(restored);
   }
   return migrateLegacyPlanarMapping(record, faceNormal);
 }
@@ -293,7 +317,10 @@ function isMatrixMapping(value: unknown): value is FaceTextureMapping {
  * @param faceNormal Face normal for basis.
  * @returns Matrix mapping.
  */
-function migrateLegacyPlanarMapping(data: FaceTextureMappingSerialized, faceNormal: THREE.Vector3): FaceTextureMapping {
+function migrateLegacyPlanarMapping(
+  data: FaceTextureMappingSerialized,
+  faceNormal: THREE.Vector3,
+): FaceTextureMappingWithTrs {
   const scaleU = data.scaleU === 0 || data.scaleU === undefined ? 1 : data.scaleU;
   const scaleV = data.scaleV === 0 || data.scaleV === undefined ? 1 : data.scaleV;
   const offsetU = data.offsetU ?? 0;

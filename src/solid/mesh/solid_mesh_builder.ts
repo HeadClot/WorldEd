@@ -47,8 +47,8 @@ export class SolidMeshBuilder {
   ): THREE.LineSegments {
     const positions: number[] = [];
     for (const [a, b] of edgePairs) {
-      const pa = points[a];
-      const pb = points[b];
+      const pa = points[a]!;
+      const pb = points[b]!;
       positions.push(pa.x, pa.y, pa.z, pb.x, pb.y, pb.z);
     }
     const geometry = new THREE.BufferGeometry();
@@ -59,7 +59,7 @@ export class SolidMeshBuilder {
     });
     const lines = new THREE.LineSegments(geometry, material);
     lines.name = name;
-    lines.userData.isSolidBrushPreview = true;
+    lines.userData['isSolidBrushPreview'] = true;
     return lines;
   }
 

@@ -50,7 +50,7 @@ export class BrushSpatialIndex {
     if (!bucket || bucket.length === 0) return [];
     const result: number[] = [];
     for (const index of bucket) {
-      if (this.boundsContainPoint(this.entries[index].bounds, point)) {
+      if (this.boundsContainPoint(this.entries[index]!.bounds, point)) {
         result.push(index);
       }
     }
@@ -91,7 +91,7 @@ export class BrushSpatialIndex {
     }
     const result: number[] = [];
     for (const index of candidates) {
-      if (this.boundsOverlap(bounds, this.entries[index].bounds)) {
+      if (this.boundsOverlap(bounds, this.entries[index]!.bounds)) {
         result.push(index);
       }
     }
@@ -107,7 +107,7 @@ export class BrushSpatialIndex {
   private queryPointLinear(point: THREE.Vector3): number[] {
     const result: number[] = [];
     for (let index = 0; index < this.entries.length; index++) {
-      if (this.boundsContainPoint(this.entries[index].bounds, point)) {
+      if (this.boundsContainPoint(this.entries[index]!.bounds, point)) {
         result.push(index);
       }
     }
@@ -125,7 +125,7 @@ export class BrushSpatialIndex {
     const result: number[] = [];
     for (let index = 0; index < this.entries.length; index++) {
       if (index === excludeIndex) continue;
-      if (this.boundsOverlap(bounds, this.entries[index].bounds)) {
+      if (this.boundsOverlap(bounds, this.entries[index]!.bounds)) {
         result.push(index);
       }
     }
@@ -138,7 +138,7 @@ export class BrushSpatialIndex {
    * @param index Entry index.
    */
   private insertEntry(index: number): void {
-    const bounds = this.entries[index].bounds;
+    const bounds = this.entries[index]!.bounds;
     const minX = Math.floor((bounds.min.x - this.pad) / this.cellSize);
     const minY = Math.floor((bounds.min.y - this.pad) / this.cellSize);
     const minZ = Math.floor((bounds.min.z - this.pad) / this.cellSize);

@@ -9,10 +9,7 @@ import {
   ensureUvAttribute,
   ensureUniqueTriangleVertices,
 } from '../../../src/texture/uv/planar_uv_projector.js';
-import {
-  createDefaultFaceTextureMapping,
-  createFaceTextureMappingFromTrs,
-} from '../../../src/texture/uv/face_texture_mapping.js';
+import { createFaceTextureMappingFromTrs } from '../../../src/texture/uv/face_texture_mapping.js';
 import { initializeMeshTextureUVs } from '../../../src/texture/uv/face_texture_applier.js';
 import { TerrainGenerator } from '../../../src/terrain/terrain_generator.js';
 
@@ -174,7 +171,7 @@ describe('planar_uv_projector', () => {
     }
     expect(samples.length).toBeGreaterThan(4);
     for (let i = 0; i < samples.length; i++) {
-      const sample = samples[i];
+      const sample = samples[i]!;
       expect(sample.u).toBeCloseTo(sample.x, 3);
     }
     const uValues = samples.map((sample) => sample.u);
@@ -229,9 +226,9 @@ describe('planar_uv_projector', () => {
     expect(ranges.length).toBe(segments);
     ranges.sort((a, b) => a.minU - b.minU);
     for (let i = 1; i < ranges.length; i++) {
-      expect(ranges[i].minU).toBeGreaterThanOrEqual(ranges[i - 1].maxU - 1e-3);
+      expect(ranges[i]!.minU).toBeGreaterThanOrEqual(ranges[i - 1]!.maxU - 1e-3);
     }
-    const totalSpan = ranges[ranges.length - 1].maxU - ranges[0].minU;
+    const totalSpan = ranges[ranges.length - 1]!.maxU - ranges[0]!.minU;
     const sideLength = 2 * Math.sin(Math.PI / segments);
     expect(totalSpan).toBeCloseTo(segments * sideLength, 2);
   });
@@ -267,7 +264,7 @@ function collectVerticesNear(
  * @returns Aspect ratios (UV span U / UV span V) * (height / sideLength).
  */
 function measureCylinderSideAspectRatios(mesh: THREE.Mesh, sideLength: number, height: number): number[] {
-  const maps = (mesh.userData.faceTextureMaps ?? []) as Array<{ triangleIndices: number[] }>;
+  const maps = (mesh.userData['faceTextureMaps'] ?? []) as Array<{ triangleIndices: number[] }>;
   const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
   const position = mesh.geometry.getAttribute('position');
   const ratios: number[] = [];
@@ -306,7 +303,7 @@ function measureCylinderSideAspectRatios(mesh: THREE.Mesh, sideLength: number, h
  * @returns U min/max per side panel.
  */
 function measureCylinderSideURanges(mesh: THREE.Mesh): Array<{ minU: number; maxU: number }> {
-  const maps = (mesh.userData.faceTextureMaps ?? []) as Array<{ triangleIndices: number[] }>;
+  const maps = (mesh.userData['faceTextureMaps'] ?? []) as Array<{ triangleIndices: number[] }>;
   const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
   const position = mesh.geometry.getAttribute('position');
   const ranges: Array<{ minU: number; maxU: number }> = [];

@@ -73,7 +73,7 @@ describe('Solid interactive transform commit', () => {
     const prepared = model.prepareLiveBrushEdit([brush.mesh!]);
     expect(prepared).toBe(true);
     model.finalizeAfterInteractiveEdit();
-    const sources = model.getResultMesh().userData.solidTriangleSources as unknown[] | undefined;
+    const sources = model.getResultMesh().userData['solidTriangleSources'] as unknown[] | undefined;
     expect(sources?.length).toBeGreaterThan(0);
   });
 
@@ -114,7 +114,7 @@ describe('Solid interactive transform commit', () => {
     mover.mesh!.position.x = 2.2;
     model.prepareLiveBrushEdit([mover.mesh!]);
     model.rebuildLive();
-    const sources = model.getResultMesh().userData.solidTriangleSources as Array<{ brushId: string }> | undefined;
+    const sources = model.getResultMesh().userData['solidTriangleSources'] as Array<{ brushId: string }> | undefined;
     const brushIds = new Set((sources ?? []).map((source) => source.brushId));
     expect(brushIds.has(base.id)).toBe(true);
     expect(brushIds.has(mover.id)).toBe(true);

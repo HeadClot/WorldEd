@@ -209,14 +209,14 @@ export function appendTransformDeltaDimensions(
   for (let axisIndex = 0; axisIndex < 3; axisIndex += 1) {
     const local = axisIndex as LocalAxisIndex;
     if (!isCadMeasureAxisVisible(placement.viewPlane, local)) continue;
-    const component = translation.dot(localAxes[axisIndex]);
+    const component = translation.dot(localAxes[axisIndex]!);
     if (Math.abs(component) < epsilon) continue;
     appendTrailingFaceTravel(
       startBounds,
       currentBounds,
       local,
       component,
-      colors[axisIndex],
+      colors[axisIndex]!,
       labelColorCss,
       segments,
       labels,
@@ -408,7 +408,7 @@ export function placeCameraFacingMeasuredEdge(
 ): void {
   extractBoundsAxes(bounds, scratchAxisX, scratchAxisY, scratchAxisZ);
   const axes = [scratchAxisX, scratchAxisY, scratchAxisZ];
-  const measureAxis = axes[measureLocal];
+  const measureAxis = axes[measureLocal]!;
   const halfMeasure = getHalfComponent(bounds.halfExtents, measureLocal);
   if (viewPlane !== 'xyz') {
     placeOrthoSilhouetteEdge(
@@ -470,8 +470,8 @@ function placeOrthoSilhouetteEdge(
   if (plane.depthAxis === null) return;
   const offsetLocal: LocalAxisIndex = measureLocal === plane.axisU ? plane.axisV : plane.axisU;
   const depthLocal = plane.depthAxis;
-  const offsetAxis = axes[offsetLocal];
-  const depthAxis = axes[depthLocal];
+  const offsetAxis = axes[offsetLocal]!;
+  const depthAxis = axes[depthLocal]!;
   const halfOffset = getHalfComponent(bounds.halfExtents, offsetLocal);
   const halfDepth = getHalfComponent(bounds.halfExtents, depthLocal);
   writeDirectionTowardCamera(camera, bounds.center, scratchToCamera);
@@ -620,8 +620,8 @@ function placePerspectiveViewRayEdge(
 ): void {
   const sideA = nextAxis(measureLocal);
   const sideB = nextAxis(sideA);
-  const axisA = axes[sideA];
-  const axisB = axes[sideB];
+  const axisA = axes[sideA]!;
+  const axisB = axes[sideB]!;
   const halfA = getHalfComponent(bounds.halfExtents, sideA);
   const halfB = getHalfComponent(bounds.halfExtents, sideB);
   writeCameraViewFocusOnBounds(camera, bounds, scratchEdgeCandidate);
@@ -765,7 +765,7 @@ function appendFaceTravelOnAxis(
   labels: CadLabelSpec[],
 ): void {
   extractBoundsAxes(currentBounds, scratchAxisX, scratchAxisY, scratchAxisZ);
-  const axis = [scratchAxisX, scratchAxisY, scratchAxisZ][axisLocal];
+  const axis = [scratchAxisX, scratchAxisY, scratchAxisZ][axisLocal]!;
   const startHalf = getHalfComponent(startBounds.halfExtents, axisLocal);
   const currentHalf = getHalfComponent(currentBounds.halfExtents, axisLocal);
   appendOneFaceTravel(
@@ -910,7 +910,7 @@ function writeTrailingFaceEndpoints(
   outEnd: THREE.Vector3,
 ): void {
   extractBoundsAxes(startBounds, scratchAxisX, scratchAxisY, scratchAxisZ);
-  const axis = [scratchAxisX, scratchAxisY, scratchAxisZ][axisLocal];
+  const axis = [scratchAxisX, scratchAxisY, scratchAxisZ][axisLocal]!;
   const half = getHalfComponent(startBounds.halfExtents, axisLocal);
   const trailingSign: 1 | -1 = signedMove >= 0 ? -1 : 1;
   outStart.copy(startBounds.center).addScaledVector(axis, trailingSign * half);
@@ -994,7 +994,7 @@ function appendBoxEdge(
   indexB: number,
   color: THREE.Color,
 ): void {
-  pushSegment(segments, corners[indexA], corners[indexB], color, color);
+  pushSegment(segments, corners[indexA]!, corners[indexB]!, color, color);
 }
 
 /**
@@ -1035,18 +1035,6 @@ function nextAxis(axis: LocalAxisIndex): LocalAxisIndex {
   if (axis === 0) return 1;
   if (axis === 1) return 2;
   return 0;
-}
-
-/**
- * Returns a unit world axis vector for an index (Y is up).
- *
- * @param axis Axis index.
- * @returns New unit vector.
- */
-function worldAxisVector(axis: LocalAxisIndex): THREE.Vector3 {
-  if (axis === 0) return new THREE.Vector3(1, 0, 0);
-  if (axis === 1) return new THREE.Vector3(0, 1, 0);
-  return new THREE.Vector3(0, 0, 1);
 }
 
 /**

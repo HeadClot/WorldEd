@@ -204,7 +204,6 @@ describe('SettingsDialog', () => {
     expect(content.textContent).toContain('Mouse Move');
 
     const moveSpeed = content.querySelector('[data-settings-field="move-speed"]') as HTMLInputElement;
-    const lookSensitivity = content.querySelector('[data-settings-field="look-sensitivity"]') as HTMLInputElement;
     moveSpeed.value = '8';
     moveSpeed.dispatchEvent(new Event('input', { bubbles: true }));
     const rebuiltLookSensitivity = content.querySelector(

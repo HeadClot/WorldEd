@@ -320,7 +320,7 @@ export class SolidCsgCompiler {
       20,
       (start, end) => {
         for (let i = start; i < end; i++) {
-          this.recompileOnePreparedBrush(prepared, indices[i]);
+          this.recompileOnePreparedBrush(prepared, indices[i]!);
         }
       },
       onProgress,
@@ -337,7 +337,7 @@ export class SolidCsgCompiler {
   private collectUpdateIndices(prepared: PreparedBrush[], updateSet: Set<string>): number[] {
     const indices: number[] = [];
     for (let brushIndex = 0; brushIndex < prepared.length; brushIndex++) {
-      if (updateSet.has(prepared[brushIndex].instance.id)) {
+      if (updateSet.has(prepared[brushIndex]!.instance.id)) {
         indices.push(brushIndex);
       }
     }
@@ -351,7 +351,7 @@ export class SolidCsgCompiler {
    * @param brushIndex Index of the brush to compile.
    */
   private recompileOnePreparedBrush(prepared: PreparedBrush[], brushIndex: number): void {
-    const entry = prepared[brushIndex];
+    const entry = prepared[brushIndex]!;
     const polygons: SolidCompiledPolygon[] = [];
     this.emitter.compileBrushSurfaces(prepared, brushIndex, polygons);
     this.cache.setPolygons(entry.instance.id, polygons);
@@ -364,7 +364,7 @@ export class SolidCsgCompiler {
    */
   private storeTouchCaches(prepared: PreparedBrush[]): void {
     for (const entry of prepared) {
-      const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex].instance.id);
+      const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex]!.instance.id);
       this.cache.setTouchPeerIds(entry.instance.id, peerIds);
     }
   }

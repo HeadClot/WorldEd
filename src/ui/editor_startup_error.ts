@@ -36,7 +36,7 @@ export function getEditorStartupErrorMessage(error: unknown): string {
  */
 function createStartupErrorOverlay(error: unknown): HTMLElement {
   const overlay = document.createElement('div');
-  overlay.dataset.editorStartupError = 'true';
+  overlay.dataset['editorStartupError'] = 'true';
   applyOverlayStyles(overlay);
   overlay.appendChild(createStartupErrorTitle());
   overlay.appendChild(createStartupErrorDescription());

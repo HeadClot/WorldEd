@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-const ORIGINAL_RUN_NUMBER = process.env.GITHUB_RUN_NUMBER;
+const ORIGINAL_RUN_NUMBER = process.env['GITHUB_RUN_NUMBER'];
 
 afterEach(() => {
-  if (ORIGINAL_RUN_NUMBER === undefined) delete process.env.GITHUB_RUN_NUMBER;
-  else process.env.GITHUB_RUN_NUMBER = ORIGINAL_RUN_NUMBER;
+  if (ORIGINAL_RUN_NUMBER === undefined) delete process.env['GITHUB_RUN_NUMBER'];
+  else process.env['GITHUB_RUN_NUMBER'] = ORIGINAL_RUN_NUMBER;
 });
 
 describe('CI release version assignment', () => {
@@ -31,7 +31,7 @@ describe('CI release version assignment', () => {
   });
 
   it('uses package.json major with the run number as the minor component', async () => {
-    process.env.GITHUB_RUN_NUMBER = '24';
+    process.env['GITHUB_RUN_NUMBER'] = '24';
     const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as {
       version: string;
     };

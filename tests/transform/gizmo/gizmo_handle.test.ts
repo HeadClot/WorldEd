@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '../../../src/theme.js';
 import { GizmoAxis } from '../../../src/types/transform_mode.js';

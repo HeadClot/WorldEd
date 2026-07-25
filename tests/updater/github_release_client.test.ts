@@ -27,7 +27,7 @@ describe('GitHubReleaseClient', () => {
       headers: { Accept: 'application/vnd.github+json' },
     });
     expect(release?.tagName).toBe('v1.4.0');
-    expect(release?.assets[0].browserDownloadUrl).toContain('/releases/download/');
+    expect(release?.assets[0]!.browserDownloadUrl).toContain('/releases/download/');
   });
 
   it('treats GitHub 404 as an empty release list', async () => {

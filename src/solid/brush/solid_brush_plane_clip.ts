@@ -82,8 +82,8 @@ export class SolidBrushPlaneClip {
   private static collectCapEdgePoints(polygon: THREE.Vector3[], plane: SolidPlane, capPoints: THREE.Vector3[]): void {
     const count = polygon.length;
     for (let index = 0; index < count; index++) {
-      const current = polygon[index];
-      const next = polygon[(index + 1) % count];
+      const current = polygon[index]!;
+      const next = polygon[(index + 1) % count]!;
       const distanceA = plane.signedDistance(current);
       const distanceB = plane.signedDistance(next);
       const aInside = distanceA <= SOLID_FAT_PLANE_EPSILON;

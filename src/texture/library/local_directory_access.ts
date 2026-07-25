@@ -179,8 +179,10 @@ export function buildListingFromFileList(fileList: FileList | null): PickedDirec
     files.push({ name: file.name, relativePath, file });
   }
   if (files.length === 0) return null;
+  const firstFile = files[0];
+  if (!firstFile) return null;
   return {
-    folderName: extractRootFolderName(files[0].relativePath),
+    folderName: extractRootFolderName(firstFile.relativePath),
     files,
   };
 }

@@ -59,12 +59,12 @@ describe('PropertiesPanel', () => {
     mesh.position.set(7.7, 3.3, -2.2);
     panel.bindObject(mesh);
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     expect(inputs.length).toBeGreaterThanOrEqual(3);
-    expect(inputs[0].value).toBe('7.70');
-    expect(inputs[1].value).toBe('3.30');
-    expect(inputs[2].value).toBe('-2.20');
+    expect(inputs[0]!.value).toBe('7.70');
+    expect(inputs[1]!.value).toBe('3.30');
+    expect(inputs[2]!.value).toBe('-2.20');
   });
 
   it('should show dashes for mixed multi-selection position axes', () => {
@@ -74,10 +74,10 @@ describe('PropertiesPanel', () => {
     meshB.position.set(2, 5, 9);
     panel.bindObjects([meshA, meshB]);
     const panelElement = container.children[0] as HTMLElement;
-    const inputs = panelElement.children[0].querySelectorAll('input');
-    expect(inputs[0].value).toBe('—');
-    expect(inputs[1].value).toBe('5.00');
-    expect(inputs[2].value).toBe('—');
+    const inputs = panelElement.children[0]!.querySelectorAll('input');
+    expect(inputs[0]!.value).toBe('—');
+    expect(inputs[1]!.value).toBe('5.00');
+    expect(inputs[2]!.value).toBe('—');
   });
 
   it('should apply a typed axis value to all selected objects', () => {
@@ -87,9 +87,9 @@ describe('PropertiesPanel', () => {
     meshB.position.set(2, 5, 9);
     panel.bindObjects([meshA, meshB]);
     const panelElement = container.children[0] as HTMLElement;
-    const inputs = panelElement.children[0].querySelectorAll('input');
-    inputs[0].value = '10';
-    inputs[0].dispatchEvent(new Event('change'));
+    const inputs = panelElement.children[0]!.querySelectorAll('input');
+    inputs[0]!.value = '10';
+    inputs[0]!.dispatchEvent(new Event('change'));
     expect(meshA.position.x).toBeCloseTo(10);
     expect(meshB.position.x).toBeCloseTo(10);
     expect(meshA.position.y).toBeCloseTo(5);
@@ -105,12 +105,12 @@ describe('PropertiesPanel', () => {
     meshB.position.set(2, 5, 9);
     panel.bindObjects([meshA, meshB]);
     const panelElement = container.children[0] as HTMLElement;
-    const inputs = panelElement.children[0].querySelectorAll('input');
-    expect(inputs[0].value).toBe('—');
-    inputs[0].dispatchEvent(new Event('focus'));
-    expect(inputs[0].value).toBe('');
-    inputs[0].value = '2';
-    inputs[0].dispatchEvent(new Event('change'));
+    const inputs = panelElement.children[0]!.querySelectorAll('input');
+    expect(inputs[0]!.value).toBe('—');
+    inputs[0]!.dispatchEvent(new Event('focus'));
+    expect(inputs[0]!.value).toBe('');
+    inputs[0]!.value = '2';
+    inputs[0]!.dispatchEvent(new Event('change'));
     expect(meshA.position.x).toBeCloseTo(2);
     expect(meshB.position.x).toBeCloseTo(2);
   });
@@ -138,16 +138,16 @@ describe('PropertiesPanel', () => {
     mesh.scale.set(2, 3, 4);
     panel.refreshBoundObject();
     const panelElement = container.children[0] as HTMLElement;
-    const positionInputs = panelElement.children[0].querySelectorAll('input');
-    const rotationInputs = panelElement.children[1].querySelectorAll('input');
-    const scaleInputs = panelElement.children[2].querySelectorAll('input');
-    expect(positionInputs[0].value).toBe('10.50');
-    expect(positionInputs[1].value).toBe('-4.25');
-    expect(positionInputs[2].value).toBe('8.00');
-    expect(rotationInputs[0].value).toBe('90.0');
-    expect(scaleInputs[0].value).toBe('2.00');
-    expect(scaleInputs[1].value).toBe('3.00');
-    expect(scaleInputs[2].value).toBe('4.00');
+    const positionInputs = panelElement.children[0]!.querySelectorAll('input');
+    const rotationInputs = panelElement.children[1]!.querySelectorAll('input');
+    const scaleInputs = panelElement.children[2]!.querySelectorAll('input');
+    expect(positionInputs[0]!.value).toBe('10.50');
+    expect(positionInputs[1]!.value).toBe('-4.25');
+    expect(positionInputs[2]!.value).toBe('8.00');
+    expect(rotationInputs[0]!.value).toBe('90.0');
+    expect(scaleInputs[0]!.value).toBe('2.00');
+    expect(scaleInputs[1]!.value).toBe('3.00');
+    expect(scaleInputs[2]!.value).toBe('4.00');
   });
 
   it('should no-op refresh when no object is bound', () => {
@@ -159,12 +159,12 @@ describe('PropertiesPanel', () => {
     mesh.rotation.set(Math.PI, Math.PI / 2, Math.PI / 4);
     panel.bindObject(mesh);
     const panelElement = container.children[0] as HTMLElement;
-    const rotationSection = panelElement.children[1];
+    const rotationSection = panelElement.children[1]!;
     const inputs = rotationSection.querySelectorAll('input');
     expect(inputs.length).toBeGreaterThanOrEqual(3);
-    expect(inputs[0].value).toBe('180.0');
-    expect(inputs[1].value).toBe('90.0');
-    expect(inputs[2].value).toBe('45.0');
+    expect(inputs[0]!.value).toBe('180.0');
+    expect(inputs[1]!.value).toBe('90.0');
+    expect(inputs[2]!.value).toBe('45.0');
   });
 
   it('should unbind object and clear inputs', () => {
@@ -173,12 +173,12 @@ describe('PropertiesPanel', () => {
     panel.bindObject(mesh);
     panel.unbindObject();
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     expect(inputs.length).toBeGreaterThanOrEqual(3);
-    expect(inputs[0].value).toBe('');
-    expect(inputs[1].value).toBe('');
-    expect(inputs[2].value).toBe('');
+    expect(inputs[0]!.value).toBe('');
+    expect(inputs[1]!.value).toBe('');
+    expect(inputs[2]!.value).toBe('');
   });
 
   it('should update bound object position from input change', () => {
@@ -186,11 +186,11 @@ describe('PropertiesPanel', () => {
     mesh.position.set(0, 0, 0);
     panel.bindObject(mesh);
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const inputs = positionSection.querySelectorAll('input');
     expect(inputs.length).toBeGreaterThanOrEqual(1);
-    inputs[0].value = '42.5';
-    inputs[0].dispatchEvent(new Event('change'));
+    inputs[0]!.value = '42.5';
+    inputs[0]!.dispatchEvent(new Event('change'));
     expect(mesh.position.x).toBe(42.5);
   });
 
@@ -199,11 +199,11 @@ describe('PropertiesPanel', () => {
     mesh.scale.set(1, 1, 1);
     panel.bindObject(mesh);
     const panelElement = container.children[0] as HTMLElement;
-    const scaleSection = panelElement.children[2];
+    const scaleSection = panelElement.children[2]!;
     const inputs = scaleSection.querySelectorAll('input');
     expect(inputs.length).toBeGreaterThanOrEqual(2);
-    inputs[1].value = '3.0';
-    inputs[1].dispatchEvent(new Event('change'));
+    inputs[1]!.value = '3.0';
+    inputs[1]!.dispatchEvent(new Event('change'));
     expect(mesh.scale.y).toBe(3.0);
   });
 
@@ -220,15 +220,15 @@ describe('PropertiesPanel', () => {
 
   it('should have axis labels with correct colors', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const positionSection = panelElement.children[0];
+    const positionSection = panelElement.children[0]!;
     const labels = positionSection.querySelectorAll('span');
     if (labels.length >= 3) {
       const xRgb = `rgb(${(Theme.gizmoXAxisColor >> 16) & 255}, ${(Theme.gizmoXAxisColor >> 8) & 255}, ${Theme.gizmoXAxisColor & 255})`;
       const yRgb = `rgb(${(Theme.gizmoYAxisColor >> 16) & 255}, ${(Theme.gizmoYAxisColor >> 8) & 255}, ${Theme.gizmoYAxisColor & 255})`;
       const zRgb = `rgb(${(Theme.gizmoZAxisColor >> 16) & 255}, ${(Theme.gizmoZAxisColor >> 8) & 255}, ${Theme.gizmoZAxisColor & 255})`;
-      expect(labels[0].style.color).toBe(xRgb);
-      expect(labels[1].style.color).toBe(yRgb);
-      expect(labels[2].style.color).toBe(zRgb);
+      expect(labels[0]!.style.color).toBe(xRgb);
+      expect(labels[1]!.style.color).toBe(yRgb);
+      expect(labels[2]!.style.color).toBe(zRgb);
     }
   });
 
@@ -240,7 +240,7 @@ describe('PropertiesPanel', () => {
 
   it('should have monospace font for labels', () => {
     const panelElement = container.children[0] as HTMLElement;
-    const header = panelElement.children[0].children[0] as HTMLElement;
+    const header = panelElement.children[0]!.children[0] as HTMLElement;
     expect(header.style.fontFamily).toBe('monospace');
   });
 

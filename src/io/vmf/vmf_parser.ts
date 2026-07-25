@@ -448,9 +448,9 @@ export class VmfParser {
       .split(' ')
       .map((token) => Number.parseFloat(token));
     return {
-      p1: { x: numbers[0], y: numbers[1], z: numbers[2] },
-      p2: { x: numbers[3], y: numbers[4], z: numbers[5] },
-      p3: { x: numbers[6], y: numbers[7], z: numbers[8] },
+      p1: { x: numbers[0] ?? 0, y: numbers[1] ?? 0, z: numbers[2] ?? 0 },
+      p2: { x: numbers[3] ?? 0, y: numbers[4] ?? 0, z: numbers[5] ?? 0 },
+      p3: { x: numbers[6] ?? 0, y: numbers[7] ?? 0, z: numbers[8] ?? 0 },
     };
   }
 
@@ -467,11 +467,11 @@ export class VmfParser {
       .split(' ')
       .map((token) => Number.parseFloat(token));
     return {
-      x: numbers[0],
-      y: numbers[1],
-      z: numbers[2],
-      translation: numbers[3],
-      scale: numbers[4],
+      x: numbers[0] ?? 0,
+      y: numbers[1] ?? 0,
+      z: numbers[2] ?? 0,
+      translation: numbers[3] ?? 0,
+      scale: numbers[4] ?? 1,
     };
   }
 
@@ -488,10 +488,14 @@ export class VmfParser {
     if (!parts.every((part) => /^-?\d+(\.\d+)?(e-?\d+)?$/i.test(part))) {
       return null;
     }
+    const x = parts[0];
+    const y = parts[1];
+    const z = parts[2];
+    if (x === undefined || y === undefined || z === undefined) return null;
     return {
-      x: Number.parseFloat(parts[0]),
-      y: Number.parseFloat(parts[1]),
-      z: Number.parseFloat(parts[2]),
+      x: Number.parseFloat(x),
+      y: Number.parseFloat(y),
+      z: Number.parseFloat(z),
     };
   }
 

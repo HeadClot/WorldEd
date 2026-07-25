@@ -159,9 +159,9 @@ export function isSolidBrushEdge(object: THREE.Object3D): boolean {
  */
 function isEditorOverlayChild(object: THREE.Object3D): boolean {
   if (object.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true) return true;
-  if (object.userData.isSelectionHighlight === true) return true;
-  if (object.userData.isWireframeOverlay === true) return true;
-  if (object.userData.isFaceSelectionHighlight === true) return true;
+  if (object.userData['isSelectionHighlight'] === true) return true;
+  if (object.userData['isWireframeOverlay'] === true) return true;
+  if (object.userData['isFaceSelectionHighlight'] === true) return true;
   return false;
 }
 
@@ -178,12 +178,12 @@ export function isEditorHelperObject(object: THREE.Object3D): boolean {
   if (isEditorOverlayChild(object)) return true;
   if (object.userData[DECORATIVE_EDGE_USERDATA_KEY] === true) return true;
   if (object.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true) return true;
-  if (object.userData.isBoundsGuideLines === true) return true;
-  if (object.userData.isGizmoOccludedGhost === true) return true;
-  if (object.userData.isBoundsFacePick === true) return true;
-  if (object.userData.isClipPlanePreview === true) return true;
-  if (object.userData.isCadRuler === true) return true;
-  if (object.userData.isSolidModelResult === true) return true;
+  if (object.userData['isBoundsGuideLines'] === true) return true;
+  if (object.userData['isGizmoOccludedGhost'] === true) return true;
+  if (object.userData['isBoundsFacePick'] === true) return true;
+  if (object.userData['isClipPlanePreview'] === true) return true;
+  if (object.userData['isCadRuler'] === true) return true;
+  if (object.userData['isSolidModelResult'] === true) return true;
   return false;
 }
 

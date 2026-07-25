@@ -14,7 +14,7 @@ describe('StandaloneUpdateService', () => {
     expect(result.status).toBe('update-available');
     expect(installUpdate).toHaveBeenCalledWith({
       version: 'v1.2.0',
-      downloadUrl: release.assets[0].browserDownloadUrl,
+      downloadUrl: release.assets[0]!.browserDownloadUrl,
       fileName: 'AiWorldEd-windows-installer.exe',
       releasePageUrl: release.releasePageUrl,
     });

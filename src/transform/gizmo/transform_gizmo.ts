@@ -17,7 +17,6 @@ import { getHiddenBoundsAxesForViewPlane, type CadViewPlane } from '../../rulers
  * viewports.
  */
 export class TransformGizmo {
-  private theme: typeof Theme;
   private currentMode: TransformMode;
   private handleGroup: THREE.Group;
   private viewportGroups: THREE.Group[];
@@ -37,7 +36,6 @@ export class TransformGizmo {
    * @param theme The theme containing gizmo color definitions.
    */
   constructor(theme: typeof Theme) {
-    this.theme = theme;
     this.currentMode = TransformMode.BOUNDS;
     this.handleGroup = new THREE.Group();
     this.handleGroup.name = 'transform_gizmo';
@@ -316,7 +314,7 @@ export class TransformGizmo {
   /** Removes all children from the handle group. */
   private clearGroup(): void {
     while (this.handleGroup.children.length > 0) {
-      const child = this.handleGroup.children[0];
+      const child = this.handleGroup.children[0]!;
       this.handleGroup.remove(child);
     }
     this.currentHandles = [];
@@ -329,7 +327,7 @@ export class TransformGizmo {
    */
   private clearViewportGroup(group: THREE.Group): void {
     while (group.children.length > 0) {
-      const child = group.children[0];
+      const child = group.children[0]!;
       group.remove(child);
     }
   }
@@ -423,7 +421,7 @@ export class TransformGizmo {
         return;
       }
       // Depth face pick planes remain so orthographic face-move works.
-      const isResizeHandle = typeof child.userData.handleId === 'number';
+      const isResizeHandle = typeof child.userData['handleId'] === 'number';
       child.visible = !isResizeHandle;
     });
   }

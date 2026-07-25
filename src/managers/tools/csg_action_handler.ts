@@ -88,8 +88,8 @@ export class CsgActionHandler {
   runBoolean(operation: CsgOperation): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     if (!this.validateMeshBooleanSelection(selected)) return;
-    const meshA = selected[0];
-    const meshB = selected[1];
+    const meshA = selected[0]!;
+    const meshB = selected[1]!;
     this.resultCounter += 1;
     const resultName = `CSG_${operation}_${String(this.resultCounter).padStart(3, '0')}`;
     const result = this.booleanOps.operate(meshA, meshB, operation, resultName);

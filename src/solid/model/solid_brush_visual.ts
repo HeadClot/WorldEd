@@ -83,19 +83,11 @@ export class SolidBrushVisual {
     for (const face of brush.faces) {
       const points = brush.getFaceVertices(face);
       if (points.length < 3) continue;
-      const origin = points[0];
+      const origin = points[0]!;
       for (let index = 1; index < points.length - 1; index++) {
-        positions.push(
-          origin.x,
-          origin.y,
-          origin.z,
-          points[index].x,
-          points[index].y,
-          points[index].z,
-          points[index + 1].x,
-          points[index + 1].y,
-          points[index + 1].z,
-        );
+        const mid = points[index]!;
+        const last = points[index + 1]!;
+        positions.push(origin.x, origin.y, origin.z, mid.x, mid.y, mid.z, last.x, last.y, last.z);
       }
     }
     const geometry = new THREE.BufferGeometry();

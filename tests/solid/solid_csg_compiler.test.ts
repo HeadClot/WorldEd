@@ -125,7 +125,7 @@ describe('SolidCsgCompiler', () => {
       centerX: polygon.vertices.reduce((sum, vertex) => sum + vertex.x, 0) / polygon.vertices.length,
     }));
     expect(coverageSummary, JSON.stringify(coverageSummary)).toHaveLength(1);
-    expect(coveringTops[0].brushId).toBe('right');
+    expect(coveringTops[0]!.brushId).toBe('right');
     expect(isInsideSolid(new THREE.Vector3(0, 0, 0), brushes)).toBe(true);
     expect(isInsideSolid(new THREE.Vector3(centerOffset, 0, 0), brushes)).toBe(true);
   });

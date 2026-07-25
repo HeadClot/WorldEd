@@ -35,12 +35,13 @@ new BrowserWindow({
 async function checkForUpdate(): Promise<StandaloneHostUpdateCheck> {
   const current = await Updater.getLocalInfo();
   const latest = await Updater.checkForUpdate();
-  return {
+  const result: StandaloneHostUpdateCheck = {
     currentVersion: current.version,
     latestVersion: latest.version,
     updateAvailable: latest.updateAvailable,
-    error: latest.error || undefined,
   };
+  if (latest.error) result.error = latest.error;
+  return result;
 }
 
 /** Downloads and applies the update prepared by Electrobun. */

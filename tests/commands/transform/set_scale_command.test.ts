@@ -16,7 +16,7 @@ describe('SetScaleCommand', () => {
 
   it('should snapshot original scale on construction', () => {
     const newScale = new THREE.Vector3(10, 20, 30);
-    const command = new SetScaleCommand([mesh1], [newScale]);
+    new SetScaleCommand([mesh1], [newScale]);
     expect(mesh1.scale.x).toBeCloseTo(1);
     expect(mesh1.scale.y).toBeCloseTo(1);
     expect(mesh1.scale.z).toBeCloseTo(1);

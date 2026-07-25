@@ -43,15 +43,15 @@ export class GitHubReleaseClient {
  * @throws Error when the payload lacks a release tag.
  */
 function parseReleasePayload(payload: unknown): GitHubRelease {
-  if (!isRecord(payload) || typeof payload.tag_name !== 'string') {
+  if (!isRecord(payload) || typeof payload['tag_name'] !== 'string') {
     throw new Error('GitHub returned an invalid release payload.');
   }
   return {
-    tagName: payload.tag_name,
-    title: typeof payload.name === 'string' && payload.name ? payload.name : payload.tag_name,
-    releasePageUrl: typeof payload.html_url === 'string' ? payload.html_url : GITHUB_RELEASES_PAGE_URL,
-    notes: typeof payload.body === 'string' ? payload.body : '',
-    assets: parseAssets(payload.assets),
+    tagName: payload['tag_name'],
+    title: typeof payload['name'] === 'string' && payload['name'] ? payload['name'] : payload['tag_name'],
+    releasePageUrl: typeof payload['html_url'] === 'string' ? payload['html_url'] : GITHUB_RELEASES_PAGE_URL,
+    notes: typeof payload['body'] === 'string' ? payload['body'] : '',
+    assets: parseAssets(payload['assets']),
   };
 }
 
@@ -74,12 +74,12 @@ function parseAssets(value: unknown): GitHubReleaseAsset[] {
  */
 function parseAsset(value: unknown): GitHubReleaseAsset[] {
   if (!isRecord(value)) return [];
-  if (typeof value.name !== 'string' || typeof value.browser_download_url !== 'string') return [];
+  if (typeof value['name'] !== 'string' || typeof value['browser_download_url'] !== 'string') return [];
   return [
     {
-      name: value.name,
-      browserDownloadUrl: value.browser_download_url,
-      size: typeof value.size === 'number' ? value.size : 0,
+      name: value['name'],
+      browserDownloadUrl: value['browser_download_url'],
+      size: typeof value['size'] === 'number' ? value['size'] : 0,
     },
   ];
 }

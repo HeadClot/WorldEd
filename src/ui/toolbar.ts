@@ -134,7 +134,7 @@ export class Toolbar {
    */
   setButtonActive(index: number, active: boolean): void {
     if (index < 0 || index >= this.buttons.length) return;
-    this.applyActiveVisual(this.buttons[index], active);
+    this.applyActiveVisual(this.buttons[index]!, active);
   }
 
   /**
@@ -228,13 +228,13 @@ export class Toolbar {
     button.style.boxShadow = 'none';
     button.style.transition = 'background 80ms ease, border-color 80ms ease, color 80ms ease';
     button.addEventListener('mouseenter', () => {
-      if (button.dataset.active !== 'true') {
+      if (button.dataset['active'] !== 'true') {
         button.style.background = this.hexToRgba(Theme.buttonHoverColor);
         button.style.borderColor = 'rgba(255,255,255,0.06)';
       }
     });
     button.addEventListener('mouseleave', () => {
-      if (button.dataset.active !== 'true') {
+      if (button.dataset['active'] !== 'true') {
         button.style.background = 'transparent';
         button.style.borderColor = 'transparent';
       }
@@ -262,7 +262,7 @@ export class Toolbar {
    * @param active Whether the button is selected.
    */
   private applyActiveVisual(button: HTMLButtonElement, active: boolean): void {
-    button.dataset.active = active ? 'true' : 'false';
+    button.dataset['active'] = active ? 'true' : 'false';
     if (active) {
       button.style.background = 'rgba(232, 106, 23, 0.22)';
       button.style.borderColor = this.hexToRgba(Theme.selectionColor);
@@ -306,7 +306,7 @@ export class Toolbar {
       entry.classList.add('editor-toolbar-dropdown-item');
       entry.type = 'button';
       entry.textContent = item.label;
-      entry.dataset.dropdownIndex = String(index);
+      entry.dataset['dropdownIndex'] = String(index);
       entry.setAttribute('role', 'menuitem');
       this.applyMenuItemStyles(entry);
       entry.addEventListener('click', (event) => {

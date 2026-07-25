@@ -101,13 +101,13 @@ describe('Toolbar', () => {
     (headers[0] as HTMLButtonElement).click();
     expect((menus[0] as HTMLElement).style.display).toBe('block');
     expect((menus[1] as HTMLElement).style.display).toBe('none');
-    expect(headers[0].getAttribute('aria-expanded')).toBe('true');
+    expect(headers[0]!.getAttribute('aria-expanded')).toBe('true');
 
-    headers[1].dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    headers[1]!.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect((menus[0] as HTMLElement).style.display).toBe('none');
     expect((menus[1] as HTMLElement).style.display).toBe('block');
-    expect(headers[0].getAttribute('aria-expanded')).toBe('false');
-    expect(headers[1].getAttribute('aria-expanded')).toBe('true');
+    expect(headers[0]!.getAttribute('aria-expanded')).toBe('false');
+    expect(headers[1]!.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('should expose light-theme dropdown selectors for readable menu surfaces', async () => {

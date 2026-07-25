@@ -16,7 +16,7 @@ describe('SetRotationCommand', () => {
 
   it('should snapshot original rotations on construction', () => {
     const newRotation = new THREE.Euler(Math.PI, Math.PI / 2, Math.PI / 4);
-    const command = new SetRotationCommand([mesh1], [newRotation]);
+    new SetRotationCommand([mesh1], [newRotation]);
     expect(mesh1.rotation.x).toBeCloseTo(0);
     expect(mesh1.rotation.y).toBeCloseTo(0);
     expect(mesh1.rotation.z).toBeCloseTo(0);

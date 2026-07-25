@@ -68,7 +68,7 @@ describe('ClipPlaneTool', () => {
     const moved = tool.setPoint(0, new THREE.Vector3(0, 1, 0));
     expect(moved).toBe(true);
     const points = tool.getPoints();
-    expect(points[0].y).toBeCloseTo(1);
+    expect(points[0]!.y).toBeCloseTo(1);
     expect(tool.isPlaneReady()).toBe(true);
   });
 

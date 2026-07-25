@@ -38,25 +38,25 @@ describe('updateGridDivisions', () => {
   });
 
   it('should update legacy GridHelper divisions for interval 1.0', () => {
-    const helper = new THREE.GridHelper(50, 10);
+    const helper = new THREE.GridHelper(50, 10) as THREE.GridHelper & { divisions: number };
     updateGridDivisions(helper, 1.0);
     expect(helper.divisions).toBe(50);
   });
 
   it('should update legacy GridHelper divisions for interval 5.0', () => {
-    const helper = new THREE.GridHelper(50, 10);
+    const helper = new THREE.GridHelper(50, 10) as THREE.GridHelper & { divisions: number };
     updateGridDivisions(helper, 5.0);
     expect(helper.divisions).toBe(10);
   });
 
   it('should cap legacy divisions at maximum for small interval', () => {
-    const helper = new THREE.GridHelper(50, 10);
+    const helper = new THREE.GridHelper(50, 10) as THREE.GridHelper & { divisions: number };
     updateGridDivisions(helper, 0.01);
     expect(helper.divisions).toBe(200);
   });
 
   it('should cap legacy divisions at minimum for very large interval', () => {
-    const helper = new THREE.GridHelper(50, 10);
+    const helper = new THREE.GridHelper(50, 10) as THREE.GridHelper & { divisions: number };
     updateGridDivisions(helper, 200.0);
     expect(helper.divisions).toBe(1);
   });

@@ -92,7 +92,7 @@ export async function runLayoutVmfImport(
  */
 export function runLayoutExportGlb(
   sceneIOHandler: SceneIOHandler,
-  worldObject: THREE.Object3D,
+  worldObject: THREE.Group,
   statusBar: StatusBar | null,
   profile: GameProfile | null,
 ): void {

@@ -47,7 +47,7 @@ export class SurfaceTriangulator {
     const flat = this.fanIndices(vertices.length);
     const triples: number[][] = [];
     for (let index = 0; index < flat.length; index += 3) {
-      triples.push([flat[index], flat[index + 1], flat[index + 2]]);
+      triples.push([flat[index]!, flat[index + 1]!, flat[index + 2]!]);
     }
     return triples;
   }
@@ -103,7 +103,7 @@ export class SurfaceTriangulator {
       });
       triangleCount += triangleSteps;
       for (const localIndex of localIndices) {
-        const vertex = polygon.vertices[localIndex];
+        const vertex = polygon.vertices[localIndex]!;
         positionList.push(vertex.x, vertex.y, vertex.z);
         normalList.push(polygon.normal.x, polygon.normal.y, polygon.normal.z);
       }

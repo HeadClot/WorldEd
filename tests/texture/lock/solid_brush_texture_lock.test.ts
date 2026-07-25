@@ -301,8 +301,8 @@ function sampleTopFaceUvCorners(mesh: THREE.Mesh): Array<{ u: number; v: number 
  * @returns Angle in degrees.
  */
 function uvEdgeAngle(corners: Array<{ u: number; v: number }>): number {
-  const du = corners[1].u - corners[0].u;
-  const dv = corners[1].v - corners[0].v;
+  const du = corners[1]!.u - corners[0]!.u;
+  const dv = corners[1]!.v - corners[0]!.v;
   return (Math.atan2(dv, du) * 180) / Math.PI;
 }
 

@@ -26,20 +26,20 @@ describe('SolidBrushEdgeMaterials', () => {
     const occluded = SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Subtractive);
     expect(front.depthFunc).toBe(THREE.LessEqualDepth);
     expect(occluded.depthFunc).toBe(THREE.GreaterDepth);
-    expect(front.uniforms.opacity.value).toBeCloseTo(BRUSH_EDGE_FRONT_OPACITY);
-    expect(occluded.uniforms.opacity.value).toBeCloseTo(BRUSH_EDGE_OCCLUDED_OPACITY);
-    expect(front.uniforms.fadeNear.value).toBe(BRUSH_EDGE_FADE_NEAR);
-    expect(front.uniforms.fadeFar.value).toBe(BRUSH_EDGE_FADE_FAR);
-    expect(occluded.uniforms.opacity.value).toBeLessThan(front.uniforms.opacity.value);
+    expect(front.uniforms['opacity']!.value).toBeCloseTo(BRUSH_EDGE_FRONT_OPACITY);
+    expect(occluded.uniforms['opacity']!.value).toBeCloseTo(BRUSH_EDGE_OCCLUDED_OPACITY);
+    expect(front.uniforms['fadeNear']!.value).toBe(BRUSH_EDGE_FADE_NEAR);
+    expect(front.uniforms['fadeFar']!.value).toBe(BRUSH_EDGE_FADE_FAR);
+    expect(occluded.uniforms['opacity']!.value).toBeLessThan(front.uniforms['opacity']!.value);
   });
 
   it('disables distance fade on cloned materials for 2D views', () => {
     const shared = SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Intersecting);
     const cloned = shared.clone();
     SolidBrushEdgeMaterials.disableDistanceFade(cloned);
-    expect(cloned.uniforms.fadeNear.value).toBeGreaterThan(1e6);
-    expect(cloned.uniforms.fadeFar.value).toBeGreaterThan(cloned.uniforms.fadeNear.value);
-    expect(shared.uniforms.fadeNear.value).toBe(BRUSH_EDGE_FADE_NEAR);
+    expect(cloned.uniforms['fadeNear']!.value).toBeGreaterThan(1e6);
+    expect(cloned.uniforms['fadeFar']!.value).toBeGreaterThan(cloned.uniforms['fadeNear']!.value);
+    expect(shared.uniforms['fadeNear']!.value).toBe(BRUSH_EDGE_FADE_NEAR);
   });
 
   it('prepares ortho clones without depth testing so all 2D views show edges', () => {
@@ -49,9 +49,9 @@ describe('SolidBrushEdgeMaterials', () => {
     expect(cloned.depthTest).toBe(false);
     expect(cloned.depthWrite).toBe(false);
     expect(cloned.depthFunc).toBe(THREE.AlwaysDepth);
-    expect(cloned.uniforms.fadeNear.value).toBeGreaterThan(1e6);
+    expect(cloned.uniforms['fadeNear']!.value).toBeGreaterThan(1e6);
     expect(shared.depthTest).toBe(true);
-    expect(shared.uniforms.fadeNear.value).toBe(BRUSH_EDGE_FADE_NEAR);
+    expect(shared.uniforms['fadeNear']!.value).toBe(BRUSH_EDGE_FADE_NEAR);
   });
 
   it('returns distinct colors per CSG operation', () => {

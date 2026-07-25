@@ -78,7 +78,7 @@ export class ClipPlaneTool {
   setPoint(index: number, point: THREE.Vector3): boolean {
     if (!this.active) return false;
     if (index < 0 || index >= this.points.length) return false;
-    this.points[index].copy(point);
+    this.points[index]!.copy(point);
     this.rebuildPlane();
     this.notifyChange();
     return true;

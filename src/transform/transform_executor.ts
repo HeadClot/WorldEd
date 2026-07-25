@@ -241,8 +241,8 @@ export class TransformExecutor {
    */
   computePivot(objects: THREE.Mesh[]): THREE.Vector3 {
     if (objects.length === 0) return new THREE.Vector3(0, 0, 0);
-    if (objects.length === 1) return objects[0].position.clone();
-    this.boundingBox.setFromObject(objects[0]);
+    if (objects.length === 1) return objects[0]!.position.clone();
+    this.boundingBox.setFromObject(objects[0]!);
     objects.slice(1).forEach((mesh) => {
       this.boundingBox.expandByObject(mesh);
     });

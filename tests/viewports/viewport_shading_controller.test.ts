@@ -42,7 +42,7 @@ describe('ViewportShadingController', () => {
 
     it('should not modify materials in default SOLID mode', () => {
       expect(meshA.material).toBe(materialA);
-      expect(meshA.material.wireframe).toBe(false);
+      expect(materialA.wireframe).toBe(false);
     });
   });
 
@@ -64,7 +64,7 @@ describe('ViewportShadingController', () => {
       controller.setShadingMode(ShadingMode.WIREFRAME_OVERLAY);
       expect(controller.getShadingMode()).toBe(ShadingMode.WIREFRAME_OVERLAY);
       expect(meshA.material).toBe(materialA);
-      expect(meshA.material.wireframe).toBe(false);
+      expect(materialA.wireframe).toBe(false);
     });
 
     it('should switch from WIREFRAME to FLAT', () => {
@@ -77,7 +77,7 @@ describe('ViewportShadingController', () => {
       controller.setShadingMode(ShadingMode.WIREFRAME);
       controller.setShadingMode(ShadingMode.SOLID);
       expect(meshA.material).toBe(materialA);
-      expect(meshA.material.wireframe).toBe(false);
+      expect(materialA.wireframe).toBe(false);
     });
   });
 

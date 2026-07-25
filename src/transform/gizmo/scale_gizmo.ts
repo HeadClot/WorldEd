@@ -143,7 +143,7 @@ export class ScaleGizmo {
    * @param handleId The handle identifier.
    */
   private tagHandleId(mesh: THREE.Mesh, handleId: number): void {
-    mesh.userData.handleId = handleId;
+    mesh.userData['handleId'] = handleId;
   }
 
   /**
@@ -177,9 +177,9 @@ export class ScaleGizmo {
    * @param mesh The mesh to dispose.
    */
   private disposeMesh(mesh: THREE.Mesh): void {
-    if (mesh.geometry && !mesh.userData.geometryDisposed) {
+    if (mesh.geometry && !mesh.userData['geometryDisposed']) {
       mesh.geometry.dispose();
-      mesh.userData.geometryDisposed = true;
+      mesh.userData['geometryDisposed'] = true;
     }
     if (mesh.material) {
       if (Array.isArray(mesh.material)) {

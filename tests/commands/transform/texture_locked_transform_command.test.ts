@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '../../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
+import {
+  createDefaultFaceTextureMapping,
+  FaceTextureMapping,
+  FaceTextureMappingTrs,
+} from '../../../src/texture/uv/face_texture_mapping.js';
 import { TranslateCommand } from '../../../src/commands/transform/translate_command.js';
 import { TextureLockedTransformCommand } from '../../../src/commands/transform/texture_locked_transform_command.js';
 import {
@@ -10,6 +14,9 @@ import {
   restoreTransformTextureState,
 } from '../../../src/commands/transform/transform_texture_state.js';
 import { CommandStack } from '../../../src/commands/command_stack.js';
+
+/** Runtime TRS proxy fields used by texture mapping tests. */
+type MappingWithTrs = FaceTextureMapping & FaceTextureMappingTrs;
 
 /**
  * With brush-local UV matrices, position lock leaves the matrix alone and baked
@@ -19,7 +26,7 @@ describe('TextureLockedTransformCommand', () => {
   it('keeps solid UV matrices stable under position lock and restores pose on undo', () => {
     const model = new SolidModel('UndoPosLock');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const mapping = createDefaultFaceTextureMapping('locked.png');
+    const mapping = createDefaultFaceTextureMapping('locked.png') as MappingWithTrs;
     mapping.align = 'face';
     mapping.offsetU = 0.25;
     mapping.offsetV = -0.1;
@@ -85,8 +92,9 @@ describe('TextureLockedTransformCommand', () => {
 
     mesh.position.x = 3;
     const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
-    for (let i = 0; i < uv.array.length; i++) {
-      (uv.array as Float32Array)[i] += 0.5;
+    const uvArray = uv.array as Float32Array;
+    for (let i = 0; i < uvArray.length; i++) {
+      uvArray[i] = (uvArray[i] ?? 0) + 0.5;
     }
     uv.needsUpdate = true;
     const after = captureTransformTextureState([mesh]);

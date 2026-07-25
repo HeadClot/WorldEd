@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
   FaceTextureMapping,
+  FaceTextureMappingWithTrs,
   cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
   createFaceTextureMappingFromTrs,
@@ -39,7 +40,7 @@ export function faceTextureMappingToSurface(
 export function surfaceToFaceTextureMapping(
   surface: FaceSurfaceDescription,
   _faceNormal: THREE.Vector3,
-): FaceTextureMapping {
+): FaceTextureMappingWithTrs {
   void _faceNormal;
   return withTrsAccessors({
     textureId: surface.textureId,

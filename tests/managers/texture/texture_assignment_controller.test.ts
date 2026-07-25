@@ -63,9 +63,9 @@ describe('TextureAssignmentController', () => {
     selection.selectObject(mesh);
     const entry = createTextureBrowserEntry(new File(['x'], 'rock.png', { type: 'image/png' }), 'rock.png');
     controller.onTextureSelected(entry);
-    expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe('rock.png');
+    expect(getFaceTextureMaps(mesh)[0]!.mapping.textureId).toBe('rock.png');
     expect(commandStack.getUndoCount()).toBe(1);
     commandStack.undo();
-    expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe(DEFAULT_CHECKER_TEXTURE_ID);
+    expect(getFaceTextureMaps(mesh)[0]!.mapping.textureId).toBe(DEFAULT_CHECKER_TEXTURE_ID);
   });
 });

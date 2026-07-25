@@ -33,7 +33,7 @@ describe('solid face region selection', () => {
     manager.selectFace(mesh, 1, false);
     const regions = groupSelectionsIntoFaceRegions(manager.getSelectedFaces());
     expect(regions).toHaveLength(1);
-    expect(regions[0].faceIndices).toEqual([0, 1, 2]);
+    expect(regions[0]!.faceIndices).toEqual([0, 1, 2]);
   });
 });
 

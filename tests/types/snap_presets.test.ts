@@ -8,7 +8,7 @@ describe('SNAP_PRESETS', () => {
 
   it('should be sorted in ascending order', () => {
     for (let i = 1; i < SNAP_PRESETS.length; i++) {
-      expect(SNAP_PRESETS[i]).toBeGreaterThan(SNAP_PRESETS[i - 1]);
+      expect(SNAP_PRESETS[i]!).toBeGreaterThan(SNAP_PRESETS[i - 1]!);
     }
   });
 
@@ -27,7 +27,7 @@ describe('SNAP_PRESETS', () => {
 
   it('should double each step relative to the previous preset', () => {
     for (let i = 1; i < SNAP_PRESETS.length; i++) {
-      expect(SNAP_PRESETS[i] / SNAP_PRESETS[i - 1]).toBeCloseTo(2, 10);
+      expect(SNAP_PRESETS[i]! / SNAP_PRESETS[i - 1]!).toBeCloseTo(2, 10);
     }
   });
 });

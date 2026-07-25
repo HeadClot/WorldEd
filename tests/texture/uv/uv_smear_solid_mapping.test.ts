@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import * as THREE from 'three';
 import { SolidModel } from '../../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
 import { UvSmearController } from '../../../src/managers/texture/uv_smear_controller.js';
@@ -73,7 +72,7 @@ describe('UV smear solid mapping', () => {
 
   it('prefers a covering face-map entry when region triangle sets differ', () => {
     const model = new SolidModel('CoverMap');
-    const brush = model.addBoxBrush(2, SolidOperation.Additive);
+    model.addBoxBrush(2, SolidOperation.Additive);
     model.rebuild(true);
     const result = model.getResultMesh();
     const authored = createDefaultFaceTextureMapping('cover.png');
@@ -88,7 +87,7 @@ describe('UV smear solid mapping', () => {
     const controller = new UvSmearController(new CommandStack(8));
     controller.beginStroke(result, 0);
     controller.endStroke();
-    const maps = result.userData.faceTextureMaps as Array<{ mapping: { scaleU: number } }> | undefined;
+    const maps = result.userData['faceTextureMaps'] as Array<{ mapping: { scaleU: number } }> | undefined;
     expect(maps?.some((entry) => Math.abs((entry.mapping.scaleU ?? 0) - 2.25) < 0.05)).toBe(true);
   });
 });

@@ -36,5 +36,5 @@ describe('bounds handle size vs camera distance', () => {
 function readFirstHandleScale(gizmo: TransformGizmo): number {
   const handles = gizmo.getHandles();
   if (handles.length === 0) return 0;
-  return handles[0].getVisualMesh().scale.x;
+  return handles[0]!.getVisualMesh().scale.x;
 }

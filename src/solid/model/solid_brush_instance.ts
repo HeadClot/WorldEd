@@ -4,7 +4,7 @@ import { SolidOperation } from '../types/solid_operation.js';
 import { SolidPlane } from '../brush/solid_plane.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
-import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
+import { FaceTextureMapping, FaceTextureMappingWithTrs } from '../../texture/uv/face_texture_mapping.js';
 import {
   FaceSurfaceDescription,
   FaceSurfaceDescriptionSerialized,
@@ -108,7 +108,7 @@ export class SolidBrushInstance {
    * @param surfaceIndex Brush face index.
    * @returns Cloned face texture mapping.
    */
-  getSurfaceMapping(surfaceIndex: number): FaceTextureMapping {
+  getSurfaceMapping(surfaceIndex: number): FaceTextureMappingWithTrs {
     const surface = this.getFaceSurface(surfaceIndex);
     return surfaceToFaceTextureMapping(surface, this.faceNormalLocal(surfaceIndex));
   }

@@ -230,7 +230,7 @@ export class ClipPlaneHandler {
     const points = this.deps.clipPlaneTool.getPoints();
     const index = this.pointDrag.pickMarkerIndex(event, camera, renderer, points);
     if (index === null) return false;
-    this.beginMarkerDrag(index, points[index], camera, renderer);
+    this.beginMarkerDrag(index, points[index]!, camera, renderer);
     return true;
   }
 

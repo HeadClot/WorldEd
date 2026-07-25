@@ -9,6 +9,7 @@ import { formatCoordinateSpaceSummary } from '../../settings/coordinate_space_pr
 import { getUnitLabel } from '../../settings/unit_presets.js';
 import { VmfImportResult, VmfSolidImporter } from '../../io/vmf/vmf_solid_importer.js';
 import { ImportProgressOverlay } from '../../ui/import_progress_overlay.js';
+import type { SceneJSON } from '../../io/io_types.js';
 
 /**
  * Orchestrates save, load, GLB export, and VMF import operations. Coordinates
@@ -138,10 +139,10 @@ export class SceneIOHandler {
    * @param data The parsed JSON value.
    * @returns True if the data looks like a SceneJSON payload.
    */
-  private isValidSceneData(data: unknown): data is { version: number; objects: unknown[] } {
+  private isValidSceneData(data: unknown): data is SceneJSON {
     if (!data || typeof data !== 'object') return false;
     const record = data as Record<string, unknown>;
-    return typeof record.version === 'number' && Array.isArray(record.objects);
+    return typeof record['version'] === 'number' && Array.isArray(record['objects']);
   }
 
   /**

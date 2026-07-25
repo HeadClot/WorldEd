@@ -60,7 +60,9 @@ function tryEnablePerMonitorV2(ffi: BunFfiModule): boolean {
       },
     });
     const perMonitorV2 = -4 as never;
-    return Boolean(user32.symbols.SetProcessDpiAwarenessContext(perMonitorV2));
+    const setProcessDpiAwarenessContext = user32.symbols['SetProcessDpiAwarenessContext'];
+    if (!setProcessDpiAwarenessContext) return false;
+    return Boolean(setProcessDpiAwarenessContext(perMonitorV2));
   } catch {
     return false;
   }
@@ -80,7 +82,9 @@ function tryEnablePerMonitorAwareness(ffi: BunFfiModule): void {
       },
     });
     const processPerMonitorDpiAware = 2 as never;
-    shcore.symbols.SetProcessDpiAwareness(processPerMonitorDpiAware);
+    const setProcessDpiAwareness = shcore.symbols['SetProcessDpiAwareness'];
+    if (!setProcessDpiAwareness) return;
+    setProcessDpiAwareness(processPerMonitorDpiAware);
   } catch {
     return;
   }

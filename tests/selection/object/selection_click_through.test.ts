@@ -48,9 +48,9 @@ describe('SelectionClickThrough', () => {
     const cloneOuter = createNamedMesh('clone-outer');
     const cloneInner = createNamedMesh('clone-inner');
     const hits: THREE.Intersection[] = [
-      { object: cloneOuter, distance: 1 } as THREE.Intersection,
-      { object: cloneOuter, distance: 1.1 } as THREE.Intersection,
-      { object: cloneInner, distance: 2 } as THREE.Intersection,
+      { object: cloneOuter, distance: 1 } as unknown as THREE.Intersection,
+      { object: cloneOuter, distance: 1.1 } as unknown as THREE.Intersection,
+      { object: cloneInner, distance: 2 } as unknown as THREE.Intersection,
     ];
     const resolve = (mesh: THREE.Mesh): THREE.Mesh => {
       if (mesh === cloneOuter) return outer;

@@ -40,7 +40,7 @@ export class OrientedBoundsBuilder {
     const validMeshes = this.filterMeshesWithGeometry(meshes);
     if (validMeshes.length === 0) return null;
     if (validMeshes.length === 1) {
-      return this.buildFromSingleMesh(validMeshes[0]);
+      return this.buildFromSingleMesh(validMeshes[0]!);
     }
     return this.buildWorldAxisAlignedUnion(validMeshes);
   }

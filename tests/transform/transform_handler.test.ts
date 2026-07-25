@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '../../src/theme.js';
-import { TransformMode, GizmoAxis } from '../../src/types/transform_mode.js';
+import { TransformMode } from '../../src/types/transform_mode.js';
 import { TransformGizmo } from '../../src/transform/gizmo/transform_gizmo.js';
 import { GizmoRaycaster } from '../../src/transform/gizmo/gizmo_raycaster.js';
 import { TransformExecutor } from '../../src/transform/transform_executor.js';
@@ -57,7 +57,7 @@ describe('TransformHandler', () => {
   it('should onPointerUp clear active handle on gizmo', () => {
     const handles = gizmo.getHandles();
     if (handles.length > 0) {
-      gizmo.setActiveHandle(handles[0]);
+      gizmo.setActiveHandle(handles[0] ?? null);
     }
     handler.onPointerUp();
     expect(gizmo.getActiveHandle()).toBeNull();

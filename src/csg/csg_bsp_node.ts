@@ -100,7 +100,7 @@ export class CsgBspNode {
   build(polygons: CsgPolygon[]): void {
     if (polygons.length === 0) return;
     if (!this.planeNormal) {
-      const first = polygons[0];
+      const first = polygons[0]!;
       this.planeNormal = first.getPlaneNormal().clone();
       this.planeConstant = first.getPlaneConstant();
     }
@@ -198,10 +198,10 @@ export class CsgBspNode {
     const backVertices: THREE.Vector3[] = [];
     for (let index = 0; index < vertices.length; index++) {
       const nextIndex = (index + 1) % vertices.length;
-      const type = types[index];
-      const nextType = types[nextIndex];
-      const vertex = vertices[index];
-      const nextVertex = vertices[nextIndex];
+      const type = types[index]!;
+      const nextType = types[nextIndex]!;
+      const vertex = vertices[index]!;
+      const nextVertex = vertices[nextIndex]!;
       if (type !== BACK) frontVertices.push(vertex.clone());
       if (type !== FRONT) backVertices.push(vertex.clone());
       if ((type | nextType) === SPANNING) {

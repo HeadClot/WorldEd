@@ -117,7 +117,7 @@ describe('WireframeOverlayRenderer', () => {
       renderer.setMeshes([meshA]);
       renderer.dispose();
       expect(renderer.getOverlayCount()).toBe(0);
-      expect(meshA.children.some((c) => c.userData.isWireframeOverlay)).toBe(false);
+      expect(meshA.children.some((c) => c.userData['isWireframeOverlay'])).toBe(false);
     });
   });
 });

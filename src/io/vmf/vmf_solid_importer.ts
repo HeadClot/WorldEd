@@ -220,7 +220,12 @@ export class VmfSolidImporter {
       16,
       (start, end) => {
         for (let index = start; index < end; index++) {
-          const built = this.tryBuildSolid(solids[index], unitScale, skipVolumes);
+          const solid = solids[index];
+          if (!solid) {
+            skipped += 1;
+            continue;
+          }
+          const built = this.tryBuildSolid(solid, unitScale, skipVolumes);
           if (!built) {
             skipped += 1;
             continue;
@@ -245,7 +250,9 @@ export class VmfSolidImporter {
    */
   private tryBuildSolid(solid: VmfSolid, unitScale: number, skipVolumes: boolean): VmfBuiltBrush | null {
     if (solid.sides.length === 0) return null;
-    if (skipVolumes && isSkippedVolumeMaterial(solid.sides[0].material)) {
+    const firstSide = solid.sides[0];
+    if (!firstSide) return null;
+    if (skipVolumes && isSkippedVolumeMaterial(firstSide.material)) {
       return null;
     }
     return this.brushBuilder.build(solid, unitScale);
@@ -264,7 +271,9 @@ export class VmfSolidImporter {
     const instance = new SolidBrushInstance(id, name, built.brush, SolidOperation.Additive);
     instance.position.copy(built.worldCenter);
     for (let index = 0; index < built.faceMappings.length; index++) {
-      instance.setFaceMapping(index, built.faceMappings[index]);
+      const mapping = built.faceMappings[index];
+      if (!mapping) continue;
+      instance.setFaceMapping(index, mapping);
     }
     const preview = SolidBrushVisual.createHullPreview(name, built.brush, SolidOperation.Additive);
     instance.attachMesh(preview);

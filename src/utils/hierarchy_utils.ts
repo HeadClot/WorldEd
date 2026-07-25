@@ -252,7 +252,7 @@ function compareSiblingIndexPaths(leftPath: readonly number[], rightPath: readon
   const sharedLength = Math.min(leftPath.length, rightPath.length);
   for (let index = 0; index < sharedLength; index++) {
     if (leftPath[index] !== rightPath[index]) {
-      return leftPath[index] - rightPath[index];
+      return leftPath[index]! - rightPath[index]!;
     }
   }
   return leftPath.length - rightPath.length;

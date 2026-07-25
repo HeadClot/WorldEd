@@ -23,7 +23,6 @@ import { SettingsViewTab } from './settings_view_tab.js';
  */
 export class SettingsDialog {
   private readonly host: HTMLElement;
-  private readonly store: EditorSettingsStore;
   private readonly backdrop: HTMLElement;
   private readonly panel: HTMLElement;
   private readonly tabBar: HTMLElement;
@@ -48,7 +47,6 @@ export class SettingsDialog {
    */
   constructor(host: HTMLElement, store: EditorSettingsStore) {
     this.host = host;
-    this.store = store;
     this.isVisible = false;
     this.isDisposed = false;
     this.activeTabId = 'games';
@@ -237,7 +235,7 @@ export class SettingsDialog {
     const button = document.createElement('button');
     styleSettingsTabButton(button);
     button.textContent = SETTINGS_TAB_LABELS[tabId];
-    button.dataset.settingsTab = tabId;
+    button.dataset['settingsTab'] = tabId;
     button.setAttribute('role', 'tab');
     button.setAttribute('aria-selected', 'false');
     button.addEventListener('click', () => this.showTab(tabId));

@@ -57,7 +57,7 @@ export class ExtrudeFacesCommand implements UndoCommand {
    * @returns The first mesh, or null.
    */
   getCreatedMesh(): THREE.Mesh | null {
-    return this.createdMeshes.length > 0 ? this.createdMeshes[0] : null;
+    return this.createdMeshes.length > 0 ? this.createdMeshes[0]! : null;
   }
 
   /**

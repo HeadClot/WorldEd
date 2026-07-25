@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { SceneSerializer } from '../../src/io/scene_serializer.js';
 import { SceneDeserializer } from '../../src/io/scene_deserializer.js';
-import { SceneJSON, ObjectEntry } from '../../src/io/io_types.js';
+import { SceneJSON } from '../../src/io/io_types.js';
 
 describe('SceneJSON round-trip validation', () => {
   let serializer: SceneSerializer;
@@ -31,7 +31,7 @@ describe('SceneJSON round-trip validation', () => {
     const mesh = createMeshWithGeometry('box');
     group.add(mesh);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.uuid).toBeDefined();
     expect(typeof entry.uuid).toBe('string');
     expect(typeof entry.name).toBe('string');
@@ -48,7 +48,7 @@ describe('SceneJSON round-trip validation', () => {
     const mesh = createMeshWithGeometry('box');
     group.add(mesh);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.geometryType).toBeDefined();
     expect(entry.geometryParams).toBeDefined();
     expect(typeof entry.materialColor).toBe('number');
@@ -59,7 +59,7 @@ describe('SceneJSON round-trip validation', () => {
     const mesh = createMeshWithGeometry('box');
     group.add(mesh);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.parentId).toBe(group.uuid);
   });
 
@@ -69,7 +69,7 @@ describe('SceneJSON round-trip validation', () => {
     childGroup.name = 'TestGroup';
     group.add(childGroup);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.type).toBe('group');
     expect(entry.geometryType).toBeUndefined();
     expect(entry.geometryParams).toBeUndefined();
@@ -99,7 +99,7 @@ describe('SceneJSON round-trip validation', () => {
     mesh.position.set(-5, 10, -3);
     group.add(mesh);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.position.x).toBe(-5);
     expect(entry.position.y).toBe(10);
     expect(entry.position.z).toBe(-3);
@@ -111,7 +111,7 @@ describe('SceneJSON round-trip validation', () => {
     mesh.rotation.set(Math.PI / 4, Math.PI / 3, 0);
     group.add(mesh);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.rotation.x).toBeCloseTo(Math.PI / 4);
     expect(entry.rotation.y).toBeCloseTo(Math.PI / 3);
     expect(entry.rotation.z).toBe(0);
@@ -123,7 +123,7 @@ describe('SceneJSON round-trip validation', () => {
     mesh.scale.set(2, 3, 4);
     group.add(mesh);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.scale.x).toBe(2);
     expect(entry.scale.y).toBe(3);
     expect(entry.scale.z).toBe(4);
@@ -161,7 +161,7 @@ describe('SceneJSON round-trip validation', () => {
     mesh.name = 'BufferMesh';
     sourceGroup.add(mesh);
     const sceneData = serializer.serialize(sourceGroup);
-    expect(sceneData.objects[0].geometryType).toBe('buffer');
+    expect(sceneData.objects[0]!.geometryType).toBe('buffer');
     const targetGroup = new THREE.Group();
     deserializer.deserialize(sceneData, targetGroup);
     const restored = targetGroup.children[0] as THREE.Mesh;
@@ -181,12 +181,12 @@ describe('SceneJSON round-trip validation', () => {
     const group = new THREE.Group();
     group.add(mesh);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.name).toBe('');
 
     const targetGroup = new THREE.Group();
     deserializer.deserialize(sceneData, targetGroup);
-    expect(targetGroup.children[0].name).toBe('');
+    expect(targetGroup.children[0]!.name).toBe('');
   });
 
   it('should accept ObjectEntry with visible false', () => {
@@ -195,12 +195,12 @@ describe('SceneJSON round-trip validation', () => {
     const group = new THREE.Group();
     group.add(mesh);
     const sceneData = serializer.serialize(group);
-    const entry = sceneData.objects[0];
+    const entry = sceneData.objects[0]!;
     expect(entry.visible).toBe(false);
 
     const targetGroup = new THREE.Group();
     deserializer.deserialize(sceneData, targetGroup);
-    expect(targetGroup.children[0].visible).toBe(false);
+    expect(targetGroup.children[0]!.visible).toBe(false);
   });
 });
 

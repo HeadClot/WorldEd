@@ -42,7 +42,7 @@ ${trigger}
     expect(result.skippedBrushCount).toBe(1);
     expect(result.model.getBrushCount()).toBe(1);
     expect(SolidModel.isSolidModelObject(result.model.root)).toBe(true);
-    const brush = result.model.getBrushes()[0];
+    const brush = result.model.getBrushes()[0]!;
     const validation = SolidBrushValidator.validate(brush.brush);
     expect(validation.valid).toBe(true);
     expect(brush.mesh).not.toBeNull();
@@ -87,7 +87,7 @@ ${detailSides}
       buildAxisAlignedWorldSolidVmf({ x: -64, y: -64, z: 0 }, { x: 64, y: 64, z: 128 }, 'CONCRETE/CONCRETEWALL001A', 7),
     );
     expect(result.importedBrushCount).toBe(1);
-    expect(result.model.getBrushes()[0].name).toBe('Solid 7');
+    expect(result.model.getBrushes()[0]!.name).toBe('Solid 7');
   });
 
   it('imports a representative multi-solid VMF map without throwing', () => {
@@ -104,7 +104,7 @@ ${detailSides}
     expect(result.importedBrushCount + result.skippedBrushCount).toBe(totalSolids);
     const sampleCount = Math.min(12, result.model.getBrushCount());
     for (let index = 0; index < sampleCount; index++) {
-      const brush = result.model.getBrushes()[index];
+      const brush = result.model.getBrushes()[index]!;
       const validation = SolidBrushValidator.validate(brush.brush);
       expect(validation.valid, validation.errors.join('; ')).toBe(true);
       expect(brush.brush.faces.length).toBeGreaterThanOrEqual(4);

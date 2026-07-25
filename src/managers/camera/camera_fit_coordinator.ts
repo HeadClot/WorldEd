@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { Viewport3D } from '../../viewports/viewport_3d.js';
 import { Viewport2D } from '../../viewports/viewport_2d.js';
 import { SelectionManager } from '../../selection/object/selection_manager.js';

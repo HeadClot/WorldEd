@@ -123,7 +123,7 @@ describe('FaceSelectionManager', () => {
     const changed = manager.pruneInvalidSelections(world);
     expect(changed).toBe(true);
     expect(manager.getSelectedFaceCount()).toBe(1);
-    const remaining = manager.getSelectedFaces()[0];
+    const remaining = manager.getSelectedFaces()[0]!;
     expect(remaining.regionKey).toContain('kept');
     expect(remaining.regionKey).not.toContain('gone');
   });
@@ -138,15 +138,15 @@ describe('FaceSelectionManager', () => {
   });
 
   it('should fire callback with correct selection array', () => {
-    let capturedFaces: ReturnType<typeof manager.getSelectedFaces> | null = null;
+    let capturedFaces: ReturnType<typeof manager.getSelectedFaces> | undefined;
     manager.setSelectionChangedCallback((faces) => {
       capturedFaces = faces;
     });
     manager.selectFace(meshA, 0, false, false);
-    expect(capturedFaces).not.toBeNull();
-    expect(capturedFaces?.length).toBe(1);
-    expect(capturedFaces?.[0].mesh).toBe(meshA);
-    expect(capturedFaces?.[0].faceIndex).toBe(0);
+    expect(capturedFaces).toBeDefined();
+    expect(capturedFaces!.length).toBe(1);
+    expect(capturedFaces![0]!.mesh).toBe(meshA);
+    expect(capturedFaces![0]!.faceIndex).toBe(0);
   });
 
   it('should compute average normal for a single face', () => {

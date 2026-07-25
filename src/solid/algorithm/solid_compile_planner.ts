@@ -60,7 +60,7 @@ export class SolidCompilePlanner {
     const seedIds = this.collectSeedDirtyIds(options, refreshedBrushIds);
     const indices = new Set<number>();
     for (let index = 0; index < prepared.length; index++) {
-      if (seedIds.has(prepared[index].instance.id)) {
+      if (seedIds.has(prepared[index]!.instance.id)) {
         indices.add(index);
       }
     }
@@ -157,8 +157,8 @@ export class SolidCompilePlanner {
   buildCurrentTouchMap(prepared: PreparedBrush[]): Map<string, string[]> {
     const map = new Map<string, string[]>();
     for (let index = 0; index < prepared.length; index++) {
-      const entry = prepared[index];
-      const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex].instance.id);
+      const entry = prepared[index]!;
+      const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex]!.instance.id);
       map.set(entry.instance.id, peerIds);
     }
     return map;
@@ -208,7 +208,7 @@ export class SolidCompilePlanner {
   private buildIdToIndexMap(prepared: PreparedBrush[]): Map<string, number> {
     const idToIndex = new Map<string, number>();
     for (let index = 0; index < prepared.length; index++) {
-      idToIndex.set(prepared[index].instance.id, index);
+      idToIndex.set(prepared[index]!.instance.id, index);
     }
     return idToIndex;
   }

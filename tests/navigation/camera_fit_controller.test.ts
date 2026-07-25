@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { CameraFitController } from '../../src/navigation/camera_fit_controller.js';
 import { CameraAnimationConfig } from '../../src/navigation/camera_animation_config.js';
@@ -102,9 +102,9 @@ describe('CameraFitController', () => {
       new THREE.MeshBasicMaterial(),
     );
     emptyResult.name = 'Result';
-    emptyResult.userData.isSolidModelResult = true;
+    emptyResult.userData['isSolidModelResult'] = true;
     const farBrush = createBoxMesh(2, 2, 2, 80, 0, 0);
-    farBrush.userData.isSolidBrush = true;
+    farBrush.userData['isSolidBrush'] = true;
     model.add(emptyResult);
     model.add(farBrush);
     scene.add(model);
@@ -112,7 +112,7 @@ describe('CameraFitController', () => {
       getCamera: () => camera,
       getScene: () => scene,
       collectSelectableObjects: () =>
-        collectMeshesUnderGroup(model).filter((mesh) => mesh.userData.isSolidModelResult !== true),
+        collectMeshesUnderGroup(model).filter((mesh) => mesh.userData['isSolidModelResult'] !== true),
     };
     const count = controller.fitViewportToSelection(viewport, [], config);
     expect(count).toBe(1);

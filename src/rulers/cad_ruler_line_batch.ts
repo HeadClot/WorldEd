@@ -40,10 +40,10 @@ export class CadRulerLineBatch {
     this.occludedMaterial = this.createOccludedMaterial(occludedOpacity);
     this.frontLines = this.createLinePass('front', this.frontMaterial, CadRulerStyle.frontRenderOrder);
     this.occludedLines = this.createLinePass('occluded', this.occludedMaterial, CadRulerStyle.occludedRenderOrder);
-    this.occludedLines.userData.isGizmoOccludedGhost = true;
+    this.occludedLines.userData['isGizmoOccludedGhost'] = true;
     this.rootGroup = new THREE.Group();
     this.rootGroup.name = name;
-    this.rootGroup.userData.isCadRuler = true;
+    this.rootGroup.userData['isCadRuler'] = true;
     this.rootGroup.frustumCulled = false;
     this.rootGroup.add(this.occludedLines);
     this.rootGroup.add(this.frontLines);

@@ -58,7 +58,7 @@ describe('DeleteObjectCommand', () => {
   });
 
   it('should undo and restore full state for single mesh', () => {
-    const singleSnapshot = snapshots[0];
+    const singleSnapshot = snapshots[0]!;
     const command = new DeleteObjectCommand([singleSnapshot]);
     command.execute();
     expect(parent.children.length).toBe(1);
@@ -84,8 +84,8 @@ describe('DeleteObjectCommand', () => {
     command.execute();
     command.undo();
     expect(parent.children.length).toBe(2);
-    expect(parent.children[0].name).toBe('Mesh1');
-    expect(parent.children[1].name).toBe('Mesh2');
+    expect(parent.children[0]!.name).toBe('Mesh1');
+    expect(parent.children[1]!.name).toBe('Mesh2');
   });
 
   it('should restore rotation and scale on undo', () => {

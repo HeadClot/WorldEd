@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
 import type { SolidSurfaceRegion } from '../algorithm/surface_triangulator.js';
-import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
+import {
+  FaceTextureMapping,
+  createDefaultFaceTextureMapping,
+  withTrsAccessors,
+} from '../../texture/uv/face_texture_mapping.js';
 import { setFaceTextureMapsShared } from '../../texture/uv/face_texture_storage.js';
 import { rebuildSolidResultMaterials } from '../../texture/material/surface_material_builder.js';
 import { createContentMaterial } from '../../materials/content_material_factory.js';
@@ -200,7 +204,7 @@ export class SolidModelPresentation {
       resultMesh,
       textureRegions.map((region) => ({
         triangleIndices: region.triangleIndices,
-        mapping: region.mapping,
+        mapping: withTrsAccessors(region.mapping),
       })),
     );
   }

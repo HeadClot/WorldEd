@@ -28,7 +28,7 @@ export function mapPreviewTriangleToBrushFace(
   let bestIndex = -1;
   let bestDot = FACE_NORMAL_MATCH_DOT;
   for (let faceIndex = 0; faceIndex < modelBrush.planes.length; faceIndex++) {
-    const dot = modelBrush.planes[faceIndex].normal.dot(solidLocalNormal);
+    const dot = modelBrush.planes[faceIndex]!.normal.dot(solidLocalNormal);
     if (dot > bestDot) {
       bestDot = dot;
       bestIndex = faceIndex;

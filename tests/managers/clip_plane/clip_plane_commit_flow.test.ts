@@ -65,8 +65,8 @@ describe('ClipPlaneHandler continuous commit flow', () => {
     expect(clipPlaneTool.isPlaneReady()).toBe(false);
     const selected = selectionManager.getAllSelectedObjectsAsArray();
     expect(selected.length).toBe(1);
-    expect(selected[0]).not.toBe(mesh);
-    expect(selected[0].parent).toBe(worldObject);
+    expect(selected[0]!).not.toBe(mesh);
+    expect(selected[0]!.parent).toBe(worldObject);
   });
 
   it('selects both split halves and allows another plane to be placed', () => {

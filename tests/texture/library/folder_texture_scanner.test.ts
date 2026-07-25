@@ -34,8 +34,8 @@ describe('FolderTextureScanner', () => {
     const listing = createListing([['tile.png', 'floors/tile.png']]);
     const result = scanner.scanListing(listing);
     expect(result.entries).toHaveLength(1);
-    expect(result.entries[0].id).toBe('floors/tile.png');
-    expect(result.entries[0].previewObjectUrl).toBe('blob:tile.png');
+    expect(result.entries[0]!.id).toBe('floors/tile.png');
+    expect(result.entries[0]!.previewObjectUrl).toBe('blob:tile.png');
   });
 
   it('should return zero images for an empty listing', () => {

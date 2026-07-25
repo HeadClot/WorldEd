@@ -423,7 +423,7 @@ export class TextureBrowser {
     tile.setAttribute('role', 'option');
     tile.setAttribute('aria-label', entry.id);
     tile.tabIndex = 0;
-    tile.dataset.entryId = entry.id;
+    tile.dataset['entryId'] = entry.id;
     tile.title = entry.relativePath;
     tile.style.background = hexToRgb(Theme.buttonBackground);
     tile.style.border = `1px solid ${Theme.inputBorderColor}`;
@@ -451,7 +451,7 @@ export class TextureBrowser {
   private createPreviewThumb(entry: TextureBrowserEntry): HTMLElement {
     const thumb = document.createElement('div');
     thumb.className = TEXTURE_BROWSER_THUMB_CLASS;
-    thumb.dataset.previewThumb = 'true';
+    thumb.dataset['previewThumb'] = 'true';
     thumb.setAttribute('role', 'img');
     thumb.setAttribute('aria-label', entry.displayName);
     const safeUrl = entry.previewObjectUrl.replace(/"/g, '\\"');

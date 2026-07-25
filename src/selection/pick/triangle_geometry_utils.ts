@@ -207,7 +207,7 @@ function buildPositionEdgeAdjacency(
     if (faceList.length < 2) continue;
     for (let i = 0; i < faceList.length; i++) {
       for (let j = i + 1; j < faceList.length; j++) {
-        addAdjacencyEdge(adjacency, faceList[i], faceList[j]);
+        addAdjacencyEdge(adjacency, faceList[i]!, faceList[j]!);
       }
     }
   }

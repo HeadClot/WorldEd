@@ -20,10 +20,10 @@ describe('OrthoPanHandler', () => {
     canvas.addEventListener('pointermove', () => {
       moveHandled++;
     });
-    canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, offsetX: 0, offsetY: 0, pointerId: 1 }));
-    canvas.dispatchEvent(new PointerEvent('pointermove', { button: 0, offsetX: 100, offsetY: 100, pointerId: 1 }));
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, pointerId: 1 }));
+    canvas.dispatchEvent(new PointerEvent('pointermove', { button: 0, pointerId: 1 }));
     expect(moveHandled).toBe(1);
-    canvas.dispatchEvent(new PointerEvent('pointerup', { button: 2, offsetX: 100, offsetY: 100, pointerId: 1 }));
+    canvas.dispatchEvent(new PointerEvent('pointerup', { button: 2, pointerId: 1 }));
   });
 
   it('should trigger zoom callback on wheel event', () => {
@@ -51,11 +51,11 @@ describe('OrthoPanHandler', () => {
     const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
     const zoomCallback = vi.fn();
     (canvas as any).requestPointerLock = () => {
-      document.pointerLockElement = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
       document.dispatchEvent(new Event('pointerlockchange'));
     };
     const exitLockSpy = vi.fn(() => {
-      document.pointerLockElement = null;
+      Object.defineProperty(document, 'pointerLockElement', { value: null, configurable: true });
       document.dispatchEvent(new Event('pointerlockchange'));
     });
     (document as any).exitPointerLock = exitLockSpy;
@@ -73,14 +73,14 @@ describe('OrthoPanHandler', () => {
     camera.position.set(0, 0, 10);
     const zoomCallback = vi.fn();
     (canvas as any).requestPointerLock = () => {
-      document.pointerLockElement = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
     };
     new OrthoPanHandler(canvas, camera, zoomCallback);
     canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, pointerId: 1 }));
     const initialPosition = camera.position.clone();
     canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 10, movementY: 0, pointerId: 1 }));
     expect(camera.position.distanceTo(initialPosition)).toBeGreaterThan(0.001);
-    document.pointerLockElement = null;
+    Object.defineProperty(document, 'pointerLockElement', { value: null, configurable: true });
     document.dispatchEvent(new Event('pointerlockchange'));
     const positionAfterLockLoss = camera.position.clone();
     canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 10, movementY: 0, pointerId: 1 }));

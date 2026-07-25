@@ -115,7 +115,7 @@ describe('TextureLockSettings', () => {
     const finalUvs = cloneUvArray(finalOnly);
     expect(steppedUvs.length).toBe(finalUvs.length);
     for (let index = 0; index < steppedUvs.length; index++) {
-      expect(steppedUvs[index]).toBeCloseTo(finalUvs[index], 4);
+      expect(steppedUvs[index]!).toBeCloseTo(finalUvs[index]!, 4);
     }
   });
 
@@ -133,7 +133,7 @@ describe('TextureLockSettings', () => {
     const uvAfterUnlock = cloneUvArray(mesh);
     expect(uvAfterUnlock.length).toBe(uvAfterStretch.length);
     for (let index = 0; index < uvAfterStretch.length; index++) {
-      expect(uvAfterUnlock[index]).toBeCloseTo(uvAfterStretch[index], 2);
+      expect(uvAfterUnlock[index]!).toBeCloseTo(uvAfterStretch[index]!, 2);
     }
   });
 
@@ -143,8 +143,8 @@ describe('TextureLockSettings', () => {
     initializeMeshTextureUVs(mesh);
     const maps = getFaceTextureMaps(mesh);
     expect(maps.length).toBeGreaterThan(0);
-    maps[0].mapping.scaleU = 2;
-    maps[0].mapping.scaleV = 1;
+    maps[0]!.mapping.scaleU = 2;
+    maps[0]!.mapping.scaleV = 1;
     setFaceTextureMaps(mesh, maps);
     rebakeStoredFaceTextureMaps(mesh);
     const uvAuthored = cloneUvArray(mesh);
@@ -164,7 +164,7 @@ describe('TextureLockSettings', () => {
     settings.rebakeMeshesIfLocked([mesh]);
     const uvAfterSecondUnlock = cloneUvArray(mesh);
     for (let index = 0; index < uvBeforeSecondUnlock.length; index++) {
-      expect(uvAfterSecondUnlock[index]).toBeCloseTo(uvBeforeSecondUnlock[index], 2);
+      expect(uvAfterSecondUnlock[index]!).toBeCloseTo(uvBeforeSecondUnlock[index]!, 2);
     }
     expect(contentMeshMappingsMatchCurrentUvs(mesh)).toBe(true);
     expect(maxAbsUvComponent(mesh, 0)).toBeGreaterThan(maxAbsFromArray(uvAuthored, 0) * 0.5);
@@ -221,7 +221,7 @@ function maxAbsUvComponent(mesh: THREE.Mesh, component: number): number {
 function maxAbsFromArray(values: number[], component: number): number {
   let maxAbs = 0;
   for (let index = component; index < values.length; index += 2) {
-    maxAbs = Math.max(maxAbs, Math.abs(values[index]));
+    maxAbs = Math.max(maxAbs, Math.abs(values[index]!));
   }
   return maxAbs;
 }

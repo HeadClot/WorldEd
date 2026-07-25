@@ -43,9 +43,9 @@ function removeCollinearRingPoints(ordered: THREE.Vector3[], planeNormal: THREE.
   if (ordered.length <= 3) return ordered.slice();
   const kept: THREE.Vector3[] = [];
   for (let index = 0; index < ordered.length; index++) {
-    const prev = ordered[(index - 1 + ordered.length) % ordered.length];
-    const current = ordered[index];
-    const next = ordered[(index + 1) % ordered.length];
+    const prev = ordered[(index - 1 + ordered.length) % ordered.length]!;
+    const current = ordered[index]!;
+    const next = ordered[(index + 1) % ordered.length]!;
     if (isAlmostCollinear(prev, current, next, planeNormal)) continue;
     kept.push(current);
   }
@@ -147,8 +147,8 @@ function collectPolygonEdgeIntersections(
   const vertices = polygon.getVertices();
   for (let index = 0; index < vertices.length; index++) {
     const nextIndex = (index + 1) % vertices.length;
-    const start = vertices[index];
-    const end = vertices[nextIndex];
+    const start = vertices[index]!;
+    const end = vertices[nextIndex]!;
     const startDistance = planeNormal.dot(start) - planeConstant;
     const endDistance = planeNormal.dot(end) - planeConstant;
     addOnPlaneVertex(start, startDistance, unique);

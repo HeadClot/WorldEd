@@ -14,7 +14,7 @@ describe('Solid live rebuild performance', () => {
   it('keeps partial recompile small when moving one brush in a 256 grid', () => {
     const model = buildGridModel(256, 4, 2);
     const brushes = model.getBrushes();
-    const mover = brushes[0];
+    const mover = brushes[0]!;
     mover.position.x += 0.15;
     mover.pushTransformToMesh();
     model.syncBrushesFromScene();
@@ -30,7 +30,7 @@ describe('Solid live rebuild performance', () => {
   it('stays interactive when dragging a brush among 400 packed walls', () => {
     const model = buildGridModel(400, 2.05, 2);
     const brushes = model.getBrushes();
-    const mover = brushes[Math.floor(brushes.length / 2)];
+    const mover = brushes[Math.floor(brushes.length / 2)]!;
     let worst = 0;
     for (let step = 0; step < 8; step++) {
       mover.position.x += 0.05;
@@ -47,16 +47,16 @@ describe('Solid live rebuild performance', () => {
 
   it('matches full rebuild after live moves that change contact topology', () => {
     const model = buildGridModel(64, 3, 2);
-    const mover = model.getBrushes()[0];
+    const mover = model.getBrushes()[0]!;
     mover.position.set(1.5, 0, 0);
     mover.pushTransformToMesh();
     model.syncBrushesFromScene();
     model.rebuildLive();
-    const liveSources = model.getResultMesh().userData.solidTriangleSources as Array<{
+    const liveSources = model.getResultMesh().userData['solidTriangleSources'] as Array<{
       brushId: string;
     }>;
     model.rebuild(true);
-    const fullSources = model.getResultMesh().userData.solidTriangleSources as Array<{
+    const fullSources = model.getResultMesh().userData['solidTriangleSources'] as Array<{
       brushId: string;
     }>;
     expect(liveSources.length).toBe(fullSources.length);
@@ -79,7 +79,7 @@ describe('BrushSpatialIndex', () => {
     const hits = index.queryPoint(new THREE.Vector3(0, 0, 0));
     expect(hits).toContain(0);
     expect(hits.length).toBeLessThan(5);
-    const overlaps = index.queryBounds(entries[0].bounds, 0);
+    const overlaps = index.queryBounds(entries[0]!.bounds, 0);
     expect(overlaps.length).toBe(0);
   });
 });

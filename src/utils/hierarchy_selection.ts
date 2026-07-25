@@ -24,7 +24,7 @@ export function collapseToHierarchyRoots(objects: THREE.Object3D[]): THREE.Objec
  */
 export function findCommonParent(objects: THREE.Object3D[], worldRoot: THREE.Object3D): THREE.Object3D {
   if (objects.length === 0) return worldRoot;
-  let ancestor: THREE.Object3D | null = objects[0].parent;
+  let ancestor: THREE.Object3D | null = objects[0]!.parent;
   while (ancestor) {
     if (objects.every((object) => isUnderOrEqual(object, ancestor!))) {
       return ancestor;

@@ -171,14 +171,14 @@ describe('mergeCoincidentVertices', () => {
     const vertexA = 0;
     const vertexB = 3;
     const distBefore = Math.sqrt(
-      (originalPositions[vertexA * 3] - originalPositions[vertexB * 3]) ** 2 +
-        (originalPositions[vertexA * 3 + 1] - originalPositions[vertexB * 3 + 1]) ** 2 +
-        (originalPositions[vertexA * 3 + 2] - originalPositions[vertexB * 3 + 2]) ** 2,
+      (originalPositions[vertexA * 3]! - originalPositions[vertexB * 3]!) ** 2 +
+        (originalPositions[vertexA * 3 + 1]! - originalPositions[vertexB * 3 + 1]!) ** 2 +
+        (originalPositions[vertexA * 3 + 2]! - originalPositions[vertexB * 3 + 2]!) ** 2,
     );
     const distAfter = Math.sqrt(
-      (newPositions[vertexA * 3] - newPositions[vertexB * 3]) ** 2 +
-        (newPositions[vertexA * 3 + 1] - newPositions[vertexB * 3 + 1]) ** 2 +
-        (newPositions[vertexA * 3 + 2] - newPositions[vertexB * 3 + 2]) ** 2,
+      (newPositions[vertexA * 3]! - newPositions[vertexB * 3]!) ** 2 +
+        (newPositions[vertexA * 3 + 1]! - newPositions[vertexB * 3 + 1]!) ** 2 +
+        (newPositions[vertexA * 3 + 2]! - newPositions[vertexB * 3 + 2]!) ** 2,
     );
     expect(distAfter).toBeCloseTo(0);
     expect(distBefore).toBeGreaterThan(0);
@@ -189,9 +189,9 @@ describe('mergeCoincidentVertices', () => {
     const newGeometry = mergeCoincidentVertices(geometry, 0.01);
     const originalPositions = geometry.getAttribute('position').array;
     const newPositions = newGeometry.getAttribute('position').array;
-    expect(newPositions[3]).toBeCloseTo(originalPositions[3]);
-    expect(newPositions[4]).toBeCloseTo(originalPositions[4]);
-    expect(newPositions[5]).toBeCloseTo(originalPositions[5]);
+    expect(newPositions[3]!).toBeCloseTo(originalPositions[3]!);
+    expect(newPositions[4]!).toBeCloseTo(originalPositions[4]!);
+    expect(newPositions[5]!).toBeCloseTo(originalPositions[5]!);
   });
 
   it('should return geometry with same vertex count', () => {

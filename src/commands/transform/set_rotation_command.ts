@@ -27,25 +27,27 @@ export class SetRotationCommand implements UndoCommand {
     this.snapshots = [];
     this.newRotations = [];
     for (let i = 0; i < objects.length; i++) {
+      const object = objects[i]!;
       this.snapshots.push({
-        object: objects[i],
-        rotation: objects[i].rotation.clone(),
+        object,
+        rotation: object.rotation.clone(),
       });
-      this.newRotations.push(newRotations[i].clone());
+      this.newRotations.push(newRotations[i]!.clone());
     }
   }
 
   /** Executes the command by setting each object's rotation to its new value. */
   execute(): void {
     for (let i = 0; i < this.snapshots.length; i++) {
-      this.snapshots[i].object.rotation.copy(this.newRotations[i]);
+      this.snapshots[i]!.object.rotation.copy(this.newRotations[i]!);
     }
   }
 
   /** Undoes the command by restoring each object's original rotation. */
   undo(): void {
     for (let i = 0; i < this.snapshots.length; i++) {
-      this.snapshots[i].object.rotation.copy(this.snapshots[i].rotation);
+      const snapshot = this.snapshots[i]!;
+      snapshot.object.rotation.copy(snapshot.rotation);
     }
   }
 }

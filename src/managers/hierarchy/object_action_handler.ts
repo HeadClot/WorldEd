@@ -11,7 +11,6 @@ import { SelectionManager } from '../../selection/object/selection_manager.js';
 import { collapseToHierarchyRoots, findCommonParent } from '../../utils/hierarchy_selection.js';
 import { filterUnlockedObjects, isObjectOrAncestorLocked } from '../../utils/object_lock.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
-import { SolidModel } from '../../solid/model/solid_model.js';
 
 /** Callback invoked to sync scene state to all viewports. */
 export type SyncViewportsCallback = () => void;

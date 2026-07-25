@@ -107,7 +107,7 @@ export class SolidMembershipEvaluator {
     candidates.sort((a, b) => a - b);
     let inside = false;
     for (const index of candidates) {
-      const entry = prepared[index];
+      const entry = prepared[index]!;
       const inBrush = BrushMembership.isInsidePlanes(point, entry.brush.planes, this.membershipEpsilon);
       inside = this.applyOperation(inside, inBrush, entry.operation);
     }
@@ -124,7 +124,7 @@ export class SolidMembershipEvaluator {
   collectContainingBrushIndices(point: THREE.Vector3, prepared: PreparedBrush[]): number[] {
     const indices: number[] = [];
     for (let index = 0; index < prepared.length; index++) {
-      if (this.boundsContainPoint(prepared[index].bounds, point)) {
+      if (this.boundsContainPoint(prepared[index]!.bounds, point)) {
         indices.push(index);
       }
     }

@@ -136,7 +136,7 @@ export class SettingsKeyboardTab {
       () => undefined,
     );
     input.readOnly = true;
-    input.dataset.settingsField = `keyboard-shortcut-${action}`;
+    input.dataset['settingsField'] = `keyboard-shortcut-${action}`;
     input.addEventListener('keydown', (event) => this.captureShortcut(event, action));
     return createSettingsControlRow(label, input);
   }
@@ -167,7 +167,7 @@ export class SettingsKeyboardTab {
     input.readOnly = true;
     input.tabIndex = -1;
     input.setAttribute('aria-readonly', 'true');
-    input.dataset.settingsReminder = `keyboard-reminder-${id}`;
+    input.dataset['settingsReminder'] = `keyboard-reminder-${id}`;
     return createSettingsControlRow(label, input);
   }
 

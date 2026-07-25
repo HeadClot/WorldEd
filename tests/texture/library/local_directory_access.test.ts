@@ -9,18 +9,18 @@ import {
 describe('local_directory_access', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    delete (window as { showDirectoryPicker?: unknown }).showDirectoryPicker;
+    delete (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker;
   });
 
   it('should report File System Access support from showDirectoryPicker', () => {
     const access = new FileSystemAccessDirectoryAccess();
     expect(access.isSupported()).toBe(false);
-    (window as { showDirectoryPicker?: () => Promise<never> }).showDirectoryPicker = vi.fn();
+    (window as unknown as { showDirectoryPicker?: () => Promise<never> }).showDirectoryPicker = vi.fn();
     expect(access.isSupported()).toBe(true);
   });
 
   it('should return null when the directory picker is cancelled', async () => {
-    (window as { showDirectoryPicker?: () => Promise<never> }).showDirectoryPicker = vi
+    (window as unknown as { showDirectoryPicker?: () => Promise<never> }).showDirectoryPicker = vi
       .fn()
       .mockRejectedValue(new DOMException('Aborted', 'AbortError'));
     const access = new FileSystemAccessDirectoryAccess();
@@ -45,7 +45,7 @@ describe('local_directory_access', () => {
     const listing = buildListingFromFileList(fileList);
     expect(listing?.folderName).toBe('Textures');
     expect(listing?.files).toHaveLength(2);
-    expect(listing?.files[1].relativePath).toBe('Textures/sub/b.png');
+    expect(listing?.files[1]!.relativePath).toBe('Textures/sub/b.png');
   });
 
   it('should return null for an empty FileList', () => {

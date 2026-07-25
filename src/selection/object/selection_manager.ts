@@ -47,7 +47,7 @@ export class SelectionManager {
     if (this.isSameSelection(meshes)) return;
     this.selectedObjects.clear();
     meshes.forEach((mesh) => this.selectedObjects.add(mesh));
-    this.lastSelectedMesh = meshes.length > 0 ? meshes[meshes.length - 1] : null;
+    this.lastSelectedMesh = meshes.length > 0 ? meshes[meshes.length - 1]! : null;
     this.notifyChange();
   }
 
@@ -156,7 +156,7 @@ export class SelectionManager {
     this.selectedObjects.clear();
     survivors.forEach((mesh) => this.selectedObjects.add(mesh));
     if (!this.lastSelectedMesh || !this.selectedObjects.has(this.lastSelectedMesh)) {
-      this.lastSelectedMesh = survivors.length > 0 ? survivors[survivors.length - 1] : null;
+      this.lastSelectedMesh = survivors.length > 0 ? survivors[survivors.length - 1]! : null;
     }
     this.notifyChange();
     return true;

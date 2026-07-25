@@ -90,17 +90,17 @@ export class SettingsGamesTab {
       this.store.addGameProfile();
     });
     addButton.setAttribute('aria-label', 'Add game profile');
-    addButton.dataset.settingsAction = 'add-game-profile';
+    addButton.dataset['settingsAction'] = 'add-game-profile';
     row.appendChild(addButton);
     const loadButton = createSettingsSecondaryButton('Load Game Profile', () => {
       void this.loadGameProfile();
     });
-    loadButton.dataset.settingsAction = 'load-game-profile';
+    loadButton.dataset['settingsAction'] = 'load-game-profile';
     row.appendChild(loadButton);
     const saveButton = createSettingsSecondaryButton('Save Game Profile', () => {
       void this.saveGameProfile();
     });
-    saveButton.dataset.settingsAction = 'save-game-profile';
+    saveButton.dataset['settingsAction'] = 'save-game-profile';
     row.appendChild(saveButton);
     return row;
   }
@@ -158,8 +158,8 @@ export class SettingsGamesTab {
     const item = document.createElement('button');
     item.type = 'button';
     item.textContent = profile.name;
-    item.dataset.profileId = profile.id;
-    item.dataset.settingsAction = 'select-game-profile';
+    item.dataset['profileId'] = profile.id;
+    item.dataset['settingsAction'] = 'select-game-profile';
     this.styleProfileListItem(item, profile.id === activeId);
     item.addEventListener('click', () => {
       this.store.setActiveGameProfileId(profile.id);
@@ -254,7 +254,7 @@ export class SettingsGamesTab {
     const select = createSettingsSelect(options, profile.unitSystem, (value) => {
       this.store.setGameProfileUnitSystem(profile.id, value as UnitSystem);
     });
-    select.dataset.settingsField = 'unit-system';
+    select.dataset['settingsField'] = 'unit-system';
     return createSettingsControlRow('System', select);
   }
 
@@ -273,7 +273,7 @@ export class SettingsGamesTab {
     const select = createSettingsSelect(options, selected, (value) => {
       this.applyLengthUnit(profile, value);
     });
-    select.dataset.settingsField = 'length-unit';
+    select.dataset['settingsField'] = 'length-unit';
     return createSettingsControlRow('Unit', select);
   }
 
@@ -305,7 +305,7 @@ export class SettingsGamesTab {
     const button = createSettingsSecondaryButton('Remove Profile', () => {
       this.store.removeGameProfile(profile.id);
     });
-    button.dataset.settingsAction = 'remove-game-profile';
+    button.dataset['settingsAction'] = 'remove-game-profile';
     return createSettingsControlRow('Manage', button);
   }
 }

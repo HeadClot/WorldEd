@@ -185,7 +185,7 @@ export class CommandStack {
    */
   peekUndo(): UndoCommand | null {
     if (this.undoStack.length === 0) return null;
-    return this.undoStack[this.undoStack.length - 1];
+    return this.undoStack[this.undoStack.length - 1] ?? null;
   }
 
   /**

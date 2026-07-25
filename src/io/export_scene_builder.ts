@@ -55,15 +55,15 @@ export function shouldOmitFromExport(object: THREE.Object3D): boolean {
   if (isSolidBrushEdge(object)) return true;
   if (object.userData[DECORATIVE_EDGE_USERDATA_KEY] === true) return true;
   if (object.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true) return true;
-  if (object.userData.isSelectionHighlight === true) return true;
-  if (object.userData.isWireframeOverlay === true) return true;
-  if (object.userData.isFaceSelectionHighlight === true) return true;
-  if (object.userData.isClipPlanePreview === true) return true;
-  if (object.userData.isBoundsGuideLines === true) return true;
-  if (object.userData.isGizmoOccludedGhost === true) return true;
-  if (object.userData.isBoundsFacePick === true) return true;
-  if (object.userData.isCadRuler === true) return true;
-  if (object.userData.isSolidBrushPreview === true) return true;
+  if (object.userData['isSelectionHighlight'] === true) return true;
+  if (object.userData['isWireframeOverlay'] === true) return true;
+  if (object.userData['isFaceSelectionHighlight'] === true) return true;
+  if (object.userData['isClipPlanePreview'] === true) return true;
+  if (object.userData['isBoundsGuideLines'] === true) return true;
+  if (object.userData['isGizmoOccludedGhost'] === true) return true;
+  if (object.userData['isBoundsFacePick'] === true) return true;
+  if (object.userData['isCadRuler'] === true) return true;
+  if (object.userData['isSolidBrushPreview'] === true) return true;
   return false;
 }
 

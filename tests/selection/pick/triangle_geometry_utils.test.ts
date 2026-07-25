@@ -33,8 +33,8 @@ describe('triangle_geometry_utils', () => {
   it('should produce matching normals for both coplanar box face triangles', () => {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const coplanar = findCoplanarFaceIndices(geometry, 0);
-    const n0 = computeTriangleNormal(geometry, coplanar[0]);
-    const n1 = computeTriangleNormal(geometry, coplanar[1]);
+    const n0 = computeTriangleNormal(geometry, coplanar[0]!);
+    const n1 = computeTriangleNormal(geometry, coplanar[1]!);
     expect(Math.abs(n0.dot(n1))).toBeCloseTo(1, 4);
   });
 

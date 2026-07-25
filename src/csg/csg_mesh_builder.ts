@@ -189,9 +189,12 @@ export class CsgMeshBuilder {
       const vertices = polygon.getVertices();
       const mapping = polygon.getSurfaceMapping() ?? cloneFaceTextureMapping(fallback);
       for (let i = 1; i + 1 < vertices.length; i++) {
-        positions.push(vertices[0].x, vertices[0].y, vertices[0].z);
-        positions.push(vertices[i].x, vertices[i].y, vertices[i].z);
-        positions.push(vertices[i + 1].x, vertices[i + 1].y, vertices[i + 1].z);
+        const first = vertices[0]!;
+        const second = vertices[i]!;
+        const third = vertices[i + 1]!;
+        positions.push(first.x, first.y, first.z);
+        positions.push(second.x, second.y, second.z);
+        positions.push(third.x, third.y, third.z);
         triangleMappings.push(cloneFaceTextureMapping(mapping));
       }
     });
@@ -261,7 +264,7 @@ export class CsgMeshBuilder {
       byMapping.set(key, [triangleIndex]);
     });
     byMapping.forEach((triangleIndices) => {
-      const sampleIndex = triangleIndices[0];
+      const sampleIndex = triangleIndices[0]!;
       const mapping = triangleMappings[sampleIndex] ?? cloneFaceTextureMapping(fallback);
       entries.push({
         triangleIndices: triangleIndices.slice().sort((a, b) => a - b),

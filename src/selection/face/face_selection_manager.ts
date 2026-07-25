@@ -278,8 +278,8 @@ export class FaceSelectionManager {
   private didSelectionChange(previous: FaceSelection[], next: FaceSelection[]): boolean {
     if (previous.length !== next.length) return true;
     for (let index = 0; index < previous.length; index++) {
-      const before = previous[index];
-      const after = next[index];
+      const before = previous[index]!;
+      const after = next[index]!;
       if (before.mesh !== after.mesh) return true;
       if (before.faceIndex !== after.faceIndex) return true;
       if ((before.regionKey ?? '') !== (after.regionKey ?? '')) return true;

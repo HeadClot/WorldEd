@@ -13,7 +13,6 @@ import { TransformGizmo } from '../../transform/gizmo/transform_gizmo.js';
 import { GizmoRaycaster } from '../../transform/gizmo/gizmo_raycaster.js';
 import { TransformExecutor } from '../../transform/transform_executor.js';
 import { TransformHandler } from '../../transform/transform_handler.js';
-import { TransformConstraint } from '../../transform/transform_constraint.js';
 import { GridSnap } from '../../transform/snap/grid_snap.js';
 import { SnapManager } from '../../transform/snap/snap_manager.js';
 import { TransformMode } from '../../types/transform_mode.js';
@@ -58,7 +57,7 @@ import { applyTransformModeUi } from './layout_transform_mode_ui.js';
 import {
   createOutlinerShellActions,
   createToolbarShellActions,
-  LayoutShellActionSource,
+  type LayoutShellActionSource,
 } from './layout_shell_action_builders.js';
 import { setupUvEditorPanel } from './layout_uv_editor_setup.js';
 import { setupTextureBrowserPanel } from './layout_texture_browser_setup.js';
@@ -127,7 +126,6 @@ export class ViewportLayoutManager {
   private userSnapEnabled!: boolean;
   private transformSpace!: TransformSpace;
   private snapManager!: SnapManager;
-  private transformConstraint!: TransformConstraint;
   private commandStack!: CommandStack;
   private statusBar!: StatusBar | null;
   private viewportSyncManager!: ViewportSyncManager;
@@ -254,28 +252,28 @@ export class ViewportLayoutManager {
         scene: this.viewport2DTop.getScene(),
         camera: this.viewport2DTop.getCamera(),
         renderer: this.viewport2DTop.getRenderer(),
-        container: this.viewports[0],
+        container: this.viewports[0]!,
         viewPlane: 'xz',
       },
       {
         scene: this.viewport2DFront.getScene(),
         camera: this.viewport2DFront.getCamera(),
         renderer: this.viewport2DFront.getRenderer(),
-        container: this.viewports[1],
+        container: this.viewports[1]!,
         viewPlane: 'xy',
       },
       {
         scene: this.viewport2DSide.getScene(),
         camera: this.viewport2DSide.getCamera(),
         renderer: this.viewport2DSide.getRenderer(),
-        container: this.viewports[2],
+        container: this.viewports[2]!,
         viewPlane: 'yz',
       },
       {
         scene: this.viewport3D.getScene(),
         camera: this.viewport3D.getCamera(),
         renderer: this.viewport3D.getRenderer(),
-        container: this.viewports[3],
+        container: this.viewports[3]!,
         viewPlane: 'xyz',
       },
     ]);
@@ -384,7 +382,7 @@ export class ViewportLayoutManager {
       clipPlaneTool: this.clipPlaneTool,
       faceModeCoordinator: this.faceModeCoordinator,
       toolbarContainer: this.toolbarContainer,
-      anchorViewport: this.viewports[3],
+      anchorViewport: this.viewports[3]!,
       viewport3D: this.viewport3D,
       viewport2DTop: this.viewport2DTop,
       viewport2DFront: this.viewport2DFront,
@@ -450,7 +448,7 @@ export class ViewportLayoutManager {
       selectionManager: this.selectionManager,
       propertiesPanel: this.propertiesPanel,
       toolbarContainer: this.toolbarContainer,
-      solidPanelAnchor: this.viewports[3],
+      solidPanelAnchor: this.viewports[3]!,
       viewportSyncManager: this.viewportSyncManager,
       viewport3D: this.viewport3D,
       gridSnap: this.gridSnap,
@@ -540,7 +538,7 @@ export class ViewportLayoutManager {
    * @returns Outliner action callback bundle.
    */
   private createOutlinerActions() {
-    return createOutlinerShellActions(this as unknown as LayoutShellActionSource);
+    return createOutlinerShellActions(this.buildShellActionSource());
   }
 
   /**
@@ -549,7 +547,172 @@ export class ViewportLayoutManager {
    * @returns Toolbar action callback bundle.
    */
   private createToolbarActions() {
-    return createToolbarShellActions(this as unknown as LayoutShellActionSource);
+    return createToolbarShellActions(this.buildShellActionSource());
+  }
+
+  /**
+   * Builds a late-bound shell action source so handlers may be wired after the
+   * shell.
+   *
+   * @returns Layout shell action surface.
+   */
+  private buildShellActionSource(): LayoutShellActionSource {
+    return {
+      ...this.buildShellCoreFields(),
+      ...this.buildShellHandlerFields(),
+      ...this.buildShellPanelCallbacks(),
+      ...this.buildShellEditCallbacks(),
+      ...this.buildShellIoCallbacks(),
+    };
+  }
+
+  /**
+   * Late-bound core manager fields for shell actions.
+   *
+   * @returns Core field getters.
+   */
+  private buildShellCoreFields(): Pick<
+    LayoutShellActionSource,
+    | 'selectionManager'
+    | 'commandStack'
+    | 'hierarchyReparentHandler'
+    | 'outlinerPanel'
+    | 'textureLock'
+    | 'userSnapEnabled'
+  > {
+    const layout = this;
+    return {
+      get selectionManager() {
+        return layout.selectionManager;
+      },
+      get commandStack() {
+        return layout.commandStack;
+      },
+      get hierarchyReparentHandler() {
+        return layout.hierarchyReparentHandler;
+      },
+      get outlinerPanel() {
+        return layout.outlinerPanel;
+      },
+      get textureLock() {
+        return layout.textureLock;
+      },
+      get userSnapEnabled() {
+        return layout.userSnapEnabled;
+      },
+    };
+  }
+
+  /**
+   * Late-bound action handler fields for shell actions.
+   *
+   * @returns Handler field getters.
+   */
+  private buildShellHandlerFields(): Pick<
+    LayoutShellActionSource,
+    | 'objectActionHandler'
+    | 'primitiveCreationHandler'
+    | 'csgActionHandler'
+    | 'alignmentHandler'
+    | 'snapSettingsController'
+  > {
+    const layout = this;
+    return {
+      get objectActionHandler() {
+        return layout.objectActionHandler;
+      },
+      get primitiveCreationHandler() {
+        return layout.primitiveCreationHandler;
+      },
+      get csgActionHandler() {
+        return layout.csgActionHandler;
+      },
+      get alignmentHandler() {
+        return layout.alignmentHandler;
+      },
+      get snapSettingsController() {
+        return layout.snapSettingsController;
+      },
+    };
+  }
+
+  /**
+   * Panel/toggle callbacks for shell actions.
+   *
+   * @returns Panel-related callbacks.
+   */
+  private buildShellPanelCallbacks(): Pick<
+    LayoutShellActionSource,
+    | 'refreshOutliner'
+    | 'syncPrimitivesToViewports'
+    | 'showStatusMessage'
+    | 'onSelectionChanged'
+    | 'onToggleUvEditor'
+    | 'onToggleTextureBrowser'
+    | 'onToggleToolsPalette'
+    | 'onToggleSolidModelPanel'
+    | 'onToggleSettingsDialog'
+    | 'onOpenAboutDialog'
+  > {
+    return {
+      refreshOutliner: () => this.refreshOutliner(),
+      syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
+      showStatusMessage: (message) => this.showStatusMessage(message),
+      onSelectionChanged: () => this.onSelectionChanged(),
+      onToggleUvEditor: () => this.onToggleUvEditor(),
+      onToggleTextureBrowser: () => this.onToggleTextureBrowser(),
+      onToggleToolsPalette: () => this.onToggleToolsPalette(),
+      onToggleSolidModelPanel: () => this.onToggleSolidModelPanel(),
+      onToggleSettingsDialog: () => this.onToggleSettingsDialog(),
+      onOpenAboutDialog: () => this.onOpenAboutDialog(),
+    };
+  }
+
+  /**
+   * Edit/history/create callbacks for shell actions.
+   *
+   * @returns Edit-related callbacks.
+   */
+  private buildShellEditCallbacks(): Pick<
+    LayoutShellActionSource,
+    | 'onAddTerrain'
+    | 'onAddSolidModel'
+    | 'onUndo'
+    | 'onRedo'
+    | 'onDeleteSelected'
+    | 'onGroupSelected'
+    | 'onSetTransformSpaceGlobal'
+    | 'onSetTransformSpaceLocal'
+    | 'isTransformSpaceLocal'
+  > {
+    return {
+      onAddTerrain: () => this.onAddTerrain(),
+      onAddSolidModel: () => this.onAddSolidModel(),
+      onUndo: () => this.onUndo(),
+      onRedo: () => this.onRedo(),
+      onDeleteSelected: () => this.onDeleteSelected(),
+      onGroupSelected: () => this.onGroupSelected(),
+      onSetTransformSpaceGlobal: () => this.onSetTransformSpaceGlobal(),
+      onSetTransformSpaceLocal: () => this.onSetTransformSpaceLocal(),
+      isTransformSpaceLocal: () => this.isTransformSpaceLocal(),
+    };
+  }
+
+  /**
+   * Scene I/O callbacks for shell actions.
+   *
+   * @returns Save/load/import/export callbacks.
+   */
+  private buildShellIoCallbacks(): Pick<
+    LayoutShellActionSource,
+    'onSaveScene' | 'onLoadScene' | 'onImportVmf' | 'onExportGlb'
+  > {
+    return {
+      onSaveScene: () => this.onSaveScene(),
+      onLoadScene: () => this.onLoadScene(),
+      onImportVmf: () => this.onImportVmf(),
+      onExportGlb: () => this.onExportGlb(),
+    };
   }
 
   /** Handles deletion of selected objects, preferring outliner hierarchy roots. */
@@ -639,7 +802,7 @@ export class ViewportLayoutManager {
       faceController: this.faceModeCoordinator.getFaceExtrusionController(),
       commandStack: this.commandStack,
       toolbarContainer: this.toolbarContainer,
-      anchorViewport: this.viewports[3],
+      anchorViewport: this.viewports[3]!,
       statusBar: this.statusBar,
       afterSurfaceChange: () => this.refreshShadingAfterSurfaceEdit(),
     });
@@ -663,7 +826,7 @@ export class ViewportLayoutManager {
       faceController: this.faceModeCoordinator.getFaceExtrusionController(),
       commandStack: this.commandStack,
       toolbarContainer: this.toolbarContainer,
-      anchorViewport: this.viewports[3],
+      anchorViewport: this.viewports[3]!,
       statusBar: this.statusBar,
       afterSurfaceChange: () => this.refreshShadingAfterSurfaceEdit(),
     });
@@ -1031,7 +1194,7 @@ export class ViewportLayoutManager {
   private resizeAll(): void {
     const allViewports = [this.viewport2DTop, this.viewport2DFront, this.viewport2DSide, this.viewport3D];
     allViewports.forEach((vp, index) => {
-      const rect = this.viewports[index].getBoundingClientRect();
+      const rect = this.viewports[index]!.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
         vp.resize(rect.width, rect.height);
       }
@@ -1107,6 +1270,24 @@ export class ViewportLayoutManager {
    * @returns An object containing references to editor subsystems.
    */
   getComponentsForTesting(): object {
-    return buildLayoutTestComponents(this);
+    return buildLayoutTestComponents({
+      viewport3D: this.viewport3D,
+      viewport2DTop: this.viewport2DTop,
+      viewport2DFront: this.viewport2DFront,
+      viewport2DSide: this.viewport2DSide,
+      selectionManager: this.selectionManager,
+      primitiveTool: this.primitiveTool,
+      toolbar: this.toolbar,
+      outlinerPanel: this.outlinerPanel,
+      transformGizmo: this.transformGizmo,
+      transformHandler: this.transformHandler,
+      gridSnap: this.gridSnap,
+      propertiesPanel: this.propertiesPanel,
+      transformExecutor: this.transformExecutor,
+      commandStack: this.commandStack,
+      statusBar: this.statusBar,
+      faceModeCoordinator: this.faceModeCoordinator,
+      cadRulerSystem: this.cadRulerSystem,
+    });
   }
 }

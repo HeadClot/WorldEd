@@ -57,11 +57,11 @@ export class SolidFragmentRouter {
     subjectIndex: number,
   ): SurfaceCategory {
     let category = SurfaceCategory.Outside;
-    const subject = prepared[subjectIndex];
+    const subject = prepared[subjectIndex]!;
     const overlapSet = new Set(subject.overlappingPeerIndices);
     overlapSet.add(subjectIndex);
     for (let index = 0; index < prepared.length; index++) {
-      const peer = prepared[index];
+      const peer = prepared[index]!;
       const relative = this.relativeCategoryForPeer(fragment, normal, peer, index, subjectIndex, overlapSet);
       category = CategoryRouter.route(category, relative, peer.operation);
     }
@@ -84,10 +84,10 @@ export class SolidFragmentRouter {
     subjectIndex: number,
   ): SurfaceCategory {
     let category = SurfaceCategory.Outside;
-    const subject = prepared[subjectIndex];
+    const subject = prepared[subjectIndex]!;
     const relevant = subject.overlappingPeerIndices.concat(subjectIndex).sort((a, b) => a - b);
     for (const index of relevant) {
-      category = this.routeOneLocalPeer(category, fragment, normal, prepared[index], index, subjectIndex);
+      category = this.routeOneLocalPeer(category, fragment, normal, prepared[index]!, index, subjectIndex);
     }
     return category;
   }

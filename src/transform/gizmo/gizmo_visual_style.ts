@@ -82,9 +82,9 @@ export function createGizmoOccludedMaterial(color: number): THREE.MeshBasicMater
 export function createGizmoOccludedMesh(geometry: THREE.BufferGeometry, color: number, handleId?: number): THREE.Mesh {
   const mesh = new THREE.Mesh(geometry, createGizmoOccludedMaterial(color));
   mesh.renderOrder = GizmoVisualStyle.occludedRenderOrder;
-  mesh.userData.isGizmoOccludedGhost = true;
+  mesh.userData['isGizmoOccludedGhost'] = true;
   if (handleId !== undefined) {
-    mesh.userData.handleId = handleId;
+    mesh.userData['handleId'] = handleId;
   }
   return mesh;
 }

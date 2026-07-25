@@ -232,12 +232,12 @@ export class SelectionHighlight {
   private disposeOutlineGroup(mesh: THREE.Mesh, outlineGroup: THREE.Group): void {
     mesh.remove(outlineGroup);
     let sharedGeometry: THREE.BufferGeometry | null = null;
-    outlineGroup.children.forEach((child) => {
-      if (!(child instanceof THREE.LineSegments)) return;
+    for (const child of outlineGroup.children) {
+      if (!(child instanceof THREE.LineSegments)) continue;
       if (!sharedGeometry) sharedGeometry = child.geometry;
-    });
+    }
     outlineGroup.clear();
-    sharedGeometry?.dispose();
+    if (sharedGeometry) sharedGeometry.dispose();
   }
 
   /**

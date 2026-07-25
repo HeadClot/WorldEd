@@ -50,7 +50,7 @@ export class SetColorCommand implements UndoCommand {
     index: number,
   ): number | null {
     if (originalColorHexes && index < originalColorHexes.length) {
-      return originalColorHexes[index];
+      return originalColorHexes[index] ?? null;
     }
     return this.readMeshColorHex(mesh);
   }

@@ -10,6 +10,7 @@ import {
   type FaceSurfaceDescription,
 } from '../../texture/uv_matrix/face_surface_description.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
+import type { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
 import { forBatchesAsync } from '../../utils/async_yield.js';
 import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from './solid_model_keys.js';
 import { stripStaleDecorativeEdges } from './solid_model_mesh_disposal.js';
@@ -487,7 +488,7 @@ export class SolidModelRebuildPipeline {
       stripStaleDecorativeEdges(resultMesh);
     }
     this.resultBuffer.uploadToGeometry(resultMesh.geometry);
-    resultMesh.geometry.userData.solidMeshUpdateRanges = this.resultBuffer.wasLastWritePartial()
+    resultMesh.geometry.userData['solidMeshUpdateRanges'] = this.resultBuffer.wasLastWritePartial()
       ? this.resultBuffer.getLastUpdateRanges()
       : [];
   }
@@ -520,7 +521,7 @@ export class SolidModelRebuildPipeline {
       20,
       (start, end) => {
         for (let index = start; index < end; index++) {
-          this.rebuildOneMeshChunk(dirtyIds[index], worldMatrix);
+          this.rebuildOneMeshChunk(dirtyIds[index]!, worldMatrix);
         }
       },
       onProgress,
@@ -561,33 +562,6 @@ export class SolidModelRebuildPipeline {
       new THREE.Quaternion().setFromEuler(brush.rotation),
       brush.scale,
     );
-  }
-
-  /**
-   * Brush-local face normal for brush-local UV projection.
-   *
-   * @param brush Brush instance or undefined.
-   * @param surfaceIndex Face index.
-   * @returns Unit normal in brush local space.
-   */
-  private resolveBrushFaceLocalNormal(brush: SolidBrushInstance | undefined, surfaceIndex: number): THREE.Vector3 {
-    if (!brush) return new THREE.Vector3(0, 1, 0);
-    return brush.brush.planes[surfaceIndex]?.normal.clone().normalize() ?? new THREE.Vector3(0, 1, 0);
-  }
-
-  /**
-   * Model-space brush face normal used for world UV projection.
-   *
-   * @param brush Brush instance or undefined.
-   * @param surfaceIndex Face index.
-   * @returns Unit normal in solid model space.
-   */
-  private resolveBrushFaceModelNormal(brush: SolidBrushInstance | undefined, surfaceIndex: number): THREE.Vector3 {
-    if (!brush) return new THREE.Vector3(0, 1, 0);
-    const localNormal = brush.brush.planes[surfaceIndex]?.normal ?? new THREE.Vector3(0, 1, 0);
-    const localMatrix = this.composeBrushModelMatrix(brush);
-    const normalMatrix = new THREE.Matrix3().getNormalMatrix(localMatrix);
-    return localNormal.clone().applyMatrix3(normalMatrix).normalize();
   }
 
   /**

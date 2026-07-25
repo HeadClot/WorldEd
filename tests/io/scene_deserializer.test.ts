@@ -47,7 +47,7 @@ describe('SceneDeserializer', () => {
     expect(worldGroup.children).not.toContain(staleMesh);
     const loadedMeshes = worldGroup.children.filter((child) => child instanceof THREE.Mesh);
     expect(loadedMeshes.length).toBe(1);
-    expect(loadedMeshes[0].name).toBe('LoadedCube');
+    expect(loadedMeshes[0]!.name).toBe('LoadedCube');
   });
 
   it('should deserialize single mesh with correct geometry', () => {
@@ -99,7 +99,7 @@ describe('SceneDeserializer', () => {
     deserializer.deserialize(data, worldGroup);
     const mesh = worldGroup.children[0] as THREE.Mesh;
     expect(resolveGeometrySourceType(mesh.geometry)).toBe('sphere');
-    expect(getGeometrySource(mesh.geometry)?.params.radius).toBe(2.5);
+    expect(getGeometrySource(mesh.geometry)?.params['radius']).toBe(2.5);
   });
 
   it('should deserialize cylinder geometry correctly', () => {
@@ -109,9 +109,9 @@ describe('SceneDeserializer', () => {
     const mesh = worldGroup.children[0] as THREE.Mesh;
     expect(resolveGeometrySourceType(mesh.geometry)).toBe('cylinder');
     const params = getGeometrySource(mesh.geometry)?.params ?? {};
-    expect(params.radiusTop).toBe(0.5);
-    expect(params.radiusBottom).toBe(1.0);
-    expect(params.height).toBe(3);
+    expect(params['radiusTop']).toBe(0.5);
+    expect(params['radiusBottom']).toBe(1.0);
+    expect(params['height']).toBe(3);
   });
 
   it('should deserialize plane geometry correctly', () => {
@@ -121,8 +121,8 @@ describe('SceneDeserializer', () => {
     const mesh = worldGroup.children[0] as THREE.Mesh;
     expect(resolveGeometrySourceType(mesh.geometry)).toBe('plane');
     const params = getGeometrySource(mesh.geometry)?.params ?? {};
-    expect(params.width).toBe(4);
-    expect(params.height).toBe(3);
+    expect(params['width']).toBe(4);
+    expect(params['height']).toBe(3);
   });
 
   it('should deserialize group correctly', () => {
@@ -142,7 +142,7 @@ describe('SceneDeserializer', () => {
     expect(worldGroup.children.length).toBe(1);
     const parentGroup = worldGroup.children[0] as THREE.Group;
     expect(parentGroup.children.length).toBe(1);
-    expect(parentGroup.children[0].name).toBe('ChildCube');
+    expect(parentGroup.children[0]!.name).toBe('ChildCube');
   });
 
   it('should dispose existing children before loading', () => {
@@ -155,14 +155,14 @@ describe('SceneDeserializer', () => {
     const data = createSceneJSON([createBoxEntry('box-006', 'NewCube', 1, 1, 1)]);
     deserializer.deserialize(data, worldGroup);
     expect(worldGroup.children.length).toBe(1);
-    expect(worldGroup.children[0].name).toBe('NewCube');
+    expect(worldGroup.children[0]!.name).toBe('NewCube');
     expect(worldGroup.children.includes(existingMesh)).toBe(false);
   });
 
   it('should fallback to box geometry for unknown geometry type', () => {
     const entry = createBoxEntry('box-007', 'FallbackCube', 1, 1, 1);
-    entry.geometryType = undefined;
-    entry.geometryParams = undefined;
+    delete entry.geometryType;
+    delete entry.geometryParams;
     const data = createSceneJSON([entry]);
     deserializer.deserialize(data, worldGroup);
     const mesh = worldGroup.children[0] as THREE.Mesh;
@@ -221,9 +221,9 @@ describe('SceneDeserializer', () => {
     expect(restoredMesh.scale.z).toBe(2.5);
     expect(resolveGeometrySourceType(restoredMesh.geometry)).toBe('box');
     const geoParams = getGeometrySource(restoredMesh.geometry)?.params ?? {};
-    expect(geoParams.width).toBe(2);
-    expect(geoParams.height).toBe(3);
-    expect(geoParams.depth).toBe(4);
+    expect(geoParams['width']).toBe(2);
+    expect(geoParams['height']).toBe(3);
+    expect(geoParams['depth']).toBe(4);
     const mat = restoredMesh.material as THREE.MeshStandardMaterial;
     expect(mat.color.getHex()).toBe(0x00ff00);
   });
@@ -273,7 +273,7 @@ describe('SceneDeserializer', () => {
 
     const serializer = new SceneSerializer();
     const data = serializer.serialize(sourceGroup);
-    expect(data.objects[0].geometryType).toBe('buffer');
+    expect(data.objects[0]!.geometryType).toBe('buffer');
 
     deserializer.deserialize(data, worldGroup);
     const restored = worldGroup.children[0] as THREE.Mesh;

@@ -33,20 +33,20 @@ describe('about_contributor_fetcher', () => {
     const result = await fetchGitHubContributors();
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
-    const callArgs = mockFetch.mock.calls[0];
+    const callArgs = mockFetch.mock.calls[0]!;
     expect(callArgs[0]).toContain('Henry00IS');
     expect(callArgs[0]).toContain('AiWorldEd');
 
     const headers = callArgs[1]?.headers as Record<string, string> | undefined;
-    expect(headers?.Accept).toBe('application/vnd.github+json');
+    expect(headers?.['Accept']).toBe('application/vnd.github+json');
     expect(headers?.['X-GitHub-Api-Version']).toBeTruthy();
 
     expect(result).toHaveLength(1);
-    expect(result[0].login).toBe('testuser');
-    expect(result[0].avatarUrl).toBe('https://avatars.githubusercontent.com/testuser');
-    expect(result[0].profileUrl).toBe('https://github.com/testuser');
-    expect(result[0].contributions).toBe(42);
-    expect(result[0].displayName).toBe('Test User');
+    expect(result[0]!.login).toBe('testuser');
+    expect(result[0]!.avatarUrl).toBe('https://avatars.githubusercontent.com/testuser');
+    expect(result[0]!.profileUrl).toBe('https://github.com/testuser');
+    expect(result[0]!.contributions).toBe(42);
+    expect(result[0]!.displayName).toBe('Test User');
   });
 
   it('should fall back to login when name is missing', async () => {
@@ -65,7 +65,7 @@ describe('about_contributor_fetcher', () => {
     } as Response);
 
     const result = await fetchGitHubContributors();
-    expect(result[0].displayName).toBe('anonuser');
+    expect(result[0]!.displayName).toBe('anonuser');
   });
 
   it('should return an empty array on network failure', async () => {
@@ -120,6 +120,6 @@ describe('about_contributor_fetcher', () => {
 
     const result = await fetchGitHubContributors();
     expect(result).toHaveLength(1);
-    expect(result[0].login).toBe('valid');
+    expect(result[0]!.login).toBe('valid');
   });
 });

@@ -119,15 +119,15 @@ export class ShadingModeManager {
   private hasExemptUserData(object: THREE.Object3D): boolean {
     const data = object.userData;
     if (data[SELECTION_HIGHLIGHT_USERDATA_KEY] === true) return true;
-    if (data.isSelectionHighlight === true) return true;
-    if (data.isWireframeOverlay === true) return true;
-    if (data.isFaceSelectionHighlight === true) return true;
-    if (data.isClipPlanePreview === true) return true;
-    if (data.isBoundsFacePick === true) return true;
-    if (data.isBoundsGuideLines === true) return true;
-    if (data.isGizmoOccludedGhost === true) return true;
+    if (data['isSelectionHighlight'] === true) return true;
+    if (data['isWireframeOverlay'] === true) return true;
+    if (data['isFaceSelectionHighlight'] === true) return true;
+    if (data['isClipPlanePreview'] === true) return true;
+    if (data['isBoundsFacePick'] === true) return true;
+    if (data['isBoundsGuideLines'] === true) return true;
+    if (data['isGizmoOccludedGhost'] === true) return true;
     if (data[SOLID_BRUSH_USERDATA_KEY] === true) return true;
-    if (data.handleId !== undefined) return true;
+    if (data['handleId'] !== undefined) return true;
     if (data[BOUNDS_FACE_USERDATA_KEY] !== undefined) return true;
     return false;
   }
@@ -175,13 +175,13 @@ export class ShadingModeManager {
       if (materials.length === 0) return;
       this.materialSnapshots.set(mesh.uuid, {
         materials: materials.slice(),
-        wireframeFlags: materials.map((entry) => entry.wireframe),
+        wireframeFlags: materials.map((entry) => readWireframeFlag(entry)),
       });
       return;
     }
     this.materialSnapshots.set(mesh.uuid, {
       materials,
-      wireframeFlags: materials.wireframe,
+      wireframeFlags: readWireframeFlag(materials),
     });
   }
 
@@ -222,11 +222,11 @@ export class ShadingModeManager {
     if (Array.isArray(snapshot.materials)) {
       const flags = snapshot.wireframeFlags as boolean[];
       snapshot.materials.forEach((material, index) => {
-        material.wireframe = flags[index] ?? false;
+        writeWireframeFlag(material, flags[index] ?? false);
       });
       return;
     }
-    snapshot.materials.wireframe = snapshot.wireframeFlags as boolean;
+    writeWireframeFlag(snapshot.materials, snapshot.wireframeFlags as boolean);
   }
 
   /**
@@ -241,7 +241,7 @@ export class ShadingModeManager {
       outlineOnlyMaterials.forEach((material) => {
         this.ownedOverrideMaterials.add(material);
       });
-      mesh.material = outlineOnlyMaterials.length === 1 ? outlineOnlyMaterials[0] : outlineOnlyMaterials;
+      mesh.material = pickMaterialOrArray(outlineOnlyMaterials);
     });
   }
 
@@ -276,7 +276,7 @@ export class ShadingModeManager {
       flatMaterials.forEach((material) => {
         this.ownedOverrideMaterials.add(material);
       });
-      mesh.material = flatMaterials.length === 1 ? flatMaterials[0] : flatMaterials;
+      mesh.material = pickMaterialOrArray(flatMaterials);
     });
   }
 
@@ -324,6 +324,40 @@ export class ShadingModeManager {
     });
     this.ownedOverrideMaterials.clear();
   }
+}
+
+/**
+ * Reads the wireframe flag when the material supports it.
+ *
+ * @param material Material to inspect.
+ * @returns Wireframe flag, default false.
+ */
+function readWireframeFlag(material: THREE.Material): boolean {
+  if (!('wireframe' in material)) return false;
+  return Boolean((material as THREE.MeshBasicMaterial).wireframe);
+}
+
+/**
+ * Writes the wireframe flag when the material supports it.
+ *
+ * @param material Material to update.
+ * @param wireframe Desired wireframe state.
+ */
+function writeWireframeFlag(material: THREE.Material, wireframe: boolean): void {
+  if (!('wireframe' in material)) return;
+  (material as THREE.MeshBasicMaterial).wireframe = wireframe;
+}
+
+/**
+ * Picks a single material or the full array for mesh assignment.
+ *
+ * @param materials Built override materials (non-empty).
+ * @returns Material or material array suitable for mesh.material.
+ */
+function pickMaterialOrArray(materials: THREE.MeshBasicMaterial[]): THREE.Material | THREE.Material[] {
+  const first = materials[0];
+  if (materials.length === 1 && first !== undefined) return first;
+  return materials;
 }
 
 /**

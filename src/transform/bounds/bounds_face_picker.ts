@@ -60,7 +60,7 @@ export class BoundsFacePicker {
     group.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
       if (!child.visible) return;
-      if (child.userData.isBoundsFacePick !== true) return;
+      if (child.userData['isBoundsFacePick'] !== true) return;
       meshes.push(child);
     });
     return meshes;

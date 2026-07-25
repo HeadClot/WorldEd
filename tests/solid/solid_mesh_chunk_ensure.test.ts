@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { createDefaultFaceTextureMapping } from '../../src/texture/uv/face_texture_mapping.js';
@@ -38,7 +37,7 @@ describe('Solid mesh chunk ensure after mapping sync', () => {
     setFaceTextureMaps(result, [{ triangleIndices: allTriangles, mapping }]);
     model.syncAuthoredMappingsFromResultMesh();
 
-    const mover = brushes[0];
+    const mover = brushes[0]!;
     mover.position.x += 0.75;
     mover.pushTransformToMesh();
     model.syncBrushesFromScene();
@@ -49,7 +48,7 @@ describe('Solid mesh chunk ensure after mapping sync', () => {
     expect(model.getBrushCount()).toBe(12);
     for (const brush of model.getBrushes()) {
       const faceMap = brush.getSurfaceMapping(0);
-      expect(faceMap.scaleU).toBeCloseTo(4, 5);
+      expect(faceMap.scaleU!).toBeCloseTo(4, 5);
     }
   });
 
@@ -83,6 +82,6 @@ describe('Solid mesh chunk ensure after mapping sync', () => {
     const after = model.getResultMesh().geometry.getAttribute('position').count;
     expect(after).toBeGreaterThan(0);
     expect(after).toBeGreaterThan(before * 0.25);
-    expect(base.getSurfaceMapping(0).scaleU).toBeCloseTo(2, 5);
+    expect(base.getSurfaceMapping(0).scaleU!).toBeCloseTo(2, 5);
   });
 });

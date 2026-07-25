@@ -92,7 +92,7 @@ describe('GlbExporter', () => {
       if (obj instanceof THREE.Mesh) exportMeshes.push(obj);
     });
     expect(exportMeshes.length).toBe(1);
-    expect(SolidBrushVisual.isBrushObject(exportMeshes[0])).toBe(false);
+    expect(SolidBrushVisual.isBrushObject(exportMeshes[0]!)).toBe(false);
     const buffer = await exporter.export(worldGroup);
     expect(buffer.byteLength).toBeGreaterThan(0);
     const view = new DataView(buffer);
@@ -300,7 +300,7 @@ function transformNormal(normal: THREE.Vector3, transform: THREE.Matrix4): THREE
  * @returns Normalized geometric normal.
  */
 function getTriangleNormal(positions: THREE.Vector3[]): THREE.Vector3 {
-  return positions[1].clone().sub(positions[0]).cross(positions[2].clone().sub(positions[0])).normalize();
+  return positions[1]!.clone().sub(positions[0]!).cross(positions[2]!.clone().sub(positions[0]!)).normalize();
 }
 
 /**
@@ -312,6 +312,6 @@ function getTriangleNormal(positions: THREE.Vector3[]): THREE.Vector3 {
 function expectVectorsToMatch(actual: THREE.Vector3[], expected: THREE.Vector3[]): void {
   expect(actual).toHaveLength(expected.length);
   actual.forEach((vector, index) => {
-    expect(vector.distanceTo(expected[index])).toBeCloseTo(0, 6);
+    expect(vector.distanceTo(expected[index]!)).toBeCloseTo(0, 6);
   });
 }

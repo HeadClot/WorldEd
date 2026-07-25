@@ -56,19 +56,19 @@ ${entitySolid}
     expect(world.versionInfoFormatVersion).toBe(100);
     expect(world.skyName).toBe('sky_day01_01');
     expect(world.solids).toHaveLength(1);
-    expect(world.solids[0].id).toBe(100);
-    expect(world.solids[0].sides).toHaveLength(6);
+    expect(world.solids[0]!.id).toBe(100);
+    expect(world.solids[0]!.sides).toHaveLength(6);
     expect(world.entities).toHaveLength(1);
-    expect(world.entities[0].className).toBe('func_detail');
-    expect(world.entities[0].solids).toHaveLength(1);
-    expect(world.entities[0].solids[0].sides).toHaveLength(6);
+    expect(world.entities[0]!.className).toBe('func_detail');
+    expect(world.entities[0]!.solids).toHaveLength(1);
+    expect(world.entities[0]!.solids[0]!.sides).toHaveLength(6);
   });
 
   it('parses plane points and UV axes from the first side', () => {
     const world = new VmfParser().parse(
       buildAxisAlignedWorldSolidVmf({ x: -32, y: -32, z: -32 }, { x: 32, y: 32, z: 32 }),
     );
-    const side = world.solids[0].sides[0];
+    const side = world.solids[0]!.sides[0]!;
     expect(side.plane.p1).toEqual({ x: -32, y: -32, z: 32 });
     expect(side.plane.p2).toEqual({ x: -32, y: 32, z: 32 });
     expect(side.plane.p3).toEqual({ x: 32, y: 32, z: 32 });
@@ -163,7 +163,7 @@ world
 `;
     const world = new VmfParser().parse(snippet);
     expect(world.solids).toHaveLength(1);
-    expect(world.solids[0].sides).toHaveLength(6);
-    expect(world.solids[0].sides[0].uAxis.translation).toBe(-208);
+    expect(world.solids[0]!.sides).toHaveLength(6);
+    expect(world.solids[0]!.sides[0]!.uAxis.translation).toBe(-208);
   });
 });

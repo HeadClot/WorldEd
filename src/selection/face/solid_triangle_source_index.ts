@@ -108,7 +108,7 @@ export function findFirstTriangleForBrushSurface(mesh: THREE.Mesh, brushId: stri
   const cache = getOrBuildSolidFaceIndexCache(mesh, sources);
   const indices = cache.byFaceKey.get(buildSolidFaceKey(brushId, surfaceIndex));
   if (!indices || indices.length === 0) return -1;
-  return indices[0];
+  return indices[0]!;
 }
 
 /**

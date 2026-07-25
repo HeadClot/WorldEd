@@ -35,8 +35,8 @@ export class ConvexPolygonClipper {
     const outside: THREE.Vector3[] = [];
     const count = polygon.length;
     for (let index = 0; index < count; index++) {
-      const current = polygon[index];
-      const next = polygon[(index + 1) % count];
+      const current = polygon[index]!;
+      const next = polygon[(index + 1) % count]!;
       const currentDistance = plane.signedDistance(current);
       const nextDistance = plane.signedDistance(next);
       const currentInside = currentDistance <= epsilon;
@@ -156,7 +156,7 @@ export class ConvexPolygonClipper {
       if (previous && previous.distanceToSquared(point) < 1e-16) continue;
       cleaned.push(point);
     }
-    if (cleaned.length > 1 && cleaned[0].distanceToSquared(cleaned[cleaned.length - 1]) < 1e-16) {
+    if (cleaned.length > 1 && cleaned[0]!.distanceToSquared(cleaned[cleaned.length - 1]!) < 1e-16) {
       cleaned.pop();
     }
     return cleaned.length >= 3 ? cleaned : [];

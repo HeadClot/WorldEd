@@ -38,7 +38,7 @@ export class AlignmentController {
   cycleAxisRestriction(): AlignmentAxis {
     const currentIndex = AlignmentController.AXIS_CYCLE.indexOf(this.currentAxis);
     const nextIndex = (currentIndex + 1) % AlignmentController.AXIS_CYCLE.length;
-    this.currentAxis = AlignmentController.AXIS_CYCLE[nextIndex];
+    this.currentAxis = AlignmentController.AXIS_CYCLE[nextIndex]!;
     return this.currentAxis;
   }
 

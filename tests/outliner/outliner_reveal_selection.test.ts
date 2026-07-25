@@ -54,7 +54,6 @@ describe('Outliner reveal selection', () => {
     expect(brush.mesh).toBeTruthy();
     panel.refresh();
     selectionManager.selectObject(brush.mesh!);
-    const treeElement = container.querySelector('div')?.parentElement;
     expect(container.textContent).toContain(brush.name);
     expect(container.textContent).toContain(model.root.name);
     panel.dispose();

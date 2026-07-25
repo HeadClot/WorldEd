@@ -93,9 +93,9 @@ describe('GroupCommand', () => {
     const command = new GroupCommand([mesh1, mesh2], parent, 'OrderGroup');
     command.execute();
     command.undo();
-    expect(parent.children[0].name).toBe('Mesh1');
-    expect(parent.children[1].name).toBe('Mesh2');
-    expect(parent.children[2].name).toBe('Mesh3');
+    expect(parent.children[0]!.name).toBe('Mesh1');
+    expect(parent.children[1]!.name).toBe('Mesh2');
+    expect(parent.children[2]!.name).toBe('Mesh3');
   });
 
   it('should preserve object transforms on group/ungroup', () => {

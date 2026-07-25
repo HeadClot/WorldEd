@@ -64,7 +64,7 @@ describe('CreatePrimitiveCommand', () => {
     const command = new CreatePrimitiveCommand(sphereMesh, parent);
     command.execute();
     expect(parent.children.length).toBe(1);
-    expect(parent.children[0].name).toBe('TestSphere');
+    expect(parent.children[0]!.name).toBe('TestSphere');
     command.undo();
     expect(parent.children.length).toBe(0);
     expect(sphereMesh.geometry).not.toBeNull();

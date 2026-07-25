@@ -149,7 +149,7 @@ describe('TransformInteractionBridge', () => {
    * @returns Configured TransformInteractionBridge.
    */
   function createBridge(isInteractionEnabled: (() => boolean) | undefined): TransformInteractionBridge {
-    return new TransformInteractionBridge({
+    const deps: ConstructorParameters<typeof TransformInteractionBridge>[0] = {
       selectionManager,
       selectionVisualController: {
         syncDuringTransform: () => undefined,
@@ -170,7 +170,10 @@ describe('TransformInteractionBridge', () => {
       getUserSnapEnabled: () => false,
       isTransformSpaceLocal: () => false,
       syncPrimitivesToViewports: () => undefined,
-      isInteractionEnabled,
-    });
+    };
+    if (isInteractionEnabled !== undefined) {
+      deps.isInteractionEnabled = isInteractionEnabled;
+    }
+    return new TransformInteractionBridge(deps);
   }
 });

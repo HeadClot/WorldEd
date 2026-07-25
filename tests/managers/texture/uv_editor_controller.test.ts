@@ -43,7 +43,7 @@ describe('UvEditorController', () => {
     });
     faceController.selectFace(mesh, 0, false);
     expect(uiRefresh).toHaveBeenCalled();
-    const lastCall = uiRefresh.mock.calls[uiRefresh.mock.calls.length - 1];
+    const lastCall = uiRefresh.mock.calls[uiRefresh.mock.calls.length - 1]!;
     expect(lastCall[1]).toBeGreaterThan(0);
   });
 });

@@ -30,5 +30,5 @@ export function cycleSnapInterval(current: number, direction: number): number {
   const presetCount = SNAP_PRESETS.length;
   const newIndex = currentIndex + direction;
   const wrappedIndex = ((newIndex % presetCount) + presetCount) % presetCount;
-  return SNAP_PRESETS[wrappedIndex];
+  return SNAP_PRESETS[wrappedIndex]!;
 }

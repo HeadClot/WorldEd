@@ -227,9 +227,9 @@ describe('cad_dimension_geometry', () => {
       [],
     );
     // First extension starts at the measured point (connected).
-    expect(segments[0].ax).toBeCloseTo(0, 5);
-    expect(segments[0].ay).toBeCloseTo(0, 5);
-    expect(segments[0].az).toBeCloseTo(0, 5);
+    expect(segments[0]!.ax).toBeCloseTo(0, 5);
+    expect(segments[0]!.ay).toBeCloseTo(0, 5);
+    expect(segments[0]!.az).toBeCloseTo(0, 5);
   });
 
   it('should stop extension legs on the dimension line without end ticks', () => {
@@ -252,10 +252,10 @@ describe('cad_dimension_geometry', () => {
     // Two gray extensions + one blue dimension line only (no blue end ticks).
     expect(segments).toHaveLength(3);
     // Extension tips meet the dimension line (no overshoot past offset).
-    expect(segments[0].by).toBeCloseTo(offsetWorld, 5);
-    expect(segments[1].by).toBeCloseTo(offsetWorld, 5);
-    expect(segments[2].ay).toBeCloseTo(offsetWorld, 5);
-    expect(segments[2].by).toBeCloseTo(offsetWorld, 5);
+    expect(segments[0]!.by).toBeCloseTo(offsetWorld, 5);
+    expect(segments[1]!.by).toBeCloseTo(offsetWorld, 5);
+    expect(segments[2]!.ay).toBeCloseTo(offsetWorld, 5);
+    expect(segments[2]!.by).toBeCloseTo(offsetWorld, 5);
   });
 
   it('should keep stand-off independent of measured length when placement is fixed', () => {
@@ -363,12 +363,12 @@ describe('cad_dimension_geometry', () => {
     expect(delta!.worldPosition.y).toBeCloseTo(0, 5);
     expect(delta!.worldPosition.z).toBeCloseTo(0, 5);
     expect(segments).toHaveLength(1);
-    expect(segments[0].ax).toBeCloseTo(-1, 5);
-    expect(segments[0].ay).toBeCloseTo(0, 5);
-    expect(segments[0].az).toBeCloseTo(0, 5);
-    expect(segments[0].bx).toBeCloseTo(-0.75, 5);
-    expect(segments[0].by).toBeCloseTo(0, 5);
-    expect(segments[0].bz).toBeCloseTo(0, 5);
+    expect(segments[0]!.ax).toBeCloseTo(-1, 5);
+    expect(segments[0]!.ay).toBeCloseTo(0, 5);
+    expect(segments[0]!.az).toBeCloseTo(0, 5);
+    expect(segments[0]!.bx).toBeCloseTo(-0.75, 5);
+    expect(segments[0]!.by).toBeCloseTo(0, 5);
+    expect(segments[0]!.bz).toBeCloseTo(0, 5);
   });
 
   it('should keep +Z travel centered on the trailing edge in top view', () => {
@@ -400,10 +400,10 @@ describe('cad_dimension_geometry', () => {
     expect(delta).toBeDefined();
     // Half-Z is 3; move +1 on Z → trailing edge from z=-3 to z=-2, centered at x=0.
     expect(segments).toHaveLength(1);
-    expect(segments[0].ax).toBeCloseTo(0, 5);
-    expect(segments[0].bx).toBeCloseTo(0, 5);
-    expect(segments[0].az).toBeCloseTo(-3, 5);
-    expect(segments[0].bz).toBeCloseTo(-2, 5);
+    expect(segments[0]!.ax).toBeCloseTo(0, 5);
+    expect(segments[0]!.bx).toBeCloseTo(0, 5);
+    expect(segments[0]!.az).toBeCloseTo(-3, 5);
+    expect(segments[0]!.bz).toBeCloseTo(-2, 5);
     expect(delta!.worldPosition.x).toBeCloseTo(0, 5);
   });
 
@@ -488,7 +488,7 @@ describe('cad_dimension_geometry', () => {
       [],
       labels,
     );
-    expect(labels[0].worldPosition.x).toBeCloseTo(2, 5);
-    expect(labels[0].worldPosition.y).toBeCloseTo(0.25, 5);
+    expect(labels[0]!.worldPosition.x).toBeCloseTo(2, 5);
+    expect(labels[0]!.worldPosition.y).toBeCloseTo(0.25, 5);
   });
 });

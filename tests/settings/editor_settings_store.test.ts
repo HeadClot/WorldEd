@@ -16,10 +16,10 @@ describe('EditorSettingsStore', () => {
   it('should seed a default metric meter game profile', () => {
     const snapshot = store.getSnapshot();
     expect(snapshot.gameProfiles).toHaveLength(1);
-    expect(snapshot.gameProfiles[0].name).toBe('Default');
-    expect(snapshot.gameProfiles[0].unitSystem).toBe('metric');
-    expect(snapshot.gameProfiles[0].metricUnit).toBe('meter');
-    expect(snapshot.activeGameProfileId).toBe(snapshot.gameProfiles[0].id);
+    expect(snapshot.gameProfiles[0]!.name).toBe('Default');
+    expect(snapshot.gameProfiles[0]!.unitSystem).toBe('metric');
+    expect(snapshot.gameProfiles[0]!.metricUnit).toBe('meter');
+    expect(snapshot.activeGameProfileId).toBe(snapshot.gameProfiles[0]!.id);
   });
 
   it('should persist each game profile as its own JSON document', () => {

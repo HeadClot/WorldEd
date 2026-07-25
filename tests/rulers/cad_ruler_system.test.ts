@@ -144,9 +144,9 @@ describe('CadRulerSystem', () => {
     }
     system.setSelectionMeshes([]);
     expect(system.getDimensionSegmentCount()).toBe(0);
-    system.setSelectionMeshes([many[0]]);
+    system.setSelectionMeshes([many[0]!]);
     const selectedCount = system.getDimensionSegmentCount();
-    system.setSelectionMeshes([many[0], many[1]]);
+    system.setSelectionMeshes([many[0]!, many[1]!]);
     expect(system.getDimensionSegmentCount()).toBeGreaterThan(0);
     expect(selectedCount).toBeGreaterThan(0);
   });

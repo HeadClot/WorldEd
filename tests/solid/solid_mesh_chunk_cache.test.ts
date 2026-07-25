@@ -50,7 +50,7 @@ describe('Solid mesh chunk cache', () => {
     const before = SolidResultAssembler.assemble(compiler.getLastBrushOrder(), cache);
     expect(before.triangleCount).toBeGreaterThan(0);
 
-    brushes[1].position.x += 0.5;
+    brushes[1]!.position.x += 0.5;
     compiler.compile(brushes, { dirtyBrushIds: ['b'] });
     const updatedIds = compiler.getLastUpdateBrushIds();
     expect(updatedIds).toContain('b');
@@ -79,7 +79,7 @@ describe('Solid mesh chunk cache', () => {
     expect(partial.triangleCount).toBe(full.triangleCount);
     expect(partial.positions.length).toBe(full.positions.length);
     for (let index = 0; index < partial.positions.length; index++) {
-      expect(partial.positions[index]).toBeCloseTo(full.positions[index], 5);
+      expect(partial.positions[index]!).toBeCloseTo(full.positions[index]!, 5);
     }
   });
 
@@ -94,7 +94,7 @@ describe('Solid mesh chunk cache', () => {
     }
     model.markDirty();
     model.rebuild(true);
-    const first = model.getBrushes()[0];
+    const first = model.getBrushes()[0]!;
     expect(first.mesh).toBeTruthy();
     first.mesh!.position.x += 0.35;
     model.syncBrushesFromScene();

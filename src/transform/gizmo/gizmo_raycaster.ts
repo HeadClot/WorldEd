@@ -94,8 +94,8 @@ export class GizmoRaycaster {
     const meshes: THREE.Mesh[] = [];
     group.traverse((child) => {
       if (!(child instanceof THREE.Mesh) || !child.visible) return;
-      if (child.userData.isBoundsFacePick === true) return;
-      if (child.userData.handleId === undefined) return;
+      if (child.userData['isBoundsFacePick'] === true) return;
+      if (child.userData['handleId'] === undefined) return;
       meshes.push(child);
     });
     return meshes;
@@ -148,7 +148,7 @@ export class GizmoRaycaster {
    * @returns The matching handle, or null if not found.
    */
   private findHandleForMesh(handles: GizmoHandle[], mesh: THREE.Mesh): GizmoHandle | null {
-    const hitHandleId = mesh.userData.handleId;
+    const hitHandleId = mesh.userData['handleId'];
     if (hitHandleId !== undefined) {
       for (const handle of handles) {
         if (handle.getHandleId() === hitHandleId) return handle;

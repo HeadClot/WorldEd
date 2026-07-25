@@ -52,7 +52,7 @@ export class ShadingModeHandler {
     if (this.activeViewportIndex < 0 || this.activeViewportIndex >= this.controllers.length) {
       return;
     }
-    const controller = this.controllers[this.activeViewportIndex];
+    const controller = this.controllers[this.activeViewportIndex]!;
     controller.setShadingMode(mode);
     this.updateStatusBar(mode);
   }
@@ -89,6 +89,6 @@ export class ShadingModeHandler {
     if (this.activeViewportIndex < 0 || this.activeViewportIndex >= this.controllers.length) {
       return ShadingMode.SOLID;
     }
-    return this.controllers[this.activeViewportIndex].getShadingMode();
+    return this.controllers[this.activeViewportIndex]!.getShadingMode();
   }
 }

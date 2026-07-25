@@ -26,7 +26,7 @@ export class HashedVertexTable {
     const cellKey = this.cellKeyForPoint(point);
     const candidates = this.gatherNearbyIndices(cellKey);
     for (const index of candidates) {
-      if (this.vertices[index].distanceToSquared(point) <= SOLID_SQR_VERTEX_EQUAL_EPSILON) {
+      if (this.vertices[index]!.distanceToSquared(point) <= SOLID_SQR_VERTEX_EQUAL_EPSILON) {
         return index;
       }
     }
@@ -61,7 +61,7 @@ export class HashedVertexTable {
    * @returns Vertex position.
    */
   get(index: number): THREE.Vector3 {
-    return this.vertices[index];
+    return this.vertices[index]!;
   }
 
   /**
@@ -84,7 +84,10 @@ export class HashedVertexTable {
    * @returns Candidate indices.
    */
   private gatherNearbyIndices(cellKey: string): number[] {
-    const [cx, cy, cz] = cellKey.split(',').map(Number);
+    const parts = cellKey.split(',').map(Number);
+    const cx = parts[0]!;
+    const cy = parts[1]!;
+    const cz = parts[2]!;
     const result: number[] = [];
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {

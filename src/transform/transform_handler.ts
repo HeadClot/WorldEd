@@ -160,7 +160,7 @@ export class TransformHandler {
     camera: THREE.Camera,
     renderer: THREE.WebGLRenderer,
     event: MouseEvent,
-    pivot: THREE.Vector3,
+    _pivot: THREE.Vector3,
     selectedObjects: THREE.Mesh[],
   ): void {
     if (!this.session.dragActive) return;

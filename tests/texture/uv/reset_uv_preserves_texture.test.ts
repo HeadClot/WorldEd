@@ -36,13 +36,13 @@ describe('reset UV preserves texture assignment', () => {
     scaled.scaleU = 4;
     scaled.offsetV = 0.5;
     new ApplyFaceTextureCommand(targets, scaled).execute();
-    expect(getFaceTextureMaps(mesh)[0].mapping.scaleU).toBe(4);
+    expect(getFaceTextureMaps(mesh)[0]!.mapping.scaleU).toBe(4);
     resetUvParamsOnTargets(targets);
     const maps = getFaceTextureMaps(mesh);
     maps.forEach((entry) => {
       expect(entry.mapping.textureId).toBe('walls/brick.png');
-      expect(entry.mapping.scaleU).toBe(1);
-      expect(entry.mapping.offsetV).toBeCloseTo(0, 5);
+      expect(entry.mapping.scaleU!).toBe(1);
+      expect(entry.mapping.offsetV!).toBeCloseTo(0, 5);
       expect(entry.mapping.align).toBe('auto');
     });
   });
@@ -60,11 +60,11 @@ describe('reset UV preserves texture assignment', () => {
       resetUvOnly: true,
     });
     reset.execute();
-    expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe('floor.png');
-    expect(getFaceTextureMaps(mesh)[0].mapping.scaleU).toBe(1);
+    expect(getFaceTextureMaps(mesh)[0]!.mapping.textureId).toBe('floor.png');
+    expect(getFaceTextureMaps(mesh)[0]!.mapping.scaleU).toBe(1);
     reset.undo();
-    expect(getFaceTextureMaps(mesh)[0].mapping.textureId).toBe('floor.png');
-    expect(getFaceTextureMaps(mesh)[0].mapping.scaleU).toBeCloseTo(3, 4);
+    expect(getFaceTextureMaps(mesh)[0]!.mapping.textureId).toBe('floor.png');
+    expect(getFaceTextureMaps(mesh)[0]!.mapping.scaleU).toBeCloseTo(3, 4);
   });
 
   it('should restore cylinder side unwrap on full-mesh UV reset', () => {
@@ -85,7 +85,7 @@ describe('reset UV preserves texture assignment', () => {
     const maps = getFaceTextureMaps(mesh);
     maps.forEach((entry) => {
       expect(entry.mapping.textureId).toBe('brick.png');
-      expect(entry.mapping.scaleU).toBe(1);
+      expect(entry.mapping.scaleU!).toBe(1);
     });
     const uniqueSideOffsets = new Set(
       maps

@@ -122,7 +122,7 @@ describe('FlyingCamera', () => {
     };
     const canvas = document.createElement('canvas');
     (canvas as any).requestPointerLock = () => {
-      document.pointerLockElement = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
       document.dispatchEvent(new Event('pointerlockchange'));
     };
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -212,11 +212,11 @@ describe('FlyingCamera', () => {
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     (canvas as any).requestPointerLock = () => {
-      document.pointerLockElement = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
       document.dispatchEvent(new Event('pointerlockchange'));
     };
     const exitLockSpy = vi.fn(() => {
-      document.pointerLockElement = null;
+      Object.defineProperty(document, 'pointerLockElement', { value: null, configurable: true });
       document.dispatchEvent(new Event('pointerlockchange'));
     });
     (document as any).exitPointerLock = exitLockSpy;
@@ -237,11 +237,11 @@ describe('FlyingCamera', () => {
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     (canvas as any).requestPointerLock = () => {
-      document.pointerLockElement = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
       document.dispatchEvent(new Event('pointerlockchange'));
     };
     const exitLockSpy = vi.fn(() => {
-      document.pointerLockElement = null;
+      Object.defineProperty(document, 'pointerLockElement', { value: null, configurable: true });
     });
     (document as any).exitPointerLock = exitLockSpy;
     new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
@@ -262,11 +262,11 @@ describe('FlyingCamera', () => {
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     (canvas as any).requestPointerLock = () => {
-      document.pointerLockElement = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
       document.dispatchEvent(new Event('pointerlockchange'));
     };
     const exitLockSpy = vi.fn(() => {
-      document.pointerLockElement = null;
+      Object.defineProperty(document, 'pointerLockElement', { value: null, configurable: true });
     });
     (document as any).exitPointerLock = exitLockSpy;
     new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
@@ -288,9 +288,9 @@ describe('FlyingCamera', () => {
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     camera.position.set(0, 0, 0);
     (canvas as any).requestPointerLock = () => {
-      document.pointerLockElement = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
     };
-    const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
+    new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
 
     // Start panning with middle button
     canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 1, pointerId: 1 }));
@@ -332,13 +332,13 @@ describe('FlyingCamera', () => {
     const canvas = document.createElement('canvas');
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     (canvas as any).requestPointerLock = () => {
-      document.pointerLockElement = canvas;
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
     };
     const flyingCamera = new FlyingCamera(canvas, camera, mockInputManager as any, 0, 0);
     canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, pointerId: 1 }));
     canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }));
     const yawAfterMove = flyingCamera.getYaw();
-    document.pointerLockElement = null;
+    Object.defineProperty(document, 'pointerLockElement', { value: null, configurable: true });
     document.dispatchEvent(new Event('pointerlockchange'));
     canvas.dispatchEvent(new PointerEvent('pointermove', { movementX: 100, movementY: 0, pointerId: 1 }));
     expect(flyingCamera.getYaw()).toBe(yawAfterMove);

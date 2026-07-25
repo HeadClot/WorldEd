@@ -40,25 +40,22 @@ export type TransformCallback = (event: MouseEvent) => boolean;
 export type MeshResolveCallback = (mesh: THREE.Mesh) => THREE.Mesh;
 
 export class Viewport3D extends BaseViewport {
-  private camera: THREE.PerspectiveCamera;
+  private camera!: THREE.PerspectiveCamera;
   private grids: Grids;
-  private flyingCamera: FlyingCamera;
+  private flyingCamera!: FlyingCamera;
   private cameraWidget: CameraWidget;
-  private ambientLight: THREE.AmbientLight;
-  private cameraHeadlight: CameraHeadlight;
-  private selectableObjects: THREE.Mesh[];
-  private selectionManager: SelectionManager | null;
-  private selectionHighlight: SelectionHighlight | null;
-  private raycaster: SceneRaycaster;
-  private worldGroup: THREE.Group | null;
-  private gizmoGroup: THREE.Group | null;
-  private transformCallback: TransformCallback | null;
-  private faceSelectionCallback: ((event: MouseEvent) => boolean) | null;
-  private clipPlaneCallback: ((event: MouseEvent) => boolean) | null;
-  private meshResolveCallback: MeshResolveCallback | null;
+  private ambientLight!: THREE.AmbientLight;
+  private cameraHeadlight!: CameraHeadlight;
+  private selectableObjects!: THREE.Mesh[];
+  private selectionManager!: SelectionManager | null;
+  private raycaster!: SceneRaycaster;
+  private worldGroup!: THREE.Group | null;
+  private gizmoGroup!: THREE.Group | null;
+  private transformCallback!: TransformCallback | null;
+  private faceSelectionCallback!: ((event: MouseEvent) => boolean) | null;
+  private clipPlaneCallback!: ((event: MouseEvent) => boolean) | null;
+  private meshResolveCallback!: MeshResolveCallback | null;
   private shadingController: ViewportShadingController;
-
-  private readonly inputManager: InputManager;
 
   /**
    * Creates a new 3D perspective viewport.
@@ -68,7 +65,6 @@ export class Viewport3D extends BaseViewport {
    */
   constructor(container: HTMLElement, inputManager: InputManager) {
     super(container, 'Perspective');
-    this.inputManager = inputManager;
     this.grids = new Grids(50, 50, 'xz', 'perspective');
     this.initializeCamera();
     this.initializeState();
@@ -96,8 +92,9 @@ export class Viewport3D extends BaseViewport {
   private initializeState(): void {
     this.selectableObjects = [];
     this.selectionManager = null;
-    this.selectionHighlight = null;
     this.worldGroup = null;
+    this.gizmoGroup = null;
+    this.transformCallback = null;
     this.raycaster = new SceneRaycaster();
     this.faceSelectionCallback = null;
     this.clipPlaneCallback = null;
@@ -168,9 +165,7 @@ export class Viewport3D extends BaseViewport {
    *
    * @param highlight The selection highlight instance.
    */
-  setSelectionHighlight(highlight: SelectionHighlight): void {
-    this.selectionHighlight = highlight;
-  }
+  setSelectionHighlight(_highlight: SelectionHighlight): void {}
 
   /**
    * Sets the selectable objects for raycasting.
@@ -313,7 +308,7 @@ export class Viewport3D extends BaseViewport {
    */
   private resolvePickFromStack(stack: THREE.Mesh[], additive: boolean, toggle: boolean): THREE.Mesh | null {
     if (stack.length === 0 || !this.selectionManager) return null;
-    if (additive || toggle) return stack[0];
+    if (additive || toggle) return stack[0] ?? null;
     return SelectionClickThrough.pickFromStack(stack, this.selectionManager);
   }
 

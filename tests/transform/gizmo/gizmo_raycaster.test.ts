@@ -15,7 +15,20 @@ describe('GizmoRaycaster', () => {
     camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
-    mockCanvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+    mockCanvas = {
+      getBoundingClientRect: () =>
+        ({
+          left: 0,
+          top: 0,
+          width: 800,
+          height: 600,
+          x: 0,
+          y: 0,
+          bottom: 600,
+          right: 800,
+          toJSON: () => ({}),
+        }) as DOMRect,
+    };
     mockRenderer = { domElement: mockCanvas } as unknown as THREE.WebGLRenderer;
   });
 
@@ -137,7 +150,7 @@ function createPickableGizmoSetup(): {
 } {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
   const handle = new GizmoHandle(GizmoAxis.X, 0xff0000, mesh);
-  mesh.userData.handleId = handle.getHandleId();
+  mesh.userData['handleId'] = handle.getHandleId();
   const gizmoGroup = new THREE.Group();
   gizmoGroup.add(mesh);
   const camera = new THREE.PerspectiveCamera(60, 800 / 600, 0.1, 1000);
@@ -145,7 +158,18 @@ function createPickableGizmoSetup(): {
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld(true);
   const canvas = {
-    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    getBoundingClientRect: () =>
+      ({
+        left: 0,
+        top: 0,
+        width: 800,
+        height: 600,
+        x: 0,
+        y: 0,
+        bottom: 600,
+        right: 800,
+        toJSON: () => ({}),
+      }) as DOMRect,
   };
   const renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
   return {
@@ -173,11 +197,11 @@ function createFarHandleBehindFacePickSetup(): {
     new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }),
   );
   facePick.position.set(0, 0, 1);
-  facePick.userData.isBoundsFacePick = true;
+  facePick.userData['isBoundsFacePick'] = true;
   const handleMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
   handleMesh.position.set(0, 0, -2);
   const handle = new GizmoHandle(GizmoAxis.Z, 0x00ff00, handleMesh);
-  handleMesh.userData.handleId = handle.getHandleId();
+  handleMesh.userData['handleId'] = handle.getHandleId();
   const gizmoGroup = new THREE.Group();
   gizmoGroup.add(facePick);
   gizmoGroup.add(handleMesh);
