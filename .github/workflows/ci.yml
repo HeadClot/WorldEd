@@ -39,6 +39,17 @@ jobs:
       - name: Build web bundle
         run: bun run build
 
+      - name: Restore static favicon files
+        run: |
+          git checkout HEAD -- \
+            docs/favicon.ico \
+            docs/favicon-16x16.png \
+            docs/favicon-32x32.png \
+            docs/apple-touch-icon.png \
+            docs/android-chrome-192x192.png \
+            docs/android-chrome-512x512.png \
+            docs/site.webmanifest
+
       - name: Upload GitHub Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4

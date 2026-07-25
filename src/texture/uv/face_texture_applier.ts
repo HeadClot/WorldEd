@@ -6,6 +6,8 @@ import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
+  createFaceTextureMappingFromTrs,
+  getFaceTextureMappingTrs,
 } from './face_texture_mapping.js';
 import {
   upsertFaceTextureMap,
@@ -13,13 +15,16 @@ import {
   getFaceTextureMapsLive,
   setFaceTextureMaps,
 } from './face_texture_storage.js';
-import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../solid/model/solid_model_keys.js';
+import { isResultMesh, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../solid/model/solid_model_keys.js';
 import {
   bakeFaceUVs,
   bakeAllFacesDefaultUVs,
+  computeRegionWorldNormal,
   countTriangles,
   rebakeStoredFaceTextureMaps,
+  resolveProjectionNormal,
 } from './planar_uv_projector.js';
+import { SurfaceUvMatrix } from '../uv_matrix/surface_uv_matrix.js';
 import { applyCylinderSideUnwrapOffsets } from './cylinder_side_unwrap.js';
 import { captureGeometrySourceIfNeeded } from './geometry_source.js';
 import { rebuildSurfaceMaterials } from '../material/surface_material_builder.js';
@@ -174,20 +179,67 @@ export function resolveTargetMapping(target: TextureApplyTarget): FaceTextureMap
 
 /**
  * Applies UV editor fields to each target while preserving each region's
- * textureId (and any omitted identity). Bakes UVs afterward.
+ * textureId. Rebuilds the UV matrix from TRS using each region's face normal so
+ * rotation/scale never use a wrong plane (e.g. Y-up for a Z face).
  *
  * @param targets Regions to update.
- * @param mapping Mapping parameters to write.
+ * @param mapping Mapping parameters (TRS source; matrix is rebuilt per face).
  */
 export function applyMappingToTargets(targets: TextureApplyTarget[], mapping: FaceTextureMapping): void {
   const meshes = new Set<THREE.Mesh>();
   targets.forEach((target) => {
-    const fullMapping = mergeMappingPreservingTexture(target, mapping);
+    const fullMapping = buildFaceOrientedMapping(target, mapping);
     upsertFaceTextureMap(target.mesh, target.triangleIndices, fullMapping);
     bakeFaceUVs(target.mesh, target.triangleIndices, fullMapping);
     meshes.add(target.mesh);
   });
-  meshes.forEach((mesh) => rebuildSurfaceMaterials(mesh));
+  meshes.forEach((mesh) => rebuildMaterialsPreservingSolidOrder(mesh));
+}
+
+/**
+ * Builds a face-oriented UV matrix mapping from editor TRS fields.
+ *
+ * @param target Region receiving the mapping.
+ * @param mapping Incoming mapping (TRS extracted from its matrix).
+ * @returns Mapping with UV matrix on the face plane.
+ */
+function buildFaceOrientedMapping(target: TextureApplyTarget, mapping: FaceTextureMapping): FaceTextureMapping {
+  const textureId = resolveTextureIdForMerge(target, mapping);
+  const faceNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
+  const align = mapping.align ?? 'face';
+  const projectionNormal = resolveProjectionNormal(faceNormal, align);
+  const extractNormal = resolveTrsExtractNormal(mapping, projectionNormal);
+  const trs = getFaceTextureMappingTrs(mapping, extractNormal);
+  return createFaceTextureMappingFromTrs(textureId, projectionNormal, trs, align);
+}
+
+/**
+ * Picks a normal for reading TRS from an existing matrix (prefers the matrix
+ * plane; falls back to the face projection normal).
+ *
+ * @param mapping Incoming mapping.
+ * @param fallbackNormal Face projection normal.
+ * @returns Unit normal for TRS decompose.
+ */
+function resolveTrsExtractNormal(mapping: FaceTextureMapping, fallbackNormal: THREE.Vector3): THREE.Vector3 {
+  if (mapping.uv instanceof SurfaceUvMatrix) {
+    const planeNormal = mapping.uv.planeNormal();
+    if (planeNormal.lengthSq() > 1e-12) return planeNormal;
+  }
+  return fallbackNormal.clone().normalize();
+}
+
+/**
+ * Resolves texture id when merging editor fields onto a target.
+ *
+ * @param target Region being updated.
+ * @param mapping Incoming mapping.
+ * @returns Texture identity string.
+ */
+function resolveTextureIdForMerge(target: TextureApplyTarget, mapping: FaceTextureMapping): string {
+  if (mapping.textureId) return mapping.textureId;
+  const existing = resolveTargetMapping(target).textureId;
+  return existing || DEFAULT_CHECKER_TEXTURE_ID;
 }
 
 /**
@@ -205,7 +257,7 @@ export function applyTextureIdToTargets(targets: TextureApplyTarget[], textureId
     patchTextureIdOnRegion(target.mesh, target.triangleIndices, resolvedId);
     meshes.add(target.mesh);
   });
-  meshes.forEach((mesh) => rebuildSurfaceMaterials(mesh));
+  meshes.forEach((mesh) => rebuildMaterialsPreservingSolidOrder(mesh));
 }
 
 /**
@@ -217,13 +269,16 @@ export function applyTextureIdToTargets(targets: TextureApplyTarget[], textureId
 export function applyAlignToTargets(targets: TextureApplyTarget[], align: FaceTextureAlign): void {
   const meshes = new Set<THREE.Mesh>();
   targets.forEach((target) => {
-    const mapping = resolveTargetMapping(target);
-    mapping.align = align;
+    const existing = resolveTargetMapping(target);
+    const faceNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
+    const projectionNormal = resolveProjectionNormal(faceNormal, align);
+    const trs = getFaceTextureMappingTrs(existing, faceNormal);
+    const mapping = createFaceTextureMappingFromTrs(existing.textureId, projectionNormal, trs, align);
     upsertFaceTextureMap(target.mesh, target.triangleIndices, mapping);
     bakeFaceUVs(target.mesh, target.triangleIndices, mapping);
     meshes.add(target.mesh);
   });
-  meshes.forEach((mesh) => rebuildSurfaceMaterials(mesh));
+  meshes.forEach((mesh) => rebuildMaterialsPreservingSolidOrder(mesh));
 }
 
 /**
@@ -253,7 +308,20 @@ export function resetUvParamsOnTargets(targets: TextureApplyTarget[]): void {
         bakeFaceUVs(mesh, target.triangleIndices, mapping);
       });
     }
-    rebuildSurfaceMaterials(mesh);
+    rebuildMaterialsPreservingSolidOrder(mesh);
+  });
+}
+
+/**
+ * Rebuilds surface materials without reordering solid result triangles. Solid
+ * CSG result meshes keep brush-range layout for partial remesh/patch; permuting
+ * by texture would scramble neighbor brushes and make them vanish.
+ *
+ * @param mesh Mesh receiving material layout.
+ */
+function rebuildMaterialsPreservingSolidOrder(mesh: THREE.Mesh): void {
+  rebuildSurfaceMaterials(mesh, undefined, undefined, {
+    preserveTriangleOrder: isResultMesh(mesh),
   });
 }
 
@@ -329,24 +397,28 @@ export function resetTargetsToDefault(targets: TextureApplyTarget[]): void {
 export function initializeMeshTextureUVs(mesh: THREE.Mesh, textureId?: string, align?: FaceTextureAlign): void {
   captureGeometrySourceIfNeeded(mesh);
   const paintId = textureId ?? getTexturePaintState().getLastTextureId();
-  const mapping = createDefaultFaceTextureMapping(paintId);
-  if (align) {
-    mapping.align = align;
-  }
   const triangleCount = countTriangles(mesh.geometry);
   const allIndices: number[] = [];
   for (let i = 0; i < triangleCount; i++) allIndices.push(i);
   const targets = buildTargetsFromFaceSelection(allIndices.map((faceIndex) => ({ mesh, faceIndex })));
   if (targets.length === 0) {
-    bakeAllFacesDefaultUVs(mesh, mapping);
+    bakeAllFacesDefaultUVs(mesh, createDefaultFaceTextureMapping(paintId));
     rebuildSurfaceMaterials(mesh);
     return;
   }
-  const entries = targets.map((target) => ({
-    triangleIndices: target.triangleIndices.slice(),
-    mapping: cloneFaceTextureMapping(mapping),
-  }));
-  // Unwrap cylinder sides so U walks continuously around the shell.
+  const entries = targets.map((target) => {
+    const faceNormal = computeRegionWorldNormal(mesh, target.triangleIndices);
+    const projectionNormal = resolveProjectionNormal(faceNormal, align ?? 'auto');
+    return {
+      triangleIndices: target.triangleIndices.slice(),
+      mapping: createFaceTextureMappingFromTrs(
+        paintId,
+        projectionNormal,
+        { scaleU: 1, scaleV: 1, offsetU: 0, offsetV: 0, rotationDeg: 0 },
+        align ?? 'auto',
+      ),
+    };
+  });
   applyCylinderSideUnwrapOffsets(mesh, entries);
   setFaceTextureMaps(mesh, entries);
   rebakeStoredFaceTextureMaps(mesh);
@@ -354,55 +426,44 @@ export function initializeMeshTextureUVs(mesh: THREE.Mesh, textureId?: string, a
 }
 
 /**
- * Reads a common mapping across targets when all values match.
+ * Reads a common mapping across targets when texture id and TRS match.
+ * Face-oriented UV matrices differ per normal, so compare decomposed TRS.
  *
  * @param targets Selection targets.
- * @returns Shared mapping, or null when mixed / empty.
+ * @returns Shared mapping (first target), or null when mixed / empty.
  */
 export function getCommonMapping(targets: TextureApplyTarget[]): FaceTextureMapping | null {
   if (targets.length === 0) return null;
   const first = resolveTargetMapping(targets[0]);
+  const firstNormal = computeRegionWorldNormal(targets[0].mesh, targets[0].triangleIndices);
+  const firstTrs = getFaceTextureMappingTrs(first, firstNormal);
+  const firstTextureId = first.textureId || DEFAULT_CHECKER_TEXTURE_ID;
   for (let i = 1; i < targets.length; i++) {
     const next = resolveTargetMapping(targets[i]);
-    if (!mappingsEqual(first, next)) return null;
+    if ((next.textureId || DEFAULT_CHECKER_TEXTURE_ID) !== firstTextureId) return null;
+    const nextNormal = computeRegionWorldNormal(targets[i].mesh, targets[i].triangleIndices);
+    const nextTrs = getFaceTextureMappingTrs(next, nextNormal);
+    if (!faceTextureTrsEqual(firstTrs, nextTrs)) return null;
   }
   return first;
 }
 
 /**
- * Compares two mappings for equality.
+ * Compares two TRS field sets within a small epsilon.
  *
- * @param a First mapping.
- * @param b Second mapping.
- * @returns True when all fields match.
+ * @param a First TRS.
+ * @param b Second TRS.
+ * @returns True when equal.
  */
-function mappingsEqual(a: FaceTextureMapping, b: FaceTextureMapping): boolean {
+function faceTextureTrsEqual(
+  a: ReturnType<typeof getFaceTextureMappingTrs>,
+  b: ReturnType<typeof getFaceTextureMappingTrs>,
+): boolean {
   return (
-    a.align === b.align &&
-    a.scaleU === b.scaleU &&
-    a.scaleV === b.scaleV &&
-    a.offsetU === b.offsetU &&
-    a.offsetV === b.offsetV &&
-    a.rotationDeg === b.rotationDeg &&
-    (a.textureId || DEFAULT_CHECKER_TEXTURE_ID) === (b.textureId || DEFAULT_CHECKER_TEXTURE_ID)
+    Math.abs(a.scaleU - b.scaleU) < 1e-4 &&
+    Math.abs(a.scaleV - b.scaleV) < 1e-4 &&
+    Math.abs(a.offsetU - b.offsetU) < 1e-4 &&
+    Math.abs(a.offsetV - b.offsetV) < 1e-4 &&
+    Math.abs(a.rotationDeg - b.rotationDeg) < 1e-3
   );
-}
-
-/**
- * Merges UV params from mapping onto the target, keeping textureId when
- * omitted.
- *
- * @param target Region being updated.
- * @param mapping Incoming mapping (may omit textureId).
- * @returns Complete mapping with textureId.
- */
-function mergeMappingPreservingTexture(target: TextureApplyTarget, mapping: FaceTextureMapping): FaceTextureMapping {
-  const clone = cloneFaceTextureMapping(mapping);
-  if (!mapping.textureId) {
-    clone.textureId = resolveTargetMapping(target).textureId;
-  }
-  if (!clone.textureId) {
-    clone.textureId = DEFAULT_CHECKER_TEXTURE_ID;
-  }
-  return clone;
 }

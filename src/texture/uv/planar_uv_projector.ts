@@ -1,5 +1,10 @@
 import * as THREE from 'three';
-import { FaceTextureAlign, FaceTextureMapping, createDefaultFaceTextureMapping } from './face_texture_mapping.js';
+import {
+  FaceTextureAlign,
+  FaceTextureMapping,
+  createDefaultFaceTextureMapping,
+  createFaceTextureMappingFromTrs,
+} from './face_texture_mapping.js';
 import { getFaceTextureMaps } from './face_texture_storage.js';
 import { captureGeometrySourceIfNeeded } from './geometry_source.js';
 
@@ -86,39 +91,20 @@ export function buildProjectionBasis(projectionNormal: THREE.Vector3, rotationDe
 }
 
 /**
- * Resolves the UV projection basis for a face mapping. Uses custom Source-style
- * axes when both are present; otherwise align/rotation.
+ * Resolves the UV projection basis for a face mapping from its UV matrix rows.
  *
  * @param faceNormalWorld Face normal in world space.
- * @param mapping Face texture mapping.
- * @returns Projection basis in world space.
+ * @param mapping Face texture mapping with UV matrix.
+ * @returns Projection basis in world space (unit U/V axes).
  */
 export function resolveProjectionBasis(faceNormalWorld: THREE.Vector3, mapping: FaceTextureMapping): ProjectionBasis {
-  if (mapping.customUAxis && mapping.customVAxis) {
-    return buildCustomAxisBasis(faceNormalWorld, mapping.customUAxis, mapping.customVAxis);
-  }
-  const projectionNormal = resolveProjectionNormal(faceNormalWorld, mapping.align);
-  return buildProjectionBasis(projectionNormal, mapping.rotationDeg);
-}
-
-/**
- * Builds a projection basis from explicit world U/V directions.
- *
- * @param faceNormalWorld Face normal used when axes are degenerate.
- * @param customU Custom U axis components.
- * @param customV Custom V axis components.
- * @returns Projection basis.
- */
-function buildCustomAxisBasis(
-  faceNormalWorld: THREE.Vector3,
-  customU: { x: number; y: number; z: number },
-  customV: { x: number; y: number; z: number },
-): ProjectionBasis {
   const normal = faceNormalWorld.clone().normalize();
-  const uAxis = new THREE.Vector3(customU.x, customU.y, customU.z);
-  const vAxis = new THREE.Vector3(customV.x, customV.y, customV.z);
-  if (uAxis.lengthSq() < 1e-12 || vAxis.lengthSq() < 1e-12) {
-    return buildProjectionBasis(normal, 0);
+  const uAxis = new THREE.Vector3(mapping.uv.u.x, mapping.uv.u.y, mapping.uv.u.z);
+  const vAxis = new THREE.Vector3(mapping.uv.v.x, mapping.uv.v.y, mapping.uv.v.z);
+  if (uAxis.lengthSq() < 1e-20 || vAxis.lengthSq() < 1e-20) {
+    const align = mapping.align ?? 'face';
+    const projectionNormal = resolveProjectionNormal(normal, align);
+    return buildProjectionBasis(projectionNormal, 0);
   }
   uAxis.normalize();
   vAxis.normalize();
@@ -166,25 +152,21 @@ function applyRotationAroundNormal(
 }
 
 /**
- * Projects a world position into UV using a basis and mapping params.
- * World-space meters map to UV tiles; fractional phase enables continuous
- * tiling across adjacent brushes (values need not lie in 0..1).
+ * Projects a world position into UV using the mapping's UV matrix. Basis is
+ * ignored when the matrix is present (kept for call-site compatibility).
  *
  * @param worldPos World-space vertex position.
- * @param basis Projection basis.
- * @param mapping Scale and offset.
+ * @param _basis Unused; UV matrix encodes axes.
+ * @param mapping Face mapping with SurfaceUvMatrix.
  * @returns UV pair.
  */
 export function projectWorldPositionToUv(
   worldPos: THREE.Vector3,
-  basis: ProjectionBasis,
+  _basis: ProjectionBasis,
   mapping: FaceTextureMapping,
 ): { u: number; v: number } {
-  const scaleU = mapping.scaleU === 0 ? 1 : mapping.scaleU;
-  const scaleV = mapping.scaleV === 0 ? 1 : mapping.scaleV;
-  const u = (worldPos.dot(basis.uAxis) - mapping.offsetU) / scaleU;
-  const v = (worldPos.dot(basis.vAxis) - mapping.offsetV) / scaleV;
-  return { u, v };
+  void _basis;
+  return mapping.uv.project(worldPos);
 }
 
 /**
@@ -272,28 +254,24 @@ function computeLocalTriangleNormal(geometry: THREE.BufferGeometry, faceIndex: n
  */
 export function bakeFaceUVs(mesh: THREE.Mesh, triangleIndices: number[], mapping: FaceTextureMapping): void {
   mesh.updateMatrixWorld(true);
-  const faceNormal = computeRegionWorldNormal(mesh, triangleIndices);
-  const basis = resolveProjectionBasis(faceNormal, mapping);
   const uv = ensureUvAttribute(mesh.geometry);
   const position = mesh.geometry.getAttribute('position');
   const index = mesh.geometry.getIndex();
   triangleIndices.forEach((faceIndex) => {
-    writeTriangleUvs(mesh, faceIndex, index, position, uv, basis, mapping);
+    writeTriangleUvs(mesh, faceIndex, index, position, uv, mapping);
   });
   uv.needsUpdate = true;
 }
 
 /**
- * Writes UV for the three vertices of one triangle. Always overwrites so later
- * regions can own their corners after de-indexing.
+ * Writes UV for the three vertices of one triangle via the UV matrix.
  *
  * @param mesh Mesh for world transform.
  * @param faceIndex Triangle index.
  * @param index Optional index buffer.
  * @param position Position attribute.
  * @param uv UV attribute.
- * @param basis Projection basis.
- * @param mapping Mapping params.
+ * @param mapping Mapping with SurfaceUvMatrix (world space for content).
  */
 function writeTriangleUvs(
   mesh: THREE.Mesh,
@@ -301,14 +279,13 @@ function writeTriangleUvs(
   index: THREE.BufferAttribute | null,
   position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   uv: THREE.BufferAttribute,
-  basis: ProjectionBasis,
   mapping: FaceTextureMapping,
 ): void {
   for (let corner = 0; corner < 3; corner++) {
     const vertexIndex = index ? index.getX(faceIndex * 3 + corner) : faceIndex * 3 + corner;
     scratchLocal.fromBufferAttribute(position, vertexIndex);
     scratchWorld.copy(scratchLocal).applyMatrix4(mesh.matrixWorld);
-    const coords = projectWorldPositionToUv(scratchWorld, basis, mapping);
+    const coords = mapping.uv.project(scratchWorld);
     uv.setXY(vertexIndex, coords.u, coords.v);
   }
 }
@@ -330,7 +307,15 @@ export function bakeAllFacesDefaultUVs(
   for (let i = 0; i < triangleCount; i++) allIndices.push(i);
   const regions = splitIntoCoplanarRegions(mesh, allIndices);
   regions.forEach((region) => {
-    bakeFaceUVs(mesh, region, mapping);
+    const faceNormal = computeRegionWorldNormal(mesh, region);
+    const projectionNormal = resolveProjectionNormal(faceNormal, mapping.align ?? 'auto');
+    const oriented = createFaceTextureMappingFromTrs(
+      mapping.textureId,
+      projectionNormal,
+      { scaleU: 1, scaleV: 1, offsetU: 0, offsetV: 0, rotationDeg: 0 },
+      mapping.align ?? 'auto',
+    );
+    bakeFaceUVs(mesh, region, oriented);
   });
 }
 

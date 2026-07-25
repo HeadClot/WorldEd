@@ -1,7 +1,6 @@
 import * as THREE from 'three';
-import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
-import { projectWorldPositionToUv, resolveProjectionBasis } from '../../texture/uv/planar_uv_projector.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
+import { FaceSurfaceDescription, createDefaultFaceSurface } from '../../texture/uv_matrix/face_surface_description.js';
 import { SolidCompiledPolygon } from '../algorithm/solid_compiled_polygon.js';
 import { SurfaceTriangulator } from '../algorithm/surface_triangulator.js';
 import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';
@@ -30,48 +29,29 @@ export interface SolidBrushMeshChunk {
 /** Options controlling how solid chunk UVs are projected. */
 export interface SolidChunkUvBakeOptions {
   /**
-   * When true, project in brush-local space so textures stick to the brush (Tex
-   * Lock). When false, project in world space (textures stay in the world).
-   */
-  stickToBrush: boolean;
-  /** Solid-model → world matrix of the result mesh. */
-  resultWorldMatrix: THREE.Matrix4;
-  /**
-   * Brush local → solid-model matrix (pose of this brush in the solid).
-   * Required when stickToBrush is true.
+   * Brush local → solid-model matrix. Used to convert model-space vertices into
+   * brush-local space before applying the authored UV matrix.
    */
   brushModelMatrix?: THREE.Matrix4;
-  /**
-   * Brush face normal in brush-local space (for local UV basis). Falls back to
-   * the shaded polygon normal when omitted.
-   */
-  resolveLocalFaceNormal?: (surfaceIndex: number) => THREE.Vector3;
-  /**
-   * Brush face normal in solid-model space (for world UV basis). Falls back to
-   * the shaded polygon normal when omitted.
-   */
-  resolveModelFaceNormal?: (surfaceIndex: number) => THREE.Vector3;
 }
 
 /** Builds and holds UV bake scratch state for chunk construction. */
 export class SolidBrushMeshChunkBuilder {
   private readonly scratchPoint = new THREE.Vector3();
-  private readonly scratchNormal = new THREE.Vector3();
   private readonly scratchInverse = new THREE.Matrix4();
-  private readonly scratchNormalMatrix = new THREE.Matrix3();
 
   /**
-   * Triangulates polygons and bakes planar UVs into a reusable brush chunk.
+   * Triangulates polygons and bakes UV matrices into a reusable brush chunk.
    *
    * @param polygons Compiled polygons for one brush.
-   * @param resolveMapping Maps surface index to authored face mapping.
-   * @param uvOptions World vs brush-local UV projection controls.
+   * @param resolveSurface Maps surface index to authored face surface.
+   * @param uvOptions Brush model matrix for local UV projection.
    * @returns Mesh chunk ready for assembly.
    */
   build(
     polygons: SolidCompiledPolygon[],
-    resolveMapping: (surfaceIndex: number) => FaceTextureMapping,
-    uvOptions: SolidChunkUvBakeOptions,
+    resolveSurface: (surfaceIndex: number) => FaceSurfaceDescription,
+    uvOptions: SolidChunkUvBakeOptions = {},
   ): SolidBrushMeshChunk {
     const vertexCount = this.countVertices(polygons);
     const positions = new Float32Array(vertexCount * 3);
@@ -81,14 +61,15 @@ export class SolidBrushMeshChunkBuilder {
     const triangleSources: SolidTriangleSource[] = [];
     let triangleCount = 0;
     let vertexWrite = 0;
-    if (uvOptions.stickToBrush && uvOptions.brushModelMatrix) {
+    if (uvOptions.brushModelMatrix) {
       this.scratchInverse.copy(uvOptions.brushModelMatrix).invert();
+    } else {
+      this.scratchInverse.identity();
     }
     for (const polygon of polygons) {
       triangleCount = this.writePolygon(
         polygon,
-        resolveMapping,
-        uvOptions,
+        resolveSurface,
         positions,
         normals,
         uvs,
@@ -129,8 +110,7 @@ export class SolidBrushMeshChunkBuilder {
    * Writes one polygon's triangles into the chunk buffers.
    *
    * @param polygon Source polygon.
-   * @param resolveMapping Face mapping resolver.
-   * @param uvOptions UV projection options.
+   * @param resolveSurface Face surface resolver.
    * @param positions Position buffer.
    * @param normals Normal buffer.
    * @param uvs UV buffer.
@@ -142,8 +122,7 @@ export class SolidBrushMeshChunkBuilder {
    */
   private writePolygon(
     polygon: SolidCompiledPolygon,
-    resolveMapping: (surfaceIndex: number) => FaceTextureMapping,
-    uvOptions: SolidChunkUvBakeOptions,
+    resolveSurface: (surfaceIndex: number) => FaceSurfaceDescription,
     positions: Float32Array,
     normals: Float32Array,
     uvs: Float32Array,
@@ -154,9 +133,8 @@ export class SolidBrushMeshChunkBuilder {
   ): number {
     const tris = SurfaceTriangulator.triangulateConvexVertices(polygon.vertices);
     if (tris.length < 1) return triangleCount;
-    const textureId = polygon.textureId || DEFAULT_CHECKER_TEXTURE_ID;
-    const mapping = resolveMapping(polygon.surfaceIndex);
-    const basis = this.buildUvBasis(polygon, mapping, uvOptions);
+    const surface = resolveSurface(polygon.surfaceIndex) ?? createDefaultFaceSurface();
+    const textureId = polygon.textureId || surface.textureId || DEFAULT_CHECKER_TEXTURE_ID;
     const regionIndices: number[] = [];
     for (let step = 0; step < tris.length; step++) {
       regionIndices.push(triangleCount + step);
@@ -165,17 +143,7 @@ export class SolidBrushMeshChunkBuilder {
         surfaceIndex: polygon.surfaceIndex,
         textureId,
       });
-      vertexWrite = this.writeTriangleCorners(
-        polygon,
-        tris[step],
-        mapping,
-        basis,
-        uvOptions,
-        positions,
-        normals,
-        uvs,
-        vertexWrite,
-      );
+      vertexWrite = this.writeTriangleCorners(polygon, tris[step], surface, positions, normals, uvs, vertexWrite);
     }
     regions.push({
       triangleIndices: regionIndices,
@@ -187,37 +155,11 @@ export class SolidBrushMeshChunkBuilder {
   }
 
   /**
-   * Builds a UV projection basis in the space used for projection.
-   *
-   * @param polygon Source polygon.
-   * @param mapping Face mapping.
-   * @param uvOptions UV options.
-   * @returns Projection basis.
-   */
-  private buildUvBasis(
-    polygon: SolidCompiledPolygon,
-    mapping: FaceTextureMapping,
-    uvOptions: SolidChunkUvBakeOptions,
-  ): ReturnType<typeof resolveProjectionBasis> {
-    if (uvOptions.stickToBrush) {
-      const localNormal = uvOptions.resolveLocalFaceNormal?.(polygon.surfaceIndex) ?? polygon.normal;
-      this.scratchNormal.copy(localNormal).normalize();
-      return resolveProjectionBasis(this.scratchNormal, mapping);
-    }
-    const modelNormal = uvOptions.resolveModelFaceNormal?.(polygon.surfaceIndex) ?? polygon.normal;
-    this.scratchNormalMatrix.getNormalMatrix(uvOptions.resultWorldMatrix);
-    this.scratchNormal.copy(modelNormal).applyMatrix3(this.scratchNormalMatrix).normalize();
-    return resolveProjectionBasis(this.scratchNormal, mapping);
-  }
-
-  /**
    * Writes one triangle's three corners into the buffers.
    *
    * @param polygon Source polygon.
    * @param cornerIndices Three local vertex indices into the polygon.
-   * @param mapping UV mapping.
-   * @param basis Projection basis.
-   * @param uvOptions UV projection options.
+   * @param surface Authored face surface.
    * @param positions Position buffer.
    * @param normals Normal buffer.
    * @param uvs UV buffer.
@@ -227,9 +169,7 @@ export class SolidBrushMeshChunkBuilder {
   private writeTriangleCorners(
     polygon: SolidCompiledPolygon,
     cornerIndices: number[],
-    mapping: FaceTextureMapping,
-    basis: ReturnType<typeof resolveProjectionBasis>,
-    uvOptions: SolidChunkUvBakeOptions,
+    surface: FaceSurfaceDescription,
     positions: Float32Array,
     normals: Float32Array,
     uvs: Float32Array,
@@ -244,36 +184,29 @@ export class SolidBrushMeshChunkBuilder {
       normals[base] = polygon.normal.x;
       normals[base + 1] = polygon.normal.y;
       normals[base + 2] = polygon.normal.z;
-      this.projectVertexToUv(vertex, mapping, basis, uvOptions, uvs, vertexWrite);
+      this.projectVertexToUv(vertex, surface, uvs, vertexWrite);
       vertexWrite += 1;
     }
     return vertexWrite;
   }
 
   /**
-   * Projects one vertex into the UV buffer.
+   * Projects one model-space vertex into the UV buffer using the brush-local UV
+   * matrix.
    *
    * @param modelVertex Vertex in solid model space.
-   * @param mapping Face mapping.
-   * @param basis Projection basis.
-   * @param uvOptions UV options.
+   * @param surface Authored face surface.
    * @param uvs UV buffer.
    * @param vertexWrite Vertex index to write.
    */
   private projectVertexToUv(
     modelVertex: THREE.Vector3,
-    mapping: FaceTextureMapping,
-    basis: ReturnType<typeof resolveProjectionBasis>,
-    uvOptions: SolidChunkUvBakeOptions,
+    surface: FaceSurfaceDescription,
     uvs: Float32Array,
     vertexWrite: number,
   ): void {
-    if (uvOptions.stickToBrush && uvOptions.brushModelMatrix) {
-      this.scratchPoint.copy(modelVertex).applyMatrix4(this.scratchInverse);
-    } else {
-      this.scratchPoint.copy(modelVertex).applyMatrix4(uvOptions.resultWorldMatrix);
-    }
-    const coords = projectWorldPositionToUv(this.scratchPoint, basis, mapping);
+    this.scratchPoint.copy(modelVertex).applyMatrix4(this.scratchInverse);
+    const coords = surface.uv.project(this.scratchPoint);
     const uvBase = vertexWrite * 2;
     uvs[uvBase] = coords.u;
     uvs[uvBase + 1] = coords.v;

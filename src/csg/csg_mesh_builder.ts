@@ -293,13 +293,7 @@ export class CsgMeshBuilder {
  * @returns String key.
  */
 function mappingKey(mapping: FaceTextureMapping): string {
-  return [
-    mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID,
-    mapping.align,
-    mapping.scaleU,
-    mapping.scaleV,
-    mapping.offsetU,
-    mapping.offsetV,
-    mapping.rotationDeg,
-  ].join('|');
+  const u = mapping.uv.u;
+  const v = mapping.uv.v;
+  return [mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID, u.x, u.y, u.z, u.w, v.x, v.y, v.z, v.w].join('|');
 }

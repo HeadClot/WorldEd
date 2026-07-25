@@ -26,6 +26,9 @@ import {
   pullTransformIfChanged,
   sameBrushOrder,
 } from './solid_brush_transform_sync.js';
+import type { SolidBrushTextureLockBaseline } from '../../texture/lock/solid_brush_texture_lock.js';
+import { normalizeTextureLockFlags, type TextureLockFlags } from '../../texture/lock/texture_lock_transform.js';
+import { convertWorldFaceMappingToBrushLocal } from '../brush/solid_brush_uv_space.js';
 
 export {
   SOLID_MODEL_USERDATA_KEY,
@@ -43,6 +46,8 @@ export class SolidModel {
   private readonly brushes: SolidBrushCollection;
   private readonly pipeline: SolidModelRebuildPipeline;
   private readonly presentation = new SolidModelPresentation();
+  /** Per-brush texture lock baselines for the active interactive drag. */
+  private readonly textureLockBaselines = new Map<string, SolidBrushTextureLockBaseline>();
   private static modelCounter = 0;
 
   /**
@@ -68,13 +73,15 @@ export class SolidModel {
   }
 
   /**
-   * Sets whether solid result UV bake sticks textures to each brush (Tex Lock).
+   * Sets whether interactive UV stick mode is active (legacy). Solid UVs always
+   * bake in world space; stick is applied by updating face mappings on
+   * transform using position/stretch locks. Flag-only — no remesh or
+   * conversion.
    *
-   * @param enabled True for brush-local UV, false for world UV.
+   * @param enabled True when either lock is considered on for bake hints.
    */
   setUvStickToBrush(enabled: boolean): void {
-    const brushIds = this.brushes.getEvaluationList().map((brush) => brush.id);
-    this.pipeline.setUvStickToBrush(enabled, brushIds);
+    this.pipeline.setUvStickToBrush(enabled);
   }
 
   /**
@@ -384,16 +391,17 @@ export class SolidModel {
    *
    * @param textureLockEnabled Whether Tex Lock should stick face UVs on move.
    */
-  syncBrushesFromScene(textureLockEnabled: boolean = false): void {
+  syncBrushesFromScene(textureLockEnabled: boolean | TextureLockFlags = false): void {
+    const locks = normalizeTextureLockFlags(textureLockEnabled);
     const evaluationList = this.brushes.getEvaluationList();
     const orderBefore = evaluationList.map((brush) => brush.id);
     this.syncBrushOrderFromScene();
     if (!sameBrushOrder(orderBefore, this.brushes.getEvaluationList())) {
-      pullAllBrushTransforms(this.brushes.getEvaluationList(), textureLockEnabled);
+      pullAllBrushTransforms(this.brushes.getEvaluationList(), locks);
       this.markDirty();
       return;
     }
-    const changedIds = pullChangedBrushTransforms(evaluationList, textureLockEnabled);
+    const changedIds = pullChangedBrushTransforms(evaluationList, locks);
     if (changedIds.length > 0) {
       this.markBrushesDirty(changedIds);
     }
@@ -407,12 +415,16 @@ export class SolidModel {
    * @param textureLockEnabled Whether Tex Lock should stick face UVs on move.
    * @returns True when at least one owned brush changed.
    */
-  syncSelectedBrushesFromScene(selectedMeshes: readonly THREE.Mesh[], textureLockEnabled: boolean = false): boolean {
+  syncSelectedBrushesFromScene(
+    selectedMeshes: readonly THREE.Mesh[],
+    textureLockEnabled: boolean | TextureLockFlags = false,
+  ): boolean {
+    const locks = normalizeTextureLockFlags(textureLockEnabled);
     const selectedSet = new Set(selectedMeshes);
     const changedIds: string[] = [];
     for (const brush of this.brushes.getEvaluationList()) {
       if (!brush.mesh || !selectedSet.has(brush.mesh)) continue;
-      if (pullTransformIfChanged(brush, textureLockEnabled)) {
+      if (pullTransformIfChanged(brush, locks)) {
         changedIds.push(brush.id);
       }
     }
@@ -432,12 +444,16 @@ export class SolidModel {
    * @param textureLockEnabled Whether toolbar Tex Lock is on.
    * @returns True when this model owns at least one selected brush.
    */
-  prepareLiveBrushEdit(selectedMeshes: readonly THREE.Mesh[], textureLockEnabled: boolean = false): boolean {
+  prepareLiveBrushEdit(
+    selectedMeshes: readonly THREE.Mesh[],
+    textureLockEnabled: boolean | TextureLockFlags = false,
+  ): boolean {
+    const locks = normalizeTextureLockFlags(textureLockEnabled);
     const selectedSet = new Set(selectedMeshes);
     const dirtyIds: string[] = [];
     for (const brush of this.brushes.getEvaluationList()) {
       if (!brush.mesh || !selectedSet.has(brush.mesh)) continue;
-      pullLiveBrushTransform(brush, textureLockEnabled);
+      pullLiveBrushTransform(brush, locks, this.textureLockBaselines);
       dirtyIds.push(brush.id);
     }
     if (dirtyIds.length === 0) return false;
@@ -511,6 +527,7 @@ export class SolidModel {
    * responsiveness.
    */
   finalizeAfterInteractiveEdit(): void {
+    this.textureLockBaselines.clear();
     const needsCompile =
       this.pipeline.isFullRebuildRequired() ||
       this.pipeline.getDirtyBrushIdCount() > 0 ||
@@ -716,11 +733,45 @@ export class SolidModel {
     this.pipeline.syncAuthoredMappingsFromMaps(maps, sources, (triangleIndices, mapping, sourceList) => {
       this.writeMapEntryToBrushFaces(triangleIndices, mapping, sourceList);
     });
+    if (this.pipeline.hasResultGeometry()) {
+      this.applySurfaceLayoutToResult(true);
+    }
+  }
+
+  /**
+   * Writes only the given result-mesh triangle regions back onto brush faces
+   * and remeshes only those brushes (never all coplanar neighbors).
+   *
+   * @param triangleIndices Result triangles that were authored.
+   * @param mapping Mapping applied to those triangles.
+   */
+  syncAuthoredMappingForTriangles(triangleIndices: number[], mapping: FaceTextureMapping): void {
+    const sources =
+      (this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
+        Array<{ brushId: string; surfaceIndex: number }> | undefined) ?? [];
+    this.writeMapEntryToBrushFaces(triangleIndices, mapping, sources);
+    const brushIds = new Set<string>();
+    for (const triangleIndex of triangleIndices) {
+      const source = sources[triangleIndex];
+      if (source?.brushId) brushIds.add(source.brushId);
+    }
+    this.pipeline.rebakeMeshChunksForBrushes(brushIds);
+    // Refresh result face maps from authored brush faces so triangle indices
+    // and mappings stay consistent after the partial remesh.
+    if (this.pipeline.hasResultGeometry()) {
+      this.applySurfaceLayoutToResult(true);
+    }
   }
 
   /** Rebuilds when history pull found transform changes with stable brush order. */
   private rebuildChangedHistoryTransforms(): void {
-    const changedIds = pullChangedBrushTransforms(this.brushes.getEvaluationList(), false);
+    // History restores mesh pose and UV matrices via the undo command. Pull
+    // pose only with full stick locks so brush-local UV matrices are not
+    // rewritten for world-slide.
+    const changedIds = pullChangedBrushTransforms(this.brushes.getEvaluationList(), {
+      positionLock: true,
+      stretchLock: true,
+    });
     if (changedIds.length === 0) return;
     this.markBrushesDirty(changedIds);
     this.rebuild(true);
@@ -917,7 +968,9 @@ export class SolidModel {
     written.add(key);
     const brush = this.findBrush(source.brushId);
     if (!brush) return;
-    brush.setFaceMapping(source.surfaceIndex, mapping);
+    // UV editor / result bake produce world-space matrices; brush storage is local.
+    const localMapping = convertWorldFaceMappingToBrushLocal(mapping, brush, this.root);
+    brush.setFaceMapping(source.surfaceIndex, localMapping);
   }
 
   /**

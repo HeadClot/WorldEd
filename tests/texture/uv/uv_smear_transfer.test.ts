@@ -9,7 +9,10 @@ import {
   splitMeshIntoCoplanarRegions,
   computeRegionWorldNormal,
 } from '../../../src/texture/uv/planar_uv_projector.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
+import {
+  createDefaultFaceTextureMapping,
+  createFaceTextureMappingFromTrs,
+} from '../../../src/texture/uv/face_texture_mapping.js';
 import { transferUvMappingAcrossFaces } from '../../../src/texture/uv/uv_smear_transfer.js';
 import { initializeMeshTextureUVs } from '../../../src/texture/uv/face_texture_applier.js';
 import { createContentMaterial } from '../../../src/materials/content_material_factory.js';
@@ -30,27 +33,21 @@ describe('uv_smear_transfer', () => {
     expect(pair).not.toBeNull();
     const sourceRegion = pair!.source;
     const destRegion = pair!.dest;
-    const sourceMapping = createDefaultFaceTextureMapping('wall.png');
-    sourceMapping.align = 'face';
-    sourceMapping.scaleU = 1;
-    sourceMapping.scaleV = 1;
-    sourceMapping.offsetU = 0.25;
-    sourceMapping.rotationDeg = 15;
+    const sourceNormal = computeRegionWorldNormal(mesh, sourceRegion);
+    const sourceMapping = createFaceTextureMappingFromTrs(
+      'wall.png',
+      sourceNormal,
+      { scaleU: 1, scaleV: 1, offsetU: 0.25, offsetV: 0, rotationDeg: 15 },
+      'face',
+    );
     bakeFaceUVs(mesh, sourceRegion, sourceMapping);
     const destMapping = transferUvMappingAcrossFaces(mesh, sourceRegion, sourceMapping, mesh, destRegion);
     bakeFaceUVs(mesh, destRegion, destMapping);
     const shared = findSharedWorldPoints(mesh, sourceRegion, destRegion);
     expect(shared.length).toBeGreaterThanOrEqual(2);
-    const sourceNormal = computeRegionWorldNormal(mesh, sourceRegion);
     const destNormal = computeRegionWorldNormal(mesh, destRegion);
-    const sourceBasis = buildProjectionBasis(
-      resolveProjectionNormal(sourceNormal, sourceMapping.align),
-      sourceMapping.rotationDeg,
-    );
-    const destBasis = buildProjectionBasis(
-      resolveProjectionNormal(destNormal, destMapping.align),
-      destMapping.rotationDeg,
-    );
+    const sourceBasis = buildProjectionBasis(sourceNormal, 15);
+    const destBasis = buildProjectionBasis(destNormal, 0);
     shared.slice(0, 2).forEach((point) => {
       const sourceUv = projectWorldPositionToUv(point, sourceBasis, sourceMapping);
       const destUv = projectWorldPositionToUv(point, destBasis, destMapping);

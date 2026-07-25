@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { UndoCommand } from '../undo_command.js';
 import { ObjectDuplicator } from '../../managers/hierarchy/object_duplicator.js';
+import { sortObjectsBySceneOrder } from '../../utils/hierarchy_utils.js';
 
 /**
  * Undoable command for duplicating objects. Execute runs the duplicator and
  * adds clones to parent. Undo removes clones and disposes their resources.
+ * Sources are cloned in outliner / scene-graph order, not selection order.
  */
 export class DuplicateObjectsCommand implements UndoCommand {
   private sourceMeshes: THREE.Mesh[];
@@ -21,7 +23,7 @@ export class DuplicateObjectsCommand implements UndoCommand {
    * @param offset The positional offset for each clone.
    */
   constructor(sourceMeshes: THREE.Mesh[], parent: THREE.Object3D, offset: THREE.Vector3) {
-    this.sourceMeshes = sourceMeshes.slice();
+    this.sourceMeshes = sortObjectsBySceneOrder(sourceMeshes);
     this.parent = parent;
     this.offset = offset.clone();
     this.clonedMeshes = [];

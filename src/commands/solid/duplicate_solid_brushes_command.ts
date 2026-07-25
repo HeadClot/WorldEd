@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { UndoCommand } from '../undo_command.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
 import { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
+import { sortObjectsBySceneOrder } from '../../utils/hierarchy_utils.js';
 
 /** Snapshot of one solid brush duplication for undo. */
 interface SolidBrushDuplicateEntry {
@@ -25,14 +26,18 @@ export class DuplicateSolidBrushesCommand implements UndoCommand {
    * @param offset Local offset applied to each clone.
    */
   constructor(sourceMeshes: THREE.Mesh[], offset: THREE.Vector3) {
-    this.sourceMeshes = sourceMeshes.slice();
+    this.sourceMeshes = sortObjectsBySceneOrder(sourceMeshes);
     this.offset = offset.clone();
     this.entries = [];
     this.clonedMeshes = [];
     this.executed = false;
   }
 
-  /** Duplicates each source brush under its solid model. */
+  /**
+   * Duplicates each source brush under its solid model. Sources are processed
+   * in outliner / scene-graph order so CSG evaluation order does not depend on
+   * selection click order.
+   */
   execute(): void {
     if (this.executed) return;
     this.entries.length = 0;

@@ -6,6 +6,7 @@ import { applyCylinderSideUnwrapOffsets } from '../../../src/texture/uv/cylinder
 import {
   cloneFaceTextureMapEntry,
   createDefaultFaceTextureMapping,
+  createFaceTextureMappingFromTrs,
 } from '../../../src/texture/uv/face_texture_mapping.js';
 import { computeRegionWorldNormal, splitMeshIntoCoplanarRegions } from '../../../src/texture/uv/planar_uv_projector.js';
 import { captureGeometrySourceIfNeeded } from '../../../src/texture/uv/geometry_source.js';
@@ -18,17 +19,25 @@ describe('cylinder_side_unwrap', () => {
     mesh.updateMatrixWorld(true);
     captureGeometrySourceIfNeeded(mesh);
     const regions = splitMeshIntoCoplanarRegions(mesh);
-    const entries = regions.map((triangleIndices) => ({
-      triangleIndices,
-      mapping: createDefaultFaceTextureMapping(),
-    }));
+    const entries = regions.map((triangleIndices) => {
+      const normal = computeRegionWorldNormal(mesh, triangleIndices);
+      return {
+        triangleIndices,
+        mapping: createFaceTextureMappingFromTrs(
+          createDefaultFaceTextureMapping().textureId,
+          normal,
+          { scaleU: 1, scaleV: 1, offsetU: 0, offsetV: 0, rotationDeg: 0 },
+          'face',
+        ),
+      };
+    });
     applyCylinderSideUnwrapOffsets(mesh, entries);
     const sideOffsets = entries
       .filter((entry) => {
         const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
         return Math.abs(normal.y) <= 0.35;
       })
-      .map((entry) => entry.mapping.offsetU);
+      .map((entry) => entry.mapping.uv.u.w);
     expect(sideOffsets.length).toBe(segments);
     const unique = new Set(sideOffsets.map((value) => value.toFixed(5)));
     expect(unique.size).toBe(segments);
@@ -46,7 +55,7 @@ describe('cylinder_side_unwrap', () => {
     );
     applyCylinderSideUnwrapOffsets(mesh, entries);
     entries.forEach((entry) => {
-      expect(entry.mapping.offsetU).toBe(0);
+      expect(entry.mapping.offsetU).toBeCloseTo(0, 5);
     });
   });
 

@@ -34,6 +34,21 @@ describe('InlineRenameInput', () => {
     expect(input?.value).toBe('OriginalName');
   });
 
+  it('should place the input before trailing eye and lock controls', () => {
+    const visibility = document.createElement('span');
+    visibility.textContent = 'eye';
+    const lock = document.createElement('span');
+    lock.textContent = 'lock';
+    parentElement.appendChild(visibility);
+    parentElement.appendChild(lock);
+    renameInput.activate();
+    const children = Array.from(parentElement.childNodes);
+    const input = parentElement.querySelector('input') as HTMLInputElement;
+    expect(children.indexOf(textSpan)).toBeLessThan(children.indexOf(input));
+    expect(children.indexOf(input)).toBeLessThan(children.indexOf(visibility));
+    expect(children.indexOf(visibility)).toBeLessThan(children.indexOf(lock));
+  });
+
   it('should deactivate and restore text span', () => {
     renameInput.activate();
     renameInput.deactivate('NewName');

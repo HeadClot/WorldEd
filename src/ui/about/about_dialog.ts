@@ -1,4 +1,5 @@
 import { HENRYS_TOOLS_DISCORD_URL, PROJECT_DISPLAY_NAME, getAboutLicenseText } from './about_license_text.js';
+import { ContributorRoll } from './about_contributor_roll.js';
 import {
   createAboutShimmer,
   ensureAboutDialogStyles,
@@ -28,6 +29,7 @@ export class AboutDialog {
   private isVisible: boolean;
   private isDisposed: boolean;
   private boundKeyDown: (event: KeyboardEvent) => void;
+  private contributorRoll: ContributorRoll | null;
 
   /**
    * Creates the About dialog and appends it to the host element.
@@ -38,6 +40,7 @@ export class AboutDialog {
     this.host = host;
     this.isVisible = false;
     this.isDisposed = false;
+    this.contributorRoll = null;
     this.boundKeyDown = (event) => this.handleKeyDown(event);
     ensureAboutDialogStyles();
     this.backdrop = document.createElement('div');
@@ -114,6 +117,9 @@ export class AboutDialog {
     if (this.isDisposed) return;
     this.hide();
     this.isDisposed = true;
+    if (this.contributorRoll) {
+      this.contributorRoll.dispose();
+    }
     this.backdrop.remove();
   }
 
@@ -189,6 +195,7 @@ export class AboutDialog {
     styleAboutBody(body);
     body.appendChild(this.createProclamation());
     body.appendChild(this.createCreditsSection());
+    body.appendChild(this.createContributorRollSection());
     body.appendChild(this.createLicenseSection());
     body.appendChild(this.createFooterActions());
     return body;
@@ -241,6 +248,22 @@ export class AboutDialog {
       styleAboutCreditLine(paragraph);
       section.appendChild(paragraph);
     });
+  }
+
+  /**
+   * Creates the GitHub contributor roll section with animated avatar spheres.
+   *
+   * @returns Contributor roll section element.
+   */
+  private createContributorRollSection(): HTMLElement {
+    const section = document.createElement('div');
+    section.style.display = 'flex';
+    section.style.flexDirection = 'column';
+    section.style.gap = '8px';
+    section.appendChild(this.createSectionLabel('GitHub Contributors'));
+    this.contributorRoll = new ContributorRoll();
+    section.appendChild(this.contributorRoll.getContainerElement());
+    return section;
   }
 
   /**

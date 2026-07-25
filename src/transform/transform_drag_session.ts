@@ -3,6 +3,10 @@ import { GizmoAxis } from '../types/transform_mode.js';
 import { BoundsFace } from '../types/bounds_face.js';
 import { GizmoHandle } from './gizmo/gizmo_handle.js';
 import { OrientedBoundsData } from './bounds/oriented_bounds.js';
+import {
+  captureTransformTextureState,
+  type TransformTextureSnapshot,
+} from '../commands/transform/transform_texture_state.js';
 
 /**
  * Mutable state for one transform gizmo drag session. Shared by translate,
@@ -21,6 +25,11 @@ export class TransformDragSession {
   initialPositions: Map<THREE.Mesh, THREE.Vector3>;
   initialQuaternions: Map<THREE.Mesh, THREE.Quaternion>;
   initialScales: Map<THREE.Mesh, THREE.Vector3>;
+  /**
+   * Texture / UV state at pointer-down so position and stretch lock can undo
+   * with the pose.
+   */
+  initialTextureState: TransformTextureSnapshot[];
   dragDeltaAccumulator: THREE.Vector3;
   dragRotationAngle: number;
   dragScaleFactor: number;
@@ -57,6 +66,7 @@ export class TransformDragSession {
     this.initialPositions = new Map();
     this.initialQuaternions = new Map();
     this.initialScales = new Map();
+    this.initialTextureState = [];
     this.dragDeltaAccumulator = new THREE.Vector3();
     this.dragRotationAngle = 0;
     this.dragScaleFactor = 1;
@@ -75,7 +85,7 @@ export class TransformDragSession {
   }
 
   /**
-   * Captures pre-drag transforms for every selected mesh.
+   * Captures pre-drag transforms and texture state for every selected mesh.
    *
    * @param selectedObjects Meshes included in the drag.
    */
@@ -88,6 +98,8 @@ export class TransformDragSession {
       this.initialQuaternions.set(mesh, mesh.quaternion.clone());
       this.initialScales.set(mesh, mesh.scale.clone());
     });
+    // Capture UVs/mappings before live texture-lock rewrites them.
+    this.initialTextureState = captureTransformTextureState(selectedObjects);
   }
 
   /** Resets accumulators used while measuring drag distance and angle. */

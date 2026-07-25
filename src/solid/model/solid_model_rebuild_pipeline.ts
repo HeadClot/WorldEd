@@ -5,7 +5,10 @@ import { SolidSurfaceRegion } from '../algorithm/surface_triangulator.js';
 import { SolidBrushMeshChunkBuilder } from '../mesh/solid_brush_mesh_chunk.js';
 import { SolidMeshChunkCache } from '../mesh/solid_mesh_chunk_cache.js';
 import { SolidResultBuffer } from '../mesh/solid_result_buffer.js';
-import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
+import {
+  createDefaultFaceSurface,
+  type FaceSurfaceDescription,
+} from '../../texture/uv_matrix/face_surface_description.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import { forBatchesAsync } from '../../utils/async_yield.js';
 import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from './solid_model_keys.js';
@@ -129,20 +132,18 @@ export class SolidModelRebuildPipeline {
   }
 
   /**
-   * Sets whether solid result UV bake sticks textures to each brush.
+   * Sets whether solid result UV bake sticks textures to each brush on the next
+   * remesh of a modified brush. Does not clear mesh chunks or rebuild —
+   * toggling Tex Lock is non-destructive until a brush is actually
+   * transformed.
    *
    * @param enabled True for brush-local UV, false for world UV.
-   * @param brushIds Brush ids to mark dirty when mode changes.
+   * @param _brushIds Unused; kept for call-site compatibility.
    * @returns True when mode changed.
    */
-  setUvStickToBrush(enabled: boolean, brushIds: readonly string[]): boolean {
+  setUvStickToBrush(enabled: boolean, _brushIds: readonly string[] = []): boolean {
     if (this.uvStickToBrush === enabled) return false;
     this.uvStickToBrush = enabled;
-    this.meshChunkCache.clear();
-    this.dirty = true;
-    for (const brushId of brushIds) {
-      this.dirtyBrushIds.add(brushId);
-    }
     return true;
   }
 
@@ -536,15 +537,12 @@ export class SolidModelRebuildPipeline {
     const polygons = this.compiler.getCachedPolygons(brushId) ?? [];
     const brush = this.host.findBrush(brushId);
     const brushModelMatrix = this.composeBrushModelMatrix(brush);
+    void worldMatrix;
     const chunk = this.chunkBuilder.build(
       polygons,
-      (surfaceIndex) => this.resolveBrushSurfaceMapping(brush, surfaceIndex),
+      (surfaceIndex) => this.resolveBrushFaceSurface(brush, surfaceIndex),
       {
-        stickToBrush: this.uvStickToBrush,
-        resultWorldMatrix: worldMatrix,
         brushModelMatrix,
-        resolveLocalFaceNormal: (surfaceIndex) => this.resolveBrushFaceLocalNormal(brush, surfaceIndex),
-        resolveModelFaceNormal: (surfaceIndex) => this.resolveBrushFaceModelNormal(brush, surfaceIndex),
       },
     );
     this.meshChunkCache.set(brushId, chunk);
@@ -593,15 +591,15 @@ export class SolidModelRebuildPipeline {
   }
 
   /**
-   * Resolves a face mapping for chunk UV bake.
+   * Resolves a face surface (texture + UV matrix) for chunk UV bake.
    *
    * @param brush Owning brush or undefined.
    * @param surfaceIndex Face index.
-   * @returns Face texture mapping.
+   * @returns Face surface description.
    */
-  private resolveBrushSurfaceMapping(brush: SolidBrushInstance | undefined, surfaceIndex: number): FaceTextureMapping {
-    if (brush) return brush.getSurfaceMapping(surfaceIndex);
-    return createDefaultFaceTextureMapping(DEFAULT_CHECKER_TEXTURE_ID);
+  private resolveBrushFaceSurface(brush: SolidBrushInstance | undefined, surfaceIndex: number): FaceSurfaceDescription {
+    if (brush) return brush.getFaceSurface(surfaceIndex);
+    return createDefaultFaceSurface(DEFAULT_CHECKER_TEXTURE_ID);
   }
 
   /**

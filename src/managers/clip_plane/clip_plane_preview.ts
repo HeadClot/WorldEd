@@ -180,7 +180,9 @@ export class ClipPlanePreview {
   }
 
   /**
-   * Adds an arrow showing the keep half-space direction.
+   * Adds an arrow showing the keep half-space direction. Drawn as an overlay
+   * (no depth test) so it stays visible through the translucent clip plane and
+   * scene geometry.
    *
    * @param plane Cutting plane (normal points toward front).
    * @param points Placement points for origin.
@@ -194,8 +196,42 @@ export class ClipPlanePreview {
     const length = Math.max(0.35, this.estimatePlaneSize(points) * 0.18);
     const arrow = new THREE.ArrowHelper(direction, origin, length, Theme.selectionColor, length * 0.22, length * 0.12);
     arrow.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
+    this.styleKeepArrowAsOverlay(arrow);
     this.root.add(arrow);
     this.arrowHelper = arrow;
+  }
+
+  /**
+   * Makes ArrowHelper line and cone draw on top like clip markers.
+   *
+   * @param arrow Keep-side direction helper.
+   */
+  private styleKeepArrowAsOverlay(arrow: THREE.ArrowHelper): void {
+    const overlayRenderOrder = 1000;
+    arrow.renderOrder = overlayRenderOrder;
+    arrow.traverse((child) => {
+      child.renderOrder = overlayRenderOrder;
+      child.userData[CLIP_PREVIEW_USERDATA_KEY] = true;
+      this.applyOverlayMaterialStyle(child);
+    });
+  }
+
+  /**
+   * Disables depth testing/writing on a line or mesh material so overlays stay
+   * visible.
+   *
+   * @param object Line or mesh child of the keep arrow.
+   */
+  private applyOverlayMaterialStyle(object: THREE.Object3D): void {
+    const materialOwner = object as THREE.Mesh | THREE.Line;
+    if (!materialOwner.material) return;
+    const materials = Array.isArray(materialOwner.material) ? materialOwner.material : [materialOwner.material];
+    materials.forEach((material) => {
+      material.depthTest = false;
+      material.depthWrite = false;
+      material.transparent = true;
+      material.needsUpdate = true;
+    });
   }
 
   /**

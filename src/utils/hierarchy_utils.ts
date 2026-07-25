@@ -198,3 +198,62 @@ export function restoreObjectAtIndex(
   targetParent.children.splice(index, 0, object);
   object.parent = targetParent;
 }
+
+/**
+ * Sorts objects into outliner / scene-graph order (depth-first sibling index).
+ * Used so multi-duplicate preserves CSG brush evaluation order regardless of
+ * selection click order.
+ *
+ * @param objects Objects to sort (not mutated).
+ * @returns New array ordered like the outliner tree walk.
+ */
+export function sortObjectsBySceneOrder<T extends THREE.Object3D>(objects: readonly T[]): T[] {
+  return objects.slice().sort(compareSceneGraphOrder);
+}
+
+/**
+ * Compares two objects by sibling-index path from the scene root.
+ *
+ * @param left First object.
+ * @param right Second object.
+ * @returns Negative when left comes before right in the outliner.
+ */
+export function compareSceneGraphOrder(left: THREE.Object3D, right: THREE.Object3D): number {
+  if (left === right) return 0;
+  const leftPath = buildSiblingIndexPath(left);
+  const rightPath = buildSiblingIndexPath(right);
+  return compareSiblingIndexPaths(leftPath, rightPath);
+}
+
+/**
+ * Builds the chain of sibling indices from the topmost parent down to object.
+ *
+ * @param object Object to locate in the hierarchy.
+ * @returns Sibling index path (root-most first).
+ */
+function buildSiblingIndexPath(object: THREE.Object3D): number[] {
+  const path: number[] = [];
+  let current: THREE.Object3D | null = object;
+  while (current && current.parent) {
+    path.unshift(current.parent.children.indexOf(current));
+    current = current.parent;
+  }
+  return path;
+}
+
+/**
+ * Lexicographically compares two sibling-index paths.
+ *
+ * @param leftPath Path for the left object.
+ * @param rightPath Path for the right object.
+ * @returns Negative when leftPath is earlier in tree order.
+ */
+function compareSiblingIndexPaths(leftPath: readonly number[], rightPath: readonly number[]): number {
+  const sharedLength = Math.min(leftPath.length, rightPath.length);
+  for (let index = 0; index < sharedLength; index++) {
+    if (leftPath[index] !== rightPath[index]) {
+      return leftPath[index] - rightPath[index];
+    }
+  }
+  return leftPath.length - rightPath.length;
+}

@@ -3,6 +3,7 @@ import { SolidBrush } from '../../solid/brush/solid_brush.js';
 import { SolidBrushFactory } from '../../solid/brush/solid_brush_factory.js';
 import { SolidPlane } from '../../solid/brush/solid_plane.js';
 import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
+import { convertWorldFaceMappingForCenteredBrush } from '../../solid/brush/solid_brush_uv_space.js';
 import { VMF_INCHES_TO_METERS, sourcePointToEditorMeters } from './vmf_coordinates.js';
 import { VmfHalfSpaceHullBuilder } from './vmf_half_space_hull.js';
 import { VmfSolid, VmfSolidSide } from './vmf_types.js';
@@ -62,11 +63,16 @@ export class VmfBrushFromSides {
     unitScale: number,
   ): VmfBuiltBrush {
     const planeIndices = faceLoops.map((loop) => loop.planeIndex);
-    const faceMappings = planeIndices.map((planeIndex, faceIndex) =>
+    // Hammer axes are world-space; convert to brush-local after centering so
+    // chunk bake (inv(L)*modelVertex) matches Source UV phase.
+    const worldFaceMappings = planeIndices.map((planeIndex, faceIndex) =>
       this.mapFace(solid.sides[planeIndex], brush, planes, faceIndex, planeIndex, unitScale),
     );
     const materials = planeIndices.map((planeIndex) => solid.sides[planeIndex].material);
     const worldCenter = this.centerBrushAtOrigin(brush);
+    const faceMappings = worldFaceMappings.map((mapping) =>
+      convertWorldFaceMappingForCenteredBrush(mapping, worldCenter),
+    );
     return {
       brush,
       worldCenter,

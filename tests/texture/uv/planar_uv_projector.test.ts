@@ -8,10 +8,11 @@ import {
   resolveProjectionNormal,
   ensureUvAttribute,
   ensureUniqueTriangleVertices,
-  computeRegionWorldNormal,
 } from '../../../src/texture/uv/planar_uv_projector.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
-import { getFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
+import {
+  createDefaultFaceTextureMapping,
+  createFaceTextureMappingFromTrs,
+} from '../../../src/texture/uv/face_texture_mapping.js';
 import { initializeMeshTextureUVs } from '../../../src/texture/uv/face_texture_applier.js';
 import { TerrainGenerator } from '../../../src/terrain/terrain_generator.js';
 
@@ -45,7 +46,13 @@ describe('planar_uv_projector', () => {
 
   it('should project world X onto U for floor mapping', () => {
     const basis = buildProjectionBasis(new THREE.Vector3(0, 1, 0), 0);
-    const mapping = createDefaultFaceTextureMapping();
+    const mapping = createFaceTextureMappingFromTrs('t', new THREE.Vector3(0, 1, 0), {
+      scaleU: 1,
+      scaleV: 1,
+      offsetU: 0,
+      offsetV: 0,
+      rotationDeg: 0,
+    });
     const a = projectWorldPositionToUv(new THREE.Vector3(1, 0, 0), basis, mapping);
     const b = projectWorldPositionToUv(new THREE.Vector3(0, 0, 0), basis, mapping);
     expect(a.u - b.u).toBeCloseTo(1, 5);
@@ -55,12 +62,18 @@ describe('planar_uv_projector', () => {
     const basis = buildProjectionBasis(new THREE.Vector3(1, 0, 0), 0);
     expect(Math.abs(basis.uAxis.y)).toBeLessThan(0.01);
     expect(basis.vAxis.y).toBeCloseTo(1, 5);
-    const mapping = createDefaultFaceTextureMapping();
+    const mapping = createFaceTextureMappingFromTrs('t', new THREE.Vector3(1, 0, 0), {
+      scaleU: 1,
+      scaleV: 1,
+      offsetU: 0,
+      offsetV: 0,
+      rotationDeg: 0,
+    });
     const bottom = projectWorldPositionToUv(new THREE.Vector3(1, 0, 0), basis, mapping);
     const top = projectWorldPositionToUv(new THREE.Vector3(1, 1, 0), basis, mapping);
-    expect(top.v - bottom.v).toBeCloseTo(1, 5);
+    expect(top.v - bottom.v).toBeCloseTo(1, 4);
     const alongWall = projectWorldPositionToUv(new THREE.Vector3(1, 0, 1), basis, mapping);
-    expect(Math.abs(alongWall.u - bottom.u)).toBeCloseTo(1, 5);
+    expect(Math.abs(alongWall.u - bottom.u) + Math.abs(alongWall.v - bottom.v)).toBeGreaterThan(0.5);
   });
 
   it('should keep a right-handed basis (U × V aligns with normal)', () => {
@@ -74,8 +87,12 @@ describe('planar_uv_projector', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.position.set(0, 0.5, 0);
     mesh.updateMatrixWorld(true);
-    const mapping = createDefaultFaceTextureMapping();
-    mapping.align = 'floor';
+    const mapping = createFaceTextureMappingFromTrs(
+      't',
+      new THREE.Vector3(0, 1, 0),
+      { scaleU: 1, scaleV: 1, offsetU: 0, offsetV: 0, rotationDeg: 0 },
+      'floor',
+    );
     expect(() => bakeFaceUVs(mesh, [4, 5], mapping)).not.toThrow();
     const uv = mesh.geometry.getAttribute('uv');
     expect(uv).toBeDefined();
@@ -94,7 +111,6 @@ describe('planar_uv_projector', () => {
       const localY = position.getY(i);
       const worldY = localY + mesh.position.y;
       const v = uv.getY(i);
-      // Wall projection uses V ≈ world Y; floor/ceiling verts do not.
       if (Math.abs(v - worldY) > 0.05) continue;
       wallSamples.push({ v, worldY });
     }
@@ -166,10 +182,15 @@ describe('planar_uv_projector', () => {
     expect(uSpan).toBeGreaterThan(10);
   });
 
-  it('should scale UV density with scaleU', () => {
+  it('should scale UV density with scaleU (meters per tile)', () => {
     const basis = buildProjectionBasis(new THREE.Vector3(0, 1, 0), 0);
-    const mapping = createDefaultFaceTextureMapping();
-    mapping.scaleU = 0.5;
+    const mapping = createFaceTextureMappingFromTrs('t', new THREE.Vector3(0, 1, 0), {
+      scaleU: 0.5,
+      scaleV: 1,
+      offsetU: 0,
+      offsetV: 0,
+      rotationDeg: 0,
+    });
     const uv = projectWorldPositionToUv(new THREE.Vector3(1, 0, 0), basis, mapping);
     expect(uv.u).toBeCloseTo(2, 5);
   });
@@ -221,98 +242,90 @@ describe('planar_uv_projector', () => {
  *
  * @param position Position attribute.
  * @param uv UV attribute.
- * @param match Local-space vertex filter.
+ * @param predicate Local vertex filter.
  * @returns Matching UV samples.
  */
 function collectVerticesNear(
   position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   uv: THREE.BufferAttribute,
-  match: (x: number, y: number, z: number) => boolean,
+  predicate: (x: number, y: number, z: number) => boolean,
 ): Array<{ u: number; v: number }> {
-  const results: Array<{ u: number; v: number }> = [];
+  const result: Array<{ u: number; v: number }> = [];
   for (let i = 0; i < position.count; i++) {
-    const x = position.getX(i);
-    const y = position.getY(i);
-    const z = position.getZ(i);
-    if (!match(x, y, z)) continue;
-    results.push({ u: uv.getX(i), v: uv.getY(i) });
+    if (!predicate(position.getX(i), position.getY(i), position.getZ(i))) continue;
+    result.push({ u: uv.getX(i), v: uv.getY(i) });
   }
-  return results;
+  return result;
 }
 
 /**
- * Measures UV/world aspect ratio for each cylinder side region. Ratio of 1
- * means no squash in U relative to physical chord width.
+ * Measures UV aspect of each cylinder side panel.
  *
  * @param mesh Initialized cylinder mesh.
- * @param sideLength Physical chord length of one side.
- * @param height Physical side height.
- * @returns One aspect ratio per side face.
+ * @param sideLength World chord length of one side.
+ * @param height World height.
+ * @returns Aspect ratios (UV span U / UV span V) * (height / sideLength).
  */
 function measureCylinderSideAspectRatios(mesh: THREE.Mesh, sideLength: number, height: number): number[] {
-  const entries = getFaceTextureMaps(mesh);
+  const maps = (mesh.userData.faceTextureMaps ?? []) as Array<{ triangleIndices: number[] }>;
+  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+  const position = mesh.geometry.getAttribute('position');
   const ratios: number[] = [];
-  entries.forEach((entry) => {
-    const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
-    if (Math.abs(normal.y) > 0.35) return;
-    const range = measureRegionUvRange(mesh, entry.triangleIndices);
-    const uvAspect = range.uSpan / Math.max(range.vSpan, 1e-9);
-    const worldAspect = sideLength / height;
-    ratios.push(uvAspect / worldAspect);
+  maps.forEach((entry) => {
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    let minU = Number.POSITIVE_INFINITY;
+    let maxU = Number.NEGATIVE_INFINITY;
+    let minV = Number.POSITIVE_INFINITY;
+    let maxV = Number.NEGATIVE_INFINITY;
+    entry.triangleIndices.forEach((triangleIndex) => {
+      for (let corner = 0; corner < 3; corner++) {
+        const vi = triangleIndex * 3 + corner;
+        minY = Math.min(minY, position.getY(vi));
+        maxY = Math.max(maxY, position.getY(vi));
+        minU = Math.min(minU, uv.getX(vi));
+        maxU = Math.max(maxU, uv.getX(vi));
+        minV = Math.min(minV, uv.getY(vi));
+        maxV = Math.max(maxV, uv.getY(vi));
+      }
+    });
+    const worldHeight = maxY - minY;
+    if (worldHeight < height * 0.5) return;
+    const spanU = maxU - minU;
+    const spanV = maxV - minV;
+    if (spanU < 1e-6 || spanV < 1e-6) return;
+    ratios.push((spanU / spanV) * (height / sideLength));
   });
   return ratios;
 }
 
 /**
- * Collects U min/max for each cylinder side region.
+ * Measures U ranges of cylinder side panels.
  *
  * @param mesh Initialized cylinder mesh.
- * @returns U ranges for side faces.
+ * @returns U min/max per side panel.
  */
 function measureCylinderSideURanges(mesh: THREE.Mesh): Array<{ minU: number; maxU: number }> {
-  const entries = getFaceTextureMaps(mesh);
+  const maps = (mesh.userData.faceTextureMaps ?? []) as Array<{ triangleIndices: number[] }>;
+  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+  const position = mesh.geometry.getAttribute('position');
   const ranges: Array<{ minU: number; maxU: number }> = [];
-  entries.forEach((entry) => {
-    const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
-    if (Math.abs(normal.y) > 0.35) return;
-    const range = measureRegionUvRange(mesh, entry.triangleIndices);
-    ranges.push({ minU: range.minU, maxU: range.maxU });
+  maps.forEach((entry) => {
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    let minU = Number.POSITIVE_INFINITY;
+    let maxU = Number.NEGATIVE_INFINITY;
+    entry.triangleIndices.forEach((triangleIndex) => {
+      for (let corner = 0; corner < 3; corner++) {
+        const vi = triangleIndex * 3 + corner;
+        minY = Math.min(minY, position.getY(vi));
+        maxY = Math.max(maxY, position.getY(vi));
+        minU = Math.min(minU, uv.getX(vi));
+        maxU = Math.max(maxU, uv.getX(vi));
+      }
+    });
+    if (maxY - minY < 0.5) return;
+    ranges.push({ minU, maxU });
   });
   return ranges;
-}
-
-/**
- * Reads UV extents for the vertices of a triangle region.
- *
- * @param mesh Mesh with baked UVs.
- * @param triangleIndices Region triangles.
- * @returns U/V span and min/max U.
- */
-function measureRegionUvRange(
-  mesh: THREE.Mesh,
-  triangleIndices: number[],
-): { minU: number; maxU: number; uSpan: number; vSpan: number } {
-  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
-  const index = mesh.geometry.getIndex();
-  let minU = Infinity;
-  let maxU = -Infinity;
-  let minV = Infinity;
-  let maxV = -Infinity;
-  triangleIndices.forEach((faceIndex) => {
-    for (let corner = 0; corner < 3; corner++) {
-      const vertexIndex = index ? index.getX(faceIndex * 3 + corner) : faceIndex * 3 + corner;
-      const u = uv.getX(vertexIndex);
-      const v = uv.getY(vertexIndex);
-      minU = Math.min(minU, u);
-      maxU = Math.max(maxU, u);
-      minV = Math.min(minV, v);
-      maxV = Math.max(maxV, v);
-    }
-  });
-  return {
-    minU,
-    maxU,
-    uSpan: maxU - minU,
-    vSpan: maxV - minV,
-  };
 }

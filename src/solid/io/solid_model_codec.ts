@@ -8,8 +8,9 @@ import { createWingEdge, createSolidFace } from '../types/wing_edge.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import {
   FaceTextureMapping,
-  cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
+  deserializeFaceTextureMapping,
+  serializeFaceTextureMapping,
 } from '../../texture/uv/face_texture_mapping.js';
 
 /** Serializable snapshot of a solid brush instance. */
@@ -25,10 +26,22 @@ export interface SerializedSolidBrush {
   surfaceTextureId?: string;
   /** Optional per-face texture overrides (legacy texture-id only). */
   faceTextureIds?: (string | undefined)[];
-  /** Default UV/texture mapping for faces without overrides. */
+  /** Default UV/texture mapping for faces without overrides (legacy planar). */
   defaultMapping?: FaceTextureMapping;
-  /** Sparse per-face full UV/texture mappings. */
+  /** Sparse per-face full UV/texture mappings (legacy planar). */
   faceMappings?: (FaceTextureMapping | undefined)[];
+  /** Default surface (texture + UV matrix). Preferred over defaultMapping. */
+  defaultSurface?: {
+    textureId: string;
+    uv: { u: [number, number, number, number]; v: [number, number, number, number] };
+  };
+  /**
+   * Sparse per-face surfaces (texture + UV matrix). Preferred over
+   * faceMappings.
+   */
+  faceSurfaces?: Array<
+    { textureId: string; uv: { u: [number, number, number, number]; v: [number, number, number, number] } } | undefined
+  >;
   vertices: number[];
   wingEdges: Array<{ vertexIndex: number; twinIndex: number }>;
   edgeFaceIndices: number[];
@@ -84,6 +97,7 @@ export class SolidModelCodec {
    */
   private static encodeBrush(instance: SolidBrushInstance): SerializedSolidBrush {
     instance.pullTransformFromMesh();
+    const defaultSurface = instance.serializeDefaultSurface();
     const defaultMapping = instance.serializeDefaultMapping();
     return {
       id: instance.id,
@@ -93,8 +107,10 @@ export class SolidModelCodec {
       rotation: this.encodeEuler(instance.rotation),
       scale: this.encodeVector3(instance.scale),
       visible: instance.visible,
-      surfaceTextureId: defaultMapping.textureId,
+      surfaceTextureId: defaultSurface.textureId,
       faceTextureIds: instance.serializeFaceTextureIds(),
+      defaultSurface,
+      faceSurfaces: instance.serializeFaceSurfaces(),
       defaultMapping,
       faceMappings: instance.serializeFaceMappings(),
       ...this.encodeBrushGeometry(instance.brush),
@@ -169,6 +185,10 @@ export class SolidModelCodec {
    * @param data Serialized brush data.
    */
   private static restoreBrushSurfaceData(instance: SolidBrushInstance, data: SerializedSolidBrush): void {
+    if (data.defaultSurface || data.faceSurfaces) {
+      instance.restoreFaceSurfaces(data.defaultSurface, data.faceSurfaces);
+      return;
+    }
     if (data.defaultMapping || data.faceMappings) {
       instance.restoreFaceMappings(
         this.normalizeMapping(data.defaultMapping, data.surfaceTextureId),
@@ -188,11 +208,11 @@ export class SolidModelCodec {
    * @returns Normalized mapping.
    */
   private static normalizeMapping(
-    mapping: FaceTextureMapping | undefined,
+    mapping: FaceTextureMapping | ReturnType<typeof serializeFaceTextureMapping> | undefined,
     fallbackTextureId?: string,
   ): FaceTextureMapping {
     if (mapping) {
-      const copy = cloneFaceTextureMapping(mapping);
+      const copy = deserializeFaceTextureMapping(mapping as never);
       if (!copy.textureId) {
         copy.textureId = fallbackTextureId || DEFAULT_CHECKER_TEXTURE_ID;
       }

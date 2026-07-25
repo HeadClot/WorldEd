@@ -396,13 +396,16 @@ export class PropertiesPanel {
     return filterUnlockedObjects(this.boundObjects);
   }
 
-  /** Re-bakes world planar UVs on unlocked bound meshes when texture lock is on. */
+  /**
+   * Applies content texture locks after inspector scale: stretch lock leaves
+   * UVs; unlocked stretch rebakes planar tile density on bound meshes.
+   */
   private rebakeBoundMeshesIfTextureLocked(): void {
     if (!this.textureLock) return;
     const meshes = this.getEditableBoundObjects().filter(
       (object): object is THREE.Mesh => object instanceof THREE.Mesh,
     );
-    this.textureLock.rebakeMeshesIfLocked(meshes);
+    this.textureLock.applyContentTransformPolicy(meshes, false, true);
   }
 
   /**

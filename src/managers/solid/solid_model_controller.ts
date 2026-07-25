@@ -11,6 +11,8 @@ import { SolidOperation } from '../../solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
 import { computeBrushSpawnPosition, snapPositionToGrid } from '../../solid/model/brush_spawn_placement.js';
 import { TextureLockSettings } from '../../texture/lock/texture_lock_settings.js';
+import type { TextureLockFlags } from '../../texture/lock/texture_lock_transform.js';
+import { TransformMode } from '../../types/transform_mode.js';
 
 /** Coordinates solid model creation, hierarchy brushes, and rebuild after edits. */
 export class SolidModelController {
@@ -19,6 +21,7 @@ export class SolidModelController {
   private selectionManager: SelectionManager;
   private panel: SolidModelPanel;
   private textureLock: TextureLockSettings | null;
+  private getTransformMode: (() => TransformMode) | null;
   private syncViewports: (() => void) | null;
   private refreshOutliner: (() => void) | null;
   private showStatus: ((message: string) => void) | null;
@@ -67,6 +70,7 @@ export class SolidModelController {
     this.selectionManager = selectionManager;
     this.panel = panel;
     this.textureLock = null;
+    this.getTransformMode = null;
     this.syncViewports = null;
     this.refreshOutliner = null;
     this.showStatus = null;
@@ -128,6 +132,16 @@ export class SolidModelController {
    */
   setTextureLockSettings(settings: TextureLockSettings | null): void {
     this.textureLock = settings;
+  }
+
+  /**
+   * Sets a provider for the active transform gizmo mode. Used so rotation
+   * always applies full texture stick regardless of toolbar lock toggles.
+   *
+   * @param provider Returns the current TransformMode, or null to clear.
+   */
+  setTransformModeProvider(provider: (() => TransformMode) | null): void {
+    this.getTransformMode = provider;
   }
 
   /**
@@ -337,11 +351,11 @@ export class SolidModelController {
     this.liveRebuildInProgress = true;
     const models = this.collectAffectedModels(meshes);
     const updatedResults: THREE.Mesh[] = [];
-    const textureLockEnabled = this.isTextureLockEnabled();
+    const locks = this.getTextureLockFlagsForActiveTransform();
     try {
       for (const model of models) {
-        model.setUvStickToBrush(textureLockEnabled);
-        if (!model.prepareLiveBrushEdit(meshes, textureLockEnabled)) continue;
+        model.setUvStickToBrush(locks.positionLock || locks.stretchLock);
+        if (!model.prepareLiveBrushEdit(meshes, locks)) continue;
         model.rebuildLive();
         updatedResults.push(model.getResultMeshForSync());
       }
@@ -488,24 +502,41 @@ export class SolidModelController {
     if (resultSelected) {
       this.resetResultLocalTransform(result);
     }
-    const textureLockEnabled = this.isTextureLockEnabled();
-    model.setUvStickToBrush(textureLockEnabled);
+    const locks = this.getTextureLockFlagsForActiveTransform();
+    model.setUvStickToBrush(locks.positionLock || locks.stretchLock);
     if (selectedBrushMeshes.length > 0) {
       // Always re-pull and dirty selected brushes so commit cannot trust a stale live mesh.
-      model.prepareLiveBrushEdit(selectedBrushMeshes, textureLockEnabled);
+      model.prepareLiveBrushEdit(selectedBrushMeshes, locks);
     } else {
-      model.syncBrushesFromScene(textureLockEnabled);
+      model.syncBrushesFromScene(locks);
     }
     model.finalizeAfterInteractiveEdit();
   }
 
   /**
-   * Returns whether toolbar Tex Lock is currently enabled.
+   * Returns current position/stretch lock flags from the toolbar settings.
    *
-   * @returns True when solid brush UVs should stick on transform.
+   * @returns Lock flags (both off when settings are missing).
    */
-  private isTextureLockEnabled(): boolean {
-    return this.textureLock?.isLocked() === true;
+  private getTextureLockFlags(): TextureLockFlags {
+    if (!this.textureLock) {
+      return { positionLock: false, stretchLock: false };
+    }
+    return this.textureLock.getFlags();
+  }
+
+  /**
+   * Lock flags for live/commit solid brush transforms. Rotation always forces
+   * both locks on so UVs stick sensibly during free orbit.
+   *
+   * @returns Effective texture lock flags for the current gizmo mode.
+   */
+  private getTextureLockFlagsForActiveTransform(): TextureLockFlags {
+    const mode = this.getTransformMode?.() ?? null;
+    if (mode === TransformMode.ROTATE) {
+      return { positionLock: true, stretchLock: true };
+    }
+    return this.getTextureLockFlags();
   }
 
   /**

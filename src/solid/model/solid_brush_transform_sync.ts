@@ -1,5 +1,12 @@
 import * as THREE from 'three';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
+import {
+  applyLocksToAllBrushFaces,
+  captureSolidBrushTextureLockBaseline,
+  lockFaceSurfaceForBrushTransform,
+  type SolidBrushTextureLockBaseline,
+} from '../../texture/lock/solid_brush_texture_lock.js';
+import { shouldUpdateMappingsForLocks, type TextureLockFlags } from '../../texture/lock/texture_lock_transform.js';
 
 /**
  * Compares Euler rotations component-wise.
@@ -28,39 +35,73 @@ export function sameBrushOrder(before: string[], brushes: readonly SolidBrushIns
 }
 
 /**
- * Pulls mesh transform into the brush. Result UVs stick via brush-local bake
- * (uvStickToBrush), not offset rewrites.
+ * Pulls mesh transform into the brush and applies texture locks to UV matrices.
  *
  * @param brush Brush instance.
- * @param textureLockEnabled Reserved; UV stick mode is controlled separately.
+ * @param locks Texture lock flags.
  */
-export function pullBrushTransformWithOptionalTextureLock(
-  brush: SolidBrushInstance,
-  textureLockEnabled: boolean,
-): void {
-  void textureLockEnabled;
+export function pullBrushTransformWithOptionalTextureLock(brush: SolidBrushInstance, locks: TextureLockFlags): void {
+  if (!brush.mesh) {
+    brush.pullTransformFromMesh();
+    return;
+  }
+  const previousWorld = composeBrushWorldMatrix(brush);
   brush.pullTransformFromMesh();
+  const nextWorld = composeBrushWorldMatrix(brush);
+  if (!shouldUpdateMappingsForLocks(previousWorld, nextWorld, locks)) return;
+  applyLocksToAllBrushFaces(brush, previousWorld, nextWorld, locks);
 }
 
 /**
- * Live-drag pull: mesh pose only (no per-frame face-offset churn).
+ * Live-drag pull with absolute Tex Lock from drag-start baselines. Always
+ * re-derives UV matrices from the drag-start surfaces so returning to the start
+ * pose (e.g. scale snap back to 1) restores original UVs. Skipping when the
+ * delta is identity left intermediate matrices in place and caused UV jumps at
+ * the start size under bounds/scale gizmos.
  *
  * @param brush Brush instance.
- * @param textureLockEnabled Reserved; UV stick mode is controlled separately.
+ * @param locks Texture lock flags.
+ * @param baselines Per-brush baselines for the active drag.
  */
-export function pullLiveBrushTransform(brush: SolidBrushInstance, textureLockEnabled: boolean): void {
-  void textureLockEnabled;
+export function pullLiveBrushTransform(
+  brush: SolidBrushInstance,
+  locks: TextureLockFlags,
+  baselines?: Map<string, SolidBrushTextureLockBaseline>,
+): void {
+  if (locks.positionLock && locks.stretchLock) {
+    brush.pullTransformFromMesh();
+    return;
+  }
+  if (!baselines) {
+    pullBrushTransformWithOptionalTextureLock(brush, locks);
+    return;
+  }
+  if (!baselines.has(brush.id)) {
+    baselines.set(brush.id, captureSolidBrushTextureLockBaseline(brush));
+  }
+  const baseline = baselines.get(brush.id)!;
+  const previousWorld = composeWorldFromPose(baseline.position, baseline.rotation, baseline.scale, brush);
   brush.pullTransformFromMesh();
+  const nextWorld = composeBrushWorldMatrix(brush);
+  const sources = baseline.faceSurfaces ?? baseline.faceMappings ?? [];
+  for (let faceIndex = 0; faceIndex < brush.brush.faces.length; faceIndex++) {
+    const source = sources[faceIndex] ?? brush.getFaceSurface(faceIndex);
+    const locked = lockFaceSurfaceForBrushTransform(source, brush, faceIndex, previousWorld, nextWorld, locks);
+    brush.setFaceSurface(faceIndex, locked);
+  }
 }
 
 /**
  * Copies mesh transform into the brush when it differs from the stored one.
  *
  * @param brush Brush instance to sync.
- * @param textureLockEnabled Whether Tex Lock should stick face UVs.
+ * @param locks Texture lock flags.
  * @returns True when any transform or visibility component changed.
  */
-export function pullTransformIfChanged(brush: SolidBrushInstance, textureLockEnabled: boolean = false): boolean {
+export function pullTransformIfChanged(
+  brush: SolidBrushInstance,
+  locks: TextureLockFlags = { positionLock: false, stretchLock: false },
+): boolean {
   if (!brush.mesh) {
     brush.pullTransformFromMesh();
     return false;
@@ -72,7 +113,7 @@ export function pullTransformIfChanged(brush: SolidBrushInstance, textureLockEna
     !brush.scale.equals(mesh.scale) ||
     brush.visible !== mesh.visible;
   if (!changed) return false;
-  pullBrushTransformWithOptionalTextureLock(brush, textureLockEnabled);
+  pullBrushTransformWithOptionalTextureLock(brush, locks);
   return true;
 }
 
@@ -80,16 +121,16 @@ export function pullTransformIfChanged(brush: SolidBrushInstance, textureLockEna
  * Pulls mesh transforms and returns ids of brushes that actually changed.
  *
  * @param brushes Brush instances to inspect.
- * @param textureLockEnabled Whether Tex Lock should stick face UVs.
+ * @param locks Texture lock flags.
  * @returns Brush ids whose transform or visibility changed.
  */
 export function pullChangedBrushTransforms(
   brushes: readonly SolidBrushInstance[],
-  textureLockEnabled: boolean = false,
+  locks: TextureLockFlags = { positionLock: false, stretchLock: false },
 ): string[] {
   const changedIds: string[] = [];
   for (const brush of brushes) {
-    if (pullTransformIfChanged(brush, textureLockEnabled)) {
+    if (pullTransformIfChanged(brush, locks)) {
       changedIds.push(brush.id);
     }
   }
@@ -100,14 +141,14 @@ export function pullChangedBrushTransforms(
  * Pulls transforms from every brush mesh without dirty tracking.
  *
  * @param brushes Brush instances to sync.
- * @param textureLockEnabled Whether Tex Lock should stick face UVs.
+ * @param locks Texture lock flags.
  */
 export function pullAllBrushTransforms(
   brushes: readonly SolidBrushInstance[],
-  textureLockEnabled: boolean = false,
+  locks: TextureLockFlags = { positionLock: false, stretchLock: false },
 ): void {
   for (const brush of brushes) {
-    pullBrushTransformWithOptionalTextureLock(brush, textureLockEnabled);
+    pullBrushTransformWithOptionalTextureLock(brush, locks);
   }
 }
 
@@ -125,6 +166,38 @@ export function collectDriftedBrushIds(brushes: readonly SolidBrushInstance[]): 
     driftedIds.push(brush.id);
   }
   return driftedIds;
+}
+
+/**
+ * Composes brush local-to-world from instance pose and parent.
+ *
+ * @param brush Brush instance.
+ * @returns World matrix.
+ */
+function composeBrushWorldMatrix(brush: SolidBrushInstance): THREE.Matrix4 {
+  return composeWorldFromPose(brush.position, brush.rotation, brush.scale, brush);
+}
+
+/**
+ * Composes world matrix from pose components and brush parent.
+ *
+ * @param position Local position.
+ * @param rotation Local rotation.
+ * @param scale Local scale.
+ * @param brush Brush for parent lookup.
+ * @returns World matrix.
+ */
+function composeWorldFromPose(
+  position: THREE.Vector3,
+  rotation: THREE.Euler,
+  scale: THREE.Vector3,
+  brush: SolidBrushInstance,
+): THREE.Matrix4 {
+  const local = new THREE.Matrix4().compose(position, new THREE.Quaternion().setFromEuler(rotation), scale);
+  const parent = brush.mesh?.parent;
+  if (!parent) return local;
+  parent.updateMatrixWorld(true);
+  return new THREE.Matrix4().multiplyMatrices(parent.matrixWorld, local);
 }
 
 /**

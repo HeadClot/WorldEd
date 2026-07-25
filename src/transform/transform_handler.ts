@@ -66,6 +66,15 @@ export class TransformHandler {
   }
 
   /**
+   * Returns the active transform gizmo mode.
+   *
+   * @returns Current TransformMode.
+   */
+  getMode(): TransformMode {
+    return this.transformGizmo.getMode();
+  }
+
+  /**
    * Processes a pointer down event on the gizmo. Snapshots the pre-drag state
    * of selected objects for undo support.
    *
@@ -407,6 +416,7 @@ export class TransformHandler {
     const constrainedDelta = this.constrainDeltaToOrientedAxis(totalDelta, this.session.activeAxis);
     this.session.dragDeltaAccumulator.copy(constrainedDelta);
     this.transformExecutor.applyAbsoluteTranslation(objects, this.session.initialPositions, constrainedDelta);
+    this.boundsDragController.rebakeLockedTextures(objects, true, false);
   }
 
   /**
@@ -455,6 +465,7 @@ export class TransformHandler {
       axis,
       angle,
     );
+    this.boundsDragController.rebakeLockedTextures(objects, true, false);
   }
 
   /**
@@ -536,6 +547,6 @@ export class TransformHandler {
       factor,
       this.session.activeAxis,
     );
-    this.boundsDragController.rebakeLockedTextures(objects);
+    this.boundsDragController.rebakeLockedTextures(objects, false, true);
   }
 }

@@ -10,6 +10,8 @@ import {
   getMeshChildren,
   getDepth,
   restoreObjectAtIndex,
+  sortObjectsBySceneOrder,
+  compareSceneGraphOrder,
 } from '../../src/utils/hierarchy_utils.js';
 
 describe('getDescendants', () => {
@@ -323,5 +325,34 @@ describe('restoreObjectAtIndex', () => {
     restoreObjectAtIndex(meshC, null, 0, fallback);
     expect(meshC.parent).toBe(fallback);
     expect(fallback.children[0]).toBe(meshC);
+  });
+});
+
+describe('sortObjectsBySceneOrder', () => {
+  it('should restore sibling order when input is reverse of outliner order', () => {
+    const parent = new THREE.Group();
+    const first = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    const second = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    const third = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    parent.add(first);
+    parent.add(second);
+    parent.add(third);
+    const sorted = sortObjectsBySceneOrder([third, first, second]);
+    expect(sorted).toEqual([first, second, third]);
+  });
+
+  it('should order nested objects by depth-first sibling paths', () => {
+    const root = new THREE.Group();
+    const branchA = new THREE.Group();
+    const branchB = new THREE.Group();
+    const leafEarly = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    const leafLate = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    root.add(branchA);
+    root.add(branchB);
+    branchA.add(leafEarly);
+    branchB.add(leafLate);
+    expect(compareSceneGraphOrder(leafLate, leafEarly)).toBeGreaterThan(0);
+    const sorted = sortObjectsBySceneOrder([leafLate, leafEarly]);
+    expect(sorted).toEqual([leafEarly, leafLate]);
   });
 });

@@ -6,6 +6,15 @@ import { SolidModel } from '../../solid/model/solid_model.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
 import { SolidBrushPlaneClip } from '../../solid/brush/solid_brush_plane_clip.js';
 import { SolidOperation } from '../../solid/types/solid_operation.js';
+import {
+  applyTransferredSurfacesToInstance,
+  captureInstanceFaceSurfaces,
+} from '../../solid/brush/solid_brush_surface_transfer.js';
+import type {
+  FaceSurfaceDescription,
+  FaceSurfaceDescriptionSerialized,
+} from '../../texture/uv_matrix/face_surface_description.js';
+import { cloneFaceSurface, deserializeFaceSurface } from '../../texture/uv_matrix/face_surface_description.js';
 
 /** Undoable split of one solid brush into two pieces by a world plane. */
 export class SplitSolidBrushCommand implements UndoCommand {
@@ -18,6 +27,8 @@ export class SplitSolidBrushCommand implements UndoCommand {
   private previousRotation: THREE.Euler;
   private previousScale: THREE.Vector3;
   private previousName: string;
+  private previousDefaultSurface: FaceSurfaceDescriptionSerialized | null;
+  private previousFaceSurfaces: (FaceSurfaceDescriptionSerialized | undefined)[] | null;
   private frontBrushId: string | null;
   private backBrushId: string | null;
   private executed: boolean;
@@ -39,6 +50,8 @@ export class SplitSolidBrushCommand implements UndoCommand {
     this.previousRotation = new THREE.Euler();
     this.previousScale = new THREE.Vector3(1, 1, 1);
     this.previousName = '';
+    this.previousDefaultSurface = null;
+    this.previousFaceSurfaces = null;
     this.frontBrushId = null;
     this.backBrushId = null;
     this.executed = false;
@@ -55,9 +68,23 @@ export class SplitSolidBrushCommand implements UndoCommand {
     const back = SolidBrushPlaneClip.clipKeepThreeHalfSpace(source.brush, localPlane, false);
     if (!front || !back) return;
     this.snapshotSource(source);
+    const sourceSurfaces = this.materializeSourceSurfaces(source);
+    const sourceBrush = source.brush;
     this.model.removeBrush(this.sourceBrushId, true);
     const frontInstance = this.createPiece(`${this.previousName}_A`, front, this.previousOperation);
     const backInstance = this.createPiece(`${this.previousName}_B`, back, this.previousOperation);
+    applyTransferredSurfacesToInstance(
+      frontInstance,
+      sourceBrush,
+      sourceSurfaces.defaultSurface,
+      sourceSurfaces.faceSurfaces,
+    );
+    applyTransferredSurfacesToInstance(
+      backInstance,
+      sourceBrush,
+      sourceSurfaces.defaultSurface,
+      sourceSurfaces.faceSurfaces,
+    );
     this.model.addBrushInstance(frontInstance);
     this.model.addBrushInstance(backInstance);
     this.frontBrushId = frontInstance.id;
@@ -79,12 +106,15 @@ export class SplitSolidBrushCommand implements UndoCommand {
     restored.position.copy(this.previousPosition);
     restored.rotation.copy(this.previousRotation);
     restored.scale.copy(this.previousScale);
+    restored.restoreFaceSurfaces(this.previousDefaultSurface ?? undefined, this.previousFaceSurfaces ?? undefined);
     const preview = SolidBrushVisual.createHullPreview(this.previousName, this.previousBrush, this.previousOperation);
     restored.attachMesh(preview);
     this.model.addBrushInstance(restored);
     this.frontBrushId = null;
     this.backBrushId = null;
     this.previousBrush = null;
+    this.previousDefaultSurface = null;
+    this.previousFaceSurfaces = null;
     this.executed = false;
   }
 
@@ -127,6 +157,28 @@ export class SplitSolidBrushCommand implements UndoCommand {
     this.previousRotation.copy(source.rotation);
     this.previousScale.copy(source.scale);
     this.previousName = source.name;
+    const surfaces = captureInstanceFaceSurfaces(source);
+    this.previousDefaultSurface = surfaces.defaultSurface;
+    this.previousFaceSurfaces = surfaces.faceSurfaces;
+  }
+
+  /**
+   * Builds resolved face surfaces for plane-match transfer onto split pieces.
+   *
+   * @param instance Source brush instance.
+   * @returns Default and per-face surfaces.
+   */
+  private materializeSourceSurfaces(instance: SolidBrushInstance): {
+    defaultSurface: FaceSurfaceDescription;
+    faceSurfaces: (FaceSurfaceDescription | undefined)[];
+  } {
+    const defaultSurface = deserializeFaceSurface(instance.serializeDefaultSurface());
+    const faceSurfaces: (FaceSurfaceDescription | undefined)[] = [];
+    const faceCount = instance.brush.faces.length;
+    for (let index = 0; index < faceCount; index++) {
+      faceSurfaces[index] = cloneFaceSurface(instance.getFaceSurface(index));
+    }
+    return { defaultSurface, faceSurfaces };
   }
 
   /**

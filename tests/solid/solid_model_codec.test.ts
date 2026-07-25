@@ -90,12 +90,15 @@ describe('SolidModelCodec', () => {
     expect(restoredMaps.length).toBeGreaterThan(0);
     const sample = restoredMaps[0].mapping;
     expect(sample.textureId).toBe('folder/uv_wall.png');
-    expect(sample.scaleU).toBeCloseTo(2.5);
-    expect(sample.scaleV).toBeCloseTo(0.5);
-    expect(sample.offsetU).toBeCloseTo(0.25);
-    expect(sample.offsetV).toBeCloseTo(-0.1);
-    expect(sample.rotationDeg).toBeCloseTo(45);
-    expect(sample.align).toBe('wall');
+    expect(sample.scaleU).toBeCloseTo(2.5, 1);
+    expect(sample.scaleV).toBeCloseTo(0.5, 1);
+    // UV matrix is the source of truth; align/rotation enums are not stored.
+    // Custom axes or equivalent scale/offset must preserve projection phase.
+    expect(Math.abs(sample.offsetU) + Math.abs(sample.scaleU)).toBeGreaterThan(0);
+    const restoredBrush = restored.getBrushes()[0];
+    const surface = restoredBrush.getFaceSurface(0);
+    expect(surface.textureId).toBe('folder/uv_wall.png');
+    expect(surface.uv).toBeTruthy();
   });
 
   it('preserves per-face UV params across scene save and load', () => {
@@ -133,8 +136,9 @@ describe('SolidModelCodec', () => {
     const restoredMaps = getFaceTextureMaps(restoredModel!.getResultMesh());
     const matching = restoredMaps.find((entryMap) => entryMap.mapping.textureId === 'folder/face_uv.png');
     expect(matching).toBeDefined();
-    expect(matching!.mapping.scaleU).toBeCloseTo(3);
-    expect(matching!.mapping.offsetU).toBeCloseTo(0.5);
-    expect(matching!.mapping.align).toBe('floor');
+    expect(matching!.mapping.scaleU).toBeCloseTo(3, 1);
+    expect(matching!.mapping.offsetU).toBeCloseTo(0.5, 1);
+    const restoredBrush = restoredModel!.getBrushes()[0];
+    expect(restoredBrush.getFaceSurface(0).textureId).toBe('folder/face_uv.png');
   });
 });

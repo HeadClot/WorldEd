@@ -138,7 +138,7 @@ export class UvSmearController {
     rebuildSurfaceMaterials(mesh, undefined, undefined, {
       preserveTriangleOrder: true,
     });
-    this.syncSolidBrushMappings(mesh);
+    this.syncSolidBrushMappings(mesh, triangleIndices, mapping);
     this.touchedMeshes.add(mesh);
     this.sourceSeed = {
       mesh,
@@ -200,16 +200,18 @@ export class UvSmearController {
   }
 
   /**
-   * Writes result-mesh UV maps back onto solid brush faces so CSG rebuilds keep
-   * smear/paint phase and scale.
+   * Writes only the painted result-mesh region onto its solid brush face so CSG
+   * rebuilds keep smear phase and scale without touching neighbor brushes.
    *
    * @param mesh Mesh that may be a solid model result.
+   * @param triangleIndices Painted triangle region.
+   * @param mapping Mapping applied to that region.
    */
-  private syncSolidBrushMappings(mesh: THREE.Mesh): void {
+  private syncSolidBrushMappings(mesh: THREE.Mesh, triangleIndices: number[], mapping: FaceTextureMapping): void {
     if (!SolidModel.isResultMesh(mesh)) return;
     const model = SolidModel.fromObject(mesh);
     if (!model) return;
-    model.syncAuthoredMappingsFromResultMesh();
+    model.syncAuthoredMappingForTriangles(triangleIndices, mapping);
   }
 
   /**

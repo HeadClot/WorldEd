@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { AssignSurfaceTextureCommand } from '../../../src/commands/texture/assign_surface_texture_command.js';
 import { buildTargetsFromMeshes, initializeMeshTextureUVs } from '../../../src/texture/uv/face_texture_applier.js';
 import { getFaceTextureMaps, setFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
+import { cloneFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
 import { createContentMaterial } from '../../../src/materials/content_material_factory.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../../src/texture/library/texture_id.js';
 import { setTexturePaintStateForTests, TexturePaintState } from '../../../src/texture/paint/texture_paint_state.js';
@@ -43,10 +44,14 @@ describe('AssignSurfaceTextureCommand', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createContentMaterial(0x888888));
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);
-    const mapsBefore = getFaceTextureMaps(mesh).map((entry) => ({
-      triangleIndices: entry.triangleIndices.slice(),
-      mapping: { ...entry.mapping, scaleU: 2.5 },
-    }));
+    const mapsBefore = getFaceTextureMaps(mesh).map((entry) => {
+      const mapping = cloneFaceTextureMapping(entry.mapping);
+      mapping.scaleU = 2.5;
+      return {
+        triangleIndices: entry.triangleIndices.slice(),
+        mapping,
+      };
+    });
     setFaceTextureMaps(mesh, mapsBefore);
     const targets = buildTargetsFromMeshes([mesh]);
     const command = new AssignSurfaceTextureCommand(targets, 'floor.png');

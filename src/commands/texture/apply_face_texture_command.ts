@@ -5,9 +5,14 @@ import {
   FaceTextureMapEntry,
   FaceTextureMapping,
   cloneFaceTextureMapEntry,
+  cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
 } from '../../texture/uv/face_texture_mapping.js';
-import { getFaceTextureMaps, setFaceTextureMaps } from '../../texture/uv/face_texture_storage.js';
+import {
+  getFaceTextureMaps,
+  getFaceTextureMapsLive,
+  setFaceTextureMaps,
+} from '../../texture/uv/face_texture_storage.js';
 import {
   applyAlignToTargets,
   applyMappingToTargets,
@@ -17,12 +22,19 @@ import {
 import { rebakeStoredFaceTextureMaps } from '../../texture/uv/planar_uv_projector.js';
 import { rebuildSurfaceMaterials } from '../../texture/material/surface_material_builder.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
+import type { BrushUvSnapshot } from '../../solid/model/solid_model_presentation.js';
 
 /** Snapshot of one mesh's texture state for undo. */
 interface MeshTextureSnapshot {
   mesh: THREE.Mesh;
   maps: FaceTextureMapEntry[];
   uvArray: Float32Array | null;
+  /**
+   * Authored solid brush UV state before the edit. When present, undo/redo
+   * remeshes from brush authorship instead of replaying stale result UV buffers
+   * (critical after VMF-scale partial remesh).
+   */
+  solidBrushUvs: BrushUvSnapshot[] | null;
 }
 
 /** Options for applying face texture / UV changes. */
@@ -43,6 +55,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
   private resetUvOnly: boolean;
   private alignOnly: FaceTextureAlign | null;
   private beforeSnapshots: MeshTextureSnapshot[];
+  private afterSolidBrushUvs: BrushUvSnapshot[] | null;
   private executed: boolean;
 
   /**
@@ -58,16 +71,20 @@ export class ApplyFaceTextureCommand implements UndoCommand {
     options: ApplyFaceTextureCommandOptions = {},
   ) {
     this.targets = targets;
-    this.mapping = { ...mapping };
+    this.mapping = cloneFaceTextureMapping(mapping);
     this.resetUvOnly = options.resetUvOnly === true;
     this.alignOnly = options.alignOnly ?? null;
     this.beforeSnapshots = [];
+    this.afterSolidBrushUvs = null;
     this.executed = false;
   }
 
   /** Applies the mapping and bakes UVs, capturing prior state for undo. */
   execute(): void {
-    if (this.executed) return;
+    if (this.executed) {
+      this.replayAfterState();
+      return;
+    }
     this.beforeSnapshots = this.captureSnapshots();
     if (this.resetUvOnly) {
       resetUvParamsOnTargets(this.targets);
@@ -77,34 +94,72 @@ export class ApplyFaceTextureCommand implements UndoCommand {
       applyMappingToTargets(this.targets, this.mapping);
     }
     this.syncSolidBrushMappingsFromTargets();
+    this.afterSolidBrushUvs = this.captureSolidBrushUvsFromTargets();
     this.executed = true;
   }
 
-  /** Restores prior UV attributes and face texture maps. */
+  /** Restores prior authored solid UV state (or content mesh UVs). */
   undo(): void {
     if (!this.executed) return;
     this.beforeSnapshots.forEach((snapshot) => {
       this.restoreSnapshot(snapshot);
     });
-    this.syncSolidBrushMappingsFromTargets();
     this.executed = false;
   }
 
-  /** Pushes result-mesh UV edits back onto solid brush faces for rebuild/save. */
+  /** Re-applies the post-edit solid brush UV state on redo after a prior undo. */
+  private replayAfterState(): void {
+    if (!this.afterSolidBrushUvs) {
+      // Content-mesh redo: re-run the original apply path.
+      if (this.resetUvOnly) {
+        resetUvParamsOnTargets(this.targets);
+      } else if (this.alignOnly) {
+        applyAlignToTargets(this.targets, this.alignOnly);
+      } else {
+        applyMappingToTargets(this.targets, this.mapping);
+      }
+      return;
+    }
+    const model = this.findSolidModelFromTargets();
+    if (!model) return;
+    model.restoreBrushUvSnapshots(this.afterSolidBrushUvs);
+    this.remeshAllBrushes(model);
+  }
+
+  /**
+   * Pushes only the edited triangle regions onto solid brush faces and remeshes
+   * those brushes. Converts world-space editor matrices to brush-local
+   * storage.
+   */
   private syncSolidBrushMappingsFromTargets(): void {
-    const models = new Set<SolidModel>();
     for (const target of this.targets) {
       if (!SolidModel.isResultMesh(target.mesh)) continue;
       const model = SolidModel.fromObject(target.mesh);
-      if (model) models.add(model);
-    }
-    for (const model of models) {
-      model.syncAuthoredMappingsFromResultMesh();
+      if (!model) continue;
+      const mapping = this.resolveTargetMapping(target);
+      model.syncAuthoredMappingForTriangles(target.triangleIndices, mapping);
     }
   }
 
   /**
-   * Captures unique meshes referenced by targets.
+   * Reads the mapping currently stored for a target region after apply.
+   *
+   * @param target Edited region.
+   * @returns Mapping for solid brush write-back.
+   */
+  private resolveTargetMapping(target: TextureApplyTarget): FaceTextureMapping {
+    const entries = getFaceTextureMapsLive(target.mesh);
+    const indexSet = new Set(target.triangleIndices);
+    for (const entry of entries) {
+      if (entry.triangleIndices.some((index) => indexSet.has(index))) {
+        return cloneFaceTextureMapping(entry.mapping);
+      }
+    }
+    return cloneFaceTextureMapping(this.mapping);
+  }
+
+  /**
+   * Captures unique meshes referenced by targets, including solid brush UVs.
    *
    * @returns Snapshots for undo.
    */
@@ -119,7 +174,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
   }
 
   /**
-   * Snapshots maps and UV buffer for one mesh.
+   * Snapshots maps, UV buffer, and solid brush authorship for one mesh.
    *
    * @param mesh Mesh to capture.
    * @returns Snapshot object.
@@ -128,22 +183,89 @@ export class ApplyFaceTextureCommand implements UndoCommand {
     const maps = getFaceTextureMaps(mesh).map((entry) => cloneFaceTextureMapEntry(entry));
     const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute | null;
     const uvArray = uv ? new Float32Array(uv.array as ArrayLike<number>) : null;
-    return { mesh, maps, uvArray };
+    return {
+      mesh,
+      maps,
+      uvArray,
+      solidBrushUvs: this.captureSolidBrushUvs(mesh),
+    };
   }
 
   /**
-   * Restores a mesh snapshot and refreshes UV needsUpdate.
+   * Captures all brush UV authorship when the mesh is a solid result.
+   *
+   * @param mesh Candidate mesh.
+   * @returns Brush UV snapshots, or null when not a solid result.
+   */
+  private captureSolidBrushUvs(mesh: THREE.Mesh): BrushUvSnapshot[] | null {
+    if (!SolidModel.isResultMesh(mesh)) return null;
+    const model = SolidModel.fromObject(mesh);
+    if (!model) return null;
+    return model.captureBrushUvSnapshots();
+  }
+
+  /**
+   * Captures solid brush UV state after an edit for redo.
+   *
+   * @returns Brush snapshots, or null when targets are not solid results.
+   */
+  private captureSolidBrushUvsFromTargets(): BrushUvSnapshot[] | null {
+    for (const target of this.targets) {
+      const captured = this.captureSolidBrushUvs(target.mesh);
+      if (captured) return captured;
+    }
+    return null;
+  }
+
+  /**
+   * Restores a mesh snapshot. Solid results remesh from brush authorship so
+   * triangle indices and UV buffers stay consistent with CSG chunks.
    *
    * @param snapshot Prior state.
    */
   private restoreSnapshot(snapshot: MeshTextureSnapshot): void {
+    if (snapshot.solidBrushUvs) {
+      const model = SolidModel.fromObject(snapshot.mesh);
+      if (model) {
+        model.restoreBrushUvSnapshots(snapshot.solidBrushUvs);
+        this.remeshAllBrushes(model);
+        return;
+      }
+    }
     setFaceTextureMaps(snapshot.mesh, snapshot.maps);
     if (snapshot.uvArray) {
       this.restoreUvArray(snapshot.mesh, snapshot.uvArray);
     } else {
       rebakeStoredFaceTextureMaps(snapshot.mesh);
     }
-    rebuildSurfaceMaterials(snapshot.mesh);
+    rebuildSurfaceMaterials(snapshot.mesh, undefined, undefined, {
+      preserveTriangleOrder: true,
+    });
+  }
+
+  /**
+   * Remeshes every brush chunk from authored UV surfaces and refreshes result
+   * materials/maps. Used by solid undo/redo so triangle layout stays stable.
+   *
+   * @param model Solid model to remesh.
+   */
+  private remeshAllBrushes(model: SolidModel): void {
+    const brushIds = model.getBrushes().map((brush) => brush.id);
+    model.refreshBrushPresentations(brushIds);
+  }
+
+  /**
+   * Finds a solid model from the command targets.
+   *
+   * @returns Solid model or null.
+   */
+  private findSolidModelFromTargets(): SolidModel | null {
+    for (const target of this.targets) {
+      if (!SolidModel.isResultMesh(target.mesh)) continue;
+      const model = SolidModel.fromObject(target.mesh);
+      if (model) return model;
+    }
+    return null;
   }
 
   /**

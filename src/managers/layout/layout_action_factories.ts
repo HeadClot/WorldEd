@@ -214,6 +214,8 @@ function buildCsgSnapAlignToolbarActions(
   | 'onSnapIntervalBackward'
   | 'onSnapIntervalForward'
   | 'onToggleTextureLock'
+  | 'onTogglePositionLock'
+  | 'onToggleStretchLock'
   | 'onAlignToOrigin'
   | 'onAlignToGridCenter'
   | 'onAlignToObject'
@@ -221,6 +223,8 @@ function buildCsgSnapAlignToolbarActions(
   | 'onSetTransformSpaceLocal'
   | 'isUserSnapEnabled'
   | 'isTextureLockEnabled'
+  | 'isPositionLockEnabled'
+  | 'isStretchLockEnabled'
   | 'isTransformSpaceLocal'
 > {
   return {
@@ -232,6 +236,8 @@ function buildCsgSnapAlignToolbarActions(
     onSnapIntervalBackward: () => host.getSnapSettingsController().onSnapIntervalBackward(),
     onSnapIntervalForward: () => host.getSnapSettingsController().onSnapIntervalForward(),
     onToggleTextureLock: () => host.getSnapSettingsController().onToggleTextureLock(),
+    onTogglePositionLock: () => host.getSnapSettingsController().onTogglePositionLock(),
+    onToggleStretchLock: () => host.getSnapSettingsController().onToggleStretchLock(),
     onAlignToOrigin: () => host.getAlignmentHandler().onAlignToOrigin(),
     onAlignToGridCenter: () => host.getAlignmentHandler().onAlignToGridCenter(),
     onAlignToObject: () => host.getAlignmentHandler().onAlignToObject(),
@@ -239,6 +245,8 @@ function buildCsgSnapAlignToolbarActions(
     onSetTransformSpaceLocal: () => host.onSetTransformSpaceLocal(),
     isUserSnapEnabled: () => host.isUserSnapEnabled(),
     isTextureLockEnabled: () => host.textureLock.isLocked(),
+    isPositionLockEnabled: () => host.textureLock.isPositionLocked(),
+    isStretchLockEnabled: () => host.textureLock.isStretchLocked(),
     isTransformSpaceLocal: () => host.isTransformSpaceLocal(),
   };
 }

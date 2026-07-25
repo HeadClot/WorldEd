@@ -60,32 +60,54 @@ export class SnapSettingsController {
   }
 
   /**
-   * Toggles CSG-style texture lock for transforms. On: solid brush UVs stick
-   * when moved; content meshes keep world density on scale. Off: solid brush
-   * UVs slide in world space; content mesh UVs stretch on scale.
+   * Toggles position lock: UVs stick when moving/rotating objects and brushes.
+   * Off = world-slide. Toggle never rewrites UVs by itself.
    */
-  onToggleTextureLock(): void {
-    const locked = this.deps.textureLock.toggle();
-    this.deps.toolbar.setButtonActiveByLabel('Tex Lock', locked);
-    this.applySolidUvStickMode(locked);
+  onTogglePositionLock(): void {
+    const locked = this.deps.textureLock.togglePositionLock();
+    this.deps.toolbar.setButtonActiveByLabel('Pos Lock', locked);
+    this.syncSolidUvStickHints();
     if (this.deps.statusBar) {
       this.deps.statusBar.setLastAction(
-        locked ? 'Texture lock on (stick to brushes)' : 'Texture lock off (world slide / stretch)',
+        locked ? 'Position lock on (UVs stick on move/rotate)' : 'Position lock off (world slide)',
       );
     }
   }
 
   /**
-   * Updates all solid models to bake UVs in brush-local or world space.
-   *
-   * @param stickToBrush True when Tex Lock is on.
+   * Toggles stretch lock: UVs stretch when scaling objects and brushes. Off =
+   * world tile density. Toggle never rewrites UVs by itself.
    */
-  private applySolidUvStickMode(stickToBrush: boolean): void {
+  onToggleStretchLock(): void {
+    const locked = this.deps.textureLock.toggleStretchLock();
+    this.deps.toolbar.setButtonActiveByLabel('Stretch Lock', locked);
+    this.syncSolidUvStickHints();
+    if (this.deps.statusBar) {
+      this.deps.statusBar.setLastAction(
+        locked ? 'Stretch lock on (UVs stretch on scale)' : 'Stretch lock off (tile density)',
+      );
+    }
+  }
+
+  /** Legacy combined toggle kept for callers that still use a single control. */
+  onToggleTextureLock(): void {
+    const locked = this.deps.textureLock.toggle();
+    this.deps.toolbar.setButtonActiveByLabel('Pos Lock', this.deps.textureLock.isPositionLocked());
+    this.deps.toolbar.setButtonActiveByLabel('Stretch Lock', this.deps.textureLock.isStretchLocked());
+    this.syncSolidUvStickHints();
+    if (this.deps.statusBar) {
+      this.deps.statusBar.setLastAction(locked ? 'Texture locks on' : 'Texture locks off (world slide / density)');
+    }
+  }
+
+  /** Updates solid models with a legacy stick hint from either lock. No remesh. */
+  private syncSolidUvStickHints(): void {
+    const flags = this.deps.textureLock.getFlags();
+    const stick = flags.positionLock || flags.stretchLock;
     this.deps.worldObject.traverse((child) => {
       const model = SolidModel.fromObject(child);
       if (!model) return;
-      model.setUvStickToBrush(stickToBrush);
-      model.rebuild(true);
+      model.setUvStickToBrush(stick);
     });
   }
 
@@ -100,11 +122,10 @@ export class SnapSettingsController {
   }
 
   /**
-   * Re-bakes world planar UVs on all content meshes when texture lock is on.
-   * Used after undo/redo of scale and bounds so tiles stay consistent.
+   * After undo/redo: rebake content-mesh UVs only when a world-space component
+   * is unlocked (position and/or stretch). Solid brushes are ignored.
    */
   rebakeWorldTexturesIfLocked(): void {
-    if (!this.deps.textureLock.isLocked()) return;
     const meshes: THREE.Mesh[] = [];
     this.deps.worldObject.traverse((child) => {
       if (child instanceof THREE.Mesh && child.geometry) {

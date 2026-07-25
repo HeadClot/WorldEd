@@ -7,7 +7,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SolidBrushMeshChunkBuilder } from '../../src/solid/mesh/solid_brush_mesh_chunk.js';
 import { SolidMeshChunkCache } from '../../src/solid/mesh/solid_mesh_chunk_cache.js';
 import { SolidResultAssembler } from '../../src/solid/mesh/solid_result_assembler.js';
-import { createDefaultFaceTextureMapping } from '../../src/texture/uv/face_texture_mapping.js';
+import { createDefaultFaceSurface } from '../../src/texture/uv_matrix/face_surface_description.js';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 
 /**
@@ -42,9 +42,8 @@ describe('Solid mesh chunk cache', () => {
       const polygons = compiler.getCachedPolygons(brushId) ?? [];
       cache.set(
         brushId,
-        builder.build(polygons, () => createDefaultFaceTextureMapping(), {
-          stickToBrush: false,
-          resultWorldMatrix: identity,
+        builder.build(polygons, () => createDefaultFaceSurface(), {
+          brushModelMatrix: identity,
         }),
       );
     }
@@ -59,9 +58,8 @@ describe('Solid mesh chunk cache', () => {
     for (const brushId of updatedIds) {
       cache.set(
         brushId,
-        builder.build(compiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceTextureMapping(), {
-          stickToBrush: false,
-          resultWorldMatrix: identity,
+        builder.build(compiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceSurface(), {
+          brushModelMatrix: identity,
         }),
       );
     }
@@ -72,9 +70,8 @@ describe('Solid mesh chunk cache', () => {
     for (const brushId of fullCompiler.getLastUpdateBrushIds()) {
       fullCache.set(
         brushId,
-        builder.build(fullCompiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceTextureMapping(), {
-          stickToBrush: false,
-          resultWorldMatrix: identity,
+        builder.build(fullCompiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceSurface(), {
+          brushModelMatrix: identity,
         }),
       );
     }

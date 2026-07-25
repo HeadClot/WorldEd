@@ -58,6 +58,8 @@ export interface EditorToolbarActions {
   onSnapIntervalBackward: () => void;
   onSnapIntervalForward: () => void;
   onToggleTextureLock: () => void;
+  onTogglePositionLock: () => void;
+  onToggleStretchLock: () => void;
   onAlignToOrigin: () => void;
   onAlignToGridCenter: () => void;
   onAlignToObject: () => void;
@@ -69,6 +71,8 @@ export interface EditorToolbarActions {
   onSetTransformSpaceLocal: () => void;
   isUserSnapEnabled: () => boolean;
   isTextureLockEnabled: () => boolean;
+  isPositionLockEnabled: () => boolean;
+  isStretchLockEnabled: () => boolean;
   isTransformSpaceLocal: () => boolean;
 }
 
@@ -462,8 +466,12 @@ export class EditorShellBuilder {
     toolbar.addButton('Local', () => actions.onSetTransformSpaceLocal()).title = 'Gizmo axes: object local';
     this.applyTransformSpaceButtonState(toolbar, actions.isTransformSpaceLocal());
     toolbar.addSeparator();
-    toolbar.addButton('Tex Lock', () => actions.onToggleTextureLock());
-    toolbar.setButtonActiveByLabel('Tex Lock', actions.isTextureLockEnabled());
+    toolbar.addButton('Pos Lock', () => actions.onTogglePositionLock()).title =
+      'Position lock: UVs stick when moving/rotating (off = world slide)';
+    toolbar.setButtonActiveByLabel('Pos Lock', actions.isPositionLockEnabled());
+    toolbar.addButton('Stretch Lock', () => actions.onToggleStretchLock()).title =
+      'Stretch lock: UVs stretch when scaling (off = tile density)';
+    toolbar.setButtonActiveByLabel('Stretch Lock', actions.isStretchLockEnabled());
   }
 
   /**

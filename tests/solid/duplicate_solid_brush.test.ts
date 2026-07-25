@@ -35,4 +35,28 @@ describe('Duplicate solid brushes', () => {
     expect(model.getBrushCount()).toBe(1);
     expect(command.getClonedMeshes().length).toBe(0);
   });
+
+  it('duplicates multiple brushes in outliner order, not selection click order', () => {
+    const model = new SolidModel('OrderDupSolid');
+    const first = model.addBoxBrush(4, SolidOperation.Additive);
+    const second = model.addBoxBrush(2, SolidOperation.Subtractive);
+    const third = model.addBoxBrush(3, SolidOperation.Additive);
+    first.mesh!.name = 'FirstBrush';
+    second.mesh!.name = 'SecondBrush';
+    third.mesh!.name = 'ThirdBrush';
+    const selectionClickOrder = [third.mesh!, first.mesh!];
+    const command = new DuplicateSolidBrushesCommand(selectionClickOrder, new THREE.Vector3(0, 0, 0));
+    command.execute();
+    const brushes = model.getBrushes();
+    expect(brushes).toHaveLength(5);
+    const cloneOperations = brushes.slice(3).map((brush) => brush.operation);
+    expect(cloneOperations).toEqual([SolidOperation.Additive, SolidOperation.Additive]);
+    const cloneNames = brushes.slice(3).map((brush) => brush.name);
+    expect(cloneNames[0]).toContain('FirstBrush');
+    expect(cloneNames[1]).toContain('ThirdBrush');
+    const rootBrushMeshes = model.root.children.filter((child) => SolidBrushVisual.isBrushObject(child));
+    const lastTwoNames = rootBrushMeshes.slice(-2).map((mesh) => mesh.name);
+    expect(lastTwoNames[0]).toContain('FirstBrush');
+    expect(lastTwoNames[1]).toContain('ThirdBrush');
+  });
 });

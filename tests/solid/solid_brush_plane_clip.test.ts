@@ -8,6 +8,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { ClipSolidBrushCommand } from '../../src/commands/solid/clip_solid_brush_command.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
+import { createFaceTextureMappingFromTrs } from '../../src/texture/uv/face_texture_mapping.js';
 
 /** Unit tests for solid brush plane clipping used by the clip tool. */
 describe('SolidBrushPlaneClip', () => {
@@ -38,5 +39,35 @@ describe('SolidBrushPlaneClip', () => {
     expect(validation.valid).toBe(true);
     const bounds = updated!.brush.computeLocalBounds();
     expect(bounds.max.x).toBeLessThanOrEqual(0.01);
+  });
+
+  it('preserves authored UV matrix on surviving faces after clip', () => {
+    const model = new SolidModel('ClipUvPreserve');
+    const instance = model.addBoxBrush(2, SolidOperation.Additive);
+    // Author a distinctive UV scale on a side face (+Z); clip removes the top
+    // but coplanar side planes must keep their UV matrices.
+    const sideIndex = instance.brush.planes.findIndex((plane) => plane.normal.z > 0.9);
+    expect(sideIndex).toBeGreaterThanOrEqual(0);
+    instance.setFaceMapping(
+      sideIndex,
+      createFaceTextureMappingFromTrs(
+        'clip-uv.png',
+        instance.faceNormalLocal(sideIndex),
+        { scaleU: 2, scaleV: 1, offsetU: 0.25, offsetV: 0, rotationDeg: 0 },
+        'face',
+      ),
+    );
+    const beforeUv = instance.getFaceSurface(sideIndex).uv.clone();
+    // Clip from above (keep lower half) — side plane equations stay the same.
+    const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0.25);
+    const command = new ClipSolidBrushCommand(model, instance.id, plane, true);
+    command.execute();
+    expect(command.didClip()).toBe(true);
+    const updated = model.findBrush(instance.id)!;
+    const newSideIndex = updated.brush.planes.findIndex((p) => p.normal.z > 0.9);
+    expect(newSideIndex).toBeGreaterThanOrEqual(0);
+    const afterSurface = updated.getFaceSurface(newSideIndex);
+    expect(afterSurface.textureId).toBe('clip-uv.png');
+    expect(afterSurface.uv.equals(beforeUv, 1e-5)).toBe(true);
   });
 });

@@ -8,6 +8,10 @@ import { createContentMaterial } from '../../materials/content_material_factory.
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import { Theme } from '../../theme.js';
 import { SOLID_MODEL_RESULT_USERDATA_KEY } from './solid_model_keys.js';
+import {
+  composeBrushWorldFromLocal,
+  convertBrushLocalFaceMappingToWorldWithMatrix,
+} from '../brush/solid_brush_uv_space.js';
 
 /** Snapshot of one brush UV/default and per-face mappings. */
 export type BrushUvSnapshot = {
@@ -39,7 +43,8 @@ export class SolidModelPresentation {
 
   /**
    * Writes face maps and materials onto the result mesh. UVs are already baked
-   * into brush mesh chunks; this never reprojects them.
+   * into brush mesh chunks; this never reprojects them. Face maps store
+   * world-space UV matrices for the UV editor.
    *
    * @param resultMesh Compiled result mesh.
    * @param surfaceRegions Last assembled surface regions.
@@ -53,25 +58,11 @@ export class SolidModelPresentation {
     _forceMaterials: boolean,
   ): void {
     void _forceMaterials;
-    const textureRegions = this.buildTextureRegions(surfaceRegions, findBrush);
+    const solidRoot = resultMesh.parent ?? resultMesh;
+    const invWorldByBrush = this.buildInvWorldFromLocalCache(surfaceRegions, findBrush, solidRoot);
+    const textureRegions = this.buildTextureRegions(surfaceRegions, findBrush, invWorldByBrush);
     this.writeSharedFaceMaps(resultMesh, textureRegions);
     this.writeSolidResultMaterials(resultMesh, textureRegions);
-  }
-
-  /**
-   * Resolves the authored face mapping for one compiled surface region.
-   *
-   * @param region Surface region with brush source identity.
-   * @param findBrush Lookup for the owning brush.
-   * @returns Mapping to bake onto the result mesh.
-   */
-  resolveRegionMapping(
-    region: { textureId: string; brushId: string; surfaceIndex: number },
-    findBrush: (id: string) => SolidBrushInstance | undefined,
-  ): FaceTextureMapping {
-    const brush = findBrush(region.brushId);
-    if (brush) return brush.getSurfaceMapping(region.surfaceIndex);
-    return createDefaultFaceTextureMapping(region.textureId || DEFAULT_CHECKER_TEXTURE_ID);
   }
 
   /**
@@ -123,24 +114,76 @@ export class SolidModelPresentation {
   }
 
   /**
+   * Builds inv(rootWorld * brushLocal) once per brush for the surface layout
+   * pass so local→world conversion does not refresh world matrices per face.
+   *
+   * @param surfaceRegions Assembled surface regions.
+   * @param findBrush Brush lookup.
+   * @param solidRoot Solid model root.
+   * @returns Map of brush id → inv world-from-local.
+   */
+  private buildInvWorldFromLocalCache(
+    surfaceRegions: readonly SolidSurfaceRegion[],
+    findBrush: (id: string) => SolidBrushInstance | undefined,
+    solidRoot: THREE.Object3D,
+  ): Map<string, THREE.Matrix4> {
+    solidRoot.updateMatrixWorld(true);
+    const cache = new Map<string, THREE.Matrix4>();
+    const worldFromLocal = new THREE.Matrix4();
+    for (const region of surfaceRegions) {
+      if (cache.has(region.brushId)) continue;
+      const brush = findBrush(region.brushId);
+      if (!brush) continue;
+      composeBrushWorldFromLocal(brush, solidRoot, worldFromLocal, false);
+      cache.set(region.brushId, worldFromLocal.clone().invert());
+    }
+    return cache;
+  }
+
+  /**
    * Builds texture region descriptors used for materials and face maps.
    *
    * @param surfaceRegions Last assembled surface regions.
    * @param findBrush Lookup for authored face mappings.
-   * @returns Texture regions with resolved mappings.
+   * @param invWorldByBrush Per-brush inv(root*brushLocal) matrices.
+   * @returns Texture regions with resolved world-space mappings.
    */
   private buildTextureRegions(
     surfaceRegions: readonly SolidSurfaceRegion[],
     findBrush: (id: string) => SolidBrushInstance | undefined,
+    invWorldByBrush: Map<string, THREE.Matrix4>,
   ): Array<{ triangleIndices: number[]; textureId: string; mapping: FaceTextureMapping }> {
     return surfaceRegions.map((region) => {
-      const mapping = this.resolveRegionMapping(region, findBrush);
+      const mapping = this.resolveRegionMapping(region, findBrush, invWorldByBrush);
       return {
         triangleIndices: region.triangleIndices,
         textureId: mapping.textureId || region.textureId,
         mapping,
       };
     });
+  }
+
+  /**
+   * Resolves one region mapping in world space for result face maps.
+   *
+   * @param region Surface region with brush source identity.
+   * @param findBrush Lookup for the owning brush.
+   * @param invWorldByBrush Per-brush conversion matrices.
+   * @returns World-space mapping for the result mesh.
+   */
+  private resolveRegionMapping(
+    region: { textureId: string; brushId: string; surfaceIndex: number },
+    findBrush: (id: string) => SolidBrushInstance | undefined,
+    invWorldByBrush: Map<string, THREE.Matrix4>,
+  ): FaceTextureMapping {
+    const brush = findBrush(region.brushId);
+    if (!brush) {
+      return createDefaultFaceTextureMapping(region.textureId || DEFAULT_CHECKER_TEXTURE_ID);
+    }
+    const localMapping = brush.getSurfaceMapping(region.surfaceIndex);
+    const invWorld = invWorldByBrush.get(region.brushId);
+    if (!invWorld) return localMapping;
+    return convertBrushLocalFaceMappingToWorldWithMatrix(localMapping, invWorld);
   }
 
   /**

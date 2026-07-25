@@ -19,14 +19,14 @@ describe('VmfUvConverter', () => {
       { x: 0, y: -1, z: 0, translation: 0, scale: 0.25 },
       new THREE.Vector3(0, 1, 0),
     );
-    expect(mapping.customUAxis).toBeDefined();
-    expect(mapping.customVAxis).toBeDefined();
-    expect(mapping.customUAxis!.x).toBeCloseTo(1, 5);
+    const uLen = Math.hypot(mapping.uv.u.x, mapping.uv.u.y, mapping.uv.u.z);
+    const vLen = Math.hypot(mapping.uv.v.x, mapping.uv.v.y, mapping.uv.v.z);
+    expect(mapping.uv.u.x / uLen).toBeCloseTo(1, 5);
     // Source (1,0,0)/(0,-1,0) → Three (1,0,0)/(0,0,-1), then V flipped → (0,0,1)
-    expect(mapping.customVAxis!.z).toBeCloseTo(1, 5);
+    expect(mapping.uv.v.z / vLen).toBeCloseTo(1, 5);
     const expectedScale = VMF_DEFAULT_TEXTURE_SIZE * 0.25 * VMF_INCHES_TO_METERS;
-    expect(mapping.scaleU).toBeCloseTo(expectedScale, 5);
-    expect(mapping.scaleV).toBeCloseTo(expectedScale, 5);
+    expect(1 / uLen).toBeCloseTo(expectedScale, 5);
+    expect(1 / vLen).toBeCloseTo(expectedScale, 5);
   });
 
   it('matches Hammer UV phase for a point on an axis-aligned face', () => {
@@ -59,7 +59,7 @@ describe('VmfUvConverter', () => {
     );
     const built = new VmfBrushFromSides().build(world.solids[0]);
     expect(built).not.toBeNull();
-    expect(built!.faceMappings.every((m) => m.customUAxis && m.customVAxis)).toBe(true);
+    expect(built!.faceMappings.every((m) => m.uv && m.uv.u && m.uv.v)).toBe(true);
     const model = new SolidModel('VmfUv');
     const instance = model.addBoxBrush(2, SolidOperation.Additive);
     // Replace with imported topology + mappings

@@ -26,6 +26,7 @@ function buildKeyframeCss(): string {
     buildTitleKeyframes(),
     buildGlowKeyframes(),
     buildShimmerKeyframes(),
+    buildSphereRollKeyframes(),
     buildClassRules(),
   ].join('\n');
 }
@@ -88,6 +89,20 @@ function buildShimmerKeyframes(): string {
   return `@keyframes aboutShimmer {
     0% { transform: translateX(-120%); }
     100% { transform: translateX(120%); }
+  }`;
+}
+
+/**
+ * Contributor sphere roll-in animation from right to left with a bounce.
+ *
+ * @returns CSS keyframes string.
+ */
+function buildSphereRollKeyframes(): string {
+  return `@keyframes contributorSphereRollIn {
+    0% { opacity: 0; transform: translateX(80px) scale(0.3) rotate(0deg); }
+    60% { opacity: 1; transform: translateX(-8px) scale(1.08) rotate(-8deg); }
+    80% { transform: translateX(3px) scale(0.97) rotate(3deg); }
+    100% { opacity: 1; transform: translateX(0) scale(1) rotate(0deg); }
   }`;
 }
 

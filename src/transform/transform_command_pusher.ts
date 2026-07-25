@@ -3,10 +3,13 @@ import { TransformMode } from '../types/transform_mode.js';
 import { TransformGizmo } from './gizmo/transform_gizmo.js';
 import { TransformExecutor } from './transform_executor.js';
 import { CommandStack } from '../commands/command_stack.js';
+import { UndoCommand } from '../commands/undo_command.js';
 import { TranslateCommand, ObjectTransformSnapshot } from '../commands/transform/translate_command.js';
 import { RotateCommand, ObjectRotationSnapshot } from '../commands/transform/rotate_command.js';
 import { ScaleCommand, ObjectScaleSnapshot } from '../commands/transform/scale_command.js';
 import { BoundsResizeCommand, BoundsResizeSnapshot } from '../commands/transform/bounds_resize_command.js';
+import { TextureLockedTransformCommand } from '../commands/transform/texture_locked_transform_command.js';
+import { captureTransformTextureState } from '../commands/transform/transform_texture_state.js';
 import { TransformDragSession } from './transform_drag_session.js';
 import { TransformProjectionMath } from './transform_projection_math.js';
 
@@ -88,7 +91,7 @@ export class TransformCommandPusher {
       return posChanged || scaleChanged;
     });
     if (!changed) return;
-    this.commandStack?.push(new BoundsResizeCommand(snapshots));
+    this.pushTextureAwareCommand(new BoundsResizeCommand(snapshots), selectedObjects);
   }
 
   /**
@@ -124,8 +127,7 @@ export class TransformCommandPusher {
     });
     if (!moved) return;
     const fallbackDelta = this.computeAverageDelta(snapshots);
-    const command = new TranslateCommand(snapshots, fallbackDelta);
-    this.commandStack?.push(command);
+    this.pushTextureAwareCommand(new TranslateCommand(snapshots, fallbackDelta), selectedObjects);
   }
 
   /**
@@ -141,8 +143,7 @@ export class TransformCommandPusher {
     const axisVector = this.session.activeAxis
       ? TransformProjectionMath.axisToWorldVector(this.session.activeAxis, this.transformGizmo.getOrientation())
       : new THREE.Vector3(0, 1, 0);
-    const command = new RotateCommand(snapshots, pivot, axisVector, snappedAngle);
-    this.commandStack?.push(command);
+    this.pushTextureAwareCommand(new RotateCommand(snapshots, pivot, axisVector, snappedAngle), selectedObjects);
   }
 
   /**
@@ -158,7 +159,22 @@ export class TransformCommandPusher {
     const axisVector = this.session.activeAxis
       ? TransformProjectionMath.axisToWorldVector(this.session.activeAxis, this.transformGizmo.getOrientation())
       : new THREE.Vector3(1, 0, 0);
-    const command = new ScaleCommand(snapshots, pivot, axisVector, snappedFactor, this.session.activeAxis ?? undefined);
+    this.pushTextureAwareCommand(
+      new ScaleCommand(snapshots, pivot, axisVector, snappedFactor, this.session.activeAxis ?? undefined),
+      selectedObjects,
+    );
+  }
+
+  /**
+   * Pushes a pose command wrapped with before/after texture lock UV state.
+   *
+   * @param poseCommand Pose-only undo command.
+   * @param selectedObjects Meshes transformed in this drag.
+   */
+  private pushTextureAwareCommand(poseCommand: UndoCommand, selectedObjects: THREE.Mesh[]): void {
+    const beforeTexture = this.session.initialTextureState;
+    const afterTexture = captureTransformTextureState(selectedObjects);
+    const command = new TextureLockedTransformCommand(poseCommand, beforeTexture, afterTexture);
     this.commandStack?.push(command);
   }
 

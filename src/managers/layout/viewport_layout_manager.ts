@@ -420,6 +420,7 @@ export class ViewportLayoutManager {
     });
     this.solidModelPanel = setup.solidModelPanel;
     this.solidModelController = setup.solidModelController;
+    this.solidModelController.setTransformModeProvider(() => this.transformHandler.getMode());
   }
 
   /** Toggles the solid model floating panel. */

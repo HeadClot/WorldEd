@@ -1,10 +1,13 @@
 import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
 import { ToolbarIcons } from '../toolbar_icons.js';
+import * as THREE from 'three';
 import {
   FaceTextureAlign,
   FaceTextureMapping,
   createDefaultFaceTextureMapping,
+  createFaceTextureMappingFromTrs,
+  getFaceTextureMappingTrs,
 } from '../../texture/uv/face_texture_mapping.js';
 import { FloatingPanelStack } from '../floating_panel_stack.js';
 
@@ -444,29 +447,44 @@ export class UvEditor {
     if ([scaleU, scaleV, offsetU, offsetV, rotationDeg].some((v) => isNaN(v))) {
       return null;
     }
-    return {
-      align: this.lastAlign,
-      scaleU,
-      scaleV,
-      offsetU,
-      offsetV,
-      rotationDeg,
-      textureId: '',
-    };
+    const normal = this.resolveAlignNormal(this.lastAlign);
+    return createFaceTextureMappingFromTrs(
+      '',
+      normal,
+      { scaleU, scaleV, offsetU, offsetV, rotationDeg },
+      this.lastAlign,
+    );
   }
 
   /**
-   * Writes mapping values into inputs.
+   * Writes mapping values into inputs via UV matrix decompose.
    *
    * @param mapping Source mapping.
    */
   private setMappingFields(mapping: FaceTextureMapping): void {
-    this.lastAlign = mapping.align;
-    this.scaleUInput.value = mapping.scaleU.toFixed(2);
-    this.scaleVInput.value = mapping.scaleV.toFixed(2);
-    this.offsetUInput.value = mapping.offsetU.toFixed(2);
-    this.offsetVInput.value = mapping.offsetV.toFixed(2);
-    this.rotationInput.value = mapping.rotationDeg.toFixed(1);
+    this.lastAlign = mapping.align ?? 'auto';
+    // Decompose against the matrix plane so Z/X faces show correct rotation.
+    const normal = mapping.uv.planeNormal();
+    const trs = getFaceTextureMappingTrs(mapping, normal);
+    this.scaleUInput.value = trs.scaleU.toFixed(2);
+    this.scaleVInput.value = trs.scaleV.toFixed(2);
+    this.offsetUInput.value = trs.offsetU.toFixed(2);
+    this.offsetVInput.value = trs.offsetV.toFixed(2);
+    this.rotationInput.value = trs.rotationDeg.toFixed(1);
+  }
+
+  /**
+   * Temporary normal used only when packaging form TRS for apply. Apply
+   * rebuilds the matrix per selected face normal.
+   *
+   * @param align Align preset.
+   * @returns Unit normal.
+   */
+  private resolveAlignNormal(align: FaceTextureAlign): THREE.Vector3 {
+    if (align === 'floor') return new THREE.Vector3(0, 1, 0);
+    if (align === 'ceiling') return new THREE.Vector3(0, -1, 0);
+    if (align === 'wall') return new THREE.Vector3(0, 0, 1);
+    return new THREE.Vector3(0, 1, 0);
   }
 
   /** Clears numeric inputs for mixed multi-selection. */

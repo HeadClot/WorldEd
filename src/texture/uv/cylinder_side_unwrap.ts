@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { FaceTextureMapEntry } from './face_texture_mapping.js';
 import { getGeometrySource } from './geometry_source.js';
-import { buildProjectionBasis, computeRegionWorldNormal, resolveProjectionNormal } from './planar_uv_projector.js';
+import { computeRegionWorldNormal } from './planar_uv_projector.js';
+import { SurfaceUvMatrix } from '../uv_matrix/surface_uv_matrix.js';
 
 /** Wall-like sides: normals nearly horizontal. */
 const SIDE_NORMAL_Y_MAX = 0.35;
@@ -10,10 +11,9 @@ const scratchLocal = new THREE.Vector3();
 const scratchWorld = new THREE.Vector3();
 
 /**
- * Applies circumferential U offsets to cylinder side faces. Each side keeps
- * face-plane projection (no squash) and U ranges are laid end-to-end around the
- * shell so the texture unwraps instead of repeating. Caps (top/bottom) are left
- * unchanged.
+ * Applies circumferential U offsets to cylinder side faces via UV matrix W
+ * terms. Each side keeps face-plane projection; U ranges lay end-to-end around
+ * the shell. Caps are left unchanged.
  *
  * @param mesh Mesh whose geometry source may be a cylinder.
  * @param entries Face texture map entries to mutate in place.
@@ -23,7 +23,7 @@ export function applyCylinderSideUnwrapOffsets(mesh: THREE.Mesh, entries: FaceTe
   mesh.updateMatrixWorld(true);
   const sideEntries = collectSortedSideEntries(mesh, entries);
   if (sideEntries.length < 3) return;
-  assignSequentialUOffsets(mesh, sideEntries);
+  assignSequentialUMatrixOffsets(mesh, sideEntries);
 }
 
 /**
@@ -39,9 +39,7 @@ function isCylinderMesh(mesh: THREE.Mesh): boolean {
 }
 
 /**
- * Collects side-face entries sorted by normal angle around Y in the XZ plane.
- * Order uses atan2(normal.x, normal.z); inverted (inward) normals reverse
- * order.
+ * Collects side-face entries sorted by normal angle around Y.
  *
  * @param mesh Mesh providing world normals.
  * @param entries All face map entries.
@@ -61,61 +59,39 @@ function collectSortedSideEntries(mesh: THREE.Mesh, entries: FaceTextureMapEntry
 }
 
 /**
- * Writes sequential offsetU values so side U ranges tile around the cylinder.
- * Offsets U by cumulative side length so faces unwrap end-to-end.
+ * Writes sequential U translations so side U ranges tile around the cylinder.
  *
  * @param mesh Mesh for vertex transforms.
  * @param sideEntries Side faces in angular order.
  */
-function assignSequentialUOffsets(mesh: THREE.Mesh, sideEntries: FaceTextureMapEntry[]): void {
+function assignSequentialUMatrixOffsets(mesh: THREE.Mesh, sideEntries: FaceTextureMapEntry[]): void {
   let cumulativeU = 0;
   sideEntries.forEach((entry) => {
-    const span = measureFacePlaneUSpan(mesh, entry);
-    const minDot = measureFacePlaneMinUDot(mesh, entry);
-    const scaleU = entry.mapping.scaleU === 0 ? 1 : entry.mapping.scaleU;
-    // u = (dot - offsetU) / scaleU  →  place this face at [cumulativeU, cumulativeU+span)
-    entry.mapping.offsetU = minDot - cumulativeU * scaleU;
-    cumulativeU += span / scaleU;
+    const dots = collectFaceUDots(mesh, entry);
+    if (dots.length === 0) return;
+    const minDot = Math.min(...dots);
+    const maxDot = Math.max(...dots);
+    const uvSpan = maxDot - minDot;
+    const u = entry.mapping.uv.u;
+    const v = entry.mapping.uv.v;
+    entry.mapping.uv = new SurfaceUvMatrix(
+      new THREE.Vector4(u.x, u.y, u.z, cumulativeU - minDot),
+      new THREE.Vector4(v.x, v.y, v.z, v.w),
+    );
+    cumulativeU += uvSpan;
   });
 }
 
 /**
- * Measures the physical U extent of a face under face-plane projection.
+ * Collects raw U = U.xyz · worldPos for every vertex in a face region.
  *
  * @param mesh Mesh owner.
  * @param entry Face region and mapping.
- * @returns World-meters span along the face U axis.
+ * @returns Dot products along the matrix U direction (without W).
  */
-function measureFacePlaneUSpan(mesh: THREE.Mesh, entry: FaceTextureMapEntry): number {
-  const dots = collectFacePlaneUDots(mesh, entry);
-  if (dots.length === 0) return 0;
-  return Math.max(...dots) - Math.min(...dots);
-}
-
-/**
- * Minimum world position dot the face U axis (raw, before offset).
- *
- * @param mesh Mesh owner.
- * @param entry Face region and mapping.
- * @returns Minimum U dot product.
- */
-function measureFacePlaneMinUDot(mesh: THREE.Mesh, entry: FaceTextureMapEntry): number {
-  const dots = collectFacePlaneUDots(mesh, entry);
-  if (dots.length === 0) return 0;
-  return Math.min(...dots);
-}
-
-/**
- * Collects raw U dots for every vertex in a face region.
- *
- * @param mesh Mesh owner.
- * @param entry Face region and mapping.
- * @returns Dot products along the face U axis.
- */
-function collectFacePlaneUDots(mesh: THREE.Mesh, entry: FaceTextureMapEntry): number[] {
-  const faceNormal = computeRegionWorldNormal(mesh, entry.triangleIndices);
-  const projectionNormal = resolveProjectionNormal(faceNormal, 'face');
-  const basis = buildProjectionBasis(projectionNormal, entry.mapping.rotationDeg);
+function collectFaceUDots(mesh: THREE.Mesh, entry: FaceTextureMapEntry): number[] {
+  const u = entry.mapping.uv.u;
+  const uDir = new THREE.Vector3(u.x, u.y, u.z);
   const position = mesh.geometry.getAttribute('position');
   const index = mesh.geometry.getIndex();
   const dots: number[] = [];
@@ -124,7 +100,7 @@ function collectFacePlaneUDots(mesh: THREE.Mesh, entry: FaceTextureMapEntry): nu
       const vertexIndex = index ? index.getX(faceIndex * 3 + corner) : faceIndex * 3 + corner;
       scratchLocal.fromBufferAttribute(position, vertexIndex);
       scratchWorld.copy(scratchLocal).applyMatrix4(mesh.matrixWorld);
-      dots.push(scratchWorld.dot(basis.uAxis));
+      dots.push(uDir.dot(scratchWorld));
     }
   });
   return dots;

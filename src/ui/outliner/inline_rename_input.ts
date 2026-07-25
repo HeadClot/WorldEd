@@ -58,12 +58,15 @@ export class InlineRenameInput {
     this.cancelCallback = callback;
   }
 
-  /** Activates the inline rename by replacing the text span with an input. */
+  /**
+   * Activates the inline rename by placing the input where the name span sits,
+   * before trailing row controls (visibility / lock).
+   */
   activate(): void {
     if (this.isDisposed) return;
     this.isFinishing = false;
     this.textSpan.style.display = 'none';
-    this.parentElement.appendChild(this.inputElement);
+    this.parentElement.insertBefore(this.inputElement, this.textSpan.nextSibling);
     this.inputElement.focus();
     this.inputElement.select();
   }
@@ -140,7 +143,9 @@ export class InlineRenameInput {
     input.style.fontFamily = 'monospace';
     input.style.fontSize = '12px';
     input.style.outline = 'none';
-    input.style.width = '100px';
+    input.style.flex = '1';
+    input.style.minWidth = '0';
+    input.style.boxSizing = 'border-box';
     this.bindInputElementEvents(input);
     return input;
   }

@@ -7,7 +7,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SolidBrushMeshChunkBuilder } from '../../src/solid/mesh/solid_brush_mesh_chunk.js';
 import { SolidMeshChunkCache } from '../../src/solid/mesh/solid_mesh_chunk_cache.js';
 import { SolidResultBuffer } from '../../src/solid/mesh/solid_result_buffer.js';
-import { createDefaultFaceTextureMapping } from '../../src/texture/uv/face_texture_mapping.js';
+import { createDefaultFaceSurface } from '../../src/texture/uv_matrix/face_surface_description.js';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 
 /**
@@ -43,9 +43,8 @@ function rebuildChunks(
   for (const brushId of brushIds) {
     chunkCache.set(
       brushId,
-      builder.build(compiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceTextureMapping(), {
-        stickToBrush: false,
-        resultWorldMatrix: identity,
+      builder.build(compiler.getCachedPolygons(brushId) ?? [], () => createDefaultFaceSurface(), {
+        brushModelMatrix: identity,
       }),
     );
   }

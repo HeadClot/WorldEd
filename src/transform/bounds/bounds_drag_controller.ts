@@ -198,6 +198,7 @@ export class BoundsDragController {
     const totalDelta = current.clone().sub(this.session.initialMousePosition);
     this.session.dragDeltaAccumulator.copy(totalDelta);
     this.transformExecutor.applyAbsoluteTranslation(objects, this.session.initialPositions, totalDelta);
+    this.rebakeLockedTextures(objects, true, false);
   }
 
   /**
@@ -295,16 +296,20 @@ export class BoundsDragController {
       mesh.position.copy(result.position);
       mesh.scale.copy(result.scale);
     });
-    this.rebakeLockedTextures(objects);
+    this.rebakeLockedTextures(objects, true, true);
   }
 
   /**
-   * Re-bakes world planar UVs when texture lock is enabled.
+   * Applies content texture-lock policy after a transform. Pass which
+   * components changed so position vs stretch locks are applied independently.
    *
-   * @param objects Meshes whose scale or bounds just changed.
+   * @param objects Meshes that just transformed.
+   * @param moved True when translation or rotation changed.
+   * @param scaled True when scale changed.
    */
-  rebakeLockedTextures(objects: THREE.Mesh[]): void {
-    this.textureLock?.rebakeMeshesIfLocked(objects);
+  rebakeLockedTextures(objects: THREE.Mesh[], moved: boolean = true, scaled: boolean = true): void {
+    if (!this.textureLock) return;
+    this.textureLock.applyContentTransformPolicy(objects, moved, scaled);
   }
 
   /**

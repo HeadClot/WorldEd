@@ -65,4 +65,27 @@ describe('ClipPlanePreview', () => {
     preview.syncFromTool(tool);
     expect(preview.getRoot().children.length).toBe(0);
   });
+
+  it('should draw the keep-side flip arrow without depth testing so it stays visible', () => {
+    tool.activate();
+    tool.addPoint(new THREE.Vector3(0, 0, 0));
+    tool.addPoint(new THREE.Vector3(2, 0, 0));
+    tool.addPoint(new THREE.Vector3(0, 2, 0));
+    preview.syncFromTool(tool);
+    const arrow = preview.getRoot().children.find((child) => child instanceof THREE.ArrowHelper);
+    expect(arrow).toBeDefined();
+    let styledParts = 0;
+    arrow!.traverse((child) => {
+      const materialOwner = child as THREE.Mesh | THREE.Line;
+      if (!materialOwner.material) return;
+      const materials = Array.isArray(materialOwner.material) ? materialOwner.material : [materialOwner.material];
+      materials.forEach((material) => {
+        expect(material.depthTest).toBe(false);
+        expect(material.depthWrite).toBe(false);
+        styledParts += 1;
+      });
+      expect(child.renderOrder).toBeGreaterThanOrEqual(1000);
+    });
+    expect(styledParts).toBeGreaterThan(0);
+  });
 });

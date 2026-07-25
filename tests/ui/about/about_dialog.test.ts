@@ -5,6 +5,7 @@ import {
   PROJECT_DISPLAY_NAME,
   getAboutLicenseText,
 } from '../../../src/ui/about/about_license_text.js';
+import * as fetcher from '../../../src/ui/about/about_contributor_fetcher.js';
 
 describe('AboutDialog', () => {
   let host: HTMLElement;
@@ -13,6 +14,15 @@ describe('AboutDialog', () => {
   beforeEach(() => {
     host = document.createElement('div');
     document.body.appendChild(host);
+    vi.spyOn(fetcher, 'fetchGitHubContributors').mockResolvedValue([
+      {
+        login: 'testuser',
+        avatarUrl: 'https://avatars.githubusercontent.com/testuser',
+        profileUrl: 'https://github.com/testuser',
+        contributions: 10,
+        displayName: 'Test User',
+      },
+    ]);
     dialog = new AboutDialog(host);
   });
 
@@ -21,6 +31,7 @@ describe('AboutDialog', () => {
     if (host.parentNode) {
       host.parentNode.removeChild(host);
     }
+    vi.restoreAllMocks();
   });
 
   it('should start hidden until shown', () => {
@@ -59,6 +70,36 @@ describe('AboutDialog', () => {
     const text = dialog.getPanelElement().textContent || '';
     expect(text).toContain('Grok Build 4.5');
     expect(text).toContain('Qwen 3.6 27B');
+  });
+
+  it('should include a GitHub Contributors section label', async () => {
+    dialog.show();
+    const panel = dialog.getPanelElement();
+
+    await waitForContributorSpheres(panel);
+
+    const labels = panel.querySelectorAll('div');
+    const contributorLabel = Array.from(labels).find((el) => el.textContent === 'GitHub Contributors');
+    expect(contributorLabel).toBeTruthy();
+  });
+
+  it('should render contributor spheres with avatar images', async () => {
+    dialog.show();
+    const panel = dialog.getPanelElement();
+
+    await waitForContributorSpheres(panel);
+
+    const rollContainer = panel.querySelector('.contributor-roll');
+    expect(rollContainer).toBeTruthy();
+
+    const spheres = rollContainer?.querySelectorAll('.contributor-sphere');
+    expect(spheres?.length).toBeGreaterThanOrEqual(1);
+
+    if (spheres && spheres.length > 0) {
+      const img = spheres[0].querySelector('img');
+      expect(img).toBeTruthy();
+      expect(img?.src).toContain('avatars.githubusercontent.com');
+    }
   });
 
   it('should credit Sander van Rossen for Chisel and RealtimeCSG lineage', () => {
@@ -138,4 +179,20 @@ describe('AboutDialog', () => {
 function findButtonByText(root: HTMLElement, label: string): HTMLButtonElement | null {
   const buttons = Array.from(root.querySelectorAll('button'));
   return buttons.find((button) => (button.textContent || '').trim() === label) || null;
+}
+
+/**
+ * Waits for the async contributor fetch to populate spheres in the dialog.
+ *
+ * @param panel Dialog panel to observe.
+ */
+async function waitForContributorSpheres(panel: HTMLElement): Promise<void> {
+  const maxAttempts = 20;
+  for (let i = 0; i < maxAttempts; i++) {
+    const roll = panel.querySelector('.contributor-roll');
+    if (roll && roll.querySelectorAll('.contributor-sphere').length > 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }
