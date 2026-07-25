@@ -1,6 +1,11 @@
-import { BrowserView, BrowserWindow, Updater } from 'electrobun/bun';
+import { buildDesktopWindowTitle } from '../../application_identity.js';
 import type { ElectrobunUpdaterRpcSchema } from '../../updater/electrobun_updater_rpc.js';
 import type { StandaloneHostUpdateCheck } from '../../updater/update_types.js';
+import { enableWindowsPerMonitorDpiAwareness } from '../windows_dpi_awareness.js';
+
+await enableWindowsPerMonitorDpiAwareness();
+
+const { BrowserView, BrowserWindow, Updater } = await import('electrobun/bun');
 
 const updaterRpc = BrowserView.defineRPC<ElectrobunUpdaterRpcSchema>({
   handlers: {
@@ -11,8 +16,11 @@ const updaterRpc = BrowserView.defineRPC<ElectrobunUpdaterRpcSchema>({
   },
 });
 
+const localInfo = await Updater.getLocalInfo();
+const windowTitle = buildDesktopWindowTitle(localInfo.version);
+
 new BrowserWindow({
-  title: 'AiWorldEd',
+  title: windowTitle,
   url: 'views://main_ui/index.html',
   frame: {
     x: 80,

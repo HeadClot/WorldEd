@@ -79,14 +79,35 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # Embed a unique semver into package.json before Electrobun packages the app.
+      # Patch comes from GITHUB_RUN_NUMBER so each main build gets a newer version
+      # for the native updater UI and version.json.
+      - name: Assign desktop release version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(bun scripts/ci_release_version.ts --write)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Desktop release version: ${VERSION}"
+
       - name: Build Electrobun package
         run: bun run desktop:build
+
+      # Versioned Setup for humans + Electrobun-named portable/update.json for auto-update.
+      # No duplicate Portable aliases and no hash-named .patch files.
+      - name: Package clean release assets
+        shell: bash
+        run: |
+          bun scripts/package_desktop_release.ts \
+            --version "${{ steps.version.outputs.version }}" \
+            --input desktop_artifacts \
+            --output release_dist
 
       - name: Upload desktop artifact
         uses: actions/upload-artifact@v4
         with:
           name: aiworlded-${{ matrix.platform }}-${{ github.sha }}
-          path: desktop_artifacts/
+          path: release_dist/
           if-no-files-found: error
           retention-days: 30
 
@@ -100,6 +121,20 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      # Same formula as desktop-build (major.minor from package.json + run number).
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(bun scripts/ci_release_version.ts)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Release version: ${VERSION}"
+
       # Downloads windows, linux, and macos artifacts into a local 'release_assets' directory
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -108,20 +143,21 @@ jobs:
           path: release_assets/
           merge-multiple: true
 
-      # Generates a clean timestamp identifier (e.g., 20260724-a1b2c3d)
-      - name: Generate Release Tag
-        id: tag
-        run: |
-          TAG_NAME="build-$(date +'%Y%m%d')-${{ github.sha }}"
-          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
-
-      # Automatically creates a Rolling Release on your GitHub panel
+      # Setup zips for manual install; stable-*-update.json + stable-*-*.tar.zst for native auto-update.
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag.outputs.tag_name }}
-          name: 'Automated Build: ${{ steps.tag.outputs.tag_name }}'
-          body: 'Automated desktop binaries compiled from commit ${{ github.sha }}.'
+          tag_name: v${{ steps.version.outputs.version }}
+          name: 'AI World Editor v${{ steps.version.outputs.version }}'
+          body: |
+            Automated desktop build of **AI World Editor v${{ steps.version.outputs.version }}** from commit `${{ github.sha }}`.
+
+            ### Downloads
+            - **`AiWorldEd-<version>-<Platform>-<arch>-Setup.*`** — installer for that platform (`.zip` on Windows, `.tar.gz` on Linux)
+            - **`stable-<os>-<arch>-AiWorldEd*.tar.zst`** — portable app bundle (also the in-app auto-update payload)
+            - **`stable-<os>-<arch>-update.json`** — auto-update metadata used by the desktop app
+
+            Keep the `stable-*` files on the release so existing installs can update automatically.
           files: release_assets/**/*
           generate_release_notes: true
 

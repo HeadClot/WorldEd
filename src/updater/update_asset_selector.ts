@@ -37,9 +37,13 @@ function isPlatformAsset(asset: GitHubReleaseAsset, platform: StandalonePlatform
  * @returns True when the extension is supported.
  */
 function isExecutableName(name: string, platform: StandalonePlatform): boolean {
-  if (platform === 'windows') return name.endsWith('.exe');
-  if (platform === 'macos') return name.endsWith('.dmg') || name.endsWith('.zip');
-  return name.endsWith('.appimage') || name.endsWith('.tar.gz') || name.endsWith('.zip');
+  if (platform === 'windows') {
+    return name.endsWith('.exe') || name.endsWith('.zip') || name.endsWith('.tar.zst');
+  }
+  if (platform === 'macos') {
+    return name.endsWith('.dmg') || name.endsWith('.zip') || name.endsWith('.tar.zst');
+  }
+  return name.endsWith('.appimage') || name.endsWith('.tar.gz') || name.endsWith('.tar.zst') || name.endsWith('.zip');
 }
 
 /**
@@ -65,7 +69,13 @@ function hasPlatformMarker(name: string, platform: StandalonePlatform): boolean 
  * @returns True when the asset is not installable.
  */
 function isNonInstallableArchive(name: string): boolean {
-  return name.includes('source') || name.includes('checksum') || name.includes('sha256');
+  return (
+    name.includes('source') ||
+    name.includes('checksum') ||
+    name.includes('sha256') ||
+    name.endsWith('update.json') ||
+    name.endsWith('.patch')
+  );
 }
 
 /**
@@ -99,7 +109,10 @@ function compareAssetPreference(firstAsset: GitHubReleaseAsset, secondAsset: Git
  */
 function assetPreference(asset: GitHubReleaseAsset): number {
   const name = asset.name.toLowerCase();
-  if (name.includes('setup') || name.includes('installer')) return 30;
+  if (name.includes('setup') || name.includes('installer')) return 40;
+  if (name.includes('portable')) return 30;
   if (name.endsWith('.exe') || name.endsWith('.appimage') || name.endsWith('.dmg')) return 20;
+  if (name.endsWith('.zip')) return 15;
+  if (name.endsWith('.tar.zst') || name.endsWith('.tar.gz')) return 12;
   return 10;
 }

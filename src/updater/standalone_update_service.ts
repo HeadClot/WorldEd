@@ -1,4 +1,4 @@
-import packageMetadata from '../../package.json';
+import { APPLICATION_DISPLAY_NAME, APPLICATION_VERSION } from '../application_identity.js';
 import { GITHUB_RELEASES_PAGE_URL, GitHubReleaseClient } from './github_release_client.js';
 import {
   detectStandalonePlatform,
@@ -16,8 +16,7 @@ import type {
   UpdateCheckResult,
 } from './update_types.js';
 
-/** Version embedded in the current Vite application build. */
-export const APPLICATION_VERSION = packageMetadata.version;
+export { APPLICATION_VERSION };
 
 /** Dependencies and environment values used by the update service. */
 export interface StandaloneUpdateServiceOptions {
@@ -144,7 +143,7 @@ export class StandaloneUpdateService {
   private createElectrobunRelease(result: StandaloneHostUpdateCheck): StandaloneUpdateRelease {
     return {
       version: result.latestVersion,
-      title: `AiWorldEd ${result.latestVersion}`,
+      title: `${APPLICATION_DISPLAY_NAME} ${result.latestVersion}`,
       releasePageUrl: GITHUB_RELEASES_PAGE_URL,
       notes: 'Electrobun will download and install the update bundle.',
       asset: { name: 'Electrobun update bundle', downloadUrl: '', size: 0 },

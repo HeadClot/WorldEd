@@ -14,6 +14,16 @@ describe('standalone update asset selection', () => {
     expect(selectStandaloneUpdateAsset(assets, 'windows')?.name).toBe('AiWorldEd-windows-installer.exe');
   });
 
+  it('prefers versioned Setup zips over portable update tarballs on Windows', () => {
+    const assets = createAssets(
+      'stable-win-x64-AiWorldEd.tar.zst',
+      'AiWorldEd-1.0.42-Win-x64-Setup.zip',
+      'stable-win-x64-update.json',
+      'stable-win-x64-1a42wpx0i4p0k.patch',
+    );
+    expect(selectStandaloneUpdateAsset(assets, 'windows')?.name).toBe('AiWorldEd-1.0.42-Win-x64-Setup.zip');
+  });
+
   it('selects native macOS and Linux packages only for their platform', () => {
     const assets = createAssets('AiWorldEd-macos.dmg', 'AiWorldEd-linux.AppImage', 'AiWorldEd-windows.exe');
     expect(selectStandaloneUpdateAsset(assets, 'macos')?.name).toBe('AiWorldEd-macos.dmg');

@@ -1,16 +1,52 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import electrobunConfig from '../../electrobun.config.js';
+import packageMetadata from '../../package.json';
+import { APPLICATION_DISPLAY_NAME, buildDesktopWindowTitle } from '../../src/application_identity.js';
 
 describe('Electrobun desktop build configuration', () => {
   it('packages the existing editor application as a native desktop window', () => {
     expect(electrobunConfig.app.name).toBe('AiWorldEd');
+    expect(electrobunConfig.app.version).toBe(packageMetadata.version);
     expect(electrobunConfig.build?.bun?.entrypoint).toBe('src/desktop/bun/index.ts');
     expect(electrobunConfig.build?.views?.main_ui?.entrypoint).toBe('src/desktop/main_ui/index.ts');
     expect(electrobunConfig.build?.copy?.['src/desktop/main_ui/index.html']).toBe('views/main_ui/index.html');
     expect(electrobunConfig.build?.win).toMatchObject({
       defaultRenderer: 'native',
       bundleCEF: false,
+      icon: 'public/favicon.ico',
+    });
+    expect(electrobunConfig.build?.linux).toMatchObject({
+      icon: 'public/android-chrome-512x512.png',
+    });
+    expect(electrobunConfig.build?.mac).toMatchObject({
+      icons: 'public/app_icon.iconset',
     });
     expect(electrobunConfig.release?.baseUrl).toBe('https://github.com/Henry00IS/AiWorldEd/releases/latest/download');
+    expect(electrobunConfig.release?.generatePatch).toBe(false);
+  });
+
+  it('copies public favicon assets into the desktop main_ui view bundle', () => {
+    const copy = electrobunConfig.build?.copy ?? {};
+    expect(copy['public/favicon.ico']).toBe('views/main_ui/favicon.ico');
+    expect(copy['public/favicon-16x16.png']).toBe('views/main_ui/favicon-16x16.png');
+    expect(copy['public/favicon-32x32.png']).toBe('views/main_ui/favicon-32x32.png');
+    expect(copy['public/apple-touch-icon.png']).toBe('views/main_ui/apple-touch-icon.png');
+    expect(copy['public/android-chrome-192x192.png']).toBe('views/main_ui/android-chrome-192x192.png');
+    expect(copy['public/android-chrome-512x512.png']).toBe('views/main_ui/android-chrome-512x512.png');
+  });
+
+  it('keeps platform icon sources on disk for Electrobun packaging', () => {
+    expect(existsSync(resolve(process.cwd(), 'public/favicon.ico'))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'public/android-chrome-512x512.png'))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'public/app_icon.iconset/icon_512x512.png'))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'public/app_icon.iconset/icon_16x16.png'))).toBe(true);
+  });
+
+  it('builds desktop window titles with the AI World Editor display name and version', () => {
+    expect(APPLICATION_DISPLAY_NAME).toBe('AI World Editor');
+    expect(buildDesktopWindowTitle('1.0.42')).toBe('AI World Editor 1.0.42');
+    expect(buildDesktopWindowTitle(packageMetadata.version)).toBe(`AI World Editor ${packageMetadata.version}`);
   });
 });
