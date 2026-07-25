@@ -23,11 +23,18 @@ export type ElectrobunWindowFrame = {
   height: number;
 };
 
+/** Native display information used to size desktop windows. */
+export type ElectrobunDisplay = {
+  workArea: ElectrobunWindowFrame;
+};
+
 /** Browser window construction options. */
 export type ElectrobunWindowOptions = {
   title?: string;
   url?: string;
   frame?: ElectrobunWindowFrame;
+  hidden?: boolean;
+  activate?: boolean;
   rpc?: unknown;
 };
 
@@ -50,13 +57,38 @@ export class BrowserView {
   static defineRPC<TSchema>(_config: DefineRpcConfig): TSchema {
     return {} as TSchema;
   }
+
+  /**
+   * Subscribes to a browser-surface lifecycle event.
+   *
+   * @param _name Event name.
+   * @param _handler Event callback.
+   */
+  on(_name: 'dom-ready', _handler: () => void): void {}
 }
 
 /** Native desktop window host. */
 export class BrowserWindow {
+  /** Browser surface hosted by this window. */
+  readonly webview = new BrowserView();
+
   /** @param _options Window title, URL, frame, and RPC binding. */
   constructor(_options: ElectrobunWindowOptions) {}
+
+  /** Expands the native window to the available desktop size. */
+  maximize(): void {}
+
+  /** Shows and activates the native window. */
+  show(): void {}
 }
+
+/** Native screen information exposed by Electrobun. */
+export const Screen = {
+  /** @returns Primary display bounds and usable work area. */
+  getPrimaryDisplay(): ElectrobunDisplay {
+    return { workArea: { x: 0, y: 0, width: 800, height: 600 } };
+  },
+};
 
 /** Electrobun built-in updater API. */
 export const Updater = {
