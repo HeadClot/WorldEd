@@ -13,6 +13,7 @@ import { CommandStack } from '../../commands/command_stack.js';
 import { StatusBar } from '../../ui/status_bar.js';
 import { FaceModeCoordinator } from '../face/face_mode_coordinator.js';
 import { SelectionMode } from '../../types/selection_mode.js';
+import type { CadRulerSystem } from '../../rulers/cad_ruler_system.js';
 
 /** Subsystems exposed for unit tests of the layout manager. */
 export interface LayoutTestComponents {
@@ -33,6 +34,7 @@ export interface LayoutTestComponents {
   statusBar: StatusBar | null;
   faceExtrusionController: ReturnType<FaceModeCoordinator['getFaceExtrusionController']>;
   selectionMode: SelectionMode;
+  cadRulerSystem: CadRulerSystem;
 }
 
 /**
@@ -58,6 +60,7 @@ export function buildLayoutTestComponents(parts: {
   commandStack: CommandStack;
   statusBar: StatusBar | null;
   faceModeCoordinator: FaceModeCoordinator;
+  cadRulerSystem: CadRulerSystem;
 }): LayoutTestComponents {
   return {
     viewport3D: parts.viewport3D,
@@ -77,5 +80,6 @@ export function buildLayoutTestComponents(parts: {
     statusBar: parts.statusBar,
     faceExtrusionController: parts.faceModeCoordinator.getFaceExtrusionController(),
     selectionMode: parts.faceModeCoordinator.getSelectionMode(),
+    cadRulerSystem: parts.cadRulerSystem,
   };
 }

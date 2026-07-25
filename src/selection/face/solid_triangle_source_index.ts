@@ -94,6 +94,47 @@ function buildSolidFaceKey(brushId: string, surfaceIndex: number): string {
 }
 
 /**
+ * Finds the first result triangle that still belongs to an authored brush face.
+ * Used after undo/remesh to rebind a face selection to a live seed index.
+ *
+ * @param mesh Solid result mesh.
+ * @param brushId Brush instance id.
+ * @param surfaceIndex Brush face index.
+ * @returns Triangle index, or -1 when the surface is gone.
+ */
+export function findFirstTriangleForBrushSurface(mesh: THREE.Mesh, brushId: string, surfaceIndex: number): number {
+  const sources = readSolidTriangleSources(mesh);
+  if (!sources) return -1;
+  const cache = getOrBuildSolidFaceIndexCache(mesh, sources);
+  const indices = cache.byFaceKey.get(buildSolidFaceKey(brushId, surfaceIndex));
+  if (!indices || indices.length === 0) return -1;
+  return indices[0];
+}
+
+/**
+ * Parses a face pick region key into solid brush identity when possible.
+ *
+ * @param regionKey Key from buildFacePickRegionKey.
+ * @param meshUuid Expected mesh uuid prefix.
+ * @returns Brush face identity, or null for ordinary triangle keys.
+ */
+export function parseSolidRegionKey(
+  regionKey: string,
+  meshUuid: string,
+): { brushId: string; surfaceIndex: number } | null {
+  const prefix = `${meshUuid}|`;
+  if (!regionKey.startsWith(prefix)) return null;
+  const rest = regionKey.slice(prefix.length);
+  if (rest.startsWith('tri:')) return null;
+  const separator = rest.lastIndexOf('|');
+  if (separator <= 0) return null;
+  const brushId = rest.slice(0, separator);
+  const surfaceIndex = Number(rest.slice(separator + 1));
+  if (!brushId || !Number.isFinite(surfaceIndex)) return null;
+  return { brushId, surfaceIndex };
+}
+
+/**
  * Reads solid triangle sources from mesh userData when present.
  *
  * @param mesh Mesh that may be a solid CSG result.

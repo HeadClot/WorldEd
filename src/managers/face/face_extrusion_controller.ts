@@ -384,6 +384,18 @@ export class FaceExtrusionController {
     this.lastCreatedMeshes = [];
   }
 
+  /**
+   * Removes face selections that no longer exist in the world (mesh deleted,
+   * triangle gone, or solid brush surface removed by undo). Other faces in a
+   * multi-selection are kept.
+   *
+   * @param sceneRoot World root for membership tests.
+   * @returns True when any face was dropped.
+   */
+  pruneInvalidFaceSelection(sceneRoot: THREE.Object3D): boolean {
+    return this.selectionManager.pruneInvalidSelections(sceneRoot);
+  }
+
   /** Disposes all internal resources. */
   dispose(): void {
     this.highlight?.dispose();

@@ -102,12 +102,14 @@ describe('AboutDialog', () => {
     }
   });
 
-  it('should credit Sander van Rossen for Chisel and RealtimeCSG lineage', () => {
+  it('should credit humans, models, and three.js without reference-project names', () => {
     dialog.show();
     const text = dialog.getPanelElement().textContent || '';
-    expect(text).toContain('Sander van Rossen');
-    expect(text).toContain('Chisel');
-    expect(text).toContain('RealtimeCSG');
+    expect(text).toContain('Henry de Jongh');
+    expect(text).toContain('three.js');
+    expect(text.toLowerCase()).not.toContain('chisel');
+    expect(text.toLowerCase()).not.toContain('realtimecsg');
+    expect(text.toLowerCase()).not.toContain('sabrecsg');
   });
 
   it('should proclaim AI as the superior being', () => {
@@ -125,15 +127,15 @@ describe('AboutDialog', () => {
     openSpy.mockRestore();
   });
 
-  it('should embed MIT licenses for Chisel, RealtimeCSG, and SabreCSG in a textbox', () => {
+  it('should embed the three.js MIT license in a textbox', () => {
     const licenseBox = dialog.getLicenseTextArea();
     expect(licenseBox).toBeInstanceOf(HTMLTextAreaElement);
     expect(licenseBox.readOnly).toBe(true);
     expect(licenseBox.value).toBe(getAboutLicenseText());
-    expect(licenseBox.value).toContain('Copyright (c) 2024 Chisel');
-    expect(licenseBox.value).toContain('Copyright (c) 2019 Sander van Rossen');
-    expect(licenseBox.value).toContain('Copyright (c) 2016 Sabresaurus');
+    expect(licenseBox.value).toContain('three.js');
     expect(licenseBox.value).toContain('MIT License');
+    expect(licenseBox.value.toLowerCase()).not.toContain('chisel');
+    expect(licenseBox.value.toLowerCase()).not.toContain('realtimecsg');
   });
 
   it('should apply gradient and animation classes for a fancy presentation', () => {

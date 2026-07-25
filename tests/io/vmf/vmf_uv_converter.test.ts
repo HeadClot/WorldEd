@@ -46,7 +46,7 @@ describe('VmfUvConverter', () => {
     const expectedV =
       ((sourcePos.x * vAxis.x + sourcePos.y * vAxis.y + sourcePos.z * vAxis.z) / vAxis.scale + vAxis.translation) /
       VMF_DEFAULT_TEXTURE_SIZE;
-    // Chisel flips V: our projector uses flipped axis so UV.v ≈ -HammerV
+    // Editor flips V relative to Hammer so UV.v ≈ -HammerV
     const basis = resolveProjectionBasis(new THREE.Vector3(0, 1, 0), mapping);
     const uv = projectWorldPositionToUv(posMeters, basis, mapping);
     expect(uv.u).toBeCloseTo(expectedU, 4);

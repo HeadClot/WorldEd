@@ -19,30 +19,33 @@ describe('TextureLockSettings', () => {
   let settings: TextureLockSettings;
 
   beforeEach(() => {
-    settings = new TextureLockSettings(true);
+    settings = new TextureLockSettings();
   });
 
-  it('should start locked by default', () => {
+  it('should start with position lock on and stretch lock off', () => {
     expect(settings.isLocked()).toBe(true);
     expect(settings.isPositionLocked()).toBe(true);
-    expect(settings.isStretchLocked()).toBe(true);
+    expect(settings.isStretchLocked()).toBe(false);
   });
 
   it('should toggle lock state', () => {
+    expect(settings.toggle()).toBe(true);
+    expect(settings.isPositionLocked()).toBe(true);
+    expect(settings.isStretchLocked()).toBe(true);
     expect(settings.toggle()).toBe(false);
     expect(settings.isLocked()).toBe(false);
-    expect(settings.toggle()).toBe(true);
   });
 
   it('should toggle position and stretch locks independently', () => {
     expect(settings.togglePositionLock()).toBe(false);
     expect(settings.isPositionLocked()).toBe(false);
-    expect(settings.isStretchLocked()).toBe(true);
-    expect(settings.toggleStretchLock()).toBe(false);
     expect(settings.isStretchLocked()).toBe(false);
+    expect(settings.toggleStretchLock()).toBe(true);
+    expect(settings.isStretchLocked()).toBe(true);
   });
 
   it('should stick UVs when scaling under stretch lock (no world rebake)', () => {
+    settings.setStretchLocked(true);
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.updateMatrixWorld(true);
     initializeMeshTextureUVs(mesh);

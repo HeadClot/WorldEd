@@ -1,12 +1,22 @@
 import * as THREE from 'three';
 import { computeTriangleNormal } from '../pick/triangle_geometry_utils.js';
+import { countTriangles } from '../../texture/uv/planar_uv_projector.js';
 import { expandFaceSelectionIndices, findSameSolidBrushSurfaceIndices } from './solid_result_face_indices.js';
-import { buildFacePickRegionKey } from './solid_triangle_source_index.js';
+import {
+  buildFacePickRegionKey,
+  findFirstTriangleForBrushSurface,
+  parseSolidRegionKey,
+} from './solid_triangle_source_index.js';
 
 /** A single face selection entry referencing a mesh and a face index. */
 export interface FaceSelection {
   mesh: THREE.Mesh;
   faceIndex: number;
+  /**
+   * Stable region identity at selection time (mesh uuid + brush face or
+   * triangle). Used to rebind or drop selection after undo/remesh.
+   */
+  regionKey?: string;
 }
 
 /**
@@ -62,6 +72,38 @@ export class FaceSelectionManager {
     this.selectedFaces = [];
     this.selectedRegionKeys.clear();
     this.notifyChange();
+  }
+
+  /**
+   * Drops face selections whose mesh left the scene, whose triangle is gone, or
+   * whose solid brush surface no longer exists after undo/remesh. Surviving
+   * solid regions rebind to a live triangle seed. Other multi-selected faces
+   * stay selected.
+   *
+   * @param sceneRoot World root used to test mesh membership.
+   * @returns True when the selection set changed.
+   */
+  pruneInvalidSelections(sceneRoot: THREE.Object3D): boolean {
+    if (this.selectedFaces.length === 0) return false;
+    const previous = this.selectedFaces.slice();
+    const survivors: FaceSelection[] = [];
+    const survivorKeys = new Set<string>();
+    for (const entry of previous) {
+      const resolved = this.resolveSurvivingSelection(entry, sceneRoot);
+      if (!resolved) continue;
+      const key = resolved.regionKey ?? buildFacePickRegionKey(resolved.mesh, resolved.faceIndex);
+      if (survivorKeys.has(key)) continue;
+      survivorKeys.add(key);
+      survivors.push({ ...resolved, regionKey: key });
+    }
+    if (!this.didSelectionChange(previous, survivors)) return false;
+    this.selectedFaces = survivors;
+    this.selectedRegionKeys.clear();
+    survivors.forEach((entry) => {
+      if (entry.regionKey) this.selectedRegionKeys.add(entry.regionKey);
+    });
+    this.notifyChange();
+    return true;
   }
 
   /**
@@ -152,7 +194,7 @@ export class FaceSelectionManager {
     const regionKey = buildFacePickRegionKey(mesh, faceIndex);
     if (this.selectedRegionKeys.has(regionKey)) return;
     this.selectedRegionKeys.add(regionKey);
-    this.selectedFaces.push({ mesh, faceIndex });
+    this.selectedFaces.push({ mesh, faceIndex, regionKey });
     this.notifyChange();
   }
 
@@ -170,12 +212,95 @@ export class FaceSelectionManager {
       const regionKey = buildFacePickRegionKey(mesh, index);
       if (this.selectedRegionKeys.has(regionKey)) continue;
       this.selectedRegionKeys.add(regionKey);
-      this.selectedFaces.push({ mesh, faceIndex: index });
+      this.selectedFaces.push({ mesh, faceIndex: index, regionKey });
       changed = true;
     }
     if (changed) {
       this.notifyChange();
     }
+  }
+
+  /**
+   * Rebinds one selection entry after scene/history mutation, or drops it.
+   *
+   * @param entry Previous selection entry.
+   * @param sceneRoot World root.
+   * @returns Surviving entry, or null when invalid.
+   */
+  private resolveSurvivingSelection(entry: FaceSelection, sceneRoot: THREE.Object3D): FaceSelection | null {
+    if (!this.isMeshUnderRoot(entry.mesh, sceneRoot)) return null;
+    const regionKey = entry.regionKey ?? buildFacePickRegionKey(entry.mesh, entry.faceIndex);
+    const solidIdentity = parseSolidRegionKey(regionKey, entry.mesh.uuid);
+    if (solidIdentity) {
+      return this.resolveSolidSurvivingSelection(entry.mesh, solidIdentity, regionKey);
+    }
+    return this.resolveOrdinarySurvivingSelection(entry, regionKey);
+  }
+
+  /**
+   * Rebinds a solid brush-face selection when that surface still exists.
+   *
+   * @param mesh Solid result mesh.
+   * @param identity Brush face identity from the stored region key.
+   * @param regionKey Original region key.
+   * @returns Updated seed, or null when the brush surface is gone.
+   */
+  private resolveSolidSurvivingSelection(
+    mesh: THREE.Mesh,
+    identity: { brushId: string; surfaceIndex: number },
+    regionKey: string,
+  ): FaceSelection | null {
+    const seed = findFirstTriangleForBrushSurface(mesh, identity.brushId, identity.surfaceIndex);
+    if (seed < 0) return null;
+    return { mesh, faceIndex: seed, regionKey };
+  }
+
+  /**
+   * Keeps an ordinary triangle selection when the index is still in range.
+   *
+   * @param entry Previous entry.
+   * @param regionKey Region key to preserve.
+   * @returns Entry when valid, otherwise null.
+   */
+  private resolveOrdinarySurvivingSelection(entry: FaceSelection, regionKey: string): FaceSelection | null {
+    const triangleCount = countTriangles(entry.mesh.geometry);
+    if (entry.faceIndex < 0 || entry.faceIndex >= triangleCount) return null;
+    return { mesh: entry.mesh, faceIndex: entry.faceIndex, regionKey };
+  }
+
+  /**
+   * Returns whether the selection list identity changed.
+   *
+   * @param previous Prior faces.
+   * @param next New faces.
+   * @returns True when length, mesh, index, or region key differs.
+   */
+  private didSelectionChange(previous: FaceSelection[], next: FaceSelection[]): boolean {
+    if (previous.length !== next.length) return true;
+    for (let index = 0; index < previous.length; index++) {
+      const before = previous[index];
+      const after = next[index];
+      if (before.mesh !== after.mesh) return true;
+      if (before.faceIndex !== after.faceIndex) return true;
+      if ((before.regionKey ?? '') !== (after.regionKey ?? '')) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Returns whether a mesh is still parented under the world root.
+   *
+   * @param mesh Candidate mesh.
+   * @param root Scene root.
+   * @returns True when mesh is root or a descendant.
+   */
+  private isMeshUnderRoot(mesh: THREE.Object3D, root: THREE.Object3D): boolean {
+    let current: THREE.Object3D | null = mesh;
+    while (current) {
+      if (current === root) return true;
+      current = current.parent;
+    }
+    return false;
   }
 
   /**

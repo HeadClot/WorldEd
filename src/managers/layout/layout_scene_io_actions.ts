@@ -50,6 +50,8 @@ export function applyLayoutHistoryChange(context: LayoutSceneRefreshContext, dir
   context.selectionManager.pruneSelectionNotInScene(context.worldObject);
   context.snapSettingsController.rebakeWorldTexturesIfLocked();
   SolidModel.refreshAfterHistoryChange(context.worldObject);
+  // After solid remesh, drop face selections for deleted brushes/surfaces only.
+  context.faceModeCoordinator.getFaceExtrusionController().pruneInvalidFaceSelection(context.worldObject);
   context.refreshAfterWorldMutation();
   context.propertiesPanel.refreshBoundObject();
   context.updateGizmoVisibility();

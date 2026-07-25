@@ -31,6 +31,15 @@ const BRUSH_EDGE_OCCLUDED_RENDER_ORDER = 3;
 const BRUSH_EDGE_FRONT_RENDER_ORDER = 4;
 
 /**
+ * Render order for selected hull fills in orthographic 2D clones. Above solid
+ * result meshes so the translucent volume is not buried by opaque CSG depth.
+ */
+const BRUSH_ORTHO_SELECTED_FILL_RENDER_ORDER = 6;
+
+/** UserData key marking a brush preview that lives in an orthographic 2D clone. */
+export const SOLID_BRUSH_ORTHO_CLONE_USERDATA_KEY = 'solidBrushOrthoClone';
+
+/**
  * Builds selectable brush preview meshes for the outliner and transform tools.
  * Unselected brushes render operation-colored outlines only (no filled hull).
  * Selected brushes add a cheap translucent fill so the volume is visible. Edge
@@ -189,6 +198,31 @@ export class SolidBrushVisual {
     } else {
       this.applyOutlineOnlyStyle(material);
     }
+    this.applyOrthoCloneHullPresentation(mesh, material, visible);
+  }
+
+  /**
+   * Marks a brush preview as a 2D orthographic clone and prepares its materials
+   * so selected hulls are not occluded by solid result depth.
+   *
+   * @param mesh Cloned brush preview in a 2D viewport scene.
+   */
+  static prepareBrushMeshForOrthoClone(mesh: THREE.Mesh): void {
+    if (!this.isBrushObject(mesh)) return;
+    mesh.userData[SOLID_BRUSH_ORTHO_CLONE_USERDATA_KEY] = true;
+    mesh.frustumCulled = false;
+    const material = this.ensureBasicMaterial(mesh);
+    this.applyOrthoCloneHullPresentation(mesh, material, this.isHullFillVisible(mesh));
+  }
+
+  /**
+   * Returns whether a brush mesh is a 2D orthographic viewport clone.
+   *
+   * @param mesh Candidate brush mesh.
+   * @returns True for ortho clones.
+   */
+  static isOrthoCloneBrush(mesh: THREE.Mesh): boolean {
+    return mesh.userData[SOLID_BRUSH_ORTHO_CLONE_USERDATA_KEY] === true;
   }
 
   /**
@@ -212,12 +246,40 @@ export class SolidBrushVisual {
     material.color.setHex(this.colorForOperation(operation));
     material.transparent = true;
     material.opacity = 0.22;
+    material.depthTest = true;
     material.depthWrite = false;
     material.colorWrite = true;
     material.side = THREE.FrontSide;
     material.polygonOffset = true;
     material.polygonOffsetFactor = -2;
     material.polygonOffsetUnits = -2;
+    material.needsUpdate = true;
+  }
+
+  /**
+   * Applies 2D orthographic presentation for selected hull fills. Solid result
+   * meshes write depth and would hide depth-tested fills, so ortho clones draw
+   * the volume without depth testing and after opaque geometry.
+   *
+   * @param mesh Brush preview mesh.
+   * @param material Fill material to adjust.
+   * @param fillVisible Whether the selected fill is shown.
+   */
+  private static applyOrthoCloneHullPresentation(
+    mesh: THREE.Mesh,
+    material: THREE.MeshBasicMaterial,
+    fillVisible: boolean,
+  ): void {
+    if (!this.isOrthoCloneBrush(mesh)) return;
+    if (fillVisible) {
+      material.depthTest = false;
+      material.depthWrite = false;
+      material.depthFunc = THREE.AlwaysDepth;
+      material.polygonOffset = false;
+      mesh.renderOrder = BRUSH_ORTHO_SELECTED_FILL_RENDER_ORDER;
+    } else {
+      mesh.renderOrder = 2;
+    }
     material.needsUpdate = true;
   }
 

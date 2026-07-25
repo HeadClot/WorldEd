@@ -7,6 +7,8 @@ import { RotateGizmo } from './rotate_gizmo.js';
 import { ScaleGizmo } from './scale_gizmo.js';
 import { BoundsGizmo } from '../bounds/bounds_gizmo.js';
 import { OrientedBoundsBuilder, OrientedBoundsData } from '../bounds/oriented_bounds.js';
+import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '../../types/bounds_face.js';
+import { getHiddenBoundsAxesForViewPlane, type CadViewPlane } from '../../rulers/cad_view_plane.js';
 
 /**
  * Main orchestrator for the transform gizmo. Manages mode switching, handle
@@ -19,6 +21,7 @@ export class TransformGizmo {
   private currentMode: TransformMode;
   private handleGroup: THREE.Group;
   private viewportGroups: THREE.Group[];
+  private viewportPlanes: CadViewPlane[];
   private currentHandles: GizmoHandle[];
   private activeHandle: GizmoHandle | null;
   private translateGizmo: TranslateGizmo;
@@ -39,6 +42,7 @@ export class TransformGizmo {
     this.handleGroup = new THREE.Group();
     this.handleGroup.name = 'transform_gizmo';
     this.viewportGroups = [];
+    this.viewportPlanes = [];
     this.currentHandles = [];
     this.activeHandle = null;
     this.translateGizmo = new TranslateGizmo(theme);
@@ -100,12 +104,16 @@ export class TransformGizmo {
    * Creates a fresh clone of the handle group for a specific viewport. Each
    * viewport must have its own group to avoid Three.js parent conflicts.
    *
+   * @param viewPlane Orthographic plane or full 3D; depth-axis bounds handles
+   *   are hidden in 2D views.
    * @returns A new Three.js group with cloned gizmo children.
    */
-  getHandleGroupClone(): THREE.Group {
+  getHandleGroupClone(viewPlane: CadViewPlane = 'xyz'): THREE.Group {
     const clone = this.cloneHandleGroupContents();
     this.viewportGroups.push(clone);
+    this.viewportPlanes.push(viewPlane);
     clone.visible = this.gizmoVisible;
+    this.applyViewPlaneBoundsFilter(clone, viewPlane);
     return clone;
   }
 
@@ -259,6 +267,7 @@ export class TransformGizmo {
     this.disposeGroup(this.handleGroup);
     this.viewportGroups.forEach((group) => this.disposeGroup(group));
     this.viewportGroups = [];
+    this.viewportPlanes = [];
     this.currentHandles = [];
     this.activeHandle = null;
   }
@@ -301,10 +310,7 @@ export class TransformGizmo {
   private buildHandlesForMode(mode: TransformMode): void {
     this.clearGroup();
     this.populateMasterGroup(mode);
-    this.viewportGroups.forEach((group) => {
-      this.clearViewportGroup(group);
-      this.copyMasterIntoGroup(group);
-    });
+    this.syncMasterTransformToClones();
   }
 
   /** Removes all children from the handle group. */
@@ -390,10 +396,53 @@ export class TransformGizmo {
 
   /** Copies master world pose into all viewport clones after bounds update. */
   private syncMasterTransformToClones(): void {
-    this.viewportGroups.forEach((group) => {
+    this.viewportGroups.forEach((group, index) => {
       this.clearViewportGroup(group);
       this.copyMasterIntoGroup(group);
+      this.applyViewPlaneBoundsFilter(group, this.viewportPlanes[index] ?? 'xyz');
     });
+  }
+
+  /**
+   * Hides depth-axis **resize cubes** in orthographic views (e.g. no Y handles
+   * in top/`xz`). Face pick planes on the depth axis stay visible so 2D
+   * click-drag on the brush face still works.
+   *
+   * @param group Viewport gizmo clone.
+   * @param viewPlane View plane for this clone.
+   */
+  private applyViewPlaneBoundsFilter(group: THREE.Group, viewPlane: CadViewPlane): void {
+    if (this.currentMode !== TransformMode.BOUNDS) return;
+    const hiddenAxes = getHiddenBoundsAxesForViewPlane(viewPlane);
+    if (hiddenAxes.length === 0) return;
+    group.traverse((child) => {
+      const face = child.userData[BOUNDS_FACE_USERDATA_KEY] as BoundsFace | undefined;
+      if (!face) return;
+      if (!this.isBoundsFaceOnHiddenAxis(face, hiddenAxes)) {
+        child.visible = true;
+        return;
+      }
+      // Depth face pick planes remain so orthographic face-move works.
+      const isResizeHandle = typeof child.userData.handleId === 'number';
+      child.visible = !isResizeHandle;
+    });
+  }
+
+  /**
+   * Returns whether a bounds face belongs to a hidden orthographic axis.
+   *
+   * @param face Bounds face id.
+   * @param hiddenAxes Axis letters to hide.
+   * @returns True when the face should be hidden.
+   */
+  private isBoundsFaceOnHiddenAxis(face: BoundsFace, hiddenAxes: ReadonlyArray<'x' | 'y' | 'z'>): boolean {
+    if (face === BoundsFace.POS_X || face === BoundsFace.NEG_X) {
+      return hiddenAxes.includes('x');
+    }
+    if (face === BoundsFace.POS_Y || face === BoundsFace.NEG_Y) {
+      return hiddenAxes.includes('y');
+    }
+    return hiddenAxes.includes('z');
   }
 
   /**

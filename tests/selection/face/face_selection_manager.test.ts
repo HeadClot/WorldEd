@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { FaceSelectionManager } from '../../../src/selection/face/face_selection_manager.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../../src/solid/model/solid_model_keys.js';
 
 describe('FaceSelectionManager', () => {
   let manager: FaceSelectionManager;
@@ -83,6 +84,48 @@ describe('FaceSelectionManager', () => {
     manager.selectFace(meshA, 0, false, false);
     manager.removeFace(meshB, 5);
     expect(manager.getSelectedFaceCount()).toBe(1);
+  });
+
+  it('should prune faces whose mesh left the scene while keeping others', () => {
+    const world = new THREE.Group();
+    world.add(meshA);
+    world.add(meshB);
+    manager.selectFace(meshA, 0, false, false);
+    manager.selectFace(meshB, 0, true, false);
+    world.remove(meshA);
+    const changed = manager.pruneInvalidSelections(world);
+    expect(changed).toBe(true);
+    expect(manager.getSelectedFaceCount()).toBe(1);
+    expect(manager.isFaceSelected(meshB, 0)).toBe(true);
+    expect(manager.isFaceSelected(meshA, 0)).toBe(false);
+  });
+
+  it('should prune solid brush-face selection when that brush surface is gone', () => {
+    const world = new THREE.Group();
+    const result = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
+    world.add(result);
+    const triangleCount = result.geometry.index
+      ? result.geometry.index.count / 3
+      : result.geometry.getAttribute('position').count / 3;
+    const sources: Array<{ brushId: string; surfaceIndex: number }> = [];
+    for (let index = 0; index < triangleCount; index++) {
+      sources.push(index < 3 ? { brushId: 'kept', surfaceIndex: 0 } : { brushId: 'gone', surfaceIndex: 0 });
+    }
+    result.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = sources;
+    manager.selectFace(result, 0, false);
+    manager.selectFace(result, 3, true);
+    expect(manager.getSelectedFaceCount()).toBe(2);
+    // Simulate undo removing the "gone" brush: only kept surfaces remain.
+    result.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] = sources.map(() => ({
+      brushId: 'kept',
+      surfaceIndex: 0,
+    }));
+    const changed = manager.pruneInvalidSelections(world);
+    expect(changed).toBe(true);
+    expect(manager.getSelectedFaceCount()).toBe(1);
+    const remaining = manager.getSelectedFaces()[0];
+    expect(remaining.regionKey).toContain('kept');
+    expect(remaining.regionKey).not.toContain('gone');
   });
 
   it('should fire callback on selection change', () => {

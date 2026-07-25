@@ -51,7 +51,8 @@ export interface LayoutCoreSystems {
 export function createLayoutCoreSystems(): LayoutCoreSystems {
   const worldObject = new THREE.Group();
   const snapBundle = createSnapAndTransformStack();
-  const textureLock = new TextureLockSettings(true);
+  // Pos Lock on, Stretch Lock off (world tile density when scaling).
+  const textureLock = new TextureLockSettings(true, false);
   snapBundle.transformHandler.setTextureLockSettings(textureLock);
   return {
     ...createRuntimeState(),

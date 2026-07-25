@@ -6,6 +6,7 @@ import { SelectionManager } from '../../../src/selection/object/selection_manage
 import { SolidModel } from '../../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
 import { DeleteSolidBrushesCommand } from '../../../src/commands/solid/delete_solid_brushes_command.js';
+import { createDefaultStartupSolidModel } from '../../../src/solid/model/default_startup_solid_model.js';
 
 /** Lightweight panel stand-in for active-model resolution tests. */
 class MockSolidPanel {
@@ -57,5 +58,19 @@ describe('Solid model active context', () => {
     expect(model.getBrushCount()).toBe(2);
     expect(panel.getModel()).toBe(model);
     void first;
+  });
+
+  it('adopts a startup solid model already in the world as the active context', () => {
+    const world = new THREE.Group();
+    const selection = new SelectionManager();
+    const panel = new MockSolidPanel();
+    const controller = new SolidModelController(world, new CommandStack(16), selection, panel as never);
+    const startup = createDefaultStartupSolidModel();
+    world.add(startup.root);
+    expect(panel.getModel()).toBeNull();
+    expect(controller.adoptFirstSolidModelInWorld()).toBe(true);
+    expect(panel.getModel()).toBe(startup);
+    controller.addBoxBrush();
+    expect(startup.getBrushCount()).toBe(2);
   });
 });

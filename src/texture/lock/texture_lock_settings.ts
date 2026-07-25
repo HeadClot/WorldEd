@@ -18,13 +18,15 @@ export class TextureLockSettings {
   private changeCallbacks: Array<(flags: TextureLockFlags) => void>;
 
   /**
-   * Creates texture lock settings.
+   * Creates texture lock settings. Defaults match the toolbar: position lock on
+   * (UVs stick on move), stretch lock off (scale keeps world tile density).
    *
-   * @param initiallyLocked When true, both locks start enabled.
+   * @param positionLocked Whether position lock starts enabled.
+   * @param stretchLocked Whether stretch lock starts enabled.
    */
-  constructor(initiallyLocked: boolean = true) {
-    this.positionLocked = initiallyLocked;
-    this.stretchLocked = initiallyLocked;
+  constructor(positionLocked: boolean = true, stretchLocked: boolean = false) {
+    this.positionLocked = positionLocked;
+    this.stretchLocked = stretchLocked;
     this.changeCallbacks = [];
   }
 

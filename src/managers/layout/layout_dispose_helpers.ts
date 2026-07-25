@@ -22,6 +22,7 @@ export function disposeLayoutOwnedResources(parts: {
   settingsDialog?: { dispose: () => void } | null;
   settingsApplicator?: { dispose: () => void } | null;
   aboutDialog?: { dispose: () => void } | null;
+  cadRulerSystem?: { dispose: () => void } | null;
 }): void {
   parts.faceExtrusionController?.dispose();
   parts.selectionVisualController?.dispose();
@@ -41,4 +42,5 @@ export function disposeLayoutOwnedResources(parts: {
   parts.settingsDialog?.dispose();
   parts.settingsApplicator?.dispose();
   parts.aboutDialog?.dispose();
+  parts.cadRulerSystem?.dispose();
 }

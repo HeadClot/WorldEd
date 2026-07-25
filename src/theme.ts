@@ -37,6 +37,22 @@ export const Theme = Object.freeze({
   gizmoZAxisColor: 0x3333ff,
   gizmoHoverColor: 0xffffff,
   boundsWireColor: 0x66c2ff,
+  /** CAD size-dimension lines and ticks (cool cyan). */
+  rulerSizeColor: 0x5ec8ff,
+  /** CAD drag-delta total path (selection orange). */
+  rulerDeltaColor: 0xe86a17,
+  /** Ghost bounds wireframe while transforming (muted steel). */
+  rulerGhostColor: 0x6a7a8a,
+  /** Construction rays that point at measured corners. */
+  rulerExtensionColor: 0x8a9aaa,
+  /** DOM label text for size dimensions. */
+  rulerLabelSizeText: '#9ee0ff',
+  /** DOM label text for drag deltas. */
+  rulerLabelDeltaText: '#ffb070',
+  /** DOM label chip background for ruler text. */
+  rulerLabelBackground: 'rgba(12, 14, 18, 0.82)',
+  /** DOM label chip border for ruler text. */
+  rulerLabelBorder: 'rgba(120, 160, 200, 0.35)',
   propertiesPanelBackground: 0x1a1a1a,
   inputBackgroundColor: '#2a2a2a',
   inputTextColor: '#cccccc',

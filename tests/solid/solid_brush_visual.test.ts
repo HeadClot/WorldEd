@@ -60,11 +60,25 @@ describe('SolidBrushVisual', () => {
     expect(material.opacity).toBeCloseTo(0.22, 5);
     expect(material.color.getHex()).toBe(0xc0392b);
     expect(material.side).toBe(THREE.FrontSide);
+    expect(material.depthTest).toBe(true);
     SolidBrushVisual.setHullFillVisible(mesh, false);
     expect(material.visible).toBe(false);
     expect(material.colorWrite).toBe(false);
     expect(material.transparent).toBe(false);
     expect(material.depthWrite).toBe(false);
+    disposeBrushPreview(mesh);
+  });
+
+  it('disables depth testing on selected hull fills for orthographic 2D clones', () => {
+    const mesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
+    SolidBrushVisual.prepareBrushMeshForOrthoClone(mesh);
+    SolidBrushVisual.setHullFillVisible(mesh, true);
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    expect(SolidBrushVisual.isOrthoCloneBrush(mesh)).toBe(true);
+    expect(material.depthTest).toBe(false);
+    expect(material.depthWrite).toBe(false);
+    expect(material.depthFunc).toBe(THREE.AlwaysDepth);
+    expect(mesh.renderOrder).toBeGreaterThan(2);
     disposeBrushPreview(mesh);
   });
 

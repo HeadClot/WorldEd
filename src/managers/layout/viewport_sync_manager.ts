@@ -7,7 +7,7 @@ import {
   SolidBrushEdgeMaterials,
   SOLID_BRUSH_EDGE_USERDATA_KEY,
 } from '../../solid/model/solid_brush_edge_materials.js';
-import { SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../../solid/model/solid_brush_visual.js';
+import { SolidBrushVisual, SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../../solid/model/solid_brush_visual.js';
 
 /** UserData key used to map viewport clone meshes back to world meshes. */
 export const EDITOR_SOURCE_UUID_KEY = 'editorSourceUuid';
@@ -467,7 +467,9 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Gives a mesh its own geometry and material instances.
+   * Gives a mesh its own geometry and material instances. Solid brush clones
+   * are tagged for orthographic presentation so selected hull fills are not
+   * buried by solid result depth.
    *
    * @param mesh The mesh to detach.
    */
@@ -479,6 +481,9 @@ export class ViewportSyncManager {
       mesh.material = mesh.material.map((material) => material.clone());
     } else if (mesh.material) {
       mesh.material = mesh.material.clone();
+    }
+    if (SolidBrushVisual.isBrushObject(mesh)) {
+      SolidBrushVisual.prepareBrushMeshForOrthoClone(mesh);
     }
   }
 

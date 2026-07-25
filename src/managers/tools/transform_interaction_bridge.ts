@@ -54,6 +54,13 @@ export interface TransformInteractionDependencies {
    * receive pointer events. Defaults to always enabled when omitted.
    */
   isInteractionEnabled?: () => boolean;
+  /**
+   * Optional CAD ruler feedback for selection dimensions and drag deltas.
+   *
+   * @param meshes Meshes involved in the interaction.
+   * @param phase Drag lifecycle phase.
+   */
+  onRulerTransformFeedback?: (meshes: THREE.Mesh[], phase: 'begin' | 'move' | 'end') => void;
 }
 
 /**
@@ -254,6 +261,7 @@ export class TransformInteractionBridge {
     this.pendingSelectionClickEvent = event;
     this.pendingSelectionClickViewport = viewport;
     this.attachWindowDragCapture(viewport);
+    this.deps.onRulerTransformFeedback?.(selectedObjects, 'begin');
     return true;
   }
 
@@ -301,6 +309,7 @@ export class TransformInteractionBridge {
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
     this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(selected));
     this.deps.transformGizmo.updateBoundsFromMeshes(selected, this.deps.viewport3D.getCamera());
+    this.deps.onRulerTransformFeedback?.(selected, 'move');
     this.refreshPropertiesPanelTransform();
     return true;
   }
@@ -341,6 +350,7 @@ export class TransformInteractionBridge {
     const clickViewport = this.pendingSelectionClickViewport;
     this.clearWindowDragCapture();
     if (selectionClick) {
+      this.deps.onRulerTransformFeedback?.(selectedObjects, 'end');
       this.applyBoundsFaceSelectionClick(clickEvent, clickViewport);
       return true;
     }
@@ -362,6 +372,7 @@ export class TransformInteractionBridge {
     }
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
     this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(selectedObjects));
+    this.deps.onRulerTransformFeedback?.(selectedObjects, 'end');
     this.refreshPropertiesPanelTransform();
   }
 

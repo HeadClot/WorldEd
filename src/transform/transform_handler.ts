@@ -11,6 +11,7 @@ import { TransformDragSession } from './transform_drag_session.js';
 import { TransformProjectionMath } from './transform_projection_math.js';
 import { BoundsDragController } from './bounds/bounds_drag_controller.js';
 import { TransformCommandPusher } from './transform_command_pusher.js';
+import type { OrientedBoundsData } from './bounds/oriented_bounds.js';
 
 /**
  * Handles the drag interaction cycle for transform gizmo operations. Uses
@@ -261,6 +262,59 @@ export class TransformHandler {
    */
   isDragging(): boolean {
     return this.session.dragActive;
+  }
+
+  /**
+   * Returns the accumulated world-space translation delta for the active drag.
+   *
+   * @returns A clone of the drag delta accumulator.
+   */
+  getDragDelta(): THREE.Vector3 {
+    return this.session.dragDeltaAccumulator.clone();
+  }
+
+  /**
+   * Returns the oriented bounds captured at the start of a bounds drag.
+   *
+   * @returns Cloned start bounds, or null when unavailable.
+   */
+  getDragStartBounds(): OrientedBoundsData | null {
+    if (!this.session.startBounds) return null;
+    return {
+      center: this.session.startBounds.center.clone(),
+      quaternion: this.session.startBounds.quaternion.clone(),
+      halfExtents: this.session.startBounds.halfExtents.clone(),
+    };
+  }
+
+  /**
+   * Returns the pivot point captured when the drag began.
+   *
+   * @returns A clone of the drag pivot.
+   */
+  getDragPivot(): THREE.Vector3 {
+    return this.session.dragPivot.clone();
+  }
+
+  /**
+   * Returns whether the active drag is a bounds one-sided resize.
+   *
+   * @returns True during bounds resize.
+   */
+  isBoundsResizeDrag(): boolean {
+    return this.session.dragActive && this.session.isBoundsResize;
+  }
+
+  /**
+   * Returns whether the active drag is a pure translation (move handle or
+   * bounds face slide).
+   *
+   * @returns True when translation deltas should drive CAD rulers.
+   */
+  isTranslationDrag(): boolean {
+    if (!this.session.dragActive) return false;
+    if (this.session.isBoundsResize) return false;
+    return true;
   }
 
   /**

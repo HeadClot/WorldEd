@@ -91,6 +91,8 @@ import {
   runLayoutVmfImport,
 } from './layout_scene_io_actions.js';
 import { createLayoutSettingsSystem, openLayoutAboutDialog } from './layout_settings_system.js';
+import { CadRulerSystem } from '../../rulers/cad_ruler_system.js';
+import { OrientedBoundsBuilder } from '../../transform/bounds/oriented_bounds.js';
 
 /**
  * Root composition manager for the four-viewport editor layout. Builds UI
@@ -158,6 +160,8 @@ export class ViewportLayoutManager {
   private clipPlaneHandler!: ClipPlaneHandler | null;
   private solidModelPanel!: SolidModelPanel | null;
   private solidModelController!: SolidModelController | null;
+  private cadRulerSystem!: CadRulerSystem;
+  private rulerBoundsBuilder!: OrientedBoundsBuilder;
 
   /**
    * Creates the viewport layout with toolbar, outliner, and four viewports.
@@ -194,6 +198,8 @@ export class ViewportLayoutManager {
     this.solidModelPanel = null;
     this.solidModelController = null;
     this.transformSpace = TransformSpace.Global;
+    this.cadRulerSystem = new CadRulerSystem();
+    this.rulerBoundsBuilder = new OrientedBoundsBuilder();
   }
 
   /** Builds the DOM shell and instantiates the four viewports. */
@@ -238,6 +244,42 @@ export class ViewportLayoutManager {
       this.viewport3D,
     );
     bootstrap.addSharedObjects(this.worldObject, viewports, this.viewportSyncManager, this.transformGizmo);
+    this.attachCadRulers();
+  }
+
+  /** Attaches CAD ruler overlays to every viewport scene and container. */
+  private attachCadRulers(): void {
+    this.cadRulerSystem.attachViewports([
+      {
+        scene: this.viewport2DTop.getScene(),
+        camera: this.viewport2DTop.getCamera(),
+        renderer: this.viewport2DTop.getRenderer(),
+        container: this.viewports[0],
+        viewPlane: 'xz',
+      },
+      {
+        scene: this.viewport2DFront.getScene(),
+        camera: this.viewport2DFront.getCamera(),
+        renderer: this.viewport2DFront.getRenderer(),
+        container: this.viewports[1],
+        viewPlane: 'xy',
+      },
+      {
+        scene: this.viewport2DSide.getScene(),
+        camera: this.viewport2DSide.getCamera(),
+        renderer: this.viewport2DSide.getRenderer(),
+        container: this.viewports[2],
+        viewPlane: 'yz',
+      },
+      {
+        scene: this.viewport3D.getScene(),
+        camera: this.viewport3D.getCamera(),
+        renderer: this.viewport3D.getRenderer(),
+        container: this.viewports[3],
+        viewPlane: 'xyz',
+      },
+    ]);
+    this.cadRulerSystem.setSnapInterval(this.gridSnap.getInterval());
   }
 
   /** Wires specialized handlers after viewports and shell exist. */
@@ -421,6 +463,8 @@ export class ViewportLayoutManager {
     this.solidModelPanel = setup.solidModelPanel;
     this.solidModelController = setup.solidModelController;
     this.solidModelController.setTransformModeProvider(() => this.transformHandler.getMode());
+    // Startup seeds a solid model before this panel exists; claim it as active.
+    this.solidModelController.adoptFirstSolidModelInWorld();
   }
 
   /** Toggles the solid model floating panel. */
@@ -486,6 +530,9 @@ export class ViewportLayoutManager {
       getUserSnapEnabled: () => this.userSnapEnabled,
       setUserSnapEnabled: (enabled) => {
         this.userSnapEnabled = enabled;
+      },
+      onSnapIntervalChanged: (interval) => {
+        this.cadRulerSystem.setSnapInterval(interval);
       },
     });
     this.snapSettingsController.setup();
@@ -557,6 +604,7 @@ export class ViewportLayoutManager {
       onTransformsCommitted: (meshes) => this.solidModelController?.onTransformsCommitted(meshes),
       onTransformsLive: (meshes) => this.solidModelController?.onTransformsLive(meshes),
       isInteractionEnabled: () => !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
+      onRulerTransformFeedback: (meshes, phase) => this.onCadRulerTransformFeedback(meshes, phase),
     });
     this.transformInteractionBridge.wireViewports([
       this.viewport3D,
@@ -651,6 +699,82 @@ export class ViewportLayoutManager {
     this.updateGizmoPivot();
     this.refreshOutliner();
     this.uvEditorController?.refreshFromSelection();
+    this.refreshCadRulersFromSelection();
+  }
+
+  /** Rebuilds CAD size dimensions for the current object selection. */
+  private refreshCadRulersFromSelection(): void {
+    const selected = filterUnlockedObjects(this.selectionManager.getAllSelectedObjectsAsArray());
+    this.cadRulerSystem.setSelectionMeshes(selected);
+  }
+
+  /**
+   * Drives CAD ghost bounds and delta rulers during transform interaction.
+   *
+   * @param meshes Selected meshes involved in the transform.
+   * @param phase Drag lifecycle phase.
+   */
+  private onCadRulerTransformFeedback(meshes: THREE.Mesh[], phase: 'begin' | 'move' | 'end'): void {
+    if (phase === 'end') {
+      this.cadRulerSystem.endDrag();
+      this.cadRulerSystem.setSelectionMeshes(meshes);
+      return;
+    }
+    if (phase === 'begin') {
+      this.beginCadRulerDrag(meshes);
+      return;
+    }
+    this.updateCadRulerDrag(meshes);
+    this.publishCadRulerStatus();
+  }
+
+  /**
+   * Captures pre-drag bounds for CAD ghost wireframes and delta chains.
+   *
+   * @param meshes Selected meshes at pointer-down.
+   */
+  private beginCadRulerDrag(meshes: THREE.Mesh[]): void {
+    const startBounds = this.transformHandler.getDragStartBounds() ?? this.rulerBoundsBuilder.buildFromMeshes(meshes);
+    this.cadRulerSystem.beginDrag(startBounds, this.resolveCadRulerDragMode());
+    this.cadRulerSystem.updateLiveSelectionMeshes(meshes);
+  }
+
+  /**
+   * Chooses CAD feedback mode: face-travel for resize/scale, translation path
+   * for move tools.
+   *
+   * @returns Drag mode for the ruler system.
+   */
+  private resolveCadRulerDragMode(): 'translate' | 'resize' {
+    if (this.transformHandler.isBoundsResizeDrag()) return 'resize';
+    if (this.transformGizmo.getMode() === TransformMode.SCALE) return 'resize';
+    return 'translate';
+  }
+
+  /**
+   * Updates CAD drag feedback from live mesh poses. Resize uses face travel;
+   * translate uses actual bounds center motion (includes grid snap).
+   *
+   * @param meshes Selected meshes during drag.
+   */
+  private updateCadRulerDrag(meshes: THREE.Mesh[]): void {
+    const liveBounds = this.rulerBoundsBuilder.buildFromMeshes(meshes);
+    if (this.cadRulerSystem.getDragMode() === 'resize') {
+      this.cadRulerSystem.updateResizeDrag(liveBounds);
+      return;
+    }
+    if (this.cadRulerSystem.getDragMode() === 'translate') {
+      this.cadRulerSystem.updateTranslateDragFromLiveBounds(liveBounds);
+      return;
+    }
+    this.cadRulerSystem.updateLiveSelectionMeshes(meshes);
+  }
+
+  /** Pushes live CAD delta text into the status bar while dragging. */
+  private publishCadRulerStatus(): void {
+    const status = this.cadRulerSystem.getStatusText();
+    if (status.length === 0) return;
+    this.statusBar?.setLastAction(status);
   }
 
   /**
@@ -860,12 +984,19 @@ export class ViewportLayoutManager {
     );
   }
 
-  /** Syncs viewports, outliner, shading, and face selection after world changes. */
+  /**
+   * Syncs viewports, outliner, shading, face selection, and CAD rulers after
+   * world changes.
+   */
   private refreshAfterWorldMutation(): void {
     this.syncPrimitivesToViewports();
     this.refreshOutliner();
     this.shadingModeCoordinator.updateShadingMeshes();
     this.faceModeCoordinator.updateFaceSelectionMeshes();
+    // Undo/redo and other world edits leave mesh poses changed without a new
+    // selection event — re-measure so rulers do not float at stale positions.
+    this.cadRulerSystem.endDrag();
+    this.refreshCadRulersFromSelection();
   }
 
   /**
@@ -887,7 +1018,10 @@ export class ViewportLayoutManager {
       viewport2DSide: this.viewport2DSide,
       cameraFitCoordinator: this.cameraFitCoordinator,
       clipPlaneHandler: this.clipPlaneHandler,
-      onBeforeRender: () => this.updateGizmoCameraScale(),
+      onBeforeRender: () => {
+        this.updateGizmoCameraScale();
+        this.cadRulerSystem.refreshLabelProjection();
+      },
     });
   }
 
@@ -959,6 +1093,7 @@ export class ViewportLayoutManager {
       settingsDialog: this.settingsDialog,
       settingsApplicator: this.settingsApplicator,
       aboutDialog: this.aboutDialog,
+      cadRulerSystem: this.cadRulerSystem,
     });
     this.settingsUnsubscribe?.();
     this.settingsUnsubscribe = null;

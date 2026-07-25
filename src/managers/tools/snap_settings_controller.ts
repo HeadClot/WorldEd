@@ -25,6 +25,8 @@ export interface SnapSettingsControllerDependencies {
   viewport3D: Viewport3D;
   getUserSnapEnabled: () => boolean;
   setUserSnapEnabled: (enabled: boolean) => void;
+  /** Optional hook when the snap interval changes (CAD ruler ticks, etc.). */
+  onSnapIntervalChanged?: (interval: number) => void;
 }
 
 /** Owns snap interval changes, snap toggle, texture lock, and grid refresh. */
@@ -144,6 +146,7 @@ export class SnapSettingsController {
     this.deps.gridSnap.setInterval(interval);
     this.deps.statusBar?.setSnapInterval(interval);
     this.updateAllViewportGrids(interval);
+    this.deps.onSnapIntervalChanged?.(interval);
   }
 
   /**

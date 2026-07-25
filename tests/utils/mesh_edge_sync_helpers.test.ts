@@ -31,4 +31,10 @@ describe('isEditorHelperObject', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     expect(isEditorHelperObject(mesh)).toBe(false);
   });
+
+  it('should treat CAD ruler overlays as helpers', () => {
+    const group = new THREE.Group();
+    group.userData.isCadRuler = true;
+    expect(isEditorHelperObject(group)).toBe(true);
+  });
 });

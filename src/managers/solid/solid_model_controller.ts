@@ -185,6 +185,20 @@ export class SolidModelController {
   }
 
   /**
+   * Adopts the first solid model already parented under the world as the
+   * working context (startup default solid). Does not push undo or change
+   * selection.
+   *
+   * @returns True when a solid model was found and remembered.
+   */
+  adoptFirstSolidModelInWorld(): boolean {
+    const model = this.findFirstSolidModelInWorld();
+    if (!model) return false;
+    this.rememberActiveModel(model);
+    return true;
+  }
+
+  /**
    * Pushes a create command, selects a target, and refreshes UI.
    *
    * @param model Solid model to parent under the world.
@@ -461,6 +475,21 @@ export class SolidModelController {
       current = current.parent;
     }
     return false;
+  }
+
+  /**
+   * Finds the first solid model root under the world hierarchy.
+   *
+   * @returns Solid model or null when none exist.
+   */
+  private findFirstSolidModelInWorld(): SolidModel | null {
+    let found: SolidModel | null = null;
+    this.worldObject.traverse((object) => {
+      if (found) return;
+      if (!SolidModel.isSolidModelObject(object)) return;
+      found = SolidModel.fromObject(object);
+    });
+    return found;
   }
 
   /**

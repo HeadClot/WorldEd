@@ -14,6 +14,12 @@ describe('Theme', () => {
     expect(Theme.separatorGapPx).toBeDefined();
     expect(Theme.boxColor).toBeDefined();
     expect(Theme.boxEdgeColor).toBeDefined();
+    expect(Theme.rulerSizeColor).toBeDefined();
+    expect(Theme.rulerDeltaColor).toBeDefined();
+    expect(Theme.rulerGhostColor).toBeDefined();
+    expect(Theme.rulerExtensionColor).toBeDefined();
+    expect(Theme.rulerLabelSizeText).toBeDefined();
+    expect(Theme.rulerLabelDeltaText).toBeDefined();
     expect(Theme.lightAmbient).toBeDefined();
     expect(Theme.lightDirectional).toBeDefined();
   });

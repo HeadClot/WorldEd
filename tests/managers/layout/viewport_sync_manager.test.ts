@@ -212,6 +212,26 @@ describe('ViewportSyncManager', () => {
       cloneEdges.forEach((edge) => expect(edge.visible).toBe(true));
     });
 
+    it('marks brush clones as orthographic so selected hull fills ignore depth', () => {
+      const worldObject = new THREE.Group();
+      const brush = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
+      worldObject.add(brush);
+      syncManager.syncWorldObjectToViewports(worldObject);
+      const scenes = [sceneTop, sceneFront, sceneSide];
+      scenes.forEach((scene) => {
+        const cloneBrush = findCloneGroup(scene).children[0] as THREE.Mesh;
+        expect(SolidBrushVisual.isOrthoCloneBrush(cloneBrush)).toBe(true);
+        SolidBrushVisual.setHullFillVisible(cloneBrush, true);
+        const fill = cloneBrush.material as THREE.MeshBasicMaterial;
+        expect(fill.depthTest).toBe(false);
+        expect(fill.depthWrite).toBe(false);
+        expect(cloneBrush.renderOrder).toBeGreaterThan(2);
+      });
+      // World mesh keeps depth-tested fill for the 3D viewport.
+      SolidBrushVisual.setHullFillVisible(brush, true);
+      expect((brush.material as THREE.MeshBasicMaterial).depthTest).toBe(true);
+    });
+
     it('disables depth testing on brush edges in every 2D clone including side', () => {
       const worldObject = new THREE.Group();
       const brush = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);

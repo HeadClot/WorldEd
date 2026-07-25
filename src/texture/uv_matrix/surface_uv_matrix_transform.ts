@@ -21,7 +21,7 @@ const scratchDelta = new THREE.Matrix4();
 
 /**
  * Transforms a brush-local UV matrix across a brush local-to-world pose change
- * according to position/stretch locks (Hammer / Chisel style).
+ * according to position/stretch locks (Hammer-style level editors).
  *
  * Full stick (both locks): matrix unchanged — geometry carries UV. World-fixed
  * (unlocked components): M' = M * inv(L_prev) * L_next so world UV stays fixed.
@@ -59,7 +59,7 @@ export function transformBrushLocalUvForPoseChange(
   if (!unlockMove && !unlockScale) {
     return uv.clone();
   }
-  // Chisel-style world-fixed UV: keep world appearance under the pose delta.
+  // World-fixed UV: keep world appearance under the pose delta.
   // When stretch is off, this also handles face-pivot scale (scale + translate)
   // so the stationary side keeps its tiles and the free side reveals more.
   void faceNormalLocal;
@@ -102,7 +102,7 @@ function poseTranslationOrRotationChanged(): boolean {
 }
 
 /**
- * Applies a plane-space transform to a UV matrix (Chisel: UV' = UV * planeT).
+ * Applies a plane-space transform to a UV matrix (UV' = UV * planeT).
  *
  * @param uv Source UV matrix.
  * @param planeSpaceTransform Transform in plane space.

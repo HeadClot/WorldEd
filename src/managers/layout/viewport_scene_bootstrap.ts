@@ -5,10 +5,7 @@ import { Viewport3D } from '../../viewports/viewport_3d.js';
 import { Viewport2D } from '../../viewports/viewport_2d.js';
 import { TransformGizmo } from '../../transform/gizmo/transform_gizmo.js';
 import { ViewportSyncManager } from './viewport_sync_manager.js';
-import { createContentMaterial } from '../../materials/content_material_factory.js';
-import { initializeMeshTextureUVs } from '../../texture/uv/face_texture_applier.js';
-import { DECORATIVE_EDGE_USERDATA_KEY } from '../../utils/mesh_edge_sync.js';
-import { DEFAULT_CUBE_CENTER_Y } from '../../types/editor_config.js';
+import { createDefaultStartupSolidModel } from '../../solid/model/default_startup_solid_model.js';
 import {
   getDefaultFrontCameraPosition,
   getDefaultSideCameraPosition,
@@ -56,7 +53,7 @@ export class ViewportSceneBootstrap {
     viewportSyncManager: ViewportSyncManager,
     transformGizmo: TransformGizmo,
   ): void {
-    worldObject.add(this.createDefaultBox());
+    worldObject.add(this.createDefaultSolidModelRoot());
     viewports.viewport2DTop.setWorldGroup(worldObject);
     viewports.viewport2DFront.setWorldGroup(worldObject);
     viewports.viewport2DSide.setWorldGroup(worldObject);
@@ -89,30 +86,28 @@ export class ViewportSceneBootstrap {
    * @param transformGizmo Source gizmo for handle group clones.
    */
   private addGizmoToAllViewports(viewports: BootstrappedViewports, transformGizmo: TransformGizmo): void {
-    const list = [viewports.viewport2DTop, viewports.viewport2DFront, viewports.viewport2DSide, viewports.viewport3D];
-    list.forEach((vp) => {
-      const gizmoGroup = transformGizmo.getHandleGroupClone();
-      vp.setGizmoGroup(gizmoGroup);
+    const pairs: Array<{
+      viewport: BootstrappedViewports[keyof BootstrappedViewports];
+      plane: 'xz' | 'xy' | 'yz' | 'xyz';
+    }> = [
+      { viewport: viewports.viewport2DTop, plane: 'xz' },
+      { viewport: viewports.viewport2DFront, plane: 'xy' },
+      { viewport: viewports.viewport2DSide, plane: 'yz' },
+      { viewport: viewports.viewport3D, plane: 'xyz' },
+    ];
+    pairs.forEach(({ viewport, plane }) => {
+      viewport.setGizmoGroup(transformGizmo.getHandleGroupClone(plane));
     });
   }
 
   /**
-   * Creates the default box primitive placed at world origin.
+   * Creates the default solid model root for a new editor session (unit box on
+   * the ground plane).
    *
-   * @returns A configured box mesh with decorative edges.
+   * @returns Solid model root group to parent under the world.
    */
-  private createDefaultBox(): THREE.Mesh {
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = createContentMaterial(Theme.boxColor);
-    const box = new THREE.Mesh(geometry, material);
-    box.position.set(0, DEFAULT_CUBE_CENTER_Y, 0);
-    box.name = 'DefaultCube';
-    initializeMeshTextureUVs(box);
-    const edges = new THREE.EdgesGeometry(geometry, 1);
-    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: Theme.boxEdgeColor }));
-    line.userData[DECORATIVE_EDGE_USERDATA_KEY] = true;
-    box.add(line);
-    return box;
+  private createDefaultSolidModelRoot(): THREE.Group {
+    return createDefaultStartupSolidModel().root;
   }
 
   /**

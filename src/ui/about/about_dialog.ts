@@ -239,8 +239,8 @@ export class AboutDialog {
     const lines = [
       'Human brain interface: Henry de Jongh',
       'Primary synthetic minds: Grok Build 4.5 · Qwen 3.6 27B',
-      'CSG geometry lineage: Sander van Rossen — Chisel Editor & RealtimeCSG',
-      'Additional CSG inspiration: SabreCSG (MIT)',
+      'Rendering and math: three.js',
+      'Built for authoring 3D game worlds',
     ];
     lines.forEach((line) => {
       const paragraph = document.createElement('p');
@@ -276,7 +276,7 @@ export class AboutDialog {
     section.style.display = 'flex';
     section.style.flexDirection = 'column';
     section.style.gap = '6px';
-    section.appendChild(this.createSectionLabel('Third-party MIT Licenses'));
+    section.appendChild(this.createSectionLabel('Third-party licenses'));
     this.configureLicenseTextArea();
     section.appendChild(this.licenseTextArea);
     return section;
