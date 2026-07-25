@@ -1,6 +1,44 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { InfiniteGrid2D } from '../../../src/viewports/grid/infinite_grid_2d.js';
+import { OrthoDepthRanger } from '../../../src/viewports/ortho_depth_ranger.js';
+
+/**
+ * Reads the depth-axis component from a grid line buffer for assertions.
+ *
+ * @param grid Grid under test.
+ * @param plane Grid plane determining which component is depth.
+ * @returns First vertex depth component, or null when empty.
+ */
+function readFirstVertexDepth(grid: InfiniteGrid2D, plane: 'xy' | 'xz' | 'yz'): number | null {
+  const lines = grid.getObject().children[0] as THREE.LineSegments;
+  const positions = lines.geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
+  if (!positions || positions.count < 1) return null;
+  if (plane === 'xz') return positions.getY(0);
+  if (plane === 'xy') return positions.getZ(0);
+  return positions.getX(0);
+}
+
+/**
+ * Returns true when every grid vertex lies inside the camera near/far volume.
+ *
+ * @param grid Grid under test.
+ * @param camera Orthographic camera after depth ranging.
+ * @returns True when all vertices project within near..far.
+ */
+function everyVertexInsideNearFar(grid: InfiniteGrid2D, camera: THREE.OrthographicCamera): boolean {
+  const lines = grid.getObject().children[0] as THREE.LineSegments;
+  const positions = lines.geometry.getAttribute('position') as THREE.BufferAttribute;
+  const viewDir = new THREE.Vector3();
+  camera.getWorldDirection(viewDir);
+  const point = new THREE.Vector3();
+  for (let i = 0; i < positions.count; i++) {
+    point.set(positions.getX(i), positions.getY(i), positions.getZ(i));
+    const depth = point.sub(camera.position).dot(viewDir);
+    if (depth < camera.near - 1e-4 || depth > camera.far + 1e-4) return false;
+  }
+  return true;
+}
 
 describe('InfiniteGrid2D', () => {
   let camera: THREE.OrthographicCamera;
@@ -33,6 +71,80 @@ describe('InfiniteGrid2D', () => {
     side.update(camera);
     expect(top.getSegmentCount()).toBeGreaterThan(0);
     expect(side.getSegmentCount()).toBeGreaterThan(0);
+  });
+
+  it('should keep side-view grid inside near/far when content is offset on +X', () => {
+    const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 1000);
+    camera.position.set(50, 0.5, 0);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(0, 0.5, 0);
+    camera.updateMatrixWorld(true);
+    const scene = new THREE.Scene();
+    const brush = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    brush.position.set(8, 0.5, 0);
+    brush.updateMatrixWorld(true);
+    scene.add(brush);
+    OrthoDepthRanger.update(camera, scene);
+    const grid = new InfiniteGrid2D('yz', 0.25);
+    grid.update(camera);
+    expect(grid.getSegmentCount()).toBeGreaterThan(0);
+    expect(everyVertexInsideNearFar(grid, camera)).toBe(true);
+    const depth = readFirstVertexDepth(grid, 'yz');
+    expect(depth).not.toBeNull();
+    expect(Math.abs(depth!)).toBeGreaterThan(1);
+  });
+
+  it('should keep side-view grid inside near/far when content is offset on -X', () => {
+    const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 1000);
+    camera.position.set(50, 0.5, 0);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(0, 0.5, 0);
+    camera.updateMatrixWorld(true);
+    const scene = new THREE.Scene();
+    const brush = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    brush.position.set(-4, 0.5, 0);
+    brush.updateMatrixWorld(true);
+    scene.add(brush);
+    OrthoDepthRanger.update(camera, scene);
+    const grid = new InfiniteGrid2D('yz', 0.25);
+    grid.update(camera);
+    expect(grid.getSegmentCount()).toBeGreaterThan(0);
+    expect(everyVertexInsideNearFar(grid, camera)).toBe(true);
+  });
+
+  it('should keep top and front grids inside near/far after depth ranging', () => {
+    const topCamera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 1000);
+    topCamera.position.set(0, 50, 0);
+    topCamera.up.set(0, 0, -1);
+    topCamera.lookAt(0, 0, 0);
+    topCamera.updateMatrixWorld(true);
+    const frontCamera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 1000);
+    frontCamera.position.set(0, 0.5, 50);
+    frontCamera.up.set(0, 1, 0);
+    frontCamera.lookAt(0, 0.5, 0);
+    frontCamera.updateMatrixWorld(true);
+    const scene = new THREE.Scene();
+    const brush = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    brush.position.set(0, 8, 8);
+    brush.updateMatrixWorld(true);
+    scene.add(brush);
+    OrthoDepthRanger.update(topCamera, scene);
+    OrthoDepthRanger.update(frontCamera, scene);
+    const top = new InfiniteGrid2D('xz', 0.25);
+    const front = new InfiniteGrid2D('xy', 0.25);
+    top.update(topCamera);
+    front.update(frontCamera);
+    expect(top.getSegmentCount()).toBeGreaterThan(0);
+    expect(front.getSegmentCount()).toBeGreaterThan(0);
+    expect(everyVertexInsideNearFar(top, topCamera)).toBe(true);
+    expect(everyVertexInsideNearFar(front, frontCamera)).toBe(true);
+  });
+
+  it('should disable depth testing so content cannot hide the reference grid', () => {
+    const grid = new InfiniteGrid2D('xy', 0.25);
+    const lines = grid.getObject().children[0] as THREE.LineSegments;
+    const material = lines.material as THREE.LineBasicMaterial;
+    expect(material.depthTest).toBe(false);
   });
 
   it('should coarsen cells when zoomed far out without exploding line count', () => {

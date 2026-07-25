@@ -25,7 +25,7 @@ export interface SnapSettingsControllerDependencies {
   viewport3D: Viewport3D;
   getUserSnapEnabled: () => boolean;
   setUserSnapEnabled: (enabled: boolean) => void;
-  /** Optional hook when the snap interval changes (CAD ruler ticks, etc.). */
+  /** Optional hook when the snap interval changes. */
   onSnapIntervalChanged?: (interval: number) => void;
 }
 

@@ -101,8 +101,8 @@ export class ViewportSceneBootstrap {
   }
 
   /**
-   * Creates the default solid model root for a new editor session (unit box on
-   * the ground plane).
+   * Creates the default solid model root for a new editor session (unit box at
+   * the world origin).
    *
    * @returns Solid model root group to parent under the world.
    */

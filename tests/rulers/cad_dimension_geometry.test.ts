@@ -99,7 +99,8 @@ describe('cad_dimension_geometry', () => {
       labels,
       placement,
     );
-    expect(segments.length).toBeGreaterThan(9);
+    // Three axes × (2 extension legs + 1 dimension line), no end ticks.
+    expect(segments.length).toBe(9);
     const texts = labels.map((label) => label.text).sort();
     expect(texts).toContain('2');
     expect(texts).toContain('4');
@@ -222,7 +223,6 @@ describe('cad_dimension_geometry', () => {
       'test',
       '4',
       '#fff',
-      0,
       segments,
       [],
     );
@@ -230,6 +230,32 @@ describe('cad_dimension_geometry', () => {
     expect(segments[0].ax).toBeCloseTo(0, 5);
     expect(segments[0].ay).toBeCloseTo(0, 5);
     expect(segments[0].az).toBeCloseTo(0, 5);
+  });
+
+  it('should stop extension legs on the dimension line without end ticks', () => {
+    const segments: CadLineSegment[] = [];
+    const offsetWorld = 0.2;
+    const placement = createFixedCadPlacementContext(makeCamera(new THREE.Vector3(0, 5, 0)), offsetWorld);
+    appendCadDimension(
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(4, 0, 0),
+      new THREE.Vector3(0, 1, 0),
+      placement,
+      new THREE.Color(0x5ec8ff),
+      new THREE.Color(0x8a9aaa),
+      'test',
+      '4',
+      '#9ee0ff',
+      segments,
+      [],
+    );
+    // Two gray extensions + one blue dimension line only (no blue end ticks).
+    expect(segments).toHaveLength(3);
+    // Extension tips meet the dimension line (no overshoot past offset).
+    expect(segments[0].by).toBeCloseTo(offsetWorld, 5);
+    expect(segments[1].by).toBeCloseTo(offsetWorld, 5);
+    expect(segments[2].ay).toBeCloseTo(offsetWorld, 5);
+    expect(segments[2].by).toBeCloseTo(offsetWorld, 5);
   });
 
   it('should keep stand-off independent of measured length when placement is fixed', () => {
@@ -294,9 +320,7 @@ describe('cad_dimension_geometry', () => {
         y: new THREE.Color(0x00ff00),
         z: new THREE.Color(0x0000ff),
       },
-      new THREE.Color(0x888888),
       '#ffb070',
-      0,
       [],
       labels,
       placement,
@@ -308,7 +332,7 @@ describe('cad_dimension_geometry', () => {
     expect(labels.filter((label) => label.id.startsWith('delta-'))).toHaveLength(1);
   });
 
-  it('should place +X travel on the trailing (left) face', () => {
+  it('should place +X travel on the trailing face center with no side offset', () => {
     const segments: CadLineSegment[] = [];
     const labels: CadLabelSpec[] = [];
     const placement = createFixedCadPlacementContext(makeCamera(new THREE.Vector3(5, 5, 5)), 0.15);
@@ -327,17 +351,104 @@ describe('cad_dimension_geometry', () => {
         y: new THREE.Color(0x00ff00),
         z: new THREE.Color(0x0000ff),
       },
-      new THREE.Color(0x888888),
       '#ffb070',
-      0,
       segments,
       labels,
       placement,
     );
     const delta = labels.find((label) => label.id === 'delta-x');
     expect(delta).toBeDefined();
-    // Trailing face at x = center - halfX: start -1 → current -0.75; midpoint ≈ -0.875
-    expect(delta!.worldPosition.x).toBeLessThan(0);
+    // Trailing face centers: x=-1 → -0.75 at y=0,z=0 (no zoom-dependent side stand-off).
+    expect(delta!.worldPosition.x).toBeCloseTo(-0.875, 5);
+    expect(delta!.worldPosition.y).toBeCloseTo(0, 5);
+    expect(delta!.worldPosition.z).toBeCloseTo(0, 5);
+    expect(segments).toHaveLength(1);
+    expect(segments[0].ax).toBeCloseTo(-1, 5);
+    expect(segments[0].ay).toBeCloseTo(0, 5);
+    expect(segments[0].az).toBeCloseTo(0, 5);
+    expect(segments[0].bx).toBeCloseTo(-0.75, 5);
+    expect(segments[0].by).toBeCloseTo(0, 5);
+    expect(segments[0].bz).toBeCloseTo(0, 5);
+  });
+
+  it('should keep +Z travel centered on the trailing edge in top view', () => {
+    const segments: CadLineSegment[] = [];
+    const labels: CadLabelSpec[] = [];
+    // Top view: camera looks down -Y; large stand-off must not shove the line in X.
+    const placement = createFixedCadPlacementContext(makeCamera(new THREE.Vector3(0, 10, 0)), 0.25, 'xz');
+    const start = makeBounds(2, 1, 3);
+    const current = {
+      center: new THREE.Vector3(0, 0, 1),
+      quaternion: new THREE.Quaternion(),
+      halfExtents: new THREE.Vector3(2, 1, 3),
+    };
+    appendTransformDeltaDimensions(
+      start,
+      current,
+      new THREE.Color(0xe86a17),
+      {
+        x: new THREE.Color(0xff0000),
+        y: new THREE.Color(0x00ff00),
+        z: new THREE.Color(0x0000ff),
+      },
+      '#ffb070',
+      segments,
+      labels,
+      placement,
+    );
+    const delta = labels.find((label) => label.id === 'delta-z');
+    expect(delta).toBeDefined();
+    // Half-Z is 3; move +1 on Z → trailing edge from z=-3 to z=-2, centered at x=0.
+    expect(segments).toHaveLength(1);
+    expect(segments[0].ax).toBeCloseTo(0, 5);
+    expect(segments[0].bx).toBeCloseTo(0, 5);
+    expect(segments[0].az).toBeCloseTo(-3, 5);
+    expect(segments[0].bz).toBeCloseTo(-2, 5);
+    expect(delta!.worldPosition.x).toBeCloseTo(0, 5);
+  });
+
+  it('should keep diagonal XZ travel on each trailing face center path', () => {
+    const segments: CadLineSegment[] = [];
+    const placement = createFixedCadPlacementContext(makeCamera(new THREE.Vector3(0, 10, 0)), 0.4, 'xz');
+    const start = makeBounds(1, 1, 1);
+    const current = {
+      center: new THREE.Vector3(0.5, 0, 0.5),
+      quaternion: new THREE.Quaternion(),
+      halfExtents: new THREE.Vector3(1, 1, 1),
+    };
+    appendTransformDeltaDimensions(
+      start,
+      current,
+      new THREE.Color(0xe86a17),
+      {
+        x: new THREE.Color(0xff0000),
+        y: new THREE.Color(0x00ff00),
+        z: new THREE.Color(0x0000ff),
+      },
+      '#ffb070',
+      segments,
+      [],
+      placement,
+    );
+    expect(segments).toHaveLength(2);
+    // +X: left face center from (-1,0,0) to (-0.5,0,0.5) — no lateral stand-off.
+    const xSeg = segments.find((segment) => Math.abs(segment.ax + 1) < 1e-5)!;
+    expect(xSeg).toBeDefined();
+    expect(xSeg.ax).toBeCloseTo(-1, 5);
+    expect(xSeg.ay).toBeCloseTo(0, 5);
+    expect(xSeg.az).toBeCloseTo(0, 5);
+    expect(xSeg.bx).toBeCloseTo(-0.5, 5);
+    expect(xSeg.by).toBeCloseTo(0, 5);
+    expect(xSeg.bz).toBeCloseTo(0.5, 5);
+    // +Z: min-Z face center from (0,0,-1) to (0.5,0,-0.5).
+    const zSeg = segments.find((segment) => Math.abs(segment.az + 1) < 1e-5)!;
+    expect(zSeg).toBeDefined();
+    expect(zSeg.ax).toBeCloseTo(0, 5);
+    expect(zSeg.ay).toBeCloseTo(0, 5);
+    expect(zSeg.az).toBeCloseTo(-1, 5);
+    expect(zSeg.bx).toBeCloseTo(0.5, 5);
+    expect(zSeg.by).toBeCloseTo(0, 5);
+    expect(zSeg.bz).toBeCloseTo(-0.5, 5);
   });
 
   it('should only report face travel on the resized axis for one-sided X resize', () => {
@@ -374,7 +485,6 @@ describe('cad_dimension_geometry', () => {
       'test',
       '4',
       '#fff',
-      0,
       [],
       labels,
     );

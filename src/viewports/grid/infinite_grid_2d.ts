@@ -24,6 +24,8 @@ export class InfiniteGrid2D {
   private workMajor: THREE.Color;
   private workBlended: THREE.Color;
   private scratchOrigin: THREE.Vector3;
+  private scratchViewDirection: THREE.Vector3;
+  private scratchWorldPoint: THREE.Vector3;
 
   /**
    * Creates a 2D infinite grid for the given plane.
@@ -35,6 +37,7 @@ export class InfiniteGrid2D {
     this.group = new THREE.Group();
     this.group.name = 'infinite_grid_2d';
     this.buffer = new GridLineBuffer();
+    this.buffer.setDepthTest(false);
     this.group.add(this.buffer.getObject());
     this.plane = plane;
     this.snapInterval = Math.max(snapInterval, 0.001);
@@ -48,6 +51,8 @@ export class InfiniteGrid2D {
     this.workMajor = new THREE.Color();
     this.workBlended = new THREE.Color();
     this.scratchOrigin = new THREE.Vector3();
+    this.scratchViewDirection = new THREE.Vector3();
+    this.scratchWorldPoint = new THREE.Vector3();
   }
 
   /**
@@ -69,17 +74,46 @@ export class InfiniteGrid2D {
   }
 
   /**
-   * Rebuilds grid lines for the current orthographic view.
+   * Rebuilds grid lines for the current orthographic view. Lines are placed at
+   * mid frustum depth so content-driven near/far ranging never clips them.
    *
    * @param camera The orthographic camera for this viewport.
    */
   update(camera: THREE.OrthographicCamera): void {
     const view = this.computeViewBounds(camera);
+    const planeDepth = this.computePlaneDepth(camera);
     const lod = this.computeAdaptiveLod(camera);
     this.buffer.beginFrame();
-    this.appendGridLines(view, lod.cell, lod.minorFade);
-    this.appendCenterAxes(view);
+    this.appendGridLines(view, lod.cell, lod.minorFade, planeDepth);
+    this.appendCenterAxes(view, planeDepth);
     this.buffer.endFrame();
+  }
+
+  /**
+   * Resolves the constant-axis world value for the grid plane so geometry sits
+   * inside the camera near/far volume (midway between near and far).
+   *
+   * @param camera Orthographic camera after depth ranging.
+   * @returns World X (yz), Y (xz), or Z (xy) for the grid plane.
+   */
+  private computePlaneDepth(camera: THREE.OrthographicCamera): number {
+    camera.updateMatrixWorld(true);
+    camera.getWorldDirection(this.scratchViewDirection);
+    const midDistance = (camera.near + camera.far) * 0.5;
+    this.scratchOrigin.copy(camera.position).addScaledVector(this.scratchViewDirection, midDistance);
+    return this.extractPlaneDepthComponent(this.scratchOrigin);
+  }
+
+  /**
+   * Reads the depth-axis component of a world point for this grid plane.
+   *
+   * @param point World position.
+   * @returns Plane constant (Y for top, Z for front, X for side).
+   */
+  private extractPlaneDepthComponent(point: THREE.Vector3): number {
+    if (this.plane === 'xz') return point.y;
+    if (this.plane === 'xy') return point.z;
+    return point.x;
   }
 
   /**
@@ -150,16 +184,18 @@ export class InfiniteGrid2D {
   }
 
   /**
-   * Converts plane UV coordinates back to a world point on the grid plane.
+   * Converts plane UV coordinates back to a world point on the grid plane at
+   * the given view-depth constant.
    *
    * @param u Plane U.
    * @param v Plane V.
-   * @returns World position on the plane.
+   * @param depth World constant for the plane normal axis.
+   * @returns World position on the grid plane (reuses scratch vector).
    */
-  private planeUVToWorld(u: number, v: number): THREE.Vector3 {
-    if (this.plane === 'xz') return new THREE.Vector3(u, 0, v);
-    if (this.plane === 'xy') return new THREE.Vector3(u, v, 0);
-    return new THREE.Vector3(0, v, u);
+  private planeUVToWorld(u: number, v: number, depth: number): THREE.Vector3 {
+    if (this.plane === 'xz') return this.scratchWorldPoint.set(u, depth, v);
+    if (this.plane === 'xy') return this.scratchWorldPoint.set(u, v, depth);
+    return this.scratchWorldPoint.set(depth, v, u);
   }
 
   /**
@@ -207,25 +243,69 @@ export class InfiniteGrid2D {
    * @param view Visible plane bounds.
    * @param cell Adaptive cell size.
    * @param minorFade Minor-line opacity 0..1.
+   * @param planeDepth World constant for the plane normal axis.
    */
   private appendGridLines(
     view: { minU: number; maxU: number; minV: number; maxV: number },
     cell: number,
     minorFade: number,
+    planeDepth: number,
   ): void {
     const cell4 = cell * 4;
     const cell8 = cell * 8;
     this.prepareLineColors(minorFade);
+    this.appendConstantUGridLines(view, cell, cell4, cell8, minorFade, planeDepth);
+    this.appendConstantVGridLines(view, cell, cell4, cell8, minorFade, planeDepth);
+  }
+
+  /**
+   * Appends all constant-U grid lines across the visible V range.
+   *
+   * @param view Visible plane bounds.
+   * @param cell Adaptive cell size.
+   * @param cell4 Section spacing.
+   * @param cell8 Major spacing.
+   * @param minorFade Minor-line opacity 0..1.
+   * @param planeDepth World constant for the plane normal axis.
+   */
+  private appendConstantUGridLines(
+    view: { minU: number; maxU: number; minV: number; maxV: number },
+    cell: number,
+    cell4: number,
+    cell8: number,
+    minorFade: number,
+    planeDepth: number,
+  ): void {
     let u = this.snapDown(view.minU, cell);
     while (u <= view.maxU + cell * 0.5) {
       const color = this.colorForCoordinate(u, cell, cell4, cell8, minorFade);
-      this.appendConstantULine(u, view.minV, view.maxV, color);
+      this.appendConstantULine(u, view.minV, view.maxV, color, planeDepth);
       u += cell;
     }
+  }
+
+  /**
+   * Appends all constant-V grid lines across the visible U range.
+   *
+   * @param view Visible plane bounds.
+   * @param cell Adaptive cell size.
+   * @param cell4 Section spacing.
+   * @param cell8 Major spacing.
+   * @param minorFade Minor-line opacity 0..1.
+   * @param planeDepth World constant for the plane normal axis.
+   */
+  private appendConstantVGridLines(
+    view: { minU: number; maxU: number; minV: number; maxV: number },
+    cell: number,
+    cell4: number,
+    cell8: number,
+    minorFade: number,
+    planeDepth: number,
+  ): void {
     let v = this.snapDown(view.minV, cell);
     while (v <= view.maxV + cell * 0.5) {
       const color = this.colorForCoordinate(v, cell, cell4, cell8, minorFade);
-      this.appendConstantVLine(v, view.minU, view.maxU, color);
+      this.appendConstantVLine(v, view.minU, view.maxU, color, planeDepth);
       v += cell;
     }
   }
@@ -280,11 +360,15 @@ export class InfiniteGrid2D {
    * @param minV Range start V.
    * @param maxV Range end V.
    * @param color Line color.
+   * @param planeDepth World constant for the plane normal axis.
    */
-  private appendConstantULine(u: number, minV: number, maxV: number, color: THREE.Color): void {
-    const a = this.planeUVToWorld(u, minV);
-    const b = this.planeUVToWorld(u, maxV);
-    this.buffer.addLine(a.x, a.y, a.z, b.x, b.y, b.z, color, color);
+  private appendConstantULine(u: number, minV: number, maxV: number, color: THREE.Color, planeDepth: number): void {
+    const a = this.planeUVToWorld(u, minV, planeDepth);
+    const ax = a.x;
+    const ay = a.y;
+    const az = a.z;
+    const b = this.planeUVToWorld(u, maxV, planeDepth);
+    this.buffer.addLine(ax, ay, az, b.x, b.y, b.z, color, color);
   }
 
   /**
@@ -294,21 +378,26 @@ export class InfiniteGrid2D {
    * @param minU Range start U.
    * @param maxU Range end U.
    * @param color Line color.
+   * @param planeDepth World constant for the plane normal axis.
    */
-  private appendConstantVLine(v: number, minU: number, maxU: number, color: THREE.Color): void {
-    const a = this.planeUVToWorld(minU, v);
-    const b = this.planeUVToWorld(maxU, v);
-    this.buffer.addLine(a.x, a.y, a.z, b.x, b.y, b.z, color, color);
+  private appendConstantVLine(v: number, minU: number, maxU: number, color: THREE.Color, planeDepth: number): void {
+    const a = this.planeUVToWorld(minU, v, planeDepth);
+    const ax = a.x;
+    const ay = a.y;
+    const az = a.z;
+    const b = this.planeUVToWorld(maxU, v, planeDepth);
+    this.buffer.addLine(ax, ay, az, b.x, b.y, b.z, color, color);
   }
 
   /**
-   * Draws the highlighted center axes through the origin.
+   * Draws the highlighted center axes through the origin UV.
    *
    * @param view Visible plane bounds.
+   * @param planeDepth World constant for the plane normal axis.
    */
-  private appendCenterAxes(view: { minU: number; maxU: number; minV: number; maxV: number }): void {
-    this.appendConstantVLine(0, view.minU, view.maxU, this.axisUColor);
-    this.appendConstantULine(0, view.minV, view.maxV, this.axisVColor);
+  private appendCenterAxes(view: { minU: number; maxU: number; minV: number; maxV: number }, planeDepth: number): void {
+    this.appendConstantVLine(0, view.minU, view.maxU, this.axisUColor, planeDepth);
+    this.appendConstantULine(0, view.minV, view.maxV, this.axisVColor, planeDepth);
   }
 
   /**

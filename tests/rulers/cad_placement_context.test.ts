@@ -39,6 +39,7 @@ describe('cad_placement_context', () => {
     expect(placement.offsetWorld).toBeGreaterThan(0);
     expect(placement.offsetWorld).toBeLessThan(3);
     expect(placement.gapWorld).toBe(0);
+    expect(placement.overshootWorld).toBe(0);
   });
 
   it('should write orthographic to-camera as opposite look direction', () => {
@@ -51,10 +52,11 @@ describe('cad_placement_context', () => {
     expect(toCamera.y).toBeGreaterThan(0.9);
   });
 
-  it('should create a fixed context with zero gap for connected extensions', () => {
+  it('should create a fixed context with zero gap and zero overshoot', () => {
     const camera = new THREE.PerspectiveCamera();
     const placement = createFixedCadPlacementContext(camera, 0.2);
     expect(placement.offsetWorld).toBeCloseTo(0.2, 5);
     expect(placement.gapWorld).toBe(0);
+    expect(placement.overshootWorld).toBe(0);
   });
 });

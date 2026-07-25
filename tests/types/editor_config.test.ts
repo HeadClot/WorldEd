@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   DEFAULT_COMMAND_STACK_MAX_SIZE,
-  DEFAULT_CUBE_CENTER_Y,
   DEFAULT_GRID_SNAP_INTERVAL,
   DEFAULT_ORTHO_HALF_EXTENT,
   DEFAULT_PERSPECTIVE_CAMERA_OFFSET,
@@ -16,9 +15,9 @@ import {
 } from '../../src/navigation/default_camera_placement.js';
 
 /**
- * Builds a unit box matching the editor default cube placement.
+ * Builds a unit box matching the editor default brush placement at origin.
  *
- * @returns A mesh with size 1 centered above the ground plane.
+ * @returns A mesh with size 1 centered at the world origin.
  */
 function createDefaultCubeMesh(): THREE.Mesh {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
@@ -36,8 +35,11 @@ describe('editor_config', () => {
     expect(SNAP_PRESETS).toContain(DEFAULT_GRID_SNAP_INTERVAL);
   });
 
-  it('should place the default cube center above the ground plane', () => {
-    expect(DEFAULT_CUBE_CENTER_Y).toBe(0.5);
+  it('should place default scene focus at the world origin', () => {
+    const focus = getDefaultSceneFocus();
+    expect(focus.x).toBe(0);
+    expect(focus.y).toBe(0);
+    expect(focus.z).toBe(0);
   });
 });
 
@@ -57,7 +59,7 @@ describe('default viewport framing constants', () => {
     expect(DEFAULT_PERSPECTIVE_CAMERA_OFFSET).toBeLessThan(previousOffset);
   });
 
-  it('should frame the default cube without pulling the perspective camera farther out', () => {
+  it('should fit the default cube tightly without zooming farther than startup', () => {
     const mesh = createDefaultCubeMesh();
     const computer = new BoundingVolumeComputer();
     const framer = new CameraFramer();
@@ -67,15 +69,15 @@ describe('default viewport framing constants', () => {
     camera.lookAt(focus.x, focus.y, focus.z);
     camera.updateMatrixWorld(true);
     const box = computer.computeWorldBoundingBox([mesh]);
-    const sphere = computer.computeBoundingSphere(box);
-    const target = framer.computePerspectiveTarget(sphere, camera, 1.5);
-    const startupDistance = camera.position.distanceTo(sphere.center);
+    const target = framer.computePerspectiveTarget(box, camera, 1.12);
+    const startupDistance = camera.position.distanceTo(target.targetLookAt);
     const fitDistance = target.targetPosition.distanceTo(target.targetLookAt);
-    expect(startupDistance).toBeLessThanOrEqual(fitDistance * 1.35);
-    expect(startupDistance).toBeGreaterThan(fitDistance * 0.4);
+    // Tight AABB fit should be closer than (or comparable to) the startup pose.
+    expect(fitDistance).toBeLessThanOrEqual(startupDistance * 1.05);
+    expect(fitDistance).toBeGreaterThan(startupDistance * 0.2);
   });
 
-  it('should keep orthographic startup zoom tighter than a loose scene overview', () => {
+  it('should keep orthographic startup zoom in the same ballpark as a tight fit', () => {
     const mesh = createDefaultCubeMesh();
     const computer = new BoundingVolumeComputer();
     const framer = new CameraFramer();
@@ -84,9 +86,9 @@ describe('default viewport framing constants', () => {
     camera.lookAt(0, 0, 0);
     camera.updateMatrixWorld(true);
     const box = computer.computeWorldBoundingBox([mesh]);
-    const target = framer.computeOrthographicTarget(box, camera, 1.5);
+    const target = framer.computeOrthographicTarget(box, camera, 1.12);
     const fitHalfHeight = (target.top - target.bottom) / 2;
-    expect(DEFAULT_ORTHO_HALF_EXTENT).toBeLessThanOrEqual(fitHalfHeight * 2.5);
+    expect(DEFAULT_ORTHO_HALF_EXTENT).toBeLessThanOrEqual(fitHalfHeight * 4);
     expect(DEFAULT_ORTHO_HALF_EXTENT).toBeGreaterThanOrEqual(fitHalfHeight * 0.5);
   });
 });

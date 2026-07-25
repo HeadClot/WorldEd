@@ -43,7 +43,6 @@ const scratchPointB = new THREE.Vector3();
 const scratchOutward = new THREE.Vector3();
 const scratchDimA = new THREE.Vector3();
 const scratchDimB = new THREE.Vector3();
-const scratchTick = new THREE.Vector3();
 const scratchMid = new THREE.Vector3();
 const scratchWorkA = new THREE.Vector3();
 const scratchWorkB = new THREE.Vector3();
@@ -121,7 +120,7 @@ export function appendGhostBoxSegments(
  * the ruler farther down in Y.
  *
  * @param bounds Oriented selection bounds.
- * @param sizeColor Color for dimension lines and ticks.
+ * @param sizeColor Color for dimension lines.
  * @param extensionColor Color for extension legs pointing at corners.
  * @param labelColorCss CSS color for size labels.
  * @param segments Output line segments.
@@ -180,27 +179,24 @@ export function appendSelectionSizeDimensions(
 
 /**
  * Builds translation delta feedback on the **trailing** face of each moved axis
- * (e.g. move +X → dimension on the left edge from old left to new left).
+ * (e.g. move +X → dimension on the left edge from old left to new left). The
+ * line is edge-centered with no side stand-off, gray legs, or snap dashes.
  *
  * @param startBounds Bounds at pointer-down.
  * @param currentBounds Live bounds after snap/move.
  * @param deltaColor Unused (kept for call-site stability).
  * @param axisColors RGB colors for X/Y/Z components.
- * @param extensionColor Color for extension legs.
  * @param labelColorCss CSS color for delta labels.
- * @param snapInterval Optional snap spacing for tick marks (0 disables).
  * @param segments Output line segments.
  * @param labels Output label specs.
- * @param placement Camera and screen-stable offset metrics.
+ * @param placement Camera and view-plane metrics.
  */
 export function appendTransformDeltaDimensions(
   startBounds: OrientedBoundsData,
   currentBounds: OrientedBoundsData,
   deltaColor: THREE.Color,
   axisColors: { x: THREE.Color; y: THREE.Color; z: THREE.Color },
-  extensionColor: THREE.Color,
   labelColorCss: string,
-  snapInterval: number,
   segments: CadLineSegment[],
   labels: CadLabelSpec[],
   placement: CadPlacementContext = createFixedCadPlacementContext(defaultTestCamera),
@@ -221,10 +217,7 @@ export function appendTransformDeltaDimensions(
       local,
       component,
       colors[axisIndex],
-      extensionColor,
       labelColorCss,
-      snapInterval,
-      placement,
       segments,
       labels,
     );
@@ -303,12 +296,11 @@ export function appendResizeSizeDeltaDimensions(
  * @param end Measured end point on the object edge.
  * @param outwardDirection Unit direction pushing the dimension outside.
  * @param placement Screen-stable offset metrics.
- * @param lineColor Dimension and tick color.
+ * @param lineColor Dimension line color.
  * @param extensionColor Extension leg color.
  * @param labelId Stable label id.
  * @param labelText Label text.
  * @param labelColorCss Label CSS color.
- * @param snapInterval Snap spacing for intermediate ticks (0 disables).
  * @param segments Output segments.
  * @param labels Output labels.
  */
@@ -322,30 +314,18 @@ export function appendCadDimension(
   labelId: string,
   labelText: string,
   labelColorCss: string,
-  snapInterval: number,
   segments: CadLineSegment[],
   labels: CadLabelSpec[],
 ): void {
   const offsetDistance = placement.offsetWorld;
   const gap = placement.gapWorld;
   const overshoot = placement.overshootWorld;
-  const tickHalf = placement.tickHalfWorld;
   scratchOutward.copy(outwardDirection).normalize();
   appendExtensionLeg(start, scratchOutward, gap, offsetDistance + overshoot, extensionColor, segments);
   appendExtensionLeg(end, scratchOutward, gap, offsetDistance + overshoot, extensionColor, segments);
   scratchDimA.copy(start).addScaledVector(scratchOutward, offsetDistance);
   scratchDimB.copy(end).addScaledVector(scratchOutward, offsetDistance);
   pushSegment(segments, scratchDimA, scratchDimB, lineColor, lineColor);
-  appendEndTicks(scratchDimA, scratchDimB, scratchOutward, tickHalf, lineColor, segments);
-  appendSnapTicksAlongSegment(
-    scratchDimA,
-    scratchDimB,
-    scratchOutward,
-    tickHalf * 0.7,
-    snapInterval,
-    lineColor,
-    segments,
-  );
   labels.push({
     id: labelId,
     worldPosition: scratchMid.copy(scratchDimA).lerp(scratchDimB, 0.5).clone(),
@@ -399,7 +379,6 @@ function appendExteriorSizeDimension(
     labelId,
     formatCadDistance(length),
     labelColorCss,
-    0,
     segments,
     labels,
   );
@@ -872,7 +851,6 @@ function appendOneFaceTravel(
     labelId,
     formatCadSignedDelta(signed),
     labelColorCss,
-    0,
     segments,
     labels,
   );
@@ -880,17 +858,15 @@ function appendOneFaceTravel(
 
 /**
  * Draws travel of the trailing face for one local axis (opposite the move).
- * Moving +X shows the left edge: old min-X → new min-X.
+ * Moving +X shows the left edge: old min-X → new min-X. The line sits on the
+ * face centers with no stand-off, gray legs, or snap dashes.
  *
  * @param startBounds Bounds at drag start.
  * @param currentBounds Live bounds.
  * @param axisLocal Local axis of travel.
  * @param signedMove Signed move along that local axis.
  * @param color Dimension color.
- * @param extensionColor Extension color.
  * @param labelColorCss Label CSS color.
- * @param snapInterval Snap tick spacing.
- * @param placement Placement context.
  * @param segments Output segments.
  * @param labels Output labels.
  */
@@ -900,44 +876,45 @@ function appendTrailingFaceTravel(
   axisLocal: LocalAxisIndex,
   signedMove: number,
   color: THREE.Color,
-  extensionColor: THREE.Color,
   labelColorCss: string,
-  snapInterval: number,
-  placement: CadPlacementContext,
   segments: CadLineSegment[],
   labels: CadLabelSpec[],
+): void {
+  writeTrailingFaceEndpoints(startBounds, currentBounds, axisLocal, signedMove, scratchPointA, scratchPointB);
+  pushSegment(segments, scratchPointA, scratchPointB, color, color);
+  const labelIds: Record<LocalAxisIndex, string> = { 0: 'delta-x', 1: 'delta-y', 2: 'delta-z' };
+  labels.push({
+    id: labelIds[axisLocal],
+    worldPosition: scratchMid.copy(scratchPointA).lerp(scratchPointB, 0.5).clone(),
+    text: formatCadSignedDelta(signedMove),
+    colorCss: labelColorCss,
+  });
+}
+
+/**
+ * Writes the trailing-face travel endpoints for one local axis.
+ *
+ * @param startBounds Bounds at drag start.
+ * @param currentBounds Live bounds.
+ * @param axisLocal Local axis of travel.
+ * @param signedMove Signed move along that local axis.
+ * @param outStart Receives the old trailing-face center.
+ * @param outEnd Receives the new trailing-face center.
+ */
+function writeTrailingFaceEndpoints(
+  startBounds: OrientedBoundsData,
+  currentBounds: OrientedBoundsData,
+  axisLocal: LocalAxisIndex,
+  signedMove: number,
+  outStart: THREE.Vector3,
+  outEnd: THREE.Vector3,
 ): void {
   extractBoundsAxes(startBounds, scratchAxisX, scratchAxisY, scratchAxisZ);
   const axis = [scratchAxisX, scratchAxisY, scratchAxisZ][axisLocal];
   const half = getHalfComponent(startBounds.halfExtents, axisLocal);
-  // Trailing face: opposite the movement direction.
   const trailingSign: 1 | -1 = signedMove >= 0 ? -1 : 1;
-  scratchPointA.copy(startBounds.center).addScaledVector(axis, trailingSign * half);
-  scratchPointB.copy(currentBounds.center).addScaledVector(axis, trailingSign * half);
-  placement.camera.getWorldDirection(scratchCamRight);
-  scratchMid.copy(scratchPointA).lerp(scratchPointB, 0.5);
-  computeScreenPlaneOutward(axis, scratchCamRight, currentBounds.center, scratchMid, scratchOutward, placement.camera);
-  // Keep outward pointing outside the solid (away from current center).
-  scratchWorkA.copy(scratchMid).sub(currentBounds.center);
-  scratchWorkA.addScaledVector(axis, -scratchWorkA.dot(axis));
-  if (scratchWorkA.lengthSq() > 1e-10 && scratchOutward.dot(scratchWorkA) < 0) {
-    scratchOutward.multiplyScalar(-1);
-  }
-  const labelIds: Record<LocalAxisIndex, string> = { 0: 'delta-x', 1: 'delta-y', 2: 'delta-z' };
-  appendCadDimension(
-    scratchPointA,
-    scratchPointB,
-    scratchOutward,
-    placement,
-    color,
-    extensionColor,
-    labelIds[axisLocal],
-    formatCadSignedDelta(signedMove),
-    labelColorCss,
-    snapInterval,
-    segments,
-    labels,
-  );
+  outStart.copy(startBounds.center).addScaledVector(axis, trailingSign * half);
+  outEnd.copy(currentBounds.center).addScaledVector(axis, trailingSign * half);
 }
 
 /**
@@ -962,96 +939,6 @@ function appendExtensionLeg(
   scratchWorkB.copy(point).addScaledVector(outward, length);
   const tip = color.clone().multiplyScalar(0.55);
   pushSegment(segments, scratchWorkA, scratchWorkB, color, tip);
-}
-
-/**
- * Appends short end ticks perpendicular to the dimension line.
- *
- * @param dimStart Dimension line start.
- * @param dimEnd Dimension line end.
- * @param outward Outward offset used as a stable tick plane normal.
- * @param tickHalf Half tick length.
- * @param color Tick color.
- * @param segments Output segments.
- */
-function appendEndTicks(
-  dimStart: THREE.Vector3,
-  dimEnd: THREE.Vector3,
-  outward: THREE.Vector3,
-  tickHalf: number,
-  color: THREE.Color,
-  segments: CadLineSegment[],
-): void {
-  scratchTick.copy(dimEnd).sub(dimStart);
-  if (scratchTick.lengthSq() < 1e-12) return;
-  scratchTick.normalize().cross(outward);
-  if (scratchTick.lengthSq() < 1e-12) {
-    scratchTick.set(0, 1, 0).cross(outward);
-  }
-  if (scratchTick.lengthSq() < 1e-12) return;
-  scratchTick.normalize();
-  appendTickAt(dimStart, scratchTick, tickHalf, color, segments);
-  appendTickAt(dimEnd, scratchTick, tickHalf, color, segments);
-}
-
-/**
- * Appends one tick centered on a point along a tick axis.
- *
- * @param center Tick center.
- * @param tickAxis Unit tick direction.
- * @param tickHalf Half tick length.
- * @param color Tick color.
- * @param segments Output segments.
- */
-function appendTickAt(
-  center: THREE.Vector3,
-  tickAxis: THREE.Vector3,
-  tickHalf: number,
-  color: THREE.Color,
-  segments: CadLineSegment[],
-): void {
-  scratchWorkA.copy(center).addScaledVector(tickAxis, -tickHalf);
-  scratchWorkB.copy(center).addScaledVector(tickAxis, tickHalf);
-  pushSegment(segments, scratchWorkA, scratchWorkB, color, color);
-}
-
-/**
- * Places intermediate ticks along a dimension when snap spacing is useful.
- *
- * @param dimStart Dimension start.
- * @param dimEnd Dimension end.
- * @param outward Plane normal for tick orientation.
- * @param tickHalf Half tick length.
- * @param snapInterval Snap spacing (0 disables).
- * @param color Tick color.
- * @param segments Output segments.
- */
-function appendSnapTicksAlongSegment(
-  dimStart: THREE.Vector3,
-  dimEnd: THREE.Vector3,
-  outward: THREE.Vector3,
-  tickHalf: number,
-  snapInterval: number,
-  color: THREE.Color,
-  segments: CadLineSegment[],
-): void {
-  if (snapInterval <= CadRulerStyle.minSnapTickSpacing) return;
-  const length = dimStart.distanceTo(dimEnd);
-  if (length < snapInterval * 0.99) return;
-  // Round so floating undershoot does not drop the last interior dash.
-  const snapSteps = Math.max(0, Math.round(length / snapInterval));
-  const tickCount = Math.min(CadRulerStyle.maxSnapTicks, Math.max(0, snapSteps - 1));
-  if (tickCount <= 0) return;
-  scratchTick.copy(dimEnd).sub(dimStart).normalize().cross(outward);
-  if (scratchTick.lengthSq() < 1e-12) return;
-  scratchTick.normalize();
-  for (let index = 1; index <= tickCount; index += 1) {
-    const distanceAlong = index * snapInterval;
-    if (distanceAlong >= length - 1e-6) break;
-    const t = distanceAlong / length;
-    scratchMid.copy(dimStart).lerp(dimEnd, t);
-    appendTickAt(scratchMid, scratchTick, tickHalf, color, segments);
-  }
 }
 
 /**

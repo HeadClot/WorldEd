@@ -7,7 +7,7 @@ import {
   getDefaultSideCameraPosition,
   getDefaultTopCameraPosition,
 } from '../../src/navigation/default_camera_placement.js';
-import { DEFAULT_CUBE_CENTER_Y, DEFAULT_PERSPECTIVE_CAMERA_OFFSET } from '../../src/types/editor_config.js';
+import { DEFAULT_PERSPECTIVE_CAMERA_OFFSET } from '../../src/types/editor_config.js';
 
 /**
  * Projects a world point into orthographic camera view space.
@@ -22,9 +22,9 @@ function projectToViewSpace(camera: THREE.OrthographicCamera, worldPoint: THREE.
 }
 
 /**
- * Builds a unit box matching the editor default cube placement.
+ * Builds a unit box centered at the world origin (startup brush placement).
  *
- * @returns A mesh with size 1 centered above the ground plane.
+ * @returns A mesh with size 1 at the origin.
  */
 function createDefaultCubeMesh(): THREE.Mesh {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
@@ -34,25 +34,27 @@ function createDefaultCubeMesh(): THREE.Mesh {
 }
 
 describe('default_camera_placement', () => {
-  it('should focus on the default cube center height', () => {
+  it('should focus on the world origin', () => {
     const focus = getDefaultSceneFocus();
     expect(focus.x).toBe(0);
-    expect(focus.y).toBe(DEFAULT_CUBE_CENTER_Y);
+    expect(focus.y).toBe(0);
     expect(focus.z).toBe(0);
   });
 
-  it('should raise the perspective camera above the diagonal offset', () => {
+  it('should place the perspective camera on the diagonal offset from origin', () => {
     const position = getDefaultPerspectiveCameraPosition();
     const offset = DEFAULT_PERSPECTIVE_CAMERA_OFFSET;
     expect(position.x).toBe(offset);
-    expect(position.y).toBe(offset + DEFAULT_CUBE_CENTER_Y);
+    expect(position.y).toBe(offset);
     expect(position.z).toBe(offset);
   });
 
-  it('should elevate front and side cameras to the cube center height', () => {
-    expect(getDefaultFrontCameraPosition().y).toBe(DEFAULT_CUBE_CENTER_Y);
-    expect(getDefaultSideCameraPosition().y).toBe(DEFAULT_CUBE_CENTER_Y);
+  it('should center front and side cameras on the origin like top view', () => {
+    expect(getDefaultFrontCameraPosition().y).toBe(0);
+    expect(getDefaultSideCameraPosition().y).toBe(0);
     expect(getDefaultTopCameraPosition().y).toBe(50);
+    expect(getDefaultFrontCameraPosition().x).toBe(0);
+    expect(getDefaultSideCameraPosition().z).toBe(0);
   });
 
   it('should center the default cube in front orthographic view space', () => {
@@ -77,7 +79,7 @@ describe('default_camera_placement', () => {
     expect(view.y).toBeCloseTo(0, 5);
   });
 
-  it('should aim the perspective camera at the default cube center', () => {
+  it('should aim the perspective camera at the world origin', () => {
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     camera.position.copy(getDefaultPerspectiveCameraPosition());
     const focus = getDefaultSceneFocus();
@@ -87,6 +89,6 @@ describe('default_camera_placement', () => {
     camera.getWorldDirection(forward);
     const toFocus = focus.clone().sub(camera.position).normalize();
     expect(forward.dot(toFocus)).toBeCloseTo(1, 5);
-    expect(camera.position.y).toBeGreaterThan(DEFAULT_PERSPECTIVE_CAMERA_OFFSET);
+    expect(camera.position.y).toBe(DEFAULT_PERSPECTIVE_CAMERA_OFFSET);
   });
 });

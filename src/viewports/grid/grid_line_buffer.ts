@@ -32,6 +32,16 @@ export class GridLineBuffer {
     return this.lineSegments;
   }
 
+  /**
+   * Enables or disables depth testing for grid lines. Orthographic reference
+   * grids typically disable depth so lines are not occluded by content.
+   *
+   * @param enabled True to compare against the depth buffer.
+   */
+  setDepthTest(enabled: boolean): void {
+    this.material.depthTest = enabled;
+  }
+
   /** Clears all queued line data for a new frame. */
   beginFrame(): void {
     this.positions.length = 0;

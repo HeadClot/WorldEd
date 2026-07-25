@@ -13,8 +13,6 @@ export interface CadPlacementContext {
   offsetWorld: number;
   /** World-unit extension overshoot past the dimension line. */
   overshootWorld: number;
-  /** World-unit half tick length. */
-  tickHalfWorld: number;
   /** World-unit gap from mesh to extension start (0 = connected). */
   gapWorld: number;
   /**
@@ -47,22 +45,16 @@ export function createCadPlacementContext(
     CadRulerStyle.minimumOffsetWorld,
     CadRulerStyle.maximumOffsetWorld,
   );
-  const overshootWorld = clampWorld(
+  const overshootWorld = resolveOptionalWorldOffset(
     worldPerPixel * CadRulerStyle.extensionOvershootPixels,
     CadRulerStyle.minimumOffsetWorld * 0.25,
     CadRulerStyle.maximumOffsetWorld * 0.25,
-  );
-  const tickHalfWorld = clampWorld(
-    worldPerPixel * CadRulerStyle.tickHalfPixels,
-    CadRulerStyle.minimumOffsetWorld * 0.2,
-    CadRulerStyle.maximumOffsetWorld * 0.2,
   );
   const gapWorld = worldPerPixel * CadRulerStyle.extensionGapPixels;
   return {
     camera,
     offsetWorld,
     overshootWorld,
-    tickHalfWorld,
     gapWorld,
     viewPlane,
   };
@@ -84,8 +76,7 @@ export function createFixedCadPlacementContext(
   return {
     camera,
     offsetWorld,
-    overshootWorld: offsetWorld * 0.2,
-    tickHalfWorld: offsetWorld * 0.25,
+    overshootWorld: 0,
     gapWorld: 0,
     viewPlane,
   };
@@ -171,6 +162,20 @@ export function faceCameraScore(faceNormal: THREE.Vector3, toCamera: THREE.Vecto
  */
 function clampWorld(value: number, min: number, max: number): number {
   return THREE.MathUtils.clamp(value, min, max);
+}
+
+/**
+ * Clamps a world offset, but keeps an exact zero so style flags like
+ * extensionOvershootPixels: 0 are not forced up to a minimum.
+ *
+ * @param value Raw world units.
+ * @param min Minimum when value is positive.
+ * @param max Maximum.
+ * @returns Zero or a clamped positive world offset.
+ */
+function resolveOptionalWorldOffset(value: number, min: number, max: number): number {
+  if (value <= 0) return 0;
+  return clampWorld(value, min, max);
 }
 
 // Keep scratch used only here from being tree-shaken incorrectly in some tools.

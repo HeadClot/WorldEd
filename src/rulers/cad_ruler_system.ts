@@ -49,7 +49,6 @@ export class CadRulerSystem {
   private dragStartBounds: OrientedBoundsData | null;
   private dragStartCenter: THREE.Vector3;
   private dragTranslation: THREE.Vector3;
-  private snapInterval: number;
   private ghostSegments: CadLineSegment[];
   private lastLabels: CadLabelSpec[];
   private lastStatusText: string;
@@ -72,7 +71,6 @@ export class CadRulerSystem {
     this.dragStartBounds = null;
     this.dragStartCenter = new THREE.Vector3();
     this.dragTranslation = new THREE.Vector3();
-    this.snapInterval = 0;
     this.ghostSegments = [];
     this.lastLabels = [];
     this.lastStatusText = '';
@@ -90,18 +88,6 @@ export class CadRulerSystem {
     this.viewports = bindings.map(
       (binding) => new CadRulerViewport(binding.scene, binding.camera, binding.renderer, binding.container),
     );
-  }
-
-  /**
-   * Updates snap spacing used for intermediate ticks on translate deltas.
-   *
-   * @param interval Snap interval in world units, or 0 to disable ticks.
-   */
-  setSnapInterval(interval: number): void {
-    this.snapInterval = Math.max(0, interval);
-    if (this.dragMode !== 'idle') {
-      this.rebuildAndUpload();
-    }
   }
 
   /**
@@ -412,9 +398,7 @@ export class CadRulerSystem {
       liveBounds,
       this.deltaColor,
       { x: this.axisColorX, y: this.axisColorY, z: this.axisColorZ },
-      this.extensionColor,
       Theme.rulerLabelDeltaText,
-      this.snapInterval,
       segments,
       labels,
       placement,

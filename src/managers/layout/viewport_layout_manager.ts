@@ -279,7 +279,6 @@ export class ViewportLayoutManager {
         viewPlane: 'xyz',
       },
     ]);
-    this.cadRulerSystem.setSnapInterval(this.gridSnap.getInterval());
   }
 
   /** Wires specialized handlers after viewports and shell exist. */
@@ -530,9 +529,6 @@ export class ViewportLayoutManager {
       getUserSnapEnabled: () => this.userSnapEnabled,
       setUserSnapEnabled: (enabled) => {
         this.userSnapEnabled = enabled;
-      },
-      onSnapIntervalChanged: (interval) => {
-        this.cadRulerSystem.setSnapInterval(interval);
       },
     });
     this.snapSettingsController.setup();

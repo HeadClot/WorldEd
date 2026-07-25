@@ -12,8 +12,8 @@ describe('CameraAnimationConfig', () => {
     expect(config.getDurationMs()).toBe(300);
   });
 
-  it('should have default padding factor of 1.5', () => {
-    expect(config.getPaddingFactor()).toBe(1.5);
+  it('should have a modest default padding factor for tight framing', () => {
+    expect(config.getPaddingFactor()).toBe(1.12);
   });
 
   it('should have animation enabled by default', () => {

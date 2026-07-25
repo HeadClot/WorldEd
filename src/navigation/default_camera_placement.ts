@@ -1,48 +1,47 @@
 import * as THREE from 'three';
-import { DEFAULT_CUBE_CENTER_Y, DEFAULT_PERSPECTIVE_CAMERA_OFFSET } from '../types/editor_config.js';
+import { DEFAULT_PERSPECTIVE_CAMERA_OFFSET } from '../types/editor_config.js';
 
 /**
  * Returns the world-space point cameras should frame on startup. Matches the
- * default unit cube center (box sitting on the ground).
+ * default unit brush center at the world origin.
  *
- * @returns A new vector at the default focus location.
+ * @returns A new vector at the origin.
  */
 export function getDefaultSceneFocus(): THREE.Vector3 {
-  return new THREE.Vector3(0, DEFAULT_CUBE_CENTER_Y, 0);
+  return new THREE.Vector3(0, 0, 0);
 }
 
 /**
- * Returns the default perspective camera world position. Raised by the cube
- * center height so look-at stays on the cube.
+ * Returns the default perspective camera world position on the (1,1,1) diagonal
+ * from the origin.
  *
- * @returns A new vector on the elevated (1,1,1) diagonal.
+ * @returns A new camera position vector.
  */
 export function getDefaultPerspectiveCameraPosition(): THREE.Vector3 {
   const offset = DEFAULT_PERSPECTIVE_CAMERA_OFFSET;
-  const focusY = DEFAULT_CUBE_CENTER_Y;
-  return new THREE.Vector3(offset, offset + focusY, offset);
+  return new THREE.Vector3(offset, offset, offset);
 }
 
 /**
- * Returns the front (XY) orthographic camera world position. Elevated so the
- * default cube sits in the vertical center of the view.
+ * Returns the front (XY) orthographic camera world position, centered on the
+ * origin like the top view.
  *
- * @param distance Distance along +Z from the focus point.
+ * @param distance Distance along +Z from the origin.
  * @returns A new camera position vector.
  */
 export function getDefaultFrontCameraPosition(distance: number = 50): THREE.Vector3 {
-  return new THREE.Vector3(0, DEFAULT_CUBE_CENTER_Y, distance);
+  return new THREE.Vector3(0, 0, distance);
 }
 
 /**
- * Returns the side (YZ) orthographic camera world position. Elevated so the
- * default cube sits in the vertical center of the view.
+ * Returns the side (YZ) orthographic camera world position, centered on the
+ * origin like the top view.
  *
- * @param distance Distance along +X from the focus point.
+ * @param distance Distance along +X from the origin.
  * @returns A new camera position vector.
  */
 export function getDefaultSideCameraPosition(distance: number = 50): THREE.Vector3 {
-  return new THREE.Vector3(distance, DEFAULT_CUBE_CENTER_Y, 0);
+  return new THREE.Vector3(distance, 0, 0);
 }
 
 /**

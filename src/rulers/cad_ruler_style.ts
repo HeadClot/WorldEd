@@ -9,10 +9,11 @@ export const CadRulerStyle = {
    * small so rulers stay next to the brush in 2D and 3D.
    */
   dimensionOffsetPixels: 18,
-  /** Screen-pixel overshoot of extension legs past the dimension line. */
-  extensionOvershootPixels: 4,
-  /** Screen-pixel half-length of end ticks. */
-  tickHalfPixels: 5,
+  /**
+   * Screen-pixel overshoot of extension legs past the dimension line. Zero
+   * makes gray extension legs stop exactly on the blue dimension line.
+   */
+  extensionOvershootPixels: 0,
   /**
    * Extension legs start on the measured mesh edge (0). Non-zero values create
    * the disconnected "H" look.
@@ -34,10 +35,6 @@ export const CadRulerStyle = {
   occludedRenderOrder: 990,
   /** Render order for front ruler geometry. */
   frontRenderOrder: 991,
-  /** Maximum snap tick marks along one dimension segment. */
-  maxSnapTicks: 24,
-  /** Hide snap ticks when spacing would be denser than this world gap. */
-  minSnapTickSpacing: 0.04,
   /**
    * Maximum fractional digits for distance labels. Fine snap steps like 0.03125
    * need five places; trailing zeros are stripped at format time.

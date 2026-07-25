@@ -151,14 +151,6 @@ describe('CadRulerSystem', () => {
     expect(selectedCount).toBeGreaterThan(0);
   });
 
-  it('should accept snap interval updates during translate drag', () => {
-    const start = makeBounds(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1));
-    system.beginDrag(start, 'translate');
-    system.setSnapInterval(0.25);
-    system.updateTranslateDrag(new THREE.Vector3(2, 0, 0));
-    expect(system.getDimensionSegmentCount()).toBeGreaterThan(0);
-  });
-
   it('should dispose cleanly', () => {
     const mesh = createBoxMesh(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1));
     system.setSelectionMeshes([mesh]);

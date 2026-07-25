@@ -4,13 +4,17 @@ import { CameraFramer } from './camera_framer.js';
 import { PerspectiveCameraAnimator } from './perspective_camera_animator.js';
 import { OrthographicCameraAnimator } from './orthographic_camera_animator.js';
 import { CameraAnimationConfig } from './camera_animation_config.js';
+import { isEditorHelperObject } from '../utils/mesh_edge_sync.js';
 
 /**
- * Base class for both 3D and 2D viewport types used by the fit controller.
- * Provides access to the camera for fit operations.
+ * Viewport surface used by the fit controller. Prefer world content collectors
+ * so editor overlays (gizmos, grids, solid result helpers) never pull framing
+ * toward the world origin.
  */
 export interface FitViewport {
   getCamera(): THREE.Camera;
+  getScene?: () => THREE.Scene;
+  collectSelectableObjects?: () => THREE.Mesh[];
 }
 
 /**
@@ -43,11 +47,11 @@ export class CameraFitController {
   }
 
   /**
-   * Fits a single viewport camera to frame the given meshes. Falls back to all
-   * objects in the scene if the mesh array is empty.
+   * Fits a single viewport camera to frame the given meshes. Falls back to
+   * world content (not editor overlays) when the mesh array is empty.
    *
    * @param viewport The viewport whose camera should be fitted.
-   * @param meshes The meshes to frame, or empty array for scene fallback.
+   * @param meshes The meshes to frame, or empty array for content fallback.
    * @param config The animation configuration to use.
    * @returns The count of objects that were framed.
    */
@@ -68,7 +72,7 @@ export class CameraFitController {
    * Fits all viewports to frame the same set of meshes.
    *
    * @param viewports The viewports whose cameras should be fitted.
-   * @param meshes The meshes to frame, or empty array for scene fallback.
+   * @param meshes The meshes to frame, or empty array for content fallback.
    * @param config The animation configuration to use.
    * @returns The total count of objects framed across all viewports.
    */
@@ -92,39 +96,120 @@ export class CameraFitController {
   }
 
   /**
-   * Resolves the target meshes to frame. Falls back to all objects in the
-   * viewport's scene when no meshes are provided.
+   * Resolves the target meshes to frame. Empty selection falls back to world
+   * content only — solid model roots, CSG result helpers, gizmos, and grids are
+   * excluded so framing is not pulled to the world origin.
    *
-   * @param viewport The viewport to query for scene objects.
+   * @param viewport The viewport to query for content objects.
    * @param meshes The provided mesh array.
    * @returns The resolved mesh array to frame.
    */
   private resolveTargetMeshes(viewport: FitViewport, meshes: THREE.Mesh[]): THREE.Mesh[] {
-    if (meshes.length > 0) return meshes;
-    return this.collectAllMeshesFromScene(viewport);
+    if (meshes.length > 0) return this.filterFittableContentMeshes(meshes);
+    return this.collectContentMeshesForFit(viewport);
   }
 
   /**
-   * Collects all mesh objects from the viewport's scene.
+   * Collects world content meshes suitable for empty-selection framing.
+   *
+   * @param viewport The viewport providing content collectors or a scene.
+   * @returns Fittable content meshes.
+   */
+  private collectContentMeshesForFit(viewport: FitViewport): THREE.Mesh[] {
+    if (typeof viewport.collectSelectableObjects === 'function') {
+      return this.filterFittableContentMeshes(viewport.collectSelectableObjects());
+    }
+    return this.collectFittableMeshesFromScene(viewport);
+  }
+
+  /**
+   * Collects fittable content meshes from the viewport scene, ignoring editor
+   * overlays that often sit at the world origin.
    *
    * @param viewport The viewport whose scene to traverse.
-   * @returns An array of all meshes found in the scene.
+   * @returns Content meshes only.
    */
-  private collectAllMeshesFromScene(viewport: FitViewport): THREE.Mesh[] {
-    const baseViewport = viewport as unknown as { getScene(): THREE.Scene };
-    if (typeof baseViewport.getScene !== 'function') return [];
-    const scene = baseViewport.getScene();
+  private collectFittableMeshesFromScene(viewport: FitViewport): THREE.Mesh[] {
+    if (typeof viewport.getScene !== 'function') return [];
     const meshes: THREE.Mesh[] = [];
-    scene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        meshes.push(child);
-      }
+    viewport.getScene().traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      if (!this.isFittableContentMesh(child)) return;
+      meshes.push(child);
     });
     return meshes;
   }
 
   /**
-   * Fits a perspective camera to frame the given meshes.
+   * Drops non-content meshes that must never drive camera framing.
+   *
+   * @param meshes Candidate meshes.
+   * @returns Meshes safe to use for fit bounds.
+   */
+  private filterFittableContentMeshes(meshes: THREE.Mesh[]): THREE.Mesh[] {
+    return meshes.filter((mesh) => this.isFittableContentMesh(mesh));
+  }
+
+  /**
+   * Returns whether a mesh should contribute to fit bounds. Excludes editor
+   * helpers, solid CSG result meshes, empty geometry, and gizmo/grid overlays.
+   *
+   * @param mesh Candidate mesh.
+   * @returns True when the mesh is world content with usable geometry.
+   */
+  private isFittableContentMesh(mesh: THREE.Mesh): boolean {
+    if (!mesh.visible) return false;
+    if (isEditorHelperObject(mesh)) return false;
+    if (this.isUnderEditorOverlayRoot(mesh)) return false;
+    return this.hasUsableFitGeometry(mesh);
+  }
+
+  /**
+   * Returns true when the mesh hangs under a gizmo, bounds, or grid root that
+   * must not influence framing (often parked at the world origin).
+   *
+   * @param mesh Candidate mesh.
+   * @returns True when an ancestor is an editor overlay root.
+   */
+  private isUnderEditorOverlayRoot(mesh: THREE.Object3D): boolean {
+    let current: THREE.Object3D | null = mesh;
+    while (current) {
+      if (this.isEditorOverlayRootName(current.name || '')) return true;
+      current = current.parent;
+    }
+    return false;
+  }
+
+  /**
+   * Matches known editor overlay root names used in viewport scenes.
+   *
+   * @param name Object name.
+   * @returns True for gizmo/grid/bounds infrastructure roots.
+   */
+  private isEditorOverlayRootName(name: string): boolean {
+    if (name === 'transform_gizmo' || name === 'transform_gizmo_viewport') return true;
+    if (name === 'bounds_gizmo' || name === 'grids_root') return true;
+    if (name === 'infinite_grid_2d' || name === 'infinite_grid_3d') return true;
+    return name.startsWith('transform_gizmo');
+  }
+
+  /**
+   * Returns true when the mesh has enough position data to produce a real
+   * volume, excluding empty CSG result placeholders at the model origin.
+   *
+   * @param mesh Candidate mesh.
+   * @returns True when geometry can drive fit bounds.
+   */
+  private hasUsableFitGeometry(mesh: THREE.Mesh): boolean {
+    const geometry = mesh.geometry;
+    if (!geometry) return false;
+    const position = geometry.getAttribute('position');
+    return !!position && position.count >= 3;
+  }
+
+  /**
+   * Fits a perspective camera to frame the given meshes. Uses AABB frustum fit
+   * (not a bounding sphere). Leaves the camera near/far clip planes unchanged.
    *
    * @param camera The perspective camera to animate.
    * @param meshes The meshes to frame.
@@ -132,9 +217,9 @@ export class CameraFitController {
   private fitPerspectiveViewport(camera: THREE.PerspectiveCamera, meshes: THREE.Mesh[]): void {
     if (meshes.length === 0) return;
     const boundingBox = this.boundingVolumeComputer.computeWorldBoundingBox(meshes);
-    const boundingSphere = this.boundingVolumeComputer.computeBoundingSphere(boundingBox);
+    if (boundingBox.isEmpty()) return;
     const padding = this.config.getPaddingFactor();
-    const target = this.cameraFramer.computePerspectiveTarget(boundingSphere, camera, padding);
+    const target = this.cameraFramer.computePerspectiveTarget(boundingBox, camera, padding);
     this.perspectiveAnimator.animateToTarget(camera, target.targetPosition, target.targetLookAt, this.config);
   }
 

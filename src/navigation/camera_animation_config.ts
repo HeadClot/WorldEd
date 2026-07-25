@@ -10,7 +10,8 @@ export class CameraAnimationConfig {
   /** Creates a new animation config with default values. */
   constructor() {
     this.durationMs = 300;
-    this.paddingFactor = 1.5;
+    // ~12% margin: tight framing without clipping selection edges.
+    this.paddingFactor = 1.12;
     this.animationEnabled = true;
   }
 
