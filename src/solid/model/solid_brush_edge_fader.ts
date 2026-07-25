@@ -44,6 +44,13 @@ export class SolidBrushEdgeFader {
   }
 
   /**
+   * Kept for callers that previously invalidated a camera-motion cache. No-op
+   * now that every frame re-evaluates distances (brush motion must always
+   * update fade even when the camera is still).
+   */
+  static invalidateCameraCache(): void {}
+
+  /**
    * Shows or hides a brush's decorative edge passes based on camera distance.
    *
    * @param brushMesh Solid brush preview mesh.
@@ -102,7 +109,10 @@ export class SolidBrushEdgeFader {
       if (!(child instanceof THREE.LineSegments)) continue;
       if (child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] !== true) continue;
       const isOccluded = child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
-      child.visible = isOccluded ? showOccluded : showFront;
+      const nextVisible = isOccluded ? showOccluded : showFront;
+      if (child.visible !== nextVisible) {
+        child.visible = nextVisible;
+      }
     }
   }
 }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { packSpatialCellKey } from './spatial_cell_key.js';
 
 /** Entry used when building undirected AABB overlap adjacency. */
 export interface OverlapBoundsEntry {
@@ -157,7 +158,7 @@ export class BrushOverlapGraph {
    * @returns Candidate peer indices.
    */
   private static collectCellCandidates(
-    cells: Map<string, number[]>,
+    cells: Map<bigint, number[]>,
     bounds: THREE.Box3,
     cellSize: number,
     pad: number,
@@ -173,7 +174,7 @@ export class BrushOverlapGraph {
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
         for (let z = minZ; z <= maxZ; z++) {
-          const bucket = cells.get(`${x},${y},${z}`);
+          const bucket = cells.get(packSpatialCellKey(x, y, z));
           if (!bucket) continue;
           for (const index of bucket) {
             if (index === excludeIndex) continue;
@@ -233,7 +234,7 @@ export class BrushOverlapGraph {
   private static buildWithGrid(entries: OverlapBoundsEntry[], pad: number): void {
     const cellSize = this.chooseCellSize(entries);
     const cells = this.binEntriesIntoCells(entries, cellSize, pad);
-    const seenPairs = new Set<string>();
+    const seenPairs = new Set<number>();
     for (const indices of cells.values()) {
       this.linkPairsInCell(entries, indices, pad, seenPairs);
     }
@@ -248,9 +249,11 @@ export class BrushOverlapGraph {
   private static chooseCellSize(entries: OverlapBoundsEntry[]): number {
     let totalExtent = 0;
     for (const entry of entries) {
-      const size = new THREE.Vector3();
-      entry.bounds.getSize(size);
-      totalExtent += Math.max(size.x, size.y, size.z, 1e-3);
+      const bounds = entry.bounds;
+      const extentX = bounds.max.x - bounds.min.x;
+      const extentY = bounds.max.y - bounds.min.y;
+      const extentZ = bounds.max.z - bounds.min.z;
+      totalExtent += Math.max(extentX, extentY, extentZ, 1e-3);
     }
     return Math.max(totalExtent / entries.length, 1e-3);
   }
@@ -267,8 +270,8 @@ export class BrushOverlapGraph {
     entries: OverlapBoundsEntry[],
     cellSize: number,
     pad: number,
-  ): Map<string, number[]> {
-    const cells = new Map<string, number[]>();
+  ): Map<bigint, number[]> {
+    const cells = new Map<bigint, number[]>();
     for (let index = 0; index < entries.length; index++) {
       this.insertEntryIntoCells(cells, entries[index]!.bounds, index, cellSize, pad);
     }
@@ -285,7 +288,7 @@ export class BrushOverlapGraph {
    * @param pad Bounds pad.
    */
   private static insertEntryIntoCells(
-    cells: Map<string, number[]>,
+    cells: Map<bigint, number[]>,
     bounds: THREE.Box3,
     index: number,
     cellSize: number,
@@ -300,7 +303,7 @@ export class BrushOverlapGraph {
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
         for (let z = minZ; z <= maxZ; z++) {
-          const key = `${x},${y},${z}`;
+          const key = packSpatialCellKey(x, y, z);
           const bucket = cells.get(key);
           if (bucket) bucket.push(index);
           else cells.set(key, [index]);
@@ -321,13 +324,15 @@ export class BrushOverlapGraph {
     entries: OverlapBoundsEntry[],
     indices: number[],
     pad: number,
-    seenPairs: Set<string>,
+    seenPairs: Set<number>,
   ): void {
     for (let i = 0; i < indices.length; i++) {
       for (let j = i + 1; j < indices.length; j++) {
         const a = indices[i]!;
         const b = indices[j]!;
-        const pairKey = a < b ? `${a}:${b}` : `${b}:${a}`;
+        const lo = a < b ? a : b;
+        const hi = a < b ? b : a;
+        const pairKey = lo * entries.length + hi;
         if (seenPairs.has(pairKey)) continue;
         if (!this.boundsOverlap(entries[a]!.bounds, entries[b]!.bounds, pad)) {
           continue;

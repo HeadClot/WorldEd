@@ -46,7 +46,7 @@ export class SolidFragmentFinalizer {
     subjectIndex: number,
   ): SolidCompiledPolygon | null {
     if (fragment.length < 3) return null;
-    if (!this.membership.isBoundaryFragment(fragment, facePlane.normal, prepared)) {
+    if (!this.membership.isBoundaryFragment(fragment, facePlane.normal, prepared, subjectIndex)) {
       return null;
     }
     const category = this.router.routeFragmentCategory(fragment, facePlane.normal, prepared, subjectIndex);

@@ -4,17 +4,34 @@ import { DECORATIVE_EDGE_USERDATA_KEY } from '../../utils/mesh_edge_sync.js';
 
 /**
  * Disposes geometry and materials for a removed brush mesh. Shared brush edge
- * materials are retained for reuse.
+ * materials are retained for reuse. Geometries are disposed once even when
+ * front and occluded edge lines share one EdgesGeometry.
  *
  * @param mesh Brush preview mesh.
  */
 export function disposeBrushPreviewResources(mesh: THREE.Mesh): void {
+  const disposedGeometries = new Set<THREE.BufferGeometry>();
   mesh.traverse((child) => {
-    if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
-      child.geometry?.dispose();
-      disposeOwnedMaterials(child.material);
-    }
+    if (!(child instanceof THREE.Mesh || child instanceof THREE.LineSegments)) return;
+    disposeGeometryOnce(child.geometry, disposedGeometries);
+    disposeOwnedMaterials(child.material);
   });
+}
+
+/**
+ * Disposes a geometry if it has not already been freed in this teardown pass.
+ *
+ * @param geometry Geometry to dispose.
+ * @param disposedGeometries Set of already disposed geometry instances.
+ */
+function disposeGeometryOnce(
+  geometry: THREE.BufferGeometry | undefined,
+  disposedGeometries: Set<THREE.BufferGeometry>,
+): void {
+  if (!geometry) return;
+  if (disposedGeometries.has(geometry)) return;
+  disposedGeometries.add(geometry);
+  geometry.dispose();
 }
 
 /**

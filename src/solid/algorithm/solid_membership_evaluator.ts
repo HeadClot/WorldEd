@@ -54,15 +54,22 @@ export class SolidMembershipEvaluator {
    * @param fragment Fragment vertices.
    * @param normal Face normal.
    * @param prepared All brushes.
+   * @param subjectIndex Optional subject brush; when set, local membership only
+   *   considers the subject and its overlapping peers.
    * @returns True when the fragment lies on the final solid boundary.
    */
-  isBoundaryFragment(fragment: THREE.Vector3[], normal: THREE.Vector3, prepared: PreparedBrush[]): boolean {
+  isBoundaryFragment(
+    fragment: THREE.Vector3[],
+    normal: THREE.Vector3,
+    prepared: PreparedBrush[],
+    subjectIndex?: number,
+  ): boolean {
     this.computeCentroidInto(fragment, this.scratchCentroid);
     const offset = Math.max(this.membershipEpsilon * 4, 1e-4);
     this.scratchOutside.copy(this.scratchCentroid).addScaledVector(normal, offset);
     this.scratchInside.copy(this.scratchCentroid).addScaledVector(normal, -offset);
-    const outsideInSolid = this.evaluateSolidMembership(this.scratchOutside, prepared);
-    const insideInSolid = this.evaluateSolidMembership(this.scratchInside, prepared);
+    const outsideInSolid = this.evaluateSolidMembership(this.scratchOutside, prepared, subjectIndex);
+    const insideInSolid = this.evaluateSolidMembership(this.scratchInside, prepared, subjectIndex);
     return outsideInSolid !== insideInSolid;
   }
 
@@ -71,13 +78,14 @@ export class SolidMembershipEvaluator {
    *
    * @param point Sample point in model space.
    * @param prepared Brush list in tree order.
+   * @param subjectIndex Optional subject brush for local peer restriction.
    * @returns True when the point is inside the final solid.
    */
-  evaluateSolidMembership(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
+  evaluateSolidMembership(point: THREE.Vector3, prepared: PreparedBrush[], subjectIndex?: number): boolean {
     if (this.hasIntersectingOperations) {
       return this.evaluateSolidMembershipFull(point, prepared);
     }
-    return this.evaluateSolidMembershipLocal(point, prepared);
+    return this.evaluateSolidMembershipLocal(point, prepared, subjectIndex);
   }
 
   /**
@@ -97,18 +105,80 @@ export class SolidMembershipEvaluator {
 
   /**
    * Membership for additive/subtractive models using the spatial brush index.
+   * When subjectIndex is provided, only the subject and its overlapping peers
+   * can affect membership (same locality assumption as local fragment
+   * routing).
+   *
+   * @param point Sample point.
+   * @param prepared Brush list.
+   * @param subjectIndex Optional subject brush index for peer-local tests.
+   * @returns Solid membership.
+   */
+  evaluateSolidMembershipLocal(point: THREE.Vector3, prepared: PreparedBrush[], subjectIndex?: number): boolean {
+    if (subjectIndex !== undefined) {
+      return this.evaluateSolidMembershipAmongPeers(point, prepared, subjectIndex);
+    }
+    const candidates = this.resolveMembershipCandidates(point, prepared);
+    if (candidates.length === 0) return false;
+    this.copyAndSortCandidates(candidates);
+    return this.evaluateSortedCandidates(point, prepared);
+  }
+
+  /**
+   * Evaluates membership using only a subject brush and its sorted peers.
+   *
+   * @param point Sample point.
+   * @param prepared Brush list.
+   * @param subjectIndex Subject prepared index.
+   * @returns Solid membership.
+   */
+  private evaluateSolidMembershipAmongPeers(
+    point: THREE.Vector3,
+    prepared: PreparedBrush[],
+    subjectIndex: number,
+  ): boolean {
+    const subject = prepared[subjectIndex];
+    if (!subject) return false;
+    this.scratchCandidates.length = 0;
+    this.mergeSubjectAndPeersInOrder(subject.overlappingPeerIndices, subjectIndex);
+    return this.evaluateSortedCandidates(point, prepared);
+  }
+
+  /**
+   * Merges a sorted peer list with the subject index into scratchCandidates.
+   *
+   * @param sortedPeers Sorted overlapping peer indices.
+   * @param subjectIndex Subject prepared index.
+   */
+  private mergeSubjectAndPeersInOrder(sortedPeers: readonly number[], subjectIndex: number): void {
+    let insertedSelf = false;
+    for (const peerIndex of sortedPeers) {
+      if (!insertedSelf && subjectIndex < peerIndex) {
+        this.scratchCandidates.push(subjectIndex);
+        insertedSelf = true;
+      }
+      this.scratchCandidates.push(peerIndex);
+    }
+    if (!insertedSelf) {
+      this.scratchCandidates.push(subjectIndex);
+    }
+  }
+
+  /**
+   * Applies CSG operations for candidate indices already sorted in tree order.
    *
    * @param point Sample point.
    * @param prepared Brush list.
    * @returns Solid membership.
    */
-  evaluateSolidMembershipLocal(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
-    const candidates = this.resolveMembershipCandidates(point, prepared);
-    if (candidates.length === 0) return false;
-    this.copyAndSortCandidates(candidates);
+  private evaluateSortedCandidates(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
     let inside = false;
     for (const index of this.scratchCandidates) {
       const entry = prepared[index]!;
+      if (!this.boundsContainPoint(entry.bounds, point)) {
+        inside = this.applyOperation(inside, false, entry.operation);
+        continue;
+      }
       const inBrush = BrushMembership.isInsidePlanes(point, entry.brush.planes, this.membershipEpsilon);
       inside = this.applyOperation(inside, inBrush, entry.operation);
     }

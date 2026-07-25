@@ -441,13 +441,15 @@ export class SolidBrushVisual {
    * @param operation CSG operation for edge tint.
    */
   private static attachWireframe(mesh: THREE.Mesh, operation: SolidOperation): void {
-    const frontGeometry = new THREE.EdgesGeometry(mesh.geometry, 1);
-    const occludedGeometry = frontGeometry.clone();
-    const occluded = new THREE.LineSegments(occludedGeometry, SolidBrushEdgeMaterials.getOccludedMaterial(operation));
+    const sharedEdgeGeometry = new THREE.EdgesGeometry(mesh.geometry, 1);
+    if (!sharedEdgeGeometry.boundingSphere) {
+      sharedEdgeGeometry.computeBoundingSphere();
+    }
+    const occluded = new THREE.LineSegments(sharedEdgeGeometry, SolidBrushEdgeMaterials.getOccludedMaterial(operation));
     occluded.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
     occluded.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] = true;
     occluded.renderOrder = BRUSH_EDGE_OCCLUDED_RENDER_ORDER;
-    const front = new THREE.LineSegments(frontGeometry, SolidBrushEdgeMaterials.getFrontMaterial(operation));
+    const front = new THREE.LineSegments(sharedEdgeGeometry, SolidBrushEdgeMaterials.getFrontMaterial(operation));
     front.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
     front.renderOrder = BRUSH_EDGE_FRONT_RENDER_ORDER;
     mesh.add(occluded);

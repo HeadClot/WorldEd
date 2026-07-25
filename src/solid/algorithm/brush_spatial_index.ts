@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { packSpatialCellKey } from './spatial_cell_key.js';
 
 /** Bounds entry stored in the uniform spatial grid. */
 export interface SpatialBoundsEntry {
@@ -14,7 +15,7 @@ export class BrushSpatialIndex {
   private readonly entries: SpatialBoundsEntry[];
   private readonly cellSize: number;
   private readonly pad: number;
-  private readonly cells = new Map<string, number[]>();
+  private readonly cells = new Map<bigint, number[]>();
 
   /**
    * Builds a spatial index over prepared brush bounds.
@@ -45,8 +46,7 @@ export class BrushSpatialIndex {
     const cellX = Math.floor(point.x / this.cellSize);
     const cellY = Math.floor(point.y / this.cellSize);
     const cellZ = Math.floor(point.z / this.cellSize);
-    const key = `${cellX},${cellY},${cellZ}`;
-    const bucket = this.cells.get(key);
+    const bucket = this.cells.get(packSpatialCellKey(cellX, cellY, cellZ));
     if (!bucket || bucket.length === 0) return [];
     const result: number[] = [];
     for (const index of bucket) {
@@ -80,7 +80,7 @@ export class BrushSpatialIndex {
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
         for (let z = minZ; z <= maxZ; z++) {
-          const bucket = this.cells.get(`${x},${y},${z}`);
+          const bucket = this.cells.get(packSpatialCellKey(x, y, z));
           if (!bucket) continue;
           for (const index of bucket) {
             if (index === excludeIndex) continue;
@@ -148,7 +148,7 @@ export class BrushSpatialIndex {
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
         for (let z = minZ; z <= maxZ; z++) {
-          const key = `${x},${y},${z}`;
+          const key = packSpatialCellKey(x, y, z);
           const bucket = this.cells.get(key);
           if (bucket) bucket.push(index);
           else this.cells.set(key, [index]);

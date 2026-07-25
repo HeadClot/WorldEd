@@ -15,6 +15,7 @@ export class SolidSurfaceEmitter {
   private readonly finalizer: SolidFragmentFinalizer;
   private readonly membershipEpsilon: number;
   private hasIntersectingOperations = false;
+  private readonly scratchFaceBounds = new THREE.Box3();
 
   /**
    * Creates a surface emitter.
@@ -160,10 +161,44 @@ export class SolidSurfaceEmitter {
   ): SolidPlane[] {
     const planes: SolidPlane[] = [];
     const subject = prepared[subjectIndex]!;
+    this.fillFaceBounds(faceVertices);
     for (const peerIndex of subject.overlappingPeerIndices) {
-      this.collectPeerCutPlanes(prepared[peerIndex]!, facePlane, faceVertices, planes);
+      const peer = prepared[peerIndex]!;
+      if (!this.boundsOverlapPadded(this.scratchFaceBounds, peer.bounds)) continue;
+      this.collectPeerCutPlanes(peer, facePlane, faceVertices, planes);
     }
     return planes;
+  }
+
+  /**
+   * Writes a tight AABB around face vertices into scratchFaceBounds.
+   *
+   * @param faceVertices Face polygon vertices.
+   */
+  private fillFaceBounds(faceVertices: THREE.Vector3[]): void {
+    this.scratchFaceBounds.makeEmpty();
+    for (const vertex of faceVertices) {
+      this.scratchFaceBounds.expandByPoint(vertex);
+    }
+  }
+
+  /**
+   * Returns whether two bounds may touch using membership pad.
+   *
+   * @param a First bounds.
+   * @param b Second bounds.
+   * @returns True when they may overlap.
+   */
+  private boundsOverlapPadded(a: THREE.Box3, b: THREE.Box3): boolean {
+    const pad = this.membershipEpsilon * 2;
+    return !(
+      a.max.x + pad < b.min.x ||
+      a.min.x - pad > b.max.x ||
+      a.max.y + pad < b.min.y ||
+      a.min.y - pad > b.max.y ||
+      a.max.z + pad < b.min.z ||
+      a.min.z - pad > b.max.z
+    );
   }
 
   /**

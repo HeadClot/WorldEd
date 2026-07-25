@@ -3,12 +3,15 @@ import { pointerEventToNdc } from '../../utils/pointer_ndc.js';
 
 /**
  * Shared raycasting utility for click-to-select across all viewports. Keeps
- * camera and mesh world matrices current and uses double-sided material
- * intersection so visible faces pick reliably from any angle.
+ * camera matrices current, rejects meshes with world-sphere tests before
+ * triangle tests, and only forces double-sided materials on sphere hits so
+ * dense solid maps stay interactive.
  */
 export class SceneRaycaster {
   private raycaster: THREE.Raycaster;
   private ndcVector: THREE.Vector2;
+  private readonly scratchSphere = new THREE.Sphere();
+  private readonly candidateMeshes: THREE.Mesh[] = [];
 
   /** Creates a new shared raycaster instance for click-to-select operations. */
   constructor() {
@@ -72,27 +75,52 @@ export class SceneRaycaster {
     selectableObjects: THREE.Mesh[],
   ): THREE.Intersection[] {
     if (selectableObjects.length === 0) return [];
-    this.prepareCameraAndMeshes(camera, selectableObjects);
+    camera.updateMatrixWorld(false);
     pointerEventToNdc(event, renderer.domElement, this.ndcVector);
     this.raycaster.setFromCamera(this.ndcVector, camera);
-    const restored = this.enableDoubleSidedPicking(selectableObjects);
-    const intersections = this.raycaster.intersectObjects(selectableObjects, false);
+    this.collectSphereCandidates(selectableObjects);
+    if (this.candidateMeshes.length === 0) return [];
+    const restored = this.enableDoubleSidedPicking(this.candidateMeshes);
+    const intersections = this.raycaster.intersectObjects(this.candidateMeshes, false);
     this.restoreMaterialSides(restored);
     return intersections;
   }
 
   /**
-   * Updates camera and mesh world matrices so ray origins and hit tests match
-   * the view.
+   * Collects meshes whose world bounding spheres may intersect the pick ray.
+   * Refreshes matrices only when dirty so static maps stay cheap.
    *
-   * @param camera The camera used for the ray.
-   * @param meshes The meshes that will be tested.
+   * @param meshes Selectable meshes.
    */
-  private prepareCameraAndMeshes(camera: THREE.Camera, meshes: THREE.Mesh[]): void {
-    camera.updateMatrixWorld(true);
-    meshes.forEach((mesh) => {
-      mesh.updateMatrixWorld(true);
-    });
+  private collectSphereCandidates(meshes: THREE.Mesh[]): void {
+    this.candidateMeshes.length = 0;
+    const ray = this.raycaster.ray;
+    for (const mesh of meshes) {
+      if (!mesh.visible) continue;
+      mesh.updateMatrixWorld(false);
+      if (!this.rayIntersectsMeshWorldSphere(mesh, ray)) continue;
+      this.candidateMeshes.push(mesh);
+    }
+  }
+
+  /**
+   * Tests the pick ray against a mesh world-space bounding sphere.
+   *
+   * @param mesh Candidate mesh.
+   * @param ray World-space pick ray.
+   * @returns True when the ray may hit the mesh.
+   */
+  private rayIntersectsMeshWorldSphere(mesh: THREE.Mesh, ray: THREE.Ray): boolean {
+    const geometry = mesh.geometry;
+    if (!geometry) return false;
+    if (!geometry.boundingSphere) {
+      geometry.computeBoundingSphere();
+    }
+    const localSphere = geometry.boundingSphere;
+    if (!localSphere) return true;
+    this.scratchSphere.copy(localSphere);
+    this.scratchSphere.applyMatrix4(mesh.matrixWorld);
+    return ray.intersectsSphere(this.scratchSphere);
   }
 
   /**
@@ -104,9 +132,9 @@ export class SceneRaycaster {
    */
   private enableDoubleSidedPicking(meshes: THREE.Mesh[]): Array<{ material: THREE.Material; side: THREE.Side }> {
     const restored: Array<{ material: THREE.Material; side: THREE.Side }> = [];
-    meshes.forEach((mesh) => {
+    for (const mesh of meshes) {
       this.snapshotAndForceDoubleSide(mesh, restored);
-    });
+    }
     return restored;
   }
 
@@ -121,11 +149,11 @@ export class SceneRaycaster {
     restored: Array<{ material: THREE.Material; side: THREE.Side }>,
   ): void {
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    materials.forEach((material) => {
-      if (!material) return;
+    for (const material of materials) {
+      if (!material) continue;
       restored.push({ material, side: material.side });
       material.side = THREE.DoubleSide;
-    });
+    }
   }
 
   /**
@@ -134,9 +162,9 @@ export class SceneRaycaster {
    * @param restored Previous material side snapshots.
    */
   private restoreMaterialSides(restored: Array<{ material: THREE.Material; side: THREE.Side }>): void {
-    restored.forEach((entry) => {
+    for (const entry of restored) {
       entry.material.side = entry.side;
-    });
+    }
   }
 
   /**

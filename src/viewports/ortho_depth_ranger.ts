@@ -15,9 +15,13 @@ const MIN_STAND_OFF = 4;
  */
 export class OrthoDepthRanger {
   private static readonly viewDirection = new THREE.Vector3();
-  private static readonly worldBox = new THREE.Box3();
+  private static readonly worldCenter = new THREE.Vector3();
+  private static readonly worldScale = new THREE.Vector3();
+  private static readonly worldPosition = new THREE.Vector3();
+  private static readonly worldQuaternion = new THREE.Quaternion();
   private static readonly corner = new THREE.Vector3();
-  private static readonly size = new THREE.Vector3();
+  private static readonly boxMin = new THREE.Vector3();
+  private static readonly boxMax = new THREE.Vector3();
 
   /**
    * Updates an orthographic camera so all scene content lies within near/far.
@@ -42,7 +46,7 @@ export class OrthoDepthRanger {
     scene: THREE.Scene,
     camera: THREE.OrthographicCamera,
   ): { minDot: number; maxDot: number } | null {
-    camera.updateMatrixWorld(true);
+    camera.updateMatrixWorld(false);
     camera.getWorldDirection(this.viewDirection);
     let minDot = Infinity;
     let maxDot = -Infinity;
@@ -52,6 +56,7 @@ export class OrthoDepthRanger {
       if (!object.visible) return;
       if (isEditorHelperObject(object)) return;
       if (this.isGridOrGizmo(object)) return;
+      object.updateMatrixWorld(false);
       this.expandRangeFromMesh(object, this.viewDirection, (dot) => {
         found = true;
         minDot = Math.min(minDot, dot);
@@ -63,31 +68,90 @@ export class OrthoDepthRanger {
   }
 
   /**
-   * Expands depth range from a mesh world bounding box corners.
+   * Expands depth range from a mesh world bounds without walking child edge
+   * lines (Box3.setFromObject would include every LineSegments child).
    *
    * @param mesh Content mesh.
    * @param viewDirection Camera look direction.
-   * @param includeDot Callback for each corner projection.
+   * @param includeDot Callback for each projected bound sample.
    */
   private static expandRangeFromMesh(
     mesh: THREE.Mesh,
     viewDirection: THREE.Vector3,
     includeDot: (dot: number) => void,
   ): void {
-    this.worldBox.setFromObject(mesh);
-    if (this.worldBox.isEmpty()) return;
-    this.worldBox.getSize(this.size);
-    if (this.size.lengthSq() < 1e-12) return;
-    const min = this.worldBox.min;
-    const max = this.worldBox.max;
+    const geometry = mesh.geometry;
+    if (!geometry) return;
+    if (this.expandRangeFromBoundingBox(mesh, geometry, viewDirection, includeDot)) {
+      return;
+    }
+    this.expandRangeFromBoundingSphere(mesh, geometry, viewDirection, includeDot);
+  }
+
+  /**
+   * Projects geometry AABB corners through the mesh world matrix.
+   *
+   * @param mesh Content mesh.
+   * @param geometry Mesh geometry.
+   * @param viewDirection Camera look direction.
+   * @param includeDot Callback for each corner projection.
+   * @returns True when a bounding box was available.
+   */
+  private static expandRangeFromBoundingBox(
+    mesh: THREE.Mesh,
+    geometry: THREE.BufferGeometry,
+    viewDirection: THREE.Vector3,
+    includeDot: (dot: number) => void,
+  ): boolean {
+    if (!geometry.boundingBox) {
+      geometry.computeBoundingBox();
+    }
+    const box = geometry.boundingBox;
+    if (!box || box.isEmpty()) return false;
+    this.boxMin.copy(box.min);
+    this.boxMax.copy(box.max);
     for (let ix = 0; ix < 2; ix++) {
       for (let iy = 0; iy < 2; iy++) {
         for (let iz = 0; iz < 2; iz++) {
-          this.corner.set(ix === 0 ? min.x : max.x, iy === 0 ? min.y : max.y, iz === 0 ? min.z : max.z);
+          this.corner.set(
+            ix === 0 ? this.boxMin.x : this.boxMax.x,
+            iy === 0 ? this.boxMin.y : this.boxMax.y,
+            iz === 0 ? this.boxMin.z : this.boxMax.z,
+          );
+          this.corner.applyMatrix4(mesh.matrixWorld);
           includeDot(this.corner.dot(viewDirection));
         }
       }
     }
+    return true;
+  }
+
+  /**
+   * Falls back to a world bounding sphere when no AABB is available.
+   *
+   * @param mesh Content mesh.
+   * @param geometry Mesh geometry.
+   * @param viewDirection Camera look direction.
+   * @param includeDot Callback for sphere extremes along the view.
+   */
+  private static expandRangeFromBoundingSphere(
+    mesh: THREE.Mesh,
+    geometry: THREE.BufferGeometry,
+    viewDirection: THREE.Vector3,
+    includeDot: (dot: number) => void,
+  ): void {
+    if (!geometry.boundingSphere) {
+      geometry.computeBoundingSphere();
+    }
+    const sphere = geometry.boundingSphere;
+    if (!sphere) return;
+    this.worldCenter.copy(sphere.center).applyMatrix4(mesh.matrixWorld);
+    mesh.matrixWorld.decompose(this.worldPosition, this.worldQuaternion, this.worldScale);
+    const maxScale = Math.max(Math.abs(this.worldScale.x), Math.abs(this.worldScale.y), Math.abs(this.worldScale.z));
+    const radius = sphere.radius * maxScale;
+    const centerDot = this.worldCenter.dot(viewDirection);
+    includeDot(centerDot - radius);
+    includeDot(centerDot + radius);
   }
 
   /**
@@ -101,7 +165,6 @@ export class OrthoDepthRanger {
     camera.getWorldDirection(this.viewDirection);
     const depth = Math.max(maxDot - minDot, 0.001);
     const standOff = Math.max(MIN_STAND_OFF, depth * 0.05);
-    // Content is in front when contentDot > cameraDot.
     const desiredCameraDot = minDot - standOff;
     const currentCameraDot = camera.position.dot(this.viewDirection);
     camera.position.addScaledVector(this.viewDirection, desiredCameraDot - currentCameraDot);

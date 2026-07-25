@@ -7,6 +7,7 @@ import { ViewportShadingController } from '../../viewports/viewport_shading_cont
 import { Viewport3D } from '../../viewports/viewport_3d.js';
 import { Viewport2D } from '../../viewports/viewport_2d.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
+import { SolidBrushEdgeFader } from '../../solid/model/solid_brush_edge_fader.js';
 
 /**
  * Owns selection outline instances across all viewports. Keeps orange outlines
@@ -18,6 +19,8 @@ export class SelectionVisualController {
   private viewportSyncManager: ViewportSyncManager;
   private selectionHighlights: SelectionHighlight[];
   private shadingControllers: ViewportShadingController[];
+  /** Brush meshes currently showing a translucent hull fill. */
+  private hullFillMeshes = new Set<THREE.Mesh>();
 
   /**
    * Creates a selection visual controller.
@@ -64,6 +67,7 @@ export class SelectionVisualController {
     const selected = this.selectionManager.getSelectedObjects();
     selected.forEach((mesh) => this.highlightMeshAndClones(mesh));
     this.syncSolidBrushHullFills();
+    SolidBrushEdgeFader.invalidateCameraCache();
   }
 
   /** Re-applies outlines after 2D viewport clones are rebuilt. */
@@ -123,15 +127,37 @@ export class SelectionVisualController {
   /**
    * Shows translucent brush hulls only for selected solid brushes (world +
    * clones). Unselected brushes keep operation-colored outlines without filled
-   * volumes.
+   * volumes. Only brushes that enter or leave selection are restyled so maps
+   * with thousands of brushes stay interactive.
    */
   private syncSolidBrushHullFills(): void {
-    const selected = this.selectionManager.getSelectedObjects();
-    for (const mesh of this.viewportSyncManager.getWorldSelectableMeshes()) {
-      if (!SolidBrushVisual.isBrushObject(mesh)) continue;
-      const fillVisible = selected.has(mesh);
-      this.applyBrushHullFillToMeshAndClones(mesh, fillVisible);
+    const nextFills = this.collectSelectedBrushMeshes();
+    for (const mesh of this.hullFillMeshes) {
+      if (nextFills.has(mesh)) continue;
+      if (mesh.parent) {
+        this.applyBrushHullFillToMeshAndClones(mesh, false);
+      }
     }
+    for (const mesh of nextFills) {
+      if (this.hullFillMeshes.has(mesh)) continue;
+      this.applyBrushHullFillToMeshAndClones(mesh, true);
+    }
+    this.hullFillMeshes = nextFills;
+  }
+
+  /**
+   * Collects selected meshes that are solid brush previews.
+   *
+   * @returns Set of selected brush meshes that should show hull fill.
+   */
+  private collectSelectedBrushMeshes(): Set<THREE.Mesh> {
+    const nextFills = new Set<THREE.Mesh>();
+    for (const mesh of this.selectionManager.getSelectedObjects()) {
+      if (SolidBrushVisual.isBrushObject(mesh)) {
+        nextFills.add(mesh);
+      }
+    }
+    return nextFills;
   }
 
   /**

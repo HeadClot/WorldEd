@@ -854,11 +854,15 @@ export class ViewportLayoutManager {
     }
   }
 
-  /** Handles selection change events by updating gizmo and outliner. */
+  /**
+   * Handles selection change events by updating gizmo and selection-dependent
+   * panels. Does not rebuild the outliner tree — OutlinerPanel listens to
+   * SelectionManager and updates highlight/reveal incrementally (full tree
+   * rebuilds on hierarchy mutations stay on refreshOutliner).
+   */
   private onSelectionChanged(): void {
     this.updateGizmoVisibility();
     this.updateGizmoPivot();
-    this.refreshOutliner();
     this.uvEditorController?.refreshFromSelection();
     this.refreshCadRulersFromSelection();
   }
