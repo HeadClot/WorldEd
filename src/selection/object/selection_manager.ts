@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { resolveInspectorObjects } from './resolve_transform_targets.js';
 
 /**
  * Callback invoked when the selection set changes.
@@ -16,12 +17,18 @@ export class SelectionManager {
   private changeCallbacks: SelectionChangedCallback[];
   /** Most recently selected mesh (for outliner reveal / multi-select focus). */
   private lastSelectedMesh: THREE.Mesh | null;
+  /**
+   * Hierarchy nodes preferred by the inspector / outliner when they differ from
+   * mesh selection (e.g. solid model root while the result mesh is selected).
+   */
+  private inspectorObjects: THREE.Object3D[];
 
   /** Creates a new selection manager with an initially empty selection set. */
   constructor() {
     this.selectedObjects = new Set();
     this.changeCallbacks = [];
     this.lastSelectedMesh = null;
+    this.inspectorObjects = [];
   }
 
   /**
@@ -30,10 +37,18 @@ export class SelectionManager {
    * @param mesh The mesh to select.
    */
   selectObject(mesh: THREE.Mesh): void {
-    if (this.selectedObjects.size === 1 && this.selectedObjects.has(mesh)) return;
+    const nextInspector = resolveInspectorObjects([mesh]);
+    if (
+      this.selectedObjects.size === 1 &&
+      this.selectedObjects.has(mesh) &&
+      this.isSameInspectorObjects(nextInspector)
+    ) {
+      return;
+    }
     this.selectedObjects.clear();
     this.selectedObjects.add(mesh);
     this.lastSelectedMesh = mesh;
+    this.inspectorObjects = nextInspector;
     this.notifyChange();
   }
 
@@ -42,13 +57,27 @@ export class SelectionManager {
    * set is already identical (preserves outliner rename).
    *
    * @param meshes The meshes that should become the selection set.
+   * @param inspectorObjects Optional hierarchy nodes for the inspector
+   *   (defaults to resolved inspector targets for meshes).
    */
-  setSelection(meshes: THREE.Mesh[]): void {
-    if (this.isSameSelection(meshes)) return;
+  setSelection(meshes: THREE.Mesh[], inspectorObjects?: THREE.Object3D[]): void {
+    const nextInspector = inspectorObjects ?? resolveInspectorObjects(meshes);
+    if (this.isSameSelection(meshes) && this.isSameInspectorObjects(nextInspector)) return;
     this.selectedObjects.clear();
     meshes.forEach((mesh) => this.selectedObjects.add(mesh));
-    this.lastSelectedMesh = meshes.length > 0 ? meshes[meshes.length - 1]! : null;
+    this.lastSelectedMesh = meshes[meshes.length - 1] ?? null;
+    this.inspectorObjects = nextInspector.slice();
     this.notifyChange();
+  }
+
+  /**
+   * Returns objects the inspector should bind to (may include non-mesh roots).
+   *
+   * @returns Inspector-bound objects.
+   */
+  getInspectorObjects(): THREE.Object3D[] {
+    if (this.inspectorObjects.length > 0) return this.inspectorObjects.slice();
+    return resolveInspectorObjects(Array.from(this.selectedObjects));
   }
 
   /**
@@ -71,6 +100,7 @@ export class SelectionManager {
     if (this.selectedObjects.has(mesh)) return;
     this.selectedObjects.add(mesh);
     this.lastSelectedMesh = mesh;
+    this.inspectorObjects = resolveInspectorObjects(Array.from(this.selectedObjects));
     this.notifyChange();
   }
 
@@ -89,6 +119,7 @@ export class SelectionManager {
       this.selectedObjects.add(mesh);
       this.lastSelectedMesh = mesh;
     }
+    this.inspectorObjects = resolveInspectorObjects(Array.from(this.selectedObjects));
     this.notifyChange();
   }
 
@@ -123,14 +154,16 @@ export class SelectionManager {
     if (this.lastSelectedMesh === mesh) {
       this.lastSelectedMesh = this.getFirstSelectedObject();
     }
+    this.inspectorObjects = resolveInspectorObjects(Array.from(this.selectedObjects));
     this.notifyChange();
   }
 
   /** Clears all selected objects. */
   clearSelection(): void {
-    if (this.selectedObjects.size === 0) return;
+    if (this.selectedObjects.size === 0 && this.inspectorObjects.length === 0) return;
     this.selectedObjects.clear();
     this.lastSelectedMesh = null;
+    this.inspectorObjects = [];
     this.notifyChange();
   }
 
@@ -156,10 +189,22 @@ export class SelectionManager {
     this.selectedObjects.clear();
     survivors.forEach((mesh) => this.selectedObjects.add(mesh));
     if (!this.lastSelectedMesh || !this.selectedObjects.has(this.lastSelectedMesh)) {
-      this.lastSelectedMesh = survivors.length > 0 ? survivors[survivors.length - 1]! : null;
+      this.lastSelectedMesh = survivors[survivors.length - 1] ?? null;
     }
+    this.inspectorObjects = resolveInspectorObjects(survivors);
     this.notifyChange();
     return true;
+  }
+
+  /**
+   * Returns whether inspector objects match the candidate list.
+   *
+   * @param objects Candidate inspector objects.
+   * @returns True when equal by reference and order length.
+   */
+  private isSameInspectorObjects(objects: THREE.Object3D[]): boolean {
+    if (objects.length !== this.inspectorObjects.length) return false;
+    return objects.every((object, index) => object === this.inspectorObjects[index]);
   }
 
   /**
@@ -264,6 +309,8 @@ export class SelectionManager {
   /** Removes all change callbacks and clears selection. */
   dispose(): void {
     this.selectedObjects.clear();
+    this.inspectorObjects = [];
+    this.lastSelectedMesh = null;
     this.changeCallbacks = [];
   }
 

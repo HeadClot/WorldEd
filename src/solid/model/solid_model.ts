@@ -27,7 +27,11 @@ import {
 } from './solid_brush_transform_sync.js';
 import type { SolidBrushTextureLockBaseline } from '../../texture/lock/solid_brush_texture_lock.js';
 import { normalizeTextureLockFlags, type TextureLockFlags } from '../../texture/lock/texture_lock_transform.js';
-import { convertWorldFaceMappingToBrushLocal } from '../brush/solid_brush_uv_space.js';
+import {
+  collectBrushIdsForTriangles,
+  writeMapEntryToBrushFaces,
+  type SolidTriangleSource,
+} from './solid_model_authored_uv.js';
 
 export {
   SOLID_MODEL_USERDATA_KEY,
@@ -81,6 +85,26 @@ export class SolidModel {
    */
   setUvStickToBrush(enabled: boolean): void {
     this.pipeline.setUvStickToBrush(enabled);
+  }
+
+  /**
+   * Returns whether this solid uses inverted-world CSG (starts solid).
+   *
+   * @returns True when subtractive brushes carve rooms from a full world.
+   */
+  isInvertedWorld(): boolean {
+    return this.pipeline.isInvertedWorld();
+  }
+
+  /**
+   * Enables or disables inverted-world CSG and rebuilds the solid.
+   *
+   * @param enabled True for inverted (carved rooms) workflow.
+   */
+  setInvertedWorld(enabled: boolean): void {
+    if (this.pipeline.isInvertedWorld() === enabled) return;
+    this.pipeline.setInvertedWorld(enabled);
+    this.rebuild(true);
   }
 
   /**
@@ -726,11 +750,9 @@ export class SolidModel {
    */
   syncAuthoredMappingsFromResultMesh(): void {
     const maps = getFaceTextureMaps(this.resultMesh);
-    const sources =
-      (this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-        Array<{ brushId: string; surfaceIndex: number }> | undefined) ?? [];
+    const sources = this.getResultTriangleSources();
     this.pipeline.syncAuthoredMappingsFromMaps(maps, sources, (triangleIndices, mapping, sourceList) => {
-      this.writeMapEntryToBrushFaces(triangleIndices, mapping, sourceList);
+      writeMapEntryToBrushFaces(triangleIndices, mapping, sourceList, (id) => this.findBrush(id), this.root);
     });
     if (this.pipeline.hasResultGeometry()) {
       this.applySurfaceLayoutToResult(true);
@@ -745,21 +767,23 @@ export class SolidModel {
    * @param mapping Mapping applied to those triangles.
    */
   syncAuthoredMappingForTriangles(triangleIndices: number[], mapping: FaceTextureMapping): void {
-    const sources =
-      (this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
-        Array<{ brushId: string; surfaceIndex: number }> | undefined) ?? [];
-    this.writeMapEntryToBrushFaces(triangleIndices, mapping, sources);
-    const brushIds = new Set<string>();
-    for (const triangleIndex of triangleIndices) {
-      const source = sources[triangleIndex];
-      if (source?.brushId) brushIds.add(source.brushId);
-    }
+    const sources = this.getResultTriangleSources();
+    writeMapEntryToBrushFaces(triangleIndices, mapping, sources, (id) => this.findBrush(id), this.root);
+    const brushIds = collectBrushIdsForTriangles(triangleIndices, sources);
     this.pipeline.rebakeMeshChunksForBrushes(brushIds);
-    // Refresh result face maps from authored brush faces so triangle indices
-    // and mappings stay consistent after the partial remesh.
     if (this.pipeline.hasResultGeometry()) {
       this.applySurfaceLayoutToResult(true);
     }
+  }
+
+  /**
+   * Reads per-triangle brush surface sources from the result mesh.
+   *
+   * @returns Triangle source list (empty when unset).
+   */
+  private getResultTriangleSources(): SolidTriangleSource[] {
+    const sources = this.resultMesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as SolidTriangleSource[] | undefined;
+    return sources ?? [];
   }
 
   /** Rebuilds when history pull found transform changes with stable brush order. */
@@ -926,50 +950,6 @@ export class SolidModel {
       (id) => this.findBrush(id),
       forceMaterials,
     );
-  }
-
-  /**
-   * Applies one result-mesh mapping to the brush faces that own its triangles.
-   *
-   * @param triangleIndices Result triangle indices for the region.
-   * @param mapping Authored mapping from the UV editor or texture tools.
-   * @param sources Per-triangle brush surface sources.
-   */
-  private writeMapEntryToBrushFaces(
-    triangleIndices: number[],
-    mapping: FaceTextureMapping,
-    sources: Array<{ brushId: string; surfaceIndex: number }>,
-  ): void {
-    const written = new Set<string>();
-    for (const triangleIndex of triangleIndices) {
-      this.writeOneTriangleSourceMapping(triangleIndex, mapping, sources, written);
-    }
-  }
-
-  /**
-   * Writes mapping for a single triangle source if not already written.
-   *
-   * @param triangleIndex Result triangle index.
-   * @param mapping Authored mapping.
-   * @param sources Per-triangle brush surface sources.
-   * @param written Keys already written this pass.
-   */
-  private writeOneTriangleSourceMapping(
-    triangleIndex: number,
-    mapping: FaceTextureMapping,
-    sources: Array<{ brushId: string; surfaceIndex: number }>,
-    written: Set<string>,
-  ): void {
-    const source = sources[triangleIndex];
-    if (!source?.brushId) return;
-    const key = `${source.brushId}:${source.surfaceIndex}`;
-    if (written.has(key)) return;
-    written.add(key);
-    const brush = this.findBrush(source.brushId);
-    if (!brush) return;
-    // UV editor / result bake produce world-space matrices; brush storage is local.
-    const localMapping = convertWorldFaceMappingToBrushLocal(mapping, brush, this.root);
-    brush.setFaceMapping(source.surfaceIndex, localMapping);
   }
 
   /**

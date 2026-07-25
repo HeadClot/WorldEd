@@ -6,6 +6,7 @@ import { hexToRgb } from '../utils/color_utils.js';
 import { OutlinerTree } from './outliner/outliner_tree.js';
 import { collectMeshesUnder } from '../utils/hierarchy_utils.js';
 import { collapseToHierarchyRoots } from '../utils/hierarchy_selection.js';
+import { SolidModel } from '../solid/model/solid_model.js';
 
 /**
  * Callback type for context menu actions on outliner items.
@@ -314,17 +315,39 @@ export class OutlinerPanel {
 
   /**
    * Pushes mesh selection derived from hierarchy selection into
-   * SelectionManager.
+   * SelectionManager. Solid model roots select their result mesh only (not
+   * every brush) so the solid can be transformed as a unit; inspector objects
+   * keep the hierarchy root.
    */
   private syncMeshSelectionFromHierarchy(): void {
     const meshes: THREE.Mesh[] = [];
+    const inspectorObjects: THREE.Object3D[] = [];
     this.hierarchySelection.forEach((object) => {
+      inspectorObjects.push(object);
+      if (SolidModel.isSolidModelObject(object)) {
+        this.appendSolidModelSelectionProxy(object, meshes);
+        return;
+      }
       collectMeshesUnder(object).forEach((mesh) => {
-        if (mesh.userData['isSolidModelResult'] === true) return;
+        if (SolidModel.isResultMesh(mesh)) return;
         if (!meshes.includes(mesh)) meshes.push(mesh);
       });
     });
-    this.selectionManager.setSelection(meshes);
+    this.selectionManager.setSelection(meshes, inspectorObjects);
+  }
+
+  /**
+   * Adds the solid model result mesh as the viewport selection proxy.
+   *
+   * @param solidRoot Solid model root group.
+   * @param meshes Mesh selection accumulator.
+   */
+  private appendSolidModelSelectionProxy(solidRoot: THREE.Object3D, meshes: THREE.Mesh[]): void {
+    const model = SolidModel.fromObject(solidRoot);
+    const resultMesh = model?.getResultMesh();
+    if (resultMesh && !meshes.includes(resultMesh)) {
+      meshes.push(resultMesh);
+    }
   }
 
   /**
@@ -335,7 +358,8 @@ export class OutlinerPanel {
   private onMeshSelectionChanged(): void {
     if (this.isDisposed) return;
     if (!this.isApplyingOutlinerSelection) {
-      this.hierarchySelection = new Set(this.selectionManager.getAllSelectedObjectsAsArray());
+      // Prefer inspector objects so solid result picks highlight the solid root.
+      this.hierarchySelection = new Set(this.selectionManager.getInspectorObjects());
       this.revealLastSelectionInTree();
       return;
     }

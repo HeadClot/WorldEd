@@ -3,6 +3,7 @@ import { SurfaceCategory } from '../types/surface_category.js';
 import { BrushMembership } from './brush_membership.js';
 import { CategoryRouter } from './category_router.js';
 import type { PreparedBrush } from './solid_compile_types.js';
+import { forEachSubjectAndPeersInOrder } from './subject_peer_order.js';
 
 /**
  * Routes fragment surface categories through ordered brush operations using
@@ -10,8 +11,8 @@ import type { PreparedBrush } from './solid_compile_types.js';
  */
 export class SolidFragmentRouter {
   private hasIntersectingOperations = false;
+  private invertedWorld = false;
   private readonly scratchCentroid = new THREE.Vector3();
-  private readonly scratchOverlapFlags: boolean[] = [];
 
   /**
    * Updates whether intersecting operations force full tree routing.
@@ -20,6 +21,15 @@ export class SolidFragmentRouter {
    */
   setHasIntersectingOperations(value: boolean): void {
     this.hasIntersectingOperations = value;
+  }
+
+  /**
+   * Sets whether routing starts as solid (inverted world).
+   *
+   * @param value True when the world begins full.
+   */
+  setInvertedWorld(value: boolean): void {
+    this.invertedWorld = value;
   }
 
   /**
@@ -62,10 +72,11 @@ export class SolidFragmentRouter {
     prepared: PreparedBrush[],
     subjectIndex: number,
   ): SurfaceCategory {
-    let category = SurfaceCategory.Outside;
+    let category = this.initialRouteCategory();
     BrushMembership.polygonCentroidInto(fragment, this.scratchCentroid);
     for (let index = 0; index < prepared.length; index++) {
-      const peer = prepared[index]!;
+      const peer = prepared[index];
+      if (!peer) continue;
       const relative =
         index === subjectIndex
           ? SurfaceCategory.SelfAligned
@@ -90,37 +101,16 @@ export class SolidFragmentRouter {
     prepared: PreparedBrush[],
     subjectIndex: number,
   ): SurfaceCategory {
-    let category = SurfaceCategory.Outside;
-    const subject = prepared[subjectIndex]!;
+    let category = this.initialRouteCategory();
+    const subject = prepared[subjectIndex];
+    if (!subject) return category;
     BrushMembership.polygonCentroidInto(fragment, this.scratchCentroid);
-    this.forEachLocalPeerInOrder(subject.overlappingPeerIndices, subjectIndex, (index) => {
-      category = this.routeOneLocalPeer(category, this.scratchCentroid, normal, prepared[index]!, index, subjectIndex);
+    forEachSubjectAndPeersInOrder(subject.overlappingPeerIndices, subjectIndex, (index) => {
+      const peer = prepared[index];
+      if (!peer) return;
+      category = this.routeOneLocalPeer(category, this.scratchCentroid, normal, peer, index, subjectIndex);
     });
     return category;
-  }
-
-  /**
-   * Resolves the category of a fragment relative to one peer brush.
-   *
-   * @param fragmentCentroid Fragment centroid in model space.
-   * @param normal Face normal.
-   * @param peer Peer prepared brush.
-   * @param peerIndex Peer index.
-   * @param subjectIndex Subject index.
-   * @param overlapFlags Flags for overlapping peers including the subject.
-   * @returns Relative surface category.
-   */
-  relativeCategoryForPeer(
-    fragmentCentroid: THREE.Vector3,
-    normal: THREE.Vector3,
-    peer: PreparedBrush,
-    peerIndex: number,
-    subjectIndex: number,
-    overlapFlags: readonly boolean[],
-  ): SurfaceCategory {
-    if (peerIndex === subjectIndex) return SurfaceCategory.SelfAligned;
-    if (!overlapFlags[peerIndex]) return SurfaceCategory.Outside;
-    return BrushMembership.classifyPoint(fragmentCentroid, peer.brush, normal);
   }
 
   /**
@@ -150,48 +140,11 @@ export class SolidFragmentRouter {
   }
 
   /**
-   * Fills a reusable boolean table for full-tree overlap membership tests.
+   * Starting category for route accumulation.
    *
-   * @param peerIndices Overlapping peer indices for the subject.
-   * @param subjectIndex Subject brush index.
-   * @param preparedCount Prepared brush count.
+   * @returns Inside when inverted world; Outside otherwise.
    */
-  private fillOverlapFlags(peerIndices: readonly number[], subjectIndex: number, preparedCount: number): void {
-    while (this.scratchOverlapFlags.length < preparedCount) {
-      this.scratchOverlapFlags.push(false);
-    }
-    for (let index = 0; index < preparedCount; index++) {
-      this.scratchOverlapFlags[index] = false;
-    }
-    this.scratchOverlapFlags[subjectIndex] = true;
-    for (const peerIndex of peerIndices) {
-      this.scratchOverlapFlags[peerIndex] = true;
-    }
-  }
-
-  /**
-   * Walks a sorted peer list plus the subject in ascending prepared-index
-   * order.
-   *
-   * @param sortedPeers Sorted overlapping peer indices.
-   * @param subjectIndex Subject brush index.
-   * @param visit Callback for each index in order.
-   */
-  private forEachLocalPeerInOrder(
-    sortedPeers: readonly number[],
-    subjectIndex: number,
-    visit: (index: number) => void,
-  ): void {
-    let insertedSelf = false;
-    for (const peerIndex of sortedPeers) {
-      if (!insertedSelf && subjectIndex < peerIndex) {
-        visit(subjectIndex);
-        insertedSelf = true;
-      }
-      visit(peerIndex);
-    }
-    if (!insertedSelf) {
-      visit(subjectIndex);
-    }
+  private initialRouteCategory(): SurfaceCategory {
+    return this.invertedWorld ? SurfaceCategory.Inside : SurfaceCategory.Outside;
   }
 }

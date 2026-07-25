@@ -12,6 +12,7 @@ import { InputManager } from '../input/input_manager.js';
 import { ViewportSyncManager } from '../layout/viewport_sync_manager.js';
 import { PropertiesPanel } from '../../ui/properties/properties_panel.js';
 import { filterUnlockedObjects } from '../../utils/object_lock.js';
+import { resolveTransformTargets } from '../../selection/object/resolve_transform_targets.js';
 import { WindowPointerDragSession } from '../../utils/window_pointer_drag_session.js';
 import { SelectionClickThrough } from '../../selection/object/selection_click_through.js';
 
@@ -303,8 +304,9 @@ export class TransformInteractionBridge {
     const selected = filterUnlockedObjects(Array.from(this.deps.selectionManager.getSelectedObjects()));
     this.updateSnapFromShiftKey();
     this.deps.transformHandler.onPointerMove(camera, renderer, event, pivot, selected);
-    this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(selected);
     this.deps.onTransformsLive?.(selected);
+    const transformTargets = resolveTransformTargets(selected);
+    this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(transformTargets);
     this.deps.selectionVisualController.syncDuringTransform();
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
     this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(selected));
@@ -366,7 +368,7 @@ export class TransformInteractionBridge {
   private commitTransformAfterDrag(selectedObjects: THREE.Mesh[]): void {
     const solidHandled = this.deps.onTransformsCommitted?.(selectedObjects) === true;
     if (solidHandled) {
-      this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(selectedObjects);
+      this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(resolveTransformTargets(selectedObjects));
     } else {
       this.deps.syncPrimitivesToViewports();
     }

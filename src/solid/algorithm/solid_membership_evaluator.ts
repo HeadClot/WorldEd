@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { SolidOperation } from '../types/solid_operation.js';
+import { boundsContainPointPadded } from './bounds_overlap.js';
 import { BrushMembership } from './brush_membership.js';
 import { BrushSpatialIndex } from './brush_spatial_index.js';
 import type { PreparedBrush } from './solid_compile_types.js';
+import { forEachSubjectAndPeersInOrder } from './subject_peer_order.js';
 
 /**
  * Evaluates solid membership and boundary status for CSG fragments using
@@ -16,6 +18,7 @@ export class SolidMembershipEvaluator {
   private readonly scratchInside = new THREE.Vector3();
   private readonly scratchCandidates: number[] = [];
   private hasIntersectingOperations = false;
+  private invertedWorld = false;
   private membershipIndex: BrushSpatialIndex | null = null;
 
   /**
@@ -36,6 +39,15 @@ export class SolidMembershipEvaluator {
    */
   setHasIntersectingOperations(value: boolean): void {
     this.hasIntersectingOperations = value;
+  }
+
+  /**
+   * Sets whether the CSG fold starts as solid (inverted world).
+   *
+   * @param value True when the world begins full.
+   */
+  setInvertedWorld(value: boolean): void {
+    this.invertedWorld = value;
   }
 
   /**
@@ -101,7 +113,7 @@ export class SolidMembershipEvaluator {
    * @returns Solid membership.
    */
   evaluateSolidMembershipFull(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
-    let inside = false;
+    let inside = this.invertedWorld;
     for (const entry of prepared) {
       inside = this.evaluateOneBrushMembership(inside, point, entry);
     }
@@ -124,21 +136,9 @@ export class SolidMembershipEvaluator {
       return this.evaluateSolidMembershipAmongPeers(point, prepared, subjectIndex);
     }
     const candidates = this.resolveMembershipCandidates(point, prepared);
-    if (candidates.length === 0) return false;
+    if (candidates.length === 0) return this.invertedWorld;
     this.copyAndSortCandidates(candidates);
     return this.evaluateSortedCandidates(point, prepared);
-  }
-
-  /**
-   * Full tree-order membership (all prepared brushes). Kept for diagnostics and
-   * any caller that must ignore spatial locality.
-   *
-   * @param point Sample point.
-   * @param prepared Brush list.
-   * @returns Solid membership.
-   */
-  evaluateSolidMembershipFullTree(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
-    return this.evaluateSolidMembershipFull(point, prepared);
   }
 
   /**
@@ -155,30 +155,12 @@ export class SolidMembershipEvaluator {
     subjectIndex: number,
   ): boolean {
     const subject = prepared[subjectIndex];
-    if (!subject) return false;
+    if (!subject) return this.invertedWorld;
     this.scratchCandidates.length = 0;
-    this.mergeSubjectAndPeersInOrder(subject.overlappingPeerIndices, subjectIndex);
+    forEachSubjectAndPeersInOrder(subject.overlappingPeerIndices, subjectIndex, (index) => {
+      this.scratchCandidates.push(index);
+    });
     return this.evaluateSortedCandidates(point, prepared);
-  }
-
-  /**
-   * Merges a sorted peer list with the subject index into scratchCandidates.
-   *
-   * @param sortedPeers Sorted overlapping peer indices.
-   * @param subjectIndex Subject prepared index.
-   */
-  private mergeSubjectAndPeersInOrder(sortedPeers: readonly number[], subjectIndex: number): void {
-    let insertedSelf = false;
-    for (const peerIndex of sortedPeers) {
-      if (!insertedSelf && subjectIndex < peerIndex) {
-        this.scratchCandidates.push(subjectIndex);
-        insertedSelf = true;
-      }
-      this.scratchCandidates.push(peerIndex);
-    }
-    if (!insertedSelf) {
-      this.scratchCandidates.push(subjectIndex);
-    }
   }
 
   /**
@@ -189,9 +171,10 @@ export class SolidMembershipEvaluator {
    * @returns Solid membership.
    */
   private evaluateSortedCandidates(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
-    let inside = false;
+    let inside = this.invertedWorld;
     for (const index of this.scratchCandidates) {
-      const entry = prepared[index]!;
+      const entry = prepared[index];
+      if (!entry) continue;
       if (!this.boundsContainPoint(entry.bounds, point)) {
         inside = this.applyOperation(inside, false, entry.operation);
         continue;
@@ -226,7 +209,8 @@ export class SolidMembershipEvaluator {
   collectContainingBrushIndices(point: THREE.Vector3, prepared: PreparedBrush[]): number[] {
     const indices: number[] = [];
     for (let index = 0; index < prepared.length; index++) {
-      if (this.boundsContainPoint(prepared[index]!.bounds, point)) {
+      const entry = prepared[index];
+      if (entry && this.boundsContainPoint(entry.bounds, point)) {
         indices.push(index);
       }
     }
@@ -255,15 +239,7 @@ export class SolidMembershipEvaluator {
    * @returns True when the point is inside the expanded box.
    */
   boundsContainPoint(bounds: THREE.Box3, point: THREE.Vector3): boolean {
-    const pad = this.boundsPad;
-    return (
-      point.x >= bounds.min.x - pad &&
-      point.x <= bounds.max.x + pad &&
-      point.y >= bounds.min.y - pad &&
-      point.y <= bounds.max.y + pad &&
-      point.z >= bounds.min.z - pad &&
-      point.z <= bounds.max.z + pad
-    );
+    return boundsContainPointPadded(bounds, point, this.boundsPad);
   }
 
   /**

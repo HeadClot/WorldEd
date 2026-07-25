@@ -13,6 +13,12 @@ export interface SolidBrushPropertyHandlers {
   onMoveToFirst: (meshes: THREE.Mesh[]) => void;
   /** Moves brushes to last CSG evaluation slot. */
   onMoveToLast: (meshes: THREE.Mesh[]) => void;
+  /**
+   * Sets inverted-world mode on the solid model owning the selection.
+   *
+   * @param inverted True when CSG starts solid (carve rooms with subtract).
+   */
+  onSetInvertedWorld?: (inverted: boolean) => void;
 }
 
 /** Builds and updates the inspector Solid Brush section (CSG ops + add brush). */
@@ -24,6 +30,7 @@ export class PropertiesSolidBrushSection {
   private getEditableBrushMeshes: (() => THREE.Mesh[]) | null;
   private boundObjects: THREE.Object3D[];
   private hexToRgb: (hex: number) => string;
+  private invertedWorldCheckbox: HTMLInputElement | null;
 
   /**
    * Creates the solid brush section UI.
@@ -45,9 +52,10 @@ export class PropertiesSolidBrushSection {
     this.handlers = null;
     this.getEditableBrushMeshes = null;
     this.boundObjects = [];
+    this.invertedWorldCheckbox = null;
     this.section = createSectionContainer();
     this.section.style.display = 'none';
-    this.section.appendChild(createSectionHeader('Solid Brush'));
+    this.section.appendChild(createSectionHeader('Solid Model'));
     const content = this.createContent();
     this.section.appendChild(content);
   }
@@ -92,6 +100,7 @@ export class PropertiesSolidBrushSection {
       return;
     }
     this.section.style.display = 'block';
+    this.syncInvertedWorldCheckbox(objects);
     if (brushMeshes.length === 0) {
       this.dimOperationButtons();
       return;
@@ -114,7 +123,8 @@ export class PropertiesSolidBrushSection {
 
   /**
    * Notifies handlers that solid brushes were transform-edited in the
-   * inspector.
+   * inspector. Solid model roots move with their children without a CSG
+   * rebuild; only brush preview meshes trigger rebuild.
    *
    * @param objects Edited objects.
    */
@@ -142,10 +152,70 @@ export class PropertiesSolidBrushSection {
     content.style.display = 'flex';
     content.style.flexDirection = 'column';
     content.style.gap = '8px';
+    content.appendChild(this.createInvertedWorldRow());
     content.appendChild(this.createOperationButtons());
     content.appendChild(this.createOrderButtons());
     content.appendChild(this.createAddBoxBrushButton());
     return content;
+  }
+
+  /**
+   * Builds the inverted-world checkbox row for solid model settings.
+   *
+   * @returns Row element.
+   */
+  private createInvertedWorldRow(): HTMLElement {
+    const row = document.createElement('label');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '8px';
+    row.style.fontSize = '11px';
+    row.style.fontFamily = 'monospace';
+    row.style.color = this.theme.buttonTextColor;
+    row.style.cursor = 'pointer';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.title = 'Start CSG as solid so subtractive brushes carve rooms';
+    checkbox.addEventListener('change', () => {
+      this.handlers?.onSetInvertedWorld?.(checkbox.checked);
+    });
+    const text = document.createElement('span');
+    text.textContent = 'Inverted world';
+    row.appendChild(checkbox);
+    row.appendChild(text);
+    this.invertedWorldCheckbox = checkbox;
+    return row;
+  }
+
+  /**
+   * Syncs the inverted-world checkbox from the solid model in selection.
+   *
+   * @param objects Bound selection.
+   */
+  private syncInvertedWorldCheckbox(objects: THREE.Object3D[]): void {
+    if (!this.invertedWorldCheckbox) return;
+    const model = this.resolveSolidModelFromObjects(objects);
+    if (!model) {
+      this.invertedWorldCheckbox.checked = false;
+      this.invertedWorldCheckbox.disabled = true;
+      return;
+    }
+    this.invertedWorldCheckbox.disabled = false;
+    this.invertedWorldCheckbox.checked = model.isInvertedWorld();
+  }
+
+  /**
+   * Resolves the solid model for the current selection.
+   *
+   * @param objects Bound selection.
+   * @returns Solid model or null.
+   */
+  private resolveSolidModelFromObjects(objects: THREE.Object3D[]): SolidModel | null {
+    for (const object of objects) {
+      const model = SolidModel.fromObject(object);
+      if (model) return model;
+    }
+    return null;
   }
 
   /**
@@ -300,20 +370,11 @@ export class PropertiesSolidBrushSection {
    * @returns Button element.
    */
   private createAddBoxBrushButton(): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = '+ Box Brush';
-    button.title = 'Add a box brush to the solid model';
+    const button = this.createTextActionButton('+ Box Brush', 'Add a box brush to the solid model', () =>
+      this.requestAddBoxBrush(),
+    );
+    button.style.flex = '';
     button.style.width = '100%';
-    button.style.padding = '6px 8px';
-    button.style.fontSize = '11px';
-    button.style.fontFamily = 'monospace';
-    button.style.cursor = 'pointer';
-    button.style.borderRadius = '6px';
-    button.style.border = `1px solid ${this.hexToRgb(Theme.separatorColor)}`;
-    button.style.background = this.hexToRgb(Theme.buttonBackground);
-    button.style.color = this.theme.buttonTextColor;
-    button.addEventListener('click', () => this.requestAddBoxBrush());
     return button;
   }
 

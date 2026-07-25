@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SolidPlane } from '../brush/solid_plane.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { SurfaceCategory } from '../types/surface_category.js';
+import { boundsOverlapPadded } from './bounds_overlap.js';
 import type { PreparedBrush } from './solid_compile_types.js';
 import { SolidCompiledPolygon } from './solid_compiled_polygon.js';
 import { SolidFragmentFinalizer } from './solid_fragment_finalizer.js';
@@ -15,6 +16,7 @@ export class SolidSurfaceEmitter {
   private readonly finalizer: SolidFragmentFinalizer;
   private readonly membershipEpsilon: number;
   private hasIntersectingOperations = false;
+  private invertedWorld = false;
   private readonly scratchFaceBounds = new THREE.Box3();
 
   /**
@@ -39,6 +41,15 @@ export class SolidSurfaceEmitter {
   }
 
   /**
+   * Sets inverted-world mode for isolated surface emission.
+   *
+   * @param value True when the world begins full.
+   */
+  setInvertedWorld(value: boolean): void {
+    this.invertedWorld = value;
+  }
+
+  /**
    * Compiles all faces of one brush into the output list.
    *
    * @param prepared All prepared brushes.
@@ -46,7 +57,8 @@ export class SolidSurfaceEmitter {
    * @param output Accumulator for compiled polygons.
    */
   compileBrushSurfaces(prepared: PreparedBrush[], brushIndex: number, output: SolidCompiledPolygon[]): void {
-    const subject = prepared[brushIndex]!;
+    const subject = prepared[brushIndex];
+    if (!subject) return;
     if (subject.overlappingPeerIndices.length === 0) {
       this.emitIsolatedBrushSurfaces(subject, prepared, brushIndex, output);
       return;
@@ -70,10 +82,12 @@ export class SolidSurfaceEmitter {
     faceIndex: number,
     output: SolidCompiledPolygon[],
   ): void {
-    const subject = prepared[brushIndex]!;
-    const face = subject.brush.faces[faceIndex]!;
+    const subject = prepared[brushIndex];
+    if (!subject) return;
+    const face = subject.brush.faces[faceIndex];
+    const facePlane = subject.brush.planes[faceIndex];
+    if (!face || !facePlane) return;
     const faceVertices = subject.brush.getFaceVertices(face);
-    const facePlane = subject.brush.planes[faceIndex]!;
     const cutPlanes = this.collectCutPlanes(prepared, brushIndex, facePlane, faceVertices);
     const fragments = this.splitFaceFragments(faceVertices, cutPlanes);
     this.finalizeFaceFragments(fragments, facePlane, face.surfaceIndex, subject, prepared, brushIndex, output);
@@ -93,13 +107,15 @@ export class SolidSurfaceEmitter {
     brushIndex: number,
     output: SolidCompiledPolygon[],
   ): void {
-    if (subject.operation === SolidOperation.Subtractive) return;
     if (subject.operation === SolidOperation.Intersecting) return;
-    if (!this.hasIntersectingOperations) {
-      this.emitIsolatedAdditiveSurfacesDirect(subject, output);
+    if (subject.operation === SolidOperation.Subtractive && !this.invertedWorld) return;
+    if (!this.hasIntersectingOperations && !this.invertedWorld) {
+      if (subject.operation === SolidOperation.Additive) {
+        this.emitIsolatedAdditiveSurfacesDirect(subject, output);
+      }
       return;
     }
-    // Sequential ∩ may discard this brush even when it has no AABB peers.
+    // Inverted world and/or sequential ∩ need membership on isolated brushes.
     this.emitIsolatedSurfacesWithMembership(subject, prepared, brushIndex, output);
   }
 
@@ -118,10 +134,12 @@ export class SolidSurfaceEmitter {
     output: SolidCompiledPolygon[],
   ): void {
     for (let faceIndex = 0; faceIndex < subject.brush.faces.length; faceIndex++) {
-      const face = subject.brush.faces[faceIndex]!;
+      const face = subject.brush.faces[faceIndex];
+      const facePlane = subject.brush.planes[faceIndex];
+      if (!face || !facePlane) continue;
       const compiled = this.finalizer.finalizeFragment(
         subject.brush.getFaceVertices(face),
-        subject.brush.planes[faceIndex]!,
+        facePlane,
         face.surfaceIndex,
         subject,
         prepared,
@@ -161,11 +179,14 @@ export class SolidSurfaceEmitter {
     faceVertices: THREE.Vector3[],
   ): SolidPlane[] {
     const planes: SolidPlane[] = [];
-    const subject = prepared[subjectIndex]!;
+    const subject = prepared[subjectIndex];
+    if (!subject) return planes;
     this.fillFaceBounds(faceVertices);
+    const pad = this.membershipEpsilon * 2;
     for (const peerIndex of subject.overlappingPeerIndices) {
-      const peer = prepared[peerIndex]!;
-      if (!this.boundsOverlapPadded(this.scratchFaceBounds, peer.bounds)) continue;
+      const peer = prepared[peerIndex];
+      if (!peer) continue;
+      if (!boundsOverlapPadded(this.scratchFaceBounds, peer.bounds, pad)) continue;
       this.collectPeerCutPlanes(peer, facePlane, faceVertices, planes);
     }
     return planes;
@@ -181,25 +202,6 @@ export class SolidSurfaceEmitter {
     for (const vertex of faceVertices) {
       this.scratchFaceBounds.expandByPoint(vertex);
     }
-  }
-
-  /**
-   * Returns whether two bounds may touch using membership pad.
-   *
-   * @param a First bounds.
-   * @param b Second bounds.
-   * @returns True when they may overlap.
-   */
-  private boundsOverlapPadded(a: THREE.Box3, b: THREE.Box3): boolean {
-    const pad = this.membershipEpsilon * 2;
-    return !(
-      a.max.x + pad < b.min.x ||
-      a.min.x - pad > b.max.x ||
-      a.max.y + pad < b.min.y ||
-      a.min.y - pad > b.max.y ||
-      a.max.z + pad < b.min.z ||
-      a.min.z - pad > b.max.z
-    );
   }
 
   /**
@@ -274,9 +276,10 @@ export class SolidSurfaceEmitter {
    * @param output Polygon accumulator.
    */
   private emitOneIsolatedAdditiveFace(subject: PreparedBrush, faceIndex: number, output: SolidCompiledPolygon[]): void {
-    const face = subject.brush.faces[faceIndex]!;
+    const face = subject.brush.faces[faceIndex];
+    const facePlane = subject.brush.planes[faceIndex];
+    if (!face || !facePlane) return;
     const faceVertices = subject.brush.getFaceVertices(face);
-    const facePlane = subject.brush.planes[faceIndex]!;
     if (faceVertices.length < 3) return;
     output.push({
       vertices: faceVertices,

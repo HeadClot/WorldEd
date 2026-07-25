@@ -249,6 +249,27 @@ export class SolidModelController {
   }
 
   /**
+   * Enables or disables inverted-world CSG on the solid model owning the
+   * current selection (or the last active solid). Rebuilds immediately.
+   *
+   * @param inverted True when CSG starts solid so subtractives carve rooms.
+   */
+  setInvertedWorldForSelection(inverted: boolean): void {
+    const model = this.resolveActiveModel();
+    if (!model) {
+      this.showStatus?.('Select a solid model or brush first');
+      return;
+    }
+    if (model.isInvertedWorld() === inverted) return;
+    model.setInvertedWorld(inverted);
+    this.rememberActiveModel(model);
+    this.panel.refresh();
+    this.syncViewports?.();
+    this.refreshOutliner?.();
+    this.showStatus?.(inverted ? 'Inverted world enabled' : 'Inverted world disabled');
+  }
+
+  /**
    * Sets the CSG operation on solid brush meshes (undoable, batched).
    *
    * @param meshes Brush preview meshes.
@@ -329,9 +350,38 @@ export class SolidModelController {
    */
   onTransformsLive(selectedMeshes: THREE.Mesh[]): void {
     if (!this.involvesSolidModels(selectedMeshes)) return;
+    if (this.tryBakeSolidRootTransformsLive(selectedMeshes)) {
+      return;
+    }
     this.pendingLiveMeshes = selectedMeshes;
     this.liveTransformGeneration += 1;
     this.scheduleLiveRebuild();
+  }
+
+  /**
+   * Immediately bakes solid result mesh transforms into solid roots when only
+   * result meshes are selected (no CSG rebuild required).
+   *
+   * @param selectedMeshes Current transform selection.
+   * @returns True when all affected models were handled by root bake.
+   */
+  private tryBakeSolidRootTransformsLive(selectedMeshes: THREE.Mesh[]): boolean {
+    const selectedSet = new Set(selectedMeshes);
+    const models = this.collectAffectedModels(selectedMeshes);
+    if (models.size === 0) return false;
+    let handledAll = true;
+    const updatedResults: THREE.Mesh[] = [];
+    for (const model of models) {
+      if (this.bakeSolidRootTransformIfOnlyResultSelected(model, selectedSet)) {
+        updatedResults.push(model.getResultMeshForSync());
+        continue;
+      }
+      handledAll = false;
+    }
+    if (updatedResults.length > 0) {
+      this.onLiveGeometryUpdated?.(updatedResults);
+    }
+    return handledAll;
   }
 
   /**
@@ -387,6 +437,23 @@ export class SolidModelController {
     }
   }
 
+  /**
+   * When only the solid result mesh is selected, folds its local transform into
+   * the solid model root so the whole solid moves without a CSG rebuild.
+   *
+   * @param model Solid model.
+   * @param selectedSet Selected meshes.
+   * @returns True when a root bake was applied.
+   */
+  private bakeSolidRootTransformIfOnlyResultSelected(model: SolidModel, selectedSet: Set<THREE.Mesh>): boolean {
+    const result = model.getResultMesh();
+    if (!selectedSet.has(result)) return false;
+    const brushSelected = model.getBrushes().some((brush) => brush.mesh && selectedSet.has(brush.mesh));
+    if (brushSelected) return false;
+    this.bakeResultTransformIntoRoot(model);
+    return true;
+  }
+
   /** Reacts to scene selection changes by binding the tools panel. */
   private onSelectionChanged(): void {
     this.bindPanelToSelection();
@@ -414,6 +481,10 @@ export class SolidModelController {
    * @returns Solid model or null.
    */
   private findSelectedSolidModel(): SolidModel | null {
+    for (const object of this.selectionManager.getInspectorObjects()) {
+      const model = SolidModel.fromObject(object);
+      if (model) return model;
+    }
     for (const mesh of this.selectionManager.getSelectedObjects()) {
       const model = SolidModel.fromObject(mesh);
       if (model) return model;

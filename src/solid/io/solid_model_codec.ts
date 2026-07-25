@@ -54,6 +54,8 @@ export interface SerializedSolidBrush {
  */
 export interface SerializedSolidModel {
   brushes: SerializedSolidBrush[];
+  /** When true, CSG starts solid so subtractives carve rooms. */
+  invertedWorld?: boolean;
 }
 
 /** Encodes and decodes solid models for scene persistence. */
@@ -67,9 +69,13 @@ export class SolidModelCodec {
   static encode(model: SolidModel): SerializedSolidModel {
     model.syncBrushesFromScene();
     model.syncAuthoredMappingsFromResultMesh();
-    return {
+    const payload: SerializedSolidModel = {
       brushes: model.getBrushes().map((brush) => this.encodeBrush(brush)),
     };
+    if (model.isInvertedWorld()) {
+      payload.invertedWorld = true;
+    }
+    return payload;
   }
 
   /**
@@ -85,7 +91,11 @@ export class SolidModelCodec {
       const instance = this.decodeBrush(brushData);
       model.addBrushInstance(instance);
     }
-    model.rebuild(true);
+    if (data.invertedWorld === true) {
+      model.setInvertedWorld(true);
+    } else {
+      model.rebuild(true);
+    }
     return model;
   }
 

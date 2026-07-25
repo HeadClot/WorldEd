@@ -38,6 +38,7 @@ export class SolidModelRebuildPipeline {
   private interactiveGeometryCurrent = false;
   private lastSurfaceRegions: SolidSurfaceRegion[] = [];
   private uvStickToBrush = true;
+  private invertedWorld = false;
   private readonly scratchBrushMatrix = new THREE.Matrix4();
   private readonly scratchBrushQuaternion = new THREE.Quaternion();
   private readonly identityBrushMatrix = new THREE.Matrix4();
@@ -266,7 +267,7 @@ export class SolidModelRebuildPipeline {
   async compileFullAsync(onProgress?: (ratio: number) => void): Promise<void> {
     await this.compiler.compileAsync(
       this.host.getEvaluationList(),
-      { forceFull: true, skipPolygonAssembly: true },
+      { forceFull: true, skipPolygonAssembly: true, invertedWorld: this.invertedWorld },
       onProgress,
     );
   }
@@ -398,14 +399,37 @@ export class SolidModelRebuildPipeline {
     forceFull?: boolean;
     dirtyBrushIds?: Iterable<string>;
     skipPolygonAssembly?: boolean;
+    invertedWorld?: boolean;
   } {
     if (this.fullRebuildRequired) {
-      return { forceFull: true, skipPolygonAssembly: true };
+      return { forceFull: true, skipPolygonAssembly: true, invertedWorld: this.invertedWorld };
     }
     return {
       dirtyBrushIds: Array.from(this.dirtyBrushIds),
       skipPolygonAssembly: true,
+      invertedWorld: this.invertedWorld,
     };
+  }
+
+  /**
+   * Returns whether CSG uses inverted-world mode.
+   *
+   * @returns True when the solid starts full.
+   */
+  isInvertedWorld(): boolean {
+    return this.invertedWorld;
+  }
+
+  /**
+   * Sets inverted-world mode and marks a full rebuild.
+   *
+   * @param enabled True when subtractive brushes should carve from a full
+   *   world.
+   */
+  setInvertedWorld(enabled: boolean): void {
+    if (this.invertedWorld === enabled) return;
+    this.invertedWorld = enabled;
+    this.markDirty();
   }
 
   /** Clears dirty flags after a successful compile. */

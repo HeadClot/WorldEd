@@ -1,6 +1,7 @@
 import { SolidBrushInstance } from '../model/solid_brush_instance.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { BrushSpatialIndex } from './brush_spatial_index.js';
+import { boundsOverlapPadded } from './bounds_overlap.js';
 import { SolidBrushPreparer } from './solid_brush_preparer.js';
 import { SolidCompileCache } from './solid_compile_cache.js';
 import { SolidCompilePlanner } from './solid_compile_planner.js';
@@ -189,6 +190,7 @@ export class SolidCsgCompiler {
       return null;
     }
     this.applyIntersectingFlag(prepared);
+    this.applyInvertedWorldFlag(options.invertedWorld === true);
     this.planner.buildOverlapGraph(
       prepared,
       options,
@@ -197,6 +199,17 @@ export class SolidCsgCompiler {
     );
     this.membership.setMembershipIndex(new BrushSpatialIndex(prepared, this.boundsPad));
     return prepared;
+  }
+
+  /**
+   * Propagates inverted-world mode to membership, routing, and emission.
+   *
+   * @param invertedWorld True when CSG starts as solid.
+   */
+  private applyInvertedWorldFlag(invertedWorld: boolean): void {
+    this.membership.setInvertedWorld(invertedWorld);
+    this.router.setInvertedWorld(invertedWorld);
+    this.emitter.setInvertedWorld(invertedWorld);
   }
 
   /**
@@ -326,7 +339,9 @@ export class SolidCsgCompiler {
       20,
       (start, end) => {
         for (let i = start; i < end; i++) {
-          this.recompileOnePreparedBrush(prepared, indices[i]!);
+          const brushIndex = indices[i];
+          if (brushIndex === undefined) continue;
+          this.recompileOnePreparedBrush(prepared, brushIndex);
         }
       },
       onProgress,
@@ -343,7 +358,8 @@ export class SolidCsgCompiler {
   private collectUpdateIndices(prepared: PreparedBrush[], updateSet: Set<string>): number[] {
     const indices: number[] = [];
     for (let brushIndex = 0; brushIndex < prepared.length; brushIndex++) {
-      if (updateSet.has(prepared[brushIndex]!.instance.id)) {
+      const entry = prepared[brushIndex];
+      if (entry && updateSet.has(entry.instance.id)) {
         indices.push(brushIndex);
       }
     }
@@ -357,7 +373,8 @@ export class SolidCsgCompiler {
    * @param brushIndex Index of the brush to compile.
    */
   private recompileOnePreparedBrush(prepared: PreparedBrush[], brushIndex: number): void {
-    const entry = prepared[brushIndex]!;
+    const entry = prepared[brushIndex];
+    if (!entry) return;
     const polygons: SolidCompiledPolygon[] = [];
     this.emitter.compileBrushSurfaces(prepared, brushIndex, polygons);
     this.cache.setPolygons(entry.instance.id, polygons);
@@ -370,7 +387,10 @@ export class SolidCsgCompiler {
    */
   private storeTouchCaches(prepared: PreparedBrush[]): void {
     for (const entry of prepared) {
-      const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex]!.instance.id);
+      const peerIds = entry.overlappingPeerIndices.flatMap((peerIndex) => {
+        const peer = prepared[peerIndex];
+        return peer ? [peer.instance.id] : [];
+      });
       this.cache.setTouchPeerIds(entry.instance.id, peerIds);
     }
   }
@@ -472,31 +492,8 @@ export class SolidCsgCompiler {
   private overlapsAnyIntersecting(entry: PreparedBrush, intersecting: PreparedBrush[]): boolean {
     const pad = this.boundsPad;
     for (const inter of intersecting) {
-      if (this.boundsOverlapPadded(entry.bounds, inter.bounds, pad)) return true;
+      if (boundsOverlapPadded(entry.bounds, inter.bounds, pad)) return true;
     }
     return false;
-  }
-
-  /**
-   * Axis-aligned bounds overlap with padding.
-   *
-   * @param a First bounds.
-   * @param b Second bounds.
-   * @param pad Padding.
-   * @returns True when they may touch.
-   */
-  private boundsOverlapPadded(
-    a: { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } },
-    b: { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } },
-    pad: number,
-  ): boolean {
-    return !(
-      a.max.x + pad < b.min.x ||
-      a.min.x - pad > b.max.x ||
-      a.max.y + pad < b.min.y ||
-      a.min.y - pad > b.max.y ||
-      a.max.z + pad < b.min.z ||
-      a.min.z - pad > b.max.z
-    );
   }
 }

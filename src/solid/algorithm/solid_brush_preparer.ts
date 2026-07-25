@@ -92,7 +92,10 @@ export class SolidBrushPreparer {
    * @returns Prepared brush using cached geometry.
    */
   preparedFromCache(instance: SolidBrushInstance): PreparedBrush {
-    const cached = this.cache.getPrepared(instance.id)!;
+    const cached = this.cache.getPrepared(instance.id);
+    if (!cached) {
+      return this.prepareAndCacheBrush(instance);
+    }
     return {
       instance,
       brush: cached.brush,

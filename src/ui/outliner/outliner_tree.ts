@@ -5,6 +5,7 @@ import { isEditorHelperObject } from '../../utils/mesh_edge_sync.js';
 import { isObjectLocked } from '../../utils/object_lock.js';
 import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
+import { SolidModel } from '../../solid/model/solid_model.js';
 
 /**
  * Callback type for tree-level selection events.
@@ -429,6 +430,9 @@ export class OutlinerTree {
     hierarchySelection: Set<THREE.Object3D>,
   ): boolean {
     if (hierarchySelection.has(obj)) return true;
+    // Solid model roots are only selected via hierarchy (result mesh is a
+    // proxy). Do not treat brush selection as selecting the solid root.
+    if (SolidModel.isSolidModelObject(obj)) return false;
     if (obj instanceof THREE.Mesh) return selectedObjects.has(obj);
     if (obj instanceof THREE.Group) {
       const meshes = getAllMeshes(obj);

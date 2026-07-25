@@ -17,6 +17,11 @@ export interface SolidCompileOptions {
    * model meshing reads per-brush caches directly.
    */
   skipPolygonAssembly?: boolean;
+  /**
+   * When true, CSG starts as solid (inside) so subtractive brushes carve rooms
+   * from an inverted world.
+   */
+  invertedWorld?: boolean;
 }
 
 /** Diagnostics from the most recent compile pass (for tests and profiling). */

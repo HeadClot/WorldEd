@@ -145,6 +145,7 @@ export class PropertiesPanel {
     this.colorSession.finalize();
     this.boundObjects = [];
     this.clearAllInputs();
+    this.solidBrushSection.updateFromObjects([]);
   }
 
   /**
@@ -881,7 +882,7 @@ export class PropertiesPanel {
   private bindSelectionChanges(): void {
     this.selectionManager.onSelectionChanged(() => {
       if (this.isDisposed) return;
-      const selected = this.selectionManager.getAllSelectedObjectsAsArray();
+      const selected = this.selectionManager.getInspectorObjects();
       if (selected.length > 0) {
         this.bindObjects(selected);
         return;
