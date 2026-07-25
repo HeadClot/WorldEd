@@ -16,6 +16,7 @@ interface ElectrobunPackageConfig {
     linux?: Record<string, unknown>;
     mac?: Record<string, unknown>;
   };
+  scripts?: { postBuild?: string; postPackage?: string };
   release?: { baseUrl?: string; generatePatch?: boolean };
 }
 
@@ -32,8 +33,10 @@ describe('Electrobun desktop build configuration', () => {
     expect(config.build?.win).toMatchObject({
       defaultRenderer: 'native',
       bundleCEF: false,
-      icon: 'public/app_icon.ico',
     });
+    expect(config.build?.win).not.toHaveProperty('icon');
+    expect(config.scripts?.postBuild).toBe('scripts/embed_windows_app_icon.ts');
+    expect(config.scripts?.postPackage).toBe('scripts/embed_windows_app_icon.ts');
     expect(config.build?.linux).toMatchObject({
       icon: 'public/android-chrome-512x512.png',
     });
@@ -56,6 +59,7 @@ describe('Electrobun desktop build configuration', () => {
 
   it('keeps platform icon sources on disk for Electrobun packaging', () => {
     expect(existsSync(resolve(process.cwd(), 'public/app_icon.ico'))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'node_modules/rcedit/bin/rcedit-x64.exe'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/android-chrome-512x512.png'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/app_icon.iconset/icon_512x512.png'))).toBe(true);
     expect(existsSync(resolve(process.cwd(), 'public/app_icon.iconset/icon_16x16.png'))).toBe(true);
