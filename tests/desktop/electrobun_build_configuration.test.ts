@@ -16,6 +16,7 @@ interface ElectrobunPackageConfig {
     linux?: Record<string, unknown>;
     mac?: Record<string, unknown>;
   };
+  scripts?: { postBuild?: string; postPackage?: string };
   release?: { baseUrl?: string; generatePatch?: boolean };
 }
 
@@ -32,8 +33,10 @@ describe('Electrobun desktop build configuration', () => {
     expect(config.build?.win).toMatchObject({
       defaultRenderer: 'native',
       bundleCEF: false,
-      icon: 'public/app_icon.ico',
     });
+    expect(config.build?.win).not.toHaveProperty('icon');
+    expect(config.scripts?.postBuild).toBe('scripts/embed_windows_app_icon.ts');
+    expect(config.scripts?.postPackage).toBe('scripts/embed_windows_app_icon.ts');
     expect(config.build?.linux).toMatchObject({
       icon: 'public/android-chrome-512x512.png',
     });
