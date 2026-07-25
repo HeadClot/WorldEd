@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { SceneJSON, ObjectEntry, GeometryType } from './io_types.js';
 import { BufferGeometryCodec } from './buffer_geometry_codec.js';
-import { getFaceTextureMaps } from '../texture/face_texture_storage.js';
-import { resolveGeometrySourceParams, resolveGeometrySourceType } from '../texture/geometry_source.js';
+import { getFaceTextureMaps } from '../texture/uv/face_texture_storage.js';
+import { resolveGeometrySourceParams, resolveGeometrySourceType } from '../texture/uv/geometry_source.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { SolidModelCodec } from '../solid/io/solid_model_codec.js';
 

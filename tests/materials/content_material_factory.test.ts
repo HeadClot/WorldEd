@@ -5,7 +5,7 @@ import {
   CONTENT_ROUGHNESS,
   createContentMaterial,
 } from '../../src/materials/content_material_factory.js';
-import { disposeDebugCheckerTexture } from '../../src/texture/debug_texture_factory.js';
+import { disposeDebugCheckerTexture } from '../../src/texture/library/debug_texture_factory.js';
 
 describe('content_material_factory', () => {
   afterEach(() => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { SelectionManager } from '../../src/managers/selection_manager.js';
+import { SelectionManager } from '../../src/selection/object/selection_manager.js';
 import { OutlinerPanel } from '../../src/ui/outliner_panel.js';
 import { Theme } from '../../src/theme.js';
 

@@ -3,8 +3,8 @@ import { SolidBrushInstance } from './solid_brush_instance.js';
 import { SolidBrushFactory } from '../brush/solid_brush_factory.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
-import { FaceTextureMapping } from '../../texture/face_texture_mapping.js';
-import { getFaceTextureMaps } from '../../texture/face_texture_storage.js';
+import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
+import { getFaceTextureMaps } from '../../texture/uv/face_texture_storage.js';
 import { removeDecorativeEdges } from '../../utils/mesh_edge_sync.js';
 import {
   SOLID_MODEL_USERDATA_KEY,

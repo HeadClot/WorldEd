@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 
 /** One coplanar surface region with triangle indices and texture identity. */
 export interface SolidSurfaceRegion {

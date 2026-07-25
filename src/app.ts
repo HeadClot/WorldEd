@@ -1,4 +1,4 @@
-import { ViewportLayoutManager } from './managers/viewport_layout_manager.js';
+import { ViewportLayoutManager } from './managers/layout/viewport_layout_manager.js';
 import { showEditorStartupError } from './ui/editor_startup_error.js';
 
 const editorContainer = document.getElementById('editor-container') as HTMLElement;

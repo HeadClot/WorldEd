@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { DeleteSolidBrushesCommand } from '../../src/commands/delete_solid_brushes_command.js';
+import { DeleteSolidBrushesCommand } from '../../src/commands/solid/delete_solid_brushes_command.js';
 
 /** Deleting a brush must drop it from the solid model CSG list and rebuild. */
 describe('Delete solid brushes', () => {

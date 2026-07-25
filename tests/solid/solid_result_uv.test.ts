@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
+import { getFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
 
 /**
  * Solid result UVs must be baked per coplanar face, not one projection for the

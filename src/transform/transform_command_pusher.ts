@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { TransformMode } from '../types/transform_mode.js';
-import { TransformGizmo } from './transform_gizmo.js';
+import { TransformGizmo } from './gizmo/transform_gizmo.js';
 import { TransformExecutor } from './transform_executor.js';
 import { CommandStack } from '../commands/command_stack.js';
-import { TranslateCommand, ObjectTransformSnapshot } from '../commands/translate_command.js';
-import { RotateCommand, ObjectRotationSnapshot } from '../commands/rotate_command.js';
-import { ScaleCommand, ObjectScaleSnapshot } from '../commands/scale_command.js';
-import { BoundsResizeCommand, BoundsResizeSnapshot } from '../commands/bounds_resize_command.js';
+import { TranslateCommand, ObjectTransformSnapshot } from '../commands/transform/translate_command.js';
+import { RotateCommand, ObjectRotationSnapshot } from '../commands/transform/rotate_command.js';
+import { ScaleCommand, ObjectScaleSnapshot } from '../commands/transform/scale_command.js';
+import { BoundsResizeCommand, BoundsResizeSnapshot } from '../commands/transform/bounds_resize_command.js';
 import { TransformDragSession } from './transform_drag_session.js';
 import { TransformProjectionMath } from './transform_projection_math.js';
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ShadingMode } from '../types/shading_mode.js';
-import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
+import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/object/selection_highlight.js';
 import { BOUNDS_FACE_USERDATA_KEY } from '../types/bounds_face.js';
 import { SOLID_BRUSH_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 

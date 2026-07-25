@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { resolveGeometrySourceType } from '../../texture/geometry_source.js';
+import { resolveGeometrySourceType } from '../../texture/uv/geometry_source.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
 

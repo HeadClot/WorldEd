@@ -3,9 +3,9 @@ import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
-import { AssignSolidBrushTextureCommand } from '../../src/commands/assign_solid_brush_texture_command.js';
-import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
+import { AssignSolidBrushTextureCommand } from '../../src/commands/texture/assign_solid_brush_texture_command.js';
+import { getFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/library/texture_id.js';
 
 /** Per-brush surface textures bake into the CSG result, never helper previews. */
 describe('Solid brush surface textures', () => {

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { DECORATIVE_EDGE_USERDATA_KEY, isSolidBrushEdge } from '../utils/mesh_edge_sync.js';
-import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
+import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/object/selection_highlight.js';
 
 /**
  * Builds a temporary scene graph for GLB/export that contains only game

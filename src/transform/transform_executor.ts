@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GizmoAxis } from '../types/transform_mode.js';
-import { GridSnap } from './grid_snap.js';
+import { GridSnap } from './snap/grid_snap.js';
 
 /**
  * Applies transform operations to selected objects. Handles translation,

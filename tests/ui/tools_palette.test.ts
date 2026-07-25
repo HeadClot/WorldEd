@@ -3,7 +3,7 @@ import { ToolsPalette } from '../../src/ui/tools_palette.js';
 import { EditorToolId } from '../../src/types/editor_tool_id.js';
 import { TransformMode } from '../../src/types/transform_mode.js';
 import { FloatingPanelStack } from '../../src/ui/floating_panel_stack.js';
-import { UvEditor } from '../../src/ui/uv_editor.js';
+import { UvEditor } from '../../src/ui/uv/uv_editor.js';
 
 describe('ToolsPalette', () => {
   let host: HTMLElement;

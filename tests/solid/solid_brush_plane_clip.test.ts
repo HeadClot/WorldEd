@@ -6,7 +6,7 @@ import { SolidBrushValidator } from '../../src/solid/brush/solid_brush_validator
 import { SolidPlane } from '../../src/solid/brush/solid_plane.js';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { ClipSolidBrushCommand } from '../../src/commands/clip_solid_brush_command.js';
+import { ClipSolidBrushCommand } from '../../src/commands/solid/clip_solid_brush_command.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 
 /** Unit tests for solid brush plane clipping used by the clip tool. */

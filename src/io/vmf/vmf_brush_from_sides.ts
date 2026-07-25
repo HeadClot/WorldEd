@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { SolidBrush } from '../../solid/brush/solid_brush.js';
 import { SolidBrushFactory } from '../../solid/brush/solid_brush_factory.js';
 import { SolidPlane } from '../../solid/brush/solid_plane.js';
-import { FaceTextureMapping } from '../../texture/face_texture_mapping.js';
+import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
 import { VMF_INCHES_TO_METERS, sourcePointToEditorMeters } from './vmf_coordinates.js';
 import { VmfHalfSpaceHullBuilder } from './vmf_half_space_hull.js';
 import { VmfSolid, VmfSolidSide } from './vmf_types.js';

@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '../../src/theme.js';
 import { TransformMode, GizmoAxis } from '../../src/types/transform_mode.js';
-import { TransformGizmo } from '../../src/transform/transform_gizmo.js';
-import { GizmoRaycaster } from '../../src/transform/gizmo_raycaster.js';
+import { TransformGizmo } from '../../src/transform/gizmo/transform_gizmo.js';
+import { GizmoRaycaster } from '../../src/transform/gizmo/gizmo_raycaster.js';
 import { TransformExecutor } from '../../src/transform/transform_executor.js';
 import { TransformConstraint } from '../../src/transform/transform_constraint.js';
-import { GridSnap } from '../../src/transform/grid_snap.js';
+import { GridSnap } from '../../src/transform/snap/grid_snap.js';
 import { TransformHandler } from '../../src/transform/transform_handler.js';
 
 describe('TransformHandler', () => {

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getDebugCheckerTexture } from '../texture/debug_texture_factory.js';
+import { getDebugCheckerTexture } from '../texture/library/debug_texture_factory.js';
 
 /**
  * Default metalness for hard-edge level content materials. Kept at 0:

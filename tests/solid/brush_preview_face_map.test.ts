@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { mapPreviewTriangleToBrushFace } from '../../src/solid/model/brush_preview_face_map.js';
-import { computeTriangleNormal } from '../../src/selection/triangle_geometry_utils.js';
+import { computeTriangleNormal } from '../../src/selection/pick/triangle_geometry_utils.js';
 
 /** Preview box triangles must map to wing-edge brush faces by normal, not tri/2. */
 describe('brush_preview_face_map', () => {

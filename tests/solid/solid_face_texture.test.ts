@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { AssignSolidFaceTextureCommand } from '../../src/commands/assign_solid_face_texture_command.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
-import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
+import { AssignSolidFaceTextureCommand } from '../../src/commands/texture/assign_solid_face_texture_command.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/library/texture_id.js';
+import { getFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
 
 /** Face-mode solid textures paint individual brush surfaces into the CSG result. */
 describe('Solid face texture assignment', () => {

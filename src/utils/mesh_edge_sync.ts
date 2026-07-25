@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
-import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
+import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/object/selection_highlight.js';
 import {
   BRUSH_EDGE_SHARED_MATERIAL_KEY,
   SOLID_BRUSH_EDGE_USERDATA_KEY,

@@ -6,13 +6,13 @@ import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
-} from '../texture/face_texture_mapping.js';
-import { setFaceTextureMaps } from '../texture/face_texture_storage.js';
-import { getFaceTextureMaps } from '../texture/face_texture_storage.js';
-import { rebakeStoredFaceTextureMaps, splitMeshIntoCoplanarRegions } from '../texture/planar_uv_projector.js';
-import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
-import { getTexturePaintState } from '../texture/texture_paint_state.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/texture_id.js';
+} from '../texture/uv/face_texture_mapping.js';
+import { setFaceTextureMaps } from '../texture/uv/face_texture_storage.js';
+import { getFaceTextureMaps } from '../texture/uv/face_texture_storage.js';
+import { rebakeStoredFaceTextureMaps, splitMeshIntoCoplanarRegions } from '../texture/uv/planar_uv_projector.js';
+import { rebuildSurfaceMaterials } from '../texture/material/surface_material_builder.js';
+import { getTexturePaintState } from '../texture/paint/texture_paint_state.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/library/texture_id.js';
 
 /**
  * Converts between Three.js meshes and CSG polygon soups. Carries per-polygon

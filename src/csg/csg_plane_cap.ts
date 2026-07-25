@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { CsgPolygon } from './csg_polygon.js';
-import { orderConvexPolygon } from '../transform/convex_face_prism.js';
-import { createDefaultFaceTextureMapping } from '../texture/face_texture_mapping.js';
-import { getTexturePaintState } from '../texture/texture_paint_state.js';
+import { orderConvexPolygon } from '../transform/extrusion/convex_face_prism.js';
+import { createDefaultFaceTextureMapping } from '../texture/uv/face_texture_mapping.js';
+import { getTexturePaintState } from '../texture/paint/texture_paint_state.js';
 
 /** Distance treated as on the cutting plane when collecting cap vertices. */
 const CAP_PLANE_EPSILON = 1e-5;

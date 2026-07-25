@@ -5,7 +5,7 @@ import {
   isDecorativeEdge,
   isEditorHelperObject,
 } from '../../src/utils/mesh_edge_sync.js';
-import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/selection_highlight.js';
+import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/object/selection_highlight.js';
 
 describe('isEditorHelperObject', () => {
   it('should treat decorative edges as helpers', () => {

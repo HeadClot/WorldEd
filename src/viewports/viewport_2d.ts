@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { BaseViewport } from './base_viewport.js';
-import { Grids, GridPlane } from './grids.js';
-import { OrthoPanHandler } from '../managers/ortho_pan_handler.js';
-import { SelectionManager } from '../managers/selection_manager.js';
-import { SelectionHighlight } from '../selection/selection_highlight.js';
-import { SceneRaycaster } from '../selection/scene_raycaster.js';
-import { SelectionClickThrough } from '../selection/selection_click_through.js';
+import { Grids, GridPlane } from './grid/grids.js';
+import { OrthoPanHandler } from '../managers/camera/ortho_pan_handler.js';
+import { SelectionManager } from '../selection/object/selection_manager.js';
+import { SelectionHighlight } from '../selection/object/selection_highlight.js';
+import { SceneRaycaster } from '../selection/object/scene_raycaster.js';
+import { SelectionClickThrough } from '../selection/object/selection_click_through.js';
 import { TransformCallback, MeshResolveCallback } from './viewport_3d.js';
 import { FrustumPlanes } from '../types/frustum_planes.js';
 import { ViewportShadingController } from './viewport_shading_controller.js';

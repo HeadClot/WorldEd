@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
-import { setFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
+import { createDefaultFaceTextureMapping } from '../../src/texture/uv/face_texture_mapping.js';
+import { setFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
 import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../src/solid/model/solid_model.js';
 
 /**

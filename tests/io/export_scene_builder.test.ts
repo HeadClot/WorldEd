@@ -4,7 +4,7 @@ import { buildExportScene, shouldOmitFromExport } from '../../src/io/export_scen
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
-import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/selection_highlight.js';
+import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/object/selection_highlight.js';
 import { DECORATIVE_EDGE_USERDATA_KEY } from '../../src/utils/mesh_edge_sync.js';
 
 describe('export_scene_builder', () => {

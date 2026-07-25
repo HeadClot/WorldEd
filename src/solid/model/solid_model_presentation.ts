@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
 import type { SolidSurfaceRegion } from '../algorithm/surface_triangulator.js';
-import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/face_texture_mapping.js';
-import { setFaceTextureMapsShared } from '../../texture/face_texture_storage.js';
-import { rebuildSolidResultMaterials } from '../../texture/surface_material_builder.js';
+import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
+import { setFaceTextureMapsShared } from '../../texture/uv/face_texture_storage.js';
+import { rebuildSolidResultMaterials } from '../../texture/material/surface_material_builder.js';
 import { createContentMaterial } from '../../materials/content_material_factory.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import { Theme } from '../../theme.js';
 import { SOLID_MODEL_RESULT_USERDATA_KEY } from './solid_model_keys.js';
 

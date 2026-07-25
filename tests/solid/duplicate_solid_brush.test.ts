@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { DuplicateSolidBrushesCommand } from '../../src/commands/duplicate_solid_brushes_command.js';
+import { DuplicateSolidBrushesCommand } from '../../src/commands/solid/duplicate_solid_brushes_command.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
 
 /** Tests that solid brush duplication stays inside the solid model hierarchy. */

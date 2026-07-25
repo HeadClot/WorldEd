@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidModelController } from '../../src/managers/solid_model_controller.js';
+import { SolidModelController } from '../../src/managers/solid/solid_model_controller.js';
 import { CommandStack } from '../../src/commands/command_stack.js';
-import { SelectionManager } from '../../src/managers/selection_manager.js';
+import { SelectionManager } from '../../src/selection/object/selection_manager.js';
 import * as THREE from 'three';
 
 /** Lightweight mock of the solid tools panel used by the controller. */

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SolidBrushInstance } from './solid_brush_instance.js';
-import { computeTriangleNormal } from '../../selection/triangle_geometry_utils.js';
+import { computeTriangleNormal } from '../../selection/pick/triangle_geometry_utils.js';
 
 /** Minimum normal agreement to treat a preview triangle as a brush face. */
 const FACE_NORMAL_MATCH_DOT = 0.9;

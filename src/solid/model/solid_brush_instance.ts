@@ -3,12 +3,12 @@ import { SolidBrush } from '../brush/solid_brush.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { SolidPlane } from '../brush/solid_plane.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
-} from '../../texture/face_texture_mapping.js';
+} from '../../texture/uv/face_texture_mapping.js';
 
 /**
  * A brush placed inside a solid model with local transform and CSG operation.

@@ -5,12 +5,12 @@ import { SolidBrushInstance } from '../model/solid_brush_instance.js';
 import { SolidModel } from '../model/solid_model.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { createWingEdge, createSolidFace } from '../types/wing_edge.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import {
   FaceTextureMapping,
   cloneFaceTextureMapping,
   createDefaultFaceTextureMapping,
-} from '../../texture/face_texture_mapping.js';
+} from '../../texture/uv/face_texture_mapping.js';
 
 /** Serializable snapshot of a solid brush instance. */
 export interface SerializedSolidBrush {

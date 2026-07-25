@@ -3,13 +3,13 @@ import { SceneJSON, ObjectEntry, GeometryType, BufferGeometryData } from './io_t
 import { BufferGeometryCodec } from './buffer_geometry_codec.js';
 import { rebuildDecorativeEdges } from '../utils/mesh_edge_sync.js';
 import { createContentMaterial } from '../materials/content_material_factory.js';
-import { setFaceTextureMaps } from '../texture/face_texture_storage.js';
-import { rebakeStoredFaceTextureMaps } from '../texture/planar_uv_projector.js';
-import { initializeMeshTextureUVs } from '../texture/face_texture_applier.js';
-import { FaceTextureMapEntry } from '../texture/face_texture_mapping.js';
-import { rebuildSurfaceMaterials } from '../texture/surface_material_builder.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/texture_id.js';
-import { CLIP_PREVIEW_USERDATA_KEY } from '../managers/clip_plane_preview.js';
+import { setFaceTextureMaps } from '../texture/uv/face_texture_storage.js';
+import { rebakeStoredFaceTextureMaps } from '../texture/uv/planar_uv_projector.js';
+import { initializeMeshTextureUVs } from '../texture/uv/face_texture_applier.js';
+import { FaceTextureMapEntry } from '../texture/uv/face_texture_mapping.js';
+import { rebuildSurfaceMaterials } from '../texture/material/surface_material_builder.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../texture/library/texture_id.js';
+import { CLIP_PREVIEW_USERDATA_KEY } from '../managers/clip_plane/clip_plane_preview.js';
 import { SolidModelCodec } from '../solid/io/solid_model_codec.js';
 import { SerializedSolidModel } from '../solid/io/solid_model_codec.js';
 

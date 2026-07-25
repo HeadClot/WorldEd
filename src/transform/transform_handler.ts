@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { GizmoAxis, TransformMode } from '../types/transform_mode.js';
-import { GizmoHandle } from './gizmo_handle.js';
-import { TransformGizmo } from './transform_gizmo.js';
-import { GizmoRaycaster } from './gizmo_raycaster.js';
+import { GizmoHandle } from './gizmo/gizmo_handle.js';
+import { TransformGizmo } from './gizmo/transform_gizmo.js';
+import { GizmoRaycaster } from './gizmo/gizmo_raycaster.js';
 import { TransformExecutor } from './transform_executor.js';
 import { TransformConstraint } from './transform_constraint.js';
 import { CommandStack } from '../commands/command_stack.js';
-import { TextureLockSettings } from '../texture/texture_lock_settings.js';
+import { TextureLockSettings } from '../texture/lock/texture_lock_settings.js';
 import { TransformDragSession } from './transform_drag_session.js';
 import { TransformProjectionMath } from './transform_projection_math.js';
-import { BoundsDragController } from './bounds_drag_controller.js';
+import { BoundsDragController } from './bounds/bounds_drag_controller.js';
 import { TransformCommandPusher } from './transform_command_pusher.js';
 
 /**

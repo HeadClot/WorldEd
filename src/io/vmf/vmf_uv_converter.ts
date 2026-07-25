@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/face_texture_mapping.js';
+import { FaceTextureMapping, createDefaultFaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
 import { VMF_INCHES_TO_METERS, swizzleSourceComponentsToThree } from './vmf_coordinates.js';
 import { VmfTextureAxis } from './vmf_types.js';
 import { materialNameToTextureId } from './vmf_material_policy.js';

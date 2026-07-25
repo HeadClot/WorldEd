@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { FaceTextureMapping } from '../../texture/face_texture_mapping.js';
-import { projectWorldPositionToUv, resolveProjectionBasis } from '../../texture/planar_uv_projector.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/texture_id.js';
+import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
+import { projectWorldPositionToUv, resolveProjectionBasis } from '../../texture/uv/planar_uv_projector.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import { SolidCompiledPolygon } from '../algorithm/solid_compiled_polygon.js';
 import { SurfaceTriangulator } from '../algorithm/surface_triangulator.js';
 import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';

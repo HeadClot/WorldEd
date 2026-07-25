@@ -5,10 +5,10 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { SolidModelCodec } from '../../src/solid/io/solid_model_codec.js';
 import { SceneSerializer } from '../../src/io/scene_serializer.js';
 import { SceneDeserializer } from '../../src/io/scene_deserializer.js';
-import { ApplyFaceTextureCommand } from '../../src/commands/apply_face_texture_command.js';
-import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
-import { createDefaultFaceTextureMapping } from '../../src/texture/face_texture_mapping.js';
-import { countTriangles } from '../../src/texture/planar_uv_projector.js';
+import { ApplyFaceTextureCommand } from '../../src/commands/texture/apply_face_texture_command.js';
+import { getFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
+import { createDefaultFaceTextureMapping } from '../../src/texture/uv/face_texture_mapping.js';
+import { countTriangles } from '../../src/texture/uv/planar_uv_projector.js';
 
 /** Unit tests for solid model persistence with hierarchical brushes. */
 describe('SolidModelCodec', () => {

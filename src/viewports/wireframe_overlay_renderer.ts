@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
-import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/selection_highlight.js';
+import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/object/selection_highlight.js';
 import { hasEdgeBuildableGeometry } from '../utils/mesh_edge_sync.js';
 import { SOLID_BRUSH_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
 

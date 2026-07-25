@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
-import { SelectionManager } from '../managers/selection_manager.js';
+import { SelectionManager } from '../selection/object/selection_manager.js';
 import { ContextMenu, ContextMenuItem } from './context_menu.js';
 import { hexToRgb } from '../utils/color_utils.js';
 import { OutlinerTree } from './outliner/outliner_tree.js';

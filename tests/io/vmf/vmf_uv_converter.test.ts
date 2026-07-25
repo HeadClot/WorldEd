@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { VmfUvConverter, VMF_DEFAULT_TEXTURE_SIZE } from '../../../src/io/vmf/vmf_uv_converter.js';
 import { VMF_INCHES_TO_METERS } from '../../../src/io/vmf/vmf_coordinates.js';
-import { projectWorldPositionToUv, resolveProjectionBasis } from '../../../src/texture/planar_uv_projector.js';
+import { projectWorldPositionToUv, resolveProjectionBasis } from '../../../src/texture/uv/planar_uv_projector.js';
 import { VmfParser } from '../../../src/io/vmf/vmf_parser.js';
 import { VmfBrushFromSides } from '../../../src/io/vmf/vmf_brush_from_sides.js';
 import { buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';

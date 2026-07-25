@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FaceTextureMapping, cloneFaceTextureMapping } from '../texture/face_texture_mapping.js';
+import { FaceTextureMapping, cloneFaceTextureMapping } from '../texture/uv/face_texture_mapping.js';
 
 /**
  * A planar polygon used by the brush CSG pipeline. Optionally carries durable

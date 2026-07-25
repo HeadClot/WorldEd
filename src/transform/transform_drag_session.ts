@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GizmoAxis } from '../types/transform_mode.js';
 import { BoundsFace } from '../types/bounds_face.js';
-import { GizmoHandle } from './gizmo_handle.js';
-import { OrientedBoundsData } from './oriented_bounds.js';
+import { GizmoHandle } from './gizmo/gizmo_handle.js';
+import { OrientedBoundsData } from './bounds/oriented_bounds.js';
 
 /**
  * Mutable state for one transform gizmo drag session. Shared by translate,

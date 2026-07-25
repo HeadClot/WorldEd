@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';
-import { invalidateFacePickAcceleration } from '../../selection/mesh_pick_acceleration.js';
+import { invalidateFacePickAcceleration } from '../../selection/pick/mesh_pick_acceleration.js';
 import { SolidBrushMeshChunk } from './solid_brush_mesh_chunk.js';
 import { SolidBrushMeshRange, SolidMeshUpdateRange } from './solid_brush_mesh_range.js';
 import { SolidMeshChunkCache } from './solid_mesh_chunk_cache.js';

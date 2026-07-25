@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { ToggleVisibilityCommand } from '../../src/commands/toggle_visibility_command.js';
+import { ToggleVisibilityCommand } from '../../src/commands/object/toggle_visibility_command.js';
 import { SolidUpdateSetBuilder } from '../../src/solid/algorithm/solid_update_set.js';
 import { BrushMembership } from '../../src/solid/algorithm/brush_membership.js';
 import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.js';

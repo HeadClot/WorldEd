@@ -3,12 +3,12 @@ import * as THREE from 'three';
 import { SceneDeserializer } from '../../src/io/scene_deserializer.js';
 import { SceneSerializer } from '../../src/io/scene_serializer.js';
 import { SceneJSON, ObjectEntry } from '../../src/io/io_types.js';
-import { getFaceTextureMaps } from '../../src/texture/face_texture_storage.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/texture_id.js';
-import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/texture_paint_state.js';
-import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/texture_map_cache.js';
-import { CLIP_PREVIEW_USERDATA_KEY } from '../../src/managers/clip_plane_preview.js';
-import { getGeometrySource, resolveGeometrySourceType } from '../../src/texture/geometry_source.js';
+import { getFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/library/texture_id.js';
+import { setTexturePaintStateForTests, TexturePaintState } from '../../src/texture/paint/texture_paint_state.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '../../src/texture/library/texture_map_cache.js';
+import { CLIP_PREVIEW_USERDATA_KEY } from '../../src/managers/clip_plane/clip_plane_preview.js';
+import { getGeometrySource, resolveGeometrySourceType } from '../../src/texture/uv/geometry_source.js';
 
 describe('SceneDeserializer', () => {
   let worldGroup: THREE.Group;
