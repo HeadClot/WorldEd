@@ -146,19 +146,18 @@ describe('SolidCsgCompiler partial updates', () => {
     expect(polygonSignature(partial)).toEqual(polygonSignature(full));
   });
 
-  it('partially recompiles when an intersecting brush is present', () => {
+  it('matches full rebuild when moving a peer of an intersecting brush', () => {
     const far = makeBoxBrush('far', 2, SolidOperation.Additive, new THREE.Vector3(40, 0, 0));
     const a = makeBoxBrush('a', 2, SolidOperation.Additive, new THREE.Vector3(-0.5, 0, 0));
     const b = makeBoxBrush('b', 2, SolidOperation.Intersecting, new THREE.Vector3(0.5, 0, 0));
     const brushes = [far, a, b];
     const compiler = new SolidCsgCompiler();
     compiler.compile(brushes, { forceFull: true });
+    expect(compiler.getCachedPolygons('far')?.length ?? 0).toBe(0);
     a.position.x -= 0.1;
     const partial = compiler.compile(brushes, { dirtyBrushIds: ['a'] });
     const stats = compiler.getLastCompileStats();
     expect(stats.fullRebuild).toBe(false);
-    expect(stats.recompiledBrushCount).toBeLessThan(brushes.length);
-    expect(stats.reusedBrushCount).toBeGreaterThan(0);
     const full = new SolidCsgCompiler().compile(brushes, { forceFull: true });
     expect(polygonSignature(partial)).toEqual(polygonSignature(full));
   });
@@ -174,7 +173,7 @@ describe('SolidCsgCompiler partial updates', () => {
     const partial = compiler.compile(brushes, { dirtyBrushIds: ['b'] });
     const stats = compiler.getLastCompileStats();
     expect(stats.fullRebuild).toBe(false);
-    expect(stats.reusedBrushCount).toBeGreaterThan(0);
+    expect(compiler.getCachedPolygons('far')?.length ?? 0).toBe(0);
     const full = new SolidCsgCompiler().compile(brushes, { forceFull: true });
     expect(polygonSignature(partial)).toEqual(polygonSignature(full));
   });

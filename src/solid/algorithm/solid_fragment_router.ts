@@ -24,6 +24,9 @@ export class SolidFragmentRouter {
 
   /**
    * Routes a fragment's categories through brush operations in tree order.
+   * Additive/subtractive-only models use the local touch set. With any
+   * intersecting op, routes against every brush so sequential ∩ clips the
+   * entire previous solid.
    *
    * @param fragment Fragment polygon.
    * @param normal Face normal.
@@ -44,7 +47,8 @@ export class SolidFragmentRouter {
   }
 
   /**
-   * Full tree-order routing including non-overlapping peers.
+   * Full tree-order routing: classify against every brush (disjoint AABBs are
+   * Outside via classification). Required for true sequential intersection.
    *
    * @param fragment Fragment polygon.
    * @param normal Face normal.
@@ -59,19 +63,13 @@ export class SolidFragmentRouter {
     subjectIndex: number,
   ): SurfaceCategory {
     let category = SurfaceCategory.Outside;
-    const subject = prepared[subjectIndex]!;
-    this.fillOverlapFlags(subject.overlappingPeerIndices, subjectIndex, prepared.length);
     BrushMembership.polygonCentroidInto(fragment, this.scratchCentroid);
     for (let index = 0; index < prepared.length; index++) {
       const peer = prepared[index]!;
-      const relative = this.relativeCategoryForPeer(
-        this.scratchCentroid,
-        normal,
-        peer,
-        index,
-        subjectIndex,
-        this.scratchOverlapFlags,
-      );
+      const relative =
+        index === subjectIndex
+          ? SurfaceCategory.SelfAligned
+          : BrushMembership.classifyPoint(this.scratchCentroid, peer.brush, normal);
       category = CategoryRouter.route(category, relative, peer.operation);
     }
     return category;

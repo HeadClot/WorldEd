@@ -74,7 +74,9 @@ export class SolidMembershipEvaluator {
   }
 
   /**
-   * Evaluates the ordered CSG expression at a point.
+   * Evaluates the ordered CSG expression at a point. With intersecting ops,
+   * always uses the full brush list (sequential ∩ of the prior solid). Without
+   * intersecting ops, uses spatial/local peer restriction for speed.
    *
    * @param point Sample point in model space.
    * @param prepared Brush list in tree order.
@@ -85,7 +87,10 @@ export class SolidMembershipEvaluator {
     if (this.hasIntersectingOperations) {
       return this.evaluateSolidMembershipFull(point, prepared);
     }
-    return this.evaluateSolidMembershipLocal(point, prepared, subjectIndex);
+    if (subjectIndex !== undefined) {
+      return this.evaluateSolidMembershipAmongPeers(point, prepared, subjectIndex);
+    }
+    return this.evaluateSolidMembershipLocal(point, prepared);
   }
 
   /**
@@ -122,6 +127,18 @@ export class SolidMembershipEvaluator {
     if (candidates.length === 0) return false;
     this.copyAndSortCandidates(candidates);
     return this.evaluateSortedCandidates(point, prepared);
+  }
+
+  /**
+   * Full tree-order membership (all prepared brushes). Kept for diagnostics and
+   * any caller that must ignore spatial locality.
+   *
+   * @param point Sample point.
+   * @param prepared Brush list.
+   * @returns Solid membership.
+   */
+  evaluateSolidMembershipFullTree(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
+    return this.evaluateSolidMembershipFull(point, prepared);
   }
 
   /**

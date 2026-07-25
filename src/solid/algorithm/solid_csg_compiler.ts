@@ -32,6 +32,11 @@ export class SolidCsgCompiler {
   private readonly finalizer: SolidFragmentFinalizer;
   private readonly emitter: SolidSurfaceEmitter;
   private hasIntersectingOperations = false;
+  /**
+   * Previous compile had intersecting ops — dropping them forces a full
+   * restore.
+   */
+  private previousHadIntersectingOperations = false;
   private lastUpdateBrushIds: string[] = [];
   private lastStats: SolidCompileStats = {
     fullRebuild: true,
@@ -269,6 +274,7 @@ export class SolidCsgCompiler {
     this.cache.pruneToIds(new Set(brushIds));
     this.cache.setLastBrushOrder(brushIds);
     this.lastUpdateBrushIds = Array.from(updateSet);
+    this.previousHadIntersectingOperations = this.hasIntersectingOperations;
     this.recordCompileStats(forceFull, updateSet.size, prepared.length);
   }
 
@@ -412,7 +418,10 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Resolves the set of brush ids that must be recompiled this pass.
+   * Resolves the set of brush ids that must be recompiled this pass. With
+   * sequential ∩ present, expands the touch set so far brushes with stale
+   * non-empty caches are cleared, and restores everything when the last
+   * intersecting brush is removed.
    *
    * @param prepared Prepared brushes.
    * @param options Compile options.
@@ -423,6 +432,71 @@ export class SolidCsgCompiler {
     if (forceFull) {
       return new Set(prepared.map((entry) => entry.instance.id));
     }
-    return this.planner.buildPartialUpdateSet(prepared, options, this.preparer.getRefreshedBrushIds());
+    if (this.previousHadIntersectingOperations && !this.hasIntersectingOperations) {
+      return new Set(prepared.map((entry) => entry.instance.id));
+    }
+    const updateSet = this.planner.buildPartialUpdateSet(prepared, options, this.preparer.getRefreshedBrushIds());
+    if (this.hasIntersectingOperations) {
+      this.expandUpdateSetForSequentialIntersection(prepared, updateSet);
+    }
+    return updateSet;
+  }
+
+  /**
+   * Ensures brushes outside every intersecting volume recompile when they still
+   * hold surfaces (must become empty under sequential ∩).
+   *
+   * @param prepared Prepared brushes.
+   * @param updateSet Mutable recompile set.
+   */
+  private expandUpdateSetForSequentialIntersection(prepared: PreparedBrush[], updateSet: Set<string>): void {
+    const intersecting = prepared.filter((entry) => entry.operation === SolidOperation.Intersecting);
+    if (intersecting.length === 0) return;
+    for (const entry of prepared) {
+      if (updateSet.has(entry.instance.id)) continue;
+      if (entry.operation === SolidOperation.Intersecting) continue;
+      const cached = this.cache.getPolygons(entry.instance.id);
+      if (!cached || cached.length === 0) continue;
+      if (this.overlapsAnyIntersecting(entry, intersecting)) continue;
+      updateSet.add(entry.instance.id);
+    }
+  }
+
+  /**
+   * Returns whether a brush AABB overlaps any intersecting brush (with pad).
+   *
+   * @param entry Candidate brush.
+   * @param intersecting Intersecting prepared brushes.
+   * @returns True when they may share volume.
+   */
+  private overlapsAnyIntersecting(entry: PreparedBrush, intersecting: PreparedBrush[]): boolean {
+    const pad = this.boundsPad;
+    for (const inter of intersecting) {
+      if (this.boundsOverlapPadded(entry.bounds, inter.bounds, pad)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Axis-aligned bounds overlap with padding.
+   *
+   * @param a First bounds.
+   * @param b Second bounds.
+   * @param pad Padding.
+   * @returns True when they may touch.
+   */
+  private boundsOverlapPadded(
+    a: { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } },
+    b: { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } },
+    pad: number,
+  ): boolean {
+    return !(
+      a.max.x + pad < b.min.x ||
+      a.min.x - pad > b.max.x ||
+      a.max.y + pad < b.min.y ||
+      a.min.y - pad > b.max.y ||
+      a.max.z + pad < b.min.z ||
+      a.min.z - pad > b.max.z
+    );
   }
 }

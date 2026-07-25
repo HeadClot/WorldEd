@@ -29,8 +29,8 @@ export class SolidSurfaceEmitter {
   }
 
   /**
-   * Updates whether intersecting operations force membership on isolated
-   * brushes.
+   * Updates whether sequential intersecting ops are present (forces membership
+   * on isolated additives so they can be clipped by a distant ∩).
    *
    * @param value True when any brush uses intersecting CSG.
    */
@@ -99,6 +99,7 @@ export class SolidSurfaceEmitter {
       this.emitIsolatedAdditiveSurfacesDirect(subject, output);
       return;
     }
+    // Sequential ∩ may discard this brush even when it has no AABB peers.
     this.emitIsolatedSurfacesWithMembership(subject, prepared, brushIndex, output);
   }
 
