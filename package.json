@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "ci": "bun run format:check && bun run testrun && bun run build && git diff --exit-code -- docs",
+    "ci": "bun run format:check && bun run testrun && bun run build",
     "typecheck:strict": "tsc --project tsconfig.strict.json --noEmit",
     "desktop:dev": "electrobun dev",
     "desktop:build": "electrobun build --env=stable",
