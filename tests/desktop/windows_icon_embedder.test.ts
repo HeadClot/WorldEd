@@ -33,7 +33,7 @@ describe('WindowsIconEmbedder', () => {
     expect(runner).toHaveBeenCalledTimes(4);
     embeddedPaths.forEach((path) => {
       expect(runner).toHaveBeenCalledWith(
-        join(projectRoot, 'tools/rcedit-x64.exe'),
+        join(projectRoot, 'node_modules/rcedit/bin/rcedit-x64.exe'),
         path,
         join(projectRoot, 'public/app_icon.ico'),
       );

@@ -72,9 +72,9 @@ export class WindowsIconEmbedder {
       .map((name) => join(directoryPath, name));
   }
 
-  /** Returns the checked-in rcedit executable path. */
+  /** Returns the installed rcedit executable path. */
   private editorPath(): string {
-    return resolve(this.projectRoot, 'tools/rcedit-x64.exe');
+    return resolve(this.projectRoot, 'node_modules/rcedit/bin/rcedit-x64.exe');
   }
 
   /** Returns the Windows application icon path. */
