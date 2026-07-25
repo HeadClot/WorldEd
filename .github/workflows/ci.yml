@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: aiworlded-${{ github.workflow }}-${{ github.ref }}
@@ -39,8 +39,11 @@ jobs:
       - name: Build web bundle
         run: bun run build
 
-      - name: Verify generated web bundle
-        run: git diff --exit-code -- docs
+      - name: Upload GitHub Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/
 
       - name: Run strict TypeScript check
         continue-on-error: true
@@ -88,6 +91,8 @@ jobs:
     name: Create Automatic Release
     needs: desktop-build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -116,3 +121,20 @@ jobs:
           body: 'Automated desktop binaries compiled from commit ${{ github.sha }}.'
           files: release_assets/**/*
           generate_release_notes: true
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v4
