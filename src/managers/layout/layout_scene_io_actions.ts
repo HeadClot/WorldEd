@@ -20,9 +20,11 @@ export interface LayoutSceneRefreshContext {
   snapSettingsController: SnapSettingsController;
   worldObject: THREE.Object3D;
   propertiesPanel: PropertiesPanel;
+  /**
+   * Full visual refresh (clones, selection/hulls, CAD rulers, gizmo, outliner).
+   * Must be the same path used after inspector transforms.
+   */
   refreshAfterWorldMutation: () => void;
-  updateGizmoVisibility: () => void;
-  updateGizmoPivot: () => void;
 }
 
 /**
@@ -52,10 +54,9 @@ export function applyLayoutHistoryChange(context: LayoutSceneRefreshContext, dir
   SolidModel.refreshAfterHistoryChange(context.worldObject);
   // After solid remesh, drop face selections for deleted brushes/surfaces only.
   context.faceModeCoordinator.getFaceExtrusionController().pruneInvalidFaceSelection(context.worldObject);
+  // refreshAfterWorldMutation owns clones, selection, hulls, rulers, gizmo, and
+  // properties re-read — same contract as inspector transform commits.
   context.refreshAfterWorldMutation();
-  context.propertiesPanel.refreshBoundObject();
-  context.updateGizmoVisibility();
-  context.updateGizmoPivot();
 }
 
 /**

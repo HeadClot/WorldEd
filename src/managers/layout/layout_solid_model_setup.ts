@@ -86,9 +86,6 @@ function wireSolidBrushPropertyHandlers(propertiesPanel: PropertiesPanel, contro
   propertiesPanel.setSolidBrushHandlers({
     onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) =>
       controller.setBrushOperationForMeshes(meshes, operation),
-    onBrushEdited: (meshes: THREE.Mesh[]) => {
-      controller.onTransformsCommitted(meshes);
-    },
     onAddBoxBrush: () => controller.addBoxBrush(),
     onMoveToFirst: (meshes: THREE.Mesh[]) => controller.moveBrushesInOrder(meshes, 'first'),
     onMoveToLast: (meshes: THREE.Mesh[]) => controller.moveBrushesInOrder(meshes, 'last'),

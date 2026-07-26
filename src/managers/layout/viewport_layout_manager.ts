@@ -94,6 +94,12 @@ import { createLayoutSettingsSystem, openLayoutAboutDialog } from './layout_sett
 import { DocumentationLink } from '../../ui/documentation_link.js';
 import { CadRulerSystem } from '../../rulers/cad_ruler_system.js';
 import { OrientedBoundsBuilder } from '../../transform/bounds/oriented_bounds.js';
+import {
+  refreshSceneVisualsAfterMutation,
+  refreshSceneVisualsAfterTransformCommit,
+  type SceneMutationVisualHost,
+  type SceneTransformCommitVisualHost,
+} from './scene_visual_refresh.js';
 
 /**
  * Root composition manager for the four-viewport editor layout. Builds UI
@@ -336,7 +342,8 @@ export class ViewportLayoutManager {
       this.selectionManager,
       this.gridSnap,
       {
-        syncViewports: () => this.syncPrimitivesToViewports(),
+        // Full mutation refresh: clones, selection/hulls, CAD rulers, gizmo.
+        syncViewports: () => this.refreshAfterWorldMutation(),
         refreshOutliner: () => this.refreshOutliner(),
         showStatusMessage: (message) => this.showStatusMessage(message),
         onAxisRestrictionChanged: (axis) => this.onAxisRestrictionChanged(axis),
@@ -699,7 +706,8 @@ export class ViewportLayoutManager {
   > {
     return {
       refreshOutliner: () => this.refreshOutliner(),
-      syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
+      // Outliner reparent and shell actions need full visual refresh (not bare clones).
+      syncPrimitivesToViewports: () => this.refreshAfterWorldMutation(),
       showStatusMessage: (message) => this.showStatusMessage(message),
       onSelectionChanged: () => this.onSelectionChanged(),
       onToggleUvEditor: () => this.onToggleUvEditor(),
@@ -803,9 +811,8 @@ export class ViewportLayoutManager {
       viewport3D: this.viewport3D,
       getUserSnapEnabled: () => this.userSnapEnabled,
       isTransformSpaceLocal: () => this.transformSpace === TransformSpace.Local,
-      syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
       onDuplicateSelectedForDrag: () => this.objectActionHandler.onDuplicateSelected(),
-      onTransformsCommitted: (meshes) => this.solidModelController?.onTransformsCommitted(meshes),
+      onAfterTransformCommit: (meshes) => this.refreshVisualsAfterTransformCommit(meshes),
       onTransformsLive: (meshes) => this.solidModelController?.onTransformsLive(meshes),
       isInteractionEnabled: () => !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
       onRulerTransformFeedback: (meshes, phase) => this.onCadRulerTransformFeedback(meshes, phase),
@@ -816,6 +823,46 @@ export class ViewportLayoutManager {
       this.viewport2DFront,
       this.viewport2DSide,
     ]);
+    this.wirePropertiesTransformCommit();
+  }
+
+  /**
+   * Wires the properties inspector so position/rotation/scale edits use the
+   * same post-transform visual refresh as gizmo commit and undo/redo.
+   */
+  private wirePropertiesTransformCommit(): void {
+    this.propertiesPanel.setAfterTransformCommit((objects) => {
+      this.refreshVisualsAfterTransformCommit(objects);
+    });
+  }
+
+  /**
+   * Shared post-transform visual refresh for inspector fields and gizmo commit.
+   *
+   * @param transformedObjects World objects whose local transforms changed.
+   */
+  private refreshVisualsAfterTransformCommit(transformedObjects: readonly THREE.Object3D[]): void {
+    refreshSceneVisualsAfterTransformCommit(this.getTransformCommitVisualHost(), transformedObjects);
+  }
+
+  /**
+   * Builds the host bag for transform-commit visual refresh.
+   *
+   * @returns Scene transform commit visual host.
+   */
+  private getTransformCommitVisualHost(): SceneTransformCommitVisualHost {
+    return {
+      syncCloneTransformsForWorldObjects: (objects) =>
+        this.viewportSyncManager.syncCloneTransformsForWorldObjects(objects),
+      syncSelectionVisualsDuringTransform: () => this.selectionVisualController.syncDuringTransform(),
+      syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
+      endCadRulerDrag: () => this.cadRulerSystem.endDrag(),
+      refreshCadRulersFromSelection: () => this.refreshCadRulersFromSelection(),
+      updateGizmoVisibility: () => this.updateGizmoVisibility(),
+      updateGizmoPivot: () => this.updateGizmoPivot(),
+      finalizeSolidTransforms: (meshes) => this.solidModelController?.onTransformsCommitted(meshes) === true,
+      refreshPropertiesPanel: () => this.propertiesPanel.refreshBoundObject(),
+    };
   }
 
   /** Sets up keyboard shortcuts using the dedicated shortcut handler. */
@@ -1130,8 +1177,6 @@ export class ViewportLayoutManager {
       worldObject: this.worldObject,
       propertiesPanel: this.propertiesPanel,
       refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
-      updateGizmoVisibility: () => this.updateGizmoVisibility(),
-      updateGizmoPivot: () => this.updateGizmoPivot(),
     });
   }
 
@@ -1179,25 +1224,36 @@ export class ViewportLayoutManager {
         worldObject: this.worldObject,
         propertiesPanel: this.propertiesPanel,
         refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
-        updateGizmoVisibility: () => this.updateGizmoVisibility(),
-        updateGizmoPivot: () => this.updateGizmoPivot(),
       },
       direction,
     );
   }
 
   /**
-   * Syncs viewports, outliner, shading, face selection, and CAD rulers after
-   * world changes.
+   * Syncs viewports, outliner, shading, face selection, CAD rulers, and gizmo
+   * after world changes. Single contract shared with inspector transforms and
+   * history so overlays cannot desync from object poses.
    */
   private refreshAfterWorldMutation(): void {
-    this.syncPrimitivesToViewports();
-    this.refreshOutliner();
-    this.faceModeCoordinator.updateFaceSelectionMeshes();
-    // Undo/redo and other world edits leave mesh poses changed without a new
-    // selection event — re-measure so rulers do not float at stale positions.
-    this.cadRulerSystem.endDrag();
-    this.refreshCadRulersFromSelection();
+    refreshSceneVisualsAfterMutation(this.getMutationVisualHost());
+  }
+
+  /**
+   * Builds the host bag for full world-mutation visual refresh.
+   *
+   * @returns Scene mutation visual host.
+   */
+  private getMutationVisualHost(): SceneMutationVisualHost {
+    return {
+      syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
+      refreshOutliner: () => this.refreshOutliner(),
+      updateFaceSelectionMeshes: () => this.faceModeCoordinator.updateFaceSelectionMeshes(),
+      endCadRulerDrag: () => this.cadRulerSystem.endDrag(),
+      refreshCadRulersFromSelection: () => this.refreshCadRulersFromSelection(),
+      updateGizmoVisibility: () => this.updateGizmoVisibility(),
+      updateGizmoPivot: () => this.updateGizmoPivot(),
+      refreshPropertiesPanel: () => this.propertiesPanel.refreshBoundObject(),
+    };
   }
 
   /**

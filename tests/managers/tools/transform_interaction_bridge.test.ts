@@ -210,7 +210,7 @@ describe('TransformInteractionBridge', () => {
       } as never,
       getUserSnapEnabled: () => false,
       isTransformSpaceLocal: () => false,
-      syncPrimitivesToViewports: () => undefined,
+      onAfterTransformCommit: () => undefined,
     };
     if (isInteractionEnabled !== undefined) {
       deps.isInteractionEnabled = isInteractionEnabled;

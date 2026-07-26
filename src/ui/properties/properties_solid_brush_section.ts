@@ -7,7 +7,6 @@ import { SolidOperation, solidOperationLabel } from '../../solid/types/solid_ope
 /** Handlers for solid-brush context controls in the inspector. */
 export interface SolidBrushPropertyHandlers {
   onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) => void;
-  onBrushEdited: (meshes: THREE.Mesh[]) => void;
   onAddBoxBrush: () => void;
   /** Moves brushes to first CSG evaluation slot. */
   onMoveToFirst: (meshes: THREE.Mesh[]) => void;
@@ -119,20 +118,6 @@ export class PropertiesSolidBrushSection {
     if (!this.handlers || brushMeshes.length === 0) return;
     this.handlers.onSetOperation(brushMeshes, operation);
     this.updateFromObjects(boundObjects);
-  }
-
-  /**
-   * Notifies handlers that solid brushes were transform-edited in the
-   * inspector. Solid model roots move with their children without a CSG
-   * rebuild; only brush preview meshes trigger rebuild.
-   *
-   * @param objects Edited objects.
-   */
-  notifyBrushEdits(objects: THREE.Object3D[]): void {
-    if (!this.handlers) return;
-    const meshes = this.collectBrushMeshes(objects);
-    if (meshes.length === 0) return;
-    this.handlers.onBrushEdited(meshes);
   }
 
   /** Invokes the add-box-brush handler when configured. */

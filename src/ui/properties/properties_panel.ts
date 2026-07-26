@@ -48,6 +48,12 @@ export class PropertiesPanel {
   private inputChangeHandlers: { input: HTMLInputElement; handler: () => void }[];
   private colorSession: PropertiesColorSession;
   private solidBrushSection: PropertiesSolidBrushSection;
+  /**
+   * Layout callback after inspector transform commands. Must refresh 2D clones,
+   * selection outlines, brush hulls, CAD rulers, and gizmo (same contract as
+   * undo/redo).
+   */
+  private afterTransformCommit: ((objects: THREE.Object3D[]) => void) | null;
 
   /**
    * Creates a new properties panel.
@@ -71,6 +77,7 @@ export class PropertiesPanel {
     this.sections = [];
     this.inputChangeHandlers = [];
     this.colorSession = new PropertiesColorSession();
+    this.afterTransformCommit = null;
     this.solidBrushSection = new PropertiesSolidBrushSection(
       this.theme,
       () => this.createSectionContainer(),
@@ -99,6 +106,17 @@ export class PropertiesPanel {
    */
   setSolidBrushHandlers(handlers: SolidBrushPropertyHandlers | null): void {
     this.solidBrushSection.setHandlers(handlers);
+  }
+
+  /**
+   * Sets the callback invoked after position/rotation/scale commands commit.
+   * Layout must refresh multi-viewport visuals here — transforms alone leave
+   * clones, outlines, hulls, and CAD rulers desynced.
+   *
+   * @param callback Receives the objects that were transformed, or null.
+   */
+  setAfterTransformCommit(callback: ((objects: THREE.Object3D[]) => void) | null): void {
+    this.afterTransformCommit = callback;
   }
 
   /**
@@ -332,8 +350,7 @@ export class PropertiesPanel {
     });
     if (this.areObjectPositionsUnchanged(editable, positions)) return;
     this.pushOrExecute(new SetPositionCommand(editable, positions));
-    this.notifySolidBrushEdits(editable);
-    this.updateFromObjects(this.boundObjects);
+    this.commitTransformSideEffects(editable);
   }
 
   /** Applies rotation edits (degrees in the UI) to unlocked bound objects. */
@@ -352,8 +369,7 @@ export class PropertiesPanel {
     });
     if (this.areObjectRotationsUnchanged(editable, rotations)) return;
     this.pushOrExecute(new SetRotationCommand(editable, rotations));
-    this.notifySolidBrushEdits(editable);
-    this.updateFromObjects(this.boundObjects);
+    this.commitTransformSideEffects(editable);
   }
 
   /** Applies scale edits to unlocked bound objects. */
@@ -374,18 +390,19 @@ export class PropertiesPanel {
     if (this.areObjectScalesUnchanged(editable, scales)) return;
     this.pushOrExecute(new SetScaleCommand(editable, scales));
     this.rebakeBoundMeshesIfTextureLocked();
-    this.notifySolidBrushEdits(editable);
-    this.updateFromObjects(this.boundObjects);
+    this.commitTransformSideEffects(editable);
   }
 
   /**
-   * Notifies solid CSG to rebuild when brush transforms change from the
-   * inspector.
+   * Runs post-transform side effects after an inspector pose write: solid CSG
+   * finalize (via layout callback), multi-viewport visual sync, then re-read
+   * inputs from the live bound objects.
    *
-   * @param objects Edited objects.
+   * @param objects Objects that received the transform command.
    */
-  private notifySolidBrushEdits(objects: THREE.Object3D[]): void {
-    this.solidBrushSection.notifyBrushEdits(objects);
+  private commitTransformSideEffects(objects: THREE.Object3D[]): void {
+    this.afterTransformCommit?.(objects);
+    this.updateFromObjects(this.boundObjects);
   }
 
   /**

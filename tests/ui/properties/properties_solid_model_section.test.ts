@@ -56,7 +56,6 @@ describe('PropertiesPanel solid model section', () => {
     const onSetInvertedWorld = vi.fn();
     panel.setSolidBrushHandlers({
       onSetOperation: vi.fn(),
-      onBrushEdited: vi.fn(),
       onAddBoxBrush: vi.fn(),
       onMoveToFirst: vi.fn(),
       onMoveToLast: vi.fn(),

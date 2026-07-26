@@ -35,20 +35,20 @@ export interface TransformInteractionDependencies {
   getUserSnapEnabled: () => boolean;
   /** Returns true when gizmo handles should follow object-local axes. */
   isTransformSpaceLocal: () => boolean;
-  syncPrimitivesToViewports: () => void;
   /**
    * Duplicates the current selection and selects the created objects. Used to
    * begin an Alt-drag with duplicates instead of the originals.
    */
   onDuplicateSelectedForDrag?: () => void;
   /**
-   * Optional hook after a transform drag commits (solid CSG rebuild, etc.).
-   * Return true when the handler fully synced solid results and the bridge
-   * should skip a full viewport reclone (large-map pointer-up hang).
+   * Required hook after a transform drag commits. Must refresh 2D clones,
+   * selection outlines, brush hulls, CAD rulers, gizmo, and solid CSG — the
+   * same contract as inspector edits and undo/redo
+   * ({@link refreshSceneVisualsAfterTransformCommit}).
    *
    * @param meshes Meshes that were transformed.
    */
-  onTransformsCommitted?: (meshes: THREE.Mesh[]) => boolean | void;
+  onAfterTransformCommit: (meshes: THREE.Mesh[]) => void;
   /**
    * Optional hook during transform drag for live solid CSG preview.
    *
@@ -421,21 +421,13 @@ export class TransformInteractionBridge {
   }
 
   /**
-   * Commits a completed transform drag (viewport sync, gizmo refresh).
+   * Commits a completed transform drag through the shared layout visual refresh
+   * (clones, selection, rulers, gizmo, solid finalize).
    *
    * @param selectedObjects Meshes that were transformed.
    */
   private commitTransformAfterDrag(selectedObjects: THREE.Mesh[]): void {
-    const solidHandled = this.deps.onTransformsCommitted?.(selectedObjects) === true;
-    if (solidHandled) {
-      this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(resolveTransformTargets(selectedObjects));
-    } else {
-      this.deps.syncPrimitivesToViewports();
-    }
-    this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
-    this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(selectedObjects));
-    this.deps.onRulerTransformFeedback?.(selectedObjects, 'end');
-    this.refreshPropertiesPanelTransform();
+    this.deps.onAfterTransformCommit(selectedObjects);
   }
 
   /**
