@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { Theme } from '../../theme.js';
-import {
-  GizmoVisualStyle,
-  createGizmoFrontLineMaterial,
-  createGizmoOccludedLineMaterial,
-} from '../gizmo/gizmo_visual_style.js';
+import { GizmoVisualStyle } from '../gizmo/gizmo_visual_style.js';
 import type { CadViewPlane } from '../../rulers/cad_view_plane.js';
+import {
+  createBoundsGuideFrontLineMaterial,
+  createBoundsGuideOccludedLineMaterial,
+} from './bounds_guide_line_material.js';
 import {
   isBoundsGuideAxisDrawnInView,
   resolveBoundsGuideRay,
@@ -27,17 +27,25 @@ export interface BoundsGuideLineBuildOptions {
   planarWorldBoxes?: readonly THREE.Box3[];
 }
 
+/** Flat attribute arrays accumulated while building guide rays. */
+interface GuideRayBuffers {
+  positions: number[];
+  colors: number[];
+  lineDistances: number[];
+}
+
 /**
- * Draws RGB axis guide rays from each corner of an oriented bounds box. Solid
- * color at the corner fades toward a transparent tip. Individual rays are only
- * emitted when they can reach the ground plane (perspective) or scene geometry,
- * and orthographic views never draw the depth axis.
+ * Draws RGB axis guide rays from each corner of an oriented bounds box. Rays
+ * use a GPU dashed shader with screen-space dash length (via fwidth) so zoom
+ * does not change dash size in 2D or 3D. Individual rays are only emitted when
+ * they can reach the ground plane (perspective) or scene geometry, and
+ * orthographic views never draw the depth axis.
  */
 export class BoundsGuideLines {
   private rootGroup: THREE.Group;
   private geometry: THREE.BufferGeometry;
-  private frontMaterial: THREE.LineBasicMaterial;
-  private occludedMaterial: THREE.LineBasicMaterial;
+  private frontMaterial: THREE.ShaderMaterial;
+  private occludedMaterial: THREE.ShaderMaterial;
   private frontLines: THREE.LineSegments;
   private occludedLines: THREE.LineSegments;
   private fixedGuideLength: number;
@@ -59,8 +67,8 @@ export class BoundsGuideLines {
     this.colorZ = new THREE.Color(theme.gizmoZAxisColor);
     this.cornerSigns = [-1, 1];
     this.geometry = new THREE.BufferGeometry();
-    this.frontMaterial = createGizmoFrontLineMaterial();
-    this.occludedMaterial = createGizmoOccludedLineMaterial();
+    this.frontMaterial = createBoundsGuideFrontLineMaterial();
+    this.occludedMaterial = createBoundsGuideOccludedLineMaterial();
     this.frontLines = this.createFrontLineSegments();
     this.occludedLines = this.createOccludedLineSegments();
     this.rootGroup = this.createRootGroup();
@@ -111,8 +119,16 @@ export class BoundsGuideLines {
 
   /** Allocates zero-length buffers until the first bounds update. */
   private allocateEmptyGeometry(): void {
-    this.geometry.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
-    this.geometry.setAttribute('color', new THREE.Float32BufferAttribute([], 3));
+    this.applyBuffers(this.createEmptyBuffers());
+  }
+
+  /**
+   * Creates empty attribute arrays for guide ray geometry.
+   *
+   * @returns Empty buffer set.
+   */
+  private createEmptyBuffers(): GuideRayBuffers {
+    return { positions: [], colors: [], lineDistances: [] };
   }
 
   /**
@@ -159,10 +175,9 @@ export class BoundsGuideLines {
    * @param options Optional viewport and raycast context for filtering.
    */
   updateFromHalfExtents(halfExtents: THREE.Vector3, options: BoundsGuideLineBuildOptions = {}): void {
-    const positions: number[] = [];
-    const colors: number[] = [];
-    this.appendAllCornerGuides(positions, colors, halfExtents, options);
-    this.applyBuffers(positions, colors);
+    const buffers = this.createEmptyBuffers();
+    this.appendAllCornerGuides(buffers, halfExtents, options);
+    this.applyBuffers(buffers);
   }
 
   /**
@@ -184,9 +199,7 @@ export class BoundsGuideLines {
   ): void {
     const builder = new BoundsGuideLines(theme, fixedGuideLength);
     builder.updateFromHalfExtents(halfExtents, options);
-    const source = builder.getGeometry();
-    geometry.setAttribute('position', source.getAttribute('position')!.clone());
-    geometry.setAttribute('color', source.getAttribute('color')!.clone());
+    copyGuideGeometryAttributes(builder.getGeometry(), geometry);
     geometry.computeBoundingSphere();
     builder.dispose();
   }
@@ -194,30 +207,19 @@ export class BoundsGuideLines {
   /**
    * Appends outward X/Y/Z rays for every box corner that passes visibility.
    *
-   * @param positions Position component accumulator.
-   * @param colors Color component accumulator.
+   * @param buffers Attribute accumulators.
    * @param halfExtents Local half extents.
    * @param options Visibility context.
    */
   private appendAllCornerGuides(
-    positions: number[],
-    colors: number[],
+    buffers: GuideRayBuffers,
     halfExtents: THREE.Vector3,
     options: BoundsGuideLineBuildOptions,
   ): void {
     this.cornerSigns.forEach((signX) => {
       this.cornerSigns.forEach((signY) => {
         this.cornerSigns.forEach((signZ) => {
-          this.appendCornerAxisRays(
-            positions,
-            colors,
-            halfExtents,
-            this.fixedGuideLength,
-            signX,
-            signY,
-            signZ,
-            options,
-          );
+          this.appendCornerAxisRays(buffers, halfExtents, this.fixedGuideLength, signX, signY, signZ, options);
         });
       });
     });
@@ -226,8 +228,7 @@ export class BoundsGuideLines {
   /**
    * Appends visible outward axis rays for one corner.
    *
-   * @param positions Position component accumulator.
-   * @param colors Color component accumulator.
+   * @param buffers Attribute accumulators.
    * @param halfExtents Local half extents.
    * @param length Outward ray length.
    * @param signX Corner sign on X (-1 or 1).
@@ -236,8 +237,7 @@ export class BoundsGuideLines {
    * @param options Visibility context.
    */
   private appendCornerAxisRays(
-    positions: number[],
-    colors: number[],
+    buffers: GuideRayBuffers,
     halfExtents: THREE.Vector3,
     length: number,
     signX: number,
@@ -248,16 +248,15 @@ export class BoundsGuideLines {
     const cornerX = signX * halfExtents.x;
     const cornerY = signY * halfExtents.y;
     const cornerZ = signZ * halfExtents.z;
-    this.tryAppendAxisRay(positions, colors, cornerX, cornerY, cornerZ, 'x', signX, length, this.colorX, options);
-    this.tryAppendAxisRay(positions, colors, cornerX, cornerY, cornerZ, 'y', signY, length, this.colorY, options);
-    this.tryAppendAxisRay(positions, colors, cornerX, cornerY, cornerZ, 'z', signZ, length, this.colorZ, options);
+    this.tryAppendAxisRay(buffers, cornerX, cornerY, cornerZ, 'x', signX, length, this.colorX, options);
+    this.tryAppendAxisRay(buffers, cornerX, cornerY, cornerZ, 'y', signY, length, this.colorY, options);
+    this.tryAppendAxisRay(buffers, cornerX, cornerY, cornerZ, 'z', signZ, length, this.colorZ, options);
   }
 
   /**
    * Appends one axis ray when viewport rules allow it.
    *
-   * @param positions Position component accumulator.
-   * @param colors Color component accumulator.
+   * @param buffers Attribute accumulators.
    * @param cornerX Corner X.
    * @param cornerY Corner Y.
    * @param cornerZ Corner Z.
@@ -268,8 +267,7 @@ export class BoundsGuideLines {
    * @param options Visibility context.
    */
   private tryAppendAxisRay(
-    positions: number[],
-    colors: number[],
+    buffers: GuideRayBuffers,
     cornerX: number,
     cornerY: number,
     cornerZ: number,
@@ -294,7 +292,7 @@ export class BoundsGuideLines {
       options,
     );
     if (!clipped) return;
-    this.appendRay(positions, colors, cornerX, cornerY, cornerZ, clipped.endX, clipped.endY, clipped.endZ, color);
+    this.appendRay(buffers, cornerX, cornerY, cornerZ, clipped.endX, clipped.endY, clipped.endZ, color);
   }
 
   /**
@@ -354,21 +352,20 @@ export class BoundsGuideLines {
   }
 
   /**
-   * Appends one colored ray with a solid start and faded tip.
+   * Appends one solid-color dashed ray. lineDistance is 0 at the tip and the
+   * segment length at the corner so a full dash lands on the hit target.
    *
-   * @param positions Position component accumulator.
-   * @param colors Color component accumulator.
-   * @param ax Start X.
-   * @param ay Start Y.
-   * @param az Start Z.
-   * @param bx End X.
-   * @param by End Y.
-   * @param bz End Z.
-   * @param color Axis color at the solid end.
+   * @param buffers Attribute accumulators.
+   * @param ax Corner X.
+   * @param ay Corner Y.
+   * @param az Corner Z.
+   * @param bx Tip X.
+   * @param by Tip Y.
+   * @param bz Tip Z.
+   * @param color Axis color for both endpoints.
    */
   private appendRay(
-    positions: number[],
-    colors: number[],
+    buffers: GuideRayBuffers,
     ax: number,
     ay: number,
     az: number,
@@ -377,9 +374,12 @@ export class BoundsGuideLines {
     bz: number,
     color: THREE.Color,
   ): void {
-    positions.push(ax, ay, az, bx, by, bz);
-    this.pushSolidColor(colors, color);
-    this.pushFadedColor(colors, color);
+    const length = Math.hypot(bx - ax, by - ay, bz - az);
+    buffers.positions.push(ax, ay, az, bx, by, bz);
+    this.pushSolidColor(buffers.colors, color);
+    this.pushSolidColor(buffers.colors, color);
+    // Tip = 0, corner = length → tip-aligned screen dashes via fwidth.
+    buffers.lineDistances.push(length, 0);
   }
 
   /**
@@ -393,25 +393,14 @@ export class BoundsGuideLines {
   }
 
   /**
-   * Pushes a dimmed RGB triple that reads as a transparent tip on dark UI.
+   * Writes guide ray attribute arrays into the shared line geometry.
    *
-   * @param colors Color component accumulator.
-   * @param color Source color.
+   * @param buffers Flat attribute component arrays.
    */
-  private pushFadedColor(colors: number[], color: THREE.Color): void {
-    const fade = 0.35;
-    colors.push(color.r * fade, color.g * fade, color.b * fade);
-  }
-
-  /**
-   * Writes position and color arrays into the line geometry.
-   *
-   * @param positions Flat position components.
-   * @param colors Flat color components.
-   */
-  private applyBuffers(positions: number[], colors: number[]): void {
-    this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    this.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  private applyBuffers(buffers: GuideRayBuffers): void {
+    this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(buffers.positions, 3));
+    this.geometry.setAttribute('color', new THREE.Float32BufferAttribute(buffers.colors, 3));
+    this.geometry.setAttribute('lineDistance', new THREE.Float32BufferAttribute(buffers.lineDistances, 1));
     this.geometry.computeBoundingSphere();
   }
 
@@ -432,4 +421,18 @@ export class BoundsGuideLines {
     this.frontMaterial.dispose();
     this.occludedMaterial.dispose();
   }
+}
+
+/**
+ * Copies all guide-ray attributes from a source geometry onto a target.
+ *
+ * @param source Geometry built by a temporary BoundsGuideLines.
+ * @param target Geometry owned by a viewport clone.
+ */
+function copyGuideGeometryAttributes(source: THREE.BufferGeometry, target: THREE.BufferGeometry): void {
+  const names = ['position', 'color', 'lineDistance'] as const;
+  names.forEach((name) => {
+    const attribute = source.getAttribute(name);
+    if (attribute) target.setAttribute(name, attribute.clone());
+  });
 }
