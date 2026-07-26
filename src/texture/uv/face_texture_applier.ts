@@ -30,6 +30,15 @@ import { captureGeometrySourceIfNeeded } from './geometry_source.js';
 import { rebuildSurfaceMaterials } from '../material/surface_material_builder.js';
 import { getTexturePaintState } from '../paint/texture_paint_state.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../library/texture_id.js';
+import {
+  applyPartialFieldsToTrs,
+  applyRelativeOpToTrs,
+  isAlignCompatibleWithFace,
+  readMappingTrs,
+  rebuildMappingWithTrs,
+  type UvRelativeTrsOp,
+} from './uv_trs_ops.js';
+import type { FaceTextureMappingTrs } from './face_texture_mapping.js';
 
 /** Describes one mesh region that will receive a texture mapping update. */
 export interface TextureApplyTarget {
@@ -239,14 +248,19 @@ function resolveTrsExtractNormal(mapping: FaceTextureMapping, fallbackNormal: TH
 }
 
 /**
- * Resolves texture id when merging editor fields onto a target.
+ * Resolves texture id when merging editor fields onto a target. An empty
+ * textureId on the incoming mapping means the UV editor only changed TRS and
+ * each region must keep its own assigned texture (including multi-select with
+ * mixed textures). A non-empty id replaces the region's texture.
  *
  * @param target Region being updated.
  * @param mapping Incoming mapping.
  * @returns Texture identity string.
  */
 function resolveTextureIdForMerge(target: TextureApplyTarget, mapping: FaceTextureMapping): string {
-  if (mapping.textureId) return mapping.textureId;
+  if (mapping.textureId !== undefined && mapping.textureId !== '') {
+    return mapping.textureId;
+  }
   const existing = resolveTargetMapping(target).textureId;
   return existing || DEFAULT_CHECKER_TEXTURE_ID;
 }
@@ -271,18 +285,39 @@ export function applyTextureIdToTargets(targets: TextureApplyTarget[], textureId
 
 /**
  * Sets only the align preset on targets, keeping scale/offset/rotation/texture.
+ * Rebuilds each UV matrix on the align projection plane from TRS extracted
+ * against the existing matrix plane (UVMatrix system). Faces where the align
+ * would degenerate (e.g. Ceiling on a wall) are skipped, UnrealEd-style.
  *
  * @param targets Regions to update.
  * @param align Align preset.
+ * @returns Number of regions actually changed.
  */
-export function applyAlignToTargets(targets: TextureApplyTarget[], align: FaceTextureAlign): void {
+export function applyAlignToTargets(targets: TextureApplyTarget[], align: FaceTextureAlign): number {
+  const meshes = new Set<THREE.Mesh>();
+  let changedCount = 0;
+  targets.forEach((target) => {
+    if (!applyAlignToSingleTarget(target, align)) return;
+    changedCount += 1;
+    meshes.add(target.mesh);
+  });
+  meshes.forEach((mesh) => rebuildMaterialsPreservingSolidOrder(mesh));
+  return changedCount;
+}
+
+/**
+ * Applies a relative TRS op independently to every target (multi-select safe).
+ *
+ * @param targets Regions to update.
+ * @param op Relative scale/offset/rotation operation.
+ */
+export function applyRelativeTrsToTargets(targets: TextureApplyTarget[], op: UvRelativeTrsOp): void {
   const meshes = new Set<THREE.Mesh>();
   targets.forEach((target) => {
     const existing = resolveTargetMapping(target);
     const faceNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
-    const projectionNormal = resolveProjectionNormal(faceNormal, align);
-    const trs = getFaceTextureMappingTrs(existing, faceNormal);
-    const mapping = createFaceTextureMappingFromTrs(existing.textureId, projectionNormal, trs, align);
+    const trs = applyRelativeOpToTrs(readMappingTrs(existing, faceNormal), op);
+    const mapping = rebuildMappingWithTrs(existing, faceNormal, trs);
     upsertFaceTextureMap(target.mesh, target.triangleIndices, mapping);
     bakeFaceUVs(target.mesh, target.triangleIndices, mapping);
     meshes.add(target.mesh);
@@ -291,10 +326,51 @@ export function applyAlignToTargets(targets: TextureApplyTarget[], align: FaceTe
 }
 
 /**
+ * Writes absolute TRS fields onto every target. Only keys present in fields are
+ * changed; missing keys keep each region's existing value (Unity multi-edit).
+ *
+ * @param targets Regions to update.
+ * @param fields Partial absolute TRS fields.
+ */
+export function applyPartialTrsToTargets(targets: TextureApplyTarget[], fields: Partial<FaceTextureMappingTrs>): void {
+  if (Object.keys(fields).length === 0) return;
+  const meshes = new Set<THREE.Mesh>();
+  targets.forEach((target) => {
+    const existing = resolveTargetMapping(target);
+    const faceNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
+    const trs = applyPartialFieldsToTrs(readMappingTrs(existing, faceNormal), fields);
+    const mapping = rebuildMappingWithTrs(existing, faceNormal, trs);
+    upsertFaceTextureMap(target.mesh, target.triangleIndices, mapping);
+    bakeFaceUVs(target.mesh, target.triangleIndices, mapping);
+    meshes.add(target.mesh);
+  });
+  meshes.forEach((mesh) => rebuildMaterialsPreservingSolidOrder(mesh));
+}
+
+/**
+ * Applies align to one target when compatible with its face normal.
+ *
+ * @param target Region to update.
+ * @param align Align preset.
+ * @returns True when the region was modified.
+ */
+function applyAlignToSingleTarget(target: TextureApplyTarget, align: FaceTextureAlign): boolean {
+  const existing = resolveTargetMapping(target);
+  const faceNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
+  if (!isAlignCompatibleWithFace(faceNormal, align)) return false;
+  const projectionNormal = resolveProjectionNormal(faceNormal, align);
+  const trs = readMappingTrs(existing, faceNormal);
+  const mapping = createFaceTextureMappingFromTrs(existing.textureId, projectionNormal, trs, align);
+  upsertFaceTextureMap(target.mesh, target.triangleIndices, mapping);
+  bakeFaceUVs(target.mesh, target.triangleIndices, mapping);
+  return true;
+}
+
+/**
  * Resets UV projection to smart defaults while keeping texture ids. Restores
- * face-plane auto projection (scale 1, rotation 0). When every triangle of a
- * cylinder is included, re-applies circumferential U unwrap so the shell
- * matches create-time layout.
+ * face-plane auto projection (scale 1, rotation 0) with a face-oriented UV
+ * matrix (not identity). When every triangle of a cylinder is included,
+ * re-applies circumferential U unwrap so the shell matches create-time layout.
  *
  * @param targets Regions to reset.
  */
@@ -302,7 +378,7 @@ export function resetUvParamsOnTargets(targets: TextureApplyTarget[]): void {
   const meshes = new Set<THREE.Mesh>();
   targets.forEach((target) => {
     const existing = resolveTargetMapping(target);
-    const mapping = createDefaultFaceTextureMapping(existing.textureId);
+    const mapping = createFaceOrientedDefaultMapping(target, existing.textureId);
     upsertFaceTextureMap(target.mesh, target.triangleIndices, mapping);
     meshes.add(target.mesh);
   });
@@ -319,6 +395,26 @@ export function resetUvParamsOnTargets(targets: TextureApplyTarget[]): void {
     }
     rebuildMaterialsPreservingSolidOrder(mesh);
   });
+}
+
+/**
+ * Builds a default face-plane UV mapping (1 m tiles, 0 rotation) oriented to
+ * the target region's world normal. Used by UV Reset so walls/ceilings are not
+ * left with identity (U=X, V=Y) matrices.
+ *
+ * @param target Region receiving the default mapping.
+ * @param textureId Texture identity to keep.
+ * @returns Face-oriented default mapping.
+ */
+function createFaceOrientedDefaultMapping(target: TextureApplyTarget, textureId: string): FaceTextureMapping {
+  const faceNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
+  const projectionNormal = resolveProjectionNormal(faceNormal, 'auto');
+  return createFaceTextureMappingFromTrs(
+    textureId || DEFAULT_CHECKER_TEXTURE_ID,
+    projectionNormal,
+    { scaleU: 1, scaleV: 1, offsetU: 0, offsetV: 0, rotationDeg: 0 },
+    'auto',
+  );
 }
 
 /**
@@ -447,7 +543,7 @@ export function getCommonMapping(targets: TextureApplyTarget[]): FaceTextureMapp
   if (!firstTarget) return null;
   const first = resolveTargetMapping(firstTarget);
   const firstNormal = computeRegionWorldNormal(firstTarget.mesh, firstTarget.triangleIndices);
-  const firstTrs = getFaceTextureMappingTrs(first, firstNormal);
+  const firstTrs = readMappingTrs(first, firstNormal);
   const firstTextureId = first.textureId || DEFAULT_CHECKER_TEXTURE_ID;
   for (let i = 1; i < targets.length; i++) {
     const target = targets[i];
@@ -455,10 +551,64 @@ export function getCommonMapping(targets: TextureApplyTarget[]): FaceTextureMapp
     const next = resolveTargetMapping(target);
     if ((next.textureId || DEFAULT_CHECKER_TEXTURE_ID) !== firstTextureId) return null;
     const nextNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
-    const nextTrs = getFaceTextureMappingTrs(next, nextNormal);
+    const nextTrs = readMappingTrs(next, nextNormal);
     if (!faceTextureTrsEqual(firstTrs, nextTrs)) return null;
   }
   return first;
+}
+
+/** Per-field UV editor state; null means mixed multi-selection for that field. */
+export interface UvEditorTrsFieldState {
+  scaleU: number | null;
+  scaleV: number | null;
+  offsetU: number | null;
+  offsetV: number | null;
+  rotationDeg: number | null;
+  align: FaceTextureAlign | null;
+  targetCount: number;
+}
+
+/**
+ * Collects shared TRS field values across targets. Fields that differ show as
+ * null so the UV editor can display Unity-style dashes while still allowing
+ * relative buttons and typed overrides.
+ *
+ * @param targets Selection targets.
+ * @returns Per-field shared or mixed state.
+ */
+export function getCommonTrsFieldState(targets: TextureApplyTarget[]): UvEditorTrsFieldState {
+  if (targets.length === 0) {
+    return {
+      scaleU: null,
+      scaleV: null,
+      offsetU: null,
+      offsetV: null,
+      rotationDeg: null,
+      align: null,
+      targetCount: 0,
+    };
+  }
+  const samples = targets.map((target) => {
+    const mapping = resolveTargetMapping(target);
+    const normal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
+    return {
+      trs: readMappingTrs(mapping, normal),
+      align: mapping.align ?? 'auto',
+    };
+  });
+  const first = samples[0]!;
+  return {
+    scaleU: sharedNumber(samples.map((sample) => sample.trs.scaleU)),
+    scaleV: sharedNumber(samples.map((sample) => sample.trs.scaleV)),
+    offsetU: sharedNumber(samples.map((sample) => sample.trs.offsetU)),
+    offsetV: sharedNumber(samples.map((sample) => sample.trs.offsetV)),
+    rotationDeg: sharedNumber(
+      samples.map((sample) => sample.trs.rotationDeg),
+      1e-3,
+    ),
+    align: samples.every((sample) => sample.align === first.align) ? first.align : null,
+    targetCount: targets.length,
+  };
 }
 
 /**
@@ -468,10 +618,7 @@ export function getCommonMapping(targets: TextureApplyTarget[]): FaceTextureMapp
  * @param b Second TRS.
  * @returns True when equal.
  */
-function faceTextureTrsEqual(
-  a: ReturnType<typeof getFaceTextureMappingTrs>,
-  b: ReturnType<typeof getFaceTextureMappingTrs>,
-): boolean {
+function faceTextureTrsEqual(a: FaceTextureMappingTrs, b: FaceTextureMappingTrs): boolean {
   return (
     Math.abs(a.scaleU - b.scaleU) < 1e-4 &&
     Math.abs(a.scaleV - b.scaleV) < 1e-4 &&
@@ -479,4 +626,18 @@ function faceTextureTrsEqual(
     Math.abs(a.offsetV - b.offsetV) < 1e-4 &&
     Math.abs(a.rotationDeg - b.rotationDeg) < 1e-3
   );
+}
+
+/**
+ * Returns the shared value when all numbers match, otherwise null.
+ *
+ * @param values Values to compare.
+ * @param epsilon Equality tolerance.
+ * @returns Shared number or null when mixed.
+ */
+function sharedNumber(values: number[], epsilon: number = 1e-4): number | null {
+  if (values.length === 0) return null;
+  const first = values[0]!;
+  if (!values.every((value) => Math.abs(value - first) <= epsilon)) return null;
+  return first;
 }

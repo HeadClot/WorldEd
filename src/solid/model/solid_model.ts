@@ -767,9 +767,27 @@ export class SolidModel {
    * @param mapping Mapping applied to those triangles.
    */
   syncAuthoredMappingForTriangles(triangleIndices: number[], mapping: FaceTextureMapping): void {
+    this.syncAuthoredMappingsForRegions([{ triangleIndices, mapping }]);
+  }
+
+  /**
+   * Writes multiple result-mesh triangle regions onto brush faces, then
+   * remeshes once. Callers must capture all mappings before this runs so
+   * multi-select UV edits are not lost when the result mesh is rebuilt
+   * mid-loop.
+   *
+   * @param regions Triangle regions with their world-space mappings.
+   */
+  syncAuthoredMappingsForRegions(
+    regions: ReadonlyArray<{ triangleIndices: number[]; mapping: FaceTextureMapping }>,
+  ): void {
+    if (regions.length === 0) return;
     const sources = this.getResultTriangleSources();
-    writeMapEntryToBrushFaces(triangleIndices, mapping, sources, (id) => this.findBrush(id), this.root);
-    const brushIds = collectBrushIdsForTriangles(triangleIndices, sources);
+    const brushIds = new Set<string>();
+    for (const region of regions) {
+      writeMapEntryToBrushFaces(region.triangleIndices, region.mapping, sources, (id) => this.findBrush(id), this.root);
+      collectBrushIdsForTriangles(region.triangleIndices, sources).forEach((id) => brushIds.add(id));
+    }
     this.pipeline.rebakeMeshChunksForBrushes(brushIds);
     if (this.pipeline.hasResultGeometry()) {
       this.applySurfaceLayoutToResult(true);

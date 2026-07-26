@@ -188,7 +188,8 @@ describe('TextureBrowser', () => {
   it('should bring the texture browser above the UV editor when clicked', () => {
     const uvEditor = new UvEditor(host, {
       onAlign: vi.fn(),
-      onApplyMapping: vi.fn(),
+      onApplyPartialTrs: vi.fn(),
+      onRelativeOp: vi.fn(),
       onReset: vi.fn(),
     });
     uvEditor.show();

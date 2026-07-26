@@ -170,7 +170,8 @@ describe('ToolsPalette', () => {
   it('should bring the tools panel above the UV editor when clicked', () => {
     const uvEditor = new UvEditor(host, {
       onAlign: vi.fn(),
-      onApplyMapping: vi.fn(),
+      onApplyPartialTrs: vi.fn(),
+      onRelativeOp: vi.fn(),
       onReset: vi.fn(),
     });
     palette.show();

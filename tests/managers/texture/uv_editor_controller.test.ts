@@ -29,7 +29,9 @@ describe('UvEditorController', () => {
     const uiRefresh = vi.fn();
     controller.setUiRefreshCallback(uiRefresh);
     controller.refreshFromSelection();
-    expect(uiRefresh).toHaveBeenCalledWith(null, 0);
+    expect(uiRefresh).toHaveBeenCalled();
+    const fields = uiRefresh.mock.calls[0]![0]!;
+    expect(fields.targetCount).toBe(0);
   });
 
   it('should refresh UI with face region count after face selection', () => {
@@ -44,6 +46,6 @@ describe('UvEditorController', () => {
     faceController.selectFace(mesh, 0, false);
     expect(uiRefresh).toHaveBeenCalled();
     const lastCall = uiRefresh.mock.calls[uiRefresh.mock.calls.length - 1]!;
-    expect(lastCall[1]).toBeGreaterThan(0);
+    expect(lastCall[0].targetCount).toBeGreaterThan(0);
   });
 });

@@ -6,14 +6,17 @@ import { SelectionMode } from '../../types/selection_mode.js';
 import {
   FaceTextureAlign,
   FaceTextureMapping,
+  FaceTextureMappingTrs,
   createDefaultFaceTextureMapping,
 } from '../../texture/uv/face_texture_mapping.js';
 import {
   TextureApplyTarget,
+  UvEditorTrsFieldState,
   buildTargetsFromFaceSelection,
   buildTargetsFromMeshes,
-  getCommonMapping,
+  getCommonTrsFieldState,
 } from '../../texture/uv/face_texture_applier.js';
+import type { UvRelativeTrsOp } from '../../texture/uv/uv_trs_ops.js';
 
 /**
  * Callback for status messages.
@@ -25,10 +28,9 @@ export type UvEditorStatusCallback = (message: string) => void;
 /**
  * Callback when UV editor field values should refresh.
  *
- * @param mapping Common mapping or null when mixed/empty.
- * @param targetCount Number of face regions targeted.
+ * @param fields Per-field shared or mixed TRS state.
  */
-export type UvEditorUiRefreshCallback = (mapping: FaceTextureMapping | null, targetCount: number) => void;
+export type UvEditorUiRefreshCallback = (fields: UvEditorTrsFieldState) => void;
 
 /** Coordinates UV editor actions with selection and undo. */
 export class UvEditorController {
@@ -78,14 +80,15 @@ export class UvEditorController {
   /** Refreshes UV editor fields from the current selection. */
   refreshFromSelection(): void {
     const targets = this.collectTargets();
-    const common = getCommonMapping(targets);
+    const fields = getCommonTrsFieldState(targets);
     if (this.uiRefreshCallback) {
-      this.uiRefreshCallback(common, targets.length);
+      this.uiRefreshCallback(fields);
     }
   }
 
   /**
-   * Applies an align preset without clobbering per-region scale/offset.
+   * Applies an align preset without clobbering per-region scale/offset. Faces
+   * where the align would collapse UVs are skipped.
    *
    * @param align Align mode.
    */
@@ -99,12 +102,12 @@ export class UvEditorController {
       alignOnly: align,
     });
     this.commandStack.push(command);
-    this.statusCallback?.(`Aligned ${targets.length} face region(s) to ${align}`);
+    this.statusCallback?.(`Aligned selection to ${align} (skipped incompatible faces)`);
     this.refreshFromSelection();
   }
 
   /**
-   * Applies scale/offset/rotation values from the UV editor.
+   * Applies full mapping fields (legacy absolute apply when all fields known).
    *
    * @param mapping Mapping fields read from the UV editor form.
    */
@@ -115,7 +118,49 @@ export class UvEditorController {
       return;
     }
     this.pushApplyCommand(targets, mapping);
-    this.statusCallback?.(`Updated texture on ${targets.length} face region(s)`);
+    this.statusCallback?.(`Updated UV on ${targets.length} face region(s)`);
+    this.refreshFromSelection();
+  }
+
+  /**
+   * Applies absolute TRS field overrides to every selected region. Only
+   * provided fields change (Unity multi-edit: type into a dashed field to set
+   * all).
+   *
+   * @param fields Partial absolute TRS fields.
+   */
+  applyPartialTrsFields(fields: Partial<FaceTextureMappingTrs>): void {
+    if (Object.keys(fields).length === 0) return;
+    const targets = this.collectTargets();
+    if (targets.length === 0) {
+      this.reportNoSelection();
+      return;
+    }
+    const command = new ApplyFaceTextureCommand(targets, createDefaultFaceTextureMapping(), {
+      partialTrs: fields,
+    });
+    this.commandStack.push(command);
+    this.statusCallback?.(`Updated UV fields on ${targets.length} face region(s)`);
+    this.refreshFromSelection();
+  }
+
+  /**
+   * Applies a relative TRS op to every selected region (buttons work even when
+   * numeric fields show mixed dashes).
+   *
+   * @param op Relative operation.
+   */
+  applyRelativeOp(op: UvRelativeTrsOp): void {
+    const targets = this.collectTargets();
+    if (targets.length === 0) {
+      this.reportNoSelection();
+      return;
+    }
+    const command = new ApplyFaceTextureCommand(targets, createDefaultFaceTextureMapping(), {
+      relativeOp: op,
+    });
+    this.commandStack.push(command);
+    this.statusCallback?.(describeRelativeOp(op, targets.length));
     this.refreshFromSelection();
   }
 
@@ -168,4 +213,24 @@ export class UvEditorController {
   private reportNoSelection(): void {
     this.statusCallback?.('Select face(s) in Face mode, or object(s) in Object mode');
   }
+}
+
+/**
+ * Builds a short status string for a relative UV op.
+ *
+ * @param op Relative operation.
+ * @param count Target count.
+ * @returns Status message.
+ */
+function describeRelativeOp(op: UvRelativeTrsOp, count: number): string {
+  const suffix = `${count} face region(s)`;
+  if (op.kind === 'multiplyScale') {
+    return `Scaled ${op.axis.toUpperCase()} ×${op.factor} on ${suffix}`;
+  }
+  if (op.kind === 'addOffset') {
+    const sign = op.delta >= 0 ? '+' : '';
+    return `Offset ${op.axis.toUpperCase()} ${sign}${op.delta} on ${suffix}`;
+  }
+  const sign = op.degrees >= 0 ? '+' : '';
+  return `Rotated UV ${sign}${op.degrees}° on ${suffix}`;
 }

@@ -100,9 +100,11 @@ export function createDefaultFaceTextureMapping(
 
 /**
  * Builds a face mapping from UV editor TRS fields and a face normal. scaleU/V
- * are meters per tile (Hammer-style); converted to matrix scale.
+ * are meters per tile (Hammer-style); converted to matrix scale. Empty
+ * textureId is preserved so applyMappingToTargets can keep each region's
+ * assigned texture (UV editor TRS-only edits).
  *
- * @param textureId Texture identity.
+ * @param textureId Texture identity, or empty to preserve existing on apply.
  * @param faceNormal Face normal in the matrix space.
  * @param trs Editor TRS fields.
  * @param align Optional align hint.
@@ -120,7 +122,7 @@ export function createFaceTextureMappingFromTrs(
   const matrixScaleV = 1 / metersV;
   const translation = new THREE.Vector2(-trs.offsetU * matrixScaleU, -trs.offsetV * matrixScaleV);
   return withTrsAccessors({
-    textureId: textureId || DEFAULT_CHECKER_TEXTURE_ID,
+    textureId: normalizeOptionalTextureId(textureId),
     uv: SurfaceUvMatrix.fromTrs(translation, faceNormal, trs.rotationDeg, matrixScaleU, matrixScaleV),
     align,
   });
@@ -138,7 +140,7 @@ export function withTrsAccessors(mapping: FaceTextureMapping): FaceTextureMappin
     return mapping as unknown as FaceTextureMappingWithTrs;
   }
   const target: FaceTextureMapping & { __trsProxy: boolean } = {
-    textureId: mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID,
+    textureId: normalizeOptionalTextureId(mapping.textureId),
     uv: mapping.uv.clone(),
     __trsProxy: true,
   };
@@ -217,11 +219,24 @@ export function getFaceTextureMappingTrs(
  */
 export function cloneFaceTextureMapping(mapping: FaceTextureMapping): FaceTextureMappingWithTrs {
   const cloned: FaceTextureMapping = {
-    textureId: mapping.textureId || DEFAULT_CHECKER_TEXTURE_ID,
+    textureId: normalizeOptionalTextureId(mapping.textureId),
     uv: mapping.uv.clone(),
   };
   if (mapping.align !== undefined) cloned.align = mapping.align;
   return withTrsAccessors(cloned);
+}
+
+/**
+ * Normalizes a texture id for mapping objects. Undefined/null becomes the
+ * default checker; empty string is preserved as a "keep existing texture"
+ * sentinel for UV-editor TRS apply.
+ *
+ * @param textureId Raw texture id or missing value.
+ * @returns Normalized texture id (may be empty).
+ */
+function normalizeOptionalTextureId(textureId: string | undefined | null): string {
+  if (textureId === undefined || textureId === null) return DEFAULT_CHECKER_TEXTURE_ID;
+  return textureId;
 }
 
 /**

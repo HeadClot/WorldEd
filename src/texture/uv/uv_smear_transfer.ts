@@ -26,11 +26,13 @@ interface WorldEdge {
 
 /**
  * Builds a destination face mapping so UV coordinates continue from a source
- * face across a shared edge. Destination uses a world-space UV matrix.
+ * face across a shared edge. Destination uses a world-space UV matrix. Source
+ * UVs are sampled from the mesh attribute when possible so rotated content
+ * meshes (stale authored matrices) still transfer continuously like solids.
  *
  * @param sourceMesh Mesh owning the source region.
  * @param sourceTriangles Source coplanar triangle indices.
- * @param sourceMapping Source UV matrix mapping.
+ * @param sourceMapping Source UV matrix mapping (or fitted-to-current).
  * @param destMesh Mesh owning the destination region.
  * @param destTriangles Destination coplanar triangle indices.
  * @returns Mapping for the destination region.
@@ -54,10 +56,64 @@ export function transferUvMappingAcrossFaces(
     destTriangles,
     destNormal,
   );
-  const sourceBasis = buildProjectionBasis(resolveProjectionNormal(sourceNormal, sourceMapping.align ?? 'face'), 0);
-  const uvA = projectWorldPositionToUv(points.pointA, sourceBasis, sourceMapping);
-  const uvB = projectWorldPositionToUv(points.pointB, sourceBasis, sourceMapping);
+  const uvA = sampleSourceUvAtWorldPoint(sourceMesh, sourceTriangles, sourceMapping, points.pointA);
+  const uvB = sampleSourceUvAtWorldPoint(sourceMesh, sourceTriangles, sourceMapping, points.pointB);
   return solveDestinationMapping(destNormal, sourceMapping, points.pointA, points.pointB, uvA, uvB, points.flipU);
+}
+
+/**
+ * Samples UV at a world point on the source face. Prefers the baked UV
+ * attribute (matches what the user sees after rotation); falls back to the UV
+ * matrix projection.
+ *
+ * @param mesh Source mesh.
+ * @param triangles Source region triangles.
+ * @param mapping Source mapping used as fallback.
+ * @param worldPoint World-space sample.
+ * @returns UV pair.
+ */
+function sampleSourceUvAtWorldPoint(
+  mesh: THREE.Mesh,
+  triangles: number[],
+  mapping: FaceTextureMapping,
+  worldPoint: THREE.Vector3,
+): { u: number; v: number } {
+  const fromAttribute = findNearestRegionVertexUv(mesh, triangles, worldPoint);
+  if (fromAttribute) return fromAttribute;
+  const sourceNormal = computeRegionWorldNormal(mesh, triangles);
+  const sourceBasis = buildProjectionBasis(resolveProjectionNormal(sourceNormal, mapping.align ?? 'face'), 0);
+  return projectWorldPositionToUv(worldPoint, sourceBasis, mapping);
+}
+
+/**
+ * Finds the UV of the region vertex nearest a world point (shared-edge sample).
+ *
+ * @param mesh Source mesh.
+ * @param triangles Source region triangles.
+ * @param worldPoint World-space query.
+ * @returns UV when a close vertex exists, otherwise null.
+ */
+function findNearestRegionVertexUv(
+  mesh: THREE.Mesh,
+  triangles: number[],
+  worldPoint: THREE.Vector3,
+): { u: number; v: number } | null {
+  const position = mesh.geometry.getAttribute('position');
+  const uv = mesh.geometry.getAttribute('uv');
+  if (!position || !uv) return null;
+  let bestDistanceSq = EDGE_MATCH_TOLERANCE * EDGE_MATCH_TOLERANCE * 4;
+  let best: { u: number; v: number } | null = null;
+  triangles.forEach((triangleIndex) => {
+    const indices = getTriangleVertexIndices(mesh.geometry, triangleIndex);
+    indices.forEach((vertexIndex) => {
+      const world = getVertexPosition(position, vertexIndex).applyMatrix4(mesh.matrixWorld);
+      const distanceSq = world.distanceToSquared(worldPoint);
+      if (distanceSq > bestDistanceSq) return;
+      bestDistanceSq = distanceSq;
+      best = { u: uv.getX(vertexIndex), v: uv.getY(vertexIndex) };
+    });
+  });
+  return best;
 }
 
 /**

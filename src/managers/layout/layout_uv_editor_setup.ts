@@ -64,8 +64,12 @@ function createUvEditorUi(deps: UvEditorSetupDeps, controller: UvEditorControlle
         controller.applyAlign(align);
         deps.afterSurfaceChange();
       },
-      onApplyMapping: (mapping) => {
-        controller.applyMappingFields(mapping);
+      onApplyPartialTrs: (fields) => {
+        controller.applyPartialTrsFields(fields);
+        deps.afterSurfaceChange();
+      },
+      onRelativeOp: (op) => {
+        controller.applyRelativeOp(op);
         deps.afterSurfaceChange();
       },
       onReset: () => {
@@ -85,8 +89,8 @@ function createUvEditorUi(deps: UvEditorSetupDeps, controller: UvEditorControlle
  * @param controller UV mapping controller.
  */
 function wireUvEditorRefresh(deps: UvEditorSetupDeps, uvEditor: UvEditor, controller: UvEditorController): void {
-  controller.setUiRefreshCallback((mapping, count) => {
-    uvEditor.setFromSelection(mapping, count);
+  controller.setUiRefreshCallback((fields) => {
+    uvEditor.setFromFieldState(fields);
   });
   deps.faceController.setFaceSelectionChangedCallback(() => {
     if (!uvEditor.isOpen()) return;

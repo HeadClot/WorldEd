@@ -1,26 +1,52 @@
 import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
 import { ToolbarIcons } from '../toolbar_icons.js';
-import * as THREE from 'three';
-import {
-  FaceTextureAlign,
-  FaceTextureMapping,
-  createDefaultFaceTextureMapping,
-  createFaceTextureMappingFromTrs,
-  getFaceTextureMappingTrs,
-} from '../../texture/uv/face_texture_mapping.js';
+import { FaceTextureAlign, FaceTextureMappingTrs } from '../../texture/uv/face_texture_mapping.js';
+import type { UvEditorTrsFieldState } from '../../texture/uv/face_texture_applier.js';
+import { UV_OFFSET_NUDGE, type UvRelativeTrsOp } from '../../texture/uv/uv_trs_ops.js';
 import { FloatingPanelStack } from '../floating_panel_stack.js';
+
+/** Unity-style dash for mixed multi-selection values. */
+const MIXED_VALUE_DISPLAY = '—';
+
+/**
+ * Fixed layout metrics for a neat UV editor grid. Top icons and field rows use
+ * the same content width: four 30px cells with 4px gaps (= label+field+2
+ * btns).
+ */
+const UV_LAYOUT = {
+  panelPaddingX: 8,
+  rowGap: 4,
+  sectionGapY: 2,
+  labelWidth: 12,
+  fieldWidth: 48,
+  fieldHeight: 24,
+  /** Shared width for align icons and every nudge button. */
+  controlWidth: 30,
+  controlHeight: 24,
+  iconHeight: 26,
+  /**
+   * Content grid width: 4×30 + 3×4 = 132, equal to
+   * label(12)+gap+field(48)+gap+btn(30)+gap+btn(30).
+   */
+  contentWidth: 12 + 4 + 48 + 4 + 30 + 4 + 30,
+} as const;
+
+/** Panel outer width: horizontal padding + content grid. */
+const UV_PANEL_WIDTH_PX = UV_LAYOUT.panelPaddingX * 2 + UV_LAYOUT.contentWidth;
 
 /** Callbacks the UV editor uses to apply texture mapping operations. */
 export interface UvEditorHandlers {
   onAlign: (align: FaceTextureAlign) => void;
-  onApplyMapping: (mapping: FaceTextureMapping) => void;
+  onApplyPartialTrs: (fields: Partial<FaceTextureMappingTrs>) => void;
+  onRelativeOp: (op: UvRelativeTrsOp) => void;
   onReset: () => void;
 }
 
 /**
- * Floating UV editor for CSG-style face texture mapping. Icon strip for
- * align/reset plus numeric scale, offset, and rotation.
+ * Floating UV editor for face texture mapping. Compact numeric fields with
+ * Hammer/TrenchBroom-style nudge buttons (×2 / ½ scale, ±¼ tile offset, ±90°
+ * rotation) and multi-select support (mixed dashes + relative ops on all).
  */
 export class UvEditor {
   private root: HTMLElement;
@@ -38,6 +64,7 @@ export class UvEditor {
   private dragOffsetY: number;
   private isDragging: boolean;
   private lastAlign: FaceTextureAlign;
+  private suppressFieldEmit: boolean;
 
   /**
    * Creates a UV editor attached to the host element.
@@ -56,6 +83,7 @@ export class UvEditor {
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
     this.lastAlign = 'auto';
+    this.suppressFieldEmit = false;
     this.scaleUInput = document.createElement('input');
     this.scaleVInput = document.createElement('input');
     this.offsetUInput = document.createElement('input');
@@ -64,7 +92,15 @@ export class UvEditor {
     this.statusLabel = document.createElement('div');
     this.root = this.buildRoot();
     this.host.appendChild(this.root);
-    this.setMappingFields(createDefaultFaceTextureMapping());
+    this.setFromFieldState({
+      scaleU: 1,
+      scaleV: 1,
+      offsetU: 0,
+      offsetV: 0,
+      rotationDeg: 0,
+      align: 'auto',
+      targetCount: 0,
+    });
   }
 
   /**
@@ -119,18 +155,59 @@ export class UvEditor {
   }
 
   /**
-   * Updates numeric fields from a common mapping (or blanks when mixed).
+   * Updates numeric fields from shared/mixed TRS state.
    *
-   * @param mapping Common mapping or null.
+   * @param fields Per-field state (null = mixed).
+   */
+  setFromFieldState(fields: UvEditorTrsFieldState): void {
+    this.suppressFieldEmit = true;
+    this.lastAlign = fields.align ?? this.lastAlign;
+    this.writeField(this.scaleUInput, fields.scaleU, 2);
+    this.writeField(this.scaleVInput, fields.scaleV, 2);
+    this.writeField(this.offsetUInput, fields.offsetU, 2);
+    this.writeField(this.offsetVInput, fields.offsetV, 2);
+    this.writeField(this.rotationInput, fields.rotationDeg, 1);
+    this.statusLabel.textContent =
+      fields.targetCount === 0 ? 'No surfaces selected' : `${fields.targetCount} face region(s)`;
+    this.suppressFieldEmit = false;
+  }
+
+  /**
+   * Legacy refresh API used by older call sites. Prefer setFromFieldState.
+   *
+   * @param mapping Common mapping or null when mixed.
    * @param targetCount Number of targeted regions.
    */
-  setFromSelection(mapping: FaceTextureMapping | null, targetCount: number): void {
-    if (mapping) {
-      this.setMappingFields(mapping);
-    } else if (targetCount > 0) {
-      this.clearNumericFields();
+  setFromSelection(mapping: { align?: FaceTextureAlign } | null, targetCount: number): void {
+    if (!mapping) {
+      this.setFromFieldState({
+        scaleU: null,
+        scaleV: null,
+        offsetU: null,
+        offsetV: null,
+        rotationDeg: null,
+        align: null,
+        targetCount,
+      });
+      return;
     }
-    this.statusLabel.textContent = targetCount === 0 ? 'No surfaces selected' : `${targetCount} face region(s)`;
+    const trs = mapping as {
+      scaleU?: number;
+      scaleV?: number;
+      offsetU?: number;
+      offsetV?: number;
+      rotationDeg?: number;
+      align?: FaceTextureAlign;
+    };
+    this.setFromFieldState({
+      scaleU: trs.scaleU ?? 1,
+      scaleV: trs.scaleV ?? 1,
+      offsetU: trs.offsetU ?? 0,
+      offsetV: trs.offsetV ?? 0,
+      rotationDeg: trs.rotationDeg ?? 0,
+      align: mapping.align ?? 'auto',
+      targetCount,
+    });
   }
 
   /** Disposes DOM and listeners. */
@@ -151,9 +228,9 @@ export class UvEditor {
     this.styleRoot(root);
     root.appendChild(this.buildTitleBar());
     root.appendChild(this.buildIconStrip());
-    root.appendChild(this.buildNumericSection('Scale', 'U', 'V', this.scaleUInput, this.scaleVInput, 0.25));
-    root.appendChild(this.buildNumericSection('Offset', 'U', 'V', this.offsetUInput, this.offsetVInput, 0.25));
-    root.appendChild(this.buildRotationRow());
+    root.appendChild(this.buildScaleSection());
+    root.appendChild(this.buildOffsetSection());
+    root.appendChild(this.buildRotationSection());
     this.styleStatusLabel();
     root.appendChild(this.statusLabel);
     this.bindNumericApply();
@@ -169,7 +246,8 @@ export class UvEditor {
     root.style.position = 'fixed';
     root.style.display = 'none';
     root.style.flexDirection = 'column';
-    root.style.width = '220px';
+    root.style.width = `${UV_PANEL_WIDTH_PX}px`;
+    root.style.boxSizing = 'border-box';
     root.style.background = hexToRgb(Theme.propertiesPanelBackground);
     root.style.border = `1px solid ${hexToRgb(Theme.separatorColor)}`;
     root.style.borderRadius = '6px';
@@ -202,7 +280,7 @@ export class UvEditor {
     bar.style.display = 'flex';
     bar.style.alignItems = 'center';
     bar.style.gap = '6px';
-    bar.style.padding = '8px 10px';
+    bar.style.padding = `6px ${UV_LAYOUT.panelPaddingX}px`;
     bar.style.cursor = 'move';
     bar.style.borderBottom = `1px solid ${hexToRgb(Theme.separatorColor)}`;
     const title = document.createElement('span');
@@ -216,7 +294,7 @@ export class UvEditor {
     close.type = 'button';
     close.textContent = '×';
     close.title = 'Close';
-    this.styleSmallButton(close, false);
+    this.styleChromeButton(close);
     close.addEventListener('click', (event) => {
       event.stopPropagation();
       this.hide(true);
@@ -228,40 +306,215 @@ export class UvEditor {
   }
 
   /**
-   * Builds the align/reset icon strip.
+   * Builds the align/reset icon strip. Four equal controls packed with the same
+   * gap as field rows (not space-between).
    *
    * @returns Icon strip element.
    */
   private buildIconStrip(): HTMLElement {
     const strip = document.createElement('div');
     strip.style.display = 'flex';
-    strip.style.gap = '4px';
-    strip.style.padding = '8px 10px';
+    strip.style.gap = `${UV_LAYOUT.rowGap}px`;
+    strip.style.padding = `6px ${UV_LAYOUT.panelPaddingX}px 4px`;
+    strip.style.justifyContent = 'flex-start';
+    strip.style.boxSizing = 'border-box';
+    strip.appendChild(this.createIconButton('Floor', ToolbarIcons.alignFloor(), () => this.handlers.onAlign('floor')));
+    strip.appendChild(this.createIconButton('Wall', ToolbarIcons.alignWall(), () => this.handlers.onAlign('wall')));
     strip.appendChild(
-      this.createIconButton('Floor', ToolbarIcons.alignFloor(), () => {
-        this.handlers.onAlign('floor');
-      }),
+      this.createIconButton('Ceiling', ToolbarIcons.alignCeiling(), () => this.handlers.onAlign('ceiling')),
     );
-    strip.appendChild(
-      this.createIconButton('Wall', ToolbarIcons.alignWall(), () => {
-        this.handlers.onAlign('wall');
-      }),
-    );
-    strip.appendChild(
-      this.createIconButton('Ceiling', ToolbarIcons.alignCeiling(), () => {
-        this.handlers.onAlign('ceiling');
-      }),
-    );
-    strip.appendChild(
-      this.createIconButton('Reset', ToolbarIcons.textureReset(), () => {
-        this.handlers.onReset();
-      }),
-    );
+    strip.appendChild(this.createIconButton('Reset', ToolbarIcons.textureReset(), () => this.handlers.onReset()));
     return strip;
   }
 
   /**
-   * Creates a compact icon button.
+   * Builds the scale section with ×2 / ½ buttons per axis.
+   *
+   * @returns Section element.
+   */
+  private buildScaleSection(): HTMLElement {
+    const section = this.createSection('Scale');
+    section.appendChild(
+      this.buildAxisRowWithButtons('U', this.scaleUInput, 0.25, [
+        { label: '×2', title: 'Double U scale (larger tiles)', op: { kind: 'multiplyScale', axis: 'u', factor: 2 } },
+        { label: '½', title: 'Halve U scale (smaller tiles)', op: { kind: 'multiplyScale', axis: 'u', factor: 0.5 } },
+      ]),
+    );
+    section.appendChild(
+      this.buildAxisRowWithButtons('V', this.scaleVInput, 0.25, [
+        { label: '×2', title: 'Double V scale (larger tiles)', op: { kind: 'multiplyScale', axis: 'v', factor: 2 } },
+        { label: '½', title: 'Halve V scale (smaller tiles)', op: { kind: 'multiplyScale', axis: 'v', factor: 0.5 } },
+      ]),
+    );
+    return section;
+  }
+
+  /**
+   * Builds the offset section with ±¼ tile nudge buttons.
+   *
+   * @returns Section element.
+   */
+  private buildOffsetSection(): HTMLElement {
+    const section = this.createSection('Offset');
+    const step = UV_OFFSET_NUDGE;
+    section.appendChild(
+      this.buildAxisRowWithButtons('U', this.offsetUInput, step, [
+        { label: '−¼', title: 'Shift U by −¼ tile', op: { kind: 'addOffset', axis: 'u', delta: -step } },
+        { label: '+¼', title: 'Shift U by +¼ tile', op: { kind: 'addOffset', axis: 'u', delta: step } },
+      ]),
+    );
+    section.appendChild(
+      this.buildAxisRowWithButtons('V', this.offsetVInput, step, [
+        { label: '−¼', title: 'Shift V by −¼ tile', op: { kind: 'addOffset', axis: 'v', delta: -step } },
+        { label: '+¼', title: 'Shift V by +¼ tile', op: { kind: 'addOffset', axis: 'v', delta: step } },
+      ]),
+    );
+    return section;
+  }
+
+  /**
+   * Builds the rotation section with ±90° buttons.
+   *
+   * @returns Section element.
+   */
+  private buildRotationSection(): HTMLElement {
+    const section = this.createSection('Rotation');
+    section.appendChild(
+      this.buildAxisRowWithButtons('°', this.rotationInput, 1, [
+        { label: '−90', title: 'Rotate UV −90°', op: { kind: 'addRotation', degrees: -90 } },
+        { label: '+90', title: 'Rotate UV +90°', op: { kind: 'addRotation', degrees: 90 } },
+      ]),
+    );
+    return section;
+  }
+
+  /**
+   * Creates a labeled section container.
+   *
+   * @param title Section title.
+   * @returns Section element.
+   */
+  private createSection(title: string): HTMLElement {
+    const section = document.createElement('div');
+    section.style.padding = `${UV_LAYOUT.sectionGapY}px ${UV_LAYOUT.panelPaddingX}px`;
+    section.style.boxSizing = 'border-box';
+    const header = document.createElement('div');
+    header.textContent = title;
+    header.style.color = Theme.buttonTextColor;
+    header.style.fontFamily = 'monospace';
+    header.style.fontSize = '11px';
+    header.style.marginBottom = '3px';
+    section.appendChild(header);
+    return section;
+  }
+
+  /**
+   * Builds one labeled input row with fixed-width nudge buttons.
+   *
+   * @param label Axis label.
+   * @param input Input element.
+   * @param step Input step.
+   * @param buttons Nudge button specs.
+   * @returns Row element.
+   */
+  private buildAxisRowWithButtons(
+    label: string,
+    input: HTMLInputElement,
+    step: number,
+    buttons: Array<{ label: string; title: string; op: UvRelativeTrsOp }>,
+  ): HTMLElement {
+    const row = document.createElement('div');
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = `${UV_LAYOUT.labelWidth}px ${UV_LAYOUT.fieldWidth}px ${UV_LAYOUT.controlWidth}px ${UV_LAYOUT.controlWidth}px`;
+    row.style.columnGap = `${UV_LAYOUT.rowGap}px`;
+    row.style.alignItems = 'center';
+    row.style.marginBottom = '3px';
+    row.style.width = `${UV_LAYOUT.contentWidth}px`;
+    row.style.boxSizing = 'border-box';
+    row.appendChild(this.createAxisLabel(label));
+    this.configureNumberInput(input, step);
+    row.appendChild(input);
+    buttons.forEach((spec) => {
+      row.appendChild(this.createNudgeButton(spec.label, spec.title, () => this.handlers.onRelativeOp(spec.op)));
+    });
+    return row;
+  }
+
+  /**
+   * Creates a narrow axis label.
+   *
+   * @param label Label text.
+   * @returns Label element.
+   */
+  private createAxisLabel(label: string): HTMLElement {
+    const labelEl = document.createElement('span');
+    labelEl.textContent = label;
+    labelEl.style.width = `${UV_LAYOUT.labelWidth}px`;
+    labelEl.style.flexShrink = '0';
+    labelEl.style.color = Theme.buttonTextColor;
+    labelEl.style.fontFamily = 'monospace';
+    labelEl.style.fontSize = '11px';
+    labelEl.style.lineHeight = `${UV_LAYOUT.fieldHeight}px`;
+    labelEl.style.textAlign = 'left';
+    return labelEl;
+  }
+
+  /**
+   * Configures a compact number-like text input (supports mixed dash display).
+   *
+   * @param input Input element.
+   * @param step Step size.
+   */
+  private configureNumberInput(input: HTMLInputElement, step: number): void {
+    input.type = 'text';
+    input.inputMode = 'decimal';
+    input.placeholder = MIXED_VALUE_DISPLAY;
+    input.dataset['step'] = String(step);
+    input.style.width = `${UV_LAYOUT.fieldWidth}px`;
+    input.style.minWidth = `${UV_LAYOUT.fieldWidth}px`;
+    input.style.maxWidth = `${UV_LAYOUT.fieldWidth}px`;
+    input.style.height = `${UV_LAYOUT.fieldHeight}px`;
+    input.style.boxSizing = 'border-box';
+    input.style.background = Theme.inputBackgroundColor;
+    input.style.color = Theme.inputTextColor;
+    input.style.border = `1px solid ${Theme.inputBorderColor}`;
+    input.style.borderRadius = '3px';
+    input.style.padding = '0 4px';
+    input.style.fontFamily = 'monospace';
+    input.style.fontSize = '11px';
+    input.style.textAlign = 'right';
+    this.bindMixedValueFocusClear(input);
+  }
+
+  /**
+   * Creates a fixed-width nudge button (same size for ×2, ½, −90, +90, etc.).
+   *
+   * @param label Button label.
+   * @param title Tooltip.
+   * @param onClick Click handler.
+   * @returns Button element.
+   */
+  private createNudgeButton(label: string, title: string, onClick: () => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.title = title;
+    button.setAttribute('aria-label', title);
+    this.applyControlButtonChrome(button, UV_LAYOUT.controlHeight);
+    button.style.fontSize = '10px';
+    button.style.fontFamily = 'monospace';
+    button.style.padding = '0';
+    button.style.lineHeight = '1';
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      onClick();
+    });
+    this.bindButtonHover(button);
+    return button;
+  }
+
+  /**
+   * Creates a fixed-width icon button for the top strip (same cell as nudges).
    *
    * @param title Tooltip.
    * @param svgIcon SVG markup.
@@ -274,234 +527,162 @@ export class UvEditor {
     button.title = title;
     button.setAttribute('aria-label', title);
     button.innerHTML = svgIcon;
-    button.style.width = '28px';
-    button.style.height = '28px';
-    button.style.display = 'inline-flex';
-    button.style.alignItems = 'center';
-    button.style.justifyContent = 'center';
-    button.style.border = `1px solid ${Theme.inputBorderColor}`;
-    button.style.borderRadius = '4px';
-    button.style.background = hexToRgb(Theme.buttonBackground);
-    button.style.color = Theme.buttonTextColor;
-    button.style.cursor = 'pointer';
+    this.applyControlButtonChrome(button, UV_LAYOUT.iconHeight);
+    button.style.padding = '0';
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       onClick();
     });
-    button.addEventListener('mouseenter', () => {
-      button.style.background = hexToRgb(Theme.buttonHoverColor);
-    });
-    button.addEventListener('mouseleave', () => {
-      button.style.background = hexToRgb(Theme.buttonBackground);
-    });
+    this.bindButtonHover(button);
     return button;
   }
 
   /**
-   * Builds a two-field numeric section.
+   * Applies shared fixed size and chrome to toolbar / nudge controls.
    *
-   * @param title Section title.
-   * @param labelA First field label.
-   * @param labelB Second field label.
-   * @param inputA First input.
-   * @param inputB Second input.
-   * @param step Input step.
-   * @returns Section element.
+   * @param button Button to style.
+   * @param height Control height in pixels.
    */
-  private buildNumericSection(
-    title: string,
-    labelA: string,
-    labelB: string,
-    inputA: HTMLInputElement,
-    inputB: HTMLInputElement,
-    step: number,
-  ): HTMLElement {
-    const section = document.createElement('div');
-    section.style.padding = '4px 10px';
-    const header = document.createElement('div');
-    header.textContent = title;
-    header.style.color = Theme.buttonTextColor;
-    header.style.fontFamily = 'monospace';
-    header.style.fontSize = '11px';
-    header.style.marginBottom = '4px';
-    section.appendChild(header);
-    section.appendChild(this.buildAxisRow(labelA, inputA, step));
-    section.appendChild(this.buildAxisRow(labelB, inputB, step));
-    return section;
-  }
-
-  /**
-   * Builds the rotation single-field row.
-   *
-   * @returns Section element.
-   */
-  private buildRotationRow(): HTMLElement {
-    const section = document.createElement('div');
-    section.style.padding = '4px 10px';
-    const header = document.createElement('div');
-    header.textContent = 'Rotation';
-    header.style.color = Theme.buttonTextColor;
-    header.style.fontFamily = 'monospace';
-    header.style.fontSize = '11px';
-    header.style.marginBottom = '4px';
-    section.appendChild(header);
-    section.appendChild(this.buildAxisRow('°', this.rotationInput, 1));
-    return section;
-  }
-
-  /**
-   * Builds one labeled number input row.
-   *
-   * @param label Axis label.
-   * @param input Input element to configure.
-   * @param step Step size.
-   * @returns Row element.
-   */
-  private buildAxisRow(label: string, input: HTMLInputElement, step: number): HTMLElement {
-    const row = document.createElement('div');
-    row.style.display = 'flex';
-    row.style.alignItems = 'center';
-    row.style.gap = '6px';
-    row.style.marginBottom = '3px';
-    const labelEl = document.createElement('span');
-    labelEl.textContent = label;
-    labelEl.style.width = '14px';
-    labelEl.style.color = Theme.buttonTextColor;
-    labelEl.style.fontFamily = 'monospace';
-    labelEl.style.fontSize = '11px';
-    input.type = 'number';
-    input.step = String(step);
-    this.styleNumberInput(input);
-    row.appendChild(labelEl);
-    row.appendChild(input);
-    return row;
-  }
-
-  /**
-   * Styles a number input like the properties panel.
-   *
-   * @param input Input to style.
-   */
-  private styleNumberInput(input: HTMLInputElement): void {
-    input.style.flex = '1';
-    input.style.background = Theme.inputBackgroundColor;
-    input.style.color = Theme.inputTextColor;
-    input.style.border = `1px solid ${Theme.inputBorderColor}`;
-    input.style.borderRadius = '2px';
-    input.style.padding = '2px 4px';
-    input.style.fontFamily = 'monospace';
-    input.style.fontSize = '11px';
-  }
-
-  /**
-   * Styles a small title-bar button.
-   *
-   * @param button Button element.
-   * @param active Whether it appears active.
-   */
-  private styleSmallButton(button: HTMLButtonElement, active: boolean): void {
+  private applyControlButtonChrome(button: HTMLButtonElement, height: number): void {
+    button.style.width = `${UV_LAYOUT.controlWidth}px`;
+    button.style.minWidth = `${UV_LAYOUT.controlWidth}px`;
+    button.style.maxWidth = `${UV_LAYOUT.controlWidth}px`;
+    button.style.height = `${height}px`;
+    button.style.boxSizing = 'border-box';
+    button.style.display = 'inline-flex';
+    button.style.alignItems = 'center';
+    button.style.justifyContent = 'center';
     button.style.border = `1px solid ${Theme.inputBorderColor}`;
     button.style.borderRadius = '3px';
-    button.style.background = active ? 'rgba(232, 106, 23, 0.28)' : hexToRgb(Theme.buttonBackground);
+    button.style.background = hexToRgb(Theme.buttonBackground);
+    button.style.color = Theme.buttonTextColor;
+    button.style.cursor = 'pointer';
+    button.style.flex = `0 0 ${UV_LAYOUT.controlWidth}px`;
+    button.style.overflow = 'hidden';
+  }
+
+  /**
+   * Styles a small chrome button (title bar close).
+   *
+   * @param button Button element.
+   */
+  private styleChromeButton(button: HTMLButtonElement): void {
+    button.style.border = `1px solid ${Theme.inputBorderColor}`;
+    button.style.borderRadius = '3px';
+    button.style.background = hexToRgb(Theme.buttonBackground);
     button.style.color = Theme.buttonTextColor;
     button.style.fontSize = '11px';
     button.style.padding = '2px 6px';
     button.style.cursor = 'pointer';
   }
 
+  /**
+   * Binds hover background for a toolbar-style button.
+   *
+   * @param button Button element.
+   */
+  private bindButtonHover(button: HTMLButtonElement): void {
+    button.addEventListener('mouseenter', () => {
+      button.style.background = hexToRgb(Theme.buttonHoverColor);
+    });
+    button.addEventListener('mouseleave', () => {
+      button.style.background = hexToRgb(Theme.buttonBackground);
+    });
+  }
+
   /** Styles the status label under the fields. */
   private styleStatusLabel(): void {
-    this.statusLabel.style.padding = '4px 10px 0';
+    this.statusLabel.style.padding = `4px ${UV_LAYOUT.panelPaddingX}px 0`;
     this.statusLabel.style.color = Theme.statusBarTextColor;
     this.statusLabel.style.fontFamily = 'monospace';
     this.statusLabel.style.fontSize = '10px';
   }
 
-  /** Binds change events on numeric fields to apply mapping. */
+  /** Binds change events on numeric fields to apply partial TRS. */
   private bindNumericApply(): void {
-    const apply = () => this.emitMappingFromFields();
+    const apply = () => this.emitPartialFromFields();
     [this.scaleUInput, this.scaleVInput, this.offsetUInput, this.offsetVInput, this.rotationInput].forEach((input) => {
       input.addEventListener('change', apply);
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          (event.target as HTMLInputElement).blur();
+          apply();
+        }
+      });
     });
   }
 
-  /** Reads fields and emits an apply mapping event. */
-  private emitMappingFromFields(): void {
-    const mapping = this.readMappingFromFields();
-    if (!mapping) return;
-    this.handlers.onApplyMapping(mapping);
-  }
-
   /**
-   * Reads a complete mapping from inputs (keeps auto align if not set by
-   * icons).
+   * Clears a mixed-value dash when the user focuses the field so typing
+   * replaces it (Unity properties pattern).
    *
-   * @returns Mapping or null when any field is invalid.
+   * @param input Field input.
    */
-  private readMappingFromFields(): FaceTextureMapping | null {
-    const scaleU = parseFloat(this.scaleUInput.value);
-    const scaleV = parseFloat(this.scaleVInput.value);
-    const offsetU = parseFloat(this.offsetUInput.value);
-    const offsetV = parseFloat(this.offsetVInput.value);
-    const rotationDeg = parseFloat(this.rotationInput.value);
-    if ([scaleU, scaleV, offsetU, offsetV, rotationDeg].some((v) => isNaN(v))) {
-      return null;
-    }
-    const normal = this.resolveAlignNormal(this.lastAlign);
-    return createFaceTextureMappingFromTrs(
-      '',
-      normal,
-      { scaleU, scaleV, offsetU, offsetV, rotationDeg },
-      this.lastAlign,
-    );
+  private bindMixedValueFocusClear(input: HTMLInputElement): void {
+    input.addEventListener('focus', () => {
+      if (input.value.trim() !== MIXED_VALUE_DISPLAY) return;
+      input.value = '';
+    });
   }
 
   /**
-   * Writes mapping values into inputs via UV matrix decompose.
+   * Reads fields and emits only the axes that have valid numbers so
+   * multi-select can set one field without requiring all others.
+   */
+  private emitPartialFromFields(): void {
+    if (this.suppressFieldEmit) return;
+    const fields = this.readPartialFieldsFromInputs();
+    if (Object.keys(fields).length === 0) return;
+    this.handlers.onApplyPartialTrs(fields);
+  }
+
+  /**
+   * Parses optional numbers from inputs into a partial TRS object.
    *
-   * @param mapping Source mapping.
+   * @returns Partial TRS with only valid typed fields.
    */
-  private setMappingFields(mapping: FaceTextureMapping): void {
-    this.lastAlign = mapping.align ?? 'auto';
-    // Decompose against the matrix plane so Z/X faces show correct rotation.
-    const normal = mapping.uv.planeNormal();
-    const trs = getFaceTextureMappingTrs(mapping, normal);
-    this.scaleUInput.value = trs.scaleU.toFixed(2);
-    this.scaleVInput.value = trs.scaleV.toFixed(2);
-    this.offsetUInput.value = trs.offsetU.toFixed(2);
-    this.offsetVInput.value = trs.offsetV.toFixed(2);
-    this.rotationInput.value = trs.rotationDeg.toFixed(1);
+  private readPartialFieldsFromInputs(): Partial<FaceTextureMappingTrs> {
+    const fields: Partial<FaceTextureMappingTrs> = {};
+    const scaleU = this.parseOptionalNumber(this.scaleUInput.value);
+    const scaleV = this.parseOptionalNumber(this.scaleVInput.value);
+    const offsetU = this.parseOptionalNumber(this.offsetUInput.value);
+    const offsetV = this.parseOptionalNumber(this.offsetVInput.value);
+    const rotationDeg = this.parseOptionalNumber(this.rotationInput.value);
+    if (scaleU !== null) fields.scaleU = scaleU;
+    if (scaleV !== null) fields.scaleV = scaleV;
+    if (offsetU !== null) fields.offsetU = offsetU;
+    if (offsetV !== null) fields.offsetV = offsetV;
+    if (rotationDeg !== null) fields.rotationDeg = rotationDeg;
+    return fields;
   }
 
   /**
-   * Temporary normal used only when packaging form TRS for apply. Apply
-   * rebuilds the matrix per selected face normal.
+   * Parses an input string into a number, or null when mixed/empty/invalid.
    *
-   * @param align Align preset.
-   * @returns Unit normal.
+   * @param text Raw input text.
+   * @returns Parsed number, or null to leave the field unchanged.
    */
-  private resolveAlignNormal(align: FaceTextureAlign): THREE.Vector3 {
-    if (align === 'floor') return new THREE.Vector3(0, 1, 0);
-    if (align === 'ceiling') return new THREE.Vector3(0, -1, 0);
-    if (align === 'wall') return new THREE.Vector3(0, 0, 1);
-    return new THREE.Vector3(0, 1, 0);
-  }
-
-  /** Clears numeric inputs for mixed multi-selection. */
-  private clearNumericFields(): void {
-    this.scaleUInput.value = '';
-    this.scaleVInput.value = '';
-    this.offsetUInput.value = '';
-    this.offsetVInput.value = '';
-    this.rotationInput.value = '';
+  private parseOptionalNumber(text: string): number | null {
+    const trimmed = text.trim();
+    if (trimmed === '' || trimmed === MIXED_VALUE_DISPLAY || trimmed === '-') return null;
+    const value = parseFloat(trimmed);
+    if (isNaN(value)) return null;
+    return value;
   }
 
   /**
-   * Places the panel at the bottom-left of the default anchor (3D viewport).
-   * Uses CSS bottom so the panel bottom sits at the viewport bottom with inset,
-   * without depending on measured panel height (which is often zero before
-   * layout).
+   * Writes a shared number or mixed dash into an input.
+   *
+   * @param input Target input.
+   * @param value Shared value or null when mixed.
+   * @param decimals Fixed decimal places.
    */
+  private writeField(input: HTMLInputElement, value: number | null, decimals: number): void {
+    input.value = value === null ? MIXED_VALUE_DISPLAY : value.toFixed(decimals);
+  }
+
+  /** Places the panel at the bottom-left of the default anchor (3D viewport). */
   private positionDefault(): void {
     const paddingPx = 8;
     const anchor = this.defaultAnchor ?? this.host;

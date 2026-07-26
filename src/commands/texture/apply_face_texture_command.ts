@@ -16,6 +16,8 @@ import {
 import {
   applyAlignToTargets,
   applyMappingToTargets,
+  applyPartialTrsToTargets,
+  applyRelativeTrsToTargets,
   resetUvParamsOnTargets,
   TextureApplyTarget,
 } from '../../texture/uv/face_texture_applier.js';
@@ -23,6 +25,8 @@ import { rebakeStoredFaceTextureMaps } from '../../texture/uv/planar_uv_projecto
 import { rebuildSurfaceMaterials } from '../../texture/material/surface_material_builder.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
 import type { BrushUvSnapshot } from '../../solid/model/solid_model_presentation.js';
+import type { FaceTextureMappingTrs } from '../../texture/uv/face_texture_mapping.js';
+import type { UvRelativeTrsOp } from '../../texture/uv/uv_trs_ops.js';
 
 /** Snapshot of one mesh's texture state for undo. */
 interface MeshTextureSnapshot {
@@ -46,6 +50,10 @@ export interface ApplyFaceTextureCommandOptions {
   resetUvOnly?: boolean;
   /** When set, only the align preset is changed; scale/offset/rotation stay. */
   alignOnly?: FaceTextureAlign;
+  /** Relative TRS op applied per target (multi-select safe). */
+  relativeOp?: UvRelativeTrsOp;
+  /** Absolute TRS fields written onto every target (partial multi-edit). */
+  partialTrs?: Partial<FaceTextureMappingTrs>;
 }
 
 /** Undoable command that applies a face texture mapping to mesh regions. */
@@ -54,6 +62,8 @@ export class ApplyFaceTextureCommand implements UndoCommand {
   private mapping: FaceTextureMapping;
   private resetUvOnly: boolean;
   private alignOnly: FaceTextureAlign | null;
+  private relativeOp: UvRelativeTrsOp | null;
+  private partialTrs: Partial<FaceTextureMappingTrs> | null;
   private beforeSnapshots: MeshTextureSnapshot[];
   private afterSolidBrushUvs: BrushUvSnapshot[] | null;
   private executed: boolean;
@@ -74,6 +84,8 @@ export class ApplyFaceTextureCommand implements UndoCommand {
     this.mapping = cloneFaceTextureMapping(mapping);
     this.resetUvOnly = options.resetUvOnly === true;
     this.alignOnly = options.alignOnly ?? null;
+    this.relativeOp = options.relativeOp ?? null;
+    this.partialTrs = options.partialTrs ? { ...options.partialTrs } : null;
     this.beforeSnapshots = [];
     this.afterSolidBrushUvs = null;
     this.executed = false;
@@ -86,16 +98,31 @@ export class ApplyFaceTextureCommand implements UndoCommand {
       return;
     }
     this.beforeSnapshots = this.captureSnapshots();
-    if (this.resetUvOnly) {
-      resetUvParamsOnTargets(this.targets);
-    } else if (this.alignOnly) {
-      applyAlignToTargets(this.targets, this.alignOnly);
-    } else {
-      applyMappingToTargets(this.targets, this.mapping);
-    }
+    this.runApplyPath();
     this.syncSolidBrushMappingsFromTargets();
     this.afterSolidBrushUvs = this.captureSolidBrushUvsFromTargets();
     this.executed = true;
+  }
+
+  /** Runs the selected apply path (reset, align, relative, partial, or full). */
+  private runApplyPath(): void {
+    if (this.resetUvOnly) {
+      resetUvParamsOnTargets(this.targets);
+      return;
+    }
+    if (this.alignOnly) {
+      applyAlignToTargets(this.targets, this.alignOnly);
+      return;
+    }
+    if (this.relativeOp) {
+      applyRelativeTrsToTargets(this.targets, this.relativeOp);
+      return;
+    }
+    if (this.partialTrs) {
+      applyPartialTrsToTargets(this.targets, this.partialTrs);
+      return;
+    }
+    applyMappingToTargets(this.targets, this.mapping);
   }
 
   /** Restores prior authored solid UV state (or content mesh UVs). */
@@ -110,14 +137,7 @@ export class ApplyFaceTextureCommand implements UndoCommand {
   /** Re-applies the post-edit solid brush UV state on redo after a prior undo. */
   private replayAfterState(): void {
     if (!this.afterSolidBrushUvs) {
-      // Content-mesh redo: re-run the original apply path.
-      if (this.resetUvOnly) {
-        resetUvParamsOnTargets(this.targets);
-      } else if (this.alignOnly) {
-        applyAlignToTargets(this.targets, this.alignOnly);
-      } else {
-        applyMappingToTargets(this.targets, this.mapping);
-      }
+      this.runApplyPath();
       return;
     }
     const model = this.findSolidModelFromTargets();
@@ -127,18 +147,41 @@ export class ApplyFaceTextureCommand implements UndoCommand {
   }
 
   /**
-   * Pushes only the edited triangle regions onto solid brush faces and remeshes
-   * those brushes. Converts world-space editor matrices to brush-local
-   * storage.
+   * Pushes edited triangle regions onto solid brush faces and remeshes once per
+   * model. All post-apply mappings are captured first so multi-select UV edits
+   * survive (a per-target remesh would rebuild result maps and drop later
+   * faces).
    */
   private syncSolidBrushMappingsFromTargets(): void {
+    const pendingByModel = this.captureSolidWritebacksFromTargets();
+    pendingByModel.forEach((regions, model) => {
+      model.syncAuthoredMappingsForRegions(regions);
+    });
+  }
+
+  /**
+   * Snapshots each solid target's applied mapping while result face maps still
+   * hold the UV editor changes (before any remesh).
+   *
+   * @returns Regions to write, grouped by solid model.
+   */
+  private captureSolidWritebacksFromTargets(): Map<
+    SolidModel,
+    Array<{ triangleIndices: number[]; mapping: FaceTextureMapping }>
+  > {
+    const pendingByModel = new Map<SolidModel, Array<{ triangleIndices: number[]; mapping: FaceTextureMapping }>>();
     for (const target of this.targets) {
       if (!SolidModel.isResultMesh(target.mesh)) continue;
       const model = SolidModel.fromObject(target.mesh);
       if (!model) continue;
-      const mapping = this.resolveTargetMapping(target);
-      model.syncAuthoredMappingForTriangles(target.triangleIndices, mapping);
+      const regions = pendingByModel.get(model) ?? [];
+      regions.push({
+        triangleIndices: target.triangleIndices.slice(),
+        mapping: this.resolveTargetMapping(target),
+      });
+      pendingByModel.set(model, regions);
     }
+    return pendingByModel;
   }
 
   /**

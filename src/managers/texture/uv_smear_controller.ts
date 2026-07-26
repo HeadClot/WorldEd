@@ -14,6 +14,7 @@ import { cloneSmearSourceMapping, transferUvMappingAcrossFaces } from '../../tex
 import { getTexturePaintState } from '../../texture/paint/texture_paint_state.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import { SolidModel, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../solid/model/solid_model.js';
+import { fitFaceMappingToCurrentUvs } from '../../texture/lock/content_mesh_texture_lock.js';
 
 /** Source face seed for continuous UV smear. */
 interface SmearSourceSeed {
@@ -119,8 +120,10 @@ export class UvSmearController {
 
   /**
    * Paints continuous UVs onto the selectable face unit containing faceIndex.
-   * Solid results stay on one brush face so carpet/detail brushes stay
-   * isolated.
+   * The first face only seeds the stroke (mapping is read, UVs are not
+   * rewritten so rotated content meshes keep their existing layout). Later
+   * faces receive transferred UVs. Solid results stay on one brush face so
+   * carpet/detail brushes stay isolated.
    *
    * @param mesh Hit mesh.
    * @param faceIndex Seed triangle.
@@ -131,6 +134,51 @@ export class UvSmearController {
     if (triangleIndices.length === 0) return;
     const regionKey = buildRegionKey(mesh, triangleIndices);
     if (regionKey === this.lastRegionKey) return;
+    if (!this.sourceSeed) {
+      this.seedStrokeFromFace(mesh, triangleIndices, faceIndex, regionKey);
+      return;
+    }
+    this.applySmearToDestinationFace(mesh, triangleIndices, faceIndex, regionKey);
+  }
+
+  /**
+   * Captures the first face as the smear source without rebaking its UVs.
+   * Rebaking would reproject the stored world UV matrix onto rotated meshes and
+   * visibly jump the texture on the face the user started from.
+   *
+   * @param mesh Hit mesh.
+   * @param triangleIndices Face region triangles.
+   * @param faceIndex Seed triangle index.
+   * @param regionKey Stable region key.
+   */
+  private seedStrokeFromFace(mesh: THREE.Mesh, triangleIndices: number[], faceIndex: number, regionKey: string): void {
+    const stored = this.readOrCreateSeedMapping(mesh, triangleIndices, faceIndex);
+    // Content meshes keep vertex UVs through rotation while authored UV matrices
+    // can go stale. Fit a world matrix to the baked UVs so transfer continues
+    // the texture the user actually sees (same outcome as solid brushes).
+    const mapping = fitFaceMappingToCurrentUvs(mesh, triangleIndices, stored);
+    this.sourceSeed = {
+      mesh,
+      triangleIndices: triangleIndices.slice(),
+      mapping: cloneSmearSourceMapping(mapping),
+    };
+    this.lastRegionKey = regionKey;
+  }
+
+  /**
+   * Transfers continuous UVs onto a destination face and marks the mesh dirty.
+   *
+   * @param mesh Destination mesh.
+   * @param triangleIndices Destination region triangles.
+   * @param faceIndex Seed triangle index.
+   * @param regionKey Stable region key.
+   */
+  private applySmearToDestinationFace(
+    mesh: THREE.Mesh,
+    triangleIndices: number[],
+    faceIndex: number,
+    regionKey: string,
+  ): void {
     this.captureBeforeIfNeeded(mesh);
     const mapping = this.resolveMappingForRegion(mesh, triangleIndices, faceIndex);
     upsertFaceTextureMap(mesh, triangleIndices, mapping);
