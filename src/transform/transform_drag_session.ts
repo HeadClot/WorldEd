@@ -7,6 +7,11 @@ import {
   captureTransformTextureState,
   type TransformTextureSnapshot,
 } from '../commands/transform/transform_texture_state.js';
+import {
+  contentMeshMappingsMatchCurrentUvs,
+  syncContentMeshFaceMappingsToCurrentUvs,
+} from '../texture/lock/content_mesh_texture_lock.js';
+import { isContentMeshEligibleForTextureLockRebake } from '../texture/lock/texture_lock_settings.js';
 
 /**
  * Mutable state for one transform gizmo drag session. Shared by translate,
@@ -86,6 +91,9 @@ export class TransformDragSession {
 
   /**
    * Captures pre-drag transforms and texture state for every selected mesh.
+   * Heals stale content UV matrices first so stick-mode pose changes (or DIY
+   * rotations) cannot collapse a UV axis on a later world-density rebake. Solid
+   * brushes are left alone.
    *
    * @param selectedObjects Meshes included in the drag.
    */
@@ -94,12 +102,25 @@ export class TransformDragSession {
     this.initialQuaternions.clear();
     this.initialScales.clear();
     selectedObjects.forEach((mesh) => {
+      this.healStaleContentUvMatrices(mesh);
       this.initialPositions.set(mesh, mesh.position.clone());
       this.initialQuaternions.set(mesh, mesh.quaternion.clone());
       this.initialScales.set(mesh, mesh.scale.clone());
     });
     // Capture UVs/mappings before live texture-lock rewrites them.
     this.initialTextureState = captureTransformTextureState(selectedObjects);
+  }
+
+  /**
+   * Rewrites world UV matrices when they no longer project to current vertex
+   * UVs. Safe at rest before a drag; does not modify solid brush data.
+   *
+   * @param mesh Candidate mesh.
+   */
+  private healStaleContentUvMatrices(mesh: THREE.Mesh): void {
+    if (!isContentMeshEligibleForTextureLockRebake(mesh)) return;
+    if (contentMeshMappingsMatchCurrentUvs(mesh)) return;
+    syncContentMeshFaceMappingsToCurrentUvs(mesh);
   }
 
   /** Resets accumulators used while measuring drag distance and angle. */

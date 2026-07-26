@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { rebakeStoredFaceTextureMaps } from '../uv/planar_uv_projector.js';
 import { isResultMesh, isSolidModelObject } from '../../solid/model/solid_model_keys.js';
 import { SOLID_BRUSH_USERDATA_KEY } from '../../solid/model/solid_brush_visual.js';
+import {
+  contentMeshMappingsMatchCurrentUvs,
+  syncContentMeshFaceMappingsToCurrentUvs,
+} from './content_mesh_texture_lock.js';
 import { shouldRebakeContentAfterTransform, type TextureLockFlags } from './texture_lock_transform.js';
 
 /**
@@ -9,6 +13,11 @@ import { shouldRebakeContentAfterTransform, type TextureLockFlags } from './text
  *
  * Position lock — UVs stick when moving/rotating (off = world slide). Stretch
  * lock — UVs stretch when scaling (off = world tile/density).
+ *
+ * Content meshes store world-space UV matrices. Stick-mode transforms leave
+ * vertex UVs alone; matrices must be rewritten to match or a later world rebake
+ * (scale with stretch off, move with pos off) collapses a UV axis. Solid
+ * brushes use a separate matrix lock path and are never rewritten here.
  *
  * Toggling locks never rewrites UVs by itself; only subsequent transforms do.
  */
@@ -141,20 +150,36 @@ export class TextureLockSettings {
   }
 
   /**
-   * After content-mesh transform: rebake world UVs only for unlocked
-   * components. With both locks on, vertex UVs stick with the mesh (no
-   * rebake).
+   * After content-mesh transform: world-rebake when an unlocked component
+   * changed; otherwise keep vertex UVs stuck and rewrite stored world UV
+   * matrices so they still bake to those UVs at the new pose.
    *
    * @param meshes Transformed meshes.
    * @param moved True when translation/rotation changed.
    * @param scaled True when scale changed.
    */
   applyContentTransformPolicy(meshes: THREE.Mesh[], moved: boolean, scaled: boolean): void {
-    if (!shouldRebakeContentAfterTransform(this.getFlags(), moved, scaled)) return;
+    if (!moved && !scaled) return;
+    const shouldRebake = shouldRebakeContentAfterTransform(this.getFlags(), moved, scaled);
+    meshes.forEach((mesh) => {
+      this.applyContentTransformPolicyToMesh(mesh, shouldRebake);
+    });
+  }
+
+  /**
+   * Ensures stored world UV matrices project to the mesh's current vertex UVs.
+   * Call at rest (pointer-down, before inspector scale) so a later world rebake
+   * does not collapse a UV axis after stick-mode pose changes or DIY rotations.
+   * Skips solid brushes and CSG results.
+   *
+   * @param meshes Candidate meshes.
+   */
+  prepareContentMeshesForTextureOps(meshes: THREE.Mesh[]): void {
     meshes.forEach((mesh) => {
       if (!mesh.geometry) return;
       if (!isContentMeshEligibleForTextureLockRebake(mesh)) return;
-      rebakeStoredFaceTextureMaps(mesh);
+      if (contentMeshMappingsMatchCurrentUvs(mesh)) return;
+      syncContentMeshFaceMappingsToCurrentUvs(mesh);
     });
   }
 
@@ -174,6 +199,22 @@ export class TextureLockSettings {
       if (!isContentMeshEligibleForTextureLockRebake(mesh)) return;
       rebakeStoredFaceTextureMaps(mesh);
     });
+  }
+
+  /**
+   * Applies stick-sync or world rebake to one eligible content mesh.
+   *
+   * @param mesh Candidate mesh.
+   * @param shouldRebake True when unlocked transform components require rebake.
+   */
+  private applyContentTransformPolicyToMesh(mesh: THREE.Mesh, shouldRebake: boolean): void {
+    if (!mesh.geometry) return;
+    if (!isContentMeshEligibleForTextureLockRebake(mesh)) return;
+    if (shouldRebake) {
+      rebakeStoredFaceTextureMaps(mesh);
+      return;
+    }
+    syncContentMeshFaceMappingsToCurrentUvs(mesh);
   }
 
   /**

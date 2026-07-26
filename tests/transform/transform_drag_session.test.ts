@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { TransformDragSession } from '../../src/transform/transform_drag_session.js';
+import { initializeMeshTextureUVs } from '../../src/texture/uv/face_texture_applier.js';
+import { contentMeshMappingsMatchCurrentUvs } from '../../src/texture/lock/content_mesh_texture_lock.js';
+import { TextureLockSettings } from '../../src/texture/lock/texture_lock_settings.js';
+import { SolidModel } from '../../src/solid/model/solid_model.js';
+import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 
 describe('TransformDragSession', () => {
   /**
@@ -35,6 +40,37 @@ describe('TransformDragSession', () => {
     expect(position?.equals(new THREE.Vector3(1, 2, 3))).toBe(true);
   });
 
+  it('should heal stale content UV matrices at pointer-down before scale rebake', () => {
+    const session = new TransformDragSession();
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
+    mesh.updateMatrixWorld(true);
+    initializeMeshTextureUVs(mesh);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.updateMatrixWorld(true);
+    expect(contentMeshMappingsMatchCurrentUvs(mesh)).toBe(false);
+    session.snapshotPreDragState([mesh]);
+    expect(contentMeshMappingsMatchCurrentUvs(mesh)).toBe(true);
+    const settings = new TextureLockSettings(true, false);
+    mesh.scale.set(2, 1, 1);
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], false, true);
+    const spans = measureUvSpans(mesh);
+    expect(spans.uSpan).toBeGreaterThan(1);
+    expect(spans.vSpan).toBeGreaterThan(1);
+  });
+
+  it('should not rewrite solid brush UV state at pointer-down', () => {
+    const session = new TransformDragSession();
+    const model = new SolidModel('DragSessionSolid');
+    const brush = model.addBoxBrush(2, SolidOperation.Additive);
+    model.rebuild(true);
+    const brushMesh = brush.mesh!;
+    const surfaceBefore = brush.getFaceSurface(0);
+    session.snapshotPreDragState([brushMesh]);
+    const surfaceAfter = brush.getFaceSurface(0);
+    expect(surfaceAfter.uv.equals(surfaceBefore.uv)).toBe(true);
+  });
+
   it('should reset drag accumulators without clearing snapshots', () => {
     const session = new TransformDragSession();
     const mesh = createTransformedMesh();
@@ -61,3 +97,24 @@ describe('TransformDragSession', () => {
     expect(session.activeHandle).toBeNull();
   });
 });
+
+/**
+ * Returns U and V spans for a mesh UV attribute.
+ *
+ * @param mesh Mesh with UVs.
+ * @returns Positive spans.
+ */
+function measureUvSpans(mesh: THREE.Mesh): { uSpan: number; vSpan: number } {
+  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+  let minU = Infinity;
+  let maxU = -Infinity;
+  let minV = Infinity;
+  let maxV = -Infinity;
+  for (let index = 0; index < uv.count; index++) {
+    minU = Math.min(minU, uv.getX(index));
+    maxU = Math.max(maxU, uv.getX(index));
+    minV = Math.min(minV, uv.getY(index));
+    maxV = Math.max(maxV, uv.getY(index));
+  }
+  return { uSpan: maxU - minU, vSpan: maxV - minV };
+}

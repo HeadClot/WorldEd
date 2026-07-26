@@ -3,6 +3,28 @@ import * as THREE from 'three';
 import { Theme } from '../../../src/theme.js';
 import { PrimitiveCreationTool } from '../../../src/managers/creation/primitive_creation_tool.js';
 import { getGeometrySource, resolveGeometrySourceType } from '../../../src/texture/uv/geometry_source.js';
+import { TextureLockSettings } from '../../../src/texture/lock/texture_lock_settings.js';
+
+/**
+ * Returns the range of U and V coordinates on a mesh.
+ *
+ * @param mesh Mesh with a UV attribute.
+ * @returns Spans along U and V.
+ */
+function measureUvSpans(mesh: THREE.Mesh): { uSpan: number; vSpan: number } {
+  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+  let minU = Infinity;
+  let maxU = -Infinity;
+  let minV = Infinity;
+  let maxV = -Infinity;
+  for (let index = 0; index < uv.count; index++) {
+    minU = Math.min(minU, uv.getX(index));
+    maxU = Math.max(maxU, uv.getX(index));
+    minV = Math.min(minV, uv.getY(index));
+    maxV = Math.max(maxV, uv.getY(index));
+  }
+  return { uSpan: maxU - minU, vSpan: maxV - minV };
+}
 
 describe('PrimitiveCreationTool', () => {
   let scene: THREE.Scene;
@@ -91,6 +113,40 @@ describe('PrimitiveCreationTool', () => {
   it('should rotate plane to be horizontal', () => {
     const mesh = tool.createPlane(1, 1);
     expect(mesh.rotation.x).toBeCloseTo(-Math.PI / 2);
+  });
+
+  it('should keep both plane UV axes after world rebake from scale', () => {
+    const mesh = tool.createPlane(2, 2);
+    const settings = new TextureLockSettings(true, false);
+    mesh.scale.set(2, 1, 1);
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], false, true);
+    const spans = measureUvSpans(mesh);
+    expect(spans.uSpan).toBeGreaterThan(1);
+    expect(spans.vSpan).toBeGreaterThan(1);
+  });
+
+  it('should keep both plane UV axes after world rebake from move', () => {
+    const mesh = tool.createPlane(2, 2);
+    const settings = new TextureLockSettings(false, true);
+    mesh.position.set(3, 0, 4);
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], true, false);
+    const spans = measureUvSpans(mesh);
+    expect(spans.uSpan).toBeGreaterThan(1);
+    expect(spans.vSpan).toBeGreaterThan(1);
+  });
+
+  it('should still rebake cube UVs on scale without collapsing a face axis', () => {
+    const mesh = tool.createBox(2, 2, 2);
+    const settings = new TextureLockSettings(true, false);
+    const before = measureUvSpans(mesh);
+    mesh.scale.set(2, 1, 1);
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], false, true);
+    const after = measureUvSpans(mesh);
+    expect(after.uSpan).toBeGreaterThan(before.uSpan * 0.5);
+    expect(after.vSpan).toBeGreaterThan(0.5);
   });
 
   it('should name plane with auto-incremented number', () => {

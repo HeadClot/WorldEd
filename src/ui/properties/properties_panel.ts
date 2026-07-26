@@ -350,6 +350,7 @@ export class PropertiesPanel {
     });
     if (this.areObjectPositionsUnchanged(editable, positions)) return;
     this.pushOrExecute(new SetPositionCommand(editable, positions));
+    this.applyBoundContentTexturePolicy(true, false);
     this.commitTransformSideEffects(editable);
   }
 
@@ -369,6 +370,7 @@ export class PropertiesPanel {
     });
     if (this.areObjectRotationsUnchanged(editable, rotations)) return;
     this.pushOrExecute(new SetRotationCommand(editable, rotations));
+    this.applyBoundContentTexturePolicy(true, false);
     this.commitTransformSideEffects(editable);
   }
 
@@ -388,8 +390,11 @@ export class PropertiesPanel {
       return next;
     });
     if (this.areObjectScalesUnchanged(editable, scales)) return;
+    // Heal stale world UV matrices at the pre-scale pose so world-density
+    // rebake after SetScaleCommand cannot collapse a UV axis.
+    this.prepareBoundContentMeshesForTextureOps();
     this.pushOrExecute(new SetScaleCommand(editable, scales));
-    this.rebakeBoundMeshesIfTextureLocked();
+    this.applyBoundContentTexturePolicy(false, true);
     this.commitTransformSideEffects(editable);
   }
 
@@ -415,15 +420,32 @@ export class PropertiesPanel {
   }
 
   /**
-   * Applies content texture locks after inspector scale: stretch lock leaves
-   * UVs; unlocked stretch rebakes planar tile density on bound meshes.
+   * Applies content texture lock policy after an inspector pose write.
+   *
+   * @param moved True when translation/rotation changed.
+   * @param scaled True when scale changed.
    */
-  private rebakeBoundMeshesIfTextureLocked(): void {
+  private applyBoundContentTexturePolicy(moved: boolean, scaled: boolean): void {
     if (!this.textureLock) return;
-    const meshes = this.getEditableBoundObjects().filter(
-      (object): object is THREE.Mesh => object instanceof THREE.Mesh,
-    );
-    this.textureLock.applyContentTransformPolicy(meshes, false, true);
+    this.textureLock.applyContentTransformPolicy(this.getEditableBoundMeshes(), moved, scaled);
+  }
+
+  /**
+   * Heals stale content UV matrices on bound meshes before a pose write that
+   * may world-rebake (inspector scale).
+   */
+  private prepareBoundContentMeshesForTextureOps(): void {
+    if (!this.textureLock) return;
+    this.textureLock.prepareContentMeshesForTextureOps(this.getEditableBoundMeshes());
+  }
+
+  /**
+   * Returns editable bound objects that are meshes.
+   *
+   * @returns Content and brush meshes currently bound in the panel.
+   */
+  private getEditableBoundMeshes(): THREE.Mesh[] {
+    return this.getEditableBoundObjects().filter((object): object is THREE.Mesh => object instanceof THREE.Mesh);
   }
 
   /**

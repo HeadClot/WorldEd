@@ -85,7 +85,9 @@ export class PrimitiveCreationTool {
   }
 
   /**
-   * Creates a plane primitive with the given dimensions.
+   * Creates a plane primitive with the given dimensions. Lays the plane flat on
+   * XZ before world-space UV init so stored face UV matrices match the final
+   * pose. Cubes and other primitives keep the shared buildMesh path.
    *
    * @param width The width of the plane along the X axis.
    * @param height The height of the plane along the Z axis.
@@ -95,9 +97,11 @@ export class PrimitiveCreationTool {
   createPlane(width: number, height: number, position?: THREE.Vector3): THREE.Mesh {
     this.planeCount++;
     const geometry = new THREE.PlaneGeometry(width, height);
-    const mesh = this.buildMesh(geometry, `Plane${this.padNumber(this.planeCount)}`);
+    const mesh = this.createBaseMesh(geometry, `Plane${this.padNumber(this.planeCount)}`);
     if (position) mesh.position.copy(position);
     mesh.rotation.x = -Math.PI / 2;
+    mesh.updateMatrixWorld(true);
+    initializeMeshTextureUVs(mesh);
     this.addWireframe(mesh);
     this.lastCreated = mesh;
     return mesh;
@@ -137,18 +141,32 @@ export class PrimitiveCreationTool {
   }
 
   /**
-   * Builds a mesh with a standard material from geometry.
+   * Builds a mesh with a standard material, flat shading, and world UV maps.
+   * Used by box/sphere/cylinder (identity pose at bake time).
    *
    * @param geometry The geometry for the mesh.
    * @param name The display name for the mesh.
    * @returns A configured Three.js mesh.
    */
   private buildMesh(geometry: THREE.BufferGeometry, name: string): THREE.Mesh {
+    const mesh = this.createBaseMesh(geometry, name);
+    initializeMeshTextureUVs(mesh);
+    return mesh;
+  }
+
+  /**
+   * Creates a named content mesh with material and flat shading only. Callers
+   * that must set pose first (planes) initialize UVs after their transform.
+   *
+   * @param geometry The geometry for the mesh.
+   * @param name The display name for the mesh.
+   * @returns Mesh ready for texture UV initialization.
+   */
+  private createBaseMesh(geometry: THREE.BufferGeometry, name: string): THREE.Mesh {
     const material = createContentMaterial(Theme.boxColor);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = name;
     enableFlatShadingOnMesh(mesh);
-    initializeMeshTextureUVs(mesh);
     return mesh;
   }
 

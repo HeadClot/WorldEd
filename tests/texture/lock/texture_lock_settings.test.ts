@@ -80,6 +80,51 @@ describe('TextureLockSettings', () => {
     expect(cloneUvArray(mesh)).toEqual(uvBefore);
   });
 
+  it('should keep face UV matrices aligned after stick-mode rotate', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    mesh.updateMatrixWorld(true);
+    initializeMeshTextureUVs(mesh);
+    mesh.rotation.y = Math.PI / 2;
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], true, false);
+    expect(contentMeshMappingsMatchCurrentUvs(mesh)).toBe(true);
+  });
+
+  it('should not collapse UV axes when scaling a mesh rotated under position lock', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
+    mesh.updateMatrixWorld(true);
+    initializeMeshTextureUVs(mesh);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], true, false);
+    settings.setStretchLocked(false);
+    mesh.scale.set(2, 1, 1);
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], false, true);
+    const spans = measureUvSpans(mesh);
+    expect(spans.uSpan).toBeGreaterThan(1);
+    expect(spans.vSpan).toBeGreaterThan(1);
+  });
+
+  it('should heal DIY plane rotated outside the lock pipeline before scale rebake', () => {
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
+    mesh.updateMatrixWorld(true);
+    initializeMeshTextureUVs(mesh);
+    // Pose change without applyContentTransformPolicy (DIY / import / scripted).
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.updateMatrixWorld(true);
+    expect(contentMeshMappingsMatchCurrentUvs(mesh)).toBe(false);
+    settings.prepareContentMeshesForTextureOps([mesh]);
+    expect(contentMeshMappingsMatchCurrentUvs(mesh)).toBe(true);
+    settings.setStretchLocked(false);
+    mesh.scale.set(2, 1, 1);
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], false, true);
+    const spans = measureUvSpans(mesh);
+    expect(spans.uSpan).toBeGreaterThan(1);
+    expect(spans.vSpan).toBeGreaterThan(1);
+  });
+
   it('should rebake when rotating with position lock off', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.updateMatrixWorld(true);
@@ -193,6 +238,27 @@ describe('TextureLockSettings', () => {
     expect(isContentMeshEligibleForTextureLockRebake(brush.mesh!)).toBe(false);
   });
 });
+
+/**
+ * Returns the span of U and V across all mesh vertices.
+ *
+ * @param mesh Mesh with UV attribute.
+ * @returns Positive spans along U and V.
+ */
+function measureUvSpans(mesh: THREE.Mesh): { uSpan: number; vSpan: number } {
+  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+  let minU = Infinity;
+  let maxU = -Infinity;
+  let minV = Infinity;
+  let maxV = -Infinity;
+  for (let index = 0; index < uv.count; index++) {
+    minU = Math.min(minU, uv.getX(index));
+    maxU = Math.max(maxU, uv.getX(index));
+    minV = Math.min(minV, uv.getY(index));
+    maxV = Math.max(maxV, uv.getY(index));
+  }
+  return { uSpan: maxU - minU, vSpan: maxV - minV };
+}
 
 /**
  * Returns the maximum absolute UV component on an axis across all vertices.
