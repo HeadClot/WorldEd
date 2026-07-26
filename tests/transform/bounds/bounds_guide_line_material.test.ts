@@ -60,7 +60,7 @@ describe('bounds_guide_line_material', () => {
       {} as THREE.Camera,
       {} as THREE.BufferGeometry,
       {} as THREE.Object3D,
-      undefined,
+      new THREE.Group(),
     );
     const resolution = material.uniforms['resolution']!.value as THREE.Vector2;
     expect(resolution.x).toBe(1280);

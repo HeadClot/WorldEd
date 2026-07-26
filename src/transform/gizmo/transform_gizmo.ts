@@ -17,7 +17,6 @@ import { getHiddenBoundsAxesForViewPlane, type CadViewPlane } from '../../rulers
  * viewports.
  */
 export class TransformGizmo {
-  private readonly theme: typeof Theme;
   private currentMode: TransformMode;
   private handleGroup: THREE.Group;
   private viewportGroups: THREE.Group[];
@@ -42,7 +41,6 @@ export class TransformGizmo {
    * @param theme The theme containing gizmo color definitions.
    */
   constructor(theme: typeof Theme) {
-    this.theme = theme;
     this.currentMode = TransformMode.BOUNDS;
     this.handleGroup = new THREE.Group();
     this.handleGroup.name = 'transform_gizmo';

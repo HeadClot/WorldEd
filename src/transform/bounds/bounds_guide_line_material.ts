@@ -117,10 +117,7 @@ function buildBoundsGuideLineUniforms(opacity: number): Record<string, THREE.IUn
  * @param material Guide line shader material.
  * @param renderer Renderer currently drawing the material.
  */
-function updateBoundsGuideResolutionUniform(
-  material: THREE.ShaderMaterial,
-  renderer: THREE.WebGLRenderer,
-): void {
+function updateBoundsGuideResolutionUniform(material: THREE.ShaderMaterial, renderer: THREE.WebGLRenderer): void {
   const resolution = material.uniforms['resolution']?.value as THREE.Vector2 | undefined;
   if (!resolution) return;
   const size = new THREE.Vector2();
