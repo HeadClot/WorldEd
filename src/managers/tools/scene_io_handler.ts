@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SceneSerializer } from '../../io/scene_serializer.js';
 import { SceneDeserializer } from '../../io/scene_deserializer.js';
 import { GlbExporter } from '../../io/glb_exporter.js';
+import { ObjExporter } from '../../io/obj_exporter.js';
 import { FileDialogManager } from '../../io/file_dialog_manager.js';
 import { StatusBar } from '../../ui/status_bar.js';
 import type { GameProfile } from '../../settings/settings_types.js';
@@ -10,15 +11,18 @@ import { getUnitLabel } from '../../settings/unit_presets.js';
 import { VmfImportResult, VmfSolidImporter } from '../../io/vmf/vmf_solid_importer.js';
 import { ImportProgressOverlay } from '../../ui/import_progress_overlay.js';
 import type { SceneJSON } from '../../io/io_types.js';
+import { CLIP_PREVIEW_USERDATA_KEY } from '../clip_plane/clip_plane_preview.js';
 
 /**
- * Orchestrates save, load, GLB export, and VMF import operations. Coordinates
- * serializer, deserializer, exporter, and file dialog.
+ * Orchestrates save, load, new scene, GLB/OBJ export, and VMF import
+ * operations. Coordinates serializer, deserializer, exporters, and file
+ * dialog.
  */
 export class SceneIOHandler {
   private sceneSerializer: SceneSerializer;
   private sceneDeserializer: SceneDeserializer;
   private glbExporter: GlbExporter;
+  private objExporter: ObjExporter;
   private fileDialogManager: FileDialogManager;
   private vmfImporter: VmfSolidImporter;
 
@@ -27,8 +31,34 @@ export class SceneIOHandler {
     this.sceneSerializer = new SceneSerializer();
     this.sceneDeserializer = new SceneDeserializer();
     this.glbExporter = new GlbExporter();
+    this.objExporter = new ObjExporter();
     this.fileDialogManager = new FileDialogManager();
     this.vmfImporter = new VmfSolidImporter();
+  }
+
+  /**
+   * Clears all scene content from the world group while preserving editor
+   * helpers. Does not modify the undo stack; the caller clears history.
+   *
+   * @param worldGroup The root group containing the scene objects.
+   * @param statusBar The status bar for feedback, or null.
+   */
+  clearScene(worldGroup: THREE.Group, statusBar: StatusBar | null): void {
+    this.sceneDeserializer.clearContent(worldGroup);
+    if (statusBar) {
+      statusBar.setLastAction('Created new scene');
+      statusBar.setLastSavedInfo('untitled');
+    }
+  }
+
+  /**
+   * Returns whether the world contains user content that would be lost by New.
+   *
+   * @param worldGroup World root group.
+   * @returns True when at least one content child is present.
+   */
+  hasSceneContent(worldGroup: THREE.Group): boolean {
+    return worldGroup.children.some((child) => child.userData[CLIP_PREVIEW_USERDATA_KEY] !== true);
   }
 
   /**
@@ -244,7 +274,7 @@ export class SceneIOHandler {
     profile: GameProfile | null = null,
   ): Promise<void> {
     try {
-      if (worldGroup.children.length === 0) {
+      if (!this.hasExportableContent(worldGroup)) {
         this.showError(statusBar, 'Nothing to export');
         return;
       }
@@ -254,10 +284,75 @@ export class SceneIOHandler {
         return;
       }
       const filename = await this.fileDialogManager.saveBinary(buffer, 'scene.glb');
-      this.showExportResult(filename, statusBar, profile);
+      this.showExportResult(filename, statusBar, profile, 'GLB');
     } catch (error) {
       this.showError(statusBar, `Failed to export GLB: ${this.formatError(error)}`);
     }
+  }
+
+  /**
+   * Exports the scene as a Wavefront package (.obj + .mtl + map images) baked
+   * with the active profile's coordinate space and length-unit conventions.
+   *
+   * @param worldGroup The root group to export.
+   * @param statusBar The status bar for feedback, or null.
+   * @param profile Active game profile controlling conversion, or null.
+   */
+  async exportObj(
+    worldGroup: THREE.Group,
+    statusBar: StatusBar | null,
+    profile: GameProfile | null = null,
+  ): Promise<void> {
+    try {
+      if (!this.hasExportableContent(worldGroup)) {
+        this.showError(statusBar, 'Nothing to export');
+        return;
+      }
+      const exportPackage = await this.objExporter.exportPackage(worldGroup, profile, 'scene');
+      if (!exportPackage.objText || exportPackage.objText.trim().length === 0) {
+        this.showError(statusBar, 'Failed to export OBJ: empty result');
+        return;
+      }
+      const filename = await this.fileDialogManager.saveWavefrontPackage(exportPackage);
+      this.showObjExportResult(filename, statusBar, profile, exportPackage.textures.length);
+    } catch (error) {
+      this.showError(statusBar, `Failed to export OBJ: ${this.formatError(error)}`);
+    }
+  }
+
+  /**
+   * Displays Wavefront package export feedback, noting the companion MTL and
+   * any texture maps written alongside the OBJ.
+   *
+   * @param filename Primary OBJ file name, or null on failure.
+   * @param statusBar Status bar for feedback, or null.
+   * @param profile Profile used for conversion, or null.
+   * @param textureCount Number of map image files exported.
+   */
+  private showObjExportResult(
+    filename: string | null,
+    statusBar: StatusBar | null,
+    profile: GameProfile | null,
+    textureCount: number,
+  ): void {
+    if (!statusBar) return;
+    if (!filename) {
+      statusBar.setLastAction('Wavefront OBJ export cancelled');
+      return;
+    }
+    const maps = textureCount > 0 ? ` + ${textureCount} map${textureCount === 1 ? '' : 's'}` : '';
+    const suffix = this.describeProfile(profile);
+    statusBar.setLastAction(`Exported Wavefront OBJ/MTL${maps} to ${filename}${suffix}`);
+  }
+
+  /**
+   * Returns whether the world has content worth exporting (ignores helpers).
+   *
+   * @param worldGroup World root group.
+   * @returns True when exportable content exists.
+   */
+  private hasExportableContent(worldGroup: THREE.Group): boolean {
+    return this.hasSceneContent(worldGroup);
   }
 
   /**
@@ -267,14 +362,20 @@ export class SceneIOHandler {
    * @param filename The exported filename, or null on failure.
    * @param statusBar The status bar for feedback, or null.
    * @param profile The profile used for conversion, or null.
+   * @param formatLabel Short format name such as GLB or OBJ.
    */
-  private showExportResult(filename: string | null, statusBar: StatusBar | null, profile: GameProfile | null): void {
+  private showExportResult(
+    filename: string | null,
+    statusBar: StatusBar | null,
+    profile: GameProfile | null,
+    formatLabel: string,
+  ): void {
     if (!statusBar) return;
     if (filename) {
       const suffix = this.describeProfile(profile);
-      statusBar.setLastAction(`Exported GLB to ${filename}${suffix}`);
+      statusBar.setLastAction(`Exported ${formatLabel} to ${filename}${suffix}`);
     } else {
-      statusBar.setErrorText('Failed to export GLB');
+      statusBar.setErrorText(`Failed to export ${formatLabel}`);
     }
   }
 

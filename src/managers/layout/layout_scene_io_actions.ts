@@ -8,7 +8,9 @@ import type { SelectionManager } from '../../selection/object/selection_manager.
 import type { SnapSettingsController } from '../tools/snap_settings_controller.js';
 import type { PropertiesPanel } from '../../ui/properties/properties_panel.js';
 import type { StatusBar } from '../../ui/status_bar.js';
+import { showConfirmDialog } from '../../ui/confirm_dialog.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
+import { createDefaultStartupSolidModel } from '../../solid/model/default_startup_solid_model.js';
 import type * as THREE from 'three';
 
 /** Dependencies for scene load / history refresh side effects. */
@@ -98,4 +100,80 @@ export function runLayoutExportGlb(
   profile: GameProfile | null,
 ): void {
   void sceneIOHandler.exportGlb(worldObject, statusBar, profile);
+}
+
+/**
+ * Exports the world as Wavefront OBJ using the active game profile when
+ * available.
+ *
+ * @param sceneIOHandler Scene I/O handler.
+ * @param worldObject Root world group.
+ * @param statusBar Status bar for progress.
+ * @param profile Active game profile or null.
+ */
+export function runLayoutExportObj(
+  sceneIOHandler: SceneIOHandler,
+  worldObject: THREE.Group,
+  statusBar: StatusBar | null,
+  profile: GameProfile | null,
+): void {
+  void sceneIOHandler.exportObj(worldObject, statusBar, profile);
+}
+
+/**
+ * Prompts to discard unsaved work, then resets the world to the same default
+ * solid model cube used at editor startup.
+ *
+ * @param host DOM host for the confirmation dialog.
+ * @param sceneIOHandler Scene clear helper.
+ * @param worldObject Root world group.
+ * @param commandStack Undo history to abandon after clearing.
+ * @param statusBar Status bar for feedback.
+ * @param solidModelController Solid controller to adopt the seeded model, or
+ *   null when solid tools are not ready.
+ * @param onSceneCleared Callback after the default scene is restored.
+ */
+export async function runLayoutNewScene(
+  host: HTMLElement,
+  sceneIOHandler: SceneIOHandler,
+  worldObject: THREE.Group,
+  commandStack: CommandStack,
+  statusBar: StatusBar | null,
+  solidModelController: SolidModelController | null,
+  onSceneCleared: () => void,
+): Promise<void> {
+  const shouldPrompt = sceneIOHandler.hasSceneContent(worldObject) || commandStack.canUndo() || commandStack.canRedo();
+  if (shouldPrompt) {
+    const confirmed = await showConfirmDialog({
+      host,
+      title: 'Create New Scene',
+      message: 'Are you sure you want to create a new scene?\n\nAny unsaved changes will be permanently lost.',
+      confirmLabel: 'Yes',
+      cancelLabel: 'No',
+    });
+    if (!confirmed) return;
+  }
+  seedDefaultStartupScene(sceneIOHandler, worldObject, statusBar);
+  onSceneCleared();
+  solidModelController?.adoptFirstSolidModelInWorld();
+}
+
+/**
+ * Clears world content and parents the startup default solid model (unit cube).
+ *
+ * @param sceneIOHandler Scene clear helper.
+ * @param worldObject Root world group.
+ * @param statusBar Status bar for feedback.
+ */
+function seedDefaultStartupScene(
+  sceneIOHandler: SceneIOHandler,
+  worldObject: THREE.Group,
+  statusBar: StatusBar | null,
+): void {
+  sceneIOHandler.clearScene(worldObject, statusBar);
+  worldObject.add(createDefaultStartupSolidModel().root);
+  if (statusBar) {
+    statusBar.setLastAction('Created new scene');
+    statusBar.setLastSavedInfo('untitled');
+  }
 }

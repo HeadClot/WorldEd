@@ -3,6 +3,8 @@
  * handles browsers without File System Access API support.
  */
 
+import type { ObjExportPackage } from './obj_export_types.js';
+
 /**
  * Checks whether the File System Access API is available.
  *
@@ -133,6 +135,47 @@ export class FileDialogManager {
       return this.saveBinaryFallback(buffer, suggestedName);
     }
     return this.saveBinaryWithAPI(buffer, suggestedName);
+  }
+
+  /**
+   * Opens a save dialog for plain text content with a custom extension filter.
+   * Falls back to a download anchor when the File System Access API is
+   * unavailable.
+   *
+   * @param data Text file contents.
+   * @param suggestedName Suggested download filename.
+   * @param description File type description for the picker.
+   * @param mimeType MIME type for the blob and accept map.
+   * @param extensions Extension list including the leading dot.
+   * @returns Saved filename, or null on cancel or failure.
+   */
+  async saveText(
+    data: string,
+    suggestedName: string,
+    description: string,
+    mimeType: string,
+    extensions: string[],
+  ): Promise<string | null> {
+    if (!isFileSystemAccessAvailable()) {
+      return this.saveTextFallback(data, suggestedName, mimeType);
+    }
+    return this.saveTextWithAPI(data, suggestedName, description, mimeType, extensions);
+  }
+
+  /**
+   * Saves a Wavefront package (.obj, .mtl, and map images) to one folder when
+   * the directory picker is available, otherwise downloads each file. User
+   * cancel on the folder dialog returns null and does not fall back to
+   * Downloads.
+   *
+   * @param exportPackage OBJ, MTL, and texture files to write.
+   * @returns Primary .obj file name on success, or null when cancelled/failed.
+   */
+  async saveWavefrontPackage(exportPackage: ObjExportPackage): Promise<string | null> {
+    if (this.canPickDirectory()) {
+      return this.saveWavefrontPackageToDirectory(exportPackage);
+    }
+    return this.saveWavefrontPackageAsDownloads(exportPackage);
   }
 
   /**
@@ -332,5 +375,145 @@ export class FileDialogManager {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Saves text using the File System Access API with a custom accept filter.
+   *
+   * @param data Text content.
+   * @param suggestedName Suggested filename.
+   * @param description Picker type description.
+   * @param mimeType MIME type for accept.
+   * @param extensions Extension list including the leading dot.
+   * @returns Filename or null on failure.
+   */
+  private async saveTextWithAPI(
+    data: string,
+    suggestedName: string,
+    description: string,
+    mimeType: string,
+    extensions: string[],
+  ): Promise<string | null> {
+    if (!('showSaveFilePicker' in window)) {
+      return null;
+    }
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName,
+        types: [
+          {
+            description,
+            accept: { [mimeType]: extensions },
+          },
+        ],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(data);
+      await writable.close();
+      return suggestedName;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Saves text using the fallback download mechanism.
+   *
+   * @param data Text content.
+   * @param suggestedName Suggested filename.
+   * @param mimeType MIME type for the blob.
+   * @returns Filename or null on failure.
+   */
+  private saveTextFallback(data: string, suggestedName: string, mimeType: string): string | null {
+    try {
+      const blob = createTextBlob(data, mimeType);
+      downloadBlob(blob, suggestedName);
+      return suggestedName;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Returns whether showDirectoryPicker is available.
+   *
+   * @returns True when a directory can be chosen for multi-file export.
+   */
+  private canPickDirectory(): boolean {
+    return typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+  }
+
+  /**
+   * Writes the Wavefront package into a user-chosen directory. Cancel or
+   * dismissal of the picker returns null without writing anything.
+   *
+   * @param exportPackage Package files.
+   * @returns Primary .obj file name on success, or null on cancel/error.
+   */
+  private async saveWavefrontPackageToDirectory(exportPackage: ObjExportPackage): Promise<string | null> {
+    let directory: any;
+    try {
+      directory = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+    } catch (error) {
+      // AbortError is the standard result when the user presses Cancel.
+      return null;
+    }
+    try {
+      await this.writeTextToDirectory(directory, exportPackage.objFileName, exportPackage.objText);
+      await this.writeTextToDirectory(directory, exportPackage.mtlFileName, exportPackage.mtlText);
+      for (const texture of exportPackage.textures) {
+        await this.writeBlobToDirectory(directory, texture.fileName, texture.blob);
+      }
+      return exportPackage.objFileName;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Downloads each package file via temporary anchor elements.
+   *
+   * @param exportPackage Package files.
+   * @returns Primary .obj file name, or null on failure.
+   */
+  private saveWavefrontPackageAsDownloads(exportPackage: ObjExportPackage): string | null {
+    try {
+      downloadBlob(createTextBlob(exportPackage.objText, 'text/plain'), exportPackage.objFileName);
+      downloadBlob(createTextBlob(exportPackage.mtlText, 'text/plain'), exportPackage.mtlFileName);
+      exportPackage.textures.forEach((texture) => {
+        downloadBlob(texture.blob, texture.fileName);
+      });
+      return exportPackage.objFileName;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Writes a UTF-8 text file into a directory handle.
+   *
+   * @param directory Directory handle from showDirectoryPicker.
+   * @param fileName File name within the directory.
+   * @param text File contents.
+   */
+  private async writeTextToDirectory(directory: any, fileName: string, text: string): Promise<void> {
+    const handle = await directory.getFileHandle(fileName, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(text);
+    await writable.close();
+  }
+
+  /**
+   * Writes a binary blob into a directory handle.
+   *
+   * @param directory Directory handle from showDirectoryPicker.
+   * @param fileName File name within the directory.
+   * @param blob Binary contents.
+   */
+  private async writeBlobToDirectory(directory: any, fileName: string, blob: Blob): Promise<void> {
+    const handle = await directory.getFileHandle(fileName, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
   }
 }

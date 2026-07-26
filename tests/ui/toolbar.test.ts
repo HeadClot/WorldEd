@@ -115,6 +115,12 @@ describe('Toolbar', () => {
     expect(toolbarElement.style.display).toBe('flex');
   });
 
+  it('should vertically center toolbar controls with equal padding', () => {
+    const toolbarElement = container.children[0] as HTMLElement;
+    expect(toolbarElement.style.alignItems).toBe('center');
+    expect(toolbarElement.style.padding).toBe('6px 8px');
+  });
+
   it('should wrap toolbar rows to avoid off-screen overflow', () => {
     const toolbarElement = container.children[0] as HTMLElement;
     expect(toolbarElement.style.flexWrap).toBe('wrap');
@@ -125,6 +131,65 @@ describe('Toolbar', () => {
     toolbar.addDropdown('File', [{ label: 'Save', onClick: clickHandler }]);
     expect(toolbar.getButtonCount()).toBe(1);
     expect(toolbar.getButtonIndexByLabel('File')).toBe(0);
+  });
+
+  it('should render separators, shortcuts, and nested submenus', () => {
+    const importHandler = vi.fn();
+    toolbar.addDropdown('File', [
+      { label: 'New', onClick: () => {} },
+      { kind: 'separator' },
+      { label: 'Save', onClick: () => {}, shortcut: () => 'Ctrl+S' },
+      {
+        kind: 'submenu',
+        label: 'Import',
+        children: [{ label: 'Valve Map Format 2006 (.vmf)…', onClick: importHandler }],
+      },
+    ]);
+    const header = container.querySelector('.editor-toolbar-menu-button') as HTMLButtonElement;
+    header.click();
+    const menu = container.querySelector('.editor-toolbar-dropdown-menu') as HTMLElement;
+    expect(menu.querySelector('.editor-toolbar-dropdown-separator')).not.toBeNull();
+    expect(menu.textContent).toContain('Ctrl+S');
+    const importHost = menu.querySelector('.editor-toolbar-dropdown-submenu-host') as HTMLElement;
+    importHost.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    const importParent = importHost.querySelector('button') as HTMLButtonElement;
+    expect(importParent.style.background).not.toBe('transparent');
+    const submenu = menu.querySelector('.editor-toolbar-dropdown-submenu') as HTMLElement;
+    expect(submenu.style.display).toBe('block');
+    const child = submenu.querySelector('button') as HTMLButtonElement;
+    child.click();
+    expect(importHandler).toHaveBeenCalledTimes(1);
+    expect(menu.style.display).toBe('none');
+  });
+
+  it('should keep submenu parent highlight when switching between flyouts', () => {
+    toolbar.addDropdown('File', [
+      {
+        kind: 'submenu',
+        label: 'Import',
+        children: [{ label: 'VMF', onClick: () => {} }],
+      },
+      {
+        kind: 'submenu',
+        label: 'Export',
+        children: [{ label: 'GLB', onClick: () => {} }],
+      },
+    ]);
+    const header = container.querySelector('.editor-toolbar-menu-button') as HTMLButtonElement;
+    header.click();
+    const hosts = container.querySelectorAll('.editor-toolbar-dropdown-submenu-host');
+    const importHost = hosts[0] as HTMLElement;
+    const exportHost = hosts[1] as HTMLElement;
+    const importButton = importHost.querySelector('button') as HTMLButtonElement;
+    const exportButton = exportHost.querySelector('button') as HTMLButtonElement;
+
+    importHost.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(importButton.style.background).not.toBe('transparent');
+
+    exportHost.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(exportButton.style.background).not.toBe('transparent');
+    expect(importButton.style.background).toBe('transparent');
+    expect((exportHost.querySelector('.editor-toolbar-dropdown-submenu') as HTMLElement).style.display).toBe('block');
   });
 
   it('should switch from an open dropdown to another menu on hover', () => {

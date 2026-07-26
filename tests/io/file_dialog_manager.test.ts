@@ -111,4 +111,39 @@ describe('FileDialogManager', () => {
     expect(result!.filename).toBe('map.vmf');
     expect(result!.text).toContain('solid');
   });
+
+  it('does not download Wavefront files when the folder picker is cancelled', async () => {
+    const abortError = new DOMException('The user aborted a request.', 'AbortError');
+    vi.stubGlobal(
+      'showDirectoryPicker',
+      vi.fn(async () => {
+        throw abortError;
+      }),
+    );
+    const click = vi.fn();
+    document.createElement = vi.fn((tagName: string) => {
+      if (tagName === 'a') {
+        return {
+          href: '',
+          download: '',
+          style: { display: '' },
+          click,
+        } as unknown as HTMLElement;
+      }
+      return savedCreateElement(tagName);
+    });
+    document.body.appendChild = vi.fn() as typeof document.body.appendChild;
+    document.body.removeChild = vi.fn() as typeof document.body.removeChild;
+
+    const result = await manager.saveWavefrontPackage({
+      objFileName: 'scene.obj',
+      objText: 'mtllib scene.mtl\n',
+      mtlFileName: 'scene.mtl',
+      mtlText: 'newmtl Default\n',
+      textures: [],
+    });
+
+    expect(result).toBeNull();
+    expect(click).not.toHaveBeenCalled();
+  });
 });

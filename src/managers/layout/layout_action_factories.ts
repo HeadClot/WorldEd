@@ -58,10 +58,13 @@ export interface ToolbarActionHost {
   onOpenAboutDialog: () => void;
   onDeleteSelected: () => void;
   onGroupSelected: () => void;
+  onNewScene: () => void;
   onSaveScene: () => void;
   onLoadScene: () => void;
   onImportVmf: () => void;
   onExportGlb: () => void;
+  onExportObj: () => void;
+  getShortcutLabel: (action: 'save' | 'load' | 'export_glb') => string;
   onSetTransformSpaceGlobal: () => void;
   onSetTransformSpaceLocal: () => void;
   isTransformSpaceLocal: () => boolean;
@@ -262,11 +265,17 @@ function buildCsgSnapAlignToolbarActions(
  */
 function buildIoToolbarActions(
   host: ToolbarActionHost,
-): Pick<EditorToolbarActions, 'onSaveScene' | 'onLoadScene' | 'onImportVmf' | 'onExportGlb'> {
+): Pick<
+  EditorToolbarActions,
+  'onNewScene' | 'onSaveScene' | 'onLoadScene' | 'onImportVmf' | 'onExportGlb' | 'onExportObj' | 'getShortcutLabel'
+> {
   return {
+    onNewScene: () => host.onNewScene(),
     onSaveScene: () => host.onSaveScene(),
     onLoadScene: () => host.onLoadScene(),
     onImportVmf: () => host.onImportVmf(),
     onExportGlb: () => host.onExportGlb(),
+    onExportObj: () => host.onExportObj(),
+    getShortcutLabel: (action) => host.getShortcutLabel(action),
   };
 }

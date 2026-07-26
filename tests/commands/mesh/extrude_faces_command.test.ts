@@ -17,14 +17,14 @@ describe('ExtrudeFacesCommand', () => {
   });
 
   it('should add all created meshes to the parent on execute', () => {
-    const command = new ExtrudeFacesCommand([meshA, meshB], parent);
+    const command = ExtrudeFacesCommand.fromMeshes([meshA, meshB], parent);
     command.execute();
     expect(parent.children.includes(meshA)).toBe(true);
     expect(parent.children.includes(meshB)).toBe(true);
   });
 
   it('should remove all meshes on undo', () => {
-    const command = new ExtrudeFacesCommand([meshA, meshB], parent);
+    const command = ExtrudeFacesCommand.fromMeshes([meshA, meshB], parent);
     command.execute();
     command.undo();
     expect(parent.children.includes(meshA)).toBe(false);
@@ -32,7 +32,7 @@ describe('ExtrudeFacesCommand', () => {
   });
 
   it('should re-add all meshes on redo', () => {
-    const command = new ExtrudeFacesCommand([meshA, meshB], parent);
+    const command = ExtrudeFacesCommand.fromMeshes([meshA, meshB], parent);
     command.execute();
     command.undo();
     command.execute();
@@ -41,7 +41,7 @@ describe('ExtrudeFacesCommand', () => {
 
   it('should work with the command stack', () => {
     const stack = new CommandStack(16);
-    stack.push(new ExtrudeFacesCommand([meshA, meshB], parent));
+    stack.push(ExtrudeFacesCommand.fromMeshes([meshA, meshB], parent));
     expect(parent.children.length).toBe(2);
     stack.undo();
     expect(parent.children.length).toBe(0);
@@ -50,7 +50,7 @@ describe('ExtrudeFacesCommand', () => {
   });
 
   it('should expose all created meshes', () => {
-    const command = new ExtrudeFacesCommand([meshA, meshB], parent);
+    const command = ExtrudeFacesCommand.fromMeshes([meshA, meshB], parent);
     expect(command.getCreatedMeshes()).toEqual([meshA, meshB]);
     expect(command.getCreatedMesh()).toBe(meshA);
   });

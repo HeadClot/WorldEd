@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SolidBrush } from '../brush/solid_brush.js';
 import { SolidBrushInstance } from './solid_brush_instance.js';
 import { SolidBrushFactory } from '../brush/solid_brush_factory.js';
 import { SolidOperation } from '../types/solid_operation.js';
@@ -255,6 +256,34 @@ export class SolidModel {
     this.brushes.appendPreparedBrush(instance);
     this.markBrushesDirty([instance.id]);
     this.rebuild();
+    return instance;
+  }
+
+  /**
+   * Prepares a hull-preview brush from convex topology without adding it to the
+   * model. Used by face extrude so undo can install/remove the same instance.
+   *
+   * @param brush Centered local convex topology.
+   * @param operation CSG operation for the new brush.
+   * @param localPosition Model-local placement for the brush origin.
+   * @param textureId Optional default surface texture identity.
+   * @returns Configured instance not yet registered on this model.
+   */
+  prepareTopologyBrush(
+    brush: SolidBrush,
+    operation: SolidOperation,
+    localPosition: THREE.Vector3,
+    textureId?: string,
+  ): SolidBrushInstance {
+    const counter = this.brushes.nextBrushCounter();
+    const name = `Brush${padSolidDisplayNumber(counter)}`;
+    const instance = new SolidBrushInstance(this.brushes.allocateBrushId(), name, brush, operation);
+    instance.position.copy(localPosition);
+    if (textureId) {
+      instance.setAllFacesTextureId(textureId);
+    }
+    const preview = SolidBrushVisual.createHullPreview(name, brush, operation);
+    instance.attachMesh(preview);
     return instance;
   }
 

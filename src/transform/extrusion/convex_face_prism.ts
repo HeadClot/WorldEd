@@ -34,17 +34,9 @@ export function createConvexPrismFromFace(
   distance: number,
   objectName: string,
 ): THREE.Mesh | null {
-  if (faceIndices.length === 0) return null;
-  if (Math.abs(distance) < 1e-8) return null;
-  sourceMesh.updateMatrixWorld(true);
-  const worldPolygon = collectWorldFacePolygon(sourceMesh, faceIndices);
-  if (worldPolygon.length < 3) return null;
-  const worldNormal = computeWorldFaceNormal(sourceMesh, faceIndices[0]!);
-  if (worldNormal.lengthSq() < 1e-10) return null;
-  const orderedPolygon = orderConvexPolygon(worldPolygon, worldNormal);
-  if (orderedPolygon.length < 3) return null;
-  const signedDistance = distance;
-  const geometry = buildPrismGeometry(orderedPolygon, worldNormal, signedDistance);
+  const orderedFace = resolveOrderedWorldFacePolygon(sourceMesh, faceIndices);
+  if (!orderedFace || Math.abs(distance) < 1e-8) return null;
+  const geometry = buildPrismGeometry(orderedFace.polygon, orderedFace.normal, distance);
   const flatGeometry = prepareFlatShadedGeometry(geometry);
   geometry.dispose();
   const mesh = buildPrismMesh(flatGeometry, objectName);
@@ -52,6 +44,28 @@ export function createConvexPrismFromFace(
   // Edges must be built after centering so local outline matches mesh.geometry.
   rebuildDecorativeEdges(mesh);
   return mesh;
+}
+
+/**
+ * Resolves an ordered convex face polygon and normal in world space.
+ *
+ * @param sourceMesh The mesh that owns the face (used for world transform).
+ * @param faceIndices Coplanar triangle indices of the face region.
+ * @returns Ordered polygon and unit normal, or null on failure.
+ */
+export function resolveOrderedWorldFacePolygon(
+  sourceMesh: THREE.Mesh,
+  faceIndices: number[],
+): { polygon: THREE.Vector3[]; normal: THREE.Vector3 } | null {
+  if (faceIndices.length === 0) return null;
+  sourceMesh.updateMatrixWorld(true);
+  const worldPolygon = collectWorldFacePolygon(sourceMesh, faceIndices);
+  if (worldPolygon.length < 3) return null;
+  const worldNormal = computeWorldFaceNormal(sourceMesh, faceIndices[0]!);
+  if (worldNormal.lengthSq() < 1e-10) return null;
+  const orderedPolygon = orderConvexPolygon(worldPolygon, worldNormal);
+  if (orderedPolygon.length < 3) return null;
+  return { polygon: orderedPolygon, normal: worldNormal };
 }
 
 /**

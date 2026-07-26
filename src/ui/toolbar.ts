@@ -1,17 +1,14 @@
 import { Theme } from '../theme.js';
+import { MenuPanel } from './menu/menu_panel.js';
+import type { ToolbarMenuEntry } from './menu/menu_types.js';
 
-/** One entry in a toolbar dropdown menu. */
-export interface ToolbarDropdownItem {
-  /** Visible menu label. */
-  label: string;
-  /** Invoked when the enabled item is clicked. */
-  onClick: () => void;
-  /**
-   * Optional live enablement check evaluated when the menu opens. When omitted
-   * or true, the item is clickable.
-   */
-  isEnabled?: () => boolean;
-}
+export type {
+  ToolbarDropdownItem,
+  ToolbarMenuAction,
+  ToolbarMenuEntry,
+  ToolbarMenuSeparator,
+  ToolbarMenuSubmenu,
+} from './menu/menu_types.js';
 
 /** Three toolbar presentations available through bottom-edge dragging. */
 export type ToolbarSize = 'small' | 'medium' | 'large';
@@ -30,9 +27,9 @@ const TOOLBAR_MIN_HEIGHTS: Readonly<Record<ToolbarSize, number>> = {
 export class Toolbar {
   private container: HTMLElement;
   private buttons: HTMLButtonElement[];
-  private openMenu: HTMLElement | null;
+  private openMenuPanel: MenuPanel | null;
   private openMenuButton: HTMLButtonElement | null;
-  private dropdownItemBindings: Map<HTMLElement, ToolbarDropdownItem[]>;
+  private dropdownPanels: Map<HTMLButtonElement, MenuPanel>;
   private iconButtons: HTMLButtonElement[];
   private buttonLabelsEnabled: boolean;
   private size: ToolbarSize;
@@ -51,9 +48,9 @@ export class Toolbar {
     this.container = document.createElement('div');
     this.container.classList.add('editor-toolbar');
     this.buttons = [];
-    this.openMenu = null;
+    this.openMenuPanel = null;
     this.openMenuButton = null;
-    this.dropdownItemBindings = new Map();
+    this.dropdownPanels = new Map();
     this.iconButtons = [];
     this.buttonLabelsEnabled = true;
     this.size = 'medium';
@@ -147,17 +144,20 @@ export class Toolbar {
   }
 
   /**
-   * Adds a dropdown menu with multiple actions under a single header button.
+   * Adds a dropdown menu with actions, separators, and nested submenus under a
+   * single header button. Hovering another open top-level menu switches panels
+   * like a Windows application menu bar.
    *
    * @param label The dropdown header label.
-   * @param items The menu item labels, handlers, and optional enablement.
+   * @param items The menu entries (actions, separators, submenus).
    * @returns The header button element.
    */
-  addDropdown(label: string, items: ToolbarDropdownItem[]): HTMLButtonElement {
+  addDropdown(label: string, items: ToolbarMenuEntry[]): HTMLButtonElement {
     const wrapper = document.createElement('div');
     wrapper.classList.add('editor-toolbar-dropdown');
     wrapper.style.position = 'relative';
     wrapper.style.display = 'inline-flex';
+    wrapper.style.alignItems = 'center';
     const button = document.createElement('button');
     button.classList.add('editor-toolbar-menu-button');
     button.type = 'button';
@@ -167,16 +167,17 @@ export class Toolbar {
     button.setAttribute('aria-expanded', 'false');
     this.applyButtonStyles(button, false);
     this.appendDropdownCaret(button);
-    const menu = this.createDropdownMenu(items);
+    const panel = new MenuPanel(items, () => this.closeOpenMenu());
+    this.dropdownPanels.set(button, panel);
     button.addEventListener('click', (event) => {
       event.stopPropagation();
-      this.toggleDropdownMenu(menu, button);
+      this.toggleDropdownMenu(panel, button);
     });
     button.addEventListener('mouseenter', () => {
-      this.openDropdownOnHover(menu, button);
+      this.openDropdownOnHover(panel, button);
     });
     wrapper.appendChild(button);
-    wrapper.appendChild(menu);
+    wrapper.appendChild(panel.getElement());
     this.container.appendChild(wrapper);
     this.buttons.push(button);
     return button;
@@ -238,9 +239,9 @@ export class Toolbar {
       this.container.parentNode.removeChild(this.container);
     }
     this.buttons = [];
-    this.openMenu = null;
+    this.openMenuPanel = null;
     this.openMenuButton = null;
-    this.dropdownItemBindings.clear();
+    this.dropdownPanels.clear();
     this.iconButtons = [];
     window.removeEventListener('pointermove', this.windowMoveListener);
     window.removeEventListener('pointerup', this.windowUpListener);
@@ -303,7 +304,9 @@ export class Toolbar {
   private applyToolbarSize(): void {
     this.container.style.height = 'auto';
     this.container.style.minHeight = `${TOOLBAR_MIN_HEIGHTS[this.size]}px`;
-    this.container.style.padding = this.size === 'small' ? '3px 8px 7px' : '4px 8px 8px';
+    // Equal vertical padding keeps menu and icon buttons centered; the bottom
+    // resize handle overlays the edge and does not need extra padding.
+    this.container.style.padding = '6px 8px';
     this.refreshIconButtonAppearance();
   }
 
@@ -341,10 +344,10 @@ export class Toolbar {
     this.container.style.position = 'relative';
     this.container.style.flexWrap = 'wrap';
     this.container.style.alignItems = 'center';
-    this.container.style.alignContent = 'flex-start';
+    this.container.style.alignContent = 'center';
     this.container.style.justifyContent = 'flex-start';
     this.container.style.minHeight = `${Theme.toolbarHeightPx}px`;
-    this.container.style.padding = '4px 8px 8px';
+    this.container.style.padding = '6px 8px';
     this.container.style.gap = '4px';
     this.container.style.rowGap = '4px';
     this.container.style.background = `linear-gradient(180deg, ${start} 0%, ${end} 100%)`;
@@ -448,160 +451,52 @@ export class Toolbar {
   }
 
   /**
-   * Creates a dropdown menu panel for the given items.
-   *
-   * @param items The menu items to render.
-   * @returns The menu container element.
-   */
-  private createDropdownMenu(items: ToolbarDropdownItem[]): HTMLElement {
-    const menu = document.createElement('div');
-    menu.classList.add('editor-toolbar-dropdown-menu');
-    menu.setAttribute('role', 'menu');
-    this.styleDropdownMenuPanel(menu);
-    this.dropdownItemBindings.set(menu, items);
-    items.forEach((item, index) => {
-      const entry = document.createElement('button');
-      entry.classList.add('editor-toolbar-dropdown-item');
-      entry.type = 'button';
-      entry.textContent = item.label;
-      entry.dataset['dropdownIndex'] = String(index);
-      entry.setAttribute('role', 'menuitem');
-      this.applyMenuItemStyles(entry);
-      entry.addEventListener('click', (event) => {
-        event.stopPropagation();
-        if (entry.disabled) return;
-        item.onClick();
-        this.closeOpenMenu();
-      });
-      menu.appendChild(entry);
-    });
-    return menu;
-  }
-
-  /**
-   * Applies layout styles to a dropdown menu panel.
-   *
-   * @param menu Menu panel element.
-   */
-  private styleDropdownMenuPanel(menu: HTMLElement): void {
-    menu.style.display = 'none';
-    menu.style.position = 'absolute';
-    menu.style.top = 'calc(100% + 4px)';
-    menu.style.left = '0';
-    menu.style.zIndex = '1000';
-    menu.style.minWidth = '168px';
-    menu.style.background = this.hexToRgba(Theme.toolbarBackground);
-    menu.style.border = '1px solid rgba(255,255,255,0.1)';
-    menu.style.borderRadius = '8px';
-    menu.style.boxShadow = '0 10px 28px rgba(0,0,0,0.55)';
-    menu.style.padding = '4px';
-  }
-
-  /**
-   * Styles a dropdown menu entry as a full-width list row.
-   *
-   * @param entry Menu item button.
-   */
-  private applyMenuItemStyles(entry: HTMLButtonElement): void {
-    entry.style.display = 'block';
-    entry.style.width = '100%';
-    entry.style.textAlign = 'left';
-    entry.style.padding = '7px 10px';
-    entry.style.margin = '0';
-    entry.style.border = '1px solid transparent';
-    entry.style.borderRadius = '5px';
-    entry.style.background = 'transparent';
-    entry.style.color = Theme.buttonTextColor;
-    entry.style.cursor = 'pointer';
-    entry.style.fontFamily = Theme.uiFontFamily;
-    entry.style.fontSize = '12px';
-    entry.style.fontWeight = '500';
-    entry.addEventListener('mouseenter', () => {
-      if (entry.disabled) return;
-      entry.style.background = this.hexToRgba(Theme.buttonHoverColor);
-    });
-    entry.addEventListener('mouseleave', () => {
-      entry.style.background = 'transparent';
-    });
-  }
-
-  /**
    * Toggles a dropdown menu open or closed.
    *
-   * @param menu The menu element to toggle.
+   * @param panel The menu panel to toggle.
    * @param button The header button that owns the menu.
    */
-  private toggleDropdownMenu(menu: HTMLElement, button: HTMLButtonElement): void {
-    if (this.openMenu === menu) {
+  private toggleDropdownMenu(panel: MenuPanel, button: HTMLButtonElement): void {
+    if (this.openMenuPanel === panel) {
       this.closeOpenMenu();
       return;
     }
-    this.openDropdownMenu(menu, button);
+    this.openDropdownMenu(panel, button);
   }
 
   /**
-   * Opens a different dropdown after the pointer enters its header.
+   * Opens a different dropdown after the pointer enters its header when a menu
+   * bar panel is already open.
    *
-   * @param menu The menu element to open.
+   * @param panel The menu panel to open.
    * @param button The header button that owns the menu.
    */
-  private openDropdownOnHover(menu: HTMLElement, button: HTMLButtonElement): void {
-    if (this.openMenu && this.openMenu !== menu) {
-      this.openDropdownMenu(menu, button);
+  private openDropdownOnHover(panel: MenuPanel, button: HTMLButtonElement): void {
+    if (this.openMenuPanel && this.openMenuPanel !== panel) {
+      this.openDropdownMenu(panel, button);
     }
   }
 
   /**
    * Opens a dropdown after closing whichever menu is currently visible.
    *
-   * @param menu The menu element to open.
+   * @param panel The menu panel to open.
    * @param button The header button that owns the menu.
    */
-  private openDropdownMenu(menu: HTMLElement, button: HTMLButtonElement): void {
+  private openDropdownMenu(panel: MenuPanel, button: HTMLButtonElement): void {
     this.closeOpenMenu();
-    this.refreshDropdownEnabledState(menu);
-    menu.style.display = 'block';
-    this.openMenu = menu;
+    panel.open();
+    this.openMenuPanel = panel;
     this.openMenuButton = button;
     button.setAttribute('aria-expanded', 'true');
   }
 
-  /**
-   * Re-evaluates isEnabled for each item when a dropdown opens.
-   *
-   * @param menu Dropdown menu panel.
-   */
-  private refreshDropdownEnabledState(menu: HTMLElement): void {
-    const items = this.dropdownItemBindings.get(menu);
-    if (!items) return;
-    const buttons = menu.querySelectorAll('button');
-    buttons.forEach((button, index) => {
-      const item = items[index];
-      if (!item) return;
-      const enabled = item.isEnabled ? item.isEnabled() : true;
-      this.applyDropdownItemEnabledState(button as HTMLButtonElement, enabled);
-    });
-  }
-
-  /**
-   * Applies enabled/disabled visuals to one dropdown entry.
-   *
-   * @param entry Menu item button.
-   * @param enabled Whether the item can be activated.
-   */
-  private applyDropdownItemEnabledState(entry: HTMLButtonElement, enabled: boolean): void {
-    entry.disabled = !enabled;
-    entry.style.opacity = enabled ? '1' : '0.4';
-    entry.style.cursor = enabled ? 'pointer' : 'default';
-    entry.style.color = enabled ? Theme.buttonTextColor : '#666666';
-  }
-
   /** Closes the currently open dropdown menu if any. */
   private closeOpenMenu(): void {
-    if (!this.openMenu) return;
-    this.openMenu.style.display = 'none';
+    if (!this.openMenuPanel) return;
+    this.openMenuPanel.close();
     this.openMenuButton?.setAttribute('aria-expanded', 'false');
-    this.openMenu = null;
+    this.openMenuPanel = null;
     this.openMenuButton = null;
   }
 
@@ -611,7 +506,7 @@ export class Toolbar {
    * @param event The document pointer event.
    */
   private handleDocumentPointerDown(event: Event): void {
-    if (!this.openMenu) return;
+    if (!this.openMenuPanel) return;
     const target = event.target as Node | null;
     if (target && this.container.contains(target)) return;
     this.closeOpenMenu();

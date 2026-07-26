@@ -88,8 +88,12 @@ import {
   applyLayoutHistoryChange,
   handleLayoutSceneLoaded,
   runLayoutExportGlb,
+  runLayoutExportObj,
+  runLayoutNewScene,
   runLayoutVmfImport,
 } from './layout_scene_io_actions.js';
+import { formatKeyboardShortcut } from '../../settings/keyboard_shortcut_format.js';
+import { createDefaultKeyboardShortcutSettings } from '../../settings/settings_defaults.js';
 import { createLayoutSettingsSystem, openLayoutAboutDialog } from './layout_settings_system.js';
 import { DocumentationLink } from '../../ui/documentation_link.js';
 import { CadRulerSystem } from '../../rulers/cad_ruler_system.js';
@@ -757,13 +761,16 @@ export class ViewportLayoutManager {
    */
   private buildShellIoCallbacks(): Pick<
     LayoutShellActionSource,
-    'onSaveScene' | 'onLoadScene' | 'onImportVmf' | 'onExportGlb'
+    'onNewScene' | 'onSaveScene' | 'onLoadScene' | 'onImportVmf' | 'onExportGlb' | 'onExportObj' | 'getShortcutLabel'
   > {
     return {
+      onNewScene: () => this.onNewScene(),
       onSaveScene: () => this.onSaveScene(),
       onLoadScene: () => this.onLoadScene(),
       onImportVmf: () => this.onImportVmf(),
       onExportGlb: () => this.onExportGlb(),
+      onExportObj: () => this.onExportObj(),
+      getShortcutLabel: (action) => this.getShortcutLabel(action),
     };
   }
 
@@ -1156,6 +1163,19 @@ export class ViewportLayoutManager {
     applyTransformModeUi(this.toolsPalette, this.statusBar, this.transformGizmo.getMode());
   }
 
+  /** Handles File → New: confirms discard, then restores the startup cube. */
+  private onNewScene(): void {
+    void runLayoutNewScene(
+      this.toolbarContainer,
+      this.sceneIOHandler,
+      this.worldObject,
+      this.commandStack,
+      this.statusBar,
+      this.solidModelController,
+      () => this.onSceneLoaded(),
+    );
+  }
+
   /** Handles the Save Scene toolbar button and Ctrl+S shortcut. */
   private onSaveScene(): void {
     void this.sceneIOHandler.saveScene(this.worldObject, this.statusBar);
@@ -1191,11 +1211,30 @@ export class ViewportLayoutManager {
     runLayoutExportGlb(this.sceneIOHandler, this.worldObject, this.statusBar, profile);
   }
 
+  /** Handles File → Export → Wavefront OBJ. */
+  private onExportObj(): void {
+    this.ensureSettingsSystem();
+    const profile = this.settingsStore?.getActiveGameProfile() ?? null;
+    runLayoutExportObj(this.sceneIOHandler, this.worldObject, this.statusBar, profile);
+  }
+
   /** Handles File → Import VMF: picks a map and places a solid model. */
   private onImportVmf(): void {
     void runLayoutVmfImport(this.sceneIOHandler, this.statusBar, this.solidModelController, () =>
       this.refreshAfterWorldMutation(),
     );
+  }
+
+  /**
+   * Resolves a configured keyboard shortcut label for File menu display.
+   *
+   * @param action Save, load, or export_glb action id.
+   * @returns Shortcut text such as "Ctrl+S".
+   */
+  private getShortcutLabel(action: 'save' | 'load' | 'export_glb'): string {
+    const defaults = createDefaultKeyboardShortcutSettings();
+    const settings = this.settingsStore?.getKeyboardShortcutSettings() ?? defaults;
+    return formatKeyboardShortcut(settings[action]);
   }
 
   /** Handles the undo action from toolbar or keyboard shortcut. */

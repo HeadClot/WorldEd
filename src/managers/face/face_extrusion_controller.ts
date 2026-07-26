@@ -4,11 +4,17 @@ import { FaceSelection, FaceSelectionManager } from '../../selection/face/face_s
 import { FaceSelectionRaycaster, FacePickResult } from '../../selection/face/face_selection_raycaster.js';
 import { FaceSelectionHighlight } from '../../selection/face/face_selection_highlight.js';
 import { CommandStack } from '../../commands/command_stack.js';
-import { ExtrudeFacesCommand } from '../../commands/mesh/extrude_faces_command.js';
+import { ExtrudeCreation, ExtrudeFacesCommand } from '../../commands/mesh/extrude_faces_command.js';
 import { createConvexPrismFromFace } from '../../transform/extrusion/convex_face_prism.js';
-import { groupSelectionsIntoFaceRegions } from '../../selection/face/face_region_grouper.js';
+import { createConvexPrismBrushFromFace } from '../../transform/extrusion/convex_face_prism_brush.js';
+import { groupSelectionsIntoFaceRegions, FaceRegion } from '../../selection/face/face_region_grouper.js';
 import { buildFacePickRegionKey } from '../../selection/face/solid_triangle_source_index.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../solid/model/solid_model_keys.js';
+import { SolidModel } from '../../solid/model/solid_model.js';
+import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
+import { SolidOperation } from '../../solid/types/solid_operation.js';
 import { GridSnap } from '../../transform/snap/grid_snap.js';
+import type { SolidTriangleSourceRef } from '../../selection/face/solid_result_face_indices.js';
 
 /**
  * Callback for selection mode changes.
@@ -314,11 +320,12 @@ export class FaceExtrusionController {
   }
 
   /**
-   * Creates one new convex prism per distinct selected face region. Source
-   * meshes are never modified.
+   * Creates one new convex prism per distinct selected face region. Solid
+   * result faces spawn brushes on their solid model; ordinary mesh faces spawn
+   * regular meshes. Source geometry is never modified.
    *
    * @param displacement The extrusion distance along each face normal.
-   * @returns The new meshes (empty if nothing could be extruded).
+   * @returns Selectable created meshes (prisms and/or brush previews).
    */
   extrudeSelectedFaces(displacement: number): THREE.Mesh[] {
     const faces = this.selectionManager.getSelectedFaces();
@@ -326,21 +333,119 @@ export class FaceExtrusionController {
     const regions = groupSelectionsIntoFaceRegions(faces);
     if (regions.length === 0) return [];
     const safeDistance = this.resolveSafeDistance(displacement);
-    const createdMeshes: THREE.Mesh[] = [];
+    const creations = this.buildExtrudeCreations(regions, safeDistance);
+    if (creations.length === 0) return [];
+    const command = new ExtrudeFacesCommand(creations);
+    this.commandStack.push(command);
+    this.lastCreatedMeshes = command.getCreatedMeshes();
+    this.selectionManager.deselectAll();
+    return this.lastCreatedMeshes.slice();
+  }
+
+  /**
+   * Builds mesh and brush extrude products for each face region.
+   *
+   * @param regions Distinct selected face regions.
+   * @param distance Safe extrude distance.
+   * @returns Creations ready for the undo command.
+   */
+  private buildExtrudeCreations(regions: FaceRegion[], distance: number): ExtrudeCreation[] {
+    const creations: ExtrudeCreation[] = [];
     regions.forEach((region) => {
-      this.extrudeCounter += 1;
-      const objectName = `Extrude${String(this.extrudeCounter).padStart(3, '0')}`;
-      const prism = createConvexPrismFromFace(region.mesh, region.faceIndices, safeDistance, objectName);
-      if (prism) {
-        createdMeshes.push(prism);
+      const creation = this.buildExtrudeCreationForRegion(region, distance);
+      if (creation) {
+        creations.push(creation);
       }
     });
-    if (createdMeshes.length === 0) return [];
-    const command = new ExtrudeFacesCommand(createdMeshes, this.worldRoot);
-    this.commandStack.push(command);
-    this.lastCreatedMeshes = createdMeshes;
-    this.selectionManager.deselectAll();
-    return createdMeshes;
+    return creations;
+  }
+
+  /**
+   * Builds one extrude product for a face region (mesh or solid brush).
+   *
+   * @param region Face region to extrude.
+   * @param distance Extrude distance along the face normal.
+   * @returns Creation entry, or null when geometry could not be built.
+   */
+  private buildExtrudeCreationForRegion(region: FaceRegion, distance: number): ExtrudeCreation | null {
+    const solidContext = this.resolveSolidBrushContext(region);
+    if (solidContext) {
+      return this.buildBrushExtrudeCreation(region, distance, solidContext);
+    }
+    return this.buildMeshExtrudeCreation(region, distance);
+  }
+
+  /**
+   * Builds a regular mesh prism for a non-solid face region.
+   *
+   * @param region Ordinary mesh face region.
+   * @param distance Extrude distance.
+   * @returns Mesh creation, or null on failure.
+   */
+  private buildMeshExtrudeCreation(region: FaceRegion, distance: number): ExtrudeCreation | null {
+    this.extrudeCounter += 1;
+    const objectName = `Extrude${String(this.extrudeCounter).padStart(3, '0')}`;
+    const prism = createConvexPrismFromFace(region.mesh, region.faceIndices, distance, objectName);
+    if (!prism) return null;
+    return { kind: 'mesh', mesh: prism, parent: this.worldRoot };
+  }
+
+  /**
+   * Builds a solid brush prism under the owning solid model.
+   *
+   * @param region Solid result face region.
+   * @param distance Extrude distance.
+   * @param context Owning model and source brush metadata.
+   * @returns Brush creation, or null on failure.
+   */
+  private buildBrushExtrudeCreation(
+    region: FaceRegion,
+    distance: number,
+    context: { model: SolidModel; brushId: string; surfaceIndex: number },
+  ): ExtrudeCreation | null {
+    const placement = createConvexPrismBrushFromFace(region.mesh, region.faceIndices, distance, context.model.root);
+    if (!placement) return null;
+    const sourceBrush = context.model.findBrush(context.brushId);
+    const operation = sourceBrush?.operation ?? SolidOperation.Additive;
+    const textureId = sourceBrush?.getSurfaceTextureId(context.surfaceIndex);
+    const instance = context.model.prepareTopologyBrush(placement.brush, operation, placement.localPosition, textureId);
+    return { kind: 'brush', model: context.model, instance };
+  }
+
+  /**
+   * Resolves solid model and authored brush face when the region belongs to a
+   * CSG result surface.
+   *
+   * @param region Candidate face region.
+   * @returns Solid context, or null for ordinary meshes.
+   */
+  private resolveSolidBrushContext(
+    region: FaceRegion,
+  ): { model: SolidModel; brushId: string; surfaceIndex: number } | null {
+    if (!SolidModel.isResultMesh(region.mesh)) return null;
+    if (SolidBrushVisual.isBrushObject(region.mesh)) return null;
+    const model = SolidModel.fromObject(region.mesh);
+    if (!model) return null;
+    const seedIndex = region.faceIndices[0];
+    if (seedIndex === undefined) return null;
+    const source = this.readTriangleSource(region.mesh, seedIndex);
+    if (!source) return null;
+    return { model, brushId: source.brushId, surfaceIndex: source.surfaceIndex };
+  }
+
+  /**
+   * Reads the authored solid triangle source for a result triangle.
+   *
+   * @param mesh Solid result mesh.
+   * @param faceIndex Triangle index.
+   * @returns Source ref, or null when missing.
+   */
+  private readTriangleSource(mesh: THREE.Mesh, faceIndex: number): SolidTriangleSourceRef | null {
+    const raw = mesh.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY];
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    const seed = raw[faceIndex] as SolidTriangleSourceRef | undefined;
+    if (!seed?.brushId || typeof seed.surfaceIndex !== 'number') return null;
+    return seed;
   }
 
   /**

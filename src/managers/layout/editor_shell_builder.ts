@@ -64,10 +64,14 @@ export interface EditorToolbarActions {
   onAlignToOrigin: () => void;
   onAlignToGridCenter: () => void;
   onAlignToObject: () => void;
+  onNewScene: () => void;
   onSaveScene: () => void;
   onLoadScene: () => void;
   onImportVmf: () => void;
   onExportGlb: () => void;
+  onExportObj: () => void;
+  /** Resolves a live keyboard shortcut label for File menu items. */
+  getShortcutLabel: (action: 'save' | 'load' | 'export_glb') => string;
   onSetTransformSpaceGlobal: () => void;
   onSetTransformSpaceLocal: () => void;
   isUserSnapEnabled: () => boolean;
@@ -336,17 +340,51 @@ export class EditorShellBuilder {
   }
 
   /**
-   * Adds the File menu (save, load, import, export).
+   * Adds the File menu with New, Save/Load, Import, and Export submenus.
    *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
    */
   private addFileMenu(toolbar: Toolbar, actions: EditorToolbarActions): void {
     toolbar.addDropdown('File', [
-      { label: 'Save', onClick: () => actions.onSaveScene() },
-      { label: 'Load', onClick: () => actions.onLoadScene() },
-      { label: 'Import VMF…', onClick: () => actions.onImportVmf() },
-      { label: 'Export GLB', onClick: () => actions.onExportGlb() },
+      { label: 'New', onClick: () => actions.onNewScene() },
+      { kind: 'separator' },
+      {
+        label: 'Save',
+        onClick: () => actions.onSaveScene(),
+        shortcut: () => actions.getShortcutLabel('save'),
+      },
+      {
+        label: 'Load',
+        onClick: () => actions.onLoadScene(),
+        shortcut: () => actions.getShortcutLabel('load'),
+      },
+      { kind: 'separator' },
+      {
+        kind: 'submenu',
+        label: 'Import',
+        children: [
+          {
+            label: 'Valve Map Format 2006 (.vmf)…',
+            onClick: () => actions.onImportVmf(),
+          },
+        ],
+      },
+      {
+        kind: 'submenu',
+        label: 'Export',
+        children: [
+          {
+            label: 'Export GLTF (.glb)…',
+            onClick: () => actions.onExportGlb(),
+            shortcut: () => actions.getShortcutLabel('export_glb'),
+          },
+          {
+            label: 'Wavefront OBJ/MTL (.obj)…',
+            onClick: () => actions.onExportObj(),
+          },
+        ],
+      },
     ]);
   }
 

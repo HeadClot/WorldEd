@@ -26,6 +26,16 @@ export class SceneDeserializer {
   }
 
   /**
+   * Removes and disposes scene content while preserving editor helpers such as
+   * the clip-plane preview. Used by New Scene and before loading a file.
+   *
+   * @param worldGroup The group to clear.
+   */
+  clearContent(worldGroup: THREE.Group): void {
+    this.disposeExistingChildren(worldGroup);
+  }
+
+  /**
    * Deserializes scene data into Three.js objects and adds them to the group.
    * Clears existing children before loading.
    *
@@ -34,7 +44,7 @@ export class SceneDeserializer {
    * @returns Array of top-level objects that were created.
    */
   deserialize(data: SceneJSON, worldGroup: THREE.Group): THREE.Object3D[] {
-    this.disposeExistingChildren(worldGroup);
+    this.clearContent(worldGroup);
     const objectMap = new Map<string, THREE.Object3D>();
     const topLevelObjects: THREE.Object3D[] = [];
     this.createObjectsFromEntries(data.objects, objectMap);

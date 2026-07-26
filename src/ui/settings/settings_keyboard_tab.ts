@@ -1,4 +1,5 @@
 import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
+import { formatKeyboardShortcut } from '../../settings/keyboard_shortcut_format.js';
 import type { KeyboardShortcutAction, KeyboardShortcutSettings } from '../../settings/settings_types.js';
 import { createSettingsCategory, createSettingsControlRow, createSettingsTextInput } from './settings_form_controls.js';
 
@@ -189,35 +190,6 @@ export class SettingsKeyboardTab {
       meta: event.metaKey,
     });
   }
-}
-
-/**
- * Converts a shortcut binding to a short UI label.
- *
- * @param shortcut Configured key and modifiers.
- * @returns User-facing shortcut label.
- */
-function formatKeyboardShortcut(shortcut: KeyboardShortcutSettings[keyof KeyboardShortcutSettings]): string {
-  const modifiers = [
-    shortcut.ctrl ? 'Ctrl' : '',
-    shortcut.shift ? 'Shift' : '',
-    shortcut.alt ? 'Alt' : '',
-    shortcut.meta ? 'Meta' : '',
-  ].filter(Boolean);
-  return [...modifiers, formatKeyboardCode(shortcut.code)].join('+');
-}
-
-/**
- * Converts a KeyboardEvent.code value to a short UI label.
- *
- * @param code Keyboard event code.
- * @returns User-facing key label.
- */
-function formatKeyboardCode(code: string): string {
-  if (code.startsWith('Key')) return code.slice(3);
-  if (code.startsWith('Digit')) return code.slice(5);
-  if (code === 'Delete') return 'Del';
-  return code;
 }
 
 /**

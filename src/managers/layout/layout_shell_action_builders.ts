@@ -40,10 +40,13 @@ export interface LayoutShellActionSource {
   onOpenAboutDialog: () => void;
   onDeleteSelected: () => void;
   onGroupSelected: () => void;
+  onNewScene: () => void;
   onSaveScene: () => void;
   onLoadScene: () => void;
   onImportVmf: () => void;
   onExportGlb: () => void;
+  onExportObj: () => void;
+  getShortcutLabel: (action: 'save' | 'load' | 'export_glb') => string;
   onSetTransformSpaceGlobal: () => void;
   onSetTransformSpaceLocal: () => void;
   isTransformSpaceLocal: () => boolean;
@@ -115,10 +118,13 @@ export function createToolbarShellActions(source: LayoutShellActionSource) {
     onOpenAboutDialog: () => source.onOpenAboutDialog(),
     onDeleteSelected: () => source.onDeleteSelected(),
     onGroupSelected: () => source.onGroupSelected(),
+    onNewScene: () => source.onNewScene(),
     onSaveScene: () => source.onSaveScene(),
     onLoadScene: () => source.onLoadScene(),
     onImportVmf: () => source.onImportVmf(),
     onExportGlb: () => source.onExportGlb(),
+    onExportObj: () => source.onExportObj(),
+    getShortcutLabel: (action) => source.getShortcutLabel(action),
     onSetTransformSpaceGlobal: () => source.onSetTransformSpaceGlobal(),
     onSetTransformSpaceLocal: () => source.onSetTransformSpaceLocal(),
     isTransformSpaceLocal: () => source.isTransformSpaceLocal(),

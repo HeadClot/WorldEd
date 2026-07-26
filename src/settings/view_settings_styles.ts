@@ -90,7 +90,8 @@ function buildLightThemeCss(): string {
 
 /** Builds light-theme surfaces and states for toolbar dropdown menus. */
 function buildLightThemeDropdownCss(): string {
-  return `html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-menu {
+  return `html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-menu,
+html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-submenu {
   background: #ffffff !important;
   border-color: #767676 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
@@ -103,6 +104,13 @@ html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-item
 html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-item:hover {
   background: #e5f3ff !important;
   border-color: #0078d4 !important;
+}
+html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-shortcut,
+html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-submenu-caret {
+  color: #5a5a5a !important;
+}
+html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-separator {
+  background: #d0d0d0 !important;
 }`;
 }
 

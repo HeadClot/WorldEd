@@ -114,11 +114,30 @@ export class FaceModeCoordinator {
     // Select after leaving face mode and syncing viewports so object gizmos show.
     this.deps.selectionManager.setSelection(createdMeshes);
     this.updateSelectionModeStatus();
-    const label =
-      createdMeshes.length === 1
-        ? `Created convex solid ${createdMeshes[0]!.name}`
-        : `Created ${createdMeshes.length} convex solids`;
-    this.deps.showStatusMessage(label);
+    this.deps.showStatusMessage(this.buildExtrudeStatusLabel(createdMeshes));
+  }
+
+  /**
+   * Builds a status label describing extrude products (meshes and/or brushes).
+   *
+   * @param createdMeshes Selectable meshes produced by the extrude.
+   * @returns Human-readable status string.
+   */
+  private buildExtrudeStatusLabel(createdMeshes: THREE.Mesh[]): string {
+    if (createdMeshes.length === 1) {
+      const mesh = createdMeshes[0]!;
+      const kind = SolidBrushVisual.isBrushObject(mesh) ? 'brush' : 'mesh';
+      return `Created ${kind} ${mesh.name}`;
+    }
+    const brushCount = createdMeshes.filter((mesh) => SolidBrushVisual.isBrushObject(mesh)).length;
+    const meshCount = createdMeshes.length - brushCount;
+    if (brushCount > 0 && meshCount > 0) {
+      return `Created ${brushCount} brush(es) and ${meshCount} mesh(es)`;
+    }
+    if (brushCount > 0) {
+      return `Created ${brushCount} brush(es)`;
+    }
+    return `Created ${createdMeshes.length} convex solids`;
   }
 
   /**
