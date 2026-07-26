@@ -172,7 +172,9 @@ export class OutlinerTree {
   }
 
   /**
-   * Refreshes the tree to match the current scene hierarchy.
+   * Refreshes the tree to match the current scene hierarchy. Uses a cheap
+   * structural diff so adding or removing a single visible object does not
+   * rebuild every row.
    *
    * @param selectedObjects The set of currently selected meshes.
    * @param hierarchySelection Optional hierarchy nodes selected in the
@@ -182,8 +184,266 @@ export class OutlinerTree {
     if (this.isDisposed) return;
     this.lastSelectedObjects = selectedObjects;
     this.lastHierarchySelection = hierarchySelection;
+    if (this.tryIncrementalStructureRefresh(selectedObjects, hierarchySelection)) {
+      return;
+    }
+    this.rebuildTree(selectedObjects, hierarchySelection);
+  }
+
+  /**
+   * Fully rebuilds every visible outliner row from the scene hierarchy.
+   *
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   */
+  private rebuildTree(selectedObjects: Set<THREE.Mesh>, hierarchySelection: Set<THREE.Object3D>): void {
     this.clearItems();
-    this.renderChildren(this.root, 0, this.treeElement, selectedObjects, hierarchySelection);
+    const fragment = document.createDocumentFragment();
+    this.renderChildren(this.root, 0, fragment, selectedObjects, hierarchySelection);
+    this.treeElement.appendChild(fragment);
+  }
+
+  /**
+   * Attempts a single-row add/remove or selection-only update when the visible
+   * hierarchy barely changed.
+   *
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   * @returns True when the tree was updated without a full rebuild.
+   */
+  private tryIncrementalStructureRefresh(
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>,
+  ): boolean {
+    if (this.searchQuery) return false;
+    const desired = this.collectVisibleContentObjects();
+    const current = Array.from(this.itemMap.keys());
+    if (desired.length === current.length && this.areObjectListsEqual(desired, current)) {
+      this.updateSelectionStates(selectedObjects, hierarchySelection);
+      this.syncVisibleItemChrome(desired);
+      return true;
+    }
+    if (desired.length === current.length + 1) {
+      return this.tryInsertSingleVisibleObject(desired, current, selectedObjects, hierarchySelection);
+    }
+    if (desired.length === current.length - 1) {
+      return this.tryRemoveSingleVisibleObject(desired, current, selectedObjects, hierarchySelection);
+    }
+    return false;
+  }
+
+  /**
+   * Collects content objects currently visible in the outliner (expanded DFS).
+   *
+   * @returns Ordered list of visible hierarchy objects.
+   */
+  private collectVisibleContentObjects(): THREE.Object3D[] {
+    const result: THREE.Object3D[] = [];
+    this.collectVisibleContentObjectsUnder(this.root, result);
+    return result;
+  }
+
+  /**
+   * Appends visible content descendants of a parent into the accumulator.
+   *
+   * @param parent Parent object in the hierarchy.
+   * @param result Accumulator for visible objects.
+   */
+  private collectVisibleContentObjectsUnder(parent: THREE.Object3D, result: THREE.Object3D[]): void {
+    for (const child of this.getContentChildren(parent)) {
+      result.push(child);
+      if (this.getContentChildren(child).length > 0 && this.expandedSet.has(child.uuid)) {
+        this.collectVisibleContentObjectsUnder(child, result);
+      }
+    }
+  }
+
+  /**
+   * Returns whether two object lists reference the same objects in order.
+   *
+   * @param first First list.
+   * @param second Second list.
+   * @returns True when both lists are identical.
+   */
+  private areObjectListsEqual(first: readonly THREE.Object3D[], second: readonly THREE.Object3D[]): boolean {
+    if (first.length !== second.length) return false;
+    return first.every((object, index) => object === second[index]);
+  }
+
+  /**
+   * Inserts one newly visible object when the rest of the list is unchanged.
+   *
+   * @param desired Desired visible object list.
+   * @param current Current itemMap key order.
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   * @returns True when the insert succeeded.
+   */
+  private tryInsertSingleVisibleObject(
+    desired: readonly THREE.Object3D[],
+    current: readonly THREE.Object3D[],
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>,
+  ): boolean {
+    const insertIndex = this.findSingleInsertionIndex(desired, current);
+    if (insertIndex < 0) return false;
+    const objectToInsert = desired[insertIndex];
+    if (!objectToInsert) return false;
+    const depth = this.computeOutlinerDepth(objectToInsert);
+    if (depth < 0) return false;
+    const hasChildren = this.getContentChildren(objectToInsert).length > 0;
+    const item = this.createConfiguredItem(objectToInsert, depth, hasChildren, selectedObjects, hierarchySelection);
+    const beforeElement = this.treeElement.children[insertIndex] ?? null;
+    this.treeElement.insertBefore(item.getElement(), beforeElement);
+    this.rebuildItemMapOrder(desired, item, objectToInsert);
+    this.syncVisibleItemChrome(desired);
+    return true;
+  }
+
+  /**
+   * Removes one object that left the visible list when the rest is unchanged.
+   *
+   * @param desired Desired visible object list.
+   * @param current Current itemMap key order.
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   * @returns True when the remove succeeded.
+   */
+  private tryRemoveSingleVisibleObject(
+    desired: readonly THREE.Object3D[],
+    current: readonly THREE.Object3D[],
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>,
+  ): boolean {
+    const removeIndex = this.findSingleRemovalIndex(desired, current);
+    if (removeIndex < 0) return false;
+    const objectToRemove = current[removeIndex];
+    if (!objectToRemove) return false;
+    const item = this.itemMap.get(objectToRemove);
+    if (!item) return false;
+    item.dispose();
+    this.itemMap.delete(objectToRemove);
+    this.rebuildItemMapOrder(desired, null, null);
+    this.updateSelectionStates(selectedObjects, hierarchySelection);
+    this.syncVisibleItemChrome(desired);
+    return true;
+  }
+
+  /**
+   * Finds the index of a single inserted object between two ordered lists.
+   *
+   * @param desired Desired list (one longer).
+   * @param current Current list.
+   * @returns Insertion index, or -1 when the diff is not a single insert.
+   */
+  private findSingleInsertionIndex(desired: readonly THREE.Object3D[], current: readonly THREE.Object3D[]): number {
+    let insertIndex = 0;
+    while (insertIndex < current.length && desired[insertIndex] === current[insertIndex]) {
+      insertIndex++;
+    }
+    for (let index = insertIndex; index < current.length; index++) {
+      if (desired[index + 1] !== current[index]) return -1;
+    }
+    return insertIndex;
+  }
+
+  /**
+   * Finds the index of a single removed object between two ordered lists.
+   *
+   * @param desired Desired list (one shorter).
+   * @param current Current list.
+   * @returns Removal index, or -1 when the diff is not a single remove.
+   */
+  private findSingleRemovalIndex(desired: readonly THREE.Object3D[], current: readonly THREE.Object3D[]): number {
+    let removeIndex = 0;
+    while (removeIndex < desired.length && desired[removeIndex] === current[removeIndex]) {
+      removeIndex++;
+    }
+    for (let index = removeIndex; index < desired.length; index++) {
+      if (desired[index] !== current[index + 1]) return -1;
+    }
+    return removeIndex;
+  }
+
+  /**
+   * Computes indentation depth for an object relative to the tree root.
+   *
+   * @param object Hierarchy object.
+   * @returns Depth starting at 0 for direct root children, or -1 if orphaned.
+   */
+  private computeOutlinerDepth(object: THREE.Object3D): number {
+    let depth = 0;
+    let current: THREE.Object3D | null = object.parent;
+    while (current && current !== this.root) {
+      depth++;
+      current = current.parent;
+    }
+    return current === this.root ? depth : -1;
+  }
+
+  /**
+   * Creates an outliner row with selection, expand, visibility, and lock state.
+   *
+   * @param object Hierarchy object for the row.
+   * @param depth Indentation depth.
+   * @param hasChildren Whether the object has content children.
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   * @returns Configured outliner item.
+   */
+  private createConfiguredItem(
+    object: THREE.Object3D,
+    depth: number,
+    hasChildren: boolean,
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>,
+  ): OutlinerItem {
+    const item = new OutlinerItem(object, depth, hasChildren);
+    this.applySelectionState(item, object, selectedObjects, hierarchySelection);
+    this.applyExpandedState(item, object);
+    this.applyVisibilityState(item, object);
+    this.applyLockState(item, object);
+    this.bindItemCallbacks(item);
+    return item;
+  }
+
+  /**
+   * Rebuilds itemMap insertion order to match the desired visible list.
+   *
+   * @param desired Desired visible objects.
+   * @param insertedItem Optional newly created item.
+   * @param insertedObject Optional object for the inserted item.
+   */
+  private rebuildItemMapOrder(
+    desired: readonly THREE.Object3D[],
+    insertedItem: OutlinerItem | null,
+    insertedObject: THREE.Object3D | null,
+  ): void {
+    const nextMap = new Map<THREE.Object3D, OutlinerItem>();
+    for (const object of desired) {
+      if (insertedObject && object === insertedObject && insertedItem) {
+        nextMap.set(object, insertedItem);
+        continue;
+      }
+      const existing = this.itemMap.get(object);
+      if (existing) nextMap.set(object, existing);
+    }
+    this.itemMap = nextMap;
+  }
+
+  /**
+   * Refreshes expand/visibility/lock chrome for visible rows without rebuild.
+   *
+   * @param visibleObjects Currently visible hierarchy objects.
+   */
+  private syncVisibleItemChrome(visibleObjects: readonly THREE.Object3D[]): void {
+    for (const object of visibleObjects) {
+      const item = this.itemMap.get(object);
+      if (!item) continue;
+      this.applyExpandedState(item, object);
+      this.applyVisibilityState(item, object);
+      this.applyLockState(item, object);
+    }
   }
 
   /**
@@ -349,7 +609,7 @@ export class OutlinerTree {
   private renderChildren(
     parent: THREE.Object3D,
     depth: number,
-    targetContainer: HTMLElement,
+    targetContainer: HTMLElement | DocumentFragment,
     selectedObjects: Set<THREE.Mesh>,
     hierarchySelection: Set<THREE.Object3D>,
   ): void {
@@ -357,12 +617,7 @@ export class OutlinerTree {
     this.getContentChildren(parent).forEach((child) => {
       if (!this.passesSearchFilter(child, query)) return;
       const hasChildren = this.getContentChildren(child).length > 0;
-      const item = new OutlinerItem(child, depth, hasChildren);
-      this.applySelectionState(item, child, selectedObjects, hierarchySelection);
-      this.applyExpandedState(item, child);
-      this.applyVisibilityState(item, child);
-      this.applyLockState(item, child);
-      this.bindItemCallbacks(item);
+      const item = this.createConfiguredItem(child, depth, hasChildren, selectedObjects, hierarchySelection);
       targetContainer.appendChild(item.getElement());
       this.itemMap.set(child, item);
       if (hasChildren && this.expandedSet.has(child.uuid)) {

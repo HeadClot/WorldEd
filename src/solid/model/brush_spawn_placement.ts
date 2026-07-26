@@ -1,15 +1,18 @@
 import * as THREE from 'three';
+import {
+  computeCameraForwardSpawnPosition,
+  computeOcclusionAwareSpawnPosition,
+  DEFAULT_SPAWN_DISTANCE,
+  snapPositionToGrid,
+} from '../../navigation/object_spawn_placement.js';
 
-/** Default distance ahead of the camera for new brush placement. */
-const DEFAULT_SPAWN_DISTANCE = 8;
-
-/** Fallback grid interval when snap settings are unavailable or invalid. */
-const FALLBACK_GRID_INTERVAL = 1;
+export { snapPositionToGrid, DEFAULT_SPAWN_DISTANCE };
 
 /**
  * Computes a world position for a new brush in front of the camera. Placement
- * is independent of existing brush count (no cascade offset). Callers snap in
- * model-local space after converting from world.
+ * is independent of existing brush count (no cascade offset). Prefer
+ * {@link computeBrushSpawnPositionInScene} when a scene root is available so
+ * placement stays on the camera side of walls.
  *
  * @param camera Active view camera (perspective or orthographic).
  * @param distance Distance along the view forward from the camera origin.
@@ -19,29 +22,32 @@ export function computeBrushSpawnPosition(
   camera: THREE.Camera,
   distance: number = DEFAULT_SPAWN_DISTANCE,
 ): THREE.Vector3 {
-  const position = new THREE.Vector3();
-  const forward = new THREE.Vector3();
-  camera.getWorldPosition(position);
-  camera.getWorldDirection(forward);
-  if (forward.lengthSq() < 1e-12) {
-    forward.set(0, 0, -1);
-  } else {
-    forward.normalize();
-  }
-  position.addScaledVector(forward, Math.max(distance, 0));
-  return position;
+  return computeCameraForwardSpawnPosition(camera, distance);
 }
 
 /**
- * Snaps a position to the nearest grid cell on each axis.
+ * Computes a grid-snapped world spawn for a brush using view-ray occlusion so
+ * new brushes do not appear behind walls the camera is looking at.
  *
- * @param position Position modified in place.
- * @param gridInterval Grid step (non-positive values leave the position
- *   unchanged).
+ * @param camera Active view camera.
+ * @param raycastRoot World hierarchy used for occlusion tests.
+ * @param gridInterval Grid step for snapping.
+ * @param objectRadius Approximate brush half-extent for surface clearance.
+ * @param preferredDistance Preferred open-space distance along the view ray.
+ * @returns World-space snapped spawn position.
  */
-export function snapPositionToGrid(position: THREE.Vector3, gridInterval: number): void {
-  const interval = Number.isFinite(gridInterval) && gridInterval > 0 ? gridInterval : FALLBACK_GRID_INTERVAL;
-  position.x = Math.round(position.x / interval) * interval;
-  position.y = Math.round(position.y / interval) * interval;
-  position.z = Math.round(position.z / interval) * interval;
+export function computeBrushSpawnPositionInScene(
+  camera: THREE.Camera,
+  raycastRoot: THREE.Object3D,
+  gridInterval: number,
+  objectRadius: number = 1,
+  preferredDistance: number = DEFAULT_SPAWN_DISTANCE,
+): THREE.Vector3 {
+  return computeOcclusionAwareSpawnPosition({
+    camera,
+    preferredDistance,
+    gridInterval,
+    raycastRoot,
+    objectRadius,
+  });
 }

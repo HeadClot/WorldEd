@@ -134,9 +134,7 @@ export class SelectionVisualController {
     const nextFills = this.collectSelectedBrushMeshes();
     for (const mesh of this.hullFillMeshes) {
       if (nextFills.has(mesh)) continue;
-      if (mesh.parent) {
-        this.applyBrushHullFillToMeshAndClones(mesh, false);
-      }
+      this.applyBrushHullFillToMeshAndClones(mesh, false);
     }
     for (const mesh of nextFills) {
       if (this.hullFillMeshes.has(mesh)) continue;
@@ -146,22 +144,25 @@ export class SelectionVisualController {
   }
 
   /**
-   * Collects selected meshes that are solid brush previews.
+   * Collects selected solid brush previews that are still parented in a scene.
+   * Detached meshes (e.g. mid undo) never keep a filled hull.
    *
    * @returns Set of selected brush meshes that should show hull fill.
    */
   private collectSelectedBrushMeshes(): Set<THREE.Mesh> {
     const nextFills = new Set<THREE.Mesh>();
     for (const mesh of this.selectionManager.getSelectedObjects()) {
-      if (SolidBrushVisual.isBrushObject(mesh)) {
-        nextFills.add(mesh);
-      }
+      if (!SolidBrushVisual.isBrushObject(mesh)) continue;
+      if (!mesh.parent) continue;
+      nextFills.add(mesh);
     }
     return nextFills;
   }
 
   /**
    * Applies hull fill visibility to a world brush mesh and its 2D clones.
+   * Always updates the world mesh userData even when detached so undo/redo
+   * cannot resurrect a selected fill after the brush is re-parented.
    *
    * @param worldMesh Authoritative brush preview mesh.
    * @param fillVisible Whether the translucent volume should be drawn.

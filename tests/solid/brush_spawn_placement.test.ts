@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { computeBrushSpawnPosition, snapPositionToGrid } from '../../src/solid/model/brush_spawn_placement.js';
+import {
+  computeBrushSpawnPosition,
+  computeBrushSpawnPositionInScene,
+  snapPositionToGrid,
+} from '../../src/solid/model/brush_spawn_placement.js';
 
 /** Unit tests for camera-front, grid-aligned brush spawn placement. */
 describe('brush_spawn_placement', () => {
@@ -35,5 +39,21 @@ describe('brush_spawn_placement', () => {
     expect(first.z).toBeCloseTo(second.z, 5);
     expect(Math.abs(first.x)).toBeLessThan(0.01);
     expect(first.z).toBeCloseTo(2, 5);
+  });
+
+  it('places brushes on the camera side of an occluding wall', () => {
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+    camera.position.set(0, 1, 12);
+    camera.lookAt(0, 1, 0);
+    camera.updateMatrixWorld(true);
+    const world = new THREE.Group();
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 0.25), new THREE.MeshBasicMaterial());
+    wall.position.set(0, 1, 5);
+    world.add(wall);
+    world.updateMatrixWorld(true);
+
+    const position = computeBrushSpawnPositionInScene(camera, world, 0.25, 1, 8);
+    expect(position.z).toBeGreaterThan(5);
+    expect(position.z).toBeLessThan(12);
   });
 });

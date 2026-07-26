@@ -5,13 +5,33 @@ import {
   createGizmoFrontLineMaterial,
   createGizmoOccludedLineMaterial,
 } from '../gizmo/gizmo_visual_style.js';
+import type { CadViewPlane } from '../../rulers/cad_view_plane.js';
+import {
+  isBoundsGuideAxisDrawnInView,
+  resolveBoundsGuideRay,
+  transformGuideRayToWorld,
+  type BoundsGuideAxis,
+} from './bounds_guide_visibility.js';
+
+/** Options controlling which corner guide rays are built. */
+export interface BoundsGuideLineBuildOptions {
+  /** Viewport plane; orthographic depth axes are omitted. */
+  viewPlane?: CadViewPlane;
+  /** World center of the oriented bounds. */
+  boundsCenter?: THREE.Vector3;
+  /** World orientation of the oriented bounds. */
+  boundsQuaternion?: THREE.Quaternion;
+  /** Content meshes for 3D triangle tests (perspective). */
+  raycastMeshes?: readonly THREE.Mesh[];
+  /** Precomputed world AABBs for fast planar tests (orthographic). */
+  planarWorldBoxes?: readonly THREE.Box3[];
+}
 
 /**
  * Draws RGB axis guide rays from each corner of an oriented bounds box. Solid
- * color at the corner fades toward a transparent tip, matching classic brush
- * editor construction guides. Uses the same front/occluded dual-pass as move
- * and rotate gizmos so segments that enter existing geometry draw
- * semi-transparent.
+ * color at the corner fades toward a transparent tip. Individual rays are only
+ * emitted when they can reach the ground plane (perspective) or scene geometry,
+ * and orthographic views never draw the depth axis.
  */
 export class BoundsGuideLines {
   private rootGroup: THREE.Group;
@@ -132,38 +152,79 @@ export class BoundsGuideLines {
   }
 
   /**
-   * Rebuilds guide rays for the given local half extents. Ray length is fixed
-   * and does not scale with object size. Lines are authored in local bounds
-   * space (origin at box center).
+   * Rebuilds guide rays for the given local half extents. Only rays that pass
+   * viewport visibility rules are written into the geometry.
    *
    * @param halfExtents Local half extents of the oriented bounds.
+   * @param options Optional viewport and raycast context for filtering.
    */
-  updateFromHalfExtents(halfExtents: THREE.Vector3): void {
+  updateFromHalfExtents(halfExtents: THREE.Vector3, options: BoundsGuideLineBuildOptions = {}): void {
     const positions: number[] = [];
     const colors: number[] = [];
-    this.appendAllCornerGuides(positions, colors, halfExtents);
+    this.appendAllCornerGuides(positions, colors, halfExtents, options);
     this.applyBuffers(positions, colors);
   }
 
   /**
-   * Appends outward X/Y/Z rays for every box corner.
+   * Writes filtered guide rays into an existing geometry (viewport clones).
+   * Creates a temporary builder so theme colors match the master gizmo.
+   *
+   * @param geometry Geometry to replace attributes on (owned by the caller).
+   * @param halfExtents Local half extents of the oriented bounds.
+   * @param theme Theme for axis colors.
+   * @param fixedGuideLength Authored ray length.
+   * @param options Viewport and raycast context for filtering.
+   */
+  static writeFilteredGeometry(
+    geometry: THREE.BufferGeometry,
+    halfExtents: THREE.Vector3,
+    theme: typeof Theme,
+    fixedGuideLength: number,
+    options: BoundsGuideLineBuildOptions,
+  ): void {
+    const builder = new BoundsGuideLines(theme, fixedGuideLength);
+    builder.updateFromHalfExtents(halfExtents, options);
+    const source = builder.getGeometry();
+    geometry.setAttribute('position', source.getAttribute('position')!.clone());
+    geometry.setAttribute('color', source.getAttribute('color')!.clone());
+    geometry.computeBoundingSphere();
+    builder.dispose();
+  }
+
+  /**
+   * Appends outward X/Y/Z rays for every box corner that passes visibility.
    *
    * @param positions Position component accumulator.
    * @param colors Color component accumulator.
    * @param halfExtents Local half extents.
+   * @param options Visibility context.
    */
-  private appendAllCornerGuides(positions: number[], colors: number[], halfExtents: THREE.Vector3): void {
+  private appendAllCornerGuides(
+    positions: number[],
+    colors: number[],
+    halfExtents: THREE.Vector3,
+    options: BoundsGuideLineBuildOptions,
+  ): void {
     this.cornerSigns.forEach((signX) => {
       this.cornerSigns.forEach((signY) => {
         this.cornerSigns.forEach((signZ) => {
-          this.appendCornerAxisRays(positions, colors, halfExtents, this.fixedGuideLength, signX, signY, signZ);
+          this.appendCornerAxisRays(
+            positions,
+            colors,
+            halfExtents,
+            this.fixedGuideLength,
+            signX,
+            signY,
+            signZ,
+            options,
+          );
         });
       });
     });
   }
 
   /**
-   * Appends three outward axis rays for one corner.
+   * Appends visible outward axis rays for one corner.
    *
    * @param positions Position component accumulator.
    * @param colors Color component accumulator.
@@ -172,6 +233,7 @@ export class BoundsGuideLines {
    * @param signX Corner sign on X (-1 or 1).
    * @param signY Corner sign on Y (-1 or 1).
    * @param signZ Corner sign on Z (-1 or 1).
+   * @param options Visibility context.
    */
   private appendCornerAxisRays(
     positions: number[],
@@ -181,43 +243,114 @@ export class BoundsGuideLines {
     signX: number,
     signY: number,
     signZ: number,
+    options: BoundsGuideLineBuildOptions,
   ): void {
     const cornerX = signX * halfExtents.x;
     const cornerY = signY * halfExtents.y;
     const cornerZ = signZ * halfExtents.z;
-    this.appendRay(
-      positions,
-      colors,
+    this.tryAppendAxisRay(positions, colors, cornerX, cornerY, cornerZ, 'x', signX, length, this.colorX, options);
+    this.tryAppendAxisRay(positions, colors, cornerX, cornerY, cornerZ, 'y', signY, length, this.colorY, options);
+    this.tryAppendAxisRay(positions, colors, cornerX, cornerY, cornerZ, 'z', signZ, length, this.colorZ, options);
+  }
+
+  /**
+   * Appends one axis ray when viewport rules allow it.
+   *
+   * @param positions Position component accumulator.
+   * @param colors Color component accumulator.
+   * @param cornerX Corner X.
+   * @param cornerY Corner Y.
+   * @param cornerZ Corner Z.
+   * @param axis Axis of the ray.
+   * @param sign Outward sign along the axis.
+   * @param length Ray length.
+   * @param color Axis color.
+   * @param options Visibility context.
+   */
+  private tryAppendAxisRay(
+    positions: number[],
+    colors: number[],
+    cornerX: number,
+    cornerY: number,
+    cornerZ: number,
+    axis: BoundsGuideAxis,
+    sign: number,
+    length: number,
+    color: THREE.Color,
+    options: BoundsGuideLineBuildOptions,
+  ): void {
+    const fullEndX = cornerX + (axis === 'x' ? sign * length : 0);
+    const fullEndY = cornerY + (axis === 'y' ? sign * length : 0);
+    const fullEndZ = cornerZ + (axis === 'z' ? sign * length : 0);
+    const clipped = this.resolveClippedLocalEnd(
       cornerX,
       cornerY,
       cornerZ,
-      cornerX + signX * length,
-      cornerY,
-      cornerZ,
-      this.colorX,
+      fullEndX,
+      fullEndY,
+      fullEndZ,
+      axis,
+      length,
+      options,
     );
-    this.appendRay(
-      positions,
-      colors,
-      cornerX,
-      cornerY,
-      cornerZ,
-      cornerX,
-      cornerY + signY * length,
-      cornerZ,
-      this.colorY,
+    if (!clipped) return;
+    this.appendRay(positions, colors, cornerX, cornerY, cornerZ, clipped.endX, clipped.endY, clipped.endZ, color);
+  }
+
+  /**
+   * Resolves the local end point of a guide ray after visibility and clip
+   * tests.
+   *
+   * @param ax Start X.
+   * @param ay Start Y.
+   * @param az Start Z.
+   * @param bx Full-length end X.
+   * @param by Full-length end Y.
+   * @param bz Full-length end Z.
+   * @param axis Axis of the ray.
+   * @param fullLength Authored ray length.
+   * @param options Visibility context.
+   * @returns Clipped local end, or null when the ray is hidden.
+   */
+  private resolveClippedLocalEnd(
+    ax: number,
+    ay: number,
+    az: number,
+    bx: number,
+    by: number,
+    bz: number,
+    axis: BoundsGuideAxis,
+    fullLength: number,
+    options: BoundsGuideLineBuildOptions,
+  ): { endX: number; endY: number; endZ: number } | null {
+    const viewPlane = options.viewPlane ?? 'xyz';
+    if (options.boundsCenter === undefined) {
+      if (!isBoundsGuideAxisDrawnInView(axis, viewPlane)) return null;
+      return { endX: bx, endY: by, endZ: bz };
+    }
+    const quaternion = options.boundsQuaternion ?? new THREE.Quaternion();
+    const worldRay = transformGuideRayToWorld(
+      new THREE.Vector3(ax, ay, az),
+      new THREE.Vector3(bx, by, bz),
+      options.boundsCenter,
+      quaternion,
     );
-    this.appendRay(
-      positions,
-      colors,
-      cornerX,
-      cornerY,
-      cornerZ,
-      cornerX,
-      cornerY,
-      cornerZ + signZ * length,
-      this.colorZ,
-    );
+    const resolution = resolveBoundsGuideRay({
+      viewPlane,
+      axis,
+      worldOrigin: worldRay.origin,
+      worldDirection: worldRay.direction,
+      length: worldRay.length,
+      ...(options.raycastMeshes ? { raycastMeshes: options.raycastMeshes } : {}),
+      ...(options.planarWorldBoxes ? { planarWorldBoxes: options.planarWorldBoxes } : {}),
+    });
+    if (!resolution.show || resolution.drawLength <= 1e-8) return null;
+    const scale = fullLength > 1e-12 ? resolution.drawLength / fullLength : 0;
+    return {
+      endX: ax + (bx - ax) * scale,
+      endY: ay + (by - ay) * scale,
+      endZ: az + (bz - az) * scale,
+    };
   }
 
   /**

@@ -110,6 +110,50 @@ describe('ViewportSyncManager', () => {
       const worldMesh = worldObject.children[0] as THREE.Mesh;
       expect(cloneMesh.geometry).not.toBe(worldMesh.geometry);
     });
+
+    it('should add a new world child without recloning existing mesh geometry', () => {
+      const worldObject = createWorldGroupWithChildren([
+        [0, 0, 0],
+        [1, 0, 0],
+      ]);
+      syncManager.syncWorldObjectToViewports(worldObject);
+      const firstCloneMesh = findCloneGroup(sceneTop).children[0] as THREE.Mesh;
+      const firstCloneGeometry = firstCloneMesh.geometry;
+      const firstCloneUuid = firstCloneMesh.uuid;
+
+      const extra = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+      extra.position.set(2, 0, 0);
+      worldObject.add(extra);
+      syncManager.syncWorldObjectToViewports(worldObject);
+
+      const cloneRoot = findCloneGroup(sceneTop);
+      expect(cloneRoot.children.length).toBe(3);
+      const preserved = cloneRoot.children[0] as THREE.Mesh;
+      expect(preserved.uuid).toBe(firstCloneUuid);
+      expect(preserved.geometry).toBe(firstCloneGeometry);
+      expect(cloneRoot.children.some((child) => child.userData['editorSourceUuid'] === extra.uuid)).toBe(true);
+    });
+
+    it('should remove a deleted world child clone without dropping siblings', () => {
+      const worldObject = createWorldGroupWithChildren([
+        [0, 0, 0],
+        [1, 0, 0],
+        [2, 0, 0],
+      ]);
+      syncManager.syncWorldObjectToViewports(worldObject);
+      const removed = worldObject.children[1]!;
+      const keptA = worldObject.children[0]!;
+      const keptB = worldObject.children[2]!;
+      worldObject.remove(removed);
+      syncManager.syncWorldObjectToViewports(worldObject);
+
+      const cloneRoot = findCloneGroup(sceneTop);
+      expect(cloneRoot.children.length).toBe(2);
+      const sourceUuids = cloneRoot.children.map((child) => child.userData['editorSourceUuid']);
+      expect(sourceUuids).toContain(keptA.uuid);
+      expect(sourceUuids).toContain(keptB.uuid);
+      expect(sourceUuids).not.toContain(removed.uuid);
+    });
   });
 
   describe('syncClonePositionsToWorldObject', () => {

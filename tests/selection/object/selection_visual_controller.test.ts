@@ -115,4 +115,23 @@ describe('SelectionVisualController', () => {
     expect(SolidBrushVisual.isHullFillVisible(brushMesh)).toBe(false);
     expect((brushMesh.material as THREE.MeshBasicMaterial).colorWrite).toBe(false);
   });
+
+  it('should clear hull fill userData when a selected brush is detached like undo', () => {
+    const brushMesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
+    world.add(brushMesh);
+    syncManager = createSyncManagerStub([mesh, brushMesh]);
+    controller = new SelectionVisualController(selectionManager, syncManager);
+    controller.wireViewports([viewport3d as any, viewport2d as any]);
+    selectionManager.selectObject(brushMesh);
+    expect(SolidBrushVisual.isHullFillVisible(brushMesh)).toBe(true);
+
+    world.remove(brushMesh);
+    selectionManager.pruneSelectionNotInScene(world);
+    expect(SolidBrushVisual.isHullFillVisible(brushMesh)).toBe(false);
+
+    world.add(brushMesh);
+    controller.reapplyAfterViewportSync();
+    expect(SolidBrushVisual.isHullFillVisible(brushMesh)).toBe(false);
+    expect((brushMesh.material as THREE.MeshBasicMaterial).colorWrite).toBe(false);
+  });
 });

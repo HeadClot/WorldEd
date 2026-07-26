@@ -8,12 +8,10 @@ import {
   SOLID_BRUSH_EDGE_USERDATA_KEY,
 } from '../../solid/model/solid_brush_edge_materials.js';
 import { SolidBrushVisual, SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../../solid/model/solid_brush_visual.js';
+import { reconcileViewportCloneSubtree } from './viewport_clone_reconcile.js';
+import { EDITOR_SOURCE_UUID_KEY, EDITOR_VIEWPORT_CLONE_KEY } from './viewport_sync_keys.js';
 
-/** UserData key used to map viewport clone meshes back to world meshes. */
-export const EDITOR_SOURCE_UUID_KEY = 'editorSourceUuid';
-
-/** UserData key marking a top-level group as a 2D viewport world clone. */
-export const EDITOR_VIEWPORT_CLONE_KEY = 'isEditorViewportClone';
+export { EDITOR_SOURCE_UUID_KEY, EDITOR_VIEWPORT_CLONE_KEY } from './viewport_sync_keys.js';
 
 /** Configuration mapping a viewport to its container element. */
 export interface ViewportContainerPair {
@@ -171,17 +169,114 @@ export class ViewportSyncManager {
   }
 
   /**
-   * Syncs a world object to all 2D viewport scenes by cloning and replacing.
+   * Syncs a world object to all 2D viewport scenes. Prefers an incremental
+   * hierarchy reconcile so adding or removing one object does not reclone the
+   * entire scene; falls back to a full replace when no valid clone roots
+   * exist.
    *
    * @param worldObject The world object to clone into 2D viewports.
    */
   syncWorldObjectToViewports(worldObject: THREE.Group): void {
     this.worldObject = worldObject;
+    if (!this.tryIncrementalWorldSync(worldObject)) {
+      this.replaceAllViewportClones(worldObject);
+    }
+    this.rebuildCloneSourceIndex();
+    this.setupViewportSelectableObjects();
+  }
+
+  /**
+   * Attempts to update existing 2D clone trees in place for the given world.
+   *
+   * @param worldObject Authoritative world group.
+   * @returns True when all three viewport clones were reconciled in place.
+   */
+  private tryIncrementalWorldSync(worldObject: THREE.Group): boolean {
+    const cloneRoots = this.collectExistingCloneRoots();
+    if (cloneRoots.length !== 3) return false;
+    if (!cloneRoots.every((root) => root.userData[EDITOR_SOURCE_UUID_KEY] === worldObject.uuid)) {
+      return false;
+    }
+    const hooks = this.createReconcileHooks();
+    for (const cloneRoot of cloneRoots) {
+      reconcileViewportCloneSubtree(worldObject, cloneRoot, hooks);
+    }
+    return true;
+  }
+
+  /**
+   * Collects the tagged world-clone roots currently present in the 2D scenes.
+   *
+   * @returns Clone roots in top/front/side order when present.
+   */
+  private collectExistingCloneRoots(): THREE.Object3D[] {
+    const scenes = [this.viewport2DTop.getScene(), this.viewport2DFront.getScene(), this.viewport2DSide.getScene()];
+    const roots: THREE.Object3D[] = [];
+    for (const scene of scenes) {
+      const root = this.findCloneGroupInScene(scene);
+      if (!root) return [];
+      roots.push(root);
+    }
+    return roots;
+  }
+
+  /**
+   * Fully replaces every 2D viewport clone from the authoritative world.
+   *
+   * @param worldObject Authoritative world group.
+   */
+  private replaceAllViewportClones(worldObject: THREE.Group): void {
     this.replaceCloneInScene(this.viewport2DTop.getScene(), worldObject);
     this.replaceCloneInScene(this.viewport2DFront.getScene(), worldObject);
     this.replaceCloneInScene(this.viewport2DSide.getScene(), worldObject);
-    this.rebuildCloneSourceIndex();
-    this.setupViewportSelectableObjects();
+  }
+
+  /**
+   * Builds reconcile hooks bound to this manager's clone helpers.
+   *
+   * @returns Hooks for incremental clone updates.
+   */
+  private createReconcileHooks() {
+    return {
+      shouldAppearInClone: (object: THREE.Object3D) => this.shouldAppearInClone(object),
+      createSubtreeClone: (worldObject: THREE.Object3D) => this.createSubtreeClone(worldObject),
+      disposeCloneObject: (object: THREE.Object3D) => this.disposeObject3D(object),
+      syncCloneTransform: (worldObject: THREE.Object3D, cloneObject: THREE.Object3D) => {
+        cloneObject.position.copy(worldObject.position);
+        cloneObject.quaternion.copy(worldObject.quaternion);
+        cloneObject.scale.copy(worldObject.scale);
+        this.syncCloneVisibility(worldObject, cloneObject);
+      },
+    };
+  }
+
+  /**
+   * Returns whether a world object should appear under a 2D viewport clone.
+   *
+   * @param object World hierarchy node.
+   * @returns False for selection overlays and occluded brush edge passes.
+   */
+  private shouldAppearInClone(object: THREE.Object3D): boolean {
+    if (this.isEditorOverlayObject(object)) return false;
+    if (object.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true) return false;
+    return true;
+  }
+
+  /**
+   * Deep-clones one world subtree for insertion into an existing viewport
+   * clone.
+   *
+   * @param worldObject Authoritative world node.
+   * @returns Independent clone with source UUID tags.
+   */
+  private createSubtreeClone(worldObject: THREE.Object3D): THREE.Object3D {
+    const clone = worldObject.clone(true);
+    this.stripEditorOverlays(clone);
+    this.tagCloneWithSourceUuids(worldObject, clone);
+    this.detachSharedResources(clone);
+    this.stripOccludedBrushEdges(clone);
+    this.forceBrushEdgesVisible(clone);
+    return clone;
   }
 
   /**

@@ -244,7 +244,7 @@ export class SolidModel {
    * @param operation CSG operation.
    * @returns Created brush instance.
    */
-  addBoxBrush(size: number = 2, operation: SolidOperation = SolidOperation.Additive): SolidBrushInstance {
+  addBoxBrush(size: number = 1, operation: SolidOperation = SolidOperation.Additive): SolidBrushInstance {
     const counter = this.brushes.nextBrushCounter();
     const name = `Brush${this.padNumber(counter)}`;
     const brush = SolidBrushFactory.createCenteredBox(size, size, size);

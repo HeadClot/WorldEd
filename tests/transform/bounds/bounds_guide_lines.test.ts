@@ -22,12 +22,50 @@ describe('BoundsGuideLines', () => {
     expect(guides.isVisible()).toBe(false);
   });
 
-  it('should create 24 corner axis rays for a box', () => {
+  it('should create 24 corner axis rays for a box without filter context', () => {
     guides.updateFromHalfExtents(new THREE.Vector3(1, 2, 3));
     expect(guides.getSegmentCount()).toBe(24);
   });
 
-  it('should keep guide ray length fixed regardless of bounds size', () => {
+  it('should omit the orthographic depth axis when a view plane is provided', () => {
+    guides.updateFromHalfExtents(new THREE.Vector3(1, 1, 1), { viewPlane: 'xz' });
+    // 8 corners × 2 axes (X and Z) = 16 segments
+    expect(guides.getSegmentCount()).toBe(16);
+  });
+
+  it('should keep only ground-reaching rays when filtering an empty scene in 3D', () => {
+    guides.updateFromHalfExtents(new THREE.Vector3(0.5, 0.5, 0.5), {
+      viewPlane: 'xyz',
+      boundsCenter: new THREE.Vector3(0, 2, 0),
+      boundsQuaternion: new THREE.Quaternion(),
+      raycastMeshes: [],
+    });
+    // Only downward (-Y) rays from the four bottom corners can hit Y=0 within length 4.
+    expect(guides.getSegmentCount()).toBe(4);
+  });
+
+  it('should clip ground-only rays to the ground plane distance', () => {
+    guides.updateFromHalfExtents(new THREE.Vector3(0.5, 0.5, 0.5), {
+      viewPlane: 'xyz',
+      boundsCenter: new THREE.Vector3(0, 2, 0),
+      boundsQuaternion: new THREE.Quaternion(),
+      raycastMeshes: [],
+    });
+    const position = guides.getGeometry().getAttribute('position') as THREE.BufferAttribute;
+    // Bottom corner local (0.5,-0.5,0.5) -> world (0.5,1.5,0.5); -Y hits ground at distance 1.5.
+    let foundClippedDown = false;
+    for (let index = 0; index < position.count; index += 2) {
+      const start = new THREE.Vector3().fromBufferAttribute(position, index);
+      const end = new THREE.Vector3().fromBufferAttribute(position, index + 1);
+      if (Math.abs(start.y + 0.5) > 1e-5) continue;
+      if (Math.abs(end.x - start.x) > 1e-5 || Math.abs(end.z - start.z) > 1e-5) continue;
+      expect(start.distanceTo(end)).toBeCloseTo(1.5, 4);
+      foundClippedDown = true;
+    }
+    expect(foundClippedDown).toBe(true);
+  });
+
+  it('should keep guide ray length fixed regardless of bounds size without filter context', () => {
     const fixedLength = 4;
     guides = new BoundsGuideLines(Theme, fixedLength);
     guides.updateFromHalfExtents(new THREE.Vector3(50, 1, 1));

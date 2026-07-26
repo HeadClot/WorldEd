@@ -9,7 +9,8 @@ import { SolidModel } from '../../solid/model/solid_model.js';
 import { SolidModelPanel } from '../../ui/solid_model_panel.js';
 import { SolidOperation } from '../../solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
-import { computeBrushSpawnPosition, snapPositionToGrid } from '../../solid/model/brush_spawn_placement.js';
+import { DEFAULT_STARTUP_BRUSH_SIZE } from '../../solid/model/default_startup_solid_model.js';
+import { computeOcclusionAwareSpawnPosition, DEFAULT_SPAWN_DISTANCE } from '../../navigation/object_spawn_placement.js';
 import { TextureLockSettings } from '../../texture/lock/texture_lock_settings.js';
 import type { TextureLockFlags } from '../../texture/lock/texture_lock_transform.js';
 import { TransformMode } from '../../types/transform_mode.js';
@@ -166,7 +167,7 @@ export class SolidModelController {
   createSolidModel(): void {
     this.solidModelCounter += 1;
     const model = new SolidModel(`SolidModel${this.padNumber(this.solidModelCounter)}`);
-    const brush = model.addBoxBrush(2, SolidOperation.Additive);
+    const brush = model.addBoxBrush(DEFAULT_STARTUP_BRUSH_SIZE, SolidOperation.Additive);
     this.placeModelInScene(model, brush.mesh ?? model.root, `Created ${model.root.name}`);
   }
 
@@ -236,7 +237,7 @@ export class SolidModelController {
       return;
     }
     const offset = this.computeNewBrushLocalPosition(model);
-    const command = new AddSolidBoxBrushCommand(model, 2, SolidOperation.Additive, offset);
+    const command = new AddSolidBoxBrushCommand(model, DEFAULT_STARTUP_BRUSH_SIZE, SolidOperation.Additive, offset);
     this.commandStack.push(command);
     const brush = command.getCreatedBrush();
     if (brush?.mesh) {
@@ -654,7 +655,8 @@ export class SolidModelController {
 
   /**
    * Computes a grid-snapped local position for a new brush under a solid model.
-   * Uses the active camera forward when available; otherwise model origin.
+   * Uses occlusion-aware view-ray placement so brushes land in front of walls
+   * the camera is looking at; falls back to model origin without a camera.
    *
    * @param model Target solid model.
    * @returns Local position relative to the solid model root.
@@ -665,12 +667,15 @@ export class SolidModelController {
     if (!camera) {
       return new THREE.Vector3(0, 0, 0);
     }
-    // World point in front of camera, then snap in model-local space.
-    const worldPosition = computeBrushSpawnPosition(camera, 8);
+    const worldPosition = computeOcclusionAwareSpawnPosition({
+      camera,
+      preferredDistance: DEFAULT_SPAWN_DISTANCE,
+      gridInterval,
+      raycastRoot: this.worldObject,
+      objectRadius: DEFAULT_STARTUP_BRUSH_SIZE * 0.5,
+    });
     model.root.updateMatrixWorld(true);
-    const localPosition = model.root.worldToLocal(worldPosition);
-    snapPositionToGrid(localPosition, gridInterval);
-    return localPosition;
+    return model.root.worldToLocal(worldPosition.clone());
   }
 
   /**

@@ -205,4 +205,79 @@ describe('TransformGizmo', () => {
     expect(gizmo.getHandles().length).toBe(0);
     expect(gizmo.getActiveHandle()).toBeNull();
   });
+
+  it('should give each viewport its own guide geometry (2D vs 3D filters)', () => {
+    const top = gizmo.getHandleGroupClone('xz');
+    const perspective = gizmo.getHandleGroupClone('xyz');
+    const selected = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selected.position.set(0, 2, 0);
+    selected.updateMatrixWorld(true);
+    const world = new THREE.Group();
+    world.add(selected);
+    gizmo.setGuideLineRaycastRoot(world);
+    gizmo.updateBoundsFromMeshes([selected]);
+    gizmo.setBoundsGuideLinesVisible(true);
+
+    const topGeometry = findGuideGeometry(top);
+    const perspectiveGeometry = findGuideGeometry(perspective);
+    expect(topGeometry).not.toBeNull();
+    expect(perspectiveGeometry).not.toBeNull();
+    // Shared clone geometry was the bug: last (3D) filter overwrote every view.
+    expect(topGeometry).not.toBe(perspectiveGeometry);
+    // Empty scene, top: no planar targets → no segments. Perspective: ground hits.
+    expect(countGuideSegments(topGeometry!)).toBe(0);
+    expect(countGuideSegments(perspectiveGeometry!)).toBe(4);
+  });
+
+  it('should show planar top-view guides for geometry at different Y', () => {
+    const top = gizmo.getHandleGroupClone('xz');
+    const selected = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selected.position.set(0, 0, 0);
+    selected.updateMatrixWorld(true);
+    const neighbor = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    neighbor.position.set(2, 10, 0);
+    neighbor.updateMatrixWorld(true);
+    const world = new THREE.Group();
+    world.add(selected);
+    world.add(neighbor);
+    gizmo.setGuideLineRaycastRoot(world);
+    gizmo.updateBoundsFromMeshes([selected]);
+    gizmo.setBoundsGuideLinesVisible(true);
+
+    const topGeometry = findGuideGeometry(top);
+    expect(topGeometry).not.toBeNull();
+    // Neighbor is high on Y but overlaps in XZ — top view must still draw hits.
+    expect(countGuideSegments(topGeometry!)).toBeGreaterThan(0);
+  });
 });
+
+/**
+ * Finds the first bounds guide LineSegments geometry under a gizmo group.
+ *
+ * @param group Viewport or master gizmo group.
+ * @returns Shared guide geometry, or null.
+ */
+function findGuideGeometry(group: THREE.Group): THREE.BufferGeometry | null {
+  let found: THREE.BufferGeometry | null = null;
+  group.traverse((child) => {
+    if (child.userData['isBoundsGuideLines'] !== true) return;
+    child.traverse((lineChild) => {
+      if (lineChild instanceof THREE.LineSegments && !found) {
+        found = lineChild.geometry;
+      }
+    });
+  });
+  return found;
+}
+
+/**
+ * Counts line segments in guide geometry (two vertices per segment).
+ *
+ * @param geometry Guide BufferGeometry.
+ * @returns Segment count.
+ */
+function countGuideSegments(geometry: THREE.BufferGeometry): number {
+  const position = geometry.getAttribute('position');
+  if (!position) return 0;
+  return Math.floor(position.count / 2);
+}

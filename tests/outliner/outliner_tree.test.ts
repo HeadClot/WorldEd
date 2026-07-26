@@ -196,4 +196,50 @@ describe('OutlinerTree', () => {
     tree.dispose();
     expect(container.children.length).toBe(0);
   });
+
+  it('should insert a single added root child without dropping existing rows', () => {
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshA.name = 'CubeA';
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshB.name = 'CubeB';
+    root.add(meshA);
+    root.add(meshB);
+    tree.refresh(new Set());
+    const treeElement = container.children[1] as HTMLElement;
+    const firstRow = treeElement.children[0] as HTMLElement;
+    expect(treeElement.children.length).toBe(2);
+
+    const meshC = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshC.name = 'CubeC';
+    root.add(meshC);
+    tree.refresh(new Set());
+
+    expect(treeElement.children.length).toBe(3);
+    expect(treeElement.children[0]).toBe(firstRow);
+    expect(treeElement.textContent).toContain('CubeC');
+  });
+
+  it('should remove a single deleted root child without rebuilding siblings', () => {
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshA.name = 'KeepA';
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshB.name = 'RemoveMe';
+    const meshC = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshC.name = 'KeepC';
+    root.add(meshA);
+    root.add(meshB);
+    root.add(meshC);
+    tree.refresh(new Set());
+    const treeElement = container.children[1] as HTMLElement;
+    const firstRow = treeElement.children[0] as HTMLElement;
+    const thirdRow = treeElement.children[2] as HTMLElement;
+
+    root.remove(meshB);
+    tree.refresh(new Set());
+
+    expect(treeElement.children.length).toBe(2);
+    expect(treeElement.children[0]).toBe(firstRow);
+    expect(treeElement.children[1]).toBe(thirdRow);
+    expect(treeElement.textContent).not.toContain('RemoveMe');
+  });
 });

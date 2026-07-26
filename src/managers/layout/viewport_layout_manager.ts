@@ -302,6 +302,7 @@ export class ViewportLayoutManager {
   /** Creates selection visuals and primitive creation wiring. */
   private createSelectionAndPrimitiveHandlers(): void {
     this.selectionVisualController = new SelectionVisualController(this.selectionManager, this.viewportSyncManager);
+    this.transformGizmo.setGuideLineRaycastRoot(this.worldObject);
     this.primitiveCreationHandler = new PrimitiveCreationHandler(
       this.primitiveTool,
       this.worldObject,
@@ -309,6 +310,22 @@ export class ViewportLayoutManager {
       this.selectionManager,
     );
     this.primitiveCreationHandler.setOnPrimitiveCreated(() => this.onPrimitiveCreated());
+    this.primitiveCreationHandler.setActiveCameraProvider(() => this.getActiveSpawnCamera());
+    this.primitiveCreationHandler.setGridIntervalProvider(() => this.gridSnap.getInterval());
+  }
+
+  /**
+   * Returns the camera from the active viewport for object spawn placement.
+   *
+   * @returns Active viewport camera, falling back to the 3D camera.
+   */
+  private getActiveSpawnCamera(): THREE.Camera {
+    const coordinator = this.shadingModeCoordinator;
+    if (coordinator) {
+      const viewport = coordinator.getOrderedViewports()[coordinator.getActiveViewportIndex()];
+      if (viewport) return viewport.getCamera();
+    }
+    return this.viewport3D.getCamera();
   }
 
   /** Creates object, CSG, and alignment action handlers. */
@@ -461,6 +478,7 @@ export class ViewportLayoutManager {
     this.solidModelPanel = setup.solidModelPanel;
     this.solidModelController = setup.solidModelController;
     this.solidModelController.setTransformModeProvider(() => this.transformHandler.getMode());
+    this.solidModelController.setActiveCameraProvider(() => this.getActiveSpawnCamera());
     // Startup seeds a solid model before this panel exists; claim it as active.
     this.solidModelController.adoptFirstSolidModelInWorld();
   }
@@ -1013,15 +1031,9 @@ export class ViewportLayoutManager {
     };
   }
 
-  /** Refreshes the outliner panel with current scene objects. */
+  /** Refreshes the outliner panel from the live world hierarchy. */
   private refreshOutliner(): void {
-    const meshes: THREE.Mesh[] = [];
-    this.worldObject.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        meshes.push(child);
-      }
-    });
-    this.outlinerPanel.refresh(meshes);
+    this.outlinerPanel.refresh();
   }
 
   /** Handles post-primitive-creation synchronization and UI refresh. */
@@ -1156,7 +1168,6 @@ export class ViewportLayoutManager {
   private refreshAfterWorldMutation(): void {
     this.syncPrimitivesToViewports();
     this.refreshOutliner();
-    this.shadingModeCoordinator.updateShadingMeshes();
     this.faceModeCoordinator.updateFaceSelectionMeshes();
     // Undo/redo and other world edits leave mesh poses changed without a new
     // selection event — re-measure so rulers do not float at stale positions.
@@ -1166,7 +1177,8 @@ export class ViewportLayoutManager {
 
   /**
    * Syncs world objects to all 2D viewport scenes and restores selection
-   * outlines.
+   * outlines. Shading refresh runs once here so callers avoid a second full
+   * mesh walk.
    */
   private syncPrimitivesToViewports(): void {
     this.viewportSyncManager.syncWorldObjectToViewports(this.worldObject);
