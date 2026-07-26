@@ -10,14 +10,22 @@ export type StartupDesktopWindow = {
   show(): unknown;
 };
 
+/** Optional work to run after the window has been maximized and shown. */
+export type AfterDesktopWindowShown = () => void | Promise<void>;
+
 /**
  * Shows a maximized window after its webview can process resize events.
  *
  * @param desktopWindow Native window hosting the editor.
+ * @param afterShown Optional callback after maximize/show (for HWND icons).
  */
-export function showMaximizedWhenReady(desktopWindow: StartupDesktopWindow): void {
+export function showMaximizedWhenReady(
+  desktopWindow: StartupDesktopWindow,
+  afterShown?: AfterDesktopWindowShown,
+): void {
   desktopWindow.webview.on('dom-ready', () => {
     desktopWindow.maximize();
     desktopWindow.show();
+    void afterShown?.();
   });
 }

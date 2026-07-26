@@ -31,6 +31,9 @@ const electrobunConfig: ElectrobunConfig = {
     win: {
       defaultRenderer: 'native',
       bundleCEF: false,
+      // Electrobun embeds this into launcher.exe, bun.exe, and Setup.exe before
+      // the Setup zip is created (required for GitHub Actions release assets).
+      icon: 'public/app_icon.ico',
     },
     mac: {
       defaultRenderer: 'native',

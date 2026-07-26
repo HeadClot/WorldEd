@@ -1,19 +1,21 @@
-import { spawnSync } from 'node:child_process';
+import { writeWindowsExecutableIcon } from './windows_pe_icon_writer.js';
 import { WindowsIconEmbedder } from './windows_icon_embedder.js';
 
 /**
- * Embeds an icon into a Windows executable.
+ * Embeds an icon into a Windows executable via the pure-JS PE rewriter.
  *
- * @param editorPath Absolute rcedit executable path.
+ * @param _editorPath Unused legacy rcedit path kept for the embedder callback
+ *   shape.
  * @param executablePath Absolute target executable path.
  * @param iconPath Absolute ICO source path.
  */
-function runEditor(editorPath: string, executablePath: string, iconPath: string): void {
-  const result = spawnSync(editorPath, [executablePath, '--set-icon', iconPath], { stdio: 'inherit' });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`rcedit failed for ${executablePath} with exit code ${result.status}`);
+function runEditor(_editorPath: string, executablePath: string, iconPath: string): void {
+  writeWindowsExecutableIcon(executablePath, iconPath);
 }
 
 const embedder = new WindowsIconEmbedder(process.cwd(), process.env, runEditor);
 const embeddedPaths = embedder.embed();
-embeddedPaths.forEach((path) => console.log(`Embedded Windows icon into ${path}`));
+embeddedPaths.forEach((path) => {
+  const label = path.toLowerCase().endsWith('.zip') ? 'Refreshed Windows Setup zip' : 'Embedded Windows icon into';
+  console.log(`${label} ${path}`);
+});

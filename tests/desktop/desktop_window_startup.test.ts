@@ -13,13 +13,17 @@ describe('desktop window startup', () => {
       }),
     };
 
-    showMaximizedWhenReady({ maximize, show, webview });
+    const afterShown = vi.fn();
+    showMaximizedWhenReady({ maximize, show, webview }, afterShown);
 
     expect(maximize).not.toHaveBeenCalled();
     expect(show).not.toHaveBeenCalled();
+    expect(afterShown).not.toHaveBeenCalled();
     notifyReady();
     expect(maximize).toHaveBeenCalledOnce();
     expect(show).toHaveBeenCalledOnce();
+    expect(afterShown).toHaveBeenCalledOnce();
     expect(maximize.mock.invocationCallOrder[0]!).toBeLessThan(show.mock.invocationCallOrder[0]!);
+    expect(show.mock.invocationCallOrder[0]!).toBeLessThan(afterShown.mock.invocationCallOrder[0]!);
   });
 });

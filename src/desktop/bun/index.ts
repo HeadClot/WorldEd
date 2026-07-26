@@ -4,6 +4,7 @@ import type { StandaloneHostUpdateCheck } from '../../updater/update_types.js';
 import { buildDesktopWindowFrame } from '../desktop_window_maximize.js';
 import { showMaximizedWhenReady } from '../desktop_window_startup.js';
 import { enableWindowsPerMonitorDpiAwareness } from '../windows_dpi_awareness.js';
+import { applyWindowsWindowIcon } from '../windows_window_icon.js';
 
 await enableWindowsPerMonitorDpiAwareness();
 
@@ -30,7 +31,7 @@ const desktopWindow = new BrowserWindow({
   activate: false,
   rpc: updaterRpc,
 });
-showMaximizedWhenReady(desktopWindow);
+showMaximizedWhenReady(desktopWindow, () => applyWindowsWindowIcon(windowTitle));
 
 /** Checks Electrobun's configured release channel. */
 async function checkForUpdate(): Promise<StandaloneHostUpdateCheck> {
