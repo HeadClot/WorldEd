@@ -11,6 +11,7 @@ These guides explain the editor from a user's point of view. You do not need to 
 3. [Glyph reference](glyph_reference.md) — see every icon and learn what it does.
 4. [Navigation](navigation.md) — move around the perspective, top, front, and side views.
 5. [User input and shortcuts](user_input_and_shortcuts.md) — mouse controls, selection gestures, and the default keyboard map.
+6. [Toolbar](toolbar.md) — resize the toolbar and control expanded button labels.
 
 ## Build and edit a world
 

@@ -488,6 +488,18 @@ export class EditorSettingsStore {
   }
 
   /**
+   * Sets whether expanded toolbar icons include visible text labels.
+   *
+   * @param enabled Whether labels should appear in expanded mode.
+   */
+  setToolbarButtonLabels(enabled: boolean): void {
+    if (this.view.toolbarButtonLabels === enabled) return;
+    this.view.toolbarButtonLabels = enabled;
+    this.persistViewSettings();
+    this.notifyListeners();
+  }
+
+  /**
    * Sets the content texture sampling mode.
    *
    * @param mode Point, bilinear, or trilinear sampling.

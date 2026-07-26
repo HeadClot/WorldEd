@@ -116,6 +116,8 @@ export interface ViewSettings {
   textureFilterMode: TextureFilterMode;
   /** Anisotropic filtering preference for content surface maps. */
   anisotropyPreference: AnisotropyPreference;
+  /** Shows text beside quick-access icons when the top toolbar is expanded. */
+  toolbarButtonLabels: boolean;
 }
 
 /** Settings that control mouse-driven viewport navigation. */
