@@ -387,10 +387,11 @@ export class SolidCsgCompiler {
    */
   private storeTouchCaches(prepared: PreparedBrush[]): void {
     for (const entry of prepared) {
-      const peerIds = entry.overlappingPeerIndices.flatMap((peerIndex) => {
+      const peerIds: string[] = [];
+      for (const peerIndex of entry.overlappingPeerIndices) {
         const peer = prepared[peerIndex];
-        return peer ? [peer.instance.id] : [];
-      });
+        if (peer) peerIds.push(peer.instance.id);
+      }
       this.cache.setTouchPeerIds(entry.instance.id, peerIds);
     }
   }

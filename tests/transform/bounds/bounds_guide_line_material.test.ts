@@ -19,6 +19,7 @@ describe('bounds_guide_line_material', () => {
     expect(material.uniforms['opacity']!.value).toBeCloseTo(GizmoVisualStyle.frontOpacity);
     expect(material.uniforms['dashSize']!.value).toBeCloseTo(BOUNDS_GUIDE_DASH_PIXELS);
     expect(material.uniforms['gapSize']!.value).toBeCloseTo(BOUNDS_GUIDE_GAP_PIXELS);
+    expect(material.uniforms['resolution']!.value).toBeInstanceOf(THREE.Vector2);
     material.dispose();
   });
 
@@ -34,14 +35,36 @@ describe('bounds_guide_line_material', () => {
     occluded.dispose();
   });
 
-  it('should convert world distance to pixels with fwidth for zoom-stable dashes', () => {
+  it('should project both endpoints to pixels for screen-stable dashes', () => {
     const material = createBoundsGuideFrontLineMaterial();
     expect(BOUNDS_GUIDE_DASH_PIXELS).toBeLessThanOrEqual(6);
     expect(BOUNDS_GUIDE_GAP_PIXELS).toBeLessThanOrEqual(5);
-    expect(material.fragmentShader).toContain('fwidth');
-    expect(material.fragmentShader).toContain('pixelsFromTip');
+    expect(material.vertexShader).toContain('otherEnd');
+    expect(material.vertexShader).toContain('resolution');
+    expect(material.vertexShader).toContain('segmentPixels');
+    expect(material.fragmentShader).toContain('vPixelFromTip');
     expect(material.fragmentShader).toContain('discard');
-    expect(material.vertexShader).toContain('lineDistance');
+    expect(material.fragmentShader).not.toContain('fwidth');
+    expect(typeof material.onBeforeRender).toBe('function');
+    material.dispose();
+  });
+
+  it('should refresh the resolution uniform from the drawing buffer size', () => {
+    const material = createBoundsGuideFrontLineMaterial();
+    const renderer = {
+      getDrawingBufferSize: (target: THREE.Vector2) => target.set(1280, 720),
+    } as unknown as THREE.WebGLRenderer;
+    material.onBeforeRender!(
+      renderer,
+      {} as THREE.Scene,
+      {} as THREE.Camera,
+      {} as THREE.BufferGeometry,
+      {} as THREE.Object3D,
+      undefined,
+    );
+    const resolution = material.uniforms['resolution']!.value as THREE.Vector2;
+    expect(resolution.x).toBe(1280);
+    expect(resolution.y).toBe(720);
     material.dispose();
   });
 });

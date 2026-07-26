@@ -6,15 +6,9 @@ import { TranslateGizmo } from './translate_gizmo.js';
 import { RotateGizmo } from './rotate_gizmo.js';
 import { ScaleGizmo } from './scale_gizmo.js';
 import { BoundsGizmo } from '../bounds/bounds_gizmo.js';
-import { BoundsGuideLines } from '../bounds/bounds_guide_lines.js';
-import { buildGuideRaycastWorldBoxes } from '../bounds/bounds_guide_visibility.js';
 import { OrientedBoundsBuilder, OrientedBoundsData } from '../bounds/oriented_bounds.js';
 import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '../../types/bounds_face.js';
 import { getHiddenBoundsAxesForViewPlane, type CadViewPlane } from '../../rulers/cad_view_plane.js';
-import { isSpawnRaycastMesh } from '../../navigation/object_spawn_placement.js';
-
-/** Default outward length of bounds construction guide rays. */
-const BOUNDS_GUIDE_RAY_LENGTH = 4;
 
 /**
  * Main orchestrator for the transform gizmo. Manages mode switching, handle
@@ -36,17 +30,11 @@ export class TransformGizmo {
   private boundsGizmo: BoundsGizmo;
   private boundsBuilder: OrientedBoundsBuilder;
   private gizmoVisible: boolean;
-  private guideLineRaycastRoot: THREE.Object3D | null;
-  private lastBoundsMeshes: THREE.Mesh[];
   /**
    * Stable signature of the last applied bounds pose used to skip redundant
    * rebuilds.
    */
   private lastBoundsPoseSignature: string;
-  /** Cached content meshes for guide tests during a single clone sync. */
-  private cachedGuideRaycastMeshes: THREE.Mesh[] | null;
-  /** Cached world AABBs for planar guide tests during a single clone sync. */
-  private cachedGuidePlanarBoxes: THREE.Box3[] | null;
 
   /**
    * Creates a new transform gizmo.
@@ -69,21 +57,8 @@ export class TransformGizmo {
     this.boundsBuilder = new OrientedBoundsBuilder();
     this.gizmoVisible = false;
     this.handleGroup.visible = false;
-    this.guideLineRaycastRoot = null;
-    this.lastBoundsMeshes = [];
     this.lastBoundsPoseSignature = '';
-    this.cachedGuideRaycastMeshes = null;
-    this.cachedGuidePlanarBoxes = null;
     this.buildHandlesForMode(this.currentMode);
-  }
-
-  /**
-   * Sets the world hierarchy used to test bounds guide rays against geometry.
-   *
-   * @param root Scene root, or null to disable geometry tests.
-   */
-  setGuideLineRaycastRoot(root: THREE.Object3D | null): void {
-    this.guideLineRaycastRoot = root;
   }
 
   /**
@@ -234,7 +209,6 @@ export class TransformGizmo {
    */
   updateBoundsFromMeshes(meshes: THREE.Mesh[], camera: THREE.Camera | null = null): void {
     if (this.currentMode !== TransformMode.BOUNDS) return;
-    this.lastBoundsMeshes = meshes.slice();
     const bounds = this.boundsBuilder.buildFromMeshes(meshes);
     const handleSize = this.computeBoundsHandleSize(bounds, camera);
     const poseSignature = this.buildBoundsPoseSignature(bounds, handleSize);
@@ -362,48 +336,15 @@ export class TransformGizmo {
   }
 
   /**
-   * Removes all children from a viewport-specific group clone. Disposes
-   * guide-line geometries unique to the clone (Three.js shares geometry on
-   * clone; each viewport later owns its filtered buffer).
+   * Removes all children from a viewport-specific group clone.
    *
    * @param group The viewport group to clear.
    */
   private clearViewportGroup(group: THREE.Group): void {
-    this.disposeViewportOwnedGuideGeometries(group);
     while (group.children.length > 0) {
       const child = group.children[0]!;
       group.remove(child);
     }
-  }
-
-  /**
-   * Disposes filtered guide BufferGeometries that belong only to a viewport
-   * clone. Leaves master (shared) guide geometry intact.
-   *
-   * @param group Viewport gizmo group about to be cleared.
-   */
-  private disposeViewportOwnedGuideGeometries(group: THREE.Group): void {
-    const masterGeometries = this.collectMasterGuideGeometries();
-    const disposed = new Set<THREE.BufferGeometry>();
-    for (const line of this.findBoundsGuideLineSegments(group)) {
-      const geometry = line.geometry;
-      if (!geometry || masterGeometries.has(geometry) || disposed.has(geometry)) continue;
-      geometry.dispose();
-      disposed.add(geometry);
-    }
-  }
-
-  /**
-   * Collects guide-line geometries still owned by the master handle group.
-   *
-   * @returns Set of master guide BufferGeometry instances.
-   */
-  private collectMasterGuideGeometries(): Set<THREE.BufferGeometry> {
-    const geometries = new Set<THREE.BufferGeometry>();
-    for (const line of this.findBoundsGuideLineSegments(this.handleGroup)) {
-      geometries.add(line.geometry);
-    }
-    return geometries;
   }
 
   /**
@@ -468,156 +409,16 @@ export class TransformGizmo {
 
   /** Copies master world pose into all viewport clones after bounds update. */
   private syncMasterTransformToClones(): void {
-    this.beginGuideRaycastCache();
     this.viewportGroups.forEach((group, index) => {
-      const viewPlane = this.viewportPlanes[index] ?? 'xyz';
       this.clearViewportGroup(group);
       this.copyMasterIntoGroup(group);
-      this.applyViewPlaneBoundsFilter(group, viewPlane);
-      this.applyViewportGuideLineFilter(group, viewPlane);
+      this.applyViewPlaneBoundsFilter(group, this.viewportPlanes[index] ?? 'xyz');
     });
-    this.clearGuideRaycastCache();
-  }
-
-  /** Prepares shared mesh/AABB caches reused across viewport guide filters. */
-  private beginGuideRaycastCache(): void {
-    this.cachedGuideRaycastMeshes = null;
-    this.cachedGuidePlanarBoxes = null;
-  }
-
-  /** Drops temporary guide raycast caches after clone sync. */
-  private clearGuideRaycastCache(): void {
-    this.cachedGuideRaycastMeshes = null;
-    this.cachedGuidePlanarBoxes = null;
-  }
-
-  /**
-   * Rebuilds bounds guide-line geometry for one viewport clone so only useful
-   * rays appear (ground/geometry in 3D; planar geometry on non-depth axes in
-   * 2D). Each viewport gets its own BufferGeometry — Three.js `clone()` shares
-   * geometry with the master, so writing into the shared buffer would make
-   * every viewport show the last filter (usually perspective).
-   *
-   * @param group Viewport gizmo clone.
-   * @param viewPlane View plane for this clone.
-   */
-  private applyViewportGuideLineFilter(group: THREE.Group, viewPlane: CadViewPlane): void {
-    if (this.currentMode !== TransformMode.BOUNDS) return;
-    if (!this.boundsGizmo.areGuideLinesVisible()) return;
-    const bounds = this.boundsGizmo.getCurrentBounds();
-    if (!bounds) return;
-    const linePasses = this.findBoundsGuideLineSegments(group);
-    if (linePasses.length === 0) return;
-    const geometry = new THREE.BufferGeometry();
-    BoundsGuideLines.writeFilteredGeometry(
-      geometry,
-      bounds.halfExtents,
-      this.theme,
-      BOUNDS_GUIDE_RAY_LENGTH,
-      this.buildGuideFilterOptions(viewPlane, bounds),
-    );
-    for (const line of linePasses) {
-      line.geometry = geometry;
-    }
-  }
-
-  /**
-   * Builds filter options for one viewport: 3D mesh raycasts + ground, or 2D
-   * planar AABB tests that ignore the depth axis.
-   *
-   * @param viewPlane Viewport plane.
-   * @param bounds Current oriented bounds.
-   * @returns Options for {@link BoundsGuideLines.writeFilteredGeometry}.
-   */
-  private buildGuideFilterOptions(
-    viewPlane: CadViewPlane,
-    bounds: OrientedBoundsData,
-  ): {
-    viewPlane: CadViewPlane;
-    boundsCenter: THREE.Vector3;
-    boundsQuaternion: THREE.Quaternion;
-    raycastMeshes?: readonly THREE.Mesh[];
-    planarWorldBoxes?: readonly THREE.Box3[];
-  } {
-    if (viewPlane === 'xyz') {
-      return {
-        viewPlane,
-        boundsCenter: bounds.center,
-        boundsQuaternion: bounds.quaternion,
-        raycastMeshes: this.getCachedGuideRaycastMeshes(),
-      };
-    }
-    return {
-      viewPlane,
-      boundsCenter: bounds.center,
-      boundsQuaternion: bounds.quaternion,
-      planarWorldBoxes: this.getCachedGuidePlanarBoxes(),
-    };
-  }
-
-  /**
-   * Returns content meshes for 3D guide tests, collecting once per sync.
-   *
-   * @returns Cached mesh list.
-   */
-  private getCachedGuideRaycastMeshes(): THREE.Mesh[] {
-    if (!this.cachedGuideRaycastMeshes) {
-      this.cachedGuideRaycastMeshes = this.collectGuideRaycastMeshes();
-    }
-    return this.cachedGuideRaycastMeshes;
-  }
-
-  /**
-   * Returns world AABBs for planar guide tests, building once per sync.
-   *
-   * @returns Cached world boxes.
-   */
-  private getCachedGuidePlanarBoxes(): THREE.Box3[] {
-    if (!this.cachedGuidePlanarBoxes) {
-      this.cachedGuidePlanarBoxes = buildGuideRaycastWorldBoxes(this.getCachedGuideRaycastMeshes());
-    }
-    return this.cachedGuidePlanarBoxes;
-  }
-
-  /**
-   * Finds all guide-line LineSegments under a gizmo group (front + occluded).
-   *
-   * @param group Viewport or master gizmo group.
-   * @returns Line passes for bounds construction guides.
-   */
-  private findBoundsGuideLineSegments(group: THREE.Group): THREE.LineSegments[] {
-    const lines: THREE.LineSegments[] = [];
-    group.traverse((child) => {
-      if (!(child instanceof THREE.LineSegments)) return;
-      if (child.parent?.userData['isBoundsGuideLines'] !== true) return;
-      lines.push(child);
-    });
-    return lines;
-  }
-
-  /**
-   * Collects scene meshes that can reveal bounds guides. Excludes the active
-   * selection and solid CSG result meshes (their union AABB would swallow the
-   * selection and make every planar ray start "inside" with zero length).
-   *
-   * @returns Content meshes for guide ray tests.
-   */
-  private collectGuideRaycastMeshes(): THREE.Mesh[] {
-    if (!this.guideLineRaycastRoot) return [];
-    const excluded = new Set(this.lastBoundsMeshes.map((mesh) => mesh.uuid));
-    const meshes: THREE.Mesh[] = [];
-    this.guideLineRaycastRoot.traverse((object) => {
-      if (!isSpawnRaycastMesh(object)) return;
-      if (excluded.has(object.uuid)) return;
-      if (object.userData['isSolidModelResult'] === true) return;
-      meshes.push(object);
-    });
-    return meshes;
   }
 
   /**
    * Builds a quantized signature for bounds pose so pointer jitter with an
-   * unchanged snapped selection does not rebuild guide visibility.
+   * unchanged snapped selection does not rebuild the bounds gizmo.
    *
    * @param bounds Oriented bounds, or null when empty.
    * @param handleSize Handle world size used by the gizmo.

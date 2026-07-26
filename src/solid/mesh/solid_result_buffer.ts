@@ -508,7 +508,7 @@ export class SolidResultBuffer {
    * @param chunk Updated chunk.
    */
   private replaceBrushRegions(range: SolidBrushMeshRange, chunk: SolidBrushMeshChunk): void {
-    this.surfaceRegions = this.surfaceRegions.filter((region) => region.brushId !== range.brushId);
+    this.removeSurfaceRegionsForBrush(range.brushId);
     this.triangleSources.splice(range.triangleStart, range.triangleCount, ...chunk.triangleSources);
     for (const region of chunk.regions) {
       this.surfaceRegions.push({
@@ -518,6 +518,23 @@ export class SolidResultBuffer {
         surfaceIndex: region.surfaceIndex,
       });
     }
+  }
+
+  /**
+   * Removes surface regions belonging to one brush without reallocating when
+   * none match (common for clean peers during partial patch of another brush).
+   *
+   * @param brushId Brush id to drop regions for.
+   */
+  private removeSurfaceRegionsForBrush(brushId: string): void {
+    let writeIndex = 0;
+    for (let readIndex = 0; readIndex < this.surfaceRegions.length; readIndex++) {
+      const region = this.surfaceRegions[readIndex]!;
+      if (region.brushId === brushId) continue;
+      this.surfaceRegions[writeIndex] = region;
+      writeIndex += 1;
+    }
+    this.surfaceRegions.length = writeIndex;
   }
 
   /**

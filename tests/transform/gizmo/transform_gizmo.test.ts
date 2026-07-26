@@ -206,48 +206,16 @@ describe('TransformGizmo', () => {
     expect(gizmo.getActiveHandle()).toBeNull();
   });
 
-  it('should give each viewport its own guide geometry (2D vs 3D filters)', () => {
-    const top = gizmo.getHandleGroupClone('xz');
-    const perspective = gizmo.getHandleGroupClone('xyz');
+  it('should show fixed-length corner guides when bounds drag guides are enabled', () => {
+    const clone = gizmo.getHandleGroupClone('xyz');
     const selected = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     selected.position.set(0, 2, 0);
     selected.updateMatrixWorld(true);
-    const world = new THREE.Group();
-    world.add(selected);
-    gizmo.setGuideLineRaycastRoot(world);
     gizmo.updateBoundsFromMeshes([selected]);
     gizmo.setBoundsGuideLinesVisible(true);
-
-    const topGeometry = findGuideGeometry(top);
-    const perspectiveGeometry = findGuideGeometry(perspective);
-    expect(topGeometry).not.toBeNull();
-    expect(perspectiveGeometry).not.toBeNull();
-    // Shared clone geometry was the bug: last (3D) filter overwrote every view.
-    expect(topGeometry).not.toBe(perspectiveGeometry);
-    // Empty scene, top: no planar targets → no segments. Perspective: ground hits.
-    expect(countGuideSegments(topGeometry!)).toBe(0);
-    expect(countGuideSegments(perspectiveGeometry!)).toBe(4);
-  });
-
-  it('should show planar top-view guides for geometry at different Y', () => {
-    const top = gizmo.getHandleGroupClone('xz');
-    const selected = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    selected.position.set(0, 0, 0);
-    selected.updateMatrixWorld(true);
-    const neighbor = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    neighbor.position.set(2, 10, 0);
-    neighbor.updateMatrixWorld(true);
-    const world = new THREE.Group();
-    world.add(selected);
-    world.add(neighbor);
-    gizmo.setGuideLineRaycastRoot(world);
-    gizmo.updateBoundsFromMeshes([selected]);
-    gizmo.setBoundsGuideLinesVisible(true);
-
-    const topGeometry = findGuideGeometry(top);
-    expect(topGeometry).not.toBeNull();
-    // Neighbor is high on Y but overlaps in XZ — top view must still draw hits.
-    expect(countGuideSegments(topGeometry!)).toBeGreaterThan(0);
+    const geometry = findGuideGeometry(clone);
+    expect(geometry).not.toBeNull();
+    expect(countGuideSegments(geometry!)).toBe(24);
   });
 });
 

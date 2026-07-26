@@ -302,7 +302,6 @@ export class ViewportLayoutManager {
   /** Creates selection visuals and primitive creation wiring. */
   private createSelectionAndPrimitiveHandlers(): void {
     this.selectionVisualController = new SelectionVisualController(this.selectionManager, this.viewportSyncManager);
-    this.transformGizmo.setGuideLineRaycastRoot(this.worldObject);
     this.primitiveCreationHandler = new PrimitiveCreationHandler(
       this.primitiveTool,
       this.worldObject,

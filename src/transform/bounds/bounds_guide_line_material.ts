@@ -8,39 +8,47 @@ export const BOUNDS_GUIDE_DASH_PIXELS = 5;
 export const BOUNDS_GUIDE_GAP_PIXELS = 4;
 
 /**
- * Vertex shader: projects guide rays and forwards tip-aligned world distance
- * for screen-space dash conversion in the fragment stage.
+ * Vertex shader: projects both endpoints of a segment to pixels so dash length
+ * is true screen-space in perspective and orthographic views.
  */
 const GUIDE_LINE_VERTEX_SHADER = `
-  attribute float lineDistance;
+  attribute float lineParam;
+  attribute vec3 otherEnd;
   attribute vec3 color;
-  varying float vLineDistance;
+  uniform vec2 resolution;
+  varying float vPixelFromTip;
   varying vec3 vColor;
 
+  vec2 clipToScreen(vec4 clip) {
+    float safeW = abs(clip.w) < 1e-6 ? 1e-6 : clip.w;
+    vec2 ndc = clip.xy / safeW;
+    return (ndc * 0.5 + 0.5) * resolution;
+  }
+
   void main() {
-    vLineDistance = lineDistance;
+    vec4 clipThis = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 clipOther = projectionMatrix * modelViewMatrix * vec4(otherEnd, 1.0);
+    gl_Position = clipThis;
+    float segmentPixels = length(clipToScreen(clipThis) - clipToScreen(clipOther));
+    vPixelFromTip = lineParam * segmentPixels;
     vColor = color;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 
 /**
- * Fragment shader: converts world distance along the ray into pixels via fwidth
- * so dash size stays zoom-stable in 2D and 3D. lineDistance is 0 at the tip so
- * a full dash lands on the hit target.
+ * Fragment shader: discards gap pixels using a fixed pixel period so dash size
+ * stays constant under zoom and perspective foreshortening.
  */
 const GUIDE_LINE_FRAGMENT_SHADER = `
   uniform float opacity;
   uniform float dashSize;
   uniform float gapSize;
-  varying float vLineDistance;
+  varying float vPixelFromTip;
   varying vec3 vColor;
 
   void main() {
-    float distanceChangePerPixel = fwidth(vLineDistance);
-    float pixelsFromTip = vLineDistance / max(distanceChangePerPixel, 1e-6);
     float period = dashSize + gapSize;
-    float phase = mod(pixelsFromTip, period);
+    float phase = mod(vPixelFromTip, period);
     if (phase > dashSize) discard;
     gl_FragColor = vec4(vColor, opacity);
   }
@@ -72,7 +80,7 @@ export function createBoundsGuideOccludedLineMaterial(): THREE.ShaderMaterial {
  * @returns Configured shader material.
  */
 function createBoundsGuideLineMaterial(opacity: number, depthFunc: THREE.DepthModes): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
+  const material = new THREE.ShaderMaterial({
     uniforms: buildBoundsGuideLineUniforms(opacity),
     vertexShader: GUIDE_LINE_VERTEX_SHADER,
     fragmentShader: GUIDE_LINE_FRAGMENT_SHADER,
@@ -82,10 +90,14 @@ function createBoundsGuideLineMaterial(opacity: number, depthFunc: THREE.DepthMo
     depthFunc,
     toneMapped: false,
   });
+  material.onBeforeRender = (renderer) => {
+    updateBoundsGuideResolutionUniform(material, renderer);
+  };
+  return material;
 }
 
 /**
- * Builds dash and opacity uniforms for a guide line material.
+ * Builds dash, gap, opacity, and resolution uniforms for a guide line material.
  *
  * @param opacity Base alpha for the pass.
  * @returns Shader uniform map.
@@ -95,5 +107,23 @@ function buildBoundsGuideLineUniforms(opacity: number): Record<string, THREE.IUn
     opacity: { value: opacity },
     dashSize: { value: BOUNDS_GUIDE_DASH_PIXELS },
     gapSize: { value: BOUNDS_GUIDE_GAP_PIXELS },
+    resolution: { value: new THREE.Vector2(1, 1) },
   };
+}
+
+/**
+ * Writes the active drawing-buffer resolution into a guide material.
+ *
+ * @param material Guide line shader material.
+ * @param renderer Renderer currently drawing the material.
+ */
+function updateBoundsGuideResolutionUniform(
+  material: THREE.ShaderMaterial,
+  renderer: THREE.WebGLRenderer,
+): void {
+  const resolution = material.uniforms['resolution']?.value as THREE.Vector2 | undefined;
+  if (!resolution) return;
+  const size = new THREE.Vector2();
+  renderer.getDrawingBufferSize(size);
+  resolution.copy(size);
 }

@@ -566,9 +566,10 @@ export class SolidModelRebuildPipeline {
     const brush = this.host.findBrush(brushId);
     const brushModelMatrix = this.composeBrushModelMatrix(brush);
     void worldMatrix;
+    const surfaceByIndex = new Map<number, FaceSurfaceDescription>();
     const chunk = this.chunkBuilder.build(
       polygons,
-      (surfaceIndex) => this.resolveBrushFaceSurface(brush, surfaceIndex),
+      (surfaceIndex) => this.resolveBrushFaceSurfaceCached(brush, surfaceIndex, surfaceByIndex),
       {
         brushModelMatrix,
       },
@@ -589,15 +590,24 @@ export class SolidModelRebuildPipeline {
   }
 
   /**
-   * Resolves a face surface (texture + UV matrix) for chunk UV bake.
+   * Resolves a face surface (texture + UV matrix) for chunk UV bake, caching
+   * per face for the current chunk so multi-polygon faces do not re-clone.
    *
    * @param brush Owning brush or undefined.
    * @param surfaceIndex Face index.
+   * @param surfaceByIndex Per-chunk surface cache.
    * @returns Face surface description.
    */
-  private resolveBrushFaceSurface(brush: SolidBrushInstance | undefined, surfaceIndex: number): FaceSurfaceDescription {
-    if (brush) return brush.getFaceSurface(surfaceIndex);
-    return createDefaultFaceSurface(DEFAULT_CHECKER_TEXTURE_ID);
+  private resolveBrushFaceSurfaceCached(
+    brush: SolidBrushInstance | undefined,
+    surfaceIndex: number,
+    surfaceByIndex: Map<number, FaceSurfaceDescription>,
+  ): FaceSurfaceDescription {
+    const cached = surfaceByIndex.get(surfaceIndex);
+    if (cached) return cached;
+    const surface = brush ? brush.getFaceSurface(surfaceIndex) : createDefaultFaceSurface(DEFAULT_CHECKER_TEXTURE_ID);
+    surfaceByIndex.set(surfaceIndex, surface);
+    return surface;
   }
 
   /**

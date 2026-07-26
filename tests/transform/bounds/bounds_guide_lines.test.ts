@@ -22,50 +22,12 @@ describe('BoundsGuideLines', () => {
     expect(guides.isVisible()).toBe(false);
   });
 
-  it('should create 24 corner axis rays for a box without filter context', () => {
+  it('should create 24 corner axis rays for a box', () => {
     guides.updateFromHalfExtents(new THREE.Vector3(1, 2, 3));
     expect(guides.getSegmentCount()).toBe(24);
   });
 
-  it('should omit the orthographic depth axis when a view plane is provided', () => {
-    guides.updateFromHalfExtents(new THREE.Vector3(1, 1, 1), { viewPlane: 'xz' });
-    // 8 corners × 2 axes (X and Z) = 16 segments
-    expect(guides.getSegmentCount()).toBe(16);
-  });
-
-  it('should keep only ground-reaching rays when filtering an empty scene in 3D', () => {
-    guides.updateFromHalfExtents(new THREE.Vector3(0.5, 0.5, 0.5), {
-      viewPlane: 'xyz',
-      boundsCenter: new THREE.Vector3(0, 2, 0),
-      boundsQuaternion: new THREE.Quaternion(),
-      raycastMeshes: [],
-    });
-    // Only downward (-Y) rays from the four bottom corners can hit Y=0 within length 4.
-    expect(guides.getSegmentCount()).toBe(4);
-  });
-
-  it('should clip ground-only rays to the ground plane distance', () => {
-    guides.updateFromHalfExtents(new THREE.Vector3(0.5, 0.5, 0.5), {
-      viewPlane: 'xyz',
-      boundsCenter: new THREE.Vector3(0, 2, 0),
-      boundsQuaternion: new THREE.Quaternion(),
-      raycastMeshes: [],
-    });
-    const position = guides.getGeometry().getAttribute('position') as THREE.BufferAttribute;
-    // Bottom corner local (0.5,-0.5,0.5) -> world (0.5,1.5,0.5); -Y hits ground at distance 1.5.
-    let foundClippedDown = false;
-    for (let index = 0; index < position.count; index += 2) {
-      const start = new THREE.Vector3().fromBufferAttribute(position, index);
-      const end = new THREE.Vector3().fromBufferAttribute(position, index + 1);
-      if (Math.abs(start.y + 0.5) > 1e-5) continue;
-      if (Math.abs(end.x - start.x) > 1e-5 || Math.abs(end.z - start.z) > 1e-5) continue;
-      expect(start.distanceTo(end)).toBeCloseTo(1.5, 4);
-      foundClippedDown = true;
-    }
-    expect(foundClippedDown).toBe(true);
-  });
-
-  it('should keep guide ray length fixed regardless of bounds size without filter context', () => {
+  it('should keep guide ray length fixed regardless of bounds size', () => {
     const fixedLength = 4;
     guides = new BoundsGuideLines(Theme, fixedLength);
     guides.updateFromHalfExtents(new THREE.Vector3(50, 1, 1));
@@ -91,12 +53,13 @@ describe('BoundsGuideLines', () => {
     expect(foundCorner).toBe(true);
   });
 
-  it('should use solid axis color on both ray endpoints without fade', () => {
+  it('should fade the tip color relative to the solid corner color', () => {
     guides.updateFromHalfExtents(new THREE.Vector3(1, 1, 1));
     const color = guides.getGeometry().getAttribute('color') as THREE.BufferAttribute;
-    expect(color.getX(0)).toBeCloseTo(color.getX(1), 5);
-    expect(color.getY(0)).toBeCloseTo(color.getY(1), 5);
-    expect(color.getZ(0)).toBeCloseTo(color.getZ(1), 5);
+    const solid = new THREE.Vector3(color.getX(0), color.getY(0), color.getZ(0));
+    const tip = new THREE.Vector3(color.getX(1), color.getY(1), color.getZ(1));
+    expect(tip.length()).toBeLessThan(solid.length());
+    expect(tip.x / solid.x).toBeCloseTo(0.35, 5);
   });
 
   it('should expose a group containing front and occluded line passes', () => {
@@ -125,39 +88,26 @@ describe('BoundsGuideLines', () => {
     expect(front!.fragmentShader).toContain('discard');
   });
 
-  it('should author tip-aligned lineDistance for screen-space dashes', () => {
-    const fixedLength = 4;
-    guides = new BoundsGuideLines(Theme, fixedLength);
+  it('should author endpoint pairs and tip-aligned line params for pixel dashes', () => {
+    guides = new BoundsGuideLines(Theme, 4);
     guides.updateFromHalfExtents(new THREE.Vector3(1, 1, 1));
     expect(guides.getSegmentCount()).toBe(24);
-    const lineDistance = guides.getGeometry().getAttribute('lineDistance') as THREE.BufferAttribute;
-    expect(lineDistance.count).toBe(48);
-    for (let index = 0; index < lineDistance.count; index += 2) {
-      // Corner carries length; tip is 0 so a full dash lands on the target.
-      expect(lineDistance.getX(index)).toBeCloseTo(fixedLength, 5);
-      expect(lineDistance.getX(index + 1)).toBeCloseTo(0, 5);
-    }
-  });
-
-  it('should keep tip lineDistance at zero when the ray is clipped', () => {
-    guides.updateFromHalfExtents(new THREE.Vector3(0.5, 0.5, 0.5), {
-      viewPlane: 'xyz',
-      boundsCenter: new THREE.Vector3(0, 2, 0),
-      boundsQuaternion: new THREE.Quaternion(),
-      raycastMeshes: [],
-    });
-    const position = guides.getGeometry().getAttribute('position') as THREE.BufferAttribute;
-    const lineDistance = guides.getGeometry().getAttribute('lineDistance') as THREE.BufferAttribute;
-    let foundClipped = false;
+    const geometry = guides.getGeometry();
+    const position = geometry.getAttribute('position') as THREE.BufferAttribute;
+    const otherEnd = geometry.getAttribute('otherEnd') as THREE.BufferAttribute;
+    const lineParam = geometry.getAttribute('lineParam') as THREE.BufferAttribute;
+    expect(otherEnd.count).toBe(position.count);
+    expect(lineParam.count).toBe(position.count);
     for (let index = 0; index < position.count; index += 2) {
-      const start = new THREE.Vector3().fromBufferAttribute(position, index);
-      const end = new THREE.Vector3().fromBufferAttribute(position, index + 1);
-      const length = start.distanceTo(end);
-      expect(lineDistance.getX(index)).toBeCloseTo(length, 5);
-      expect(lineDistance.getX(index + 1)).toBeCloseTo(0, 5);
-      if (Math.abs(length - 1.5) < 1e-4) foundClipped = true;
+      expect(lineParam.getX(index)).toBeCloseTo(1, 5);
+      expect(lineParam.getX(index + 1)).toBeCloseTo(0, 5);
+      expect(otherEnd.getX(index)).toBeCloseTo(position.getX(index + 1), 5);
+      expect(otherEnd.getY(index)).toBeCloseTo(position.getY(index + 1), 5);
+      expect(otherEnd.getZ(index)).toBeCloseTo(position.getZ(index + 1), 5);
+      expect(otherEnd.getX(index + 1)).toBeCloseTo(position.getX(index), 5);
+      expect(otherEnd.getY(index + 1)).toBeCloseTo(position.getY(index), 5);
+      expect(otherEnd.getZ(index + 1)).toBeCloseTo(position.getZ(index), 5);
     }
-    expect(foundClipped).toBe(true);
   });
 
   it('should share one geometry between front and occluded passes', () => {
@@ -167,20 +117,6 @@ describe('BoundsGuideLines', () => {
       .children.filter((child) => child instanceof THREE.LineSegments) as THREE.LineSegments[];
     expect(linePasses[0]!.geometry).toBe(linePasses[1]!.geometry);
     expect(linePasses[0]!.geometry).toBe(guides.getGeometry());
-  });
-
-  it('should copy lineDistance when writing filtered geometry for viewport clones', () => {
-    const target = new THREE.BufferGeometry();
-    BoundsGuideLines.writeFilteredGeometry(target, new THREE.Vector3(1, 1, 1), Theme, 4, {
-      viewPlane: 'xz',
-    });
-    const lineDistance = target.getAttribute('lineDistance') as THREE.BufferAttribute;
-    expect(lineDistance).toBeDefined();
-    // 8 corners × 2 axes × 2 verts
-    expect(lineDistance.count).toBe(32);
-    expect(lineDistance.getX(0)).toBeCloseTo(4, 5);
-    expect(lineDistance.getX(1)).toBeCloseTo(0, 5);
-    target.dispose();
   });
 
   it('should mark the occluded pass as a gizmo ghost', () => {

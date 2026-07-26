@@ -5,6 +5,10 @@ import {
   SOLID_PLANE_D_ALIGN_EPSILON,
 } from '../algorithm/solid_math_constants.js';
 
+const scratchNormalMatrix = new THREE.Matrix3();
+const scratchTransformedNormal = new THREE.Vector3();
+const scratchPlanePoint = new THREE.Vector3();
+
 /**
  * Plane stored as unit normal and offset (ax + by + cz + d = 0). Positive
  * half-space is outside the solid for outward-facing brush planes.
@@ -124,12 +128,11 @@ export class SolidPlane {
    * @returns Transformed plane.
    */
   applyMatrix4(matrix: THREE.Matrix4): SolidPlane {
-    const normalMatrix = new THREE.Matrix3().getNormalMatrix(matrix);
-    const transformedNormal = this.normal.clone().applyMatrix3(normalMatrix).normalize();
-    const pointOnPlane = this.normal.clone().multiplyScalar(-this.offset);
-    pointOnPlane.applyMatrix4(matrix);
-    const offset = -transformedNormal.dot(pointOnPlane);
-    return new SolidPlane(transformedNormal, offset);
+    scratchNormalMatrix.getNormalMatrix(matrix);
+    scratchTransformedNormal.copy(this.normal).applyMatrix3(scratchNormalMatrix).normalize();
+    scratchPlanePoint.copy(this.normal).multiplyScalar(-this.offset).applyMatrix4(matrix);
+    const offset = -scratchTransformedNormal.dot(scratchPlanePoint);
+    return new SolidPlane(scratchTransformedNormal, offset);
   }
 
   /**

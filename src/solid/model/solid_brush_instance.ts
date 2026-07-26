@@ -19,6 +19,23 @@ import {
 } from '../../texture/uv_matrix/legacy_mapping_migrate.js';
 import { SurfaceUvMatrix } from '../../texture/uv_matrix/surface_uv_matrix.js';
 
+const scratchLocalMatrix = new THREE.Matrix4();
+const scratchLocalQuaternion = new THREE.Quaternion();
+
+/**
+ * Composes a TRS matrix into a shared scratch and returns a clone for callers
+ * that retain the matrix.
+ *
+ * @param position Local position.
+ * @param rotation Local rotation.
+ * @param scale Local scale.
+ * @returns Independent matrix.
+ */
+function composeLocalMatrix(position: THREE.Vector3, rotation: THREE.Euler, scale: THREE.Vector3): THREE.Matrix4 {
+  scratchLocalQuaternion.setFromEuler(rotation);
+  return scratchLocalMatrix.compose(position, scratchLocalQuaternion, scale).clone();
+}
+
 /**
  * A brush placed inside a solid model with local transform and CSG operation.
  * Surface texture and UV matrix are authored per brush face in brush-local
@@ -115,12 +132,15 @@ export class SolidBrushInstance {
 
   /**
    * Returns the texture id for a brush face (per-face override or default).
+   * Avoids cloning full face UV matrices.
    *
    * @param surfaceIndex Brush face index.
    * @returns Texture identity string.
    */
   getSurfaceTextureId(surfaceIndex: number): string {
-    return this.getFaceSurface(surfaceIndex).textureId;
+    const override = this.faceSurfaces[surfaceIndex];
+    if (override) return override.textureId;
+    return this.defaultSurface.textureId || DEFAULT_CHECKER_TEXTURE_ID;
   }
 
   /**
@@ -337,7 +357,7 @@ export class SolidBrushInstance {
    */
   getLocalMatrix(): THREE.Matrix4 {
     this.pullTransformFromMesh();
-    return new THREE.Matrix4().compose(this.position, new THREE.Quaternion().setFromEuler(this.rotation), this.scale);
+    return composeLocalMatrix(this.position, this.rotation, this.scale);
   }
 
   /**
@@ -407,13 +427,6 @@ export class SolidBrushInstance {
     return this.brush.planes[surfaceIndex]?.offset ?? 0;
   }
 
-  /**
-   * Coerces serialized or live surface data into a FaceSurfaceDescription.
-   *
-   * @param value Surface, serialized surface, or undefined.
-   * @param faceNormal Face normal for legacy migration.
-   * @returns Normalized surface.
-   */
   /**
    * Builds a default surface for a face: shared texture id with a UV matrix
    * oriented to that face's plane (identity TRS on the face normal).

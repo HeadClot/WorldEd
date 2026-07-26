@@ -14,7 +14,7 @@ import {
 } from './solid_model_keys.js';
 import { SolidModelRegistry } from './solid_model_registry.js';
 import { SolidBrushCollection } from './solid_brush_collection.js';
-import { SolidModelPresentation, type BrushUvSnapshot } from './solid_model_presentation.js';
+import { padSolidDisplayNumber, SolidModelPresentation, type BrushUvSnapshot } from './solid_model_presentation.js';
 import { SolidModelRebuildPipeline } from './solid_model_rebuild_pipeline.js';
 import { disposeBrushPreviewResources } from './solid_model_mesh_disposal.js';
 import {
@@ -61,7 +61,7 @@ export class SolidModel {
   constructor(name?: string) {
     SolidModel.modelCounter += 1;
     this.root = new THREE.Group();
-    this.root.name = name ?? `SolidModel${this.padNumber(SolidModel.modelCounter)}`;
+    this.root.name = name ?? `SolidModel${padSolidDisplayNumber(SolidModel.modelCounter)}`;
     this.root.userData[SOLID_MODEL_USERDATA_KEY] = true;
     SolidModelRegistry.register(this.root, this);
     this.brushes = new SolidBrushCollection(this.root);
@@ -246,7 +246,7 @@ export class SolidModel {
    */
   addBoxBrush(size: number = 1, operation: SolidOperation = SolidOperation.Additive): SolidBrushInstance {
     const counter = this.brushes.nextBrushCounter();
-    const name = `Brush${this.padNumber(counter)}`;
+    const name = `Brush${padSolidDisplayNumber(counter)}`;
     const brush = SolidBrushFactory.createCenteredBox(size, size, size);
     const instance = new SolidBrushInstance(this.brushes.allocateBrushId(), name, brush, operation);
     const preview = SolidBrushVisual.createBoxPreview(name, size, operation);
@@ -465,7 +465,7 @@ export class SolidModel {
    *
    * @param selectedMeshes Meshes currently being transformed.
    * @param textureLockEnabled Whether toolbar Tex Lock is on.
-   * @returns True when this model owns at least one selected brush.
+   * @returns True when any selected brush belongs to this model.
    */
   prepareLiveBrushEdit(
     selectedMeshes: readonly THREE.Mesh[],
@@ -804,11 +804,8 @@ export class SolidModel {
     return sources ?? [];
   }
 
-  /** Rebuilds when history pull found transform changes with stable brush order. */
+  /** Rebuilds partial CSG after history when only brush transforms drifted. */
   private rebuildChangedHistoryTransforms(): void {
-    // History restores mesh pose and UV matrices via the undo command. Pull
-    // pose only with full stick locks so brush-local UV matrices are not
-    // rewritten for world-slide.
     const changedIds = pullChangedBrushTransforms(this.brushes.getEvaluationList(), {
       positionLock: true,
       stretchLock: true,
@@ -827,9 +824,7 @@ export class SolidModel {
   private detachAndMaybeDisposeBrushMesh(brush: SolidBrushInstance, disposeResources: boolean): void {
     if (!brush.mesh) return;
     this.root.remove(brush.mesh);
-    if (disposeResources) {
-      disposeBrushPreviewResources(brush.mesh);
-    }
+    if (disposeResources) disposeBrushPreviewResources(brush.mesh);
   }
 
   /**
@@ -984,22 +979,8 @@ export class SolidModel {
     });
   }
 
-  /**
-   * Ensures the solid result mesh has no content decorative outline edges.
-   * Brush volume helpers provide colored edges; result shows solid surfaces
-   * only.
-   */
+  /** Removes content outline edges from the compiled result mesh. */
   private clearResultContentEdges(): void {
     removeDecorativeEdges(this.resultMesh);
-  }
-
-  /**
-   * Pads a number to two digits.
-   *
-   * @param value Number to pad.
-   * @returns Zero-padded string.
-   */
-  private padNumber(value: number): string {
-    return value < 10 ? `0${value}` : String(value);
   }
 }

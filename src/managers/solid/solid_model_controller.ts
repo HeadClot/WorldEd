@@ -608,7 +608,6 @@ export class SolidModelController {
     const locks = this.getTextureLockFlagsForActiveTransform();
     model.setUvStickToBrush(locks.positionLock || locks.stretchLock);
     if (selectedBrushMeshes.length > 0) {
-      // Always re-pull and dirty selected brushes so commit cannot trust a stale live mesh.
       model.prepareLiveBrushEdit(selectedBrushMeshes, locks);
     } else {
       model.syncBrushesFromScene(locks);

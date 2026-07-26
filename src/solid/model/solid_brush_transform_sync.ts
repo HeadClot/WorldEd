@@ -8,6 +8,10 @@ import {
 } from '../../texture/lock/solid_brush_texture_lock.js';
 import { shouldUpdateMappingsForLocks, type TextureLockFlags } from '../../texture/lock/texture_lock_transform.js';
 
+const scratchLocalMatrix = new THREE.Matrix4();
+const scratchWorldMatrix = new THREE.Matrix4();
+const scratchQuaternion = new THREE.Quaternion();
+
 /**
  * Compares Euler rotations component-wise.
  *
@@ -185,7 +189,7 @@ function composeBrushWorldMatrix(brush: SolidBrushInstance): THREE.Matrix4 {
  * @param rotation Local rotation.
  * @param scale Local scale.
  * @param brush Brush for parent lookup.
- * @returns World matrix.
+ * @returns Independent world matrix.
  */
 function composeWorldFromPose(
   position: THREE.Vector3,
@@ -193,11 +197,12 @@ function composeWorldFromPose(
   scale: THREE.Vector3,
   brush: SolidBrushInstance,
 ): THREE.Matrix4 {
-  const local = new THREE.Matrix4().compose(position, new THREE.Quaternion().setFromEuler(rotation), scale);
+  scratchQuaternion.setFromEuler(rotation);
+  scratchLocalMatrix.compose(position, scratchQuaternion, scale);
   const parent = brush.mesh?.parent;
-  if (!parent) return local;
+  if (!parent) return scratchLocalMatrix.clone();
   parent.updateMatrixWorld(true);
-  return new THREE.Matrix4().multiplyMatrices(parent.matrixWorld, local);
+  return scratchWorldMatrix.multiplyMatrices(parent.matrixWorld, scratchLocalMatrix).clone();
 }
 
 /**
