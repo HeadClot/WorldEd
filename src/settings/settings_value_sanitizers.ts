@@ -178,6 +178,8 @@ export function mergeParsedViewSettings(defaults: ViewSettings, parsed: Partial<
     ) as ViewportPaneCount,
     textureFilterMode: sanitizeTextureFilterMode(parsed.textureFilterMode, defaults.textureFilterMode),
     anisotropyPreference: sanitizeAnisotropyPreference(parsed.anisotropyPreference, defaults.anisotropyPreference),
+    toolbarButtonLabels:
+      typeof parsed.toolbarButtonLabels === 'boolean' ? parsed.toolbarButtonLabels : defaults.toolbarButtonLabels,
   };
 }
 

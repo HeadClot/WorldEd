@@ -42,6 +42,7 @@ export function createDefaultViewSettings(): ViewSettings {
     viewportPaneCount: 4,
     textureFilterMode: 'trilinear',
     anisotropyPreference: 'max',
+    toolbarButtonLabels: true,
   };
 }
 

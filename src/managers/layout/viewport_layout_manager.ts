@@ -521,6 +521,7 @@ export class ViewportLayoutManager {
       container: this.container,
       viewport3D: this.viewport3D,
       viewportPaneLayout: this.viewportPaneLayout,
+      toolbar: this.toolbar,
       resizeAll: () => this.resizeAll(),
     });
     this.settingsStore = parts.settingsStore;

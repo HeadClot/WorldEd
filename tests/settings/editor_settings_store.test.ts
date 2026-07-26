@@ -87,6 +87,7 @@ describe('EditorSettingsStore', () => {
     expect(view.viewportPaneCount).toBe(4);
     expect(view.textureFilterMode).toBe('trilinear');
     expect(view.anisotropyPreference).toBe('max');
+    expect(view.toolbarButtonLabels).toBe(true);
 
     store.setTheme('light');
     store.setBrightness(150);
@@ -95,6 +96,7 @@ describe('EditorSettingsStore', () => {
     store.setViewportPaneCount(2);
     store.setTextureFilterMode('point');
     store.setAnisotropyPreference('4x');
+    store.setToolbarButtonLabels(false);
     const next = store.getViewSettings();
     expect(next.theme).toBe('light');
     expect(next.brightness).toBe(150);
@@ -103,6 +105,7 @@ describe('EditorSettingsStore', () => {
     expect(next.viewportPaneCount).toBe(2);
     expect(next.textureFilterMode).toBe('point');
     expect(next.anisotropyPreference).toBe('4x');
+    expect(next.toolbarButtonLabels).toBe(false);
   });
 
   it('should persist texture filter preferences across reloads', () => {
