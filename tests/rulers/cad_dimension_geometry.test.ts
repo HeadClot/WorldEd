@@ -407,7 +407,7 @@ describe('cad_dimension_geometry', () => {
     expect(delta!.worldPosition.x).toBeCloseTo(0, 5);
   });
 
-  it('should keep diagonal XZ travel on each trailing face center path', () => {
+  it('should keep diagonal XZ travel axis-aligned and riding the live brush', () => {
     const segments: CadLineSegment[] = [];
     const placement = createFixedCadPlacementContext(makeCamera(new THREE.Vector3(0, 10, 0)), 0.4, 'xz');
     const start = makeBounds(1, 1, 1);
@@ -431,24 +431,75 @@ describe('cad_dimension_geometry', () => {
       placement,
     );
     expect(segments).toHaveLength(2);
-    // +X: left face center from (-1,0,0) to (-0.5,0,0.5) — no lateral stand-off.
+    // +X rides live Z: pure X from (-1,0,0.5) to (-0.5,0,0.5) on the live left face.
     const xSeg = segments.find((segment) => Math.abs(segment.ax + 1) < 1e-5)!;
     expect(xSeg).toBeDefined();
     expect(xSeg.ax).toBeCloseTo(-1, 5);
     expect(xSeg.ay).toBeCloseTo(0, 5);
-    expect(xSeg.az).toBeCloseTo(0, 5);
+    expect(xSeg.az).toBeCloseTo(0.5, 5);
     expect(xSeg.bx).toBeCloseTo(-0.5, 5);
     expect(xSeg.by).toBeCloseTo(0, 5);
     expect(xSeg.bz).toBeCloseTo(0.5, 5);
-    // +Z: min-Z face center from (0,0,-1) to (0.5,0,-0.5).
+    // +Z rides live X: pure Z from (0.5,0,-1) to (0.5,0,-0.5) on the live min-Z face.
     const zSeg = segments.find((segment) => Math.abs(segment.az + 1) < 1e-5)!;
     expect(zSeg).toBeDefined();
-    expect(zSeg.ax).toBeCloseTo(0, 5);
+    expect(zSeg.ax).toBeCloseTo(0.5, 5);
     expect(zSeg.ay).toBeCloseTo(0, 5);
     expect(zSeg.az).toBeCloseTo(-1, 5);
     expect(zSeg.bx).toBeCloseTo(0.5, 5);
     expect(zSeg.by).toBeCloseTo(0, 5);
     expect(zSeg.bz).toBeCloseTo(-0.5, 5);
+  });
+
+  it('should keep XYZ travel pure on each measure axis in 3D', () => {
+    const segments: CadLineSegment[] = [];
+    const labels: CadLabelSpec[] = [];
+    const placement = createFixedCadPlacementContext(makeCamera(new THREE.Vector3(8, 8, 8)), 0.15);
+    const start = makeBounds(1, 1, 1);
+    const current = {
+      center: new THREE.Vector3(0.25, 0.5, 0.75),
+      quaternion: new THREE.Quaternion(),
+      halfExtents: new THREE.Vector3(1, 1, 1),
+    };
+    appendTransformDeltaDimensions(
+      start,
+      current,
+      new THREE.Color(0xe86a17),
+      {
+        x: new THREE.Color(0xff0000),
+        y: new THREE.Color(0x00ff00),
+        z: new THREE.Color(0x0000ff),
+      },
+      '#ffb070',
+      segments,
+      labels,
+      placement,
+    );
+    expect(segments).toHaveLength(3);
+    expect(labels.map((label) => label.id).sort()).toEqual(['delta-x', 'delta-y', 'delta-z']);
+    for (const segment of segments) {
+      const dx = Math.abs(segment.bx - segment.ax);
+      const dy = Math.abs(segment.by - segment.ay);
+      const dz = Math.abs(segment.bz - segment.az);
+      const nonZeroAxes = [dx, dy, dz].filter((value) => value > 1e-6).length;
+      expect(nonZeroAxes).toBe(1);
+    }
+    // X rides live Y/Z trailing face; Y rides live X/Z; Z rides live X/Y.
+    const xSeg = segments.find((segment) => Math.abs(segment.bx - segment.ax) > 1e-6)!;
+    expect(xSeg.ay).toBeCloseTo(0.5, 5);
+    expect(xSeg.az).toBeCloseTo(0.75, 5);
+    expect(xSeg.by).toBeCloseTo(0.5, 5);
+    expect(xSeg.bz).toBeCloseTo(0.75, 5);
+    const ySeg = segments.find((segment) => Math.abs(segment.by - segment.ay) > 1e-6)!;
+    expect(ySeg.ax).toBeCloseTo(0.25, 5);
+    expect(ySeg.az).toBeCloseTo(0.75, 5);
+    expect(ySeg.bx).toBeCloseTo(0.25, 5);
+    expect(ySeg.bz).toBeCloseTo(0.75, 5);
+    const zSeg = segments.find((segment) => Math.abs(segment.bz - segment.az) > 1e-6)!;
+    expect(zSeg.ax).toBeCloseTo(0.25, 5);
+    expect(zSeg.ay).toBeCloseTo(0.5, 5);
+    expect(zSeg.bx).toBeCloseTo(0.25, 5);
+    expect(zSeg.by).toBeCloseTo(0.5, 5);
   });
 
   it('should only report face travel on the resized axis for one-sided X resize', () => {

@@ -179,8 +179,10 @@ export function appendSelectionSizeDimensions(
 
 /**
  * Builds translation delta feedback on the **trailing** face of each moved axis
- * (e.g. move +X → dimension on the left edge from old left to new left). The
- * line is edge-centered with no side stand-off, gray legs, or snap dashes.
+ * (e.g. move +X → dimension on the left edge from old left to new left). Each
+ * axis line is pure along that measure axis and rides the live brush on the
+ * lateral axes, so diagonal moves never draw diagonal rulers or crossing
+ * paths.
  *
  * @param startBounds Bounds at pointer-down.
  * @param currentBounds Live bounds after snap/move.
@@ -857,9 +859,10 @@ function appendOneFaceTravel(
 }
 
 /**
- * Draws travel of the trailing face for one local axis (opposite the move).
- * Moving +X shows the left edge: old min-X → new min-X. The line sits on the
- * face centers with no stand-off, gray legs, or snap dashes.
+ * Draws pure-axis travel of the trailing face for one local axis (opposite the
+ * move). Moving +X shows min-X: start measure → live measure, both at the live
+ * brush lateral position so the ruler follows the brush without going
+ * diagonal.
  *
  * @param startBounds Bounds at drag start.
  * @param currentBounds Live bounds.
@@ -892,14 +895,16 @@ function appendTrailingFaceTravel(
 }
 
 /**
- * Writes the trailing-face travel endpoints for one local axis.
+ * Writes axis-aligned trailing-face travel endpoints for one local axis. Both
+ * ends share the live brush lateral position; only the measure component spans
+ * from the start pose to the live pose (never a diagonal face-center path).
  *
  * @param startBounds Bounds at drag start.
  * @param currentBounds Live bounds.
  * @param axisLocal Local axis of travel.
  * @param signedMove Signed move along that local axis.
- * @param outStart Receives the old trailing-face center.
- * @param outEnd Receives the new trailing-face center.
+ * @param outStart Receives start measure at live lateral position.
+ * @param outEnd Receives live trailing-face center.
  */
 function writeTrailingFaceEndpoints(
   startBounds: OrientedBoundsData,
@@ -913,8 +918,8 @@ function writeTrailingFaceEndpoints(
   const axis = [scratchAxisX, scratchAxisY, scratchAxisZ][axisLocal]!;
   const half = getHalfComponent(startBounds.halfExtents, axisLocal);
   const trailingSign: 1 | -1 = signedMove >= 0 ? -1 : 1;
-  outStart.copy(startBounds.center).addScaledVector(axis, trailingSign * half);
   outEnd.copy(currentBounds.center).addScaledVector(axis, trailingSign * half);
+  outStart.copy(outEnd).addScaledVector(axis, -signedMove);
 }
 
 /**
