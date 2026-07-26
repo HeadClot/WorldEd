@@ -44,6 +44,52 @@ export const UI_THEME_LABELS: Readonly<Record<UiThemePreference, string>> = Obje
 /** Ordered theme options. */
 export const UI_THEME_OPTIONS: readonly UiThemePreference[] = Object.freeze(['system', 'light', 'dark']);
 
+/**
+ * Content texture sampling mode. Point uses nearest sampling; bilinear and
+ * trilinear use linear magnification with mipmaps.
+ */
+export type TextureFilterMode = 'point' | 'bilinear' | 'trilinear';
+
+/** Ordered texture filter modes shown in View preferences. */
+export const TEXTURE_FILTER_MODE_OPTIONS: readonly TextureFilterMode[] = Object.freeze([
+  'trilinear',
+  'bilinear',
+  'point',
+]);
+
+/** Display labels for texture filter modes. */
+export const TEXTURE_FILTER_MODE_LABELS: Readonly<Record<TextureFilterMode, string>> = Object.freeze({
+  trilinear: 'Smooth (Trilinear)',
+  bilinear: 'Bilinear',
+  point: 'Point (Nearest)',
+});
+
+/**
+ * Anisotropic filtering preference for content maps. Maximum uses the GPU
+ * reported cap at runtime.
+ */
+export type AnisotropyPreference = 'off' | '2x' | '4x' | '8x' | '16x' | 'max';
+
+/** Ordered anisotropy options shown in View preferences. */
+export const ANISOTROPY_PREFERENCE_OPTIONS: readonly AnisotropyPreference[] = Object.freeze([
+  'max',
+  '16x',
+  '8x',
+  '4x',
+  '2x',
+  'off',
+]);
+
+/** Display labels for anisotropy preferences. */
+export const ANISOTROPY_PREFERENCE_LABELS: Readonly<Record<AnisotropyPreference, string>> = Object.freeze({
+  max: 'Maximum',
+  '16x': '16×',
+  '8x': '8×',
+  '4x': '4×',
+  '2x': '2×',
+  off: 'Off',
+});
+
 /** Serializable game profile stored as one JSON document per profile. */
 export interface GameProfile {
   id: string;
@@ -55,7 +101,7 @@ export interface GameProfile {
   coordinateSpace: CoordinateSpaceDefinition;
 }
 
-/** View tab preferences for UI, material browser, and fonts. */
+/** View tab preferences for UI, material browser, fonts, and textures. */
 export interface ViewSettings {
   theme: UiThemePreference;
   /** Viewport texture/material brightness percent (0–200). */
@@ -66,6 +112,10 @@ export interface ViewSettings {
   rendererFontSize: number;
   /** Number of viewport panes visible in the editor workspace. */
   viewportPaneCount: ViewportPaneCount;
+  /** Sampling mode for content surface maps. */
+  textureFilterMode: TextureFilterMode;
+  /** Anisotropic filtering preference for content surface maps. */
+  anisotropyPreference: AnisotropyPreference;
 }
 
 /** Settings that control mouse-driven viewport navigation. */

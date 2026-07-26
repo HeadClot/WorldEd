@@ -5,7 +5,9 @@ import {
   clampNumber,
   mergeMouseSettings,
   mergeViewSettings,
+  sanitizeAnisotropyPreference,
   sanitizeBoolean,
+  sanitizeTextureFilterMode,
   sanitizeTheme,
 } from '../../src/settings/settings_value_sanitizers.js';
 
@@ -34,10 +36,39 @@ describe('settings_value_sanitizers', () => {
 
   it('merges view settings JSON and falls back on invalid text', () => {
     const defaults = createDefaultViewSettings();
-    const merged = mergeViewSettings(defaults, JSON.stringify({ brightness: 150, theme: 'light' }));
+    const merged = mergeViewSettings(
+      defaults,
+      JSON.stringify({
+        brightness: 150,
+        theme: 'light',
+        textureFilterMode: 'point',
+        anisotropyPreference: '4x',
+      }),
+    );
     expect(merged.brightness).toBe(150);
     expect(merged.theme).toBe('light');
+    expect(merged.textureFilterMode).toBe('point');
+    expect(merged.anisotropyPreference).toBe('4x');
     expect(mergeViewSettings(defaults, '{not-json')).toEqual(defaults);
+  });
+
+  it('keeps default texture filter settings when stored values are invalid', () => {
+    const defaults = createDefaultViewSettings();
+    expect(defaults.textureFilterMode).toBe('trilinear');
+    expect(defaults.anisotropyPreference).toBe('max');
+    const merged = mergeViewSettings(
+      defaults,
+      JSON.stringify({ textureFilterMode: 'cubic', anisotropyPreference: '32x' }),
+    );
+    expect(merged.textureFilterMode).toBe('trilinear');
+    expect(merged.anisotropyPreference).toBe('max');
+  });
+
+  it('sanitizes texture filter and anisotropy preferences', () => {
+    expect(sanitizeTextureFilterMode('bilinear', 'trilinear')).toBe('bilinear');
+    expect(sanitizeTextureFilterMode('nope', 'trilinear')).toBe('trilinear');
+    expect(sanitizeAnisotropyPreference('16x', 'max')).toBe('16x');
+    expect(sanitizeAnisotropyPreference('full', 'max')).toBe('max');
   });
 
   it('sanitizes booleans with a fallback', () => {

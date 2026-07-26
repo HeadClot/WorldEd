@@ -3,6 +3,7 @@ import { SolidBrushVisual } from '../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../solid/model/solid_model.js';
 import { DECORATIVE_EDGE_USERDATA_KEY, isSolidBrushEdge } from '../utils/mesh_edge_sync.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/object/selection_highlight.js';
+import { CONTENT_METALNESS, CONTENT_ROUGHNESS } from '../materials/content_material_factory.js';
 
 /**
  * Builds a temporary scene graph for GLB/export that contains only game
@@ -151,21 +152,50 @@ function cloneMaterialsForExport(material: THREE.Material | THREE.Material[]): T
 }
 
 /**
- * Clones one material and clears CanvasTexture maps used by the editor checker.
+ * Clones one material for GLB export. Viewport matcaps convert to standard
+ * diffuse materials; canvas debug maps are stripped.
  *
  * @param material Live material.
  * @returns Cloned material safe for GLTFExporter.
  */
 function cloneOneMaterialForExport(material: THREE.Material): THREE.Material {
-  const cloned = material.clone();
-  const asMapHost = cloned as THREE.Material & {
-    map?: THREE.Texture | null;
-  };
-  if (asMapHost.map instanceof THREE.CanvasTexture) {
-    asMapHost.map = null;
-    cloned.needsUpdate = true;
+  if (material instanceof THREE.MeshMatcapMaterial) {
+    return createStandardMaterialFromMatcap(material);
   }
+  const cloned = material.clone();
+  clearCanvasMaps(cloned);
   return cloned;
+}
+
+/**
+ * Builds an export MeshStandardMaterial from a viewport matcap material.
+ *
+ * @param material Live matcap material.
+ * @returns Standard material with albedo only.
+ */
+function createStandardMaterialFromMatcap(material: THREE.MeshMatcapMaterial): THREE.MeshStandardMaterial {
+  const map = material.map instanceof THREE.CanvasTexture ? null : material.map;
+  return new THREE.MeshStandardMaterial({
+    color: material.color.clone(),
+    map,
+    metalness: CONTENT_METALNESS,
+    roughness: CONTENT_ROUGHNESS,
+    flatShading: material.flatShading,
+    side: material.side,
+  });
+}
+
+/**
+ * Nulls canvas-backed maps so the exporter does not embed editor checkers.
+ *
+ * @param material Cloned material to sanitize.
+ */
+function clearCanvasMaps(material: THREE.Material): void {
+  const mapHost = material as THREE.Material & { map?: THREE.Texture | null };
+  if (mapHost.map instanceof THREE.CanvasTexture) {
+    mapHost.map = null;
+    material.needsUpdate = true;
+  }
 }
 
 /**

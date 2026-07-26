@@ -109,12 +109,13 @@ describe('SettingsDialog', () => {
     expect(store.getActiveGameProfile()?.unitSystem).toBe('imperial');
   });
 
-  it('should expose View tab controls for theme brightness panes icon size and font', () => {
+  it('should expose View tab controls for theme brightness panes textures icon size and font', () => {
     dialog.show();
     dialog.showTab('view');
     const content = dialog.getContentElement();
     expect(content.textContent).toContain('User Interface');
     expect(content.textContent).toContain('Viewports');
+    expect(content.textContent).toContain('Textures');
     expect(content.textContent).toContain('Material browser');
     expect(content.textContent).toContain('Fonts');
 
@@ -133,12 +134,37 @@ describe('SettingsDialog', () => {
     paneCount.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().viewportPaneCount).toBe(3);
 
-    const iconSize = content.querySelector('[data-settings-field="material-icon-size"]') as HTMLSelectElement;
+    const textureFilter = content.querySelector('[data-settings-field="texture-filter-mode"]') as HTMLSelectElement;
+    expect(textureFilter.value).toBe('trilinear');
+    textureFilter.value = 'point';
+    textureFilter.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(store.getViewSettings().textureFilterMode).toBe('point');
+
+    const refreshedContent = dialog.getContentElement();
+    const anisotropy = refreshedContent.querySelector(
+      '[data-settings-field="anisotropy-preference"]',
+    ) as HTMLSelectElement;
+    expect(anisotropy.value).toBe('max');
+    expect(anisotropy.disabled).toBe(true);
+
+    store.setTextureFilterMode('trilinear');
+    const afterFilterReset = dialog.getContentElement();
+    const enabledAnisotropy = afterFilterReset.querySelector(
+      '[data-settings-field="anisotropy-preference"]',
+    ) as HTMLSelectElement;
+    expect(enabledAnisotropy.disabled).toBe(false);
+    enabledAnisotropy.value = '8x';
+    enabledAnisotropy.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(store.getViewSettings().anisotropyPreference).toBe('8x');
+
+    const afterAnisotropy = dialog.getContentElement();
+    const iconSize = afterAnisotropy.querySelector('[data-settings-field="material-icon-size"]') as HTMLSelectElement;
     iconSize.value = '200';
     iconSize.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().materialBrowserIconSizePercent).toBe(200);
 
-    const fontSize = content.querySelector('[data-settings-field="renderer-font-size"]') as HTMLSelectElement;
+    const afterIconSize = dialog.getContentElement();
+    const fontSize = afterIconSize.querySelector('[data-settings-field="renderer-font-size"]') as HTMLSelectElement;
     fontSize.value = '18';
     fontSize.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().rendererFontSize).toBe(18);

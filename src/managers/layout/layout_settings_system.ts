@@ -2,6 +2,9 @@ import { AboutDialog } from '../../ui/about/about_dialog.js';
 import { SettingsDialog } from '../../ui/settings/settings_dialog.js';
 import { EditorSettingsStore } from '../../settings/editor_settings_store.js';
 import { SettingsApplicator } from '../../settings/settings_applicator.js';
+import type { ViewSettings } from '../../settings/settings_types.js';
+import { getTextureMapCache } from '../../texture/library/texture_map_cache.js';
+import { createTextureFilterPolicy } from '../../texture/library/texture_filter_policy.js';
 import type { Viewport3D } from '../../viewports/viewport_3d.js';
 import type { ViewportPaneLayout } from './viewport_pane_layout.js';
 import type { StatusBar } from '../../ui/status_bar.js';
@@ -38,13 +41,27 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
     settingsStore.getViewSettings().viewportPaneCount,
   );
   deps.viewport3D.setFlyingCameraMoveSpeed(settingsStore.getMouseSettings().moveSpeed);
+  applyLayoutTextureFilterSettings(deps.viewport3D, settingsStore.getViewSettings());
   const settingsUnsubscribe = settingsStore.subscribe((snapshot) => {
     settingsApplicator.applySnapshot(snapshot);
     applyLayoutViewportPaneCount(deps.viewportPaneLayout, deps.resizeAll, snapshot.view.viewportPaneCount);
     deps.viewport3D.setFlyingCameraMoveSpeed(snapshot.mouse.moveSpeed);
+    applyLayoutTextureFilterSettings(deps.viewport3D, snapshot.view);
   });
   const settingsDialog = new SettingsDialog(deps.container, settingsStore);
   return { settingsStore, settingsApplicator, settingsDialog, settingsUnsubscribe };
+}
+
+/**
+ * Applies view texture filter preferences to the shared content map cache.
+ *
+ * @param viewport3D Viewport providing WebGL max anisotropy.
+ * @param view Current view settings snapshot.
+ */
+export function applyLayoutTextureFilterSettings(viewport3D: Viewport3D, view: ViewSettings): void {
+  const maxAnisotropy = viewport3D.getRenderer().capabilities.getMaxAnisotropy();
+  const policy = createTextureFilterPolicy(view.textureFilterMode, view.anisotropyPreference, maxAnisotropy);
+  getTextureMapCache().setFilterPolicy(policy);
 }
 
 /**

@@ -1,26 +1,27 @@
 import * as THREE from 'three';
 import { getDebugCheckerTexture } from '../texture/library/debug_texture_factory.js';
+import { getStudioMatcapTexture } from './studio_matcap_factory.js';
 
 /**
- * Default metalness for hard-edge level content materials. Kept at 0:
- * brush/level surfaces are diffuse. Any metalness without an environment map
- * makes MeshStandardMaterial look unnaturally dark.
+ * Default metalness for export conversion of content materials to standard
+ * materials.
  */
 export const CONTENT_METALNESS = 0;
 
 /**
- * Default roughness for hard-edge level content materials. High roughness keeps
- * lighting soft and readable in a world editor.
+ * Default roughness for export conversion of content materials to standard
+ * materials.
  */
-export const CONTENT_ROUGHNESS = 0.9;
+export const CONTENT_ROUGHNESS = 0.85;
 
 /**
- * Creates a standard level-content material with the shared debug checker map.
- * Material color tints the map (existing color picker workflow).
+ * Creates a level-content material with the shared debug checker map and studio
+ * matcap. Color tints the map; matcap provides solid-mode form without scene
+ * lights.
  *
  * @param color Hex color tint.
  * @param options Optional side / flatShading overrides.
- * @returns Configured MeshStandardMaterial.
+ * @returns Configured MeshMatcapMaterial.
  */
 export function createContentMaterial(
   color: number,
@@ -28,14 +29,13 @@ export function createContentMaterial(
     flatShading?: boolean;
     side?: THREE.Side;
   } = {},
-): THREE.MeshStandardMaterial {
+): THREE.MeshMatcapMaterial {
   const flatShading = options.flatShading !== false;
   const side = options.side ?? THREE.FrontSide;
-  return new THREE.MeshStandardMaterial({
+  return new THREE.MeshMatcapMaterial({
     color,
     map: getDebugCheckerTexture(),
-    metalness: CONTENT_METALNESS,
-    roughness: CONTENT_ROUGHNESS,
+    matcap: getStudioMatcapTexture(),
     flatShading,
     side,
   });

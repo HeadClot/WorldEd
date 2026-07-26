@@ -17,7 +17,7 @@ import { isEditorHelperObject } from '../utils/mesh_edge_sync.js';
 import { getDefaultPerspectiveCameraPosition, getDefaultSceneFocus } from '../navigation/default_camera_placement.js';
 import { SolidBrushEdgeFader } from '../solid/model/solid_brush_edge_fader.js';
 
-/** Ambient fill intensity for the 3D viewport (white content stays readable). */
+/** Ambient fill intensity for the 3D viewport. */
 export const VIEWPORT_3D_AMBIENT_INTENSITY = 0.7;
 
 /** Camera headlight intensity for the 3D viewport key light. */
@@ -346,9 +346,8 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
-   * Adds ambient fill and a directional headlight locked to the camera.
-   * Intensities are tuned so white content materials stay readable when facing
-   * the camera (PBR MeshStandardMaterial needs more fill than Basic).
+   * Adds ambient fill and a directional headlight locked to the camera. Content
+   * uses studio matcap shading; these lights cover non-matcap helpers.
    */
   private setupLights(): void {
     this.ambientLight = new THREE.AmbientLight(Theme.lightAmbient, VIEWPORT_3D_AMBIENT_INTENSITY);

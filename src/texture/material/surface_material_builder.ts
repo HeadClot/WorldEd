@@ -4,7 +4,7 @@ import { getFaceTextureMaps, setFaceTextureMaps } from '../uv/face_texture_stora
 import { countTriangles } from '../uv/planar_uv_projector.js';
 import { TextureMapCache, getTextureMapCache } from '../library/texture_map_cache.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../library/texture_id.js';
-import { CONTENT_METALNESS, CONTENT_ROUGHNESS } from '../../materials/content_material_factory.js';
+import { getStudioMatcapTexture } from '../../materials/studio_matcap_factory.js';
 import { invalidateFacePickAcceleration } from '../../selection/pick/mesh_pick_acceleration.js';
 
 /**
@@ -449,26 +449,24 @@ function applyMergedGeometryGroups(
  * @param materials Built surface materials (non-empty when geometry has tris).
  * @returns Material or material array suitable for mesh.material.
  */
-function pickMaterialAssignment(materials: THREE.MeshStandardMaterial[]): THREE.Material | THREE.Material[] {
+function pickMaterialAssignment(materials: THREE.MeshMatcapMaterial[]): THREE.Material | THREE.Material[] {
   const first = materials[0];
   if (materials.length === 1 && first !== undefined) return first;
   return materials;
 }
 
 /**
- * Creates one surface material with the given map. Front-face culling keeps
- * large solid maps cheap to fill.
+ * Creates one surface material with the given map and shared studio matcap.
  *
  * @param color Hex tint.
  * @param map Diffuse map texture.
- * @returns MeshStandardMaterial.
+ * @returns MeshMatcapMaterial.
  */
-function createSurfaceMaterial(color: number, map: THREE.Texture): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
+function createSurfaceMaterial(color: number, map: THREE.Texture): THREE.MeshMatcapMaterial {
+  return new THREE.MeshMatcapMaterial({
     color,
     map,
-    metalness: CONTENT_METALNESS,
-    roughness: CONTENT_ROUGHNESS,
+    matcap: getStudioMatcapTexture(),
     flatShading: true,
     side: THREE.FrontSide,
   });
@@ -484,7 +482,7 @@ function extractMeshColor(mesh: THREE.Mesh): number {
   const material = mesh.material;
   const first = Array.isArray(material) ? material[0] : material;
   if (first && 'color' in first) {
-    const color = (first as THREE.MeshStandardMaterial).color;
+    const color = (first as THREE.MeshMatcapMaterial).color;
     if (color) return color.getHex();
   }
   return 0xffffff;
@@ -511,18 +509,9 @@ function disposeOwnedMaterials(mesh: THREE.Mesh): void {
  * @param material Material about to be disposed.
  */
 function detachSharedMaps(material: THREE.Material): void {
-  const standard = material as THREE.MeshStandardMaterial;
-  if ('map' in standard) standard.map = null;
-  if ('lightMap' in standard) standard.lightMap = null;
-  if ('aoMap' in standard) standard.aoMap = null;
-  if ('emissiveMap' in standard) standard.emissiveMap = null;
-  if ('bumpMap' in standard) standard.bumpMap = null;
-  if ('normalMap' in standard) standard.normalMap = null;
-  if ('displacementMap' in standard) standard.displacementMap = null;
-  if ('roughnessMap' in standard) standard.roughnessMap = null;
-  if ('metalnessMap' in standard) standard.metalnessMap = null;
-  if ('alphaMap' in standard) standard.alphaMap = null;
-  if ('envMap' in standard) standard.envMap = null;
+  const matcapMaterial = material as THREE.MeshMatcapMaterial;
+  if ('map' in matcapMaterial) matcapMaterial.map = null;
+  if ('matcap' in matcapMaterial) matcapMaterial.matcap = null;
 }
 
 /**

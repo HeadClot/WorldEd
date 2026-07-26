@@ -1,12 +1,18 @@
 import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
 import {
+  ANISOTROPY_PREFERENCE_LABELS,
+  ANISOTROPY_PREFERENCE_OPTIONS,
   BRIGHTNESS_MAX,
   BRIGHTNESS_MIN,
   buildRendererFontSizeOptions,
   MATERIAL_BROWSER_ICON_SIZE_OPTIONS,
+  TEXTURE_FILTER_MODE_LABELS,
+  TEXTURE_FILTER_MODE_OPTIONS,
   VIEWPORT_PANE_COUNT_OPTIONS,
   UI_THEME_LABELS,
   UI_THEME_OPTIONS,
+  type AnisotropyPreference,
+  type TextureFilterMode,
   type UiThemePreference,
 } from '../../settings/settings_types.js';
 import {
@@ -16,7 +22,10 @@ import {
   createSettingsSlider,
 } from './settings_form_controls.js';
 
-/** View tab content: UI theme, brightness, material browser, and fonts. */
+/**
+ * View tab content: UI theme, brightness, textures, material browser, and
+ * fonts.
+ */
 export class SettingsViewTab {
   private readonly store: EditorSettingsStore;
   private readonly root: HTMLElement;
@@ -48,6 +57,7 @@ export class SettingsViewTab {
     this.root.replaceChildren();
     this.root.appendChild(this.buildUserInterfaceCategory());
     this.root.appendChild(this.buildViewportsCategory());
+    this.root.appendChild(this.buildTexturesCategory());
     this.root.appendChild(this.buildMaterialBrowserCategory());
     this.root.appendChild(this.buildFontsCategory());
   }
@@ -90,6 +100,19 @@ export class SettingsViewTab {
   }
 
   /**
+   * Builds content texture filtering controls.
+   *
+   * @returns Section containing filter mode and anisotropy.
+   */
+  private buildTexturesCategory(): HTMLElement {
+    const view = this.store.getViewSettings();
+    const { section, body } = createSettingsCategory('Textures');
+    body.appendChild(this.createTextureFilterModeRow(view.textureFilterMode));
+    body.appendChild(this.createAnisotropyRow(view.anisotropyPreference, view.textureFilterMode === 'point'));
+    return section;
+  }
+
+  /**
    * Creates the viewport pane count dropdown.
    *
    * @param paneCount Current number of visible viewport panes.
@@ -105,6 +128,45 @@ export class SettingsViewTab {
     });
     select.dataset['settingsField'] = 'viewport-pane-count';
     return createSettingsControlRow('Visible panes', select);
+  }
+
+  /**
+   * Creates the content texture sampling mode dropdown.
+   *
+   * @param mode Current filter mode.
+   * @returns Control row for the filter mode preference.
+   */
+  private createTextureFilterModeRow(mode: TextureFilterMode): HTMLElement {
+    const options = TEXTURE_FILTER_MODE_OPTIONS.map((value) => ({
+      value,
+      label: TEXTURE_FILTER_MODE_LABELS[value],
+    }));
+    const select = createSettingsSelect(options, mode, (value) => {
+      this.store.setTextureFilterMode(value as TextureFilterMode);
+    });
+    select.dataset['settingsField'] = 'texture-filter-mode';
+    return createSettingsControlRow('Texture filtering', select);
+  }
+
+  /**
+   * Creates the anisotropic filtering dropdown.
+   *
+   * @param preference Current anisotropy preference.
+   * @param disabled Whether the control is inactive for point sampling.
+   * @returns Control row for the anisotropy preference.
+   */
+  private createAnisotropyRow(preference: AnisotropyPreference, disabled: boolean): HTMLElement {
+    const options = ANISOTROPY_PREFERENCE_OPTIONS.map((value) => ({
+      value,
+      label: ANISOTROPY_PREFERENCE_LABELS[value],
+    }));
+    const select = createSettingsSelect(options, preference, (value) => {
+      this.store.setAnisotropyPreference(value as AnisotropyPreference);
+    });
+    select.dataset['settingsField'] = 'anisotropy-preference';
+    select.disabled = disabled;
+    select.title = disabled ? 'Anisotropic filtering applies only when texture filtering is Smooth or Bilinear' : '';
+    return createSettingsControlRow('Anisotropic filtering', select);
   }
 
   /**

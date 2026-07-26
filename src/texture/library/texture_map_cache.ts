@@ -3,6 +3,11 @@ import { TextureLibrary } from './texture_library.js';
 import { TextureBrowserEntry } from './texture_browser_entry.js';
 import { getDebugCheckerTexture } from './debug_texture_factory.js';
 import { DEFAULT_CHECKER_TEXTURE_ID, isDefaultCheckerTextureId } from './texture_id.js';
+import {
+  applyTextureFilterPolicy,
+  createTextureFilterPolicy,
+  type TextureFilterPolicy,
+} from './texture_filter_policy.js';
 
 /**
  * Loads and caches THREE.Texture instances for surface assignment. The built-in
@@ -11,11 +16,13 @@ import { DEFAULT_CHECKER_TEXTURE_ID, isDefaultCheckerTextureId } from './texture
 export class TextureMapCache {
   private textures: Map<string, THREE.Texture>;
   private library: TextureLibrary | null;
+  private filterPolicy: TextureFilterPolicy;
 
-  /** Creates an empty texture map cache. */
+  /** Creates an empty texture map cache with best-quality default filters. */
   constructor() {
     this.textures = new Map();
     this.library = null;
+    this.filterPolicy = createTextureFilterPolicy('trilinear', 'max', 1);
   }
 
   /**
@@ -25,6 +32,25 @@ export class TextureMapCache {
    */
   setLibrary(library: TextureLibrary | null): void {
     this.library = library;
+  }
+
+  /**
+   * Updates filter and anisotropy policy for all cached content maps.
+   *
+   * @param policy Runtime filter policy including GPU max anisotropy.
+   */
+  setFilterPolicy(policy: TextureFilterPolicy): void {
+    this.filterPolicy = policy;
+    this.textures.forEach((texture) => applyTextureFilterPolicy(texture, policy));
+  }
+
+  /**
+   * Returns the active filter policy used for new and cached maps.
+   *
+   * @returns Current filter policy.
+   */
+  getFilterPolicy(): TextureFilterPolicy {
+    return { ...this.filterPolicy };
   }
 
   /**
@@ -44,7 +70,7 @@ export class TextureMapCache {
     if (!entry || isDefaultCheckerTextureId(entry.id)) {
       return getDebugCheckerTexture();
     }
-    const texture = createTextureFromBrowserEntry(entry);
+    const texture = createTextureFromBrowserEntry(entry, this.filterPolicy);
     this.textures.set(textureId, texture);
     return texture;
   }
@@ -109,15 +135,16 @@ export function setTextureMapCacheForTests(cache: TextureMapCache | null): void 
  * Builds a repeating sRGB texture from a browser entry preview URL.
  *
  * @param entry Texture browser entry with a live object URL.
+ * @param filterPolicy Filter policy applied at creation time.
  * @returns Configured THREE.Texture (updates when the image loads).
  */
-function createTextureFromBrowserEntry(entry: TextureBrowserEntry): THREE.Texture {
+function createTextureFromBrowserEntry(entry: TextureBrowserEntry, filterPolicy: TextureFilterPolicy): THREE.Texture {
   if (entry.id === DEFAULT_CHECKER_TEXTURE_ID) {
     return getDebugCheckerTexture();
   }
   const image = new Image();
   const texture = new THREE.Texture(image);
-  configureUserTexture(texture);
+  configureUserTexture(texture, filterPolicy);
   image.onload = () => {
     texture.needsUpdate = true;
   };
@@ -129,13 +156,11 @@ function createTextureFromBrowserEntry(entry: TextureBrowserEntry): THREE.Textur
  * Applies wrap and filter defaults for level surface maps.
  *
  * @param texture Texture to configure.
+ * @param filterPolicy Active filter policy.
  */
-function configureUserTexture(texture: THREE.Texture): void {
+function configureUserTexture(texture: THREE.Texture, filterPolicy: TextureFilterPolicy): void {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.generateMipmaps = true;
-  texture.needsUpdate = true;
+  applyTextureFilterPolicy(texture, filterPolicy);
 }

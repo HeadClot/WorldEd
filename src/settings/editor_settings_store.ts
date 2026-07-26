@@ -28,12 +28,14 @@ import {
   type EditorSettingsListener,
 } from './settings_storage_keys.js';
 import type {
+  AnisotropyPreference,
   EditorSettingsSnapshot,
   GameProfile,
   KeyboardShortcutAction,
   KeyboardShortcut,
   KeyboardShortcutSettings,
   MouseSettings,
+  TextureFilterMode,
   UpdateSettings,
   UiThemePreference,
   ViewportPaneCount,
@@ -481,6 +483,34 @@ export class EditorSettingsStore {
       return;
     }
     this.view.viewportPaneCount = clamped;
+    this.persistViewSettings();
+    this.notifyListeners();
+  }
+
+  /**
+   * Sets the content texture sampling mode.
+   *
+   * @param mode Point, bilinear, or trilinear sampling.
+   */
+  setTextureFilterMode(mode: TextureFilterMode): void {
+    if (this.view.textureFilterMode === mode) {
+      return;
+    }
+    this.view.textureFilterMode = mode;
+    this.persistViewSettings();
+    this.notifyListeners();
+  }
+
+  /**
+   * Sets anisotropic filtering for content surface maps.
+   *
+   * @param preference Discrete level, maximum, or off.
+   */
+  setAnisotropyPreference(preference: AnisotropyPreference): void {
+    if (this.view.anisotropyPreference === preference) {
+      return;
+    }
+    this.view.anisotropyPreference = preference;
     this.persistViewSettings();
     this.notifyListeners();
   }

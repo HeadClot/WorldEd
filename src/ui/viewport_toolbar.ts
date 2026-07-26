@@ -234,6 +234,7 @@ export class ViewportToolbar {
    */
   private applyActiveState(button: HTMLButtonElement, active: boolean): void {
     button.dataset['active'] = active ? 'true' : 'false';
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
     if (active) {
       button.style.background = this.hexToRgba(Theme.selectionColor, 0.28);
       button.style.borderColor = this.hexToRgba(Theme.selectionColor, 0.85);

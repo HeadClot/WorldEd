@@ -85,18 +85,33 @@ describe('EditorSettingsStore', () => {
     expect(view.materialBrowserIconSizePercent).toBe(100);
     expect(view.rendererFontSize).toBe(13);
     expect(view.viewportPaneCount).toBe(4);
+    expect(view.textureFilterMode).toBe('trilinear');
+    expect(view.anisotropyPreference).toBe('max');
 
     store.setTheme('light');
     store.setBrightness(150);
     store.setMaterialBrowserIconSizePercent(200);
     store.setRendererFontSize(18);
     store.setViewportPaneCount(2);
+    store.setTextureFilterMode('point');
+    store.setAnisotropyPreference('4x');
     const next = store.getViewSettings();
     expect(next.theme).toBe('light');
     expect(next.brightness).toBe(150);
     expect(next.materialBrowserIconSizePercent).toBe(200);
     expect(next.rendererFontSize).toBe(18);
     expect(next.viewportPaneCount).toBe(2);
+    expect(next.textureFilterMode).toBe('point');
+    expect(next.anisotropyPreference).toBe('4x');
+  });
+
+  it('should persist texture filter preferences across reloads', () => {
+    store.setTextureFilterMode('bilinear');
+    store.setAnisotropyPreference('8x');
+
+    const reloaded = new EditorSettingsStore(storage);
+    expect(reloaded.getViewSettings().textureFilterMode).toBe('bilinear');
+    expect(reloaded.getViewSettings().anisotropyPreference).toBe('8x');
   });
 
   it('should clamp brightness font size and viewport panes into supported ranges', () => {

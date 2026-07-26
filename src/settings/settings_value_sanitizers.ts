@@ -1,4 +1,11 @@
-import type { MouseSettings, UiThemePreference, ViewportPaneCount, ViewSettings } from './settings_types.js';
+import type {
+  AnisotropyPreference,
+  MouseSettings,
+  TextureFilterMode,
+  UiThemePreference,
+  ViewportPaneCount,
+  ViewSettings,
+} from './settings_types.js';
 import {
   BRIGHTNESS_MAX,
   BRIGHTNESS_MIN,
@@ -48,6 +55,34 @@ export function sanitizeTheme(value: unknown, fallback: UiThemePreference): UiTh
  */
 export function sanitizeBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
+}
+
+/**
+ * Validates a texture filter mode preference.
+ *
+ * @param value Candidate mode.
+ * @param fallback Default mode.
+ * @returns Safe texture filter mode.
+ */
+export function sanitizeTextureFilterMode(value: unknown, fallback: TextureFilterMode): TextureFilterMode {
+  if (value === 'point' || value === 'bilinear' || value === 'trilinear') {
+    return value;
+  }
+  return fallback;
+}
+
+/**
+ * Validates an anisotropic filtering preference.
+ *
+ * @param value Candidate preference.
+ * @param fallback Default preference.
+ * @returns Safe anisotropy preference.
+ */
+export function sanitizeAnisotropyPreference(value: unknown, fallback: AnisotropyPreference): AnisotropyPreference {
+  if (value === 'off' || value === '2x' || value === '4x' || value === '8x' || value === '16x' || value === 'max') {
+    return value;
+  }
+  return fallback;
 }
 
 /**
@@ -141,6 +176,8 @@ export function mergeParsedViewSettings(defaults: ViewSettings, parsed: Partial<
       1,
       4,
     ) as ViewportPaneCount,
+    textureFilterMode: sanitizeTextureFilterMode(parsed.textureFilterMode, defaults.textureFilterMode),
+    anisotropyPreference: sanitizeAnisotropyPreference(parsed.anisotropyPreference, defaults.anisotropyPreference),
   };
 }
 
