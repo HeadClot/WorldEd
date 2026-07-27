@@ -149,8 +149,7 @@ export class TransformHandler {
   ): void {
     if (this.session.dragActive) return;
     if (this.transformGizmo.getMode() !== TransformMode.BOUNDS) {
-      this.transformGizmo.setHighlightedBoundsFace(null);
-      if (pickElement.style) pickElement.style.cursor = '';
+      this.clearBoundsHover(pickElement);
       return;
     }
     this.boundsDragController.updateFaceHoverHighlight(
@@ -161,6 +160,16 @@ export class TransformHandler {
       gizmoGroup,
       viewPlane,
     );
+  }
+
+  /**
+   * Clears bounds face/handle hover highlights and the pick-element CSS cursor.
+   *
+   * @param pickElement Optional DOM pick target whose cursor should be reset.
+   */
+  clearBoundsHover(pickElement?: HTMLElement): void {
+    this.transformGizmo.setHighlightedBoundsFace(null);
+    if (pickElement?.style) pickElement.style.cursor = '';
   }
 
   /**

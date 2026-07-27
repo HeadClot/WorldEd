@@ -19,6 +19,7 @@ class MockViewport {
   private camera: THREE.Camera;
   private renderer: THREE.WebGLRenderer;
   private gizmoGroup: THREE.Group;
+  private cameraNavigating: boolean;
 
   /**
    * Creates a mock viewport with a bounds-capable gizmo group.
@@ -32,11 +33,13 @@ class MockViewport {
       getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
       width: 800,
       height: 600,
+      style: { cursor: '' },
     };
     this.renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
     this.gizmoGroup = gizmoGroup;
     this.gizmoGroup.visible = true;
     this.gizmoGroup.updateMatrixWorld(true);
+    this.cameraNavigating = false;
   }
 
   getCamera(): THREE.Camera {
@@ -57,6 +60,19 @@ class MockViewport {
 
   getViewportKind(): ViewportKind {
     return ViewportKind.PERSPECTIVE;
+  }
+
+  /**
+   * Marks the mock camera as panning/flying for hover-suppression tests.
+   *
+   * @param navigating Whether navigation is active.
+   */
+  setCameraNavigating(navigating: boolean): void {
+    this.cameraNavigating = navigating;
+  }
+
+  isCameraNavigating(): boolean {
+    return this.cameraNavigating;
   }
 }
 
@@ -186,6 +202,27 @@ describe('TransformInteractionBridge', () => {
     expect(consumed).toBe(true);
     expect(onDuplicateSelectedForDrag).toHaveBeenCalledOnce();
     window.dispatchEvent(new PointerEvent('pointerup', { button: 0 }));
+  });
+
+  it('clears bounds hover while the viewport camera is navigating', () => {
+    const bridge = createBridge(() => true);
+    const typedViewport = viewport as unknown as Viewport3D;
+    const hoverMove = new MouseEvent('pointermove', { clientX: 460, clientY: 280 });
+    bridge.onTransformEvent(hoverMove, typedViewport);
+    expect(transformGizmo.getHighlightedBoundsFace()).not.toBeNull();
+    viewport.setCameraNavigating(true);
+    bridge.onTransformEvent(hoverMove, typedViewport);
+    expect(transformGizmo.getHighlightedBoundsFace()).toBeNull();
+  });
+
+  it('clears bounds hover while right mouse button is held', () => {
+    const bridge = createBridge(() => true);
+    const typedViewport = viewport as unknown as Viewport3D;
+    bridge.onTransformEvent(new MouseEvent('pointermove', { clientX: 460, clientY: 280 }), typedViewport);
+    expect(transformGizmo.getHighlightedBoundsFace()).not.toBeNull();
+    const rightHeldMove = new MouseEvent('pointermove', { clientX: 460, clientY: 280, buttons: 2 });
+    bridge.onTransformEvent(rightHeldMove, typedViewport);
+    expect(transformGizmo.getHighlightedBoundsFace()).toBeNull();
   });
 
   /**

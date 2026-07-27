@@ -402,6 +402,15 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
+   * Returns whether the orthographic camera is currently panning.
+   *
+   * @returns True during right-mouse pan.
+   */
+  isCameraNavigating(): boolean {
+    return this.panHandler?.isNavigating() ?? false;
+  }
+
+  /**
    * Returns the orthographic camera for this viewport.
    *
    * @returns The orthographic camera instance.

@@ -13,19 +13,30 @@ function getSubmenuChildren(entry: ToolbarMenuEntry): ToolbarMenuEntry[] {
   return isMenuSubmenu(entry) ? entry.children : [];
 }
 
+/**
+ * Collects visible labels from actions and submenus (separators have none).
+ *
+ * @param entries Menu entries to read.
+ * @returns Labels in menu order.
+ */
+function getEntryLabels(entries: ToolbarMenuEntry[]): string[] {
+  const labels: string[] = [];
+  for (const entry of entries) {
+    if (isMenuAction(entry) || isMenuSubmenu(entry)) {
+      labels.push(entry.label);
+    }
+  }
+  return labels;
+}
+
 describe('createAddMenuEntries', () => {
   it('groups every creation action into the expected category', () => {
     const actions = createActionSpies();
     const entries = createAddMenuEntries(actions);
-    expect(entries.map((entry) => entry.label)).toEqual(['Geometry', 'Terrain', 'Brushes']);
-    expect(getSubmenuChildren(entries[0]!).map((entry) => entry.label)).toEqual([
-      'Cube',
-      'Sphere',
-      'Cylinder',
-      'Plane',
-    ]);
-    expect(getSubmenuChildren(entries[1]!).map((entry) => entry.label)).toEqual(['Terrain']);
-    expect(getSubmenuChildren(entries[2]!).map((entry) => entry.label)).toEqual(['Solid Model']);
+    expect(getEntryLabels(entries)).toEqual(['Geometry', 'Terrain', 'Brushes']);
+    expect(getEntryLabels(getSubmenuChildren(entries[0]!))).toEqual(['Cube', 'Sphere', 'Cylinder', 'Plane']);
+    expect(getEntryLabels(getSubmenuChildren(entries[1]!))).toEqual(['Terrain']);
+    expect(getEntryLabels(getSubmenuChildren(entries[2]!))).toEqual(['Solid Model']);
   });
 
   it('routes every categorized item to its existing creation callback', () => {

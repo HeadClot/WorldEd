@@ -196,6 +196,24 @@ describe('TransformHandler', () => {
     expect(gizmo.getHighlightedBoundsFaceMode()).toBe('move');
   });
 
+  it('clears bounds hover highlight and cursor style', () => {
+    const setup = createBoundsPickSetup(gizmo);
+    handler.updateBoundsHover(
+      setup.camera,
+      setup.pickElement,
+      new MouseEvent('pointermove', { clientX: 460, clientY: 280 }),
+      setup.gizmoGroup,
+    );
+    expect(gizmo.getHighlightedBoundsFace()).toBe(BoundsFace.POS_Z);
+    const pickWithStyle = {
+      ...setup.pickElement,
+      style: { cursor: 'move' },
+    } as unknown as HTMLElement;
+    handler.clearBoundsHover(pickWithStyle);
+    expect(gizmo.getHighlightedBoundsFace()).toBeNull();
+    expect(pickWithStyle.style.cursor).toBe('');
+  });
+
   it('treats bounds face press without movement as a selection click', () => {
     const setup = createBoundsPickSetup(gizmo);
     const downEvent = new MouseEvent('pointerdown', {

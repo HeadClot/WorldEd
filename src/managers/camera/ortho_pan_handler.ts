@@ -99,6 +99,15 @@ export class OrthoPanHandler {
   }
 
   /**
+   * Returns whether secondary-button pan is currently active.
+   *
+   * @returns True while right-mouse pan is held.
+   */
+  isNavigating(): boolean {
+    return this.isPanning;
+  }
+
+  /**
    * Starts panning when the secondary mouse button is pressed.
    *
    * @param event Pointer down event from the canvas.

@@ -15,15 +15,18 @@ describe('OrthoPanHandler', () => {
     const canvas = document.createElement('canvas');
     const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
     const zoomCallback = vi.fn();
-    new OrthoPanHandler(canvas, camera, zoomCallback);
+    const handler = new OrthoPanHandler(canvas, camera, zoomCallback);
     let moveHandled = 0;
     canvas.addEventListener('pointermove', () => {
       moveHandled++;
     });
+    expect(handler.isNavigating()).toBe(false);
     canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, pointerId: 1 }));
+    expect(handler.isNavigating()).toBe(true);
     canvas.dispatchEvent(new PointerEvent('pointermove', { button: 0, pointerId: 1 }));
     expect(moveHandled).toBe(1);
     canvas.dispatchEvent(new PointerEvent('pointerup', { button: 2, pointerId: 1 }));
+    expect(handler.isNavigating()).toBe(false);
   });
 
   it('should trigger zoom callback on wheel event with pointer fractions', () => {

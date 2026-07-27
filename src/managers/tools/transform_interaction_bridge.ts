@@ -417,6 +417,8 @@ export class TransformInteractionBridge {
 
   /**
    * Updates Bounds face hover highlight when idle (no modifier required).
+   * Suppressed while the camera is panning or flying so navigation stays
+   * clean.
    *
    * @param camera The viewport camera.
    * @param pickElement DOM pick target for NDC.
@@ -431,11 +433,50 @@ export class TransformInteractionBridge {
     event: MouseEvent,
     viewport: Viewport3D | Viewport2D,
   ): boolean {
+    if (this.shouldSuppressBoundsHover(event, viewport)) {
+      this.deps.transformHandler.clearBoundsHover(pickElement);
+      return false;
+    }
     const gizmoGroup = viewport.getGizmoGroup() ?? new THREE.Group();
     const kind = typeof viewport.getViewportKind === 'function' ? viewport.getViewportKind() : undefined;
     const viewPlane = kind ? getCadViewPlaneForKind(kind) : 'xyz';
     this.deps.transformHandler.updateBoundsHover(camera, pickElement, event, gizmoGroup, viewPlane);
     return false;
+  }
+
+  /**
+   * True when secondary/middle mouse is held or the viewport reports camera
+   * navigation (2D pan / 3D fly).
+   *
+   * @param event Pointer event with button bitfield.
+   * @param viewport Source viewport for navigation state.
+   * @returns True when bounds hover should be cleared and skipped.
+   */
+  private shouldSuppressBoundsHover(event: MouseEvent, viewport: Viewport3D | Viewport2D): boolean {
+    if (this.isNavigationMouseButtonHeld(event)) return true;
+    return this.isViewportCameraNavigating(viewport);
+  }
+
+  /**
+   * True when right or middle mouse button is held (pan / fly navigation).
+   *
+   * @param event Pointer event providing the buttons bitfield.
+   * @returns True when a navigation mouse button is down.
+   */
+  private isNavigationMouseButtonHeld(event: MouseEvent): boolean {
+    const rightOrMiddleMask = 2 | 4;
+    return (event.buttons & rightOrMiddleMask) !== 0;
+  }
+
+  /**
+   * Reads camera navigation state from the viewport when available.
+   *
+   * @param viewport Viewport that may expose isCameraNavigating.
+   * @returns True during pan or fly navigation.
+   */
+  private isViewportCameraNavigating(viewport: Viewport3D | Viewport2D): boolean {
+    if (typeof viewport.isCameraNavigating !== 'function') return false;
+    return viewport.isCameraNavigating();
   }
 
   /**
