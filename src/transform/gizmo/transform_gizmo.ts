@@ -294,6 +294,15 @@ export class TransformGizmo {
     return this.boundsGizmo.getHighlightedFace();
   }
 
+  /**
+   * Returns whether the active bounds face highlight is resize or body-move.
+   *
+   * @returns Highlight mode (defaults to resize when nothing is highlighted).
+   */
+  getHighlightedBoundsFaceMode(): BoundsFaceHighlightMode {
+    return this.boundsGizmo.getHighlightMode();
+  }
+
   /** Re-applies face highlight materials on master and every viewport clone. */
   private applyBoundsFaceHighlightToAllGroups(): void {
     this.boundsGizmo.applyHighlightToRoot(this.handleGroup, true);

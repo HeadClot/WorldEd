@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '../../src/theme.js';
+import { BoundsFace } from '../../src/types/bounds_face.js';
 import { TransformMode } from '../../src/types/transform_mode.js';
 import { TransformGizmo } from '../../src/transform/gizmo/transform_gizmo.js';
 import { GizmoRaycaster } from '../../src/transform/gizmo/gizmo_raycaster.js';
@@ -183,7 +184,7 @@ describe('TransformHandler', () => {
     handler.onPointerUp(setup.pivot, setup.meshes);
   });
 
-  it('does not edge-highlight when hovering face interior away from handles', () => {
+  it('uses body-move highlight when hovering face interior away from handles', () => {
     const setup = createBoundsPickSetup(gizmo);
     handler.updateBoundsHover(
       setup.camera,
@@ -191,7 +192,8 @@ describe('TransformHandler', () => {
       new MouseEvent('pointermove', { clientX: 460, clientY: 280 }),
       setup.gizmoGroup,
     );
-    expect(gizmo.getHighlightedBoundsFace()).toBeNull();
+    expect(gizmo.getHighlightedBoundsFace()).toBe(BoundsFace.POS_Z);
+    expect(gizmo.getHighlightedBoundsFaceMode()).toBe('move');
   });
 
   it('treats bounds face press without movement as a selection click', () => {
