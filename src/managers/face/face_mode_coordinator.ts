@@ -16,10 +16,8 @@ const UV_SMEAR_KEY_CODE = 'KeyG';
 
 /** Dependencies required to coordinate face selection and extrusion UI. */
 export interface FaceModeCoordinatorDependencies {
-  viewport3D: Viewport3D;
-  viewport2DTop: Viewport2D;
-  viewport2DFront: Viewport2D;
-  viewport2DSide: Viewport2D;
+  getViewports: () => Array<Viewport3D | Viewport2D>;
+  getPrimaryScene: () => THREE.Scene;
   commandStack: CommandStack;
   gridSnap: GridSnap;
   worldObject: THREE.Group;
@@ -40,6 +38,7 @@ export class FaceModeCoordinator {
   private uvSmearController: UvSmearController;
   private selectionMode: SelectionMode;
   private activeDragViewport: Viewport3D | Viewport2D | null;
+  private dragOwnerWindow: Window | null;
   private windowPointerMoveListener: ((event: PointerEvent) => void) | null;
   private windowPointerUpListener: ((event: PointerEvent) => void) | null;
   private isSmearStrokeLive: boolean;
@@ -58,6 +57,7 @@ export class FaceModeCoordinator {
     this.faceExtrusionController = this.createFaceExtrusionController();
     this.uvSmearController = new UvSmearController(deps.commandStack);
     this.activeDragViewport = null;
+    this.dragOwnerWindow = null;
     this.windowPointerMoveListener = null;
     this.windowPointerUpListener = null;
     this.isSmearStrokeLive = false;
@@ -172,7 +172,7 @@ export class FaceModeCoordinator {
    */
   private createFaceExtrusionController(): FaceExtrusionController {
     return new FaceExtrusionController(
-      this.deps.viewport3D.getScene(),
+      this.deps.getPrimaryScene(),
       this.deps.commandStack,
       this.deps.gridSnap,
       this.deps.worldObject,
@@ -188,15 +188,14 @@ export class FaceModeCoordinator {
 
   /** Wires face selection callbacks to all viewports. */
   private bindViewportFaceCallbacks(): void {
-    const viewports = [
-      this.deps.viewport3D,
-      this.deps.viewport2DTop,
-      this.deps.viewport2DFront,
-      this.deps.viewport2DSide,
-    ];
-    viewports.forEach((viewport) => {
+    this.deps.getViewports().forEach((viewport) => {
       viewport.setFaceSelectionCallback((event) => this.onViewportFacePointerDown(event, viewport));
     });
+  }
+
+  /** Rebinds face selection callbacks after the live viewport set changes. */
+  rebindViewportFaceCallbacks(): void {
+    this.bindViewportFaceCallbacks();
   }
 
   /**
@@ -213,8 +212,8 @@ export class FaceModeCoordinator {
     }
     const smearHeld = this.isUvSmearKeyHeld();
     const camera = viewport.getCamera();
-    const renderer = viewport.getRenderer();
-    const pick = this.faceExtrusionController.onPointerDown(event, camera, renderer);
+    const pickElement = viewport.getContentElement();
+    const pick = this.faceExtrusionController.onPointerDown(event, camera, pickElement);
     if (smearHeld && pick) {
       this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);
       this.isSmearStrokeLive = true;
@@ -240,22 +239,27 @@ export class FaceModeCoordinator {
     this.windowPointerUpListener = () => {
       this.onWindowPointerUp();
     };
-    window.addEventListener('pointermove', this.windowPointerMoveListener);
-    window.addEventListener('pointerup', this.windowPointerUpListener);
-    window.addEventListener('pointercancel', this.windowPointerUpListener);
+    const content = viewport.getContentElement?.() as HTMLElement | undefined;
+    const ownerWindow = content?.ownerDocument?.defaultView ?? window;
+    this.dragOwnerWindow = ownerWindow;
+    ownerWindow.addEventListener('pointermove', this.windowPointerMoveListener);
+    ownerWindow.addEventListener('pointerup', this.windowPointerUpListener);
+    ownerWindow.addEventListener('pointercancel', this.windowPointerUpListener);
   }
 
   /** Removes window drag listeners. */
   private endWindowDragTracking(): void {
+    const ownerWindow = this.dragOwnerWindow ?? window;
     if (this.windowPointerMoveListener) {
-      window.removeEventListener('pointermove', this.windowPointerMoveListener);
+      ownerWindow.removeEventListener('pointermove', this.windowPointerMoveListener);
       this.windowPointerMoveListener = null;
     }
     if (this.windowPointerUpListener) {
-      window.removeEventListener('pointerup', this.windowPointerUpListener);
-      window.removeEventListener('pointercancel', this.windowPointerUpListener);
+      ownerWindow.removeEventListener('pointerup', this.windowPointerUpListener);
+      ownerWindow.removeEventListener('pointercancel', this.windowPointerUpListener);
       this.windowPointerUpListener = null;
     }
+    this.dragOwnerWindow = null;
     this.activeDragViewport = null;
   }
 
@@ -290,8 +294,8 @@ export class FaceModeCoordinator {
       return;
     }
     const camera = viewport.getCamera();
-    const renderer = viewport.getRenderer();
-    const pick = this.faceExtrusionController.onPointerMove(event, camera, renderer);
+    const pickElement = viewport.getContentElement();
+    const pick = this.faceExtrusionController.onPointerMove(event, camera, pickElement);
     if (pick && (this.isSmearStrokeLive || this.isUvSmearKeyHeld())) {
       if (!this.isSmearStrokeLive) {
         this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);

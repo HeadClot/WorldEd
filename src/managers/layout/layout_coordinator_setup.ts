@@ -3,8 +3,7 @@ import { SelectionManager } from '../../selection/object/selection_manager.js';
 import { StatusBar } from '../../ui/status_bar.js';
 import { CameraFitCoordinator } from '../camera/camera_fit_coordinator.js';
 import { ShadingModeCoordinator } from '../camera/shading_mode_coordinator.js';
-import { Viewport2D } from '../../viewports/viewport_2d.js';
-import { Viewport3D } from '../../viewports/viewport_3d.js';
+import type { EditorViewport } from '../../viewports/editor_viewport.js';
 import { SelectionVisualController } from '../../selection/object/selection_visual_controller.js';
 import { KeyboardShortcutHandler } from '../input/keyboard_shortcut_handler.js';
 import { FaceModeCoordinator } from '../face/face_mode_coordinator.js';
@@ -27,22 +26,16 @@ export function setupCameraAndShadingCoordinators(parts: {
   selectionManager: SelectionManager;
   statusBar: StatusBar | null;
   keyboardShortcutHandler: KeyboardShortcutHandler;
-  viewport2DTop: Viewport2D;
-  viewport2DFront: Viewport2D;
-  viewport2DSide: Viewport2D;
-  viewport3D: Viewport3D;
-  viewports: HTMLElement[];
+  getViewports: () => readonly EditorViewport[];
+  getViewportElements: () => readonly HTMLElement[];
   selectionVisualController: SelectionVisualController;
 }): {
   cameraFitCoordinator: CameraFitCoordinator;
   shadingModeCoordinator: ShadingModeCoordinator;
 } {
   const shadingModeCoordinator = new ShadingModeCoordinator(
-    parts.viewport2DTop,
-    parts.viewport2DFront,
-    parts.viewport2DSide,
-    parts.viewport3D,
-    parts.viewports,
+    parts.getViewports,
+    parts.getViewportElements,
     parts.selectionVisualController,
     parts.statusBar,
   );
@@ -63,14 +56,11 @@ export function setupCameraAndShadingCoordinators(parts: {
  * Builds the face selection and extrusion coordinator.
  *
  * @param parts Scene and UI dependencies.
- * @param onSelectionModeUiChanged Called when face/object mode changes.
  * @returns Face mode coordinator.
  */
 export function setupFaceModeCoordinator(parts: {
-  viewport3D: Viewport3D;
-  viewport2DTop: Viewport2D;
-  viewport2DFront: Viewport2D;
-  viewport2DSide: Viewport2D;
+  getViewports: () => EditorViewport[];
+  getPrimaryScene: () => THREE.Scene;
   commandStack: CommandStack;
   gridSnap: GridSnap;
   worldObject: THREE.Group;
@@ -84,10 +74,8 @@ export function setupFaceModeCoordinator(parts: {
   onSelectionModeUiChanged: () => void;
 }): FaceModeCoordinator {
   return new FaceModeCoordinator({
-    viewport3D: parts.viewport3D,
-    viewport2DTop: parts.viewport2DTop,
-    viewport2DFront: parts.viewport2DFront,
-    viewport2DSide: parts.viewport2DSide,
+    getViewports: parts.getViewports,
+    getPrimaryScene: parts.getPrimaryScene,
     commandStack: parts.commandStack,
     gridSnap: parts.gridSnap,
     worldObject: parts.worldObject,
@@ -117,10 +105,7 @@ export function setupToolsPaletteAndClipWiring(parts: {
   faceModeCoordinator: FaceModeCoordinator;
   toolbarContainer: HTMLElement;
   anchorViewport: HTMLElement;
-  viewport3D: Viewport3D;
-  viewport2DTop: Viewport2D;
-  viewport2DFront: Viewport2D;
-  viewport2DSide: Viewport2D;
+  getViewports: () => EditorViewport[];
   keyboardShortcutHandler: KeyboardShortcutHandler;
   showStatusMessage: (message: string) => void;
   syncPrimitivesToViewports: () => void;
@@ -144,10 +129,7 @@ export function setupToolsPaletteAndClipWiring(parts: {
     faceExtrusionController: parts.faceModeCoordinator.getFaceExtrusionController(),
     toolbarContainer: parts.toolbarContainer,
     anchorViewport: parts.anchorViewport,
-    viewport3D: parts.viewport3D,
-    viewport2DTop: parts.viewport2DTop,
-    viewport2DFront: parts.viewport2DFront,
-    viewport2DSide: parts.viewport2DSide,
+    getViewports: parts.getViewports,
     keyboardShortcutHandler: parts.keyboardShortcutHandler,
     showStatusMessage: parts.showStatusMessage,
     syncPrimitivesToViewports: parts.syncPrimitivesToViewports,

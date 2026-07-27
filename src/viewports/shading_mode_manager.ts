@@ -3,27 +3,23 @@ import { ShadingMode } from '../types/shading_mode.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/object/selection_highlight.js';
 import { BOUNDS_FACE_USERDATA_KEY } from '../types/bounds_face.js';
 import { SOLID_BRUSH_USERDATA_KEY } from '../solid/model/solid_brush_visual.js';
-
-/** Content-material snapshot for one mesh (supports multi-material arrays). */
-interface MaterialSnapshot {
-  materials: THREE.Material | THREE.Material[];
-  wireframeFlags: boolean | boolean[];
-}
+import {
+  captureSharedContentMaterials,
+  markShadingOverrideMaterial,
+  resolveSharedContentMaterialList,
+  restoreSharedContentMaterials,
+} from './shared_content_material_store.js';
 
 /** Group names used by editor gizmos that must never receive shading overrides. */
 const EXEMPT_GROUP_NAMES = new Set(['transform_gizmo', 'transform_gizmo_viewport', 'bounds_gizmo']);
 
 /**
- * Manages material overrides for viewport shading modes. Content materials
- * (including per-object textures) are the source of truth. Snapshots are
- * refreshed from live meshes while in SOLID so texture rebuilds are never
- * overwritten by stale pre-texture material references. FLAT mode shows unlit
- * albedo (color × map) at full brightness — no lighting. WIREFRAME mode hides
- * surface fill so only decorative edge outlines remain.
+ * Manages material overrides for viewport shading modes on the shared scene.
+ * Content materials live in a shared store so multi-view panes cannot poison
+ * each other's snapshots with temporary wireframe/flat materials.
  */
 export class ShadingModeManager {
   private viewportScene: THREE.Scene;
-  private materialSnapshots: Map<string, MaterialSnapshot>;
   private activeMode: ShadingMode;
   private ownedOverrideMaterials: Set<THREE.Material>;
 
@@ -34,28 +30,16 @@ export class ShadingModeManager {
    */
   constructor(viewportScene: THREE.Scene) {
     this.viewportScene = viewportScene;
-    this.materialSnapshots = new Map();
     this.activeMode = ShadingMode.SOLID;
     this.ownedOverrideMaterials = new Set();
   }
 
   /**
-   * Captures content materials from the scene. In SOLID mode, always refreshes
-   * snapshots from live meshes so texture assignment and material rebuilds
-   * stick across shading refreshes. In override modes, only adds snapshots for
-   * meshes not yet recorded.
+   * Captures content materials from the scene when live materials are not
+   * temporary shading overrides.
    */
   snapshotMaterials(): void {
-    const meshes = this.collectContentMeshes();
-    if (this.activeMode === ShadingMode.SOLID) {
-      meshes.forEach((mesh) => this.captureContentSnapshot(mesh));
-      return;
-    }
-    meshes.forEach((mesh) => {
-      if (!this.materialSnapshots.has(mesh.uuid)) {
-        this.captureContentSnapshot(mesh);
-      }
-    });
+    this.collectContentMeshes().forEach((mesh) => captureSharedContentMaterials(mesh));
   }
 
   /**
@@ -76,6 +60,15 @@ export class ShadingModeManager {
   }
 
   /**
+   * Returns the mode last applied by this manager instance.
+   *
+   * @returns Active shading mode.
+   */
+  getActiveMode(): ShadingMode {
+    return this.activeMode;
+  }
+
+  /**
    * Returns true when an object is an editor helper that must keep its own
    * materials.
    *
@@ -92,7 +85,6 @@ export class ShadingModeManager {
   dispose(): void {
     this.restoreContentMaterials();
     this.ownedOverrideMaterials.clear();
-    this.materialSnapshots.clear();
   }
 
   /**
@@ -134,8 +126,6 @@ export class ShadingModeManager {
 
   /**
    * Checks object names used by bounds gizmo parts and transform/bounds roots.
-   * Matches bounds handle/face/wireframe names and EXEMPT_GROUP_NAMES
-   * (transform_gizmo, transform_gizmo_viewport, bounds_gizmo).
    *
    * @param name The object name.
    * @returns True when the name marks an editor helper.
@@ -163,91 +153,27 @@ export class ShadingModeManager {
     return false;
   }
 
-  /**
-   * Stores the mesh's current materials as its content snapshot.
-   *
-   * @param mesh Mesh to capture.
-   */
-  private captureContentSnapshot(mesh: THREE.Mesh): void {
-    const materials = mesh.material;
-    if (!materials) return;
-    if (Array.isArray(materials)) {
-      if (materials.length === 0) return;
-      this.materialSnapshots.set(mesh.uuid, {
-        materials: materials.slice(),
-        wireframeFlags: materials.map((entry) => readWireframeFlag(entry)),
-      });
-      return;
-    }
-    this.materialSnapshots.set(mesh.uuid, {
-      materials,
-      wireframeFlags: readWireframeFlag(materials),
-    });
-  }
-
-  /** Restores every snapshotted mesh to its content materials. */
+  /** Restores every content mesh from the shared content material store. */
   private restoreContentMaterials(): void {
     this.disposeOwnedOverrideMaterials();
-    this.materialSnapshots.forEach((snapshot, meshUuid) => {
-      const mesh = this.findMeshByUuid(meshUuid);
-      if (!mesh) return;
-      this.restoreMeshMaterial(mesh, snapshot);
+    this.collectContentMeshes().forEach((mesh) => {
+      restoreSharedContentMaterials(mesh);
     });
   }
 
-  /**
-   * Finds a mesh in the viewport scene by its UUID.
-   *
-   * @param uuid The mesh UUID to search for.
-   * @returns The mesh if found, or null otherwise.
-   */
-  private findMeshByUuid(uuid: string): THREE.Mesh | null {
-    let found: THREE.Mesh | null = null;
-    this.viewportScene.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.uuid === uuid) {
-        found = child;
-      }
-    });
-    return found;
-  }
-
-  /**
-   * Restores a mesh to its content material and wireframe flags.
-   *
-   * @param mesh The mesh to restore.
-   * @param snapshot The content material snapshot.
-   */
-  private restoreMeshMaterial(mesh: THREE.Mesh, snapshot: MaterialSnapshot): void {
-    mesh.material = snapshot.materials;
-    if (Array.isArray(snapshot.materials)) {
-      const flags = snapshot.wireframeFlags as boolean[];
-      snapshot.materials.forEach((material, index) => {
-        writeWireframeFlag(material, flags[index] ?? false);
-      });
-      return;
-    }
-    writeWireframeFlag(snapshot.materials, snapshot.wireframeFlags as boolean);
-  }
-
-  /**
-   * Hides surface fill so only decorative white edge outlines remain visible.
-   * Surfaces still write depth so outlines occlude correctly.
-   */
+  /** Hides surface fill so only decorative white edge outlines remain visible. */
   private applyWireframeMode(): void {
-    const meshes = this.collectContentMeshes();
-    meshes.forEach((mesh) => {
-      const contentMaterials = this.getContentMaterialsForMesh(mesh);
+    this.collectContentMeshes().forEach((mesh) => {
+      const contentMaterials = resolveSharedContentMaterialList(mesh);
+      if (contentMaterials.length === 0) return;
       const outlineOnlyMaterials = contentMaterials.map((source) => this.createOutlineOnlySurfaceMaterial(source));
-      outlineOnlyMaterials.forEach((material) => {
-        this.ownedOverrideMaterials.add(material);
-      });
+      outlineOnlyMaterials.forEach((material) => this.trackOverrideMaterial(material));
       mesh.material = pickMaterialOrArray(outlineOnlyMaterials);
     });
   }
 
   /**
-   * Builds a surface material that contributes depth but no color. Decorative
-   * edge LineSegments on the mesh provide the visible outlines.
+   * Builds a surface material that contributes depth but no color.
    *
    * @param source Content material used only for side/culling settings.
    * @returns MeshBasicMaterial with color writes disabled.
@@ -264,36 +190,15 @@ export class ShadingModeManager {
     return material;
   }
 
-  /**
-   * Applies unlit flat shading: full-brightness albedo from content materials.
-   * Uses MeshBasicMaterial so lighting cannot darken surfaces.
-   */
+  /** Applies unlit flat shading from shared content materials. */
   private applyFlatMode(): void {
-    const meshes = this.collectContentMeshes();
-    meshes.forEach((mesh) => {
-      const contentMaterials = this.getContentMaterialsForMesh(mesh);
+    this.collectContentMeshes().forEach((mesh) => {
+      const contentMaterials = resolveSharedContentMaterialList(mesh);
+      if (contentMaterials.length === 0) return;
       const flatMaterials = contentMaterials.map((source) => this.createUnlitAlbedoMaterial(source));
-      flatMaterials.forEach((material) => {
-        this.ownedOverrideMaterials.add(material);
-      });
+      flatMaterials.forEach((material) => this.trackOverrideMaterial(material));
       mesh.material = pickMaterialOrArray(flatMaterials);
     });
-  }
-
-  /**
-   * Resolves content materials for a mesh (snapshot preferred, else live).
-   *
-   * @param mesh Mesh to inspect.
-   * @returns Content material list.
-   */
-  private getContentMaterialsForMesh(mesh: THREE.Mesh): THREE.Material[] {
-    const snapshot = this.materialSnapshots.get(mesh.uuid);
-    if (snapshot) {
-      return Array.isArray(snapshot.materials) ? snapshot.materials : [snapshot.materials];
-    }
-    const live = mesh.material;
-    if (Array.isArray(live)) return live;
-    return live ? [live] : [];
   }
 
   /**
@@ -314,6 +219,16 @@ export class ShadingModeManager {
     });
   }
 
+  /**
+   * Tracks and tags an override material for later dispose.
+   *
+   * @param material Temporary shading material.
+   */
+  private trackOverrideMaterial(material: THREE.Material): void {
+    markShadingOverrideMaterial(material);
+    this.ownedOverrideMaterials.add(material);
+  }
+
   /** Disposes override materials created for FLAT or WIREFRAME modes. */
   private disposeOwnedOverrideMaterials(): void {
     this.ownedOverrideMaterials.forEach((material) => {
@@ -324,28 +239,6 @@ export class ShadingModeManager {
     });
     this.ownedOverrideMaterials.clear();
   }
-}
-
-/**
- * Reads the wireframe flag when the material supports it.
- *
- * @param material Material to inspect.
- * @returns Wireframe flag, default false.
- */
-function readWireframeFlag(material: THREE.Material): boolean {
-  if (!('wireframe' in material)) return false;
-  return Boolean((material as THREE.MeshBasicMaterial).wireframe);
-}
-
-/**
- * Writes the wireframe flag when the material supports it.
- *
- * @param material Material to update.
- * @param wireframe Desired wireframe state.
- */
-function writeWireframeFlag(material: THREE.Material, wireframe: boolean): void {
-  if (!('wireframe' in material)) return;
-  (material as THREE.MeshBasicMaterial).wireframe = wireframe;
 }
 
 /**

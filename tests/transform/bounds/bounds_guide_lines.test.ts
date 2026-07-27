@@ -70,7 +70,7 @@ describe('BoundsGuideLines', () => {
     expect(linePasses).toHaveLength(2);
   });
 
-  it('should use depth-aware front and occluded dashed shaders', () => {
+  it('should use depth-aware front and occluded screen-pixel dash shaders', () => {
     const linePasses = guides
       .getObject()
       .children.filter((child) => child instanceof THREE.LineSegments) as THREE.LineSegments[];
@@ -85,28 +85,35 @@ describe('BoundsGuideLines', () => {
     expect(occluded!.depthTest).toBe(true);
     expect(front!.uniforms['opacity']!.value).toBe(GizmoVisualStyle.frontOpacity);
     expect(occluded!.uniforms['opacity']!.value).toBe(GizmoVisualStyle.occludedOpacity);
+    expect(front!.fragmentShader).toContain('gl_FragCoord');
+    expect(front!.fragmentShader).toContain('distAlong');
     expect(front!.fragmentShader).toContain('discard');
   });
 
-  it('should author endpoint pairs and tip-aligned line params for pixel dashes', () => {
+  it('should author identical lineStart/lineEnd on both vertices of each segment', () => {
     guides = new BoundsGuideLines(Theme, 4);
     guides.updateFromHalfExtents(new THREE.Vector3(1, 1, 1));
     expect(guides.getSegmentCount()).toBe(24);
     const geometry = guides.getGeometry();
     const position = geometry.getAttribute('position') as THREE.BufferAttribute;
-    const otherEnd = geometry.getAttribute('otherEnd') as THREE.BufferAttribute;
-    const lineParam = geometry.getAttribute('lineParam') as THREE.BufferAttribute;
-    expect(otherEnd.count).toBe(position.count);
-    expect(lineParam.count).toBe(position.count);
+    const lineStart = geometry.getAttribute('lineStart') as THREE.BufferAttribute;
+    const lineEnd = geometry.getAttribute('lineEnd') as THREE.BufferAttribute;
+    const color = geometry.getAttribute('color') as THREE.BufferAttribute;
+    expect(position.count).toBe(48);
+    expect(color.count).toBe(48);
+    expect(lineStart.count).toBe(position.count);
+    expect(lineEnd.count).toBe(position.count);
     for (let index = 0; index < position.count; index += 2) {
-      expect(lineParam.getX(index)).toBeCloseTo(1, 5);
-      expect(lineParam.getX(index + 1)).toBeCloseTo(0, 5);
-      expect(otherEnd.getX(index)).toBeCloseTo(position.getX(index + 1), 5);
-      expect(otherEnd.getY(index)).toBeCloseTo(position.getY(index + 1), 5);
-      expect(otherEnd.getZ(index)).toBeCloseTo(position.getZ(index + 1), 5);
-      expect(otherEnd.getX(index + 1)).toBeCloseTo(position.getX(index), 5);
-      expect(otherEnd.getY(index + 1)).toBeCloseTo(position.getY(index), 5);
-      expect(otherEnd.getZ(index + 1)).toBeCloseTo(position.getZ(index), 5);
+      // Start/end constants match both vertices so screen ends do not warp.
+      expect(lineStart.getX(index)).toBeCloseTo(lineStart.getX(index + 1), 5);
+      expect(lineStart.getY(index)).toBeCloseTo(lineStart.getY(index + 1), 5);
+      expect(lineStart.getZ(index)).toBeCloseTo(lineStart.getZ(index + 1), 5);
+      expect(lineEnd.getX(index)).toBeCloseTo(lineEnd.getX(index + 1), 5);
+      expect(lineEnd.getY(index)).toBeCloseTo(lineEnd.getY(index + 1), 5);
+      expect(lineEnd.getZ(index)).toBeCloseTo(lineEnd.getZ(index + 1), 5);
+      // Positions are corner then tip; start is corner, end is tip.
+      expect(lineStart.getX(index)).toBeCloseTo(position.getX(index), 5);
+      expect(lineEnd.getX(index)).toBeCloseTo(position.getX(index + 1), 5);
     }
   });
 

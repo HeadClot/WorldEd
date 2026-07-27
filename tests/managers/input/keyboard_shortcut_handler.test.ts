@@ -170,4 +170,33 @@ describe('KeyboardShortcutHandler', () => {
     expect(onUndo).toHaveBeenCalled();
     expect(onRedo).not.toHaveBeenCalled();
   });
+
+  it('should dispatch shortcuts from additional registered windows', () => {
+    const onMode = vi.fn();
+    handler.setOnTransformMode(onMode);
+    const listeners = new Map<string, Set<EventListener>>();
+    const popupWindow = {
+      addEventListener: vi.fn((type: string, listener: EventListener) => {
+        const set = listeners.get(type) ?? new Set();
+        set.add(listener);
+        listeners.set(type, set);
+      }),
+      removeEventListener: vi.fn((type: string, listener: EventListener) => {
+        listeners.get(type)?.delete(listener);
+      }),
+      dispatchEvent(event: Event): boolean {
+        listeners.get(event.type)?.forEach((listener) => listener(event));
+        return true;
+      },
+    } as unknown as Window;
+    handler.registerOnWindow(popupWindow);
+    expect(popupWindow.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+    popupWindow.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+    expect(onMode).toHaveBeenCalledWith(TransformMode.TRANSLATE);
+    handler.unregisterFromWindow(popupWindow);
+    expect(popupWindow.removeEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+    onMode.mockClear();
+    popupWindow.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }));
+    expect(onMode).not.toHaveBeenCalled();
+  });
 });

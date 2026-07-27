@@ -9,8 +9,7 @@ import { GridSnap } from '../../transform/snap/grid_snap.js';
 import { KeyboardShortcutHandler } from '../input/keyboard_shortcut_handler.js';
 import { EditorToolId } from '../../types/editor_tool_id.js';
 import { TransformMode } from '../../types/transform_mode.js';
-import { Viewport3D } from '../../viewports/viewport_3d.js';
-import { Viewport2D } from '../../viewports/viewport_2d.js';
+import type { EditorViewport } from '../../viewports/editor_viewport.js';
 import * as THREE from 'three';
 
 /** Dependencies for tools palette and clip plane wiring. */
@@ -23,10 +22,7 @@ export interface ClipToolsSetupDeps {
   faceExtrusionController: FaceExtrusionController;
   toolbarContainer: HTMLElement;
   anchorViewport: HTMLElement;
-  viewport3D: Viewport3D;
-  viewport2DTop: Viewport2D;
-  viewport2DFront: Viewport2D;
-  viewport2DSide: Viewport2D;
+  getViewports: () => readonly EditorViewport[];
   keyboardShortcutHandler: KeyboardShortcutHandler;
   showStatusMessage: (message: string) => void;
   syncPrimitivesToViewports: () => void;
@@ -145,10 +141,9 @@ function createToolsPaletteController(
  * @param clipPlaneHandler Clip plane handler receiving pointer events.
  */
 function wireClipPlaneViewportCallbacks(deps: ClipToolsSetupDeps, clipPlaneHandler: ClipPlaneHandler): void {
-  const viewports = [deps.viewport3D, deps.viewport2DTop, deps.viewport2DFront, deps.viewport2DSide];
-  viewports.forEach((viewport) => {
+  deps.getViewports().forEach((viewport) => {
     viewport.setClipPlaneCallback((event) => {
-      return clipPlaneHandler.onPointerDown(event, viewport.getCamera(), viewport.getRenderer());
+      return clipPlaneHandler.onPointerDown(event, viewport.getCamera(), viewport.getContentElement());
     });
   });
 }

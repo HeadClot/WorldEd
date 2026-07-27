@@ -46,6 +46,7 @@ export interface EditorToolbarActions {
   onToggleSettingsDialog: () => void;
   onOpenDocumentation: () => void;
   onOpenAboutDialog: () => void;
+  onOpenDetachedViewport: () => void;
   onDeleteSelected: () => void;
   onDuplicateSelected: () => void;
   onGroupSelected: () => void;
@@ -85,7 +86,10 @@ export interface EditorToolbarActions {
 export interface EditorShellElements {
   toolbarContainer: HTMLElement;
   mainLayout: HTMLElement;
+  /** Outer host for the shared WebGL canvas (not a CSS grid). */
   viewportArea: HTMLElement;
+  /** Absolute grid layer that holds pane chrome containers. */
+  viewportPaneGrid: HTMLElement;
   viewports: HTMLElement[];
   toolbar: Toolbar;
   outlinerPanel: OutlinerPanel;
@@ -127,8 +131,8 @@ export class EditorShellBuilder {
     const toolbar = new Toolbar(toolbarContainer);
     this.createToolbarButtons(toolbar, toolbarActions);
     const mainLayout = this.createMainLayout(toolbarContainer);
-    const viewportArea = this.createViewportArea(mainLayout);
-    const viewports = this.createViewportContainers(viewportArea);
+    const viewportShell = this.createViewportShell(mainLayout);
+    const viewports = this.createViewportContainers(viewportShell.paneGrid);
     const outlinerPanel = this.createOutliner(
       mainLayout,
       selectionManager,
@@ -141,7 +145,8 @@ export class EditorShellBuilder {
     return {
       toolbarContainer,
       mainLayout,
-      viewportArea,
+      viewportArea: viewportShell.host,
+      viewportPaneGrid: viewportShell.paneGrid,
       viewports,
       toolbar,
       outlinerPanel,
@@ -183,55 +188,88 @@ export class EditorShellBuilder {
   }
 
   /**
-   * Creates and styles the viewport grid area element.
+   * Creates the viewport workspace host and the absolute pane grid overlay. The
+   * shared WebGL canvas is parented to the host so it is never a CSS grid item
+   * (which previously collapsed it into a zero-height implicit track).
    *
    * @param mainLayout Parent main layout.
-   * @returns The viewport area element.
+   * @returns Host for the canvas and grid layer for pane chrome.
    */
-  private createViewportArea(mainLayout: HTMLElement): HTMLElement {
-    const viewportArea = document.createElement('div');
-    viewportArea.classList.add('editor-viewport-area');
-    viewportArea.style.display = 'grid';
-    viewportArea.style.gridTemplateColumns = '1fr 1fr';
-    viewportArea.style.gridTemplateRows = '1fr 1fr';
-    viewportArea.style.gridTemplateAreas = '"top front"\n"side perspective"';
-    viewportArea.style.background = `#${Theme.separatorColor.toString(16).padStart(6, '0')}`;
-    viewportArea.style.gap = `${Theme.separatorGapPx}px`;
-    viewportArea.style.padding = `${Theme.separatorGapPx}px`;
-    viewportArea.style.flex = '1';
-    viewportArea.style.overflow = 'hidden';
-    mainLayout.appendChild(viewportArea);
-    return viewportArea;
+  private createViewportShell(mainLayout: HTMLElement): { host: HTMLElement; paneGrid: HTMLElement } {
+    const host = this.createViewportHost();
+    const paneGrid = this.createViewportPaneGrid();
+    host.appendChild(paneGrid);
+    mainLayout.appendChild(host);
+    return { host, paneGrid };
+  }
+
+  /**
+   * Creates the non-grid workspace host that owns the shared canvas.
+   *
+   * @returns Viewport workspace host element.
+   */
+  private createViewportHost(): HTMLElement {
+    const host = document.createElement('div');
+    host.classList.add('editor-viewport-area');
+    host.style.position = 'relative';
+    host.style.flex = '1';
+    host.style.overflow = 'hidden';
+    host.style.minWidth = '0';
+    host.style.minHeight = '0';
+    host.style.background = `#${Theme.separatorColor.toString(16).padStart(6, '0')}`;
+    return host;
+  }
+
+  /**
+   * Creates the absolute CSS grid layer for pane chrome containers.
+   *
+   * @returns Pane grid element.
+   */
+  private createViewportPaneGrid(): HTMLElement {
+    const paneGrid = document.createElement('div');
+    paneGrid.classList.add('editor-viewport-pane-grid');
+    paneGrid.style.position = 'absolute';
+    paneGrid.style.inset = '0';
+    paneGrid.style.display = 'grid';
+    paneGrid.style.gridTemplateColumns = '1fr 1fr';
+    paneGrid.style.gridTemplateRows = '1fr 1fr';
+    paneGrid.style.gridTemplateAreas = '"top front"\n"side perspective"';
+    paneGrid.style.gap = `${Theme.separatorGapPx}px`;
+    paneGrid.style.padding = `${Theme.separatorGapPx}px`;
+    paneGrid.style.boxSizing = 'border-box';
+    paneGrid.style.zIndex = '1';
+    return paneGrid;
   }
 
   /**
    * Creates viewport container elements for each grid area.
    *
-   * @param viewportArea Parent grid container.
+   * @param paneGrid Absolute grid layer that hosts pane chrome.
    * @returns Containers ordered top, front, side, perspective.
    */
-  private createViewportContainers(viewportArea: HTMLElement): HTMLElement[] {
+  private createViewportContainers(paneGrid: HTMLElement): HTMLElement[] {
     return [
-      this.createContainer(viewportArea, 'top'),
-      this.createContainer(viewportArea, 'front'),
-      this.createContainer(viewportArea, 'side'),
-      this.createContainer(viewportArea, 'perspective'),
+      this.createContainer(paneGrid, 'top'),
+      this.createContainer(paneGrid, 'front'),
+      this.createContainer(paneGrid, 'side'),
+      this.createContainer(paneGrid, 'perspective'),
     ];
   }
 
   /**
    * Creates a viewport container element for a grid area.
    *
-   * @param viewportArea Parent grid container.
+   * @param paneGrid Parent grid container.
    * @param area The grid area name for the viewport.
    * @returns The created container element.
    */
-  private createContainer(viewportArea: HTMLElement, area: string): HTMLElement {
+  private createContainer(paneGrid: HTMLElement, area: string): HTMLElement {
     const el = document.createElement('div');
     el.style.gridArea = area;
     el.style.overflow = 'hidden';
     el.style.position = 'relative';
-    viewportArea.appendChild(el);
+    el.style.background = 'transparent';
+    paneGrid.appendChild(el);
     return el;
   }
 
@@ -540,5 +578,6 @@ export class EditorShellBuilder {
     toolbar.addSeparator();
     toolbar.addIconButton('Documentation', ToolbarIcons.documentation(), () => actions.onOpenDocumentation());
     toolbar.addIconButton('About', ToolbarIcons.about(), () => actions.onOpenAboutDialog());
+    toolbar.addIconButton('Detached Viewport', ToolbarIcons.detachedViewport(), () => actions.onOpenDetachedViewport());
   }
 }

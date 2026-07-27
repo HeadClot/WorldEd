@@ -46,7 +46,7 @@ describe('ClipPlanePointDrag', () => {
       clientX,
       clientY,
     } as MouseEvent;
-    const index = drag.pickMarkerIndex(event, camera, renderer, [point]);
+    const index = drag.pickMarkerIndex(event, camera, renderer.domElement, [point]);
     expect(index).toBe(0);
   });
 
@@ -56,7 +56,7 @@ describe('ClipPlanePointDrag', () => {
       clientX: 0,
       clientY: 0,
     } as MouseEvent;
-    const index = drag.pickMarkerIndex(event, camera, renderer, [point]);
+    const index = drag.pickMarkerIndex(event, camera, renderer.domElement, [point]);
     expect(index).toBeNull();
   });
 
@@ -69,7 +69,7 @@ describe('ClipPlanePointDrag', () => {
     const origin = new THREE.Vector3(0, 0, 0);
     const plane = drag.createDragPlane(origin, camera);
     const centerEvent = { clientX: 100, clientY: 100 } as MouseEvent;
-    const hit = drag.projectOntoDragPlane(centerEvent, camera, renderer, plane);
+    const hit = drag.projectOntoDragPlane(centerEvent, camera, renderer.domElement, plane);
     expect(hit).not.toBeNull();
     expect(hit!.z).toBeCloseTo(0, 1);
   });

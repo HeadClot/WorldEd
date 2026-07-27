@@ -56,6 +56,7 @@ export interface ToolbarActionHost {
   onToggleSettingsDialog: () => void;
   onOpenDocumentation: () => void;
   onOpenAboutDialog: () => void;
+  onOpenDetachedViewport: () => void;
   onDeleteSelected: () => void;
   onGroupSelected: () => void;
   onNewScene: () => void;
@@ -162,6 +163,7 @@ function buildPrimitiveToolbarActions(
   | 'onToggleSettingsDialog'
   | 'onOpenDocumentation'
   | 'onOpenAboutDialog'
+  | 'onOpenDetachedViewport'
 > {
   return {
     onAddCube: () => host.getPrimitiveCreationHandler().createCube(),
@@ -177,6 +179,7 @@ function buildPrimitiveToolbarActions(
     onToggleSettingsDialog: () => host.onToggleSettingsDialog(),
     onOpenDocumentation: () => host.onOpenDocumentation(),
     onOpenAboutDialog: () => host.onOpenAboutDialog(),
+    onOpenDetachedViewport: () => host.onOpenDetachedViewport(),
   };
 }
 

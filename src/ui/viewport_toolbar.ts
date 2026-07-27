@@ -1,14 +1,24 @@
 import { Theme } from '../theme.js';
 import { ShadingMode } from '../types/shading_mode.js';
 import { ToolbarIcons } from './toolbar_icons.js';
+import { MenuPanel } from './menu/menu_panel.js';
+import { ViewportKind, getViewportKindDisplayLabel } from '../viewports/viewport_kind.js';
+import { buildViewportTypeMenuEntries } from './viewport_type_menu.js';
+import { UiStackLayers } from './ui_stack_layers.js';
 
 /**
  * Compact toolbar overlaid at the top of a single viewport. Provides
- * per-viewport shading modes and a Fit action.
+ * per-viewport shading modes, type menu, Fit, and maximize actions.
  */
 export class ViewportToolbar {
+  private readonly ownerDocument: Document;
+  private readonly ownerWindow: Window;
   private container: HTMLElement;
-  private titleElement: HTMLElement;
+  private titleWrapper: HTMLElement;
+  private titleButton: HTMLButtonElement;
+  private titleLabel: HTMLElement;
+  private typeMenuPanel: MenuPanel | null;
+  private documentClickCloser: ((event: PointerEvent) => void) | null;
   private buttonRow: HTMLElement;
   private shadingButtons: Map<ShadingMode, HTMLButtonElement>;
   private fitButton: HTMLButtonElement;
@@ -16,7 +26,9 @@ export class ViewportToolbar {
   private onShadingMode: ((mode: ShadingMode) => void) | null;
   private onFit: (() => void) | null;
   private onToggleMaximize: (() => void) | null;
+  private onViewportKindChange: ((kind: ViewportKind) => void) | null;
   private currentMode: ShadingMode;
+  private currentKind: ViewportKind;
 
   /**
    * Creates a viewport toolbar and appends it to the given parent.
@@ -26,14 +38,22 @@ export class ViewportToolbar {
    * @param initialMode The shading mode to highlight initially.
    */
   constructor(parentElement: HTMLElement, titleText: string, initialMode: ShadingMode = ShadingMode.SOLID) {
-    this.container = document.createElement('div');
-    this.titleElement = document.createElement('span');
-    this.buttonRow = document.createElement('div');
+    this.ownerDocument = parentElement.ownerDocument;
+    this.ownerWindow = parentElement.ownerDocument.defaultView ?? window;
+    this.container = this.ownerDocument.createElement('div');
+    this.titleWrapper = this.ownerDocument.createElement('div');
+    this.titleButton = this.ownerDocument.createElement('button');
+    this.titleLabel = this.ownerDocument.createElement('span');
+    this.typeMenuPanel = null;
+    this.documentClickCloser = null;
+    this.buttonRow = this.ownerDocument.createElement('div');
     this.shadingButtons = new Map();
     this.onShadingMode = null;
     this.onFit = null;
     this.onToggleMaximize = null;
+    this.onViewportKindChange = null;
     this.currentMode = initialMode;
+    this.currentKind = ViewportKind.PERSPECTIVE;
     this.applyContainerStyles();
     this.buildTitle(titleText);
     this.buildControls();
@@ -42,7 +62,7 @@ export class ViewportToolbar {
     this.buttonRow.appendChild(this.createSeparator());
     this.buttonRow.appendChild(this.fitButton);
     this.buttonRow.appendChild(this.maximizeButton);
-    this.container.appendChild(this.titleElement);
+    this.container.appendChild(this.titleWrapper);
     this.container.appendChild(this.buttonRow);
     parentElement.appendChild(this.container);
     this.setActiveShadingMode(initialMode);
@@ -76,6 +96,26 @@ export class ViewportToolbar {
   }
 
   /**
+   * Registers the callback invoked when the user picks a viewport type.
+   *
+   * @param callback Kind change handler.
+   */
+  setOnViewportKindChange(callback: (kind: ViewportKind) => void): void {
+    this.onViewportKindChange = callback;
+  }
+
+  /**
+   * Updates the type menu selection and title label for a viewport kind.
+   *
+   * @param kind Active viewport kind.
+   */
+  setViewportKind(kind: ViewportKind): void {
+    this.currentKind = kind;
+    this.setTitle(getViewportKindDisplayLabel(kind));
+    this.rebuildTypeMenu();
+  }
+
+  /**
    * Updates the maximize button label and selected appearance.
    *
    * @param maximized Whether this viewport currently fills the workspace.
@@ -106,6 +146,33 @@ export class ViewportToolbar {
    */
   getActiveShadingMode(): ShadingMode {
     return this.currentMode;
+  }
+
+  /**
+   * Updates the title text shown on the left side of the toolbar.
+   *
+   * @param titleText New display title.
+   */
+  setTitle(titleText: string): void {
+    this.titleLabel.textContent = titleText;
+  }
+
+  /**
+   * Returns the title button used for type menus and tests.
+   *
+   * @returns Title HTML button element.
+   */
+  getTitleElement(): HTMLElement {
+    return this.titleButton;
+  }
+
+  /**
+   * Returns the type dropdown menu panel for tests.
+   *
+   * @returns Menu panel or null before first open rebuild.
+   */
+  getTypeMenuPanel(): MenuPanel | null {
+    return this.typeMenuPanel;
   }
 
   /**
@@ -145,8 +212,9 @@ export class ViewportToolbar {
     return this.shadingButtons.get(mode);
   }
 
-  /** Removes the toolbar from the DOM. */
+  /** Removes the toolbar from the DOM and closes the type menu. */
   dispose(): void {
+    this.closeTypeMenu();
     if (this.container.parentNode) {
       this.container.parentNode.removeChild(this.container);
     }
@@ -154,21 +222,142 @@ export class ViewportToolbar {
   }
 
   /**
-   * Builds the viewport title label on the left side of the bar.
+   * Builds the viewport title control with a dropdown caret.
    *
    * @param titleText The text to display.
    */
   private buildTitle(titleText: string): void {
-    this.titleElement.classList.add('editor-viewport-title');
-    this.titleElement.textContent = titleText;
-    this.titleElement.style.fontFamily = Theme.uiFontFamily;
-    this.titleElement.style.fontSize = '11px';
-    this.titleElement.style.fontWeight = '600';
-    this.titleElement.style.letterSpacing = '0.04em';
-    this.titleElement.style.textTransform = 'uppercase';
-    this.titleElement.style.color = Theme.viewportLabelTextColor;
-    this.titleElement.style.userSelect = 'none';
-    this.titleElement.style.padding = '0 4px';
+    this.titleWrapper.style.position = 'relative';
+    this.titleWrapper.style.display = 'inline-flex';
+    this.titleWrapper.style.alignItems = 'center';
+    this.titleButton.type = 'button';
+    this.titleButton.classList.add('editor-viewport-title');
+    this.titleButton.setAttribute('aria-haspopup', 'menu');
+    this.titleButton.setAttribute('aria-expanded', 'false');
+    this.titleButton.title = 'Change viewport type';
+    this.styleTitleButton();
+    this.styleTitleLabel(titleText);
+    this.titleButton.appendChild(this.titleLabel);
+    this.appendDropdownCaret(this.titleButton);
+    this.titleButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.toggleTypeMenu();
+    });
+    this.titleWrapper.appendChild(this.titleButton);
+    this.rebuildTypeMenu();
+  }
+
+  /** Applies layout styles to the type menu header button chrome. */
+  private styleTitleButton(): void {
+    this.titleButton.style.display = 'inline-flex';
+    this.titleButton.style.alignItems = 'center';
+    this.titleButton.style.gap = '4px';
+    this.titleButton.style.margin = '0';
+    this.titleButton.style.padding = '0';
+    this.titleButton.style.border = '1px solid transparent';
+    this.titleButton.style.borderRadius = '4px';
+    this.titleButton.style.background = 'transparent';
+    this.titleButton.style.cursor = 'pointer';
+    this.titleButton.style.font = 'inherit';
+    this.titleButton.style.lineHeight = '1';
+    this.titleButton.style.color = Theme.viewportLabelTextColor;
+    this.titleButton.style.userSelect = 'none';
+  }
+
+  /**
+   * Restores the compact title label look (pre-type-menu span styling).
+   * Horizontal inset matches the original label padding so titles sit slightly
+   * in from the toolbar edge without the oversized type-menu button padding.
+   *
+   * @param titleText Viewport display name.
+   */
+  private styleTitleLabel(titleText: string): void {
+    this.titleLabel.textContent = titleText;
+    this.titleLabel.style.fontFamily = Theme.uiFontFamily;
+    this.titleLabel.style.fontSize = '11px';
+    this.titleLabel.style.fontWeight = '600';
+    this.titleLabel.style.letterSpacing = '0.04em';
+    this.titleLabel.style.textTransform = 'uppercase';
+    this.titleLabel.style.color = Theme.viewportLabelTextColor;
+    this.titleLabel.style.lineHeight = '1';
+    this.titleLabel.style.userSelect = 'none';
+    this.titleLabel.style.padding = '0 4px 0 3px';
+    this.titleLabel.style.margin = '0';
+  }
+
+  /**
+   * Appends a subtle dropdown caret matching the main toolbar menus.
+   *
+   * @param button Header button receiving the caret.
+   */
+  private appendDropdownCaret(button: HTMLButtonElement): void {
+    const caret = this.ownerDocument.createElement('span');
+    caret.textContent = '▾';
+    caret.style.fontSize = '9px';
+    caret.style.opacity = '0.7';
+    caret.style.marginLeft = '2px';
+    button.appendChild(caret);
+  }
+
+  /** Rebuilds the type menu panel from the current kind. */
+  private rebuildTypeMenu(): void {
+    if (this.typeMenuPanel) {
+      this.typeMenuPanel.getElement().remove();
+      this.typeMenuPanel = null;
+    }
+    const entries = buildViewportTypeMenuEntries(this.currentKind, (kind) => {
+      this.closeTypeMenu();
+      this.onViewportKindChange?.(kind);
+    });
+    this.typeMenuPanel = new MenuPanel(entries, () => this.closeTypeMenu());
+    this.titleWrapper.appendChild(this.typeMenuPanel.getElement());
+  }
+
+  /** Opens or closes the type menu panel. */
+  private toggleTypeMenu(): void {
+    if (!this.typeMenuPanel) return;
+    if (this.typeMenuPanel.isOpen()) {
+      this.closeTypeMenu();
+      return;
+    }
+    this.openTypeMenu();
+  }
+
+  /** Shows the type menu and listens for outside pointer presses. */
+  private openTypeMenu(): void {
+    if (!this.typeMenuPanel) return;
+    this.rebuildTypeMenu();
+    this.typeMenuPanel.open(this.titleButton);
+    this.titleButton.setAttribute('aria-expanded', 'true');
+    // pointerdown (not mousedown): FlyingCamera preventDefault on the 3D
+    // content element suppresses compatibility mouse events, so mousedown never
+    // reaches window after a click in the perspective pane. Listen on the
+    // toolbar's owner window so detached popups close their own menus.
+    this.documentClickCloser = (event) => this.handleOutsidePointerDown(event);
+    this.ownerWindow.addEventListener('pointerdown', this.documentClickCloser, true);
+  }
+
+  /**
+   * Closes the type menu when the pointer presses outside the title and menu.
+   *
+   * @param event Capture-phase pointer event from the window.
+   */
+  private handleOutsidePointerDown(event: PointerEvent): void {
+    const target = event.target as Node | null;
+    if (!target) return;
+    if (this.titleWrapper.contains(target)) return;
+    if (this.typeMenuPanel?.getElement().contains(target)) return;
+    this.closeTypeMenu();
+  }
+
+  /** Hides the type menu and removes the outside-click listener. */
+  private closeTypeMenu(): void {
+    this.typeMenuPanel?.close();
+    this.titleButton.setAttribute('aria-expanded', 'false');
+    if (this.documentClickCloser) {
+      this.ownerWindow.removeEventListener('pointerdown', this.documentClickCloser, true);
+      this.documentClickCloser = null;
+    }
   }
 
   /** Creates the shading mode button group. */
@@ -236,7 +425,7 @@ export class ViewportToolbar {
    * @returns The styled button element.
    */
   private createIconButton(tooltip: string, iconSvg: string): HTMLButtonElement {
-    const button = document.createElement('button');
+    const button = this.ownerDocument.createElement('button');
     button.type = 'button';
     button.title = tooltip;
     button.setAttribute('aria-label', tooltip);
@@ -301,7 +490,7 @@ export class ViewportToolbar {
    * @returns The separator element.
    */
   private createSeparator(): HTMLElement {
-    const separator = document.createElement('div');
+    const separator = this.ownerDocument.createElement('div');
     separator.style.width = '1px';
     separator.style.height = '16px';
     separator.style.margin = '0 4px';
@@ -325,7 +514,7 @@ export class ViewportToolbar {
     this.container.style.boxSizing = 'border-box';
     this.container.style.background = Theme.viewportToolbarBackground;
     this.container.style.borderBottom = `1px solid ${Theme.viewportToolbarBorder}`;
-    this.container.style.zIndex = '20';
+    this.container.style.zIndex = String(UiStackLayers.viewportChrome);
     this.container.style.userSelect = 'none';
     this.container.style.backdropFilter = 'blur(8px)';
   }

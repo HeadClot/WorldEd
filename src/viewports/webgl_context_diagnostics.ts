@@ -21,6 +21,22 @@ export interface WebGLContextCreationError {
 export type WebGLContextStateChangeHandler = (change: WebGLContextStateChange) => void;
 
 /**
+ * Canvases whose next context-loss event is expected from dispose /
+ * forceContextLoss and must not be reported as a GPU failure.
+ */
+const intentionalContextLossCanvases = new WeakSet<HTMLCanvasElement>();
+
+/**
+ * Marks the next webglcontextlost event on a canvas as intentional so dispose
+ * paths do not log a false-positive GPU failure.
+ *
+ * @param canvas Canvas about to be disposed or force-lost.
+ */
+export function markWebGLContextLossAsIntentional(canvas: HTMLCanvasElement): void {
+  intentionalContextLossCanvases.add(canvas);
+}
+
+/**
  * Installs context-loss and context-restored diagnostics on a canvas.
  *
  * @param canvas Canvas whose WebGL context should be monitored.
@@ -34,6 +50,7 @@ export function attachWebGLContextDiagnostics(
 ): void {
   canvas.addEventListener('webglcontextlost', (event) => {
     event.preventDefault();
+    if (consumeIntentionalContextLoss(canvas)) return;
     onStateChange({ ownerName, state: 'lost' });
   });
   canvas.addEventListener('webglcontextrestored', () => {
@@ -45,6 +62,18 @@ export function attachWebGLContextDiagnostics(
       statusMessage: getWebGLContextCreationStatus(event),
     });
   });
+}
+
+/**
+ * Consumes a one-shot intentional loss marker for a canvas.
+ *
+ * @param canvas Canvas that fired webglcontextlost.
+ * @returns True when the loss was marked intentional and should be quiet.
+ */
+function consumeIntentionalContextLoss(canvas: HTMLCanvasElement): boolean {
+  if (!intentionalContextLossCanvases.has(canvas)) return false;
+  intentionalContextLossCanvases.delete(canvas);
+  return true;
 }
 
 /**

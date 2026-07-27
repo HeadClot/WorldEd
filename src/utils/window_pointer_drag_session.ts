@@ -1,15 +1,19 @@
 /**
  * Captures pointer move and release on window for a drag that began on a
  * specific element. Releasing over toolbars or other UI still ends the drag.
+ * Listens on the window that owns the interaction (main editor or detached
+ * popup) so multi-monitor panes can drag tools correctly.
  */
 export class WindowPointerDragSession {
   private boundMove: ((event: PointerEvent) => void) | null;
   private boundUp: ((event: Event) => void) | null;
+  private targetWindow: Window | null;
 
   /** Creates an inactive window pointer drag session. */
   constructor() {
     this.boundMove = null;
     this.boundUp = null;
+    this.targetWindow = null;
   }
 
   /**
@@ -19,27 +23,32 @@ export class WindowPointerDragSession {
    * @param onMove Called for each window pointermove during the drag.
    * @param onUp Called once for pointerup or pointercancel; listeners are
    *   removed before this callback runs.
+   * @param targetWindow Window that owns the drag (defaults to the main
+   *   window).
    */
-  begin(onMove: (event: PointerEvent) => void, onUp: () => void): void {
+  begin(onMove: (event: PointerEvent) => void, onUp: () => void, targetWindow: Window = window): void {
     this.end();
+    this.targetWindow = targetWindow;
     this.boundMove = (event) => onMove(event);
     this.boundUp = () => this.finishWithCallback(onUp);
-    window.addEventListener('pointermove', this.boundMove);
-    window.addEventListener('pointerup', this.boundUp);
-    window.addEventListener('pointercancel', this.boundUp);
+    targetWindow.addEventListener('pointermove', this.boundMove);
+    targetWindow.addEventListener('pointerup', this.boundUp);
+    targetWindow.addEventListener('pointercancel', this.boundUp);
   }
 
-  /** Removes window listeners if any are attached. */
+  /** Removes active listeners if any are attached. */
   end(): void {
+    const targetWindow = this.targetWindow ?? window;
     if (this.boundMove) {
-      window.removeEventListener('pointermove', this.boundMove);
+      targetWindow.removeEventListener('pointermove', this.boundMove);
     }
     if (this.boundUp) {
-      window.removeEventListener('pointerup', this.boundUp);
-      window.removeEventListener('pointercancel', this.boundUp);
+      targetWindow.removeEventListener('pointerup', this.boundUp);
+      targetWindow.removeEventListener('pointercancel', this.boundUp);
     }
     this.boundMove = null;
     this.boundUp = null;
+    this.targetWindow = null;
   }
 
   /**

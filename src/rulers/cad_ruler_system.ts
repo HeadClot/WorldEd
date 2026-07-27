@@ -203,6 +203,26 @@ export class CadRulerSystem {
   }
 
   /**
+   * Shows only the ruler world geometry that belongs to the given pane camera.
+   * Required for shared multi-view: each pane has custom placement (2D vs 3D)
+   * and must not draw sibling pane rulers into its scissor pass.
+   *
+   * @param camera Active multi-view pane camera.
+   */
+  prepareForCamera(camera: THREE.Camera): void {
+    if (this.isDisposed) return;
+    this.viewports.forEach((viewport) => {
+      viewport.setGeometryVisible(viewport.getCamera() === camera);
+    });
+  }
+
+  /** Hides all shared-scene ruler line batches after a multi-view pane pass. */
+  endCameraPass(): void {
+    if (this.isDisposed) return;
+    this.viewports.forEach((viewport) => viewport.setGeometryVisible(false));
+  }
+
+  /**
    * Returns the latest drag status summary for the status bar.
    *
    * @returns Status text, or empty when not dragging / zero delta.
@@ -335,7 +355,7 @@ export class CadRulerSystem {
    */
   private createPlacementForViewport(viewport: CadRulerViewport, viewPlane: CadViewPlane): CadPlacementContext {
     const anchor = this.currentBounds?.center ?? this.dragStartCenter;
-    return createCadPlacementContext(viewport.getCamera(), viewport.getRenderer(), anchor, viewPlane);
+    return createCadPlacementContext(viewport.getCamera(), viewport.getViewportCssHeight(), anchor, viewPlane);
   }
 
   /**

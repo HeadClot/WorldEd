@@ -21,7 +21,7 @@ describe('SceneRaycaster', () => {
     const renderer = createMockRenderer(canvas);
     const camera = createTestCamera();
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.cast(camera, renderer, event, []);
+    const result = raycaster.cast(camera, renderer.domElement, event, []);
     expect(result).toBeNull();
   });
 
@@ -34,7 +34,7 @@ describe('SceneRaycaster', () => {
     const camera = createTestCamera();
     const offTargetMesh = createMeshAt(0.5, 0.5, 0.5, 5, 5, -2);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.cast(camera, renderer, event, [offTargetMesh]);
+    const result = raycaster.cast(camera, renderer.domElement, event, [offTargetMesh]);
     expect(result).toBeNull();
   });
 
@@ -47,7 +47,7 @@ describe('SceneRaycaster', () => {
     const camera = createTestCamera();
     const targetMesh = createMeshAt(2, 2, 2, 0, 0, 0);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.cast(camera, renderer, event, [targetMesh]);
+    const result = raycaster.cast(camera, renderer.domElement, event, [targetMesh]);
     expect(result).toBe(targetMesh);
   });
 
@@ -61,7 +61,7 @@ describe('SceneRaycaster', () => {
     const nearMesh = createMeshAt(1, 1, 1, 0, 0, -1);
     const farMesh = createMeshAt(1, 1, 1, 0, 0, -4);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.cast(camera, renderer, event, [farMesh, nearMesh]);
+    const result = raycaster.cast(camera, renderer.domElement, event, [farMesh, nearMesh]);
     expect(result).toBe(nearMesh);
   });
 
@@ -74,7 +74,7 @@ describe('SceneRaycaster', () => {
     const camera = createTestCamera();
     const targetMesh = createMeshAt(2, 2, 2, 0, 0, 0);
     const event = createMockMouseEvent(500, 350);
-    const result = raycaster.cast(camera, renderer, event, [targetMesh]);
+    const result = raycaster.cast(camera, renderer.domElement, event, [targetMesh]);
     expect(result).toBe(targetMesh);
   });
 
@@ -91,7 +91,7 @@ describe('SceneRaycaster', () => {
     const camera = createTestCamera();
     const targetMesh = createMeshAt(2, 2, 2, 0, 0, 0);
     const offCenterEvent = createMockMouseEvent(460, 280);
-    const result = raycaster.cast(camera, renderer, offCenterEvent, [targetMesh]);
+    const result = raycaster.cast(camera, renderer.domElement, offCenterEvent, [targetMesh]);
     expect(result).toBe(targetMesh);
   });
 
@@ -107,7 +107,7 @@ describe('SceneRaycaster', () => {
     plane.rotation.y = Math.PI;
     plane.updateMatrixWorld(true);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.cast(camera, renderer, event, [plane]);
+    const result = raycaster.cast(camera, renderer.domElement, event, [plane]);
     expect(result).toBe(plane);
   });
 
@@ -122,7 +122,7 @@ describe('SceneRaycaster', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material);
     mesh.updateMatrixWorld(true);
     const event = createMockMouseEvent(400, 300);
-    raycaster.cast(camera, renderer, event, [mesh]);
+    raycaster.cast(camera, renderer.domElement, event, [mesh]);
     expect(material.side).toBe(THREE.FrontSide);
   });
 });

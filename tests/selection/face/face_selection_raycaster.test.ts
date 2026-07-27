@@ -18,7 +18,7 @@ describe('FaceSelectionRaycaster', () => {
     const renderer = createMockRenderer(canvas);
     const camera = createTestCamera();
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.pickFace(event, camera, renderer, []);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, []);
     expect(result).toBeNull();
   });
 
@@ -28,7 +28,7 @@ describe('FaceSelectionRaycaster', () => {
     const camera = createTestCamera();
     const offTargetMesh = createMeshAt(1, 1, 1, 10, 10, 0);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.pickFace(event, camera, renderer, [offTargetMesh]);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [offTargetMesh]);
     expect(result).toBeNull();
   });
 
@@ -38,7 +38,7 @@ describe('FaceSelectionRaycaster', () => {
     const camera = createTestCamera();
     const targetMesh = createMeshAt(2, 2, 2, 0, 0, 0);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.pickFace(event, camera, renderer, [targetMesh]);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [targetMesh]);
     expect(result).not.toBeNull();
     expect(result?.mesh).toBe(targetMesh);
     expect(result?.faceIndex).toBeGreaterThanOrEqual(0);
@@ -50,7 +50,7 @@ describe('FaceSelectionRaycaster', () => {
     const camera = createTestCamera();
     const targetMesh = createMeshAt(2, 2, 2, 0, 0, 0);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.pickFace(event, camera, renderer, [targetMesh]);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [targetMesh]);
     expect(result).not.toBeNull();
     expect(result?.hitPoint).toBeInstanceOf(THREE.Vector3);
   });
@@ -62,7 +62,7 @@ describe('FaceSelectionRaycaster', () => {
     const nearMesh = createMeshAt(1, 1, 1, 0, 0, -1);
     const farMesh = createMeshAt(1, 1, 1, 0, 0, -4);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.pickFace(event, camera, renderer, [farMesh, nearMesh]);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [farMesh, nearMesh]);
     expect(result?.mesh).toBe(nearMesh);
   });
 
@@ -72,7 +72,7 @@ describe('FaceSelectionRaycaster', () => {
     const camera = createTestCamera();
     const targetMesh = createMeshAt(2, 2, 2, 0, 0, 0);
     const event = createMockMouseEvent(500, 350);
-    const result = raycaster.pickFace(event, camera, renderer, [targetMesh]);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [targetMesh]);
     expect(result?.mesh).toBe(targetMesh);
   });
 
@@ -86,7 +86,7 @@ describe('FaceSelectionRaycaster', () => {
     const camera = createCameraAt(0, 0, -5);
     const facingPositiveZ = createDoubleSidedPlaneAt(0, 0, 0);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.pickFace(event, camera, renderer, [facingPositiveZ]);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [facingPositiveZ]);
     expect(result).toBeNull();
   });
 
@@ -96,7 +96,7 @@ describe('FaceSelectionRaycaster', () => {
     const camera = createCameraAt(0, 0, 5);
     const facingPositiveZ = createDoubleSidedPlaneAt(0, 0, 0);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.pickFace(event, camera, renderer, [facingPositiveZ]);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [facingPositiveZ]);
     expect(result?.mesh).toBe(facingPositiveZ);
   });
 
@@ -109,7 +109,7 @@ describe('FaceSelectionRaycaster', () => {
     nearerBackFacing.updateMatrixWorld(true);
     const fartherFrontFacing = createDoubleSidedPlaneAt(0, 0, -2);
     const event = createMockMouseEvent(400, 300);
-    const result = raycaster.pickFace(event, camera, renderer, [nearerBackFacing, fartherFrontFacing]);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [nearerBackFacing, fartherFrontFacing]);
     expect(result?.mesh).toBe(fartherFrontFacing);
   });
 });

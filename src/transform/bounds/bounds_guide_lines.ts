@@ -9,15 +9,16 @@ import {
 /** Flat attribute arrays accumulated while building guide rays. */
 interface GuideRayBuffers {
   positions: number[];
-  otherEnds: number[];
-  lineParams: number[];
+  lineStarts: number[];
+  lineEnds: number[];
   colors: number[];
 }
 
 /**
  * Draws RGB axis guide rays from each corner of an oriented bounds box. Rays
  * are fixed length (no scene raycasts), solid at the corner and faded at the
- * tip, with a GPU dashed shader so dash size stays zoom-stable.
+ * tip. Dashing uses true framebuffer pixels along the projected stroke so 3D
+ * perspective cannot stretch the pattern with depth.
  */
 export class BoundsGuideLines {
   private rootGroup: THREE.Group;
@@ -106,7 +107,7 @@ export class BoundsGuideLines {
    * @returns Empty buffer set.
    */
   private createEmptyBuffers(): GuideRayBuffers {
-    return { positions: [], otherEnds: [], lineParams: [], colors: [] };
+    return { positions: [], lineStarts: [], lineEnds: [], colors: [] };
   }
 
   /**
@@ -201,8 +202,8 @@ export class BoundsGuideLines {
   }
 
   /**
-   * Appends one colored ray with a solid corner, faded tip, and endpoint pair
-   * data for true screen-pixel dashes in the GPU shader.
+   * Appends one colored ray. lineStart/lineEnd are duplicated on both vertices
+   * so the GPU can treat screen endpoints as constants (no depth warp).
    *
    * @param buffers Attribute accumulators.
    * @param ax Corner X.
@@ -223,10 +224,11 @@ export class BoundsGuideLines {
     bz: number,
     color: THREE.Color,
   ): void {
-    // Corner first (lineParam 1 = full segment pixels from tip), tip second (0).
+    // Corner first, tip second for position (color solid → fade).
     buffers.positions.push(ax, ay, az, bx, by, bz);
-    buffers.otherEnds.push(bx, by, bz, ax, ay, az);
-    buffers.lineParams.push(1, 0);
+    // Identical start/end on both vertices — required for constant screen ends.
+    buffers.lineStarts.push(ax, ay, az, ax, ay, az);
+    buffers.lineEnds.push(bx, by, bz, bx, by, bz);
     this.pushSolidColor(buffers.colors, color);
     this.pushFadedColor(buffers.colors, color);
   }
@@ -259,8 +261,8 @@ export class BoundsGuideLines {
    */
   private applyBuffers(buffers: GuideRayBuffers): void {
     this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(buffers.positions, 3));
-    this.geometry.setAttribute('otherEnd', new THREE.Float32BufferAttribute(buffers.otherEnds, 3));
-    this.geometry.setAttribute('lineParam', new THREE.Float32BufferAttribute(buffers.lineParams, 1));
+    this.geometry.setAttribute('lineStart', new THREE.Float32BufferAttribute(buffers.lineStarts, 3));
+    this.geometry.setAttribute('lineEnd', new THREE.Float32BufferAttribute(buffers.lineEnds, 3));
     this.geometry.setAttribute('color', new THREE.Float32BufferAttribute(buffers.colors, 3));
     this.geometry.computeBoundingSphere();
   }

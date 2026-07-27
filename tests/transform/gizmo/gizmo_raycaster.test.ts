@@ -8,7 +8,6 @@ describe('GizmoRaycaster', () => {
   let raycaster: GizmoRaycaster;
   let camera: THREE.PerspectiveCamera;
   let mockCanvas: { getBoundingClientRect: () => DOMRect };
-  let mockRenderer: THREE.WebGLRenderer;
 
   beforeEach(() => {
     raycaster = new GizmoRaycaster();
@@ -29,7 +28,6 @@ describe('GizmoRaycaster', () => {
           toJSON: () => ({}),
         }) as DOMRect,
     };
-    mockRenderer = { domElement: mockCanvas } as unknown as THREE.WebGLRenderer;
   });
 
   it('should create instance without errors', () => {
@@ -48,7 +46,7 @@ describe('GizmoRaycaster', () => {
     direction.applyQuaternion(camera.quaternion).normalize();
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(direction, pivot);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.projectMouseToPlane(camera, mockRenderer, event, plane);
+    const result = raycaster.projectMouseToPlane(camera, mockCanvas as unknown as HTMLElement, event, plane);
     expect(result).not.toBeNull();
     const planeDistance = plane.distanceToPoint(result!);
     expect(planeDistance).toBeLessThan(0.01);
@@ -60,7 +58,7 @@ describe('GizmoRaycaster', () => {
     direction.applyQuaternion(camera.quaternion).normalize();
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(direction, pivot);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.projectMouseToPlane(camera, mockRenderer, event, plane);
+    const result = raycaster.projectMouseToPlane(camera, mockCanvas as unknown as HTMLElement, event, plane);
     expect(result).not.toBeNull();
     const planeDistance = plane.distanceToPoint(result!);
     expect(planeDistance).toBeLessThan(0.01);
@@ -72,7 +70,12 @@ describe('GizmoRaycaster', () => {
     cameraAtOrigin.position.set(0, 0, 0);
     cameraAtOrigin.lookAt(1, 0, 0);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.projectMouseToPlane(cameraAtOrigin, mockRenderer, event, parallelPlane);
+    const result = raycaster.projectMouseToPlane(
+      cameraAtOrigin,
+      mockCanvas as unknown as HTMLElement,
+      event,
+      parallelPlane,
+    );
     expect(result).toBeNull();
   });
 
@@ -83,8 +86,8 @@ describe('GizmoRaycaster', () => {
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(direction, pivot);
     const eventA = new MouseEvent('pointerdown', { clientX: 100, clientY: 100 });
     const eventB = new MouseEvent('pointerdown', { clientX: 700, clientY: 500 });
-    const resultA = raycaster.projectMouseToPlane(camera, mockRenderer, eventA, plane);
-    const resultB = raycaster.projectMouseToPlane(camera, mockRenderer, eventB, plane);
+    const resultA = raycaster.projectMouseToPlane(camera, mockCanvas as unknown as HTMLElement, eventA, plane);
+    const resultB = raycaster.projectMouseToPlane(camera, mockCanvas as unknown as HTMLElement, eventB, plane);
     expect(resultA).not.toBeNull();
     expect(resultB).not.toBeNull();
     const distance = resultA!.distanceTo(resultB!);
@@ -98,13 +101,12 @@ describe('GizmoRaycaster', () => {
     const mockCanvasWide = {
       getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
     };
-    const mockRendererWide = { domElement: mockCanvasWide } as unknown as THREE.WebGLRenderer;
     const pivot = new THREE.Vector3(0, 0, 0);
     const direction = new THREE.Vector3(0, 0, -1);
     direction.applyQuaternion(cam.quaternion).normalize();
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(direction, pivot);
     const centerEvent = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.projectMouseToPlane(cam, mockRendererWide, centerEvent, plane);
+    const result = raycaster.projectMouseToPlane(cam, mockCanvasWide as unknown as HTMLElement, centerEvent, plane);
     expect(result).not.toBeNull();
     const originDistance = result!.distanceTo(new THREE.Vector3(0, 0, 0));
     expect(originDistance).toBeLessThan(0.5);
@@ -115,7 +117,7 @@ describe('GizmoRaycaster', () => {
     setup.gizmoGroup.visible = false;
     setup.gizmoGroup.updateMatrixWorld(true);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.renderer, event, setup.gizmoGroup);
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.pickElement, event, setup.gizmoGroup);
     expect(result).toBeNull();
   });
 
@@ -124,28 +126,29 @@ describe('GizmoRaycaster', () => {
     setup.gizmoGroup.visible = true;
     setup.gizmoGroup.updateMatrixWorld(true);
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.renderer, event, setup.gizmoGroup);
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.pickElement, event, setup.gizmoGroup);
     expect(result).toBe(setup.handles[0]);
   });
 
   it('should pick a far handle through a nearer bounds face pick plane', () => {
     const setup = createFarHandleBehindFacePickSetup();
     const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.renderer, event, setup.gizmoGroup);
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.pickElement, event, setup.gizmoGroup);
     expect(result).toBe(setup.handles[0]);
   });
 });
 
 /**
- * Builds a camera, renderer, handle, and gizmo group for pickHandle tests.
- * Places a large mesh at the origin so a center-screen ray intersects it.
+ * Builds a camera, pickElement: renderer.domElement as HTMLElement, handle, and
+ * gizmo group for pickHandle tests. Places a large mesh at the origin so a
+ * center-screen ray intersects it.
  *
  * @returns Fixtures for gizmo picking tests.
  */
 function createPickableGizmoSetup(): {
   handles: GizmoHandle[];
   camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
+  pickElement: HTMLElement;
   gizmoGroup: THREE.Group;
 } {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
@@ -175,7 +178,7 @@ function createPickableGizmoSetup(): {
   return {
     handles: [handle],
     camera,
-    renderer,
+    pickElement: renderer.domElement as HTMLElement,
     gizmoGroup,
   };
 }
@@ -189,7 +192,7 @@ function createPickableGizmoSetup(): {
 function createFarHandleBehindFacePickSetup(): {
   handles: GizmoHandle[];
   camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
+  pickElement: HTMLElement;
   gizmoGroup: THREE.Group;
 } {
   const facePick = new THREE.Mesh(
@@ -218,7 +221,7 @@ function createFarHandleBehindFacePickSetup(): {
   return {
     handles: [handle],
     camera,
-    renderer,
+    pickElement: renderer.domElement as HTMLElement,
     gizmoGroup,
   };
 }

@@ -1,5 +1,6 @@
 import { Theme } from '../theme.js';
 import { hexToRgb } from '../utils/color_utils.js';
+import { UiStackLayers } from './ui_stack_layers.js';
 
 /** A single item in a context menu. */
 export interface ContextMenuItem {
@@ -83,7 +84,7 @@ export class ContextMenu {
     el.className = 'editor-context-menu';
     el.style.position = 'fixed';
     el.style.display = 'none';
-    el.style.zIndex = '9999';
+    el.style.zIndex = String(UiStackLayers.contextMenu);
     el.style.background = hexToRgb(Theme.toolbarBackground);
     el.style.border = `1px solid ${hexToRgb(Theme.separatorColor)}`;
     el.style.borderRadius = '4px';

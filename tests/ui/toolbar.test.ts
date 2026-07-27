@@ -2,6 +2,16 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Toolbar } from '../../src/ui/toolbar.js';
 import { Theme } from '../../src/theme.js';
 
+/**
+ * Finds the open root dropdown mounted on document.body (menus leave the
+ * toolbar stacking context so they paint above floating tool windows).
+ *
+ * @returns Open menu element or null.
+ */
+function queryOpenRootMenu(): HTMLElement | null {
+  return document.body.querySelector('.editor-toolbar-dropdown-menu[style*="display: block"]');
+}
+
 describe('Toolbar', () => {
   let container: HTMLElement;
   let toolbar: Toolbar;
@@ -17,6 +27,7 @@ describe('Toolbar', () => {
     if (container.parentNode) {
       container.parentNode.removeChild(container);
     }
+    document.querySelectorAll('.editor-toolbar-dropdown-menu').forEach((node) => node.remove());
   });
 
   it('should create toolbar and append to container', () => {
@@ -147,19 +158,21 @@ describe('Toolbar', () => {
     ]);
     const header = container.querySelector('.editor-toolbar-menu-button') as HTMLButtonElement;
     header.click();
-    const menu = container.querySelector('.editor-toolbar-dropdown-menu') as HTMLElement;
-    expect(menu.querySelector('.editor-toolbar-dropdown-separator')).not.toBeNull();
-    expect(menu.textContent).toContain('Ctrl+S');
-    const importHost = menu.querySelector('.editor-toolbar-dropdown-submenu-host') as HTMLElement;
+    const menu = queryOpenRootMenu();
+    expect(menu).not.toBeNull();
+    expect(menu!.parentElement).toBe(document.body);
+    expect(menu!.querySelector('.editor-toolbar-dropdown-separator')).not.toBeNull();
+    expect(menu!.textContent).toContain('Ctrl+S');
+    const importHost = menu!.querySelector('.editor-toolbar-dropdown-submenu-host') as HTMLElement;
     importHost.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     const importParent = importHost.querySelector('button') as HTMLButtonElement;
     expect(importParent.style.background).not.toBe('transparent');
-    const submenu = menu.querySelector('.editor-toolbar-dropdown-submenu') as HTMLElement;
+    const submenu = menu!.querySelector('.editor-toolbar-dropdown-submenu') as HTMLElement;
     expect(submenu.style.display).toBe('block');
     const child = submenu.querySelector('button') as HTMLButtonElement;
     child.click();
     expect(importHandler).toHaveBeenCalledTimes(1);
-    expect(menu.style.display).toBe('none');
+    expect(menu!.style.display).toBe('none');
   });
 
   it('should keep submenu parent highlight when switching between flyouts', () => {
@@ -177,7 +190,9 @@ describe('Toolbar', () => {
     ]);
     const header = container.querySelector('.editor-toolbar-menu-button') as HTMLButtonElement;
     header.click();
-    const hosts = container.querySelectorAll('.editor-toolbar-dropdown-submenu-host');
+    const menu = queryOpenRootMenu();
+    expect(menu).not.toBeNull();
+    const hosts = menu!.querySelectorAll('.editor-toolbar-dropdown-submenu-host');
     const importHost = hosts[0] as HTMLElement;
     const exportHost = hosts[1] as HTMLElement;
     const importButton = importHost.querySelector('button') as HTMLButtonElement;
@@ -196,16 +211,17 @@ describe('Toolbar', () => {
     toolbar.addDropdown('File', [{ label: 'Save', onClick: () => {} }]);
     toolbar.addDropdown('Edit', [{ label: 'Delete', onClick: () => {} }]);
     const headers = container.querySelectorAll('.editor-toolbar-menu-button');
-    const menus = container.querySelectorAll('.editor-toolbar-dropdown-menu');
 
     (headers[0] as HTMLButtonElement).click();
-    expect((menus[0] as HTMLElement).style.display).toBe('block');
-    expect((menus[1] as HTMLElement).style.display).toBe('none');
+    const firstOpen = queryOpenRootMenu();
+    expect(firstOpen).not.toBeNull();
+    expect(firstOpen!.textContent).toContain('Save');
     expect(headers[0]!.getAttribute('aria-expanded')).toBe('true');
 
     headers[1]!.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    expect((menus[0] as HTMLElement).style.display).toBe('none');
-    expect((menus[1] as HTMLElement).style.display).toBe('block');
+    const secondOpen = queryOpenRootMenu();
+    expect(secondOpen).not.toBeNull();
+    expect(secondOpen!.textContent).toContain('Delete');
     expect(headers[0]!.getAttribute('aria-expanded')).toBe('false');
     expect(headers[1]!.getAttribute('aria-expanded')).toBe('true');
   });
@@ -232,15 +248,20 @@ describe('Toolbar', () => {
     ]);
     const header = container.querySelector('button') as HTMLButtonElement;
     header.click();
-    const menuItem = container.querySelectorAll('button')[1] as HTMLButtonElement;
+    const menu = queryOpenRootMenu();
+    expect(menu).not.toBeNull();
+    const menuItem = menu!.querySelector('button') as HTMLButtonElement;
     expect(menuItem.disabled).toBe(true);
     menuItem.click();
     expect(clickHandler).not.toHaveBeenCalled();
     enabled = true;
     header.click();
     header.click();
-    expect(menuItem.disabled).toBe(false);
-    menuItem.click();
+    const reopened = queryOpenRootMenu();
+    expect(reopened).not.toBeNull();
+    const enabledItem = reopened!.querySelector('button') as HTMLButtonElement;
+    expect(enabledItem.disabled).toBe(false);
+    enabledItem.click();
     expect(clickHandler).toHaveBeenCalledTimes(1);
   });
 

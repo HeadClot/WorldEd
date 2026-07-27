@@ -35,17 +35,18 @@ export class CadRulerLabelLayer {
   }
 
   /**
-   * Projects label specs into screen space and shows only on-screen chips.
+   * Projects label specs into screen space and shows only on-screen chips. Uses
+   * the host pane box (not the shared full-workspace canvas) so NDC from the
+   * pane camera maps onto this overlay.
    *
    * @param labels World-space label specifications.
    * @param camera Viewport camera used for projection.
-   * @param renderer Viewport renderer providing canvas metrics.
    */
-  update(labels: CadLabelSpec[], camera: THREE.Camera, renderer: THREE.WebGLRenderer): void {
+  update(labels: CadLabelSpec[], camera: THREE.Camera): void {
     if (this.isDisposed) return;
     this.ensureChipCount(labels.length);
-    const width = renderer.domElement.clientWidth;
-    const height = renderer.domElement.clientHeight;
+    const width = Math.max(1, this.host.clientWidth || 1);
+    const height = Math.max(1, this.host.clientHeight || 1);
     for (let index = 0; index < this.chips.length; index += 1) {
       const chip = this.chips[index]!;
       if (index >= labels.length) {
@@ -135,8 +136,8 @@ export class CadRulerLabelLayer {
    * @param chip Chip to update.
    * @param label Label specification.
    * @param camera Projection camera.
-   * @param width Canvas CSS width.
-   * @param height Canvas CSS height.
+   * @param width Pane host CSS width.
+   * @param height Pane host CSS height.
    */
   private placeChip(
     chip: CadLabelChip,

@@ -2,8 +2,7 @@ import * as THREE from 'three';
 import { GridSnap } from '../../transform/snap/grid_snap.js';
 import { SnapManager } from '../../transform/snap/snap_manager.js';
 import { updateGridDivisions } from '../../viewports/grid/grid_updater.js';
-import { Viewport3D } from '../../viewports/viewport_3d.js';
-import { Viewport2D } from '../../viewports/viewport_2d.js';
+import type { EditorViewport } from '../../viewports/editor_viewport.js';
 import { Toolbar } from '../../ui/toolbar.js';
 import { StatusBar } from '../../ui/status_bar.js';
 import { KeyboardShortcutHandler } from '../input/keyboard_shortcut_handler.js';
@@ -19,10 +18,7 @@ export interface SnapSettingsControllerDependencies {
   statusBar: StatusBar | null;
   keyboardShortcutHandler: KeyboardShortcutHandler;
   worldObject: THREE.Group;
-  viewport2DTop: Viewport2D;
-  viewport2DFront: Viewport2D;
-  viewport2DSide: Viewport2D;
-  viewport3D: Viewport3D;
+  getViewports: () => readonly EditorViewport[];
   getUserSnapEnabled: () => boolean;
   setUserSnapEnabled: (enabled: boolean) => void;
   /** Optional hook when the snap interval changes. */
@@ -150,15 +146,14 @@ export class SnapSettingsController {
   }
 
   /**
-   * Updates the grid division count in all four viewports.
+   * Updates the grid division count in every live viewport.
    *
    * @param interval The new snap interval value.
    */
   private updateAllViewportGrids(interval: number): void {
-    updateGridDivisions(this.deps.viewport2DTop.getGrid(), interval);
-    updateGridDivisions(this.deps.viewport2DFront.getGrid(), interval);
-    updateGridDivisions(this.deps.viewport2DSide.getGrid(), interval);
-    updateGridDivisions(this.deps.viewport3D.getGrid(), interval);
+    this.deps.getViewports().forEach((viewport) => {
+      updateGridDivisions(viewport.getGrid(), interval);
+    });
   }
 
   /** Binds keyboard shortcuts for snap interval cycling. */

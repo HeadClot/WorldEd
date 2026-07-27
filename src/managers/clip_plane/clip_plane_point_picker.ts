@@ -28,21 +28,21 @@ export class ClipPlanePointPicker {
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement Viewport pickElement.
    * @param meshes Candidate meshes for surface hits.
    * @returns Snapped world point, or null when nothing was hit.
    */
   pickPoint(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     meshes: THREE.Mesh[],
   ): THREE.Vector3 | null {
-    const surfaceHit = this.faceRaycaster.pickFace(event, camera, renderer, meshes);
+    const surfaceHit = this.faceRaycaster.pickFace(event, camera, pickElement, meshes);
     if (surfaceHit) {
       return this.snapPoint(surfaceHit.hitPoint);
     }
-    const groundHit = this.pickGroundPlane(event, camera, renderer);
+    const groundHit = this.pickGroundPlane(event, camera, pickElement);
     if (!groundHit) return null;
     return this.snapPoint(groundHit);
   }
@@ -52,16 +52,12 @@ export class ClipPlanePointPicker {
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement Viewport pickElement.
    * @returns Hit point or null.
    */
-  private pickGroundPlane(
-    event: MouseEvent,
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
-  ): THREE.Vector3 | null {
+  private pickGroundPlane(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
-    pointerEventToNdc(event, renderer.domElement, this.ndc);
+    pointerEventToNdc(event, pickElement, this.ndc);
     this.raycaster.setFromCamera(this.ndc, camera);
     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const hit = new THREE.Vector3();

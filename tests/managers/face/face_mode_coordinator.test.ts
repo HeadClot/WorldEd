@@ -50,10 +50,8 @@ describe('FaceModeCoordinator', () => {
     selectionManager.selectObject(mesh);
     const viewport = new MockViewport();
     coordinator = new FaceModeCoordinator({
-      viewport3D: viewport as never,
-      viewport2DTop: viewport as never,
-      viewport2DFront: viewport as never,
-      viewport2DSide: viewport as never,
+      getViewports: () => [viewport as never],
+      getPrimaryScene: () => viewport.getScene(),
       commandStack: new CommandStack(16),
       gridSnap: new GridSnap(false, 1),
       worldObject,

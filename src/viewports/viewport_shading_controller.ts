@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ShadingMode } from '../types/shading_mode.js';
-import { ShadingModeManager } from './shading_mode_manager.js';
 import { WireframeOverlayRenderer } from './wireframe_overlay_renderer.js';
+import { applySharedShadingPass, invalidateSharedShadingPass } from './shared_shading_pass.js';
 
 /** Base interface for viewports that support shading mode control. */
 export interface ShadableViewport {
@@ -9,12 +9,12 @@ export interface ShadableViewport {
 }
 
 /**
- * Controls shading mode for a single viewport. Coordinates between
- * ShadingModeManager and WireframeOverlayRenderer to apply the correct visual
- * style.
+ * Controls per-viewport shading mode preference and wireframe overlays.
+ * Material swaps on the shared scene go through {@link applySharedShadingPass}
+ * so multi-view panes do not thrash materials every frame.
  */
 export class ViewportShadingController {
-  private shadingModeManager: ShadingModeManager;
+  private readonly scene: THREE.Scene;
   private wireframeOverlayRenderer: WireframeOverlayRenderer;
   private currentMode: ShadingMode;
 
@@ -24,11 +24,9 @@ export class ViewportShadingController {
    * @param viewport The viewport whose scene will be managed.
    */
   constructor(viewport: ShadableViewport) {
-    const scene = viewport.getScene();
-    this.shadingModeManager = new ShadingModeManager(scene);
-    this.wireframeOverlayRenderer = new WireframeOverlayRenderer(scene);
+    this.scene = viewport.getScene();
+    this.wireframeOverlayRenderer = new WireframeOverlayRenderer(this.scene);
     this.currentMode = ShadingMode.SOLID;
-    this.shadingModeManager.snapshotMaterials();
   }
 
   /**
@@ -46,8 +44,16 @@ export class ViewportShadingController {
    * meshes are cloned or replaced so materials stay consistent.
    */
   refreshShadingMode(): void {
-    this.shadingModeManager.snapshotMaterials();
-    this.shadingModeManager.setMode(this.currentMode);
+    applySharedShadingPass(this.scene, this.currentMode, true);
+    this.updateOverlayVisibility(this.currentMode);
+  }
+
+  /**
+   * Applies this viewport's shading for one multi-view pass. No-ops when the
+   * shared scene already uses this mode (avoids full-editor material thrash).
+   */
+  applyForRenderPass(): void {
+    applySharedShadingPass(this.scene, this.currentMode, false);
     this.updateOverlayVisibility(this.currentMode);
   }
 
@@ -81,6 +87,7 @@ export class ViewportShadingController {
    */
   updateMeshes(meshes: THREE.Mesh[]): void {
     this.wireframeOverlayRenderer.setMeshes(meshes);
+    invalidateSharedShadingPass();
     this.refreshShadingMode();
   }
 
@@ -89,9 +96,8 @@ export class ViewportShadingController {
     this.wireframeOverlayRenderer.syncTransforms();
   }
 
-  /** Cleans up all resources held by this controller. */
+  /** Cleans up overlay resources held by this controller. */
   dispose(): void {
-    this.shadingModeManager.dispose();
     this.wireframeOverlayRenderer.dispose();
   }
 }

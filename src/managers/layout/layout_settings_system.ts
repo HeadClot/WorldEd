@@ -25,6 +25,7 @@ export interface LayoutSettingsCreateDeps {
   viewportPaneLayout: ViewportPaneLayout;
   toolbar: Toolbar;
   resizeAll: () => void;
+  onVisibleSlots?: (slots: readonly string[]) => void;
 }
 
 /**
@@ -42,13 +43,19 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
     deps.viewportPaneLayout,
     deps.resizeAll,
     settingsStore.getViewSettings().viewportPaneCount,
+    deps.onVisibleSlots,
   );
   deps.viewport3D.setFlyingCameraMoveSpeed(settingsStore.getMouseSettings().moveSpeed);
   applyLayoutTextureFilterSettings(deps.viewport3D, settingsStore.getViewSettings());
   const settingsUnsubscribe = settingsStore.subscribe((snapshot) => {
     settingsApplicator.applySnapshot(snapshot);
     deps.toolbar.setButtonLabelsEnabled(snapshot.view.toolbarButtonLabels);
-    applyLayoutViewportPaneCount(deps.viewportPaneLayout, deps.resizeAll, snapshot.view.viewportPaneCount);
+    applyLayoutViewportPaneCount(
+      deps.viewportPaneLayout,
+      deps.resizeAll,
+      snapshot.view.viewportPaneCount,
+      deps.onVisibleSlots,
+    );
     deps.viewport3D.setFlyingCameraMoveSpeed(snapshot.mouse.moveSpeed);
     applyLayoutTextureFilterSettings(deps.viewport3D, snapshot.view);
   });
@@ -74,13 +81,17 @@ export function applyLayoutTextureFilterSettings(viewport3D: Viewport3D, view: V
  * @param viewportPaneLayout Pane layout controller.
  * @param resizeAll Resize callback after layout settles.
  * @param paneCount Number of viewport panes to display.
+ * @param onVisibleSlots Optional callback with visible slot names for
+ *   active-set sync.
  */
 export function applyLayoutViewportPaneCount(
   viewportPaneLayout: ViewportPaneLayout,
   resizeAll: () => void,
   paneCount: 1 | 2 | 3 | 4,
+  onVisibleSlots?: (slots: readonly string[]) => void,
 ): void {
   viewportPaneLayout.apply(paneCount);
+  onVisibleSlots?.(viewportPaneLayout.getVisibleSlots());
   requestAnimationFrame(() => resizeAll());
 }
 

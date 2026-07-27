@@ -19,7 +19,7 @@ describe('SceneRaycaster click-through', () => {
     const outer = createMeshAt(4, 4, 1, 0, 0, -1);
     const inner = createMeshAt(1, 1, 1, 0, 0, -1);
     const event = createMockMouseEvent(400, 300);
-    const hits = raycaster.castAll(camera, renderer, event, [outer, inner]);
+    const hits = raycaster.castAll(camera, renderer.domElement, event, [outer, inner]);
     expect(hits.length).toBeGreaterThanOrEqual(2);
     expect(hits[0]).toBe(outer);
     expect(hits).toContain(inner);
@@ -32,7 +32,7 @@ describe('SceneRaycaster click-through', () => {
     const outer = createMeshAt(4, 4, 1, 0, 0, -1);
     const inner = createMeshAt(1, 1, 1, 0, 0, -1);
     const event = createMockMouseEvent(400, 300);
-    const intersections = raycaster.castIntersections(camera, renderer, event, [outer, inner]);
+    const intersections = raycaster.castIntersections(camera, renderer.domElement, event, [outer, inner]);
     const stack = SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) => mesh);
     const selectionManager = new SelectionManager();
     const first = SelectionClickThrough.pickFromStack(stack, selectionManager);

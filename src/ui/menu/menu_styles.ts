@@ -1,16 +1,19 @@
 import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
+import { getMenuPanelZIndex } from '../ui_stack_layers.js';
 
 /**
- * Applies layout styles to a dropdown or submenu panel.
+ * Applies layout styles to a dropdown or submenu panel. Root menus are
+ * re-parented to document.body on open (fixed) so they escape the toolbar
+ * stacking context and paint above floating tool windows.
  *
  * @param menu Menu panel element.
  * @param isSubmenu Whether the panel is a nested flyout (not the root drop).
  */
 export function styleMenuPanel(menu: HTMLElement, isSubmenu: boolean): void {
   menu.style.display = 'none';
-  menu.style.position = 'absolute';
-  menu.style.zIndex = isSubmenu ? '1001' : '1000';
+  menu.style.position = isSubmenu ? 'absolute' : 'fixed';
+  menu.style.zIndex = String(getMenuPanelZIndex(isSubmenu));
   menu.style.minWidth = '196px';
   menu.style.background = hexToRgb(Theme.toolbarBackground);
   menu.style.border = '1px solid rgba(255,255,255,0.1)';
@@ -24,7 +27,7 @@ export function styleMenuPanel(menu: HTMLElement, isSubmenu: boolean): void {
     menu.style.left = 'calc(100% - 4px)';
     menu.style.marginLeft = '0';
   } else {
-    menu.style.top = 'calc(100% + 4px)';
+    menu.style.top = '0';
     menu.style.left = '0';
   }
 }

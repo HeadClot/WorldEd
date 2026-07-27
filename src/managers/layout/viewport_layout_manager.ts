@@ -104,16 +104,35 @@ import {
   type SceneMutationVisualHost,
   type SceneTransformCommitVisualHost,
 } from './scene_visual_refresh.js';
+import { ViewportRegistry } from './viewport_registry.js';
+import type { EditorViewport } from '../../viewports/editor_viewport.js';
+import {
+  getCadViewPlaneForKind,
+  getGizmoPlaneForKind,
+  isPerspectiveViewport,
+} from '../../viewports/editor_viewport.js';
+import { ViewportKind, getViewportKindDisplayLabel } from '../../viewports/viewport_kind.js';
+import type { ViewportPane } from './viewport_pane.js';
+import { SharedWebGLSurface } from '../../viewports/shared_webgl_surface.js';
+import { SharedWorldScene } from '../../viewports/shared_world_scene.js';
+import { MultiViewComposer } from '../../viewports/multi_view_composer.js';
+import { DetachedViewportWindow } from '../../viewports/detached_viewport_window.js';
 
 /**
- * Root composition manager for the four-viewport editor layout. Builds UI
- * shell, viewports, and wires specialized coordinators.
+ * Root composition manager for the editor viewport layout. Builds UI shell,
+ * dynamic viewports, and wires specialized coordinators.
  */
 export class ViewportLayoutManager {
   private container: HTMLElement;
   private viewports!: HTMLElement[];
   private viewportArea!: HTMLElement;
   private viewportPaneLayout!: ViewportPaneLayout;
+  private viewportRegistry!: ViewportRegistry;
+  private sharedSurface!: SharedWebGLSurface;
+  private sharedWorldScene!: SharedWorldScene;
+  private multiViewComposer!: MultiViewComposer;
+  private detachedViewportWindow: DetachedViewportWindow;
+  private sceneBootstrap!: ViewportSceneBootstrap;
   private viewport3D!: Viewport3D;
   private viewport2DTop!: Viewport2D;
   private viewport2DFront!: Viewport2D;
@@ -182,6 +201,14 @@ export class ViewportLayoutManager {
     this.container = editorContainer;
     this.isDisposed = false;
     this.renderLoop = new LayoutRenderLoop();
+    this.detachedViewportWindow = new DetachedViewportWindow({
+      hooks: {
+        onViewportReady: (viewport) => this.wireDetachedViewport(viewport),
+        onViewportDisposed: (viewport) => this.onDetachedViewportDisposed(viewport),
+        onPopupWindowReady: (popup) => this.keyboardShortcutHandler?.registerOnWindow(popup),
+        onPopupWindowClosed: (popup) => this.keyboardShortcutHandler?.unregisterFromWindow(popup),
+      },
+    });
     this.initializeCoreSystems();
     this.buildShellAndViewports();
     this.wireHandlersAndCoordinators();
@@ -229,7 +256,7 @@ export class ViewportLayoutManager {
     this.toolbarContainer = shell.toolbarContainer;
     this.viewportArea = shell.viewportArea;
     this.viewports = shell.viewports;
-    this.viewportPaneLayout = new ViewportPaneLayout(this.viewportArea, this.viewports);
+    this.viewportPaneLayout = new ViewportPaneLayout(shell.viewportPaneGrid, this.viewports);
     this.toolbar = shell.toolbar;
     this.outlinerPanel = shell.outlinerPanel;
     this.propertiesPanel = shell.propertiesPanel;
@@ -241,54 +268,183 @@ export class ViewportLayoutManager {
 
   /** Creates viewports, sync manager, and shared scene objects. */
   private assignViewportsFromBootstrap(): void {
-    const bootstrap = new ViewportSceneBootstrap();
-    const viewports = bootstrap.createViewports(this.viewports, this.inputManager);
-    this.viewport2DTop = viewports.viewport2DTop;
-    this.viewport2DFront = viewports.viewport2DFront;
-    this.viewport2DSide = viewports.viewport2DSide;
-    this.viewport3D = viewports.viewport3D;
+    this.sharedWorldScene = new SharedWorldScene();
+    this.sharedSurface = new SharedWebGLSurface(this.viewportArea);
+    this.multiViewComposer = new MultiViewComposer(this.sharedSurface);
+    this.sceneBootstrap = new ViewportSceneBootstrap();
+    const bootstrapped = this.sceneBootstrap.createViewports(
+      this.viewports,
+      this.inputManager,
+      this.sharedWorldScene,
+      this.sharedSurface,
+    );
+    this.viewportRegistry = bootstrapped.registry;
+    this.refreshNamedViewportFields();
     this.viewportSyncManager = new ViewportSyncManager(
       this.viewport2DTop,
       this.viewport2DFront,
       this.viewport2DSide,
       this.viewport3D,
     );
-    bootstrap.addSharedObjects(this.worldObject, viewports, this.viewportSyncManager, this.transformGizmo);
+    this.sceneBootstrap.addSharedObjects(
+      this.worldObject,
+      bootstrapped,
+      this.sharedWorldScene,
+      this.viewportSyncManager,
+      this.transformGizmo,
+    );
     this.attachCadRulers();
+    this.bindDetachedViewportRenderSource();
   }
 
-  /** Attaches CAD ruler overlays to every viewport scene and container. */
+  /**
+   * Points detached multi-monitor windows at the shared scene, world root, and
+   * optional seed camera so each popup can allocate its own interactive
+   * renderer.
+   */
+  private bindDetachedViewportRenderSource(): void {
+    this.detachedViewportWindow.setRenderSource({
+      getScene: () => this.sharedWorldScene.getScene(),
+      getSeedCamera: () => this.getPrimaryPerspectiveViewport()?.getCamera() ?? null,
+      getWorldObject: () => this.worldObject,
+    });
+  }
+
+  /**
+   * Wires selection, gizmo, transform, clip, face, and fit hooks on a detached
+   * pane so it behaves like an in-window viewport.
+   *
+   * @param viewport Newly created or kind-switched detached viewport.
+   */
+  private wireDetachedViewport(viewport: EditorViewport): void {
+    const plane = getGizmoPlaneForKind(viewport.getViewportKind());
+    viewport.setWorldGroup(this.worldObject);
+    viewport.setMeshResolveCallback((mesh) => this.viewportSyncManager.resolveToWorldMesh(mesh));
+    viewport.setGizmoGroup(this.transformGizmo.getHandleGroupClone(plane));
+    this.selectionVisualController?.wireViewports([viewport]);
+    this.transformInteractionBridge?.wireViewports([viewport]);
+    this.wireClipCallbackOnViewport(viewport);
+    this.faceModeCoordinator?.rebindViewportFaceCallbacks();
+    this.wireDetachedViewportToolbar(viewport);
+    this.shadingModeCoordinator?.updateShadingMeshes();
+    this.selectionVisualController?.refreshFromSelection();
+    this.updateGizmoVisibility();
+  }
+
+  /**
+   * Wires Fit and type-menu chrome that depends on main layout coordinators.
+   *
+   * @param viewport Detached editor viewport.
+   */
+  private wireDetachedViewportToolbar(viewport: EditorViewport): void {
+    const toolbar = viewport.getViewportToolbar();
+    toolbar.setOnFit(() => {
+      this.cameraFitCoordinator?.fitSpecificViewport(viewport);
+    });
+    toolbar.setOnShadingMode((mode) => {
+      viewport.setShadingMode(mode);
+      toolbar.setActiveShadingMode(mode);
+    });
+  }
+
+  /**
+   * Handles teardown notification for a disposed detached viewport instance.
+   *
+   * @param _viewport Viewport that is no longer live.
+   */
+  private onDetachedViewportDisposed(_viewport: EditorViewport): void {
+    this.faceModeCoordinator?.rebindViewportFaceCallbacks();
+  }
+
+  /**
+   * Returns main-window viewports plus any open detached panes for tools that
+   * must reach every interactive surface (selection, face mode, transforms).
+   *
+   * @returns Combined live viewport list.
+   */
+  private getAllInteractiveViewports(): EditorViewport[] {
+    return [...this.getAllLiveViewports(), ...this.detachedViewportWindow.getViewports()];
+  }
+
+  /**
+   * Refreshes legacy named viewport fields from the registry for tests and
+   * systems that still expect the default quad kinds when present. Falls back
+   * to any live instances so disposed references are never retained.
+   */
+  private refreshNamedViewportFields(): void {
+    const all = this.viewportRegistry.getAllViewports();
+    const top = all.find((viewport) => viewport.getViewportKind() === ViewportKind.TOP);
+    const front = all.find((viewport) => viewport.getViewportKind() === ViewportKind.FRONT);
+    const side = all.find((viewport) => viewport.getViewportKind() === ViewportKind.SIDE);
+    const perspective = all.find((viewport) => isPerspectiveViewport(viewport));
+    const first2d = all.find((viewport) => viewport instanceof Viewport2D);
+    const first3d = all.find((viewport) => viewport instanceof Viewport3D);
+    this.viewport2DTop = (top instanceof Viewport2D ? top : first2d) as Viewport2D;
+    this.viewport2DFront = (front instanceof Viewport2D ? front : first2d) as Viewport2D;
+    this.viewport2DSide = (side instanceof Viewport2D ? side : first2d) as Viewport2D;
+    this.viewport3D = (
+      perspective instanceof Viewport3D ? perspective : first3d instanceof Viewport3D ? first3d : (all[0] as Viewport3D)
+    ) as Viewport3D;
+  }
+
+  /**
+   * Returns a preferred perspective viewport, or any live viewport camera host.
+   *
+   * @returns Primary Viewport3D when available.
+   */
+  private getPrimaryPerspectiveViewport(): Viewport3D | null {
+    const found = this.getAllLiveViewports().find((viewport) => isPerspectiveViewport(viewport));
+    return found ?? null;
+  }
+
+  /**
+   * Returns live viewports currently considered active for render and input.
+   *
+   * @returns Active editor viewports.
+   */
+  private getActiveViewports(): EditorViewport[] {
+    return this.viewportRegistry.getActiveViewports();
+  }
+
+  /**
+   * Returns every live viewport instance regardless of active flag.
+   *
+   * @returns All viewport instances.
+   */
+  private getAllLiveViewports(): EditorViewport[] {
+    return this.viewportRegistry.getAllViewports();
+  }
+
+  /**
+   * Returns a primary scene for tools that need a single scene root.
+   *
+   * @returns Host scene when available, otherwise the first live scene.
+   */
+  private getPrimaryScene(): THREE.Scene {
+    return this.sharedWorldScene.getScene();
+  }
+
+  /**
+   * Attaches CAD ruler overlays to every live viewport using the shared
+   * surface.
+   */
   private attachCadRulers(): void {
-    this.cadRulerSystem.attachViewports([
-      {
-        scene: this.viewport2DTop.getScene(),
-        camera: this.viewport2DTop.getCamera(),
-        renderer: this.viewport2DTop.getRenderer(),
-        container: this.viewports[0]!,
-        viewPlane: 'xz',
-      },
-      {
-        scene: this.viewport2DFront.getScene(),
-        camera: this.viewport2DFront.getCamera(),
-        renderer: this.viewport2DFront.getRenderer(),
-        container: this.viewports[1]!,
-        viewPlane: 'xy',
-      },
-      {
-        scene: this.viewport2DSide.getScene(),
-        camera: this.viewport2DSide.getCamera(),
-        renderer: this.viewport2DSide.getRenderer(),
-        container: this.viewports[2]!,
-        viewPlane: 'yz',
-      },
-      {
-        scene: this.viewport3D.getScene(),
-        camera: this.viewport3D.getCamera(),
-        renderer: this.viewport3D.getRenderer(),
-        container: this.viewports[3]!,
-        viewPlane: 'xyz',
-      },
-    ]);
+    const renderer = this.sharedSurface.getRenderer();
+    const scene = this.sharedWorldScene.getScene();
+    const bindings = this.viewportRegistry.getPanes().map((pane) => {
+      const viewport = pane.getViewport();
+      if (!viewport) {
+        throw new Error(`Pane ${pane.getId()} has no viewport for CAD rulers`);
+      }
+      return {
+        scene,
+        camera: viewport.getCamera(),
+        renderer,
+        container: viewport.getContentElement(),
+        viewPlane: getCadViewPlaneForKind(pane.getKind()),
+      };
+    });
+    this.cadRulerSystem.attachViewports(bindings);
   }
 
   /** Wires specialized handlers after viewports and shell exist. */
@@ -335,7 +491,7 @@ export class ViewportLayoutManager {
       const viewport = coordinator.getOrderedViewports()[coordinator.getActiveViewportIndex()];
       if (viewport) return viewport.getCamera();
     }
-    return this.viewport3D.getCamera();
+    return this.getActiveViewports()[0]?.getCamera() ?? this.viewport3D.getCamera();
   }
 
   /** Creates object, CSG, and alignment action handlers. */
@@ -365,39 +521,175 @@ export class ViewportLayoutManager {
       selectionManager: this.selectionManager,
       statusBar: this.statusBar,
       keyboardShortcutHandler: this.keyboardShortcutHandler,
-      viewport2DTop: this.viewport2DTop,
-      viewport2DFront: this.viewport2DFront,
-      viewport2DSide: this.viewport2DSide,
-      viewport3D: this.viewport3D,
-      viewports: this.viewports,
+      getViewports: () => this.getAllLiveViewports(),
+      getViewportElements: () => this.viewportRegistry.getContainers(),
       selectionVisualController: this.selectionVisualController,
     });
     this.cameraFitCoordinator = setup.cameraFitCoordinator;
     this.shadingModeCoordinator = setup.shadingModeCoordinator;
     this.setupViewportMaximizeControls();
+    this.setupViewportTypeMenus();
   }
 
   /** Wires maximize/restore actions on all viewport overlay toolbars. */
   private setupViewportMaximizeControls(): void {
-    const viewports = this.shadingModeCoordinator.getOrderedViewports();
-    viewports.forEach((viewport, index) => {
+    this.viewportRegistry.getPanes().forEach((pane, index) => {
+      const viewport = pane.getViewport();
+      if (!viewport) return;
       viewport.getViewportToolbar().setOnToggleMaximize(() => {
-        const maximizedIndex = this.viewportPaneLayout.toggleMaximized(index);
-        viewports.forEach((candidate, candidateIndex) => {
-          candidate.getViewportToolbar().setMaximized(candidateIndex === maximizedIndex);
-        });
-        this.resizeAll();
+        this.toggleMaximizeForPane(index);
       });
+    });
+  }
+
+  /**
+   * Syncs registry active flags from classic grid slot names (top/front/side/
+   * perspective).
+   *
+   * @param slots Visible slot names from the pane layout.
+   */
+  private syncActivePanesFromSlots(slots: readonly string[]): void {
+    const slotToIndex: Record<string, number> = {
+      top: 0,
+      front: 1,
+      side: 2,
+      perspective: 3,
+    };
+    const activeIds = slots
+      .map((slot) => this.viewportRegistry.getPaneByIndex(slotToIndex[slot] ?? -1)?.getId())
+      .filter((id): id is string => typeof id === 'string');
+    if (activeIds.length > 0) {
+      this.viewportRegistry.setActivePaneIds(activeIds);
+    }
+  }
+
+  /**
+   * Maximizes a pane by deactivating others (no render), or restores the
+   * layout.
+   *
+   * @param paneIndex Pane index in registry order.
+   */
+  private toggleMaximizeForPane(paneIndex: number): void {
+    const maximizedIndex = this.viewportPaneLayout.toggleMaximized(paneIndex);
+    if (maximizedIndex === null) {
+      this.viewportRegistry.activateAllPanes();
+      this.viewportRegistry.getAllViewports().forEach((viewport) => {
+        viewport.getViewportToolbar().setMaximized(false);
+      });
+    } else {
+      const maximizedPane = this.viewportRegistry.getPaneByIndex(maximizedIndex);
+      if (maximizedPane) {
+        this.viewportRegistry.setActivePaneIds([maximizedPane.getId()]);
+      }
+      this.viewportRegistry.getPanes().forEach((pane, candidateIndex) => {
+        pane
+          .getViewport()
+          ?.getViewportToolbar()
+          .setMaximized(candidateIndex === maximizedIndex);
+      });
+    }
+    this.resizeAll();
+  }
+
+  /** Wires the viewport kind dropdown on every live toolbar. */
+  private setupViewportTypeMenus(): void {
+    this.viewportRegistry.getPanes().forEach((pane) => {
+      const viewport = pane.getViewport();
+      if (!viewport) return;
+      const toolbar = viewport.getViewportToolbar();
+      toolbar.setViewportKind(pane.getKind());
+      toolbar.setOnViewportKindChange((kind) => this.onViewportKindChange(pane.getId(), kind));
+    });
+  }
+
+  /**
+   * Replaces only the target pane's viewport instance and wires that pane.
+   * Other panes keep their cameras, grids, and DOM so the whole editor does not
+   * flicker on type changes.
+   *
+   * @param paneId Target pane id.
+   * @param kind Desired viewport kind.
+   */
+  private onViewportKindChange(paneId: string, kind: ViewportKind): void {
+    const pane = this.viewportRegistry.getPaneById(paneId);
+    if (!pane || pane.getKind() === kind) return;
+    const created = this.viewportRegistry.replaceKind(paneId, kind);
+    if (!created) return;
+    this.wireReplacedPane(pane, created);
+    this.refreshNamedViewportFields();
+    this.attachCadRulers();
+    this.shadingModeCoordinator?.rebindViewportUi();
+    this.faceModeCoordinator?.rebindViewportFaceCallbacks();
+    this.resizeReplacedPane(created);
+    this.showStatusMessage(`Viewport set to ${getViewportKindDisplayLabel(kind)}`);
+  }
+
+  /**
+   * Wires world, gizmo, selection, and toolbar hooks for one replaced pane.
+   *
+   * @param pane Pane descriptor that owns the container.
+   * @param viewport Newly created viewport instance.
+   */
+  private wireReplacedPane(pane: ViewportPane, viewport: EditorViewport): void {
+    const plane = getGizmoPlaneForKind(viewport.getViewportKind());
+    viewport.setWorldGroup(this.worldObject);
+    viewport.setMeshResolveCallback((mesh) => this.viewportSyncManager.resolveToWorldMesh(mesh));
+    viewport.setGizmoGroup(this.transformGizmo.getHandleGroupClone(plane));
+    this.viewportSyncManager.setViewportRoles(null, this.viewportRegistry.getAllViewports());
+    this.viewportSyncManager.syncWorldObjectToViewports(this.worldObject);
+    this.selectionVisualController?.wireViewports([viewport]);
+    this.transformInteractionBridge?.wireViewports([viewport]);
+    this.wireToolbarForPane(pane, viewport);
+    this.wireClipCallbackOnViewport(viewport);
+    this.shadingModeCoordinator?.updateShadingMeshes();
+  }
+
+  /**
+   * Wires maximize and type-menu actions for one pane toolbar.
+   *
+   * @param pane Pane descriptor.
+   * @param viewport Live viewport in that pane.
+   */
+  private wireToolbarForPane(pane: ViewportPane, viewport: EditorViewport): void {
+    const paneIndex = this.viewportRegistry.getPanes().findIndex((candidate) => candidate.getId() === pane.getId());
+    const toolbar = viewport.getViewportToolbar();
+    toolbar.setViewportKind(pane.getKind());
+    toolbar.setOnViewportKindChange((kind) => this.onViewportKindChange(pane.getId(), kind));
+    if (paneIndex >= 0) {
+      toolbar.setOnToggleMaximize(() => this.toggleMaximizeForPane(paneIndex));
+    }
+  }
+
+  /**
+   * Resizes only the replaced pane's camera from its content element size.
+   *
+   * @param viewport Newly created viewport.
+   */
+  private resizeReplacedPane(viewport: EditorViewport): void {
+    const rect = viewport.getContentElement().getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      viewport.resize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
+    }
+  }
+
+  /**
+   * Binds the clip-plane pointer callback on one viewport when the tool exists.
+   *
+   * @param viewport Viewport to wire.
+   */
+  private wireClipCallbackOnViewport(viewport: EditorViewport): void {
+    const clipPlaneHandler = this.clipPlaneHandler;
+    if (!clipPlaneHandler) return;
+    viewport.setClipPlaneCallback((event) => {
+      return clipPlaneHandler.onPointerDown(event, viewport.getCamera(), viewport.getContentElement());
     });
   }
 
   /** Creates the face selection/extrusion coordinator. */
   private setupFaceModeCoordinator(): void {
     this.faceModeCoordinator = createFaceModeCoordinator({
-      viewport3D: this.viewport3D,
-      viewport2DTop: this.viewport2DTop,
-      viewport2DFront: this.viewport2DFront,
-      viewport2DSide: this.viewport2DSide,
+      getViewports: () => this.getAllInteractiveViewports(),
+      getPrimaryScene: () => this.getPrimaryScene(),
       commandStack: this.commandStack,
       gridSnap: this.gridSnap,
       worldObject: this.worldObject,
@@ -426,11 +718,8 @@ export class ViewportLayoutManager {
       clipPlaneTool: this.clipPlaneTool,
       faceModeCoordinator: this.faceModeCoordinator,
       toolbarContainer: this.toolbarContainer,
-      anchorViewport: this.viewports[3]!,
-      viewport3D: this.viewport3D,
-      viewport2DTop: this.viewport2DTop,
-      viewport2DFront: this.viewport2DFront,
-      viewport2DSide: this.viewport2DSide,
+      anchorViewport: this.viewports[3] ?? this.viewports[0]!,
+      getViewports: () => this.getAllLiveViewports(),
       keyboardShortcutHandler: this.keyboardShortcutHandler,
       showStatusMessage: (message) => this.showStatusMessage(message),
       syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
@@ -527,6 +816,21 @@ export class ViewportLayoutManager {
     this.aboutDialog = openLayoutAboutDialog(this.container, this.aboutDialog, this.statusBar);
   }
 
+  /**
+   * Opens another detached viewport window for multi-monitor use. Each open
+   * allocates its own WebGL surface; closed popups release that budget.
+   */
+  private onOpenDetachedViewport(): void {
+    this.bindDetachedViewportRenderSource();
+    const opened = this.detachedViewportWindow.open();
+    if (opened) {
+      const count = this.detachedViewportWindow.getOpenCount();
+      this.showStatusMessage(count === 1 ? 'Detached viewport opened' : `Detached viewport opened (${count} open)`);
+      return;
+    }
+    this.showStatusMessage('Could not open detached viewport (popup blocked?)');
+  }
+
   /** Opens the hosted user documentation in a separate browser tab. */
   private onOpenDocumentation(): void {
     new DocumentationLink().open();
@@ -555,6 +859,7 @@ export class ViewportLayoutManager {
       viewportPaneLayout: this.viewportPaneLayout,
       toolbar: this.toolbar,
       resizeAll: () => this.resizeAll(),
+      onVisibleSlots: (slots) => this.syncActivePanesFromSlots(slots),
     });
     this.settingsStore = parts.settingsStore;
     this.settingsApplicator = parts.settingsApplicator;
@@ -572,10 +877,7 @@ export class ViewportLayoutManager {
       statusBar: this.statusBar,
       keyboardShortcutHandler: this.keyboardShortcutHandler,
       worldObject: this.worldObject,
-      viewport2DTop: this.viewport2DTop,
-      viewport2DFront: this.viewport2DFront,
-      viewport2DSide: this.viewport2DSide,
-      viewport3D: this.viewport3D,
+      getViewports: () => this.getAllLiveViewports(),
       getUserSnapEnabled: () => this.userSnapEnabled,
       setUserSnapEnabled: (enabled) => {
         this.userSnapEnabled = enabled;
@@ -707,6 +1009,7 @@ export class ViewportLayoutManager {
     | 'onToggleSettingsDialog'
     | 'onOpenDocumentation'
     | 'onOpenAboutDialog'
+    | 'onOpenDetachedViewport'
   > {
     return {
       refreshOutliner: () => this.refreshOutliner(),
@@ -721,6 +1024,7 @@ export class ViewportLayoutManager {
       onToggleSettingsDialog: () => this.onToggleSettingsDialog(),
       onOpenDocumentation: () => this.onOpenDocumentation(),
       onOpenAboutDialog: () => this.onOpenAboutDialog(),
+      onOpenDetachedViewport: () => this.onOpenDetachedViewport(),
     };
   }
 
@@ -793,12 +1097,7 @@ export class ViewportLayoutManager {
 
   /** Wires selection state, outlines, and gizmo visibility across viewports. */
   private wireSelectionSystem(): void {
-    this.selectionVisualController.wireViewports([
-      this.viewport2DTop,
-      this.viewport2DFront,
-      this.viewport2DSide,
-      this.viewport3D,
-    ]);
+    this.selectionVisualController.wireViewports(this.getAllLiveViewports());
     this.selectionManager.onSelectionChanged(() => this.onSelectionChanged());
   }
 
@@ -824,12 +1123,7 @@ export class ViewportLayoutManager {
       isInteractionEnabled: () => !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
       onRulerTransformFeedback: (meshes, phase) => this.onCadRulerTransformFeedback(meshes, phase),
     });
-    this.transformInteractionBridge.wireViewports([
-      this.viewport3D,
-      this.viewport2DTop,
-      this.viewport2DFront,
-      this.viewport2DSide,
-    ]);
+    this.transformInteractionBridge.wireViewports(this.getAllLiveViewports());
     this.wirePropertiesTransformCommit();
   }
 
@@ -877,7 +1171,10 @@ export class ViewportLayoutManager {
     this.keyboardShortcutHandler = createAndRegisterKeyboardShortcuts(
       this.inputManager,
       {
-        isCameraNavigating: () => this.viewport3D.isCameraNavigating(),
+        isCameraNavigating: () =>
+          this.getAllInteractiveViewports().some(
+            (viewport) => isPerspectiveViewport(viewport) && viewport.isCameraNavigating(),
+          ),
         onTransformMode: (mode) => this.onTransformMode(mode),
         onDeleteSelected: () => this.onDeleteSelected(),
         onEscapeCancel: () => this.onEscapeCancel(),
@@ -1104,7 +1401,7 @@ export class ViewportLayoutManager {
       transformGizmo: this.transformGizmo,
       transformExecutor: this.transformExecutor,
       transformSpace: this.transformSpace,
-      viewport3D: this.viewport3D,
+      viewport3D: this.getPrimaryPerspectiveViewport() ?? this.viewport3D,
       toolbar: this.toolbar,
       showStatusMessage: (message) => this.showStatusMessage(message),
     };
@@ -1309,32 +1606,39 @@ export class ViewportLayoutManager {
   /** Binds the shared render loop to live viewports and coordinators. */
   private bindRenderLoop(): void {
     this.renderLoop.bind({
-      viewport3D: this.viewport3D,
-      viewport2DTop: this.viewport2DTop,
-      viewport2DFront: this.viewport2DFront,
-      viewport2DSide: this.viewport2DSide,
+      getActiveViewports: () => this.getActiveViewports(),
       cameraFitCoordinator: this.cameraFitCoordinator,
       clipPlaneHandler: this.clipPlaneHandler,
       onBeforeRender: () => {
         this.updateGizmoCameraScale();
         this.cadRulerSystem.refreshLabelProjection();
       },
+      multiViewComposer: this.multiViewComposer,
+      sharedScene: this.sharedWorldScene,
     });
   }
 
-  /** Creates ResizeObserver-based resize handling for all viewports. */
+  /** Creates ResizeObserver-based resize handling for workspace and panes. */
   private watchResize(): void {
-    this.renderLoop.watchResize(this.viewports, () => this.resizeAll());
+    const elements = [this.viewportArea, ...this.viewportRegistry.getContainers()];
+    this.renderLoop.watchResize(elements, () => this.resizeAll());
     requestAnimationFrame(() => this.resizeAll());
   }
 
-  /** Resizes all viewports to match their container dimensions. */
+  /** Resizes the shared surface and every active pane camera. */
   private resizeAll(): void {
-    const allViewports = [this.viewport2DTop, this.viewport2DFront, this.viewport2DSide, this.viewport3D];
-    allViewports.forEach((vp, index) => {
-      const rect = this.viewports[index]!.getBoundingClientRect();
+    const width = this.viewportArea.clientWidth;
+    const height = this.viewportArea.clientHeight;
+    if (width > 0 && height > 0) {
+      this.sharedSurface.resize(width, height);
+    }
+    this.viewportRegistry.getPanes().forEach((pane) => {
+      const viewport = pane.getViewport();
+      if (!viewport || !pane.isActive()) return;
+      // Match camera aspect to the drawable content box (below the title bar).
+      const rect = viewport.getContentElement().getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
-        vp.resize(rect.width, rect.height);
+        viewport.resize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
       }
     });
   }
@@ -1366,6 +1670,9 @@ export class ViewportLayoutManager {
     this.renderLoop.dispose();
     this.keyboardShortcutHandler?.unregister();
     this.inputManager?.dispose();
+    this.viewportRegistry?.dispose();
+    this.sharedSurface?.dispose();
+    this.detachedViewportWindow?.dispose();
     this.disposeOwnedUiAndManagers();
   }
 

@@ -1,5 +1,4 @@
-import { Viewport3D } from '../../viewports/viewport_3d.js';
-import { Viewport2D } from '../../viewports/viewport_2d.js';
+import type { EditorViewport } from '../../viewports/editor_viewport.js';
 import { SelectionManager } from '../../selection/object/selection_manager.js';
 import { CameraFitController } from '../../navigation/camera_fit_controller.js';
 import { CameraAnimationConfig } from '../../navigation/camera_animation_config.js';
@@ -12,7 +11,7 @@ export class CameraFitCoordinator {
   private cameraAnimationConfig: CameraAnimationConfig;
   private selectionManager: SelectionManager;
   private statusBar: StatusBar | null;
-  private getOrderedViewports: () => Array<Viewport2D | Viewport3D>;
+  private getOrderedViewports: () => Array<EditorViewport>;
   private getActiveViewportIndex: () => number;
 
   /**
@@ -26,7 +25,7 @@ export class CameraFitCoordinator {
   constructor(
     selectionManager: SelectionManager,
     statusBar: StatusBar | null,
-    getOrderedViewports: () => Array<Viewport2D | Viewport3D>,
+    getOrderedViewports: () => Array<EditorViewport>,
     getActiveViewportIndex: () => number,
   ) {
     this.cameraFitController = new CameraFitController();
@@ -64,7 +63,7 @@ export class CameraFitCoordinator {
    *
    * @param viewport The viewport whose camera should be fitted.
    */
-  fitSpecificViewport(viewport: Viewport2D | Viewport3D): void {
+  fitSpecificViewport(viewport: EditorViewport): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     const count = this.cameraFitController.fitViewportToSelection(viewport, selected, this.cameraAnimationConfig);
     this.showFitFeedback(count);

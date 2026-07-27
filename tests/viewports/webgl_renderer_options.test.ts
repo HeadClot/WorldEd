@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getEditorWebGLRendererOptions } from '../../src/viewports/webgl_renderer_options.js';
 
 describe('editor WebGL renderer options', () => {
-  it('enables multisample antialiasing for clean thick lines', () => {
+  it('defaults to multisample antialiasing for overlay-style renderers', () => {
     expect(getEditorWebGLRendererOptions()).toEqual({
       alpha: false,
       antialias: true,
@@ -14,5 +14,10 @@ describe('editor WebGL renderer options', () => {
   it('preserves transparency for overlay renderers', () => {
     expect(getEditorWebGLRendererOptions(true).alpha).toBe(true);
     expect(getEditorWebGLRendererOptions(true).antialias).toBe(true);
+  });
+
+  it('allows explicit antialias overrides', () => {
+    expect(getEditorWebGLRendererOptions({ alpha: false, antialias: true }).antialias).toBe(true);
+    expect(getEditorWebGLRendererOptions({ alpha: false, antialias: false }).antialias).toBe(false);
   });
 });

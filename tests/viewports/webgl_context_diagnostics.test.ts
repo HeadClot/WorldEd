@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   attachWebGLContextDiagnostics,
+  markWebGLContextLossAsIntentional,
   WebGLContextStateChange,
 } from '../../src/viewports/webgl_context_diagnostics.js';
 
@@ -17,6 +18,28 @@ describe('WebGL context diagnostics', () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(changes).toEqual([{ ownerName: 'viewport:Perspective', state: 'lost' }]);
+  });
+
+  it('should suppress intentional context loss from dispose', () => {
+    const canvas = document.createElement('canvas');
+    const onStateChange = vi.fn();
+    attachWebGLContextDiagnostics(canvas, 'detached_viewport', onStateChange);
+    markWebGLContextLossAsIntentional(canvas);
+    const event = new Event('webglcontextlost', { cancelable: true });
+    canvas.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(onStateChange).not.toHaveBeenCalled();
+  });
+
+  it('should still report unexpected losses after intentional marker is consumed', () => {
+    const canvas = document.createElement('canvas');
+    const onStateChange = vi.fn();
+    attachWebGLContextDiagnostics(canvas, 'shared_workspace', onStateChange);
+    markWebGLContextLossAsIntentional(canvas);
+    canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true }));
+    canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true }));
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith({ ownerName: 'shared_workspace', state: 'lost' });
   });
 
   it('should report context restoration for the same owner', () => {

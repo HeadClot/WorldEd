@@ -22,7 +22,7 @@ export class TransformDragSession {
   activeHandle: GizmoHandle | null;
   activeAxis: GizmoAxis | null;
   dragCamera: THREE.Camera | null;
-  dragRenderer: THREE.WebGLRenderer | null;
+  dragRenderer: HTMLElement | null;
   initialMousePosition: THREE.Vector3 | null;
   initialRotationDirection: THREE.Vector3 | null;
   initialScreenPosition: THREE.Vector2 | null;

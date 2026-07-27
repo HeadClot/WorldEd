@@ -38,7 +38,7 @@ export class ClipPlaneHandler {
   private draggingPointIndex: number;
   private dragPlane: THREE.Plane | null;
   private dragCamera: THREE.Camera | null;
-  private dragRenderer: THREE.WebGLRenderer | null;
+  private dragRenderer: HTMLElement | null;
   private boundDragMove: ((event: PointerEvent) => void) | null;
   private boundDragUp: ((event: PointerEvent) => void) | null;
 
@@ -100,13 +100,13 @@ export class ClipPlaneHandler {
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement Viewport pickElement.
    * @returns True when the event was consumed.
    */
-  onPointerDown(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): boolean {
+  onPointerDown(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): boolean {
     if (!this.deps.clipPlaneTool.isActive()) return false;
-    if (this.tryBeginMarkerDrag(event, camera, renderer)) return true;
-    return this.placeNewPoint(event, camera, renderer);
+    if (this.tryBeginMarkerDrag(event, camera, pickElement)) return true;
+    return this.placeNewPoint(event, camera, pickElement);
   }
 
   /** Flips the keep side of the active plane. */
@@ -223,14 +223,14 @@ export class ClipPlaneHandler {
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement Viewport pickElement.
    * @returns True when a drag started.
    */
-  private tryBeginMarkerDrag(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): boolean {
+  private tryBeginMarkerDrag(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): boolean {
     const points = this.deps.clipPlaneTool.getPoints();
-    const index = this.pointDrag.pickMarkerIndex(event, camera, renderer, points);
+    const index = this.pointDrag.pickMarkerIndex(event, camera, pickElement, points);
     if (index === null) return false;
-    this.beginMarkerDrag(index, points[index]!, camera, renderer);
+    this.beginMarkerDrag(index, points[index]!, camera, pickElement);
     return true;
   }
 
@@ -240,19 +240,14 @@ export class ClipPlaneHandler {
    * @param index Placement point index.
    * @param point Starting world position.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement Viewport pickElement.
    */
-  private beginMarkerDrag(
-    index: number,
-    point: THREE.Vector3,
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
-  ): void {
+  private beginMarkerDrag(index: number, point: THREE.Vector3, camera: THREE.Camera, pickElement: HTMLElement): void {
     this.endMarkerDrag(false);
     this.draggingPointIndex = index;
     this.dragPlane = this.pointDrag.createDragPlane(point, camera);
     this.dragCamera = camera;
-    this.dragRenderer = renderer;
+    this.dragRenderer = pickElement;
     this.boundDragMove = (moveEvent) => this.onMarkerDragMove(moveEvent);
     this.boundDragUp = () => this.endMarkerDrag(true);
     window.addEventListener('pointermove', this.boundDragMove);
@@ -303,12 +298,12 @@ export class ClipPlaneHandler {
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement Viewport pickElement.
    * @returns True (event always consumed while tool is active).
    */
-  private placeNewPoint(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): boolean {
+  private placeNewPoint(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): boolean {
     const meshes = this.collectWorldMeshes();
-    const point = this.pointPicker.pickPoint(event, camera, renderer, meshes);
+    const point = this.pointPicker.pickPoint(event, camera, pickElement, meshes);
     if (!point) {
       this.deps.showStatusMessage('Click a mesh or the ground plane');
       return true;

@@ -49,8 +49,8 @@ export class TransformProjectionMath {
    * @param event The pointer event.
    * @returns Normalized screen position.
    */
-  static getScreenPosition(renderer: THREE.WebGLRenderer, event: MouseEvent): THREE.Vector2 {
-    const rect = renderer.domElement.getBoundingClientRect();
+  static getScreenPosition(pickElement: HTMLElement, event: MouseEvent): THREE.Vector2 {
+    const rect = pickElement.getBoundingClientRect();
     const x = (event.clientX - rect.left) / Math.max(rect.width, 1);
     const y = (event.clientY - rect.top) / Math.max(rect.height, 1);
     return new THREE.Vector2(x, y);

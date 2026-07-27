@@ -46,6 +46,10 @@ class MockViewport {
     return this.renderer;
   }
 
+  getContentElement(): HTMLElement {
+    return this.renderer.domElement as HTMLElement;
+  }
+
   getGizmoGroup(): THREE.Group {
     return this.gizmoGroup;
   }

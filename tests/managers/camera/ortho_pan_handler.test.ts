@@ -26,13 +26,20 @@ describe('OrthoPanHandler', () => {
     canvas.dispatchEvent(new PointerEvent('pointerup', { button: 2, pointerId: 1 }));
   });
 
-  it('should trigger zoom callback on wheel event', () => {
+  it('should trigger zoom callback on wheel event with pointer fractions', () => {
     const canvas = document.createElement('canvas');
+    Object.defineProperty(canvas, 'getBoundingClientRect', {
+      value: () => ({ left: 100, top: 50, width: 200, height: 100, right: 300, bottom: 150 }),
+    });
     const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
     const zoomCallback = vi.fn();
     new OrthoPanHandler(canvas, camera, zoomCallback);
-    canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 100 }));
+    canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, clientX: 150, clientY: 100 }));
     expect(zoomCallback).toHaveBeenCalled();
+    const [factor, pointerU, pointerV] = zoomCallback.mock.calls[0] as [number, number, number];
+    expect(factor).toBeGreaterThan(1);
+    expect(pointerU).toBeCloseTo(0.25);
+    expect(pointerV).toBeCloseTo(0.5);
   });
 
   it('should attempt pointer lock on right button down', () => {

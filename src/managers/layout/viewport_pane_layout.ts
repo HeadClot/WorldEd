@@ -74,6 +74,18 @@ export class ViewportPaneLayout {
   }
 
   /**
+   * Returns the currently visible slot names for the active layout.
+   *
+   * @returns Visible grid slot names.
+   */
+  getVisibleSlots(): readonly ViewportSlot[] {
+    if (this.maximizedIndex !== null) {
+      return [this.getSlot(this.maximizedIndex)];
+    }
+    return PANE_LAYOUTS[this.paneCount].visibleSlots;
+  }
+
+  /**
    * Maximizes one viewport, or restores the configured pane layout when the
    * same viewport is toggled again.
    *

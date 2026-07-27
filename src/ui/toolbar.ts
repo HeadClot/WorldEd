@@ -1,6 +1,7 @@
 import { Theme } from '../theme.js';
 import { MenuPanel } from './menu/menu_panel.js';
 import type { ToolbarMenuEntry } from './menu/menu_types.js';
+import { UiStackLayers } from './ui_stack_layers.js';
 
 export type {
   ToolbarDropdownItem,
@@ -358,7 +359,7 @@ export class Toolbar {
     this.container.style.overflow = 'visible';
     this.container.style.boxSizing = 'border-box';
     this.container.style.flexShrink = '0';
-    this.container.style.zIndex = '100';
+    this.container.style.zIndex = String(UiStackLayers.mainToolbar);
     this.container.style.fontFamily = Theme.uiFontFamily;
   }
 
@@ -485,7 +486,7 @@ export class Toolbar {
    */
   private openDropdownMenu(panel: MenuPanel, button: HTMLButtonElement): void {
     this.closeOpenMenu();
-    panel.open();
+    panel.open(button);
     this.openMenuPanel = panel;
     this.openMenuButton = button;
     button.setAttribute('aria-expanded', 'true');
@@ -501,14 +502,16 @@ export class Toolbar {
   }
 
   /**
-   * Closes dropdowns when the user clicks outside the toolbar.
+   * Closes dropdowns when the user clicks outside the toolbar and open menu.
    *
    * @param event The document pointer event.
    */
   private handleDocumentPointerDown(event: Event): void {
     if (!this.openMenuPanel) return;
     const target = event.target as Node | null;
-    if (target && this.container.contains(target)) return;
+    if (!target) return;
+    if (this.container.contains(target)) return;
+    if (this.openMenuPanel.getElement().contains(target)) return;
     this.closeOpenMenu();
   }
 

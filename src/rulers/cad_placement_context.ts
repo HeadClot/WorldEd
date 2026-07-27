@@ -29,17 +29,18 @@ const scratchToCamera = new THREE.Vector3();
  * Builds placement metrics for a viewport camera at a world anchor point.
  *
  * @param camera Active viewport camera.
- * @param renderer Viewport renderer (canvas pixel size).
+ * @param viewportCssHeight Pane content CSS height (not full shared canvas).
  * @param worldAnchor Point used to estimate world units per pixel.
+ * @param viewPlane Optional view plane (defaults to full 3D).
  * @returns Placement context with clamped world offsets.
  */
 export function createCadPlacementContext(
   camera: THREE.Camera,
-  renderer: THREE.WebGLRenderer,
+  viewportCssHeight: number,
   worldAnchor: THREE.Vector3,
   viewPlane: CadViewPlane = 'xyz',
 ): CadPlacementContext {
-  const worldPerPixel = estimateWorldUnitsPerPixel(camera, renderer, worldAnchor);
+  const worldPerPixel = estimateWorldUnitsPerPixel(camera, viewportCssHeight, worldAnchor);
   const offsetWorld = clampWorld(
     worldPerPixel * CadRulerStyle.dimensionOffsetPixels,
     CadRulerStyle.minimumOffsetWorld,
@@ -86,16 +87,16 @@ export function createFixedCadPlacementContext(
  * Estimates world units covered by one CSS pixel at a world anchor.
  *
  * @param camera Active camera.
- * @param renderer Renderer providing canvas CSS size.
+ * @param viewportCssHeight Pane content height in CSS pixels.
  * @param worldAnchor Sample point in world space.
  * @returns World units per pixel.
  */
 export function estimateWorldUnitsPerPixel(
   camera: THREE.Camera,
-  renderer: THREE.WebGLRenderer,
+  viewportCssHeight: number,
   worldAnchor: THREE.Vector3,
 ): number {
-  const height = Math.max(1, renderer.domElement.clientHeight || 1);
+  const height = Math.max(1, viewportCssHeight || 1);
   if (camera instanceof THREE.OrthographicCamera) {
     const viewHeight = Math.abs(camera.top - camera.bottom) / Math.max(camera.zoom, 1e-6);
     return viewHeight / height;

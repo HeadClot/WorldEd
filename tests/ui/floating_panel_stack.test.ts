@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { FloatingPanelStack } from '../../src/ui/floating_panel_stack.js';
+import { UiStackLayers } from '../../src/ui/ui_stack_layers.js';
 
 describe('FloatingPanelStack', () => {
   beforeEach(() => {
@@ -31,5 +32,13 @@ describe('FloatingPanelStack', () => {
     FloatingPanelStack.bringToFront(panel);
     expect(FloatingPanelStack.getCurrentTopZIndex()).toBe(before + 1);
     expect(Number(panel.style.zIndex)).toBe(before + 1);
+  });
+
+  it('should stay under the menu band even after many bringToFront calls', () => {
+    const panel = document.createElement('div');
+    for (let i = 0; i < 20; i += 1) {
+      FloatingPanelStack.bringToFront(panel);
+    }
+    expect(Number(panel.style.zIndex)).toBeLessThan(UiStackLayers.menu);
   });
 });

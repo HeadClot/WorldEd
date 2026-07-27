@@ -2,53 +2,151 @@ import * as THREE from 'three';
 import { Theme } from '../theme.js';
 import { ViewportToolbar } from '../ui/viewport_toolbar.js';
 import { ShadingMode } from '../types/shading_mode.js';
-import { createEditorWebGLCanvas, getEditorWebGLRendererOptions } from './webgl_renderer_options.js';
+import { ViewportKind } from './viewport_kind.js';
+import type { SharedWebGLSurface } from './shared_webgl_surface.js';
 
+/** Construction options for a pane that shares one scene and WebGL surface. */
+export interface BaseViewportOptions {
+  container: HTMLElement;
+  contentElement: HTMLElement;
+  name: string;
+  sharedScene: THREE.Scene;
+  surface: SharedWebGLSurface;
+  initialShadingMode?: ShadingMode;
+}
+
+/**
+ * Places the pane drawable/hit target strictly below the title bar so
+ * multi-view scissor and camera aspect never include chrome pixels.
+ *
+ * @param contentElement Pane content element receiving layout styles.
+ */
+export function applyViewportContentDrawableStyles(contentElement: HTMLElement): void {
+  contentElement.style.position = 'absolute';
+  contentElement.style.left = '0';
+  contentElement.style.right = '0';
+  contentElement.style.top = `${Theme.viewportToolbarHeightPx}px`;
+  contentElement.style.bottom = '0';
+  contentElement.style.pointerEvents = 'auto';
+  contentElement.style.background = 'transparent';
+}
+
+/**
+ * Pane viewport without a private WebGL context. Cameras and helpers live in a
+ * shared scene; drawing is performed by MultiViewComposer through the surface.
+ */
 export abstract class BaseViewport {
   protected container: HTMLElement;
+  protected contentElement: HTMLElement;
   protected scene: THREE.Scene;
-  protected renderer: THREE.WebGLRenderer;
+  protected surface: SharedWebGLSurface;
   protected name: string;
   private viewportToolbar: ViewportToolbar;
+  private viewportKind: ViewportKind;
+  private isDisposed: boolean;
 
   /**
-   * Creates a viewport with a scene, renderer, and overlay toolbar.
+   * Creates a viewport pane with chrome and a content hit target.
    *
-   * @param container The DOM element that hosts this viewport.
-   * @param name The display name shown in the viewport toolbar.
-   * @param initialShadingMode The shading mode highlighted on the toolbar.
+   * @param options Shared scene/surface wiring and DOM hosts.
    */
-  constructor(container: HTMLElement, name: string, initialShadingMode: ShadingMode = ShadingMode.SOLID) {
-    this.container = container;
-    this.name = name;
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(Theme.viewportBackground);
-    this.renderer = new THREE.WebGLRenderer({
-      ...getEditorWebGLRendererOptions(),
-      canvas: createEditorWebGLCanvas(`viewport:${name}`),
-    });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.viewportToolbar = new ViewportToolbar(container, name, initialShadingMode);
+  constructor(options: BaseViewportOptions) {
+    this.container = options.container;
+    this.contentElement = options.contentElement;
+    this.scene = options.sharedScene;
+    this.surface = options.surface;
+    this.name = options.name;
+    this.viewportKind = ViewportKind.PERSPECTIVE;
+    this.isDisposed = false;
     this.setupContainer();
+    this.viewportToolbar = new ViewportToolbar(
+      this.container,
+      options.name,
+      options.initialShadingMode ?? ShadingMode.SOLID,
+    );
   }
 
-  /** Configures container and canvas layout styles, then attaches the canvas. */
+  /**
+   * Configures chrome host and drawable content. Content sits strictly below
+   * the pane title bar so scissor/camera never spend pixels under the toolbar.
+   */
   protected setupContainer(): void {
+    this.applyContainerChromeStyles();
+    this.applyContentDrawableStyles();
+    if (!this.contentElement.parentElement) {
+      this.container.appendChild(this.contentElement);
+    }
+  }
+
+  /** Styles the pane host that owns the title bar and content stack. */
+  private applyContainerChromeStyles(): void {
     this.container.style.position = 'relative';
     this.container.style.overflow = 'hidden';
-    this.renderer.domElement.style.width = '100%';
-    this.renderer.domElement.style.height = '100%';
-    this.renderer.domElement.style.display = 'block';
-    this.container.appendChild(this.renderer.domElement);
+    this.container.style.zIndex = '1';
+    this.container.style.background = 'transparent';
+    this.container.style.width = '100%';
+    this.container.style.height = '100%';
+    this.container.style.minWidth = '0';
+    this.container.style.minHeight = '0';
+  }
+
+  /** Places the hit/scissor target in the visible region under the title bar. */
+  private applyContentDrawableStyles(): void {
+    applyViewportContentDrawableStyles(this.contentElement);
   }
 
   abstract resize(width: number, height: number): void;
-  abstract render(): void;
   abstract getCamera(): THREE.Camera;
 
   /**
-   * Returns the Three.js scene for this viewport.
+   * Prepares this pane for a multi-view pass (grids, depth, overlays). Drawing
+   * is performed by the shared multi-view composer.
+   */
+  abstract prepareRender(): void;
+
+  /** Legacy no-op render entry; the shared composer draws this pane. */
+  render(): void {
+    this.prepareRender();
+  }
+
+  /**
+   * Assigns the semantic viewport kind for this instance.
+   *
+   * @param kind Kind metadata key (top, front, side, perspective).
+   */
+  setViewportKind(kind: ViewportKind): void {
+    this.viewportKind = kind;
+  }
+
+  /**
+   * Returns the semantic viewport kind for this instance.
+   *
+   * @returns Current ViewportKind value.
+   */
+  getViewportKind(): ViewportKind {
+    return this.viewportKind;
+  }
+
+  /**
+   * Returns the host DOM container for chrome and layout.
+   *
+   * @returns Container element.
+   */
+  getContainer(): HTMLElement {
+    return this.container;
+  }
+
+  /**
+   * Returns the content hit target used for picking and scissor measurement.
+   *
+   * @returns Content element.
+   */
+  getContentElement(): HTMLElement {
+    return this.contentElement;
+  }
+
+  /**
+   * Returns the shared Three.js scene.
    *
    * @returns The scene instance.
    */
@@ -57,12 +155,21 @@ export abstract class BaseViewport {
   }
 
   /**
-   * Returns the WebGL renderer for this viewport.
+   * Returns the shared WebGL renderer from the workspace surface.
    *
    * @returns The renderer instance.
    */
   getRenderer(): THREE.WebGLRenderer {
-    return this.renderer;
+    return this.surface.getRenderer();
+  }
+
+  /**
+   * Returns the shared workspace surface.
+   *
+   * @returns SharedWebGLSurface instance.
+   */
+  getSurface(): SharedWebGLSurface {
+    return this.surface;
   }
 
   /**
@@ -75,6 +182,16 @@ export abstract class BaseViewport {
   }
 
   /**
+   * Updates the display name and toolbar title text.
+   *
+   * @param name New display name.
+   */
+  setName(name: string): void {
+    this.name = name;
+    this.viewportToolbar.setTitle(name);
+  }
+
+  /**
    * Returns the overlay toolbar for this viewport.
    *
    * @returns The ViewportToolbar instance.
@@ -84,11 +201,27 @@ export abstract class BaseViewport {
   }
 
   /**
-   * Returns the toolbar root element (replaces the old standalone label).
+   * Returns the toolbar root element.
    *
    * @returns The toolbar container element.
    */
   getLabelElement(): HTMLElement {
     return this.viewportToolbar.getElement();
+  }
+
+  /**
+   * Returns whether this viewport has already been disposed.
+   *
+   * @returns True after dispose completes.
+   */
+  getIsDisposed(): boolean {
+    return this.isDisposed;
+  }
+
+  /** Releases pane-owned resources. Subclasses dispose helpers first. */
+  dispose(): void {
+    if (this.isDisposed) return;
+    this.isDisposed = true;
+    this.viewportToolbar.dispose();
   }
 }

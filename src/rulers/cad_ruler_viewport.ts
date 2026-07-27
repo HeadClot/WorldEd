@@ -13,6 +13,7 @@ export class CadRulerViewport {
   private scene: THREE.Scene;
   private camera: THREE.Camera;
   private renderer: THREE.WebGLRenderer;
+  private container: HTMLElement;
   private dimensionBatch: CadRulerLineBatch;
   private ghostBatch: CadRulerLineBatch;
   private labelLayer: CadRulerLabelLayer;
@@ -23,13 +24,14 @@ export class CadRulerViewport {
    *
    * @param scene Viewport scene that receives line groups.
    * @param camera Viewport camera for label projection.
-   * @param renderer Viewport renderer for canvas metrics.
-   * @param container Viewport DOM container for label overlay.
+   * @param renderer Shared workspace renderer (legacy metrics fallback).
+   * @param container Pane content element for label overlay and CSS size.
    */
   constructor(scene: THREE.Scene, camera: THREE.Camera, renderer: THREE.WebGLRenderer, container: HTMLElement) {
     this.scene = scene;
     this.camera = camera;
     this.renderer = renderer;
+    this.container = container;
     this.dimensionBatch = new CadRulerLineBatch(
       'cad_ruler_dimensions',
       CadRulerStyle.lineFrontOpacity,
@@ -44,6 +46,8 @@ export class CadRulerViewport {
     this.isDisposed = false;
     this.scene.add(this.dimensionBatch.getObject());
     this.scene.add(this.ghostBatch.getObject());
+    // Shared multi-view: keep world lines hidden until this pane's scissor pass.
+    this.setGeometryVisible(false);
   }
 
   /**
@@ -55,7 +59,9 @@ export class CadRulerViewport {
   setDimensions(segments: CadLineSegment[], labels: CadLabelSpec[]): void {
     if (this.isDisposed) return;
     this.dimensionBatch.setSegments(segments);
-    this.labelLayer.update(labels, this.camera, this.renderer);
+    this.labelLayer.update(labels, this.camera);
+    // setSegments may re-show the batch; isolation stays off until the pane pass.
+    this.dimensionBatch.setVisible(false);
   }
 
   /**
@@ -66,6 +72,21 @@ export class CadRulerViewport {
   setGhost(segments: CadLineSegment[]): void {
     if (this.isDisposed) return;
     this.ghostBatch.setSegments(segments);
+    this.ghostBatch.setVisible(false);
+  }
+
+  /**
+   * Shows or hides world-space ruler line batches for multi-view isolation. DOM
+   * labels stay on this pane's overlay and are unaffected.
+   *
+   * @param visible Whether this pane's 3D ruler geometry should draw.
+   */
+  setGeometryVisible(visible: boolean): void {
+    if (this.isDisposed) return;
+    const hasDimensions = this.dimensionBatch.getSegmentCount() > 0;
+    const hasGhost = this.ghostBatch.getSegmentCount() > 0;
+    this.dimensionBatch.setVisible(visible && hasDimensions);
+    this.ghostBatch.setVisible(visible && hasGhost);
   }
 
   /**
@@ -75,7 +96,7 @@ export class CadRulerViewport {
    */
   refreshLabels(labels: CadLabelSpec[]): void {
     if (this.isDisposed) return;
-    this.labelLayer.update(labels, this.camera, this.renderer);
+    this.labelLayer.update(labels, this.camera);
   }
 
   /** Hides dimension lines, ghost, and labels. */
@@ -148,5 +169,23 @@ export class CadRulerViewport {
    */
   getRenderer(): THREE.WebGLRenderer {
     return this.renderer;
+  }
+
+  /**
+   * Returns the pane content element used for label overlay and CSS metrics.
+   *
+   * @returns Content host element.
+   */
+  getContainer(): HTMLElement {
+    return this.container;
+  }
+
+  /**
+   * Returns the pane content CSS height used for world-per-pixel stand-off.
+   *
+   * @returns Height in CSS pixels (at least 1).
+   */
+  getViewportCssHeight(): number {
+    return Math.max(1, this.container.clientHeight || 1);
   }
 }

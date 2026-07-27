@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
-import { BaseViewport } from './base_viewport.js';
+import { BaseViewport, type BaseViewportOptions } from './base_viewport.js';
 import { Grids } from './grid/grids.js';
 import { InputManager } from '../managers/input/input_manager.js';
 import { FlyingCamera } from '../managers/camera/flying_camera.js';
@@ -39,6 +39,11 @@ export type TransformCallback = (event: MouseEvent) => boolean;
  */
 export type MeshResolveCallback = (mesh: THREE.Mesh) => THREE.Mesh;
 
+/** Options for constructing a shared-scene perspective pane. */
+export interface Viewport3DOptions extends BaseViewportOptions {
+  inputManager: InputManager;
+}
+
 export class Viewport3D extends BaseViewport {
   private camera!: THREE.PerspectiveCamera;
   private grids: Grids;
@@ -56,23 +61,24 @@ export class Viewport3D extends BaseViewport {
   private clipPlaneCallback!: ((event: MouseEvent) => boolean) | null;
   private meshResolveCallback!: MeshResolveCallback | null;
   private shadingController: ViewportShadingController;
+  private gridRoot: THREE.Object3D;
 
   /**
-   * Creates a new 3D perspective viewport.
+   * Creates a new 3D perspective viewport pane on the shared scene/surface.
    *
-   * @param container The DOM element that will contain this viewport.
-   * @param inputManager The shared input manager for camera controls.
+   * @param options Shared surface options plus input manager.
    */
-  constructor(container: HTMLElement, inputManager: InputManager) {
-    super(container, 'Perspective');
+  constructor(options: Viewport3DOptions) {
+    super({ ...options, name: options.name || 'Perspective' });
     this.grids = new Grids(50, 50, 'xz', 'perspective');
+    this.gridRoot = this.grids.getScene();
+    this.gridRoot.visible = false;
     this.initializeCamera();
     this.initializeState();
     this.setupLights();
     this.setupClickSelection();
-    this.setupFlyingCamera(inputManager);
-    this.scene.add(this.grids.getScene());
-    this.renderer.domElement.style.zIndex = '1';
+    this.setupFlyingCamera(options.inputManager);
+    this.scene.add(this.gridRoot);
     this.cameraWidget = new CameraWidget(this.container);
     this.shadingController = new ViewportShadingController(this);
   }
@@ -108,7 +114,7 @@ export class Viewport3D extends BaseViewport {
    */
   private setupFlyingCamera(inputManager: InputManager): void {
     this.flyingCamera = new FlyingCamera(
-      this.renderer.domElement,
+      this.contentElement,
       this.camera,
       inputManager,
       (-3 * Math.PI) / 4,
@@ -246,7 +252,7 @@ export class Viewport3D extends BaseViewport {
 
   /** Configures pointer event listeners for selection and transform. */
   private setupClickSelection(): void {
-    this.renderer.domElement.addEventListener('pointerdown', (event) => {
+    this.contentElement.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       blurActiveFormField();
       if (this.transformCallback && this.transformCallback(event)) return;
@@ -255,10 +261,10 @@ export class Viewport3D extends BaseViewport {
       if (!this.selectionManager) return;
       this.handleObjectSelection(event);
     });
-    this.renderer.domElement.addEventListener('pointermove', (event) => {
+    this.contentElement.addEventListener('pointermove', (event) => {
       if (this.transformCallback) this.transformCallback(event);
     });
-    this.renderer.domElement.addEventListener('pointerup', (event) => {
+    this.contentElement.addEventListener('pointerup', (event) => {
       if (this.transformCallback) this.transformCallback(event);
     });
   }
@@ -294,7 +300,7 @@ export class Viewport3D extends BaseViewport {
   getObjectPickStack(event: MouseEvent): THREE.Mesh[] {
     const objects = this.getEffectiveSelectableObjects();
     if (objects.length === 0) return [];
-    const intersections = this.raycaster.castIntersections(this.camera, this.renderer, event, objects);
+    const intersections = this.raycaster.castIntersections(this.camera, this.contentElement, event, objects);
     return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) => this.resolveClickedMesh(mesh));
   }
 
@@ -345,35 +351,43 @@ export class Viewport3D extends BaseViewport {
     return clicked;
   }
 
-  /**
-   * Adds ambient fill and a directional headlight locked to the camera. Content
-   * uses studio matcap shading; these lights cover non-matcap helpers.
-   */
+  /** Creates a camera-locked headlight. Ambient fill lives on the shared scene. */
   private setupLights(): void {
     this.ambientLight = new THREE.AmbientLight(Theme.lightAmbient, VIEWPORT_3D_AMBIENT_INTENSITY);
+    this.ambientLight.visible = false;
     this.scene.add(this.ambientLight);
     this.cameraHeadlight = new CameraHeadlight(Theme.lightDirectional, VIEWPORT_3D_HEADLIGHT_INTENSITY);
     this.cameraHeadlight.attachToCamera(this.scene, this.camera);
+    this.cameraHeadlight.getLight().visible = false;
   }
 
   /**
-   * Resizes the renderer and updates the perspective camera aspect ratio.
+   * Updates the perspective camera aspect ratio for the pane content size.
    *
-   * @param width Viewport width in CSS pixels.
-   * @param height Viewport height in CSS pixels.
+   * @param width Content width in CSS pixels.
+   * @param height Content height in CSS pixels.
    */
   resize(width: number, height: number): void {
-    this.renderer.setSize(width, height);
-    this.camera.aspect = width / height;
+    const safeWidth = Math.max(width, 1);
+    const safeHeight = Math.max(height, 1);
+    this.camera.aspect = safeWidth / safeHeight;
     this.camera.updateProjectionMatrix();
   }
 
-  /** Updates grids, renders the scene, and refreshes the camera widget. */
-  render(): void {
+  /** Shows this pane's grid and headlight for the shared multi-view pass. */
+  prepareRender(): void {
+    this.shadingController.applyForRenderPass();
+    this.gridRoot.visible = true;
+    this.cameraHeadlight.getLight().visible = true;
     this.grids.update(this.camera);
     this.updateBrushEdgeDistanceFade();
-    this.renderer.render(this.scene, this.camera);
     this.cameraWidget.update(this.camera);
+  }
+
+  /** Hides this pane's grid and headlight after its multi-view pass. */
+  endRenderPass(): void {
+    this.gridRoot.visible = false;
+    this.cameraHeadlight.getLight().visible = false;
   }
 
   /** Distance-fades and culls solid brush edge helpers for large 3D maps. */
@@ -509,5 +523,25 @@ export class Viewport3D extends BaseViewport {
    */
   getGridHelper(): Grids {
     return this.grids;
+  }
+
+  /**
+   * Releases flying camera, widget, grids, shading, and base pickElement
+   * resources.
+   */
+  override dispose(): void {
+    if (this.getIsDisposed()) return;
+    this.flyingCamera.dispose();
+    this.cameraWidget.dispose();
+    this.scene.remove(this.gridRoot);
+    this.scene.remove(this.ambientLight);
+    this.grids.dispose();
+    this.shadingController.dispose();
+    this.transformCallback = null;
+    this.faceSelectionCallback = null;
+    this.clipPlaneCallback = null;
+    this.meshResolveCallback = null;
+    this.selectionManager = null;
+    super.dispose();
   }
 }

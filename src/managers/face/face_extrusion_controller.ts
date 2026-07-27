@@ -190,11 +190,11 @@ export class FaceExtrusionController {
    * @returns The picked face when a hit occurred, otherwise null (event still
    *   consumed while in face mode).
    */
-  onPointerDown(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): FacePickResult | null {
+  onPointerDown(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): FacePickResult | null {
     if (this.currentMode !== SelectionMode.FACE) return null;
     this.isFaceDragActive = true;
     this.lastDragRegionKey = null;
-    const result = this.raycaster.pickFace(event, camera, renderer, this.availableMeshes);
+    const result = this.raycaster.pickFace(event, camera, pickElement, this.availableMeshes);
     if (!result) {
       if (!event.shiftKey) {
         this.selectionManager.deselectAll();
@@ -214,10 +214,10 @@ export class FaceExtrusionController {
    * @param renderer The viewport renderer.
    * @returns The painted pick result, or null when nothing new was painted.
    */
-  onPointerMove(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): FacePickResult | null {
+  onPointerMove(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): FacePickResult | null {
     if (this.currentMode !== SelectionMode.FACE) return null;
     if (!this.isFaceDragActive) return null;
-    const result = this.raycaster.pickFace(event, camera, renderer, this.availableMeshes);
+    const result = this.raycaster.pickFace(event, camera, pickElement, this.availableMeshes);
     if (!result) return null;
     this.paintSelectFace(result, true, true);
     return result;
@@ -247,9 +247,9 @@ export class FaceExtrusionController {
    * @param renderer The viewport renderer.
    * @returns Pick result or null.
    */
-  pickFaceAtPointer(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): FacePickResult | null {
+  pickFaceAtPointer(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): FacePickResult | null {
     if (this.currentMode !== SelectionMode.FACE) return null;
-    return this.raycaster.pickFace(event, camera, renderer, this.availableMeshes);
+    return this.raycaster.pickFace(event, camera, pickElement, this.availableMeshes);
   }
 
   /**

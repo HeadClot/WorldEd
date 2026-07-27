@@ -121,7 +121,7 @@ export class TransformInteractionBridge {
     return this.dispatchTransformEvent(
       event.type,
       eventParams.camera,
-      eventParams.renderer,
+      eventParams.pickElement,
       event,
       eventParams.handles,
       eventParams.selectedObjects,
@@ -180,18 +180,18 @@ export class TransformInteractionBridge {
   /**
    * Gathers viewport and selection data for transform event dispatch.
    *
-   * @param viewport The viewport providing camera and renderer.
+   * @param viewport The viewport providing camera and pickElement.
    * @returns An object containing transform event parameters.
    */
   private buildTransformEventParams(viewport: Viewport3D | Viewport2D): {
     camera: THREE.Camera;
-    renderer: THREE.WebGLRenderer;
+    pickElement: HTMLElement;
     handles: GizmoHandle[];
     selectedObjects: THREE.Mesh[];
   } {
     return {
       camera: viewport.getCamera(),
-      renderer: viewport.getRenderer(),
+      pickElement: viewport.getContentElement(),
       handles: this.deps.transformGizmo.getHandles(),
       selectedObjects: filterUnlockedObjects(this.deps.selectionManager.getAllSelectedObjectsAsArray()),
     };
@@ -202,7 +202,7 @@ export class TransformInteractionBridge {
    *
    * @param eventType The pointer event type string.
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @param handles The current gizmo handles.
    * @param selectedObjects The selected meshes for the transform.
@@ -212,7 +212,7 @@ export class TransformInteractionBridge {
   private dispatchTransformEvent(
     eventType: string,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[],
@@ -220,10 +220,10 @@ export class TransformInteractionBridge {
     viewport: Viewport3D | Viewport2D,
   ): boolean {
     if (eventType === 'pointerdown') {
-      return this.beginTransformPointerDown(camera, renderer, event, handles, selectedObjects, gizmoGroup, viewport);
+      return this.beginTransformPointerDown(camera, pickElement, event, handles, selectedObjects, gizmoGroup, viewport);
     }
     if (eventType === 'pointermove') {
-      return this.handleTransformPointerMove(camera, renderer, event);
+      return this.handleTransformPointerMove(camera, pickElement, event);
     }
     if (eventType === 'pointerup') {
       return this.handleTransformPointerUp();
@@ -236,7 +236,7 @@ export class TransformInteractionBridge {
    * the canvas still ends the drag.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointerdown event.
    * @param handles The current gizmo handles.
    * @param selectedObjects The selected meshes for the transform.
@@ -246,7 +246,7 @@ export class TransformInteractionBridge {
    */
   private beginTransformPointerDown(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[],
@@ -256,7 +256,7 @@ export class TransformInteractionBridge {
     const pivot = this.computeCurrentPivot();
     this.deps.transformHandler.onPointerDown(
       camera,
-      renderer,
+      pickElement,
       event,
       handles,
       selectedObjects,
@@ -264,7 +264,7 @@ export class TransformInteractionBridge {
       gizmoGroup ?? new THREE.Group(),
     );
     if (!this.deps.transformHandler.isDragging()) return false;
-    const dragObjects = this.prepareAltDragDuplicates(event, camera, renderer, viewport);
+    const dragObjects = this.prepareAltDragDuplicates(event, camera, pickElement, viewport);
     if (dragObjects.length === 0) return false;
     this.pendingSelectionClickEvent = event;
     this.pendingSelectionClickViewport = viewport;
@@ -279,14 +279,14 @@ export class TransformInteractionBridge {
    *
    * @param event The pointerdown event that began the drag.
    * @param camera The active viewport camera.
-   * @param renderer The active viewport renderer.
+   * @param pickElement The active viewport pickElement.
    * @param viewport Viewport that owns the refreshed gizmo clone.
    * @returns Objects targeted by the active drag, or an empty array on failure.
    */
   private prepareAltDragDuplicates(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     viewport: Viewport3D | Viewport2D,
   ): THREE.Mesh[] {
     const current = filterUnlockedObjects(this.deps.selectionManager.getAllSelectedObjectsAsArray());
@@ -295,7 +295,7 @@ export class TransformInteractionBridge {
     this.deps.onDuplicateSelectedForDrag();
     const duplicates = filterUnlockedObjects(this.deps.selectionManager.getAllSelectedObjectsAsArray());
     if (duplicates.length === 0) return duplicates;
-    this.restartTransformDrag(event, camera, renderer, duplicates, viewport);
+    this.restartTransformDrag(event, camera, pickElement, duplicates, viewport);
     return this.deps.transformHandler.isDragging() ? duplicates : [];
   }
 
@@ -304,20 +304,20 @@ export class TransformInteractionBridge {
    *
    * @param event Original pointerdown event.
    * @param camera Active viewport camera.
-   * @param renderer Active viewport renderer.
+   * @param pickElement Active viewport pickElement.
    * @param duplicates Newly created selection targets.
    * @param viewport Viewport that owns the refreshed gizmo clone.
    */
   private restartTransformDrag(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     duplicates: THREE.Mesh[],
     viewport: Viewport3D | Viewport2D,
   ): void {
     this.deps.transformHandler.onPointerDown(
       camera,
-      renderer,
+      pickElement,
       event,
       this.deps.transformGizmo.getHandles(),
       duplicates,
@@ -337,7 +337,21 @@ export class TransformInteractionBridge {
     this.windowDragSession.begin(
       (moveEvent) => this.onWindowDragMove(moveEvent),
       () => this.handleTransformPointerUp(),
+      this.resolveViewportOwnerWindow(viewport),
     );
+  }
+
+  /**
+   * Resolves the Window that owns a viewport's pick element. Falls back to the
+   * main window when the content element is a test mock without a document.
+   *
+   * @param viewport Viewport that started the drag.
+   * @returns Owner window for pointer capture.
+   */
+  private resolveViewportOwnerWindow(viewport: Viewport3D | Viewport2D): Window {
+    const content = viewport.getContentElement?.() as HTMLElement | undefined;
+    const ownerDocument = content?.ownerDocument;
+    return ownerDocument?.defaultView ?? window;
   }
 
   /**
@@ -347,23 +361,27 @@ export class TransformInteractionBridge {
    */
   private onWindowDragMove(event: PointerEvent): void {
     if (!this.activeDragViewport) return;
-    this.handleTransformPointerMove(this.activeDragViewport.getCamera(), this.activeDragViewport.getRenderer(), event);
+    this.handleTransformPointerMove(
+      this.activeDragViewport.getCamera(),
+      this.activeDragViewport.getContentElement(),
+      event,
+    );
   }
 
   /**
    * Handles the pointer move phase of a transform drag.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @returns True if the event was consumed.
    */
-  private handleTransformPointerMove(camera: THREE.Camera, renderer: THREE.WebGLRenderer, event: MouseEvent): boolean {
+  private handleTransformPointerMove(camera: THREE.Camera, pickElement: HTMLElement, event: MouseEvent): boolean {
     if (!this.deps.transformHandler.isDragging()) return false;
     const pivot = this.computeCurrentPivot();
     const selected = filterUnlockedObjects(Array.from(this.deps.selectionManager.getSelectedObjects()));
-    this.updateSnapFromShiftKey();
-    this.deps.transformHandler.onPointerMove(camera, renderer, event, pivot, selected);
+    this.updateSnapFromShiftKey(event);
+    this.deps.transformHandler.onPointerMove(camera, pickElement, event, pivot, selected);
     this.deps.onTransformsLive?.(selected);
     const transformTargets = resolveTransformTargets(selected);
     this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(transformTargets);
@@ -460,10 +478,15 @@ export class TransformInteractionBridge {
 
   /**
    * Temporarily disables snap while Shift is held (precision mode). Restores
-   * the user snap preference when Shift is released.
+   * the user snap preference when Shift is released. Prefers the live pointer
+   * event so detached popup windows work without sharing the main
+   * InputManager.
+   *
+   * @param event Optional pointer event providing shiftKey for this sample.
    */
-  private updateSnapFromShiftKey(): void {
-    if (this.deps.inputManager.isShiftDown()) {
+  private updateSnapFromShiftKey(event?: MouseEvent): void {
+    const shiftHeld = event?.shiftKey === true || this.deps.inputManager.isShiftDown();
+    if (shiftHeld) {
       this.deps.gridSnap.setEnabled(false);
       return;
     }

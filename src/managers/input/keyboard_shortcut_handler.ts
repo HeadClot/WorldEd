@@ -69,6 +69,7 @@ export class KeyboardShortcutHandler {
   private isClipToolActive: (() => boolean) | null;
   private isNavigationActive: NavigationActiveCallback | null;
   private keydownListener: ((event: KeyboardEvent) => void) | null;
+  private readonly registeredWindows: Set<Window>;
   private readonly getKeyboardShortcuts: () => KeyboardShortcutSettings;
 
   /**
@@ -118,6 +119,7 @@ export class KeyboardShortcutHandler {
     this.isClipToolActive = null;
     this.isNavigationActive = null;
     this.keydownListener = null;
+    this.registeredWindows = new Set();
   }
 
   /**
@@ -334,17 +336,55 @@ export class KeyboardShortcutHandler {
     this.onClipSplit = onSplit;
   }
 
-  /** Registers the window keydown listener for all keyboard shortcuts. */
+  /**
+   * Registers the main-window keydown listener for all keyboard shortcuts.
+   * Detached popups should also call {@link registerOnWindow}.
+   */
   register(): void {
-    if (this.keydownListener) return;
-    this.keydownListener = (event) => this.handleKeyDown(event);
-    window.addEventListener('keydown', this.keydownListener);
+    this.registerOnWindow(window);
   }
 
-  /** Removes the window keydown listener. */
+  /**
+   * Registers keyboard shortcuts on an additional window (for example a
+   * detached multi-monitor viewport popup). Safe to call repeatedly for the
+   * same window.
+   *
+   * @param targetWindow Window that should dispatch editor shortcuts.
+   */
+  registerOnWindow(targetWindow: Window): void {
+    if (this.registeredWindows.has(targetWindow)) return;
+    if (!this.keydownListener) {
+      this.keydownListener = (event) => this.handleKeyDown(event);
+    }
+    targetWindow.addEventListener('keydown', this.keydownListener);
+    this.registeredWindows.add(targetWindow);
+  }
+
+  /**
+   * Removes keyboard shortcut listeners from one window (for example when a
+   * detached popup closes).
+   *
+   * @param targetWindow Window that no longer needs editor shortcuts.
+   */
+  unregisterFromWindow(targetWindow: Window): void {
+    if (!this.keydownListener || !this.registeredWindows.has(targetWindow)) return;
+    targetWindow.removeEventListener('keydown', this.keydownListener);
+    this.registeredWindows.delete(targetWindow);
+    if (this.registeredWindows.size === 0) {
+      this.keydownListener = null;
+    }
+  }
+
+  /** Removes keydown listeners from every registered window. */
   unregister(): void {
-    if (!this.keydownListener) return;
-    window.removeEventListener('keydown', this.keydownListener);
+    if (!this.keydownListener) {
+      this.registeredWindows.clear();
+      return;
+    }
+    for (const targetWindow of this.registeredWindows) {
+      targetWindow.removeEventListener('keydown', this.keydownListener);
+    }
+    this.registeredWindows.clear();
     this.keydownListener = null;
   }
 

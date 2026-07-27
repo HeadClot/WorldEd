@@ -42,12 +42,12 @@ export class FaceSelectionRaycaster {
   pickFace(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     meshes: THREE.Mesh[],
   ): FacePickResult | null {
     if (meshes.length === 0) return null;
     camera.updateMatrixWorld(true);
-    this.setRayFromEvent(event, camera, renderer);
+    this.setRayFromEvent(event, camera, pickElement);
     let bestMesh: THREE.Mesh | null = null;
     let bestFaceIndex = -1;
     let bestDistance = Infinity;
@@ -77,8 +77,8 @@ export class FaceSelectionRaycaster {
    * @param camera The camera to cast from.
    * @param renderer The renderer providing canvas bounds.
    */
-  private setRayFromEvent(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): void {
-    pointerEventToNdc(event, renderer.domElement, this.ndcVector);
+  private setRayFromEvent(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): void {
+    pointerEventToNdc(event, pickElement, this.ndcVector);
     this.helperRaycaster.setFromCamera(this.ndcVector, camera);
     this.rayOrigin.copy(this.helperRaycaster.ray.origin);
     this.rayDirection.copy(this.helperRaycaster.ray.direction);

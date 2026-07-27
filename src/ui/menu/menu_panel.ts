@@ -38,9 +38,12 @@ export class MenuPanel {
   private readonly root: HTMLElement;
   private readonly rows: BoundMenuRow[];
   private readonly onRequestCloseRoot: () => void;
+  private readonly isSubmenu: boolean;
   private openChildPanel: MenuPanel | null;
   private activeRowButton: HTMLButtonElement | null;
   private pendingCloseTimer: ReturnType<typeof setTimeout> | null;
+  private homeParent: HTMLElement | null;
+  private homeNextSibling: ChildNode | null;
 
   /**
    * Creates a menu panel from declarative entries.
@@ -51,9 +54,12 @@ export class MenuPanel {
    */
   constructor(entries: ToolbarMenuEntry[], onRequestCloseRoot: () => void, isSubmenu = false) {
     this.rows = [];
+    this.isSubmenu = isSubmenu;
     this.openChildPanel = null;
     this.activeRowButton = null;
     this.pendingCloseTimer = null;
+    this.homeParent = null;
+    this.homeNextSibling = null;
     this.onRequestCloseRoot = onRequestCloseRoot;
     this.root = document.createElement('div');
     this.root.classList.add(isSubmenu ? 'editor-toolbar-dropdown-submenu' : 'editor-toolbar-dropdown-menu');
@@ -71,9 +77,18 @@ export class MenuPanel {
     return this.root;
   }
 
-  /** Shows the panel and refreshes live enablement and shortcut labels. */
-  open(): void {
+  /**
+   * Shows the panel and refreshes live enablement and shortcut labels. Root
+   * menus mount on document.body with fixed positioning so they stack above
+   * floating tool windows (Tools, Texture, …).
+   *
+   * @param anchor Optional trigger control used to place a root menu.
+   */
+  open(anchor?: HTMLElement): void {
     this.refresh();
+    if (!this.isSubmenu && anchor) {
+      this.mountRootMenuOnBody(anchor);
+    }
     this.root.style.display = 'block';
   }
 
@@ -83,6 +98,39 @@ export class MenuPanel {
     this.closeOpenChild();
     this.setActiveRow(null);
     this.root.style.display = 'none';
+    this.restoreRootMenuHome();
+  }
+
+  /**
+   * Re-parents a root menu under the anchor document's body and places it under
+   * the anchor. Uses ownerDocument so menus opened in detached popup windows
+   * mount in that popup instead of the main editor document.
+   *
+   * @param anchor Button or control that opened the menu.
+   */
+  private mountRootMenuOnBody(anchor: HTMLElement): void {
+    if (!this.homeParent) {
+      this.homeParent = this.root.parentElement;
+      this.homeNextSibling = this.root.nextSibling;
+    }
+    const rect = anchor.getBoundingClientRect();
+    this.root.style.position = 'fixed';
+    this.root.style.top = `${Math.round(rect.bottom + 4)}px`;
+    this.root.style.left = `${Math.round(rect.left)}px`;
+    const ownerDocument = anchor.ownerDocument;
+    ownerDocument.body.appendChild(this.root);
+  }
+
+  /** Returns a root menu to its original parent after close. */
+  private restoreRootMenuHome(): void {
+    if (this.isSubmenu || !this.homeParent) return;
+    if (this.homeNextSibling && this.homeNextSibling.parentNode === this.homeParent) {
+      this.homeParent.insertBefore(this.root, this.homeNextSibling);
+    } else {
+      this.homeParent.appendChild(this.root);
+    }
+    this.homeParent = null;
+    this.homeNextSibling = null;
   }
 
   /**

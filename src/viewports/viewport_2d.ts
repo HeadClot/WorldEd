@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BaseViewport } from './base_viewport.js';
+import { BaseViewport, type BaseViewportOptions } from './base_viewport.js';
 import { Grids, GridPlane } from './grid/grids.js';
 import { OrthoPanHandler } from '../managers/camera/ortho_pan_handler.js';
 import { SelectionManager } from '../selection/object/selection_manager.js';
@@ -11,11 +11,17 @@ import { FrustumPlanes } from '../types/frustum_planes.js';
 import { ViewportShadingController } from './viewport_shading_controller.js';
 import { ShadingMode } from '../types/shading_mode.js';
 import { blurActiveFormField } from '../utils/dom_focus.js';
-import { clampOrthoZoomFactor } from './ortho_zoom_limits.js';
+import { resizeOrthoFrustumPreservingZoom, zoomOrthoFrustumTowardPointer } from './ortho_zoom_limits.js';
 import { isEditorHelperObject } from '../utils/mesh_edge_sync.js';
 import { DEFAULT_ORTHO_HALF_EXTENT } from '../types/editor_config.js';
 import { getDefaultSceneFocus } from '../navigation/default_camera_placement.js';
 import { OrthoDepthRanger } from './ortho_depth_ranger.js';
+
+/** Options for constructing a shared-scene orthographic pane. */
+export interface Viewport2DOptions extends BaseViewportOptions {
+  plane: GridPlane;
+  cameraPosition: THREE.Vector3;
+}
 
 export class Viewport2D extends BaseViewport {
   private camera: THREE.OrthographicCamera;
@@ -30,24 +36,25 @@ export class Viewport2D extends BaseViewport {
   private clipPlaneCallback!: ((event: MouseEvent) => boolean) | null;
   private meshResolveCallback!: MeshResolveCallback | null;
   private shadingController: ViewportShadingController;
+  private panHandler: OrthoPanHandler | null;
+  private gridRoot: THREE.Object3D;
 
   /**
-   * Creates a new 2D orthographic viewport. Defaults to wireframe shading:
-   * decorative white outlines only (no fill).
+   * Creates a new 2D orthographic viewport pane on the shared scene/surface.
    *
-   * @param container The DOM element that will contain this viewport.
-   * @param name The display name shown in the viewport toolbar.
-   * @param plane The grid plane orientation for this viewport.
-   * @param cameraPosition The camera position for the orthographic view.
+   * @param options Shared surface options plus plane and camera placement.
    */
-  constructor(container: HTMLElement, name: string, plane: GridPlane, cameraPosition: THREE.Vector3) {
-    super(container, name, ShadingMode.WIREFRAME);
-    this.grids = new Grids(50, 50, plane, 'orthographic');
-    this.camera = this.createCamera(cameraPosition, plane);
+  constructor(options: Viewport2DOptions) {
+    super({ ...options, initialShadingMode: options.initialShadingMode ?? ShadingMode.WIREFRAME });
+    this.grids = new Grids(50, 50, options.plane, 'orthographic');
+    this.gridRoot = this.grids.getScene();
+    this.gridRoot.visible = false;
+    this.camera = this.createCamera(options.cameraPosition, options.plane);
+    this.panHandler = null;
     this.initializeState();
     this.setupPanHandler();
     this.setupClickSelection();
-    this.scene.add(this.grids.getScene());
+    this.scene.add(this.gridRoot);
     this.shadingController = new ViewportShadingController(this);
     this.shadingController.setShadingMode(ShadingMode.WIREFRAME);
   }
@@ -185,7 +192,7 @@ export class Viewport2D extends BaseViewport {
 
   /** Configures pointer event listeners for selection and transform. */
   private setupClickSelection(): void {
-    this.renderer.domElement.addEventListener('pointerdown', (event) => {
+    this.contentElement.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       blurActiveFormField();
       if (this.transformCallback && this.transformCallback(event)) return;
@@ -194,10 +201,10 @@ export class Viewport2D extends BaseViewport {
       if (!this.selectionManager) return;
       this.handleObjectSelection(event);
     });
-    this.renderer.domElement.addEventListener('pointermove', (event) => {
+    this.contentElement.addEventListener('pointermove', (event) => {
       if (this.transformCallback) this.transformCallback(event);
     });
-    this.renderer.domElement.addEventListener('pointerup', (event) => {
+    this.contentElement.addEventListener('pointerup', (event) => {
       if (this.transformCallback) this.transformCallback(event);
     });
   }
@@ -233,7 +240,7 @@ export class Viewport2D extends BaseViewport {
   getObjectPickStack(event: MouseEvent): THREE.Mesh[] {
     const objects = this.getEffectiveSelectableObjects();
     if (objects.length === 0) return [];
-    const intersections = this.raycaster.castIntersections(this.camera, this.renderer, event, objects);
+    const intersections = this.raycaster.castIntersections(this.camera, this.contentElement, event, objects);
     return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) => this.resolveClickedMesh(mesh));
   }
 
@@ -308,58 +315,82 @@ export class Viewport2D extends BaseViewport {
     camera.up.set(0, 1, 0);
   }
 
-  /** Attaches orthographic pan and wheel-zoom handling to the canvas. */
+  /** Attaches orthographic pan and wheel-zoom handling to the content element. */
   private setupPanHandler(): void {
-    new OrthoPanHandler(this.renderer.domElement, this.camera, (factor) => this.zoom(factor));
+    this.panHandler = new OrthoPanHandler(this.contentElement, this.camera, (factor, pointerU, pointerV) =>
+      this.zoomTowardPointer(factor, pointerU, pointerV),
+    );
   }
 
   /**
-   * Zooms the orthographic frustum about its view-space center. Factor is
-   * clamped so half-height stays within safe min/max extents.
+   * Zooms the orthographic frustum toward the pointer so the projection-space
+   * point under the cursor stays fixed (zoom-to-cursor).
    *
    * @param factor Multiplier for frustum size (greater than 1 zooms out).
+   * @param pointerU Horizontal pointer in [0, 1] across the pane.
+   * @param pointerV Vertical pointer in [0, 1] down the pane.
    */
-  private zoom(factor: number): void {
-    const currentHalfHeight = (this.camera.top - this.camera.bottom) / 2;
-    const safeFactor = clampOrthoZoomFactor(currentHalfHeight, factor);
-    if (Math.abs(safeFactor - 1) < 1e-12) return;
-    const centerX = (this.camera.left + this.camera.right) / 2;
-    const centerY = (this.camera.top + this.camera.bottom) / 2;
-    const halfWidth = ((this.camera.right - this.camera.left) * safeFactor) / 2;
-    const halfHeight = currentHalfHeight * safeFactor;
-    this.camera.left = centerX - halfWidth;
-    this.camera.right = centerX + halfWidth;
-    this.camera.top = centerY + halfHeight;
-    this.camera.bottom = centerY - halfHeight;
+  private zoomTowardPointer(factor: number, pointerU: number, pointerV: number): void {
+    const next = zoomOrthoFrustumTowardPointer(
+      {
+        left: this.camera.left,
+        right: this.camera.right,
+        top: this.camera.top,
+        bottom: this.camera.bottom,
+      },
+      factor,
+      pointerU,
+      pointerV,
+    );
+    this.camera.left = next.left;
+    this.camera.right = next.right;
+    this.camera.top = next.top;
+    this.camera.bottom = next.bottom;
     this.camera.updateProjectionMatrix();
   }
 
   /**
-   * Resizes the renderer and restores the default orthographic framing.
+   * Updates the orthographic aspect for the drawable pane size without
+   * resetting wheel zoom. Multi-view invokes this every frame with the scissor
+   * pixel size.
    *
    * @param width Viewport width in CSS pixels.
    * @param height Viewport height in CSS pixels.
    */
   resize(width: number, height: number): void {
-    this.renderer.setSize(width, height);
-    const aspect = width / height;
-    const size = DEFAULT_ORTHO_HALF_EXTENT;
-    this.camera.left = -size * aspect;
-    this.camera.right = size * aspect;
-    this.camera.top = size;
-    this.camera.bottom = -size;
+    const safeWidth = Math.max(width, 1);
+    const safeHeight = Math.max(height, 1);
+    const next = resizeOrthoFrustumPreservingZoom(
+      {
+        left: this.camera.left,
+        right: this.camera.right,
+        top: this.camera.top,
+        bottom: this.camera.bottom,
+      },
+      safeWidth / safeHeight,
+      DEFAULT_ORTHO_HALF_EXTENT,
+    );
+    this.camera.left = next.left;
+    this.camera.right = next.right;
+    this.camera.top = next.top;
+    this.camera.bottom = next.bottom;
     this.camera.updateProjectionMatrix();
   }
 
   /**
-   * Updates depth range, grids, and renders the orthographic scene. Depth
-   * ranging keeps all content in front of the camera (any ±X for side) without
-   * changing zoom or lateral pan.
+   * Shows this pane's grid and updates depth range for the shared multi-view
+   * pass. Drawing is performed by MultiViewComposer.
    */
-  render(): void {
+  prepareRender(): void {
+    this.shadingController.applyForRenderPass();
+    this.gridRoot.visible = true;
     OrthoDepthRanger.update(this.camera, this.scene);
     this.grids.update(this.camera);
-    this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Hides this pane's grid after its multi-view pass completes. */
+  endRenderPass(): void {
+    this.gridRoot.visible = false;
   }
 
   /**
@@ -438,5 +469,21 @@ export class Viewport2D extends BaseViewport {
    */
   getGridHelper(): Grids {
     return this.grids;
+  }
+
+  /** Releases grids, pan handler, shading, and base renderer resources. */
+  override dispose(): void {
+    if (this.getIsDisposed()) return;
+    this.panHandler?.dispose();
+    this.panHandler = null;
+    this.scene.remove(this.gridRoot);
+    this.grids.dispose();
+    this.shadingController.dispose();
+    this.transformCallback = null;
+    this.faceSelectionCallback = null;
+    this.clipPlaneCallback = null;
+    this.meshResolveCallback = null;
+    this.selectionManager = null;
+    super.dispose();
   }
 }

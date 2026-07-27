@@ -11,7 +11,7 @@ describe('BoundsFacePicker', () => {
     const setup = createPickerSetup();
     setup.gizmoGroup.visible = false;
     const event = createCenterEvent();
-    const result = picker.pickFace(event, setup.camera, setup.renderer, setup.gizmoGroup);
+    const result = picker.pickFace(event, setup.camera, setup.pickElement, setup.gizmoGroup);
     expect(result).toBeNull();
   });
 
@@ -21,7 +21,7 @@ describe('BoundsFacePicker', () => {
     setup.gizmoGroup.visible = true;
     setup.gizmoGroup.updateMatrixWorld(true);
     const event = createCenterEvent();
-    const result = picker.pickFace(event, setup.camera, setup.renderer, setup.gizmoGroup);
+    const result = picker.pickFace(event, setup.camera, setup.pickElement, setup.gizmoGroup);
     expect(result).not.toBeNull();
     expect(result!.face).toBeDefined();
     expect(result!.normal.length()).toBeCloseTo(1, 5);
@@ -34,13 +34,13 @@ describe('BoundsFacePicker', () => {
 });
 
 /**
- * Builds camera, renderer, and bounds gizmo group for face picking.
+ * Builds camera, renderer.domElement, and bounds gizmo group for face picking.
  *
  * @returns Fixtures for BoundsFacePicker tests.
  */
 function createPickerSetup(): {
   camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
+  pickElement: HTMLElement;
   gizmoGroup: THREE.Group;
 } {
   const boundsGizmo = new BoundsGizmo(Theme);
@@ -62,7 +62,7 @@ function createPickerSetup(): {
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
   };
   const renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
-  return { camera, renderer, gizmoGroup };
+  return { camera, pickElement: renderer.domElement as HTMLElement, gizmoGroup };
 }
 
 /**

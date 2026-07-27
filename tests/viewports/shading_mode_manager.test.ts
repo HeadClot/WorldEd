@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { ShadingModeManager } from '../../src/viewports/shading_mode_manager.js';
 import { ShadingMode } from '../../src/types/shading_mode.js';
+import { clearSharedContentMaterialStoreForTests } from '../../src/viewports/shared_content_material_store.js';
 
 describe('ShadingModeManager', () => {
   let scene: THREE.Scene;
@@ -12,12 +13,18 @@ describe('ShadingModeManager', () => {
   let materialB: THREE.MeshStandardMaterial;
 
   beforeEach(() => {
+    clearSharedContentMaterialStoreForTests();
     scene = new THREE.Scene();
     manager = new ShadingModeManager(scene);
     materialA = new THREE.MeshStandardMaterial({ color: 0xff0000 });
     materialB = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
     meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), materialA);
     meshB = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), materialB);
+  });
+
+  afterEach(() => {
+    manager.dispose();
+    clearSharedContentMaterialStoreForTests();
   });
 
   describe('snapshotMaterials', () => {
@@ -103,6 +110,16 @@ describe('ShadingModeManager', () => {
       manager.setMode(ShadingMode.FLAT);
       expect(meshA.material instanceof THREE.MeshBasicMaterial).toBe(true);
       expect(meshB.material instanceof THREE.MeshBasicMaterial).toBe(true);
+    });
+
+    it('should not capture wireframe overrides as content for another manager', () => {
+      manager.setMode(ShadingMode.WIREFRAME);
+      const second = new ShadingModeManager(scene);
+      second.snapshotMaterials();
+      second.setMode(ShadingMode.FLAT);
+      expect((meshA.material as THREE.MeshBasicMaterial).color.getHex()).toBe(0xff0000);
+      expect((meshA.material as THREE.Material).colorWrite).not.toBe(false);
+      second.dispose();
     });
 
     it('should keep content albedo colors at full brightness (unlit)', () => {

@@ -59,7 +59,7 @@ export class BoundsDragController {
    * Starts Bounds interaction: resize handle first, then face-plane move.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @param handles Current gizmo handles.
    * @param selectedObjects Selected meshes.
@@ -68,34 +68,34 @@ export class BoundsDragController {
    */
   beginPointerDown(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[],
     pivot: THREE.Vector3,
     gizmoGroup: THREE.Group,
   ): void {
-    if (this.tryBeginResizeDrag(camera, renderer, event, handles, selectedObjects, pivot, gizmoGroup)) {
+    if (this.tryBeginResizeDrag(camera, pickElement, event, handles, selectedObjects, pivot, gizmoGroup)) {
       return;
     }
-    this.beginFaceMoveDrag(camera, renderer, event, selectedObjects, pivot, gizmoGroup);
+    this.beginFaceMoveDrag(camera, pickElement, event, selectedObjects, pivot, gizmoGroup);
   }
 
   /**
    * Dispatches Bounds sub-mode drag updates.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @param objects Selected meshes.
    */
-  handleMove(camera: THREE.Camera, renderer: THREE.WebGLRenderer, event: MouseEvent, objects: THREE.Mesh[]): void {
+  handleMove(camera: THREE.Camera, pickElement: HTMLElement, event: MouseEvent, objects: THREE.Mesh[]): void {
     if (this.session.isBoundsFaceMove) {
-      this.handleFaceTranslate(camera, renderer, event, objects);
+      this.handleFaceTranslate(camera, pickElement, event, objects);
       return;
     }
     if (this.session.isBoundsResize) {
-      this.handleResize(camera, renderer, event, objects);
+      this.handleResize(camera, pickElement, event, objects);
     }
   }
 
@@ -103,7 +103,7 @@ export class BoundsDragController {
    * Starts a one-sided bounds resize when a face handle is hit.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @param handles Current handles.
    * @param selectedObjects Selected meshes.
@@ -113,14 +113,14 @@ export class BoundsDragController {
    */
   private tryBeginResizeDrag(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     handles: GizmoHandle[],
     selectedObjects: THREE.Mesh[],
     pivot: THREE.Vector3,
     gizmoGroup: THREE.Group,
   ): boolean {
-    const picked = this.gizmoRaycaster.pickHandle(handles, camera, renderer, event, gizmoGroup);
+    const picked = this.gizmoRaycaster.pickHandle(handles, camera, pickElement, event, gizmoGroup);
     if (!picked) return false;
     const face = this.readBoundsFaceFromHandle(picked);
     if (!face) return false;
@@ -135,9 +135,9 @@ export class BoundsDragController {
     this.session.activeBoundsFace = face;
     this.session.startBounds = this.cloneBounds(bounds);
     this.session.dragCamera = camera;
-    this.session.dragRenderer = renderer;
+    this.session.dragRenderer = pickElement;
     this.transformGizmo.setActiveHandle(picked);
-    this.captureResizeStart(camera, renderer, event, bounds, face);
+    this.captureResizeStart(camera, pickElement, event, bounds, face);
     this.transformGizmo.setBoundsGuideLinesVisible(true);
     return true;
   }
@@ -146,7 +146,7 @@ export class BoundsDragController {
    * Starts a face-plane translation when a bounds face is hit.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @param selectedObjects Selected meshes.
    * @param pivot Transform pivot.
@@ -154,13 +154,13 @@ export class BoundsDragController {
    */
   private beginFaceMoveDrag(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     selectedObjects: THREE.Mesh[],
     pivot: THREE.Vector3,
     gizmoGroup: THREE.Group,
   ): void {
-    const pick = this.boundsFacePicker.pickFace(event, camera, renderer, gizmoGroup);
+    const pick = this.boundsFacePicker.pickFace(event, camera, pickElement, gizmoGroup);
     if (!pick) return;
     this.session.snapshotPreDragState(selectedObjects);
     this.session.resetDragAccumulator();
@@ -170,7 +170,7 @@ export class BoundsDragController {
     this.session.activeBoundsFace = pick.face;
     this.session.boundsMovePlane.setFromNormalAndCoplanarPoint(pick.normal, pick.point);
     this.session.dragCamera = camera;
-    this.session.dragRenderer = renderer;
+    this.session.dragRenderer = pickElement;
     this.session.initialMousePosition = pick.point.clone();
     this.session.pointerDownClientX = event.clientX;
     this.session.pointerDownClientY = event.clientY;
@@ -182,18 +182,18 @@ export class BoundsDragController {
    * Translates selection on the picked bounds face plane.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @param objects Selected meshes.
    */
   private handleFaceTranslate(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     objects: THREE.Mesh[],
   ): void {
     if (!this.session.initialMousePosition) return;
-    const current = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, this.session.boundsMovePlane);
+    const current = this.gizmoRaycaster.projectMouseToPlane(camera, pickElement, event, this.session.boundsMovePlane);
     if (!current) return;
     const totalDelta = current.clone().sub(this.session.initialMousePosition);
     this.session.dragDeltaAccumulator.copy(totalDelta);
@@ -205,21 +205,16 @@ export class BoundsDragController {
    * Applies one-sided resize along the active bounds face normal.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @param objects Selected meshes.
    */
-  private handleResize(
-    camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
-    event: MouseEvent,
-    objects: THREE.Mesh[],
-  ): void {
+  private handleResize(camera: THREE.Camera, pickElement: HTMLElement, event: MouseEvent, objects: THREE.Mesh[]): void {
     if (!this.session.initialMousePosition || !this.session.activeBoundsFace || !this.session.startBounds) {
       return;
     }
     const plane = TransformProjectionMath.buildCameraPlane(camera, this.session.initialMousePosition);
-    const current = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
+    const current = this.gizmoRaycaster.projectMouseToPlane(camera, pickElement, event, plane);
     if (!current) return;
     const outward = this.getActiveFaceWorldNormal();
     const rawDelta = current.clone().sub(this.session.initialMousePosition).dot(outward);
@@ -328,14 +323,14 @@ export class BoundsDragController {
    * Stores the initial mouse sample for a bounds resize drag.
    *
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @param event The pointer event.
    * @param bounds Bounds at drag start.
    * @param face The face being resized.
    */
   private captureResizeStart(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     bounds: OrientedBoundsData,
     face: BoundsFace,
@@ -344,7 +339,7 @@ export class BoundsDragController {
     const half = this.getFaceHalfExtent(bounds, face);
     const faceCenter = bounds.center.clone().addScaledVector(outward, half);
     const plane = TransformProjectionMath.buildCameraPlane(camera, faceCenter);
-    this.session.initialMousePosition = this.gizmoRaycaster.projectMouseToPlane(camera, renderer, event, plane);
+    this.session.initialMousePosition = this.gizmoRaycaster.projectMouseToPlane(camera, pickElement, event, plane);
   }
 
   /**

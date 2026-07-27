@@ -326,6 +326,17 @@ export class ToolbarIcons {
   }
 
   /**
+   * Detached / external window icon for multi-monitor viewport testing.
+   *
+   * @returns SVG markup string.
+   */
+  static detachedViewport(): string {
+    return this.wrapSvg(
+      '<rect x="3" y="6" width="12" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M9 3h9a1.5 1.5 0 0 1 1.5 1.5V13M15 3v4h4"/>',
+    );
+  }
+
+  /**
    * Settings / gear icon for the main toolbar.
    *
    * @returns SVG markup string.

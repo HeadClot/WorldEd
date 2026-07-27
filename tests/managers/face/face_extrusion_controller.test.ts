@@ -112,7 +112,7 @@ describe('FaceExtrusionController', () => {
       controller.setSelectionMode(SelectionMode.OBJECT);
       const mockEvent = createMockPointerEvent(100, 100);
       const camera = new THREE.PerspectiveCamera();
-      const result = controller.onPointerDown(mockEvent, camera, createMockRenderer());
+      const result = controller.onPointerDown(mockEvent, camera, createMockRenderer().domElement as HTMLElement);
       expect(result).toBeNull();
     });
   });

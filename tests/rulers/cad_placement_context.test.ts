@@ -7,39 +7,32 @@ import {
   writeDirectionTowardCamera,
 } from '../../src/rulers/cad_placement_context.js';
 
-/**
- * Builds a mock renderer with fixed canvas CSS size.
- *
- * @param width CSS width.
- * @param height CSS height.
- * @returns Renderer stub.
- */
-function mockRenderer(width: number, height: number): THREE.WebGLRenderer {
-  const canvas = document.createElement('canvas');
-  Object.defineProperty(canvas, 'clientWidth', { value: width, configurable: true });
-  Object.defineProperty(canvas, 'clientHeight', { value: height, configurable: true });
-  return { domElement: canvas } as unknown as THREE.WebGLRenderer;
-}
-
 describe('cad_placement_context', () => {
   it('should estimate larger world units per pixel when ortho zoom is smaller', () => {
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 100);
     camera.zoom = 1;
-    const renderer = mockRenderer(200, 200);
-    const coarse = estimateWorldUnitsPerPixel(camera, renderer, new THREE.Vector3());
+    const coarse = estimateWorldUnitsPerPixel(camera, 200, new THREE.Vector3());
     camera.zoom = 4;
-    const fine = estimateWorldUnitsPerPixel(camera, renderer, new THREE.Vector3());
+    const fine = estimateWorldUnitsPerPixel(camera, 200, new THREE.Vector3());
     expect(coarse).toBeGreaterThan(fine);
   });
 
   it('should keep dimension stand-off small and clamped', () => {
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     camera.position.set(0, 0, 5);
-    const placement = createCadPlacementContext(camera, mockRenderer(800, 600), new THREE.Vector3());
+    const placement = createCadPlacementContext(camera, 600, new THREE.Vector3());
     expect(placement.offsetWorld).toBeGreaterThan(0);
     expect(placement.offsetWorld).toBeLessThan(3);
     expect(placement.gapWorld).toBe(0);
     expect(placement.overshootWorld).toBe(0);
+  });
+
+  it('should use smaller world stand-off for taller viewport CSS height', () => {
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+    camera.position.set(0, 0, 5);
+    const shortPane = createCadPlacementContext(camera, 200, new THREE.Vector3());
+    const tallPane = createCadPlacementContext(camera, 800, new THREE.Vector3());
+    expect(shortPane.offsetWorld).toBeGreaterThan(tallPane.offsetWorld);
   });
 
   it('should write orthographic to-camera as opposite look direction', () => {

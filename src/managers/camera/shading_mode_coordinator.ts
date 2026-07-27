@@ -1,5 +1,4 @@
-import { Viewport3D } from '../../viewports/viewport_3d.js';
-import { Viewport2D } from '../../viewports/viewport_2d.js';
+import type { EditorViewport } from '../../viewports/editor_viewport.js';
 import { SelectionVisualController } from '../../selection/object/selection_visual_controller.js';
 import { ShadingModeHandler } from './shading_mode_handler.js';
 import { KeyboardShortcutHandler } from '../input/keyboard_shortcut_handler.js';
@@ -9,45 +8,37 @@ import { ViewportShadingController } from '../../viewports/viewport_shading_cont
 
 /** Coordinates per-viewport shading modes, toolbars, and keyboard shortcuts. */
 export class ShadingModeCoordinator {
-  private viewport2DTop: Viewport2D;
-  private viewport2DFront: Viewport2D;
-  private viewport2DSide: Viewport2D;
-  private viewport3D: Viewport3D;
-  private viewportElements: HTMLElement[];
+  private getViewports: () => readonly EditorViewport[];
+  private getViewportElements: () => readonly HTMLElement[];
   private selectionVisualController: SelectionVisualController;
   private statusBar: StatusBar | null;
   private shadingControllers: ViewportShadingController[];
   private shadingModeHandler: ShadingModeHandler;
   private activeViewportIndex: number;
+  private activationUnsubscribers: Array<() => void>;
+  private onFitViewport: ((viewport: EditorViewport) => void) | null;
 
   /**
    * Creates shading mode coordination state. Call wireControls to bind UI.
    *
-   * @param viewport2DTop Top orthographic viewport.
-   * @param viewport2DFront Front orthographic viewport.
-   * @param viewport2DSide Side orthographic viewport.
-   * @param viewport3D Perspective viewport.
-   * @param viewportElements DOM containers used for activation tracking.
+   * @param getViewports Returns live viewports in pane order.
+   * @param getViewportElements Returns DOM containers in the same order.
    * @param selectionVisualController Selection visuals that need shading refs.
    * @param statusBar Status bar for shading mode display, or null.
    */
   constructor(
-    viewport2DTop: Viewport2D,
-    viewport2DFront: Viewport2D,
-    viewport2DSide: Viewport2D,
-    viewport3D: Viewport3D,
-    viewportElements: HTMLElement[],
+    getViewports: () => readonly EditorViewport[],
+    getViewportElements: () => readonly HTMLElement[],
     selectionVisualController: SelectionVisualController,
     statusBar: StatusBar | null,
   ) {
-    this.viewport2DTop = viewport2DTop;
-    this.viewport2DFront = viewport2DFront;
-    this.viewport2DSide = viewport2DSide;
-    this.viewport3D = viewport3D;
-    this.viewportElements = viewportElements;
+    this.getViewports = getViewports;
+    this.getViewportElements = getViewportElements;
     this.selectionVisualController = selectionVisualController;
     this.statusBar = statusBar;
-    this.activeViewportIndex = 3;
+    this.activeViewportIndex = 0;
+    this.activationUnsubscribers = [];
+    this.onFitViewport = null;
     this.shadingControllers = this.collectShadingControllers();
     this.selectionVisualController.setShadingControllers(this.shadingControllers);
     this.shadingModeHandler = new ShadingModeHandler(this.shadingControllers, this.activeViewportIndex, this.statusBar);
@@ -62,17 +53,36 @@ export class ShadingModeCoordinator {
    */
   wireControls(
     keyboardShortcutHandler: KeyboardShortcutHandler,
-    onFitViewport: (viewport: Viewport2D | Viewport3D) => void,
+    onFitViewport: (viewport: EditorViewport) => void,
   ): void {
+    this.onFitViewport = onFitViewport;
     keyboardShortcutHandler.setOnShadingMode((mode) => this.onShadingMode(mode));
-    this.bindViewportActivation();
-    this.bindViewportToolbars(onFitViewport);
+    this.rebindViewportUi();
     this.updateShadingMeshes();
     this.syncStatusBarShadingMode();
   }
 
   /**
-   * Returns the active viewport index (0 top, 1 front, 2 side, 3 perspective).
+   * Rebinds activation listeners and toolbars after the live viewport set
+   * changes.
+   */
+  rebindViewportUi(): void {
+    this.clearActivationListeners();
+    this.shadingControllers = this.collectShadingControllers();
+    this.selectionVisualController.setShadingControllers(this.shadingControllers);
+    this.shadingModeHandler = new ShadingModeHandler(
+      this.shadingControllers,
+      Math.min(this.activeViewportIndex, Math.max(0, this.shadingControllers.length - 1)),
+      this.statusBar,
+    );
+    this.bindViewportActivation();
+    if (this.onFitViewport) {
+      this.bindViewportToolbars(this.onFitViewport);
+    }
+  }
+
+  /**
+   * Returns the active viewport index within the ordered viewport list.
    *
    * @returns Active viewport index.
    */
@@ -81,20 +91,19 @@ export class ShadingModeCoordinator {
   }
 
   /**
-   * Returns viewports in activation-index order: Top, Front, Side, Perspective.
+   * Returns viewports in pane order from the live provider.
    *
    * @returns The ordered viewport array.
    */
-  getOrderedViewports(): Array<Viewport2D | Viewport3D> {
-    return [this.viewport2DTop, this.viewport2DFront, this.viewport2DSide, this.viewport3D];
+  getOrderedViewports(): EditorViewport[] {
+    return [...this.getViewports()];
   }
 
   /** Updates the wireframe overlay meshes for all viewports. */
   updateShadingMeshes(): void {
-    this.viewport2DTop.updateShadingMeshes(this.viewport2DTop.collectSelectableObjects());
-    this.viewport2DFront.updateShadingMeshes(this.viewport2DFront.collectSelectableObjects());
-    this.viewport2DSide.updateShadingMeshes(this.viewport2DSide.collectSelectableObjects());
-    this.viewport3D.updateShadingMeshes(this.viewport3D.collectSelectableObjects());
+    this.getViewports().forEach((viewport) => {
+      viewport.updateShadingMeshes(viewport.collectSelectableObjects());
+    });
   }
 
   /**
@@ -103,23 +112,26 @@ export class ShadingModeCoordinator {
    * @returns An array of ViewportShadingController instances.
    */
   private collectShadingControllers(): ViewportShadingController[] {
-    return [
-      this.viewport2DTop.getShadingController(),
-      this.viewport2DFront.getShadingController(),
-      this.viewport2DSide.getShadingController(),
-      this.viewport3D.getShadingController(),
-    ];
+    return this.getViewports().map((viewport) => viewport.getShadingController());
   }
 
   /** Binds pointer down events to track the active viewport. */
   private bindViewportActivation(): void {
-    this.viewportElements.forEach((el, index) => {
-      el.addEventListener('pointerdown', () => {
+    this.getViewportElements().forEach((el, index) => {
+      const listener = () => {
         this.activeViewportIndex = index;
         this.shadingModeHandler.setActiveViewportIndex(index);
         this.syncStatusBarShadingMode();
-      });
+      };
+      el.addEventListener('pointerdown', listener);
+      this.activationUnsubscribers.push(() => el.removeEventListener('pointerdown', listener));
     });
+  }
+
+  /** Removes previously registered activation listeners. */
+  private clearActivationListeners(): void {
+    this.activationUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.activationUnsubscribers = [];
   }
 
   /**
@@ -127,7 +139,7 @@ export class ShadingModeCoordinator {
    *
    * @param onFitViewport Callback when Fit is pressed for a viewport.
    */
-  private bindViewportToolbars(onFitViewport: (viewport: Viewport2D | Viewport3D) => void): void {
+  private bindViewportToolbars(onFitViewport: (viewport: EditorViewport) => void): void {
     const viewports = this.getOrderedViewports();
     viewports.forEach((viewport, index) => {
       const toolbar = viewport.getViewportToolbar();

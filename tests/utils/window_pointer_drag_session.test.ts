@@ -53,4 +53,20 @@ describe('WindowPointerDragSession', () => {
     expect(firstUp).not.toHaveBeenCalled();
     expect(secondUp).toHaveBeenCalledTimes(1);
   });
+
+  it('should attach listeners to a custom target window for detached popups', () => {
+    session = new WindowPointerDragSession();
+    const onMove = vi.fn();
+    const onUp = vi.fn();
+    const targetWindow = {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as Window;
+    session.begin(onMove, onUp, targetWindow);
+    expect(targetWindow.addEventListener).toHaveBeenCalledWith('pointermove', expect.any(Function));
+    expect(targetWindow.addEventListener).toHaveBeenCalledWith('pointerup', expect.any(Function));
+    expect(targetWindow.addEventListener).toHaveBeenCalledWith('pointercancel', expect.any(Function));
+    session.end();
+    expect(targetWindow.removeEventListener).toHaveBeenCalledWith('pointermove', expect.any(Function));
+  });
 });

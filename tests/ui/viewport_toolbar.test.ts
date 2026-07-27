@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ViewportToolbar } from '../../src/ui/viewport_toolbar.js';
 import { ShadingMode } from '../../src/types/shading_mode.js';
 import { Theme } from '../../src/theme.js';
+import { ViewportKind } from '../../src/viewports/viewport_kind.js';
 
 describe('ViewportToolbar', () => {
   let parent: HTMLElement;
@@ -27,6 +28,64 @@ describe('ViewportToolbar', () => {
 
   it('should display the viewport title', () => {
     expect(toolbar.getElement().textContent).toContain('Top');
+  });
+
+  it('should use the compact 11px uppercase title label font', () => {
+    const title = toolbar.getTitleElement();
+    const label = title.querySelector('span');
+    expect(label).not.toBeNull();
+    expect(label!.style.fontSize).toBe('11px');
+    expect(label!.style.fontWeight).toBe('600');
+    expect(label!.style.textTransform).toBe('uppercase');
+    expect(label!.style.fontFamily).toContain('Segoe UI');
+    expect(label!.style.padding).toBe('0px 4px 0px 3px');
+  });
+
+  it('should expose a type menu caret control on the title button', () => {
+    const title = toolbar.getTitleElement();
+    expect(title.getAttribute('aria-haspopup')).toBe('menu');
+    expect(title.textContent).toContain('▾');
+  });
+
+  it('should invoke kind change callback from the type menu', () => {
+    const onKind = vi.fn();
+    toolbar.setOnViewportKindChange(onKind);
+    toolbar.setViewportKind(ViewportKind.TOP);
+    toolbar.getTitleElement().click();
+    const panel = toolbar.getTypeMenuPanel();
+    expect(panel?.isOpen()).toBe(true);
+    const perspectiveRow = Array.from(panel!.getElement().querySelectorAll('button')).find((button) =>
+      (button.textContent ?? '').includes('Perspective'),
+    );
+    expect(perspectiveRow).toBeDefined();
+    perspectiveRow!.click();
+    expect(onKind).toHaveBeenCalledWith(ViewportKind.PERSPECTIVE);
+  });
+
+  it('should close the type menu on outside pointerdown without needing mousedown', () => {
+    // Perspective content preventDefault()s pointerdown (FlyingCamera), which
+    // suppresses mousedown — outside close must use pointerdown capture.
+    toolbar.setViewportKind(ViewportKind.PERSPECTIVE);
+    toolbar.getTitleElement().click();
+    const panel = toolbar.getTypeMenuPanel();
+    expect(panel?.isOpen()).toBe(true);
+    const content = document.createElement('div');
+    document.body.appendChild(content);
+    content.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+    expect(panel?.isOpen()).toBe(false);
+    content.remove();
+  });
+
+  it('should close the type menu on outside right-button pointerdown', () => {
+    toolbar.setViewportKind(ViewportKind.PERSPECTIVE);
+    toolbar.getTitleElement().click();
+    const panel = toolbar.getTypeMenuPanel();
+    expect(panel?.isOpen()).toBe(true);
+    const content = document.createElement('div');
+    document.body.appendChild(content);
+    content.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 2 }));
+    expect(panel?.isOpen()).toBe(false);
+    content.remove();
   });
 
   it('should use the configured viewport toolbar height', () => {

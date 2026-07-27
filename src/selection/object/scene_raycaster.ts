@@ -31,11 +31,11 @@ export class SceneRaycaster {
    */
   cast(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     selectableObjects: THREE.Mesh[],
   ): THREE.Mesh | null {
-    const hits = this.castAll(camera, renderer, event, selectableObjects);
+    const hits = this.castAll(camera, pickElement, event, selectableObjects);
     return hits.length > 0 ? hits[0]! : null;
   }
 
@@ -45,38 +45,38 @@ export class SceneRaycaster {
    * SelectionClickThrough.
    *
    * @param camera The camera to cast from.
-   * @param renderer The renderer for canvas dimensions.
+   * @param pickElement DOM element defining the view rectangle for NDC.
    * @param event The mouse event providing the click position.
    * @param selectableObjects The array of meshes to test against.
    * @returns Hit meshes ordered by ray distance (closest first).
    */
   castAll(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     selectableObjects: THREE.Mesh[],
   ): THREE.Mesh[] {
-    return this.allMeshHits(this.castIntersections(camera, renderer, event, selectableObjects));
+    return this.allMeshHits(this.castIntersections(camera, pickElement, event, selectableObjects));
   }
 
   /**
    * Returns raycast intersection records ordered near-to-far for click-through.
    *
    * @param camera The camera to cast from.
-   * @param renderer The renderer for canvas dimensions.
+   * @param pickElement DOM element defining the view rectangle for NDC.
    * @param event The mouse event providing the click position.
    * @param selectableObjects The array of meshes to test against.
    * @returns Raw Three.js intersections (distance-sorted).
    */
   castIntersections(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     selectableObjects: THREE.Mesh[],
   ): THREE.Intersection[] {
     if (selectableObjects.length === 0) return [];
     camera.updateMatrixWorld(false);
-    pointerEventToNdc(event, renderer.domElement, this.ndcVector);
+    pointerEventToNdc(event, pickElement, this.ndcVector);
     this.raycaster.setFromCamera(this.ndcVector, camera);
     this.collectSphereCandidates(selectableObjects);
     if (this.candidateMeshes.length === 0) return [];

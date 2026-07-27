@@ -73,7 +73,7 @@ function pickCubeFaceFromDirection(
   const renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
   const event = new MouseEvent('click', { clientX: 100, clientY: 100 });
   const raycaster = new FaceSelectionRaycaster();
-  const result = raycaster.pickFace(event, camera, renderer, [mesh]);
+  const result = raycaster.pickFace(event, camera, renderer.domElement, [mesh]);
   if (!result) return null;
   return { mesh: result.mesh, faceIndex: result.faceIndex };
 }

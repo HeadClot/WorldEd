@@ -49,10 +49,9 @@ describe('TransformHandler undo/redo', () => {
     const mockCanvas = {
       getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
     };
-    const mockRenderer = { domElement: mockCanvas } as unknown as THREE.WebGLRenderer;
     handler.onPointerDown(
       new THREE.PerspectiveCamera(),
-      mockRenderer,
+      mockCanvas as unknown as HTMLElement,
       new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
       handles,
       [mesh],

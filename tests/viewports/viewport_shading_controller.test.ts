@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { ViewportShadingController } from '../../src/viewports/viewport_shading_controller.js';
 import { ShadingMode } from '../../src/types/shading_mode.js';
 import { ShadableViewport } from '../../src/viewports/viewport_shading_controller.js';
+import { disposeSharedShadingPass } from '../../src/viewports/shared_shading_pass.js';
+import { clearSharedContentMaterialStoreForTests } from '../../src/viewports/shared_content_material_store.js';
 
 /** Minimal viewport mock for testing the shading controller. */
 class MockViewport implements ShadableViewport {
@@ -28,11 +30,19 @@ describe('ViewportShadingController', () => {
   let materialA: THREE.MeshStandardMaterial;
 
   beforeEach(() => {
+    disposeSharedShadingPass();
+    clearSharedContentMaterialStoreForTests();
     viewport = new MockViewport();
     controller = new ViewportShadingController(viewport);
     materialA = new THREE.MeshStandardMaterial({ color: 0xff0000 });
     meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), materialA);
     viewport.addMesh(meshA);
+  });
+
+  afterEach(() => {
+    controller.dispose();
+    disposeSharedShadingPass();
+    clearSharedContentMaterialStoreForTests();
   });
 
   describe('default mode', () => {

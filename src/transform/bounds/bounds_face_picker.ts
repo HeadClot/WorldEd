@@ -28,20 +28,20 @@ export class BoundsFacePicker {
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement DOM element defining the view rectangle for NDC.
    * @param gizmoGroup Viewport gizmo group containing face pick meshes.
    * @returns Face pick result, or null if none hit.
    */
   pickFace(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     gizmoGroup: THREE.Group,
   ): BoundsFacePickResult | null {
     if (!gizmoGroup.visible) return null;
     camera.updateMatrixWorld(true);
     gizmoGroup.updateMatrixWorld(true);
-    pointerEventToNdc(event, renderer.domElement, this.ndcVector);
+    pointerEventToNdc(event, pickElement, this.ndcVector);
     this.raycaster.setFromCamera(this.ndcVector, camera);
     const pickMeshes = this.collectFacePickMeshes(gizmoGroup);
     if (pickMeshes.length === 0) return null;

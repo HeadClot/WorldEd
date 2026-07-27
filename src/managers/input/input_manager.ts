@@ -3,6 +3,7 @@
  * keys when the window loses focus so navigation cannot run away.
  */
 export class InputManager {
+  private readonly targetWindow: Window;
   private keyStates: Map<string, boolean>;
   private mouseButtonStates: Map<number, boolean>;
   private keyDownListener: ((event: KeyboardEvent) => void) | null;
@@ -13,8 +14,14 @@ export class InputManager {
   private visibilityListener: (() => void) | null;
   private isDisposed: boolean;
 
-  /** Creates a new input manager and registers keyboard and mouse listeners. */
-  constructor() {
+  /**
+   * Creates a new input manager and registers keyboard and mouse listeners.
+   *
+   * @param targetWindow Window that owns the listeners (main or detached
+   *   popup).
+   */
+  constructor(targetWindow: Window = window) {
+    this.targetWindow = targetWindow;
     this.keyStates = new Map();
     this.mouseButtonStates = new Map();
     this.keyDownListener = null;
@@ -37,8 +44,8 @@ export class InputManager {
     this.keyUpListener = (event) => {
       this.keyStates.set(event.code, false);
     };
-    window.addEventListener('keydown', this.keyDownListener);
-    window.addEventListener('keyup', this.keyUpListener);
+    this.targetWindow.addEventListener('keydown', this.keyDownListener);
+    this.targetWindow.addEventListener('keyup', this.keyUpListener);
   }
 
   /** Registers window-level mouse button listeners for navigation guards. */
@@ -49,20 +56,20 @@ export class InputManager {
     this.pointerUpListener = (event) => {
       this.mouseButtonStates.set(event.button, false);
     };
-    window.addEventListener('pointerdown', this.pointerDownListener);
-    window.addEventListener('pointerup', this.pointerUpListener);
+    this.targetWindow.addEventListener('pointerdown', this.pointerDownListener);
+    this.targetWindow.addEventListener('pointerup', this.pointerUpListener);
   }
 
   /** Clears all input state when the window loses focus or is hidden. */
   private setupFocusListeners(): void {
     this.blurListener = () => this.reset();
     this.visibilityListener = () => {
-      if (document.hidden) {
+      if (this.targetWindow.document.hidden) {
         this.reset();
       }
     };
-    window.addEventListener('blur', this.blurListener);
-    document.addEventListener('visibilitychange', this.visibilityListener);
+    this.targetWindow.addEventListener('blur', this.blurListener);
+    this.targetWindow.document.addEventListener('visibilitychange', this.visibilityListener);
   }
 
   /**
@@ -143,11 +150,11 @@ export class InputManager {
   /** Unregisters keyboard window listeners. */
   private removeKeyboardListeners(): void {
     if (this.keyDownListener) {
-      window.removeEventListener('keydown', this.keyDownListener);
+      this.targetWindow.removeEventListener('keydown', this.keyDownListener);
       this.keyDownListener = null;
     }
     if (this.keyUpListener) {
-      window.removeEventListener('keyup', this.keyUpListener);
+      this.targetWindow.removeEventListener('keyup', this.keyUpListener);
       this.keyUpListener = null;
     }
   }
@@ -155,11 +162,11 @@ export class InputManager {
   /** Unregisters mouse window listeners. */
   private removeMouseListeners(): void {
     if (this.pointerDownListener) {
-      window.removeEventListener('pointerdown', this.pointerDownListener);
+      this.targetWindow.removeEventListener('pointerdown', this.pointerDownListener);
       this.pointerDownListener = null;
     }
     if (this.pointerUpListener) {
-      window.removeEventListener('pointerup', this.pointerUpListener);
+      this.targetWindow.removeEventListener('pointerup', this.pointerUpListener);
       this.pointerUpListener = null;
     }
   }
@@ -167,11 +174,11 @@ export class InputManager {
   /** Unregisters focus and visibility listeners. */
   private removeFocusListeners(): void {
     if (this.blurListener) {
-      window.removeEventListener('blur', this.blurListener);
+      this.targetWindow.removeEventListener('blur', this.blurListener);
       this.blurListener = null;
     }
     if (this.visibilityListener) {
-      document.removeEventListener('visibilitychange', this.visibilityListener);
+      this.targetWindow.document.removeEventListener('visibilitychange', this.visibilityListener);
       this.visibilityListener = null;
     }
   }

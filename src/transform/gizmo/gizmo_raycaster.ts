@@ -26,7 +26,7 @@ export class GizmoRaycaster {
    *
    * @param handles The master array of gizmo handles for ID matching.
    * @param camera The camera to cast the ray from.
-   * @param renderer The renderer for canvas dimensions.
+   * @param pickElement DOM element defining the view rectangle for NDC.
    * @param event The mouse event providing the click position.
    * @param gizmoGroup The viewport gizmo group whose meshes are raycast
    *   against.
@@ -35,13 +35,13 @@ export class GizmoRaycaster {
   pickHandle(
     handles: GizmoHandle[],
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     gizmoGroup: THREE.Group,
   ): GizmoHandle | null {
     if (!this.isGizmoPickable(gizmoGroup)) return null;
     this.prepareCameraAndGroup(camera, gizmoGroup);
-    this.setRayFromEvent(event, camera, renderer);
+    this.setRayFromEvent(event, camera, pickElement);
     const meshes = this.collectHandleMeshes(gizmoGroup);
     if (meshes.length === 0) return null;
     const intersections = this.raycaster.intersectObjects(meshes, false);
@@ -77,8 +77,8 @@ export class GizmoRaycaster {
    * @param camera The camera to cast from.
    * @param renderer The renderer providing canvas bounds.
    */
-  private setRayFromEvent(event: MouseEvent, camera: THREE.Camera, renderer: THREE.WebGLRenderer): void {
-    pointerEventToNdc(event, renderer.domElement, this.ndcVector);
+  private setRayFromEvent(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): void {
+    pointerEventToNdc(event, pickElement, this.ndcVector);
     this.raycaster.setFromCamera(this.ndcVector, camera);
   }
 
@@ -129,12 +129,12 @@ export class GizmoRaycaster {
    */
   projectMouseTo3D(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     distance: number,
   ): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
-    this.setRayFromEvent(event, camera, renderer);
+    this.setRayFromEvent(event, camera, pickElement);
     if (!this.raycaster.ray) return null;
     return this.raycaster.ray.at(distance, new THREE.Vector3());
   }
@@ -177,12 +177,12 @@ export class GizmoRaycaster {
    */
   projectMouseToPlane(
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     event: MouseEvent,
     plane: THREE.Plane,
   ): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
-    this.setRayFromEvent(event, camera, renderer);
+    this.setRayFromEvent(event, camera, pickElement);
     const target = new THREE.Vector3();
     const intersected = this.raycaster.ray.intersectPlane(plane, target);
     return intersected ? target.clone() : null;

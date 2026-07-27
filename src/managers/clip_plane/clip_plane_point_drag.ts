@@ -31,18 +31,18 @@ export class ClipPlanePointDrag {
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement Viewport pickElement.
    * @param points Current placement points.
    * @returns Point index, or null when none is near the cursor.
    */
   pickMarkerIndex(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     points: THREE.Vector3[],
   ): number | null {
     if (points.length === 0) return null;
-    const element = renderer.domElement;
+    const element = pickElement;
     const rect = element.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
     let bestIndex: number | null = null;
@@ -74,18 +74,18 @@ export class ClipPlanePointDrag {
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
-   * @param renderer Viewport renderer.
+   * @param pickElement Viewport pickElement.
    * @param dragPlane Plane established at drag start.
    * @returns Snapped world hit, or null when the ray misses the plane.
    */
   projectOntoDragPlane(
     event: MouseEvent,
     camera: THREE.Camera,
-    renderer: THREE.WebGLRenderer,
+    pickElement: HTMLElement,
     dragPlane: THREE.Plane,
   ): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
-    pointerEventToNdc(event, renderer.domElement, this.ndc);
+    pointerEventToNdc(event, pickElement, this.ndc);
     this.raycaster.setFromCamera(this.ndc, camera);
     const hit = this.raycaster.ray.intersectPlane(dragPlane, this.scratchHit);
     if (!hit) return null;

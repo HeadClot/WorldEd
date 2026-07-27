@@ -23,6 +23,15 @@ export class FlyingCamera {
   private mouseSensitivity: number;
   private panTarget: THREE.Vector3;
   private panDistance: number;
+  private isDisposed: boolean;
+  private readonly onContextMenu: (event: Event) => void;
+  private readonly onPointerDownBound: (event: PointerEvent) => void;
+  private readonly onPointerMoveBound: (event: PointerEvent) => void;
+  private readonly onPointerUpBound: (event: PointerEvent) => void;
+  private readonly onMouseUpBound: (event: MouseEvent) => void;
+  private readonly onWheelBound: (event: WheelEvent) => void;
+  private readonly onPointerLockChangeBound: () => void;
+  private readonly onPointerLockErrorBound: () => void;
 
   /**
    * Creates a flying camera controller for a canvas and perspective camera.
@@ -46,6 +55,7 @@ export class FlyingCamera {
     this.isRotating = false;
     this.isPanning = false;
     this.isPointerLocked = false;
+    this.isDisposed = false;
     this.activeButtons = new Set();
     this.yaw = initialYaw;
     this.pitch = initialPitch;
@@ -54,19 +64,75 @@ export class FlyingCamera {
     this.mouseSensitivity = 0.002;
     this.panTarget = new THREE.Vector3();
     this.panDistance = 1;
+    this.onContextMenu = (event) => event.preventDefault();
+    this.onPointerDownBound = (event) => this.onPointerDown(event);
+    this.onPointerMoveBound = (event) => this.onPointerMove(event);
+    this.onPointerUpBound = (event) => this.onPointerUp(event);
+    this.onMouseUpBound = (event) => this.onMouseUp(event);
+    this.onWheelBound = (event) => this.onWheel(event);
+    this.onPointerLockChangeBound = () => this.onPointerLockChange();
+    this.onPointerLockErrorBound = () => this.onPointerLockError();
     this.setupEventListeners();
   }
 
   /** Wires pointer, wheel, and pointer-lock listeners on the canvas. */
   private setupEventListeners(): void {
-    this.canvas.addEventListener('contextmenu', (event) => event.preventDefault());
-    this.canvas.addEventListener('pointerdown', (event) => this.onPointerDown(event));
-    this.canvas.addEventListener('pointermove', (event) => this.onPointerMove(event));
-    this.canvas.addEventListener('pointerup', (event) => this.onPointerUp(event));
-    this.canvas.addEventListener('pointercancel', (event) => this.onPointerUp(event));
-    this.canvas.addEventListener('wheel', (event) => this.onWheel(event));
-    document.addEventListener('pointerlockchange', () => this.onPointerLockChange());
-    document.addEventListener('pointerlockerror', () => this.onPointerLockError());
+    this.canvas.addEventListener('contextmenu', this.onContextMenu);
+    this.canvas.addEventListener('pointerdown', this.onPointerDownBound);
+    this.canvas.addEventListener('pointermove', this.onPointerMoveBound);
+    this.canvas.addEventListener('pointerup', this.onPointerUpBound);
+    this.canvas.addEventListener('pointercancel', this.onPointerUpBound);
+    this.canvas.addEventListener('lostpointercapture', this.onPointerUpBound);
+    this.canvas.addEventListener('wheel', this.onWheelBound);
+    const ownerDocument = this.getOwnerDocument();
+    ownerDocument.addEventListener('pointerlockchange', this.onPointerLockChangeBound);
+    ownerDocument.addEventListener('pointerlockerror', this.onPointerLockErrorBound);
+    // Window-level release so popup / pointer-lock sessions always end on button up.
+    const ownerWindow = this.getOwnerWindow();
+    ownerWindow.addEventListener('pointerup', this.onPointerUpBound);
+    ownerWindow.addEventListener('pointercancel', this.onPointerUpBound);
+    ownerWindow.addEventListener('mouseup', this.onMouseUpBound);
+  }
+
+  /** Removes all listeners so the controller can be garbage-collected. */
+  dispose(): void {
+    if (this.isDisposed) return;
+    this.isDisposed = true;
+    this.isRotating = false;
+    this.isPanning = false;
+    this.activeButtons.clear();
+    this.canvas.removeEventListener('contextmenu', this.onContextMenu);
+    this.canvas.removeEventListener('pointerdown', this.onPointerDownBound);
+    this.canvas.removeEventListener('pointermove', this.onPointerMoveBound);
+    this.canvas.removeEventListener('pointerup', this.onPointerUpBound);
+    this.canvas.removeEventListener('pointercancel', this.onPointerUpBound);
+    this.canvas.removeEventListener('lostpointercapture', this.onPointerUpBound);
+    this.canvas.removeEventListener('wheel', this.onWheelBound);
+    const ownerDocument = this.getOwnerDocument();
+    ownerDocument.removeEventListener('pointerlockchange', this.onPointerLockChangeBound);
+    ownerDocument.removeEventListener('pointerlockerror', this.onPointerLockErrorBound);
+    const ownerWindow = this.getOwnerWindow();
+    ownerWindow.removeEventListener('pointerup', this.onPointerUpBound);
+    ownerWindow.removeEventListener('pointercancel', this.onPointerUpBound);
+    ownerWindow.removeEventListener('mouseup', this.onMouseUpBound);
+  }
+
+  /**
+   * Returns the document that owns the canvas (main window or popup).
+   *
+   * @returns Owner document for pointer-lock events.
+   */
+  private getOwnerDocument(): Document {
+    return this.canvas.ownerDocument ?? document;
+  }
+
+  /**
+   * Returns the window that owns the canvas (main window or popup).
+   *
+   * @returns Owner window for button-release events.
+   */
+  private getOwnerWindow(): Window {
+    return this.getOwnerDocument().defaultView ?? window;
   }
 
   /**
@@ -76,6 +142,13 @@ export class FlyingCamera {
    */
   private onPointerDown(event: PointerEvent): void {
     event.preventDefault();
+    if (typeof this.canvas.setPointerCapture === 'function') {
+      try {
+        this.canvas.setPointerCapture(event.pointerId);
+      } catch {
+        // Ignore capture failures in locked or cross-window edge cases.
+      }
+    }
     if (event.button === 1) {
       blurActiveFormField();
       this.beginPan();
@@ -137,13 +210,31 @@ export class FlyingCamera {
    * @param event The pointer up or cancel event.
    */
   private onPointerUp(event: PointerEvent): void {
-    if (event.button === 1) {
+    this.endNavigationButton(event.button);
+  }
+
+  /**
+   * Mouse-up fallback for environments that drop pointerup after pointer lock.
+   *
+   * @param event The mouse up event.
+   */
+  private onMouseUp(event: MouseEvent): void {
+    this.endNavigationButton(event.button);
+  }
+
+  /**
+   * Clears navigation state for a released mouse button and exits pointer lock.
+   *
+   * @param button Mouse button index.
+   */
+  private endNavigationButton(button: number): void {
+    if (button === 1) {
       this.isPanning = false;
-      this.activeButtons.delete(event.button);
+      this.activeButtons.delete(button);
     }
-    if (event.button === 2) {
+    if (button === 2) {
       this.isRotating = false;
-      this.activeButtons.delete(event.button);
+      this.activeButtons.delete(button);
     }
     if (this.activeButtons.size === 0 && this.isPointerLocked) {
       this.tryExitPointerLock();
@@ -309,7 +400,7 @@ export class FlyingCamera {
 
   /** Handles pointer lock state changes from the browser. */
   private onPointerLockChange(): void {
-    if (document.pointerLockElement === this.canvas) {
+    if (this.getOwnerDocument().pointerLockElement === this.canvas) {
       this.isPointerLocked = true;
     } else {
       this.handlePointerLockLost();
@@ -336,10 +427,11 @@ export class FlyingCamera {
     }
   }
 
-  /** Exits pointer lock when supported. */
+  /** Exits pointer lock when supported on the canvas owner document. */
   private tryExitPointerLock(): void {
-    if (typeof document.exitPointerLock === 'function') {
-      document.exitPointerLock();
+    const ownerDocument = this.getOwnerDocument();
+    if (typeof ownerDocument.exitPointerLock === 'function') {
+      ownerDocument.exitPointerLock();
     }
   }
 
