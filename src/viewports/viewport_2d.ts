@@ -16,6 +16,7 @@ import { isEditorHelperObject } from '../utils/mesh_edge_sync.js';
 import { DEFAULT_ORTHO_HALF_EXTENT } from '../types/editor_config.js';
 import { getDefaultSceneFocus } from '../navigation/default_camera_placement.js';
 import { OrthoDepthRanger } from './ortho_depth_ranger.js';
+import { SolidBrushEdgeFader } from '../solid/model/solid_brush_edge_fader.js';
 
 /** Options for constructing a shared-scene orthographic pane. */
 export interface Viewport2DOptions extends BaseViewportOptions {
@@ -378,12 +379,16 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Shows this pane's grid and updates depth range for the shared multi-view
-   * pass. Drawing is performed by MultiViewComposer.
+   * Shows this pane's grid, restores solid brush edge visibility after any 3D
+   * distance cull, and updates depth range for the shared multi-view pass.
+   * Drawing is performed by MultiViewComposer.
    */
   prepareRender(): void {
     this.shadingController.applyForRenderPass();
     this.gridRoot.visible = true;
+    if (this.worldGroup) {
+      SolidBrushEdgeFader.showAllEdges(this.worldGroup);
+    }
     OrthoDepthRanger.update(this.camera, this.scene);
     this.grids.update(this.camera);
   }

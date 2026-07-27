@@ -55,6 +55,19 @@ describe('SolidBrushEdgeFader', () => {
     SolidBrushEdgeFader.updateForCamera(root, camera);
     expect(findFrontEdge(brush).visible).toBe(true);
   });
+
+  it('restores all brush edge passes after a perspective distance cull', () => {
+    const root = new THREE.Group();
+    const brush = SolidBrushVisual.createBoxPreview('Far', 2, SolidOperation.Additive);
+    brush.position.set(0, 0, BRUSH_EDGE_FADE_FAR + 40);
+    root.add(brush);
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+    camera.position.set(0, 0, 0);
+    SolidBrushEdgeFader.updateForCamera(root, camera);
+    collectEdges(brush).forEach((edge) => expect(edge.visible).toBe(false));
+    SolidBrushEdgeFader.showAllEdges(root);
+    collectEdges(brush).forEach((edge) => expect(edge.visible).toBe(true));
+  });
 });
 
 /**

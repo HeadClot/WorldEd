@@ -57,4 +57,46 @@ describe('LayoutRenderLoop', () => {
     const lastCallPanes = render.mock.calls.at(-1)?.[1] as unknown[];
     expect(lastCallPanes?.length).toBe(2);
   });
+
+  it('should prepare and end CAD ruler camera passes when cadRulerSystem is bound', async () => {
+    loop = new LayoutRenderLoop();
+    const camera = new THREE.PerspectiveCamera();
+    const container = document.createElement('div');
+    const content = document.createElement('div');
+    container.appendChild(content);
+    const viewport = {
+      render: vi.fn(),
+      prepareRender: vi.fn(),
+      update: vi.fn(),
+      resize: vi.fn(),
+      getCamera: () => camera,
+      getContentElement: () => content,
+      getContainer: () => container,
+    } as unknown as EditorViewport;
+    const prepareForCamera = vi.fn();
+    const endCameraPass = vi.fn();
+    const cameraFitCoordinator = { updateAnimations: vi.fn() } as unknown as CameraFitCoordinator;
+    const multiViewComposer = {
+      render: (_scene: THREE.Scene, passes: Array<{ prepare: () => void; finalize: () => void }>) => {
+        passes.forEach((pass) => {
+          pass.prepare();
+          pass.finalize();
+        });
+      },
+    } as unknown as MultiViewComposer;
+    const sharedScene = { getScene: () => new THREE.Scene() } as unknown as SharedWorldScene;
+    loop.bind({
+      getActiveViewports: () => [viewport],
+      cameraFitCoordinator,
+      clipPlaneHandler: null,
+      cadRulerSystem: { prepareForCamera, endCameraPass } as never,
+      onBeforeRender: () => undefined,
+      multiViewComposer,
+      sharedScene,
+    });
+    loop.start();
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    expect(prepareForCamera).toHaveBeenCalledWith(camera);
+    expect(endCameraPass).toHaveBeenCalled();
+  });
 });

@@ -23,9 +23,10 @@ const brushWorldPosition = new THREE.Vector3();
 const brushWorldQuaternion = new THREE.Quaternion();
 
 /**
- * Distance-culls solid brush edge helpers in the perspective viewport. Far
- * brushes hide edge draws so large maps rely on compiled solid geometry. 2D
- * clones are untouched (they live in separate scenes).
+ * Distance-culls solid brush edge helpers for the perspective multi-view pass.
+ * Far brushes hide edge draws so large maps rely on compiled solid geometry.
+ * Shared-scene 2D panes must call {@link showAllEdges} before drawing so a prior
+ * 3D cull does not leave edges hidden in orthographic views.
  */
 export class SolidBrushEdgeFader {
   /**
@@ -40,6 +41,20 @@ export class SolidBrushEdgeFader {
       if (!(object instanceof THREE.Mesh)) return;
       if (!SolidBrushVisual.isBrushObject(object)) return;
       this.updateBrushEdgeVisibility(object);
+    });
+  }
+
+  /**
+   * Restores full brush edge visibility for orthographic multi-view panes that
+   * share the world hierarchy with the perspective pass.
+   *
+   * @param root World group or scene containing solid brush helpers.
+   */
+  static showAllEdges(root: THREE.Object3D): void {
+    root.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      if (!SolidBrushVisual.isBrushObject(object)) return;
+      this.applyEdgeVisibility(object, true, true);
     });
   }
 

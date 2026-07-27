@@ -6,7 +6,6 @@ import { SolidOperation } from '../types/solid_operation.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
 import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
 import { getFaceTextureMaps } from '../../texture/uv/face_texture_storage.js';
-import { removeDecorativeEdges } from '../../utils/mesh_edge_sync.js';
 import {
   SOLID_MODEL_USERDATA_KEY,
   SOLID_TRIANGLE_SOURCES_USERDATA_KEY,
@@ -19,7 +18,6 @@ import { padSolidDisplayNumber, SolidModelPresentation, type BrushUvSnapshot } f
 import { SolidModelRebuildPipeline } from './solid_model_rebuild_pipeline.js';
 import { disposeBrushPreviewResources } from './solid_model_mesh_disposal.js';
 import {
-  collectDriftedBrushIds,
   pullAllBrushTransforms,
   pullChangedBrushTransforms,
   pullLiveBrushTransform,
@@ -33,6 +31,8 @@ import {
   writeMapEntryToBrushFaces,
   type SolidTriangleSource,
 } from './solid_model_authored_uv.js';
+import * as solidOps from './solid_model_ops.js';
+import type { SolidModelOpsHost } from './solid_model_ops.js';
 
 export {
   SOLID_MODEL_USERDATA_KEY,
@@ -833,15 +833,28 @@ export class SolidModel {
     return sources ?? [];
   }
 
+  /**
+   * Builds the ops host bag for shared lifecycle helpers.
+   *
+   * @returns Solid model ops host.
+   */
+  private getOpsHost(): SolidModelOpsHost {
+    return {
+      root: this.root,
+      resultMesh: this.resultMesh,
+      brushes: this.brushes,
+      pipeline: this.pipeline,
+      presentation: this.presentation,
+      findBrush: (id) => this.findBrush(id),
+      markBrushesDirty: (ids) => this.markBrushesDirty(ids),
+      markDirty: () => this.markDirty(),
+      rebuild: (force) => this.rebuild(force),
+    };
+  }
+
   /** Rebuilds partial CSG after history when only brush transforms drifted. */
   private rebuildChangedHistoryTransforms(): void {
-    const changedIds = pullChangedBrushTransforms(this.brushes.getEvaluationList(), {
-      positionLock: true,
-      stretchLock: true,
-    });
-    if (changedIds.length === 0) return;
-    this.markBrushesDirty(changedIds);
-    this.rebuild(true);
+    solidOps.rebuildChangedHistoryTransforms(this.getOpsHost());
   }
 
   /**
@@ -851,9 +864,7 @@ export class SolidModel {
    * @param disposeResources Whether to free GPU resources.
    */
   private detachAndMaybeDisposeBrushMesh(brush: SolidBrushInstance, disposeResources: boolean): void {
-    if (!brush.mesh) return;
-    this.root.remove(brush.mesh);
-    if (disposeResources) disposeBrushPreviewResources(brush.mesh);
+    solidOps.detachAndMaybeDisposeBrushMesh(this.getOpsHost(), brush, disposeResources);
   }
 
   /**
@@ -864,15 +875,7 @@ export class SolidModel {
    * @returns Prepared clone with mesh parented under root.
    */
   private cloneBrushWithPreview(source: SolidBrushInstance, offset: THREE.Vector3): SolidBrushInstance {
-    source.pullTransformFromMesh();
-    this.brushes.nextBrushCounter();
-    const name = `${source.name}_copy`;
-    const clone = source.cloneWithId(this.brushes.allocateBrushId(), name);
-    clone.position.add(offset);
-    const preview = SolidBrushVisual.createHullPreview(name, clone.brush, clone.operation);
-    clone.attachMesh(preview);
-    this.root.add(preview);
-    return clone;
+    return solidOps.cloneBrushWithPreview(this.getOpsHost(), source, offset);
   }
 
   /**
@@ -881,23 +884,15 @@ export class SolidModel {
    * @param brush Brush whose visibility changed.
    */
   private markVisibilityDirtyAndRebuild(brush: SolidBrushInstance): void {
-    const seedIds = [brush.id, ...this.pipeline.getCachedTouchPeerIds(brush.id)];
-    this.markBrushesDirty(seedIds);
-    if (!brush.visible) {
-      this.pipeline.removeMeshChunk(brush.id);
-    }
-    this.rebuild(true);
+    solidOps.markVisibilityDirtyAndRebuild(this.getOpsHost(), brush);
   }
 
   /**
    * Marks brushes dirty when their preview mesh pose no longer matches
-   * instance. Covers callers that move the mesh then call rebuildLive without
-   * prepareLive.
+   * instance.
    */
   private markMeshesThatDriftedDirty(): void {
-    const driftedIds = collectDriftedBrushIds(this.brushes.getEvaluationList());
-    if (driftedIds.length === 0) return;
-    this.markBrushesDirty(driftedIds);
+    solidOps.markMeshesThatDriftedDirty(this.getOpsHost());
   }
 
   /**
@@ -908,10 +903,7 @@ export class SolidModel {
    * @returns True when order changed.
    */
   private reorderBrushesAndRebuild(brushIds: readonly string[], end: 'first' | 'last'): boolean {
-    if (!this.brushes.reorderBrushesToEnd(brushIds, end)) return false;
-    this.markDirty();
-    this.rebuild(true);
-    return true;
+    return solidOps.reorderBrushesAndRebuild(this.getOpsHost(), brushIds, end);
   }
 
   /**
@@ -922,9 +914,7 @@ export class SolidModel {
    * @returns Always true after rebuild.
    */
   private fallbackFullPresentationRebuild(brushIds: readonly string[]): boolean {
-    this.markBrushesDirty(brushIds);
-    this.rebuild(true);
-    return true;
+    return solidOps.fallbackFullPresentationRebuild(this.getOpsHost(), brushIds);
   }
 
   /**
@@ -934,22 +924,12 @@ export class SolidModel {
    * @returns True when presentation was refreshed.
    */
   private finishPresentationRemesh(remeshed: readonly string[]): boolean {
-    if (!this.pipeline.remeshPresentationForBrushes(remeshed)) {
-      return this.fallbackFullPresentationRebuild(remeshed);
-    }
-    if (this.pipeline.hasResultGeometry()) {
-      this.applySurfaceLayoutToResult(true);
-    }
-    return true;
+    return solidOps.finishPresentationRemesh(this.getOpsHost(), remeshed);
   }
 
   /** Prepares state and pulls transforms for a full async rebuild. */
   private prepareFullAsyncRebuild(): void {
-    this.markDirty();
-    this.syncBrushOrderFromScene();
-    for (const brush of this.brushes.getEvaluationList()) {
-      brush.pullTransformFromMesh();
-    }
+    solidOps.prepareFullAsyncRebuild(this.getOpsHost());
   }
 
   /**
@@ -958,15 +938,7 @@ export class SolidModel {
    * @param onProgress Optional progress callback.
    */
   private finishAsyncRebuildPresentation(onProgress?: (ratio: number, label: string) => void): void {
-    if (this.pipeline.hasResultGeometry()) {
-      onProgress?.(0.95, 'Applying materials…');
-      this.applySurfaceLayoutToResult(true);
-      this.clearResultContentEdges();
-    }
-    this.pipeline.resetResultLocalTransform();
-    this.pipeline.clearDirtyFlag();
-    this.pipeline.setInteractiveGeometryCurrent(true);
-    onProgress?.(1, 'Done');
+    solidOps.finishAsyncRebuildPresentation(this.getOpsHost(), onProgress);
   }
 
   /**
@@ -975,9 +947,7 @@ export class SolidModel {
    * @param forceMaterials Material rebuild flag.
    */
   private applyPresentationIfGeometryExists(forceMaterials: boolean): void {
-    if (!this.pipeline.hasResultGeometry()) return;
-    this.applySurfaceLayoutToResult(forceMaterials);
-    this.clearResultContentEdges();
+    solidOps.applyPresentationIfGeometryExists(this.getOpsHost(), forceMaterials);
   }
 
   /**
@@ -986,30 +956,11 @@ export class SolidModel {
    * @param forceMaterials Reserved; solid results always preserve order.
    */
   private applySurfaceLayoutToResult(forceMaterials: boolean): void {
-    this.presentation.applySurfaceLayoutToResult(
-      this.resultMesh,
-      this.pipeline.getLastSurfaceRegions(),
-      (id) => this.findBrush(id),
-      forceMaterials,
-    );
+    solidOps.applySurfaceLayoutToResult(this.getOpsHost(), forceMaterials);
   }
 
-  /**
-   * Applies surface materials on the next frame after interactive commit. CSG
-   * result meshes never use white content outline edges (brushes own edges).
-   */
+  /** Applies surface materials on the next frame after interactive commit. */
   private schedulePresentationRefresh(): void {
-    const mesh = this.resultMesh;
-    requestAnimationFrame(() => {
-      if (this.resultMesh !== mesh) return;
-      if (!this.pipeline.hasResultGeometry()) return;
-      this.applySurfaceLayoutToResult(true);
-      this.clearResultContentEdges();
-    });
-  }
-
-  /** Removes content outline edges from the compiled result mesh. */
-  private clearResultContentEdges(): void {
-    removeDecorativeEdges(this.resultMesh);
+    solidOps.schedulePresentationRefresh(this.getOpsHost());
   }
 }

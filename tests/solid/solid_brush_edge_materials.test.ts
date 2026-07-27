@@ -61,4 +61,11 @@ describe('SolidBrushEdgeMaterials', () => {
     expect(additive).not.toBe(subtractive);
     expect(subtractive).not.toBe(intersecting);
   });
+
+  it('skips distance fade for orthographic cameras in the shared edge shader', () => {
+    const material = SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Additive);
+    expect(material.vertexShader).toContain('projectionMatrix[2][3]');
+    expect(material.vertexShader).toContain('isPerspective');
+    expect(material.vertexShader).toContain('vFade = 1.0');
+  });
 });

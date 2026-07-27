@@ -38,7 +38,12 @@ const FADE_DISABLED_NEAR = 1e7;
 /** Far plane for disabled distance fade. */
 const FADE_DISABLED_FAR = 1e8;
 
-/** Vertex shader: projects line verts and computes distance fade factor. */
+/**
+ * Vertex shader: projects line verts and computes distance fade for perspective
+ * only. Orthographic multi-view panes share these materials; Three.js sets
+ * projectionMatrix[2][3] to 0 for ortho and non-zero for perspective, so 2D
+ * panes stay fully opaque while 3D still distance-fades.
+ */
 const EDGE_VERTEX_SHADER = `
   uniform float fadeNear;
   uniform float fadeFar;
@@ -46,8 +51,13 @@ const EDGE_VERTEX_SHADER = `
 
   void main() {
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    float distanceFromCamera = length(mvPosition.xyz);
-    vFade = 1.0 - smoothstep(fadeNear, fadeFar, distanceFromCamera);
+    bool isPerspective = projectionMatrix[2][3] != 0.0;
+    if (isPerspective) {
+      float distanceFromCamera = length(mvPosition.xyz);
+      vFade = 1.0 - smoothstep(fadeNear, fadeFar, distanceFromCamera);
+    } else {
+      vFade = 1.0;
+    }
     gl_Position = projectionMatrix * mvPosition;
   }
 `;
