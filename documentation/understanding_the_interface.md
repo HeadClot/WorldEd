@@ -10,9 +10,9 @@ The toolbar contains menus followed by quick-access controls.
 
 - **File** saves and loads AiWorldEd scenes, imports VMF maps, and exports GLB models.
 - **Edit** deletes, duplicates, groups, and ungroups the selection.
-- **Add Brush** creates cubes, spheres, cylinders, planes, terrain, and solid
-  models from one compact menu. Open it, then select the brush type you want.
-  The new object is created using the current placement context and selected.
+- **Add** organizes creation commands into **Geometry**, **Terrain**, and
+  **Brushes** flyout menus. The new object is created using the current
+  placement context and selected.
 - **CSG** performs Union, Subtract, or Intersect on suitable selected meshes.
 - **Align** moves the selection to the origin, grid center, or another object.
 
