@@ -4,7 +4,7 @@ AiWorldEd provides ordinary primitives for free-standing scene geometry and soli
 
 ## Create ordinary primitives
 
-Use **Add** or the creation icons in the top toolbar:
+Open **Add > Geometry** in the top toolbar:
 
 - **Cube** for blockouts, walls, platforms, and box-shaped props.
 - **Sphere** for rounded volumes and placeholders.
@@ -16,7 +16,11 @@ After creation, the object appears in all relevant views and in the hierarchy. S
 
 ## Create terrain
 
-Choose **Add > Terrain** to create a procedural landscape. Terrain uses configurable dimensions, subdivisions, height scale, and a deterministic seed. A repeated seed with the same settings gives a repeatable shape.
+Choose **Add > Terrain > Terrain** to create a procedural landscape. Terrain uses configurable dimensions, subdivisions, height scale, and a deterministic seed. A repeated seed with the same settings gives a repeatable shape.
+
+## Create solid models
+
+Choose **Add > Brushes > Solid Model** to create brush-based architecture.
 
 Use terrain for broad layout and landscape blocking. Very dense terrain can be harder to edit and export, so begin with modest detail and add complexity only when the shape requires it.
 
