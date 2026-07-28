@@ -43,7 +43,7 @@ export function rebuildDecorativeEdges(mesh: THREE.Mesh, edgeColor: number = The
 
 /**
  * Returns whether a mesh should carry white content outline edges. Solid brush
- * helpers use colored dual-pass edges; CSG results use surface materials only.
+ * helpers use colored operation edges; CSG results use surface materials only.
  *
  * @param mesh Candidate mesh.
  * @returns True for ordinary content meshes.
@@ -141,7 +141,7 @@ export function isDecorativeEdge(object: THREE.Object3D): boolean {
 }
 
 /**
- * Returns true for solid brush dual-pass edge line children.
+ * Returns true for solid brush edge line children.
  *
  * @param object The child object to test.
  * @returns True if the object is a brush volume edge helper.

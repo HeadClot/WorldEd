@@ -3,9 +3,9 @@ import { CadRulerStyle } from './cad_ruler_style.js';
 import type { CadLineSegment } from './cad_dimension_geometry.js';
 
 /**
- * Dual-pass (front + occluded) line batch for CAD ruler geometry. Rebuilds
- * buffers only when new segments are uploaded; cheap enough for per-frame
- * selection feedback.
+ * Dual-pass (front + occluded) line batch for CAD ruler geometry. Reuses typed
+ * arrays and BufferAttributes across uploads so idle / per-frame projection
+ * refreshes do not reallocate GPU buffers every frame.
  */
 export class CadRulerLineBatch {
   private rootGroup: THREE.Group;
@@ -16,6 +16,8 @@ export class CadRulerLineBatch {
   private occludedLines: THREE.LineSegments;
   private positions: Float32Array;
   private colors: Float32Array;
+  private positionAttribute: THREE.BufferAttribute | null;
+  private colorAttribute: THREE.BufferAttribute | null;
   private capacityVertices: number;
   private usedVertices: number;
   private depthOcclusionEnabled: boolean;
@@ -35,6 +37,8 @@ export class CadRulerLineBatch {
     this.geometry = new THREE.BufferGeometry();
     this.positions = new Float32Array(0);
     this.colors = new Float32Array(0);
+    this.positionAttribute = null;
+    this.colorAttribute = null;
     this.capacityVertices = 0;
     this.usedVertices = 0;
     this.depthOcclusionEnabled = true;
@@ -67,6 +71,10 @@ export class CadRulerLineBatch {
    * @param visible Whether lines should draw.
    */
   setVisible(visible: boolean): void {
+    if (this.rootGroup.visible === visible) {
+      this.syncOccludedPassVisibility();
+      return;
+    }
     this.rootGroup.visible = visible;
     this.syncOccludedPassVisibility();
   }
@@ -161,6 +169,21 @@ export class CadRulerLineBatch {
     return Math.floor(this.usedVertices / 2);
   }
 
+  /**
+   * Returns whether the position attribute was recreated on the last capacity
+   * growth (tests).
+   *
+   * @returns True when attributes currently bind the capacity arrays.
+   */
+  hasStableAttributes(): boolean {
+    return (
+      this.positionAttribute !== null &&
+      this.positionAttribute.array === this.positions &&
+      this.colorAttribute !== null &&
+      this.colorAttribute.array === this.colors
+    );
+  }
+
   /** Disposes GPU resources owned by this batch. */
   dispose(): void {
     this.geometry.dispose();
@@ -226,7 +249,10 @@ export class CadRulerLineBatch {
 
   /** Hides the dim occluded pass when drawing full-bright 2D lines. */
   private syncOccludedPassVisibility(): void {
-    this.occludedLines.visible = this.depthOcclusionEnabled;
+    const showOccluded = this.depthOcclusionEnabled && this.rootGroup.visible;
+    if (this.occludedLines.visible !== showOccluded) {
+      this.occludedLines.visible = showOccluded;
+    }
   }
 
   /**
@@ -256,6 +282,8 @@ export class CadRulerLineBatch {
     this.positions = new Float32Array(nextCapacity * 3);
     this.colors = new Float32Array(nextCapacity * 3);
     this.capacityVertices = nextCapacity;
+    this.positionAttribute = null;
+    this.colorAttribute = null;
   }
 
   /**
@@ -284,16 +312,46 @@ export class CadRulerLineBatch {
   }
 
   /**
-   * Uploads position/color attributes for the used vertex range.
+   * Uploads position/color attributes for the used vertex range without
+   * allocating new BufferAttributes when capacity is unchanged.
    *
    * @param vertexCount Used vertex count.
    */
   private uploadAttributes(vertexCount: number): void {
-    const positionView = this.positions.subarray(0, vertexCount * 3);
-    const colorView = this.colors.subarray(0, vertexCount * 3);
-    this.geometry.setAttribute('position', new THREE.BufferAttribute(positionView, 3));
-    this.geometry.setAttribute('color', new THREE.BufferAttribute(colorView, 3));
+    if (this.capacityVertices === 0) {
+      this.geometry.setDrawRange(0, 0);
+      return;
+    }
+    this.bindAttributesIfNeeded();
+    if (this.positionAttribute && this.colorAttribute) {
+      this.markAttributeUpdated(this.positionAttribute, vertexCount * 3);
+      this.markAttributeUpdated(this.colorAttribute, vertexCount * 3);
+    }
     this.geometry.setDrawRange(0, vertexCount);
-    this.geometry.computeBoundingSphere();
+  }
+
+  /**
+   * Flags a dynamic attribute for GPU re-upload of the used range.
+   *
+   * @param attribute Position or color attribute.
+   * @param componentCount Number of scalar components to upload.
+   */
+  private markAttributeUpdated(attribute: THREE.BufferAttribute, componentCount: number): void {
+    attribute.clearUpdateRanges();
+    attribute.addUpdateRange(0, componentCount);
+    attribute.needsUpdate = true;
+  }
+
+  /** Creates or rebinds buffer attributes when capacity arrays change. */
+  private bindAttributesIfNeeded(): void {
+    if (this.positionAttribute && this.positionAttribute.array === this.positions) {
+      return;
+    }
+    this.positionAttribute = new THREE.BufferAttribute(this.positions, 3);
+    this.colorAttribute = new THREE.BufferAttribute(this.colors, 3);
+    this.positionAttribute.setUsage(THREE.DynamicDrawUsage);
+    this.colorAttribute.setUsage(THREE.DynamicDrawUsage);
+    this.geometry.setAttribute('position', this.positionAttribute);
+    this.geometry.setAttribute('color', this.colorAttribute);
   }
 }

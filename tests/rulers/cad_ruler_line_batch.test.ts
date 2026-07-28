@@ -57,6 +57,24 @@ describe('CadRulerLineBatch', () => {
     expect(batch.getSegmentCount()).toBe(200);
   });
 
+  it('reuses buffer attributes across same-capacity uploads', () => {
+    const color = new THREE.Color(0xffffff);
+    const first: CadLineSegment[] = [{ ax: 0, ay: 0, az: 0, bx: 1, by: 0, bz: 0, colorA: color, colorB: color }];
+    batch.setSegments(first);
+    expect(batch.hasStableAttributes()).toBe(true);
+    const geometry = batch.getObject().children.find((child) => child instanceof THREE.LineSegments) as
+      THREE.LineSegments | undefined;
+    expect(geometry).toBeDefined();
+    const positionBefore = geometry!.geometry.getAttribute('position');
+    batch.setSegments([
+      { ax: 2, ay: 0, az: 0, bx: 3, by: 0, bz: 0, colorA: color, colorB: color },
+      { ax: 0, ay: 1, az: 0, bx: 0, by: 2, bz: 0, colorA: color, colorB: color },
+    ]);
+    const positionAfter = geometry!.geometry.getAttribute('position');
+    expect(positionAfter).toBe(positionBefore);
+    expect(batch.hasStableAttributes()).toBe(true);
+  });
+
   it('should dispose without throwing', () => {
     expect(() => batch.dispose()).not.toThrow();
   });

@@ -418,8 +418,8 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
-   * Restores dual-pass depth occlusion for brush edges and selection outlines,
-   * then distance-fades brush edges for the perspective multi-view pass.
+   * Restores depth-tested brush edges and selection outlines, then
+   * distance-fades brush edges for the perspective multi-view pass.
    */
   private updateBrushEdgeDistanceFade(): void {
     SelectionHighlight.setDepthOcclusionEnabled(true);

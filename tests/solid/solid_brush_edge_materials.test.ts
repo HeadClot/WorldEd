@@ -5,7 +5,6 @@ import {
   BRUSH_EDGE_FADE_NEAR,
   BRUSH_EDGE_FADE_FAR,
   BRUSH_EDGE_FRONT_OPACITY,
-  BRUSH_EDGE_OCCLUDED_OPACITY,
   BRUSH_EDGE_SHARED_MATERIAL_KEY,
   BRUSH_EDGE_DISTANCE_FADE_KEY,
 } from '../../src/solid/model/solid_brush_edge_materials.js';
@@ -21,16 +20,12 @@ describe('SolidBrushEdgeMaterials', () => {
     expect(first.userData[BRUSH_EDGE_DISTANCE_FADE_KEY]).toBe(true);
   });
 
-  it('configures front and occluded depth functions and opacities', () => {
+  it('configures depth-tested edge opacity and fade uniforms', () => {
     const front = SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Subtractive);
-    const occluded = SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Subtractive);
     expect(front.depthFunc).toBe(THREE.LessEqualDepth);
-    expect(occluded.depthFunc).toBe(THREE.GreaterDepth);
     expect(front.uniforms['opacity']!.value).toBeCloseTo(BRUSH_EDGE_FRONT_OPACITY);
-    expect(occluded.uniforms['opacity']!.value).toBeCloseTo(BRUSH_EDGE_OCCLUDED_OPACITY);
     expect(front.uniforms['fadeNear']!.value).toBe(BRUSH_EDGE_FADE_NEAR);
     expect(front.uniforms['fadeFar']!.value).toBe(BRUSH_EDGE_FADE_FAR);
-    expect(occluded.uniforms['opacity']!.value).toBeLessThan(front.uniforms['opacity']!.value);
   });
 
   it('disables distance fade on cloned materials for 2D views', () => {
@@ -69,23 +64,18 @@ describe('SolidBrushEdgeMaterials', () => {
     expect(material.vertexShader).toContain('vFade = 1.0');
   });
 
-  it('toggles shared material depth occlusion for 2D multi-view passes', () => {
+  it('toggles shared material depth testing for 2D multi-view passes', () => {
     const front = SolidBrushEdgeMaterials.getFrontMaterial(SolidOperation.Additive);
-    const occluded = SolidBrushEdgeMaterials.getOccludedMaterial(SolidOperation.Additive);
     SolidBrushEdgeMaterials.setDepthOcclusionEnabled(true);
     expect(SolidBrushEdgeMaterials.isDepthOcclusionEnabled()).toBe(true);
     expect(front.depthTest).toBe(true);
     expect(front.depthFunc).toBe(THREE.LessEqualDepth);
-    expect(occluded.depthFunc).toBe(THREE.GreaterDepth);
     SolidBrushEdgeMaterials.setDepthOcclusionEnabled(false);
     expect(SolidBrushEdgeMaterials.isDepthOcclusionEnabled()).toBe(false);
     expect(front.depthTest).toBe(false);
     expect(front.depthFunc).toBe(THREE.AlwaysDepth);
-    expect(occluded.depthTest).toBe(false);
-    expect(occluded.depthFunc).toBe(THREE.AlwaysDepth);
     SolidBrushEdgeMaterials.setDepthOcclusionEnabled(true);
     expect(front.depthTest).toBe(true);
     expect(front.depthFunc).toBe(THREE.LessEqualDepth);
-    expect(occluded.depthFunc).toBe(THREE.GreaterDepth);
   });
 });

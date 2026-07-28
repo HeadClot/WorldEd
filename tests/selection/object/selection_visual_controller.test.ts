@@ -42,6 +42,7 @@ function createSyncManagerStub(worldMeshes: THREE.Mesh[]): ViewportSyncManager {
   return {
     findCloneMeshesForWorldUuid: () => [],
     getWorldSelectableMeshes: () => worldMeshes.slice(),
+    getWorldObject: () => null,
   } as unknown as ViewportSyncManager;
 }
 

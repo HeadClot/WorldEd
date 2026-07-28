@@ -53,6 +53,11 @@ export class CadRulerSystem {
   private lastLabels: CadLabelSpec[];
   private lastStatusText: string;
   private isDisposed: boolean;
+  /**
+   * Signature of the last rebuilt projection (bounds + cameras). Skips full
+   * geometry rebuilds when idle selection and cameras are unchanged.
+   */
+  private lastProjectionSignature: string;
 
   /** Creates an idle ruler system with no viewports attached. */
   constructor() {
@@ -75,6 +80,7 @@ export class CadRulerSystem {
     this.lastLabels = [];
     this.lastStatusText = '';
     this.isDisposed = false;
+    this.lastProjectionSignature = '';
   }
 
   /**
@@ -193,12 +199,17 @@ export class CadRulerSystem {
   }
 
   /**
-   * Rebuilds camera-facing geometry and reprojects labels. Called every frame
-   * so orbiting/panning moves rulers to the near side of the box.
+   * Rebuilds camera-facing geometry and reprojects labels when the selection
+   * pose or any attached camera has changed. Called every frame so
+   * orbiting/panning moves rulers to the near side of the box, but skips work
+   * while the camera is still (large maps with a visible bounds selection).
    */
   refreshLabelProjection(): void {
     if (this.isDisposed) return;
     if (!this.currentBounds && this.dragMode === 'idle') return;
+    const signature = this.buildProjectionSignature();
+    if (signature === this.lastProjectionSignature) return;
+    this.lastProjectionSignature = signature;
     this.rebuildAndUpload();
   }
 
@@ -326,6 +337,7 @@ export class CadRulerSystem {
     this.ghostSegments = [];
     this.lastLabels = [];
     this.lastStatusText = '';
+    this.lastProjectionSignature = '';
     this.viewports.forEach((viewport) => viewport.clear());
   }
 
@@ -341,6 +353,82 @@ export class CadRulerSystem {
     }
     this.lastLabels = [];
     this.viewports.forEach((viewport, index) => this.uploadViewport(viewport, this.viewportPlanes[index] ?? 'xyz'));
+    this.lastProjectionSignature = this.buildProjectionSignature();
+  }
+
+  /**
+   * Builds a cheap signature of selection bounds, drag state, and every
+   * viewport camera pose/zoom used for camera-facing ruler placement.
+   *
+   * @returns Stable string key for the current projection inputs.
+   */
+  private buildProjectionSignature(): string {
+    const parts: string[] = [this.dragMode];
+    if (this.currentBounds) {
+      parts.push(this.formatBoundsSignature(this.currentBounds));
+    } else {
+      parts.push('nobounds');
+    }
+    if (this.dragStartBounds) {
+      parts.push(this.formatBoundsSignature(this.dragStartBounds));
+    }
+    parts.push(this.dragTranslation.x.toFixed(4), this.dragTranslation.y.toFixed(4), this.dragTranslation.z.toFixed(4));
+    this.viewports.forEach((viewport) => {
+      parts.push(this.formatCameraSignature(viewport.getCamera(), viewport.getViewportCssHeight()));
+    });
+    return parts.join('|');
+  }
+
+  /**
+   * Formats oriented bounds into a quantized signature fragment.
+   *
+   * @param bounds Bounds to encode.
+   * @returns Signature fragment.
+   */
+  private formatBoundsSignature(bounds: OrientedBoundsData): string {
+    const c = bounds.center;
+    const e = bounds.halfExtents;
+    const q = bounds.quaternion;
+    return [
+      c.x.toFixed(4),
+      c.y.toFixed(4),
+      c.z.toFixed(4),
+      e.x.toFixed(4),
+      e.y.toFixed(4),
+      e.z.toFixed(4),
+      q.x.toFixed(4),
+      q.y.toFixed(4),
+      q.z.toFixed(4),
+      q.w.toFixed(4),
+    ].join(',');
+  }
+
+  /**
+   * Formats camera pose and viewport height for projection caching.
+   *
+   * @param camera Pane camera.
+   * @param viewportHeightPx Drawable height in CSS pixels.
+   * @returns Signature fragment.
+   */
+  private formatCameraSignature(camera: THREE.Camera, viewportHeightPx: number): string {
+    const p = camera.position;
+    const q = camera.quaternion;
+    const parts = [
+      p.x.toFixed(4),
+      p.y.toFixed(4),
+      p.z.toFixed(4),
+      q.x.toFixed(4),
+      q.y.toFixed(4),
+      q.z.toFixed(4),
+      q.w.toFixed(4),
+      String(viewportHeightPx),
+    ];
+    if (camera instanceof THREE.PerspectiveCamera) {
+      parts.push(camera.fov.toFixed(3), camera.aspect.toFixed(4));
+    } else if (camera instanceof THREE.OrthographicCamera) {
+      parts.push(camera.left.toFixed(4), camera.right.toFixed(4), camera.top.toFixed(4), camera.bottom.toFixed(4));
+    }
+    return parts.join(',');
   }
 
   /**

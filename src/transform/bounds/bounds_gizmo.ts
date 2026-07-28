@@ -308,15 +308,20 @@ export class BoundsGizmo {
    */
   private createFacePickMesh(face: BoundsFace): THREE.Mesh {
     const geometry = new THREE.PlaneGeometry(2, 2);
+    // Invisible to the renderer (material.visible false) but still raycastable.
+    // Never join the transparent sort list with opacity 0.001 quads — that path
+    // scales poorly with thousands of transparent brush edges in large maps.
     const material = new THREE.MeshBasicMaterial({
       color: this.theme.boundsWireColor,
-      transparent: true,
-      opacity: 0.001,
+      transparent: false,
+      opacity: 1,
       depthTest: false,
       depthWrite: false,
+      colorWrite: false,
       side: THREE.DoubleSide,
       toneMapped: false,
     });
+    material.visible = false;
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData[BOUNDS_FACE_USERDATA_KEY] = face;
     mesh.userData['isBoundsFacePick'] = true;
@@ -374,14 +379,18 @@ export class BoundsGizmo {
    */
   private createArrowHandleMesh(face: BoundsFace): THREE.Mesh {
     const pickGeometry = createCadResizeCubeGeometry();
+    // Pick volume only: skip transparent draw so large maps do not sort these
+    // with every brush edge each frame. Raycasts still hit Object3D.visible meshes.
     const pickMaterial = new THREE.MeshBasicMaterial({
       color: this.theme.boundsHandleColor,
       depthTest: false,
       depthWrite: false,
-      transparent: true,
-      opacity: 0.001,
+      transparent: false,
+      opacity: 1,
+      colorWrite: false,
       toneMapped: false,
     });
+    pickMaterial.visible = false;
     const pickMesh = new THREE.Mesh(pickGeometry, pickMaterial);
     pickMesh.name = `bounds_handle_${face}`;
     pickMesh.renderOrder = GizmoVisualStyle.frontRenderOrder;

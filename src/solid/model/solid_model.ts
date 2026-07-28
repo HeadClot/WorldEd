@@ -17,6 +17,7 @@ import { SolidBrushCollection } from './solid_brush_collection.js';
 import { padSolidDisplayNumber, SolidModelPresentation, type BrushUvSnapshot } from './solid_model_presentation.js';
 import { SolidModelRebuildPipeline } from './solid_model_rebuild_pipeline.js';
 import { disposeBrushPreviewResources } from './solid_model_mesh_disposal.js';
+import { SolidBrushEdgeBatch } from './solid_brush_edge_batch.js';
 import {
   pullAllBrushTransforms,
   pullChangedBrushTransforms,
@@ -570,6 +571,7 @@ export class SolidModel {
     this.pipeline.resetResultLocalTransform();
     this.pipeline.clearDirtyFlag();
     this.pipeline.setInteractiveGeometryCurrent(true);
+    this.refreshStaticBrushEdgeBatches();
   }
 
   /**
@@ -591,6 +593,7 @@ export class SolidModel {
     this.pipeline.resetResultLocalTransform();
     this.pipeline.clearDirtyFlag();
     this.schedulePresentationRefresh();
+    this.refreshStaticBrushEdgeBatches();
   }
 
   /**
@@ -939,6 +942,16 @@ export class SolidModel {
    */
   private finishAsyncRebuildPresentation(onProgress?: (ratio: number, label: string) => void): void {
     solidOps.finishAsyncRebuildPresentation(this.getOpsHost(), onProgress);
+    this.refreshStaticBrushEdgeBatches();
+  }
+
+  /**
+   * Rebakes static brush edge batches under this solid root after structural or
+   * transform commits. Selection membership is preserved via
+   * SolidBrushEdgeBatch.
+   */
+  private refreshStaticBrushEdgeBatches(): void {
+    SolidBrushEdgeBatch.rebuildForSolidRoot(this.root);
   }
 
   /**

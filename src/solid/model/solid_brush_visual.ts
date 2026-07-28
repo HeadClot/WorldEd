@@ -21,14 +21,15 @@ export const SOLID_BRUSH_HULL_FILL_USERDATA_KEY = 'solidBrushHullFillVisible';
  */
 export const SKIP_FACE_PICK_USERDATA_KEY = 'skipFacePick';
 
-/** UserData key marking the dim occluded pass of a brush edge wireframe. */
+/**
+ * Legacy userData key for the removed occluded (behind-geometry) edge pass.
+ * Still stripped when rebinding materials so older scenes lose the ghost
+ * lines.
+ */
 export const SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY = 'isSolidBrushOccludedEdge';
 
-/** Render order for the occluded brush edge pass (drawn before the front pass). */
-const BRUSH_EDGE_OCCLUDED_RENDER_ORDER = 3;
-
-/** Render order for the front brush edge pass. */
-const BRUSH_EDGE_FRONT_RENDER_ORDER = 4;
+/** Render order for brush edge wireframes. */
+const BRUSH_EDGE_RENDER_ORDER = 4;
 
 /**
  * Render order for selected hull fills in orthographic 2D views. Above solid
@@ -46,7 +47,8 @@ export const SOLID_BRUSH_ORTHO_CLONE_USERDATA_KEY = 'solidBrushOrthoClone';
  * Builds selectable brush preview meshes for the outliner and transform tools.
  * Unselected brushes render operation-colored outlines only (no filled hull).
  * Selected brushes add a cheap translucent fill so the volume is visible. Edge
- * lines use dual depth passes and distance fade in the 3D viewport.
+ * lines use depth testing and distance fade in 3D (no ghost lines behind
+ * walls); orthographic multi-view disables depth so full wireframes remain.
  */
 export class SolidBrushVisual {
   /**
@@ -161,9 +163,7 @@ export class SolidBrushVisual {
    */
   static applyOperationStyle(mesh: THREE.Mesh, operation: SolidOperation): void {
     this.storeOperation(mesh, operation);
-    if (!this.hasBrushEdges(mesh)) {
-      this.attachWireframe(mesh, operation);
-    } else {
+    if (this.hasBrushEdges(mesh)) {
       this.bindEdgeMaterials(mesh, operation);
     }
     const fillVisible = mesh.userData[SOLID_BRUSH_HULL_FILL_USERDATA_KEY] === true;
@@ -171,7 +171,7 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Returns whether the mesh already has dual-pass solid brush edge helpers.
+   * Returns whether the mesh already has solid brush edge LineSegments.
    *
    * @param mesh Brush preview mesh.
    * @returns True when at least one brush edge LineSegments child exists.
@@ -180,6 +180,51 @@ export class SolidBrushVisual {
     return mesh.children.some(
       (child) => child instanceof THREE.LineSegments && child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true,
     );
+  }
+
+  /**
+   * Ensures a brush mesh has personal edge LineSegments. Used after structural
+   * rebuilds for individual brushes so edges can track the mesh pose until the
+   * next static batch rebake.
+   *
+   * @param mesh Brush preview mesh.
+   */
+  static ensureLocalEdges(mesh: THREE.Mesh): void {
+    if (!this.isBrushObject(mesh)) return;
+    if (this.hasBrushEdges(mesh)) {
+      this.bindEdgeMaterials(mesh, this.readOperation(mesh));
+      return;
+    }
+    this.attachWireframe(mesh, this.readOperation(mesh));
+  }
+
+  /**
+   * Removes personal edge LineSegments when a brush no longer needs mesh-local
+   * wireframes (idle brushes rely on the solid-root static edge batch).
+   *
+   * @param mesh Brush preview mesh.
+   */
+  static stripLocalEdges(mesh: THREE.Mesh): void {
+    if (!this.isBrushObject(mesh)) return;
+    const edges = mesh.children.filter(
+      (child) => child instanceof THREE.LineSegments && child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true,
+    );
+    edges.forEach((child) => {
+      mesh.remove(child);
+      if (child instanceof THREE.LineSegments) {
+        child.geometry.dispose();
+      }
+    });
+  }
+
+  /**
+   * Returns whether a brush mesh currently has personal edge children.
+   *
+   * @param mesh Brush preview mesh.
+   * @returns True when local edge LineSegments are present.
+   */
+  static hasLocalEdges(mesh: THREE.Mesh): boolean {
+    return this.hasBrushEdges(mesh);
   }
 
   /**
@@ -437,20 +482,39 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Binds shared front/occluded edge materials for the given operation.
+   * Binds the shared edge material for the given operation and strips any
+   * legacy occluded ghost edge children.
    *
    * @param mesh Brush preview mesh.
    * @param operation CSG operation.
    */
   private static bindEdgeMaterials(mesh: THREE.Mesh, operation: SolidOperation): void {
+    this.stripLegacyOccludedEdges(mesh);
+    const material = SolidBrushEdgeMaterials.getFrontMaterial(operation);
     for (const child of mesh.children) {
       if (!(child instanceof THREE.LineSegments)) continue;
       if (child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] !== true) continue;
-      const isOccluded = child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true;
-      child.material = isOccluded
-        ? SolidBrushEdgeMaterials.getOccludedMaterial(operation)
-        : SolidBrushEdgeMaterials.getFrontMaterial(operation);
+      child.material = material;
     }
+  }
+
+  /**
+   * Removes deprecated behind-geometry edge LineSegments left on older
+   * previews.
+   *
+   * @param mesh Brush preview mesh.
+   */
+  private static stripLegacyOccludedEdges(mesh: THREE.Mesh): void {
+    const legacy = mesh.children.filter(
+      (child) =>
+        child instanceof THREE.LineSegments &&
+        child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] === true &&
+        child.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] === true,
+    );
+    legacy.forEach((child) => {
+      mesh.remove(child);
+      // Geometry may be shared with the remaining front pass; do not dispose.
+    });
   }
 
   /**
@@ -520,26 +584,23 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Attaches dual-pass operation-colored edge lines to a brush preview. Uses
+   * Attaches operation-colored edge lines to a brush preview. Uses
    * SOLID_BRUSH_EDGE_USERDATA_KEY so content white outlines never attach here.
-   * Shared materials provide occluded dimming and distance fade in 3D.
+   * Depth-tested materials hide edges behind solid geometry in 3D; multi-view
+   * 2D panes disable depth for full wireframes.
    *
    * @param mesh Target mesh.
    * @param operation CSG operation for edge tint.
    */
   private static attachWireframe(mesh: THREE.Mesh, operation: SolidOperation): void {
-    const sharedEdgeGeometry = new THREE.EdgesGeometry(mesh.geometry, 1);
-    if (!sharedEdgeGeometry.boundingSphere) {
-      sharedEdgeGeometry.computeBoundingSphere();
+    this.stripLegacyOccludedEdges(mesh);
+    const edgeGeometry = new THREE.EdgesGeometry(mesh.geometry, 1);
+    if (!edgeGeometry.boundingSphere) {
+      edgeGeometry.computeBoundingSphere();
     }
-    const occluded = new THREE.LineSegments(sharedEdgeGeometry, SolidBrushEdgeMaterials.getOccludedMaterial(operation));
-    occluded.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
-    occluded.userData[SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY] = true;
-    occluded.renderOrder = BRUSH_EDGE_OCCLUDED_RENDER_ORDER;
-    const front = new THREE.LineSegments(sharedEdgeGeometry, SolidBrushEdgeMaterials.getFrontMaterial(operation));
-    front.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
-    front.renderOrder = BRUSH_EDGE_FRONT_RENDER_ORDER;
-    mesh.add(occluded);
-    mesh.add(front);
+    const edges = new THREE.LineSegments(edgeGeometry, SolidBrushEdgeMaterials.getFrontMaterial(operation));
+    edges.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] = true;
+    edges.renderOrder = BRUSH_EDGE_RENDER_ORDER;
+    mesh.add(edges);
   }
 }

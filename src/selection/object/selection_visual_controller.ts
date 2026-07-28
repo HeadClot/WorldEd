@@ -8,6 +8,7 @@ import { Viewport3D } from '../../viewports/viewport_3d.js';
 import { Viewport2D } from '../../viewports/viewport_2d.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
 import { SolidBrushEdgeFader } from '../../solid/model/solid_brush_edge_fader.js';
+import { SolidBrushEdgeBatch } from '../../solid/model/solid_brush_edge_batch.js';
 
 /**
  * Owns selection outline instances across all viewports. Keeps orange outlines
@@ -67,6 +68,7 @@ export class SelectionVisualController {
     const selected = this.selectionManager.getSelectedObjects();
     selected.forEach((mesh) => this.highlightMeshAndClones(mesh));
     this.syncSolidBrushHullFills();
+    this.syncSolidBrushEdgeBatches();
     SolidBrushEdgeFader.invalidateCameraCache();
   }
 
@@ -172,5 +174,17 @@ export class SelectionVisualController {
     this.viewportSyncManager
       .findCloneMeshesForWorldUuid(worldMesh.uuid)
       .forEach((clone) => SolidBrushVisual.setHullFillVisible(clone, fillVisible));
+  }
+
+  /**
+   * Syncs solid-brush edge batch membership with the current selection. Static
+   * batches already draw every brush; this only updates the individual set so
+   * selection stays cheap on large solids.
+   */
+  private syncSolidBrushEdgeBatches(): void {
+    const individual = this.collectSelectedBrushMeshes();
+    const worldObject =
+      typeof this.viewportSyncManager.getWorldObject === 'function' ? this.viewportSyncManager.getWorldObject() : null;
+    SolidBrushEdgeBatch.setIndividualMeshesAndSync(worldObject, individual);
   }
 }

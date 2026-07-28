@@ -169,6 +169,23 @@ describe('CadRulerSystem', () => {
     expect(selectedCount).toBeGreaterThan(0);
   });
 
+  it('skips full projection rebuilds when selection and cameras are still', () => {
+    const mesh = createBoxMesh(new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(2, 1, 3));
+    system.setSelectionMeshes([mesh]);
+    const firstCount = system.getDimensionSegmentCount();
+    expect(firstCount).toBeGreaterThan(0);
+    const labelsBefore = system.getLabels();
+    system.refreshLabelProjection();
+    system.refreshLabelProjection();
+    expect(system.getDimensionSegmentCount()).toBe(firstCount);
+    expect(system.getLabels()).toBe(labelsBefore);
+    camera.position.set(6, 5, 5);
+    camera.updateMatrixWorld(true);
+    system.refreshLabelProjection();
+    expect(system.getDimensionSegmentCount()).toBeGreaterThan(0);
+    expect(system.getLabels()).not.toBe(labelsBefore);
+  });
+
   it('should dispose cleanly', () => {
     const mesh = createBoxMesh(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1));
     system.setSelectionMeshes([mesh]);

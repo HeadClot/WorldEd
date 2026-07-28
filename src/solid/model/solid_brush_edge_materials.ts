@@ -8,9 +8,8 @@ import { SolidOperation } from '../types/solid_operation.js';
 export const BRUSH_EDGE_SHARED_MATERIAL_KEY = 'isSharedBrushEdgeMaterial';
 
 /**
- * UserData flag marking operation-colored dual-pass edges on solid brush
- * previews. Distinct from content decorative edges (white Theme.boxEdgeColor
- * outlines).
+ * UserData flag marking operation-colored edges on solid brush previews.
+ * Distinct from content decorative edges (white Theme.boxEdgeColor outlines).
  */
 export const SOLID_BRUSH_EDGE_USERDATA_KEY = 'isSolidBrushEdge';
 
@@ -26,11 +25,8 @@ export const BRUSH_EDGE_FADE_NEAR = 28;
  */
 export const BRUSH_EDGE_FADE_FAR = 85;
 
-/** Front-pass opacity for unoccluded brush edges. */
+/** Opacity for depth-tested brush edges (3D). */
 export const BRUSH_EDGE_FRONT_OPACITY = 0.88;
-
-/** Occluded-pass opacity for edges behind solid geometry (dim ghost). */
-export const BRUSH_EDGE_OCCLUDED_OPACITY = 0.14;
 
 /** Near/far values that effectively disable distance fade (2D clones, tests). */
 const FADE_DISABLED_NEAR = 1e7;
@@ -79,52 +75,44 @@ const EDGE_FRAGMENT_SHADER = `
 `;
 
 /**
- * Shared dual-pass brush edge materials with distance fade for the 3D viewport.
- * One front and one occluded material exist per CSG operation color.
+ * Shared brush edge materials with distance fade for the 3D viewport. One
+ * material exists per CSG operation color. Perspective uses depth testing so
+ * edges behind solid geometry are not drawn; orthographic multi-view panes
+ * disable depth so full wireframes remain readable.
  */
 export class SolidBrushEdgeMaterials {
   private static frontByOperation = new Map<SolidOperation, THREE.ShaderMaterial>();
-  private static occludedByOperation = new Map<SolidOperation, THREE.ShaderMaterial>();
   private static depthOcclusionEnabled = true;
 
   /**
-   * Returns the shared front-pass edge material for a CSG operation.
+   * Returns the shared edge material for a CSG operation.
    *
    * @param operation Brush CSG operation.
-   * @returns Shared front edge material.
+   * @returns Shared edge material.
    */
   static getFrontMaterial(operation: SolidOperation): THREE.ShaderMaterial {
-    return this.getOrCreate(this.frontByOperation, operation, BRUSH_EDGE_FRONT_OPACITY, THREE.LessEqualDepth);
+    return this.getOrCreate(operation);
   }
 
   /**
-   * Returns the shared occluded-pass edge material for a CSG operation.
+   * Enables depth testing for perspective multi-view panes, or always-on-top
+   * edges for orthographic 2D panes. Shared materials are toggled each scissor
+   * pass because all panes draw the same world hierarchy.
    *
-   * @param operation Brush CSG operation.
-   * @returns Shared occluded edge material.
-   */
-  static getOccludedMaterial(operation: SolidOperation): THREE.ShaderMaterial {
-    return this.getOrCreate(this.occludedByOperation, operation, BRUSH_EDGE_OCCLUDED_OPACITY, THREE.GreaterDepth);
-  }
-
-  /**
-   * Enables dual-pass depth darkening for perspective multi-view panes, or
-   * always-on-top edges for orthographic 2D panes. Shared materials are toggled
-   * each scissor pass because all panes draw the same world hierarchy.
-   *
-   * @param enabled True for 3D occlusion; false for full-bright 2D edges.
+   * @param enabled True for 3D depth test; false for full-bright 2D edges.
    */
   static setDepthOcclusionEnabled(enabled: boolean): void {
     if (this.depthOcclusionEnabled === enabled) return;
     this.depthOcclusionEnabled = enabled;
-    this.applyDepthModeToCache(this.frontByOperation, enabled, THREE.LessEqualDepth);
-    this.applyDepthModeToCache(this.occludedByOperation, enabled, THREE.GreaterDepth);
+    this.frontByOperation.forEach((material) => {
+      this.applyDepthMode(material, enabled);
+    });
   }
 
   /**
-   * Returns whether shared edge materials currently use dual-pass depth.
+   * Returns whether shared edge materials currently use depth testing.
    *
-   * @returns True when depth occlusion is enabled.
+   * @returns True when 3D depth testing is enabled.
    */
   static isDepthOcclusionEnabled(): boolean {
     return this.depthOcclusionEnabled;
@@ -183,24 +171,16 @@ export class SolidBrushEdgeMaterials {
   }
 
   /**
-   * Gets or creates a shared edge material for an operation and depth mode.
+   * Gets or creates a shared edge material for an operation.
    *
-   * @param cache Material map keyed by operation.
    * @param operation CSG operation.
-   * @param opacity Base opacity before distance fade.
-   * @param depthFunc Depth comparison function.
    * @returns Shared shader material.
    */
-  private static getOrCreate(
-    cache: Map<SolidOperation, THREE.ShaderMaterial>,
-    operation: SolidOperation,
-    opacity: number,
-    depthFunc: THREE.DepthModes,
-  ): THREE.ShaderMaterial {
-    const existing = cache.get(operation);
+  private static getOrCreate(operation: SolidOperation): THREE.ShaderMaterial {
+    const existing = this.frontByOperation.get(operation);
     if (existing) return existing;
-    const material = this.createMaterial(operation, opacity, depthFunc);
-    cache.set(operation, material);
+    const material = this.createMaterial(operation);
+    this.frontByOperation.set(operation, material);
     return material;
   }
 
@@ -208,20 +188,14 @@ export class SolidBrushEdgeMaterials {
    * Builds one shared distance-faded edge material.
    *
    * @param operation CSG operation for tint.
-   * @param opacity Base opacity.
-   * @param depthFunc Depth function for front or occluded pass.
    * @returns Configured shader material.
    */
-  private static createMaterial(
-    operation: SolidOperation,
-    opacity: number,
-    depthFunc: THREE.DepthModes,
-  ): THREE.ShaderMaterial {
+  private static createMaterial(operation: SolidOperation): THREE.ShaderMaterial {
     const color = new THREE.Color(this.edgeColorForOperation(operation));
     const material = new THREE.ShaderMaterial({
       uniforms: {
         diffuse: { value: color },
-        opacity: { value: opacity },
+        opacity: { value: BRUSH_EDGE_FRONT_OPACITY },
         fadeNear: { value: BRUSH_EDGE_FADE_NEAR },
         fadeFar: { value: BRUSH_EDGE_FADE_FAR },
       },
@@ -230,7 +204,7 @@ export class SolidBrushEdgeMaterials {
       transparent: true,
       depthTest: this.depthOcclusionEnabled,
       depthWrite: false,
-      depthFunc: this.depthOcclusionEnabled ? depthFunc : THREE.AlwaysDepth,
+      depthFunc: this.depthOcclusionEnabled ? THREE.LessEqualDepth : THREE.AlwaysDepth,
       toneMapped: false,
     });
     material.userData[BRUSH_EDGE_SHARED_MATERIAL_KEY] = true;
@@ -239,22 +213,15 @@ export class SolidBrushEdgeMaterials {
   }
 
   /**
-   * Applies depth-test settings to every material in a shared operation cache.
+   * Applies depth-test settings for 3D occlusion or full-bright 2D.
    *
-   * @param cache Front or occluded material map.
-   * @param depthOcclusionEnabled Whether 3D dual-pass depth is active.
-   * @param occludedDepthFunc Depth function when occlusion is on.
+   * @param material Edge material to update.
+   * @param depthOcclusionEnabled Whether 3D depth testing is active.
    */
-  private static applyDepthModeToCache(
-    cache: Map<SolidOperation, THREE.ShaderMaterial>,
-    depthOcclusionEnabled: boolean,
-    occludedDepthFunc: THREE.DepthModes,
-  ): void {
-    cache.forEach((material) => {
-      material.depthTest = depthOcclusionEnabled;
-      material.depthWrite = false;
-      material.depthFunc = depthOcclusionEnabled ? occludedDepthFunc : THREE.AlwaysDepth;
-      material.needsUpdate = true;
-    });
+  private static applyDepthMode(material: THREE.ShaderMaterial, depthOcclusionEnabled: boolean): void {
+    material.depthTest = depthOcclusionEnabled;
+    material.depthWrite = false;
+    material.depthFunc = depthOcclusionEnabled ? THREE.LessEqualDepth : THREE.AlwaysDepth;
+    material.needsUpdate = true;
   }
 }

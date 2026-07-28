@@ -58,6 +58,21 @@ describe('BoundsGizmo', () => {
     expect(facePickCount).toBe(6);
   });
 
+  it('keeps face pick and cube pick volumes out of the transparent draw list', () => {
+    gizmo.createHandles();
+    gizmo.updateFromBounds(createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1)), 0.3);
+    const root = gizmo.getAllSceneObjects()[0]!;
+    root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const isPick = child.userData['isBoundsFacePick'] === true || child.userData['boundsCubePick'] === true;
+      if (!isPick) return;
+      const material = child.material as THREE.MeshBasicMaterial;
+      expect(material.visible).toBe(false);
+      expect(material.transparent).toBe(false);
+      expect(material.colorWrite).toBe(false);
+    });
+  });
+
   it('should outline only the highlighted face with selection orange edges', () => {
     gizmo.createHandles();
     gizmo.updateFromBounds(createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1)), 0.3);

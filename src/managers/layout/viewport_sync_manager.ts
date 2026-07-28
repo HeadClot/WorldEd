@@ -65,6 +65,15 @@ export class ViewportSyncManager {
   }
 
   /**
+   * Returns the authoritative world group when set.
+   *
+   * @returns World group or null.
+   */
+  getWorldObject(): THREE.Group | null {
+    return this.worldObject;
+  }
+
+  /**
    * Returns all viewport scenes (shared scene repeated for compatibility).
    *
    * @returns Scene references from live viewports.
