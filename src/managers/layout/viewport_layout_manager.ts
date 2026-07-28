@@ -12,12 +12,7 @@ import { TransformSpace } from '../../types/transform_space.js';
 import { TransformMode } from '../../types/transform_mode.js';
 import { SelectionMode } from '../../types/selection_mode.js';
 import { AlignmentAxis } from '../../types/alignment_axis.js';
-import {
-  applyLayoutTransformSpace,
-  updateLayoutGizmoCameraScale,
-  updateLayoutGizmoPivot,
-  type LayoutGizmoContext,
-} from './layout_gizmo_helpers.js';
+import { applyLayoutTransformSpace, updateLayoutGizmoPivot, type LayoutGizmoContext } from './layout_gizmo_helpers.js';
 import {
   applyLayoutHistoryChange,
   handleLayoutSceneLoaded,
@@ -177,7 +172,6 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
       viewportSyncManager: this.viewportSyncManager,
       propertiesPanel: this.propertiesPanel,
       worldObject: this.worldObject,
-      viewport3D: this.viewport3D,
       getUserSnapEnabled: () => this.userSnapEnabled,
       isTransformSpaceLocal: () => this.transformSpace === TransformSpace.Local,
       onDuplicateSelectedForDrag: () => this.objectActionHandler.onDuplicateSelected(),
@@ -261,7 +255,7 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
       faceController: this.faceModeCoordinator.getFaceExtrusionController(),
       commandStack: this.commandStack,
       toolbarContainer: this.toolbarContainer,
-      anchorViewport: this.viewports[3]!,
+      getViewports: () => this.getAllLiveViewports(),
       statusBar: this.statusBar,
       afterSurfaceChange: () => this.refreshShadingAfterSurfaceEdit(),
     });
@@ -285,7 +279,7 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
       faceController: this.faceModeCoordinator.getFaceExtrusionController(),
       commandStack: this.commandStack,
       toolbarContainer: this.toolbarContainer,
-      anchorViewport: this.viewports[3]!,
+      getViewports: () => this.getAllLiveViewports(),
       statusBar: this.statusBar,
       afterSurfaceChange: () => this.refreshShadingAfterSurfaceEdit(),
     });
@@ -400,10 +394,25 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
       transformGizmo: this.transformGizmo,
       transformExecutor: this.transformExecutor,
       transformSpace: this.transformSpace,
-      viewport3D: this.getPrimaryPerspectiveViewport() ?? this.viewport3D,
+      getGizmoScaleCamera: () => this.resolveGizmoScaleCamera(),
       toolbar: this.toolbar,
       showStatusMessage: (message) => this.showStatusMessage(message),
     };
+  }
+
+  /**
+   * Picks a camera for constant on-screen gizmo sizing. Prefer perspective when
+   * any pane still has it; otherwise use an active or live orthographic view so
+   * 2D-only startups still scale translate/rotate/scale handles.
+   *
+   * @returns Camera for gizmo scale, or null when no viewports exist.
+   */
+  private resolveGizmoScaleCamera(): THREE.Camera | null {
+    const perspective = this.getPrimaryPerspectiveViewport();
+    if (perspective) return perspective.getCamera();
+    const active = this.getActiveViewports()[0];
+    if (active) return active.getCamera();
+    return this.getAllLiveViewports()[0]?.getCamera() ?? null;
   }
 
   /** Refreshes the outliner panel from the live world hierarchy. */
@@ -618,7 +627,6 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
       cadRulerSystem: this.cadRulerSystem,
       transformGizmo: this.transformGizmo,
       onBeforeRender: () => {
-        this.updateGizmoCameraScale();
         this.cadRulerSystem.refreshLabelProjection();
       },
       multiViewComposer: this.multiViewComposer,
@@ -714,11 +722,6 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
     });
     this.settingsUnsubscribe?.();
     this.settingsUnsubscribe = null;
-  }
-
-  /** Keeps the transform gizmo a readable size relative to the 3D camera. */
-  private updateGizmoCameraScale(): void {
-    updateLayoutGizmoCameraScale(this.getGizmoContext());
   }
 
   /**

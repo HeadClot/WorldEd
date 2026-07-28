@@ -269,7 +269,7 @@ export class SettingsDialog {
         host: this.host,
         title: 'Reset All Settings',
         message:
-          'Are you sure you want to reset all settings to their defaults?\n\nThis clears saved preferences, workspaces, game profiles, and related data. The editor will reload.',
+          'Are you sure you want to reset all settings to their defaults?\n\nThis permanently clears every saved preference: view options, keyboard/mouse, workspaces and viewport layouts, game profiles, coordinate presets, and related data. Nothing is kept. The editor will reload with factory defaults.',
         boldMessage: 'Any unsaved changes will be permanently lost.',
         confirmLabel: 'Yes',
         cancelLabel: 'No',

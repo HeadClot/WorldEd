@@ -1,5 +1,6 @@
 import { ToolsPalette } from '../../ui/tools_palette.js';
 import { ToolsPaletteController } from '../tools/tools_palette_controller.js';
+import { resolveFloatingPanelAnchorElement } from '../../ui/floating_panel/floating_panel_viewport_anchor.js';
 import { ClipPlaneTool } from '../clip_plane/clip_plane_tool.js';
 import { ClipPlaneHandler } from '../clip_plane/clip_plane_handler.js';
 import { FaceExtrusionController } from '../face/face_extrusion_controller.js';
@@ -23,7 +24,6 @@ export interface ClipToolsSetupDeps {
   clipPlaneTool: ClipPlaneTool;
   faceExtrusionController: FaceExtrusionController;
   toolbarContainer: HTMLElement;
-  anchorViewport: HTMLElement;
   getViewports: () => readonly EditorViewport[];
   keyboardShortcutHandler: KeyboardShortcutHandler;
   showStatusMessage: (message: string) => void;
@@ -62,8 +62,69 @@ export function setupClipToolsAndPalette(deps: ClipToolsSetupDeps): ClipToolsSet
   controllerHolder.current = toolsPaletteController;
   wireClipPlaneViewportCallbacks(deps, clipPlaneHandler);
   wireClipPlaneKeyboardShortcuts(deps, clipPlaneHandler);
+  bindFloatingPanelToViewports(toolsPalette, deps.getViewports);
   toolsPalette.show();
+  scheduleStartupFloatingPanelLayoutPass(toolsPalette, deps.getViewports);
   return { toolsPalette, toolsPaletteController, clipPlaneHandler };
+}
+
+/** Floating panel surface needed to bind live viewport placement. */
+export interface FloatingPanelViewportBindable {
+  setDefaultAnchor: (anchor: HTMLElement | null) => void;
+  setDefaultAnchorResolver: (resolver: (() => HTMLElement | null) | null) => void;
+  repositionToDefaultAnchor: () => void;
+}
+
+/**
+ * Binds a floating panel to live viewport placement rules (largest
+ * perspective). The resolver runs on every open so removed startup panes do not
+ * pin panels.
+ *
+ * @param panel Floating panel with anchor APIs.
+ * @param getViewports Live editor viewports provider.
+ */
+export function bindFloatingPanelToViewports(
+  panel: Pick<FloatingPanelViewportBindable, 'setDefaultAnchor' | 'setDefaultAnchorResolver'>,
+  getViewports: () => readonly EditorViewport[],
+): void {
+  const resolveAnchor = (): HTMLElement | null => resolveFloatingPanelAnchorElement(getViewports());
+  panel.setDefaultAnchorResolver(resolveAnchor);
+  panel.setDefaultAnchor(resolveAnchor());
+}
+
+/**
+ * Sets a snapshot anchor on a floating panel from the current viewport list.
+ * Prefer {@link bindFloatingPanelToViewports} so re-open rescans viewports.
+ *
+ * @param panel Floating panel with setDefaultAnchor.
+ * @param viewports Live editor viewports.
+ */
+export function applyStartupFloatingPanelAnchor(
+  panel: { setDefaultAnchor: (anchor: HTMLElement | null) => void },
+  viewports: readonly EditorViewport[],
+): void {
+  panel.setDefaultAnchor(resolveFloatingPanelAnchorElement(viewports));
+}
+
+/**
+ * Re-resolves the anchor and repositions after pane geometry has been laid out.
+ *
+ * @param panel Visible floating panel.
+ * @param getViewports Live editor viewports provider.
+ */
+export function scheduleStartupFloatingPanelLayoutPass(
+  panel: FloatingPanelViewportBindable,
+  getViewports: () => readonly EditorViewport[],
+): void {
+  const apply = () => {
+    bindFloatingPanelToViewports(panel, getViewports);
+    panel.repositionToDefaultAnchor();
+  };
+  if (typeof requestAnimationFrame !== 'function') {
+    apply();
+    return;
+  }
+  requestAnimationFrame(apply);
 }
 
 /**
@@ -101,19 +162,15 @@ function createToolsPalette(
   controllerHolder: { current: ToolsPaletteController | null },
   clipPlaneHandler: ClipPlaneHandler,
 ): ToolsPalette {
-  return new ToolsPalette(
-    deps.toolbarContainer,
-    {
-      onSelectTool: (toolId) => controllerHolder.current?.selectTool(toolId),
-      onTransformMode: (mode) => deps.onTransformMode(mode),
-      onFlipClipPlane: () => clipPlaneHandler.flipPlane(),
-      onCommitClip: () => clipPlaneHandler.commitClip(),
-      onCommitSplit: () => clipPlaneHandler.commitSplit(),
-      onOpenUvEditor: () => deps.onOpenUvEditor(),
-      onExtrudeFaces: () => deps.onExtrudeFaces(),
-    },
-    deps.anchorViewport,
-  );
+  return new ToolsPalette(deps.toolbarContainer, {
+    onSelectTool: (toolId) => controllerHolder.current?.selectTool(toolId),
+    onTransformMode: (mode) => deps.onTransformMode(mode),
+    onFlipClipPlane: () => clipPlaneHandler.flipPlane(),
+    onCommitClip: () => clipPlaneHandler.commitClip(),
+    onCommitSplit: () => clipPlaneHandler.commitSplit(),
+    onOpenUvEditor: () => deps.onOpenUvEditor(),
+    onExtrudeFaces: () => deps.onExtrudeFaces(),
+  });
 }
 
 /**

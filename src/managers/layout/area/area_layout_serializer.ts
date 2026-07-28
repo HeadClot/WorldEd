@@ -3,6 +3,10 @@ import { isAreaSplitDirection, type AreaSplitDirection } from './area_split_dire
 import { clampAreaSplitRatio } from './area_layout_tree.js';
 import { createAreaLeafNode, createAreaSplitNode, isAreaLeafNode, type AreaTreeNode } from './area_tree_node.js';
 import { parseViewportKind, type ViewportKind } from '../../../viewports/viewport_kind.js';
+import {
+  parseViewportCameraSnapshot,
+  type ViewportCameraSnapshot,
+} from '../../../viewports/viewport_camera_snapshot.js';
 
 /** Current serialized layout format version. */
 export const AREA_LAYOUT_SERIAL_VERSION = 1;
@@ -13,6 +17,8 @@ export interface SerializedAreaLeaf {
   areaId: string;
   editorType: string;
   viewportKind?: string;
+  /** Optional camera pose remembered for this pane across workspace switches. */
+  camera?: ViewportCameraSnapshot;
 }
 
 /** JSON-safe split payload. */
@@ -95,6 +101,77 @@ function serializeLeaf(payload: AreaLeafPayload): SerializedAreaLeaf {
     leaf.viewportKind = payload.viewportKind;
   }
   return leaf;
+}
+
+/**
+ * Attaches live camera snapshots to each viewport leaf in a layout document.
+ * Mutates the document in place and returns it for chaining.
+ *
+ * @param layout Serialized layout tree.
+ * @param getCamera Snapshot provider for each area id.
+ * @returns The same layout document with cameras filled when available.
+ */
+export function attachCamerasToSerializedLayout(
+  layout: SerializedAreaLayout,
+  getCamera: (areaId: string) => ViewportCameraSnapshot | null,
+): SerializedAreaLayout {
+  attachCamerasToNode(layout.root, getCamera);
+  return layout;
+}
+
+/**
+ * Walks a serialized tree and applies camera snapshots to matching area ids.
+ *
+ * @param layout Layout document that may contain per-leaf camera data.
+ * @param applyCamera Restores a snapshot onto a live pane.
+ */
+export function restoreCamerasFromSerializedLayout(
+  layout: SerializedAreaLayout,
+  applyCamera: (areaId: string, camera: ViewportCameraSnapshot) => void,
+): void {
+  restoreCamerasFromNode(layout.root, applyCamera);
+}
+
+/**
+ * Recursively attaches cameras to leaf nodes.
+ *
+ * @param node Serialized node.
+ * @param getCamera Snapshot provider.
+ */
+function attachCamerasToNode(
+  node: SerializedAreaNode,
+  getCamera: (areaId: string) => ViewportCameraSnapshot | null,
+): void {
+  if (node.type === 'leaf') {
+    const snapshot = getCamera(node.areaId);
+    if (snapshot) {
+      node.camera = snapshot;
+    } else {
+      delete node.camera;
+    }
+    return;
+  }
+  attachCamerasToNode(node.first, getCamera);
+  attachCamerasToNode(node.second, getCamera);
+}
+
+/**
+ * Recursively restores cameras from leaf nodes.
+ *
+ * @param node Serialized node.
+ * @param applyCamera Restore callback.
+ */
+function restoreCamerasFromNode(
+  node: SerializedAreaNode,
+  applyCamera: (areaId: string, camera: ViewportCameraSnapshot) => void,
+): void {
+  if (node.type === 'leaf') {
+    const camera = parseViewportCameraSnapshot(node.camera);
+    if (camera) applyCamera(node.areaId, camera);
+    return;
+  }
+  restoreCamerasFromNode(node.first, applyCamera);
+  restoreCamerasFromNode(node.second, applyCamera);
 }
 
 /**

@@ -35,14 +35,17 @@ export class ViewportSyncManager {
    * @param viewport3D Perspective viewport.
    */
   constructor(
-    viewport2DTop: Viewport2D,
-    viewport2DFront: Viewport2D,
-    viewport2DSide: Viewport2D,
-    viewport3D: Viewport3D,
+    viewport2DTop: Viewport2D | null,
+    viewport2DFront: Viewport2D | null,
+    viewport2DSide: Viewport2D | null,
+    viewport3D: Viewport3D | null,
   ) {
     this.allViewports = [];
     this.worldObject = null;
-    this.setViewportRoles(null, [viewport2DTop, viewport2DFront, viewport2DSide, viewport3D]);
+    const seed = [viewport2DTop, viewport2DFront, viewport2DSide, viewport3D].filter(
+      (viewport): viewport is EditorViewport => viewport !== null,
+    );
+    this.setViewportRoles(null, seed);
   }
 
   /**
@@ -174,32 +177,24 @@ export class ViewportSyncManager {
    *
    * @param _worldMeshes Unused.
    */
-  syncMeshGeometriesToClones(_worldMeshes: THREE.Mesh[]): void {
-    // Shared scene: world geometry is already authoritative.
-  }
+  syncMeshGeometriesToClones(_worldMeshes: THREE.Mesh[]): void {}
 
   /**
    * No-op clone transform sync retained for API compatibility.
    *
    * @param _worldObject Unused.
    */
-  syncClonePositionsToWorldObject(_worldObject: THREE.Group): void {
-    // Shared scene: no clones to update.
-  }
+  syncClonePositionsToWorldObject(_worldObject: THREE.Group): void {}
 
   /**
    * No-op clone transform sync retained for API compatibility.
    *
    * @param _worldObjects Unused.
    */
-  syncCloneTransformsForWorldObjects(_worldObjects: readonly THREE.Object3D[]): void {
-    // Shared scene: no clones to update.
-  }
+  syncCloneTransformsForWorldObjects(_worldObjects: readonly THREE.Object3D[]): void {}
 
   /** No-op index rebuild retained for API compatibility. */
-  rebuildCloneSourceIndex(): void {
-    // Shared scene: no clone index.
-  }
+  rebuildCloneSourceIndex(): void {}
 
   /**
    * Returns true for wireframe helpers and highlight overlays that must not be

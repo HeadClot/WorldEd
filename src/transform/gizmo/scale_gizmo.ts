@@ -7,6 +7,7 @@ import {
   applyGizmoFrontRenderOrder,
   createGizmoFrontMaterial,
   createGizmoOccludedMesh,
+  createGizmoPickMesh,
 } from './gizmo_visual_style.js';
 
 /** Data stored alongside each scale handle for proper scene management. */
@@ -17,8 +18,8 @@ interface ScaleData {
 }
 
 /**
- * Creates the scale transform gizmo with stem and box tip for each axis. Uses
- * the same stem thickness and depth-aware materials as Move/Rotate.
+ * Creates the scale transform gizmo with thin stems/tips and thicker invisible
+ * pick volumes for easier clicking.
  */
 export class ScaleGizmo {
   private theme: typeof Theme;
@@ -69,7 +70,7 @@ export class ScaleGizmo {
   }
 
   /**
-   * Creates a single scale handle with a stem and box tip.
+   * Creates a single scale handle with a stem, tip, and thick pick volumes.
    *
    * @param axis The gizmo axis for this handle.
    * @param color The hex color of the handle.
@@ -77,29 +78,113 @@ export class ScaleGizmo {
    */
   private createScaleHandle(axis: GizmoAxis, color: number, direction: THREE.Vector3): void {
     const group = new THREE.Group();
+    const lineMesh = this.createScaleStemMesh(color);
+    const tipMesh = this.createScaleTipMesh(color);
+    const handle = new GizmoHandle(axis, color, tipMesh);
+    this.attachScaleHandleMeshes(group, lineMesh, tipMesh, handle.getHandleId());
+    this.alignGroupToDirection(group, direction);
+    this.scaleData.push({ group, tipMesh, lineMesh });
+    this.handles.push(handle);
+  }
+
+  /**
+   * Creates the thin scale stem cylinder.
+   *
+   * @param color Axis color.
+   * @returns Front stem mesh.
+   */
+  private createScaleStemMesh(color: number): THREE.Mesh {
     const lineGeometry = new THREE.CylinderGeometry(
       GizmoVisualStyle.stemRadius,
       GizmoVisualStyle.stemRadius,
       GizmoVisualStyle.scaleStemLength,
       8,
     );
-    const tipSize = GizmoVisualStyle.scaleTipSize;
-    const tipGeometry = new THREE.BoxGeometry(tipSize, tipSize, tipSize);
     const lineMesh = this.createFrontMesh(lineGeometry, color);
     lineMesh.position.set(0, GizmoVisualStyle.scaleStemLength * 0.5, 0);
+    return lineMesh;
+  }
+
+  /**
+   * Creates the scale tip cube.
+   *
+   * @param color Axis color.
+   * @returns Front tip mesh.
+   */
+  private createScaleTipMesh(color: number): THREE.Mesh {
+    const tipSize = GizmoVisualStyle.scaleTipSize;
+    const tipGeometry = new THREE.BoxGeometry(tipSize, tipSize, tipSize);
     const tipMesh = this.createFrontMesh(tipGeometry, color);
     tipMesh.position.set(0, GizmoVisualStyle.scaleStemLength, 0);
-    const handle = new GizmoHandle(axis, color, tipMesh);
-    const handleId = handle.getHandleId();
+    return tipMesh;
+  }
+
+  /**
+   * Tags, ghosts, pick-volumes, and parents scale stem and tip.
+   *
+   * @param group Scale handle group.
+   * @param lineMesh Visual stem.
+   * @param tipMesh Visual tip.
+   * @param handleId Shared handle id.
+   */
+  private attachScaleHandleMeshes(
+    group: THREE.Group,
+    lineMesh: THREE.Mesh,
+    tipMesh: THREE.Mesh,
+    handleId: number,
+  ): void {
     this.tagHandleId(lineMesh, handleId);
     this.tagHandleId(tipMesh, handleId);
-    this.addOccludedPair(group, lineGeometry, color, handleId, lineMesh.position);
-    this.addOccludedPair(group, tipGeometry, color, handleId, tipMesh.position);
+    this.addOccludedPair(group, lineMesh.geometry, this.materialColorOf(lineMesh), handleId, lineMesh.position);
+    this.addOccludedPair(group, tipMesh.geometry, this.materialColorOf(tipMesh), handleId, tipMesh.position);
+    this.addScalePickVolumes(group, handleId, lineMesh.position, tipMesh.position);
     group.add(lineMesh);
     group.add(tipMesh);
-    this.alignGroupToDirection(group, direction);
-    this.scaleData.push({ group, tipMesh, lineMesh });
-    this.handles.push(handle);
+  }
+
+  /**
+   * Reads the hex color from a mesh basic material.
+   *
+   * @param mesh Mesh with MeshBasicMaterial.
+   * @returns Hex color, or white when unavailable.
+   */
+  private materialColorOf(mesh: THREE.Mesh): number {
+    const material = mesh.material;
+    if (material instanceof THREE.MeshBasicMaterial) {
+      return material.color.getHex();
+    }
+    return 0xffffff;
+  }
+
+  /**
+   * Adds invisible thicker pick meshes for stem and tip.
+   *
+   * @param group Scale handle group.
+   * @param handleId Shared handle id.
+   * @param linePosition Local stem center.
+   * @param tipPosition Local tip center.
+   */
+  private addScalePickVolumes(
+    group: THREE.Group,
+    handleId: number,
+    linePosition: THREE.Vector3,
+    tipPosition: THREE.Vector3,
+  ): void {
+    const stemPick = createGizmoPickMesh(
+      new THREE.CylinderGeometry(
+        GizmoVisualStyle.stemPickRadius,
+        GizmoVisualStyle.stemPickRadius,
+        GizmoVisualStyle.scaleStemLength,
+        8,
+      ),
+      handleId,
+    );
+    stemPick.position.copy(linePosition);
+    const pickSize = GizmoVisualStyle.scaleTipPickSize;
+    const tipPick = createGizmoPickMesh(new THREE.BoxGeometry(pickSize, pickSize, pickSize), handleId);
+    tipPick.position.copy(tipPosition);
+    group.add(stemPick);
+    group.add(tipPick);
   }
 
   /**

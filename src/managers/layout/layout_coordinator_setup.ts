@@ -106,7 +106,6 @@ export function setupToolsPaletteAndClipWiring(parts: {
   clipPlaneTool: ClipPlaneTool;
   faceModeCoordinator: FaceModeCoordinator;
   toolbarContainer: HTMLElement;
-  anchorViewport: HTMLElement;
   getViewports: () => EditorViewport[];
   keyboardShortcutHandler: KeyboardShortcutHandler;
   showStatusMessage: (message: string) => void;
@@ -132,7 +131,6 @@ export function setupToolsPaletteAndClipWiring(parts: {
     clipPlaneTool: parts.clipPlaneTool,
     faceExtrusionController: parts.faceModeCoordinator.getFaceExtrusionController(),
     toolbarContainer: parts.toolbarContainer,
-    anchorViewport: parts.anchorViewport,
     getViewports: parts.getViewports,
     keyboardShortcutHandler: parts.keyboardShortcutHandler,
     showStatusMessage: parts.showStatusMessage,

@@ -174,7 +174,7 @@ export class OutlinerTree {
   /**
    * Refreshes the tree to match the current scene hierarchy. Uses a cheap
    * structural diff so adding or removing a single visible object does not
-   * rebuild every row.
+   * rebuild every row. Search reuses existing row DOM when possible.
    *
    * @param selectedObjects The set of currently selected meshes.
    * @param hierarchySelection Optional hierarchy nodes selected in the
@@ -187,25 +187,125 @@ export class OutlinerTree {
     if (this.tryIncrementalStructureRefresh(selectedObjects, hierarchySelection)) {
       return;
     }
-    this.rebuildTree(selectedObjects, hierarchySelection);
+    this.reconcileVisibleTree(selectedObjects, hierarchySelection);
   }
 
   /**
-   * Fully rebuilds every visible outliner row from the scene hierarchy.
+   * Reconciles visible rows with the desired hierarchy (and search filter).
+   * Reuses existing OutlinerItem instances so filter typing does not recreate
+   * every row in large scenes.
    *
    * @param selectedObjects Currently selected meshes.
    * @param hierarchySelection Hierarchy nodes selected in the outliner.
    */
-  private rebuildTree(selectedObjects: Set<THREE.Mesh>, hierarchySelection: Set<THREE.Object3D>): void {
-    this.clearItems();
+  private reconcileVisibleTree(selectedObjects: Set<THREE.Mesh>, hierarchySelection: Set<THREE.Object3D>): void {
+    const desired = this.collectVisibleContentObjects();
+    this.disposeItemsNotInDesiredSet(new Set(desired));
+    const nextMap = this.buildReconciledItemMap(desired, selectedObjects, hierarchySelection);
+    this.replaceTreeDomFromItemMap(nextMap);
+  }
+
+  /**
+   * Disposes outliner rows whose objects are no longer in the visible list.
+   *
+   * @param desiredSet Objects that should remain listed.
+   */
+  private disposeItemsNotInDesiredSet(desiredSet: Set<THREE.Object3D>): void {
+    this.itemMap.forEach((item, object) => {
+      if (desiredSet.has(object)) return;
+      item.dispose();
+      this.itemMap.delete(object);
+    });
+  }
+
+  /**
+   * Builds an ordered item map for the desired visible objects, reusing rows.
+   *
+   * @param desired Ordered visible hierarchy objects.
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   * @returns Map from object to outliner item in display order.
+   */
+  private buildReconciledItemMap(
+    desired: readonly THREE.Object3D[],
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>,
+  ): Map<THREE.Object3D, OutlinerItem> {
+    const nextMap = new Map<THREE.Object3D, OutlinerItem>();
+    for (const object of desired) {
+      const item = this.reuseOrCreateVisibleItem(object, selectedObjects, hierarchySelection);
+      if (item) nextMap.set(object, item);
+    }
+    return nextMap;
+  }
+
+  /**
+   * Reuses an existing row or creates a configured item for a visible object.
+   *
+   * @param object Hierarchy object for the row.
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   * @returns Configured item, or null when the object is not under the root.
+   */
+  private reuseOrCreateVisibleItem(
+    object: THREE.Object3D,
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>,
+  ): OutlinerItem | null {
+    const depth = this.computeOutlinerDepth(object);
+    if (depth < 0) return null;
+    const hasChildren = this.getContentChildren(object).length > 0;
+    const existing = this.itemMap.get(object);
+    if (!existing) {
+      return this.createConfiguredItem(object, depth, hasChildren, selectedObjects, hierarchySelection);
+    }
+    this.refreshExistingItemChrome(existing, object, depth, hasChildren, selectedObjects, hierarchySelection);
+    return existing;
+  }
+
+  /**
+   * Updates depth, expand, visibility, lock, and selection on a reused row.
+   *
+   * @param item Existing outliner item.
+   * @param object Hierarchy object for the row.
+   * @param depth Indentation depth.
+   * @param hasChildren Whether the object has content children.
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   */
+  private refreshExistingItemChrome(
+    item: OutlinerItem,
+    object: THREE.Object3D,
+    depth: number,
+    hasChildren: boolean,
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>,
+  ): void {
+    item.setDepth(depth);
+    item.setHasChildren(hasChildren);
+    this.applySelectionState(item, object, selectedObjects, hierarchySelection);
+    this.applyExpandedState(item, object);
+    this.applyVisibilityState(item, object);
+    this.applyLockState(item, object);
+  }
+
+  /**
+   * Replaces tree DOM children from an ordered item map.
+   *
+   * @param nextMap Ordered map of visible items.
+   */
+  private replaceTreeDomFromItemMap(nextMap: Map<THREE.Object3D, OutlinerItem>): void {
     const fragment = document.createDocumentFragment();
-    this.renderChildren(this.root, 0, fragment, selectedObjects, hierarchySelection);
-    this.treeElement.appendChild(fragment);
+    nextMap.forEach((item) => {
+      fragment.appendChild(item.getElement());
+    });
+    this.itemMap = nextMap;
+    this.treeElement.replaceChildren(fragment);
   }
 
   /**
    * Attempts a single-row add/remove or selection-only update when the visible
-   * hierarchy barely changed.
+   * hierarchy barely changed (including under an active search filter).
    *
    * @param selectedObjects Currently selected meshes.
    * @param hierarchySelection Hierarchy nodes selected in the outliner.
@@ -215,7 +315,6 @@ export class OutlinerTree {
     selectedObjects: Set<THREE.Mesh>,
     hierarchySelection: Set<THREE.Object3D>,
   ): boolean {
-    if (this.searchQuery) return false;
     const desired = this.collectVisibleContentObjects();
     const current = Array.from(this.itemMap.keys());
     if (desired.length === current.length && this.areObjectListsEqual(desired, current)) {
@@ -233,13 +332,15 @@ export class OutlinerTree {
   }
 
   /**
-   * Collects content objects currently visible in the outliner (expanded DFS).
+   * Collects content objects currently visible in the outliner (expanded DFS,
+   * optional search filter).
    *
    * @returns Ordered list of visible hierarchy objects.
    */
   private collectVisibleContentObjects(): THREE.Object3D[] {
     const result: THREE.Object3D[] = [];
-    this.collectVisibleContentObjectsUnder(this.root, result);
+    const query = this.searchQuery.toLowerCase();
+    this.collectVisibleContentObjectsUnder(this.root, result, query);
     return result;
   }
 
@@ -248,12 +349,14 @@ export class OutlinerTree {
    *
    * @param parent Parent object in the hierarchy.
    * @param result Accumulator for visible objects.
+   * @param query Lowercase search query (empty shows all).
    */
-  private collectVisibleContentObjectsUnder(parent: THREE.Object3D, result: THREE.Object3D[]): void {
+  private collectVisibleContentObjectsUnder(parent: THREE.Object3D, result: THREE.Object3D[], query: string): void {
     for (const child of this.getContentChildren(parent)) {
+      if (!this.passesSearchFilter(child, query)) continue;
       result.push(child);
       if (this.getContentChildren(child).length > 0 && this.expandedSet.has(child.uuid)) {
-        this.collectVisibleContentObjectsUnder(child, result);
+        this.collectVisibleContentObjectsUnder(child, result, query);
       }
     }
   }
@@ -576,10 +679,17 @@ export class OutlinerTree {
     this.searchElement.style.fontSize = '12px';
     this.searchElement.style.outline = 'none';
     this.searchElement.addEventListener('input', () => {
-      this.searchQuery = this.searchElement.value;
-      const selected = this.buildEmptySelectionSet();
-      this.refresh(selected);
+      this.onSearchInputChanged();
     });
+  }
+
+  /**
+   * Applies the search box text and refreshes visible rows while keeping the
+   * last known scene/hierarchy selection so highlights survive filtering.
+   */
+  private onSearchInputChanged(): void {
+    this.searchQuery = this.searchElement.value;
+    this.refresh(this.lastSelectedObjects, this.lastHierarchySelection);
   }
 
   /** Builds and styles the tree container element. */
@@ -596,34 +706,6 @@ export class OutlinerTree {
     });
     this.itemMap.clear();
     this.treeElement.innerHTML = '';
-  }
-
-  /**
-   * Recursively renders all children of a parent into the tree.
-   *
-   * @param parent The parent Three.js object.
-   * @param depth The current indentation depth level.
-   * @param targetContainer The DOM element to append child items into.
-   * @param selectedObjects The set of currently selected meshes.
-   */
-  private renderChildren(
-    parent: THREE.Object3D,
-    depth: number,
-    targetContainer: HTMLElement | DocumentFragment,
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): void {
-    const query = this.searchQuery.toLowerCase();
-    this.getContentChildren(parent).forEach((child) => {
-      if (!this.passesSearchFilter(child, query)) return;
-      const hasChildren = this.getContentChildren(child).length > 0;
-      const item = this.createConfiguredItem(child, depth, hasChildren, selectedObjects, hierarchySelection);
-      targetContainer.appendChild(item.getElement());
-      this.itemMap.set(child, item);
-      if (hasChildren && this.expandedSet.has(child.uuid)) {
-        this.renderChildren(child, depth + 1, targetContainer, selectedObjects, hierarchySelection);
-      }
-    });
   }
 
   /**
@@ -671,8 +753,11 @@ export class OutlinerTree {
   }
 
   /**
-   * Computes whether a hierarchy row should appear selected. Empty groups are
-   * selected only via hierarchy selection.
+   * Computes whether a hierarchy row should appear selected. Hierarchy
+   * selection always wins. Solid model roots only highlight via hierarchy
+   * (result mesh is a selection proxy, not a row). Empty groups need hierarchy
+   * selection; non-empty groups highlight when any descendant mesh is
+   * selected.
    *
    * @param obj Row object.
    * @param selectedObjects Selected meshes.
@@ -685,16 +770,25 @@ export class OutlinerTree {
     hierarchySelection: Set<THREE.Object3D>,
   ): boolean {
     if (hierarchySelection.has(obj)) return true;
-    // Solid model roots are only selected via hierarchy (result mesh is a
-    // proxy). Do not treat brush selection as selecting the solid root.
     if (SolidModel.isSolidModelObject(obj)) return false;
     if (obj instanceof THREE.Mesh) return selectedObjects.has(obj);
     if (obj instanceof THREE.Group) {
-      const meshes = getAllMeshes(obj);
-      if (meshes.length === 0) return false;
-      return meshes.some((mesh) => selectedObjects.has(mesh));
+      return this.isGroupHighlightedByMeshSelection(obj, selectedObjects);
     }
     return false;
+  }
+
+  /**
+   * Returns whether a group row should highlight from mesh selection.
+   *
+   * @param group Group row object.
+   * @param selectedObjects Selected meshes.
+   * @returns True when any mesh under the group is selected.
+   */
+  private isGroupHighlightedByMeshSelection(group: THREE.Group, selectedObjects: Set<THREE.Mesh>): boolean {
+    const meshes = getAllMeshes(group);
+    if (meshes.length === 0) return false;
+    return meshes.some((mesh) => selectedObjects.has(mesh));
   }
 
   /**
@@ -733,34 +827,87 @@ export class OutlinerTree {
    * @param item The item to bind callbacks to.
    */
   private bindItemCallbacks(item: OutlinerItem): void {
+    this.bindSelectionCallback(item);
+    this.bindVisibilityCallback(item);
+    this.bindLockCallback(item);
+    this.bindExpandCallback(item);
+    this.bindRenameCallback(item);
+    this.bindContextMenuCallback(item);
+    this.bindDragDropCallbacks(item);
+  }
+
+  /**
+   * Binds the row selection callback.
+   *
+   * @param item Outliner item.
+   */
+  private bindSelectionCallback(item: OutlinerItem): void {
     item.onSelection((obj, event) => {
-      if (this.onSelect) {
-        this.onSelect(obj, event);
-      }
+      this.onSelect?.(obj, event);
     });
+  }
+
+  /**
+   * Binds the visibility toggle callback.
+   *
+   * @param item Outliner item.
+   */
+  private bindVisibilityCallback(item: OutlinerItem): void {
     item.onVisibilityToggle((obj) => {
-      if (this.onVisibility) {
-        this.onVisibility(obj);
-      }
+      this.onVisibility?.(obj);
     });
+  }
+
+  /**
+   * Binds the lock toggle callback.
+   *
+   * @param item Outliner item.
+   */
+  private bindLockCallback(item: OutlinerItem): void {
     item.onLockToggle((obj) => {
-      if (this.onLock) {
-        this.onLock(obj);
-      }
+      this.onLock?.(obj);
     });
+  }
+
+  /**
+   * Binds the expand/collapse callback.
+   *
+   * @param item Outliner item.
+   */
+  private bindExpandCallback(item: OutlinerItem): void {
     item.onExpandToggle((obj) => {
       this.toggleExpand(obj);
     });
+  }
+
+  /**
+   * Binds the rename callback.
+   *
+   * @param item Outliner item.
+   */
+  private bindRenameCallback(item: OutlinerItem): void {
     item.onRenameRequest((obj, newName) => {
-      if (this.onRename) {
-        this.onRename(obj, newName);
-      }
+      this.onRename?.(obj, newName);
     });
+  }
+
+  /**
+   * Binds the context menu callback.
+   *
+   * @param item Outliner item.
+   */
+  private bindContextMenuCallback(item: OutlinerItem): void {
     item.onContextMenuRequest((obj, x, y) => {
-      if (this.contextMenuCallback) {
-        this.contextMenuCallback(obj, x, y);
-      }
+      this.contextMenuCallback?.(obj, x, y);
     });
+  }
+
+  /**
+   * Binds drag-start and drop reparent callbacks.
+   *
+   * @param item Outliner item.
+   */
+  private bindDragDropCallbacks(item: OutlinerItem): void {
     item.onDragStartRequest((obj) => {
       this.dragSource = obj;
     });
@@ -785,14 +932,5 @@ export class OutlinerTree {
     }
     this.onReparent(this.dragSource, target);
     this.dragSource = null;
-  }
-
-  /**
-   * Creates an empty set for mesh selection.
-   *
-   * @returns An empty set of Three.js Mesh objects.
-   */
-  private buildEmptySelectionSet(): Set<THREE.Mesh> {
-    return new Set();
   }
 }

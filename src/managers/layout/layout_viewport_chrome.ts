@@ -29,6 +29,11 @@ export interface LayoutViewportChromeHost {
   attachCadRulers(): void;
   refreshNamedViewportFields(): void;
   showStatusMessage(message: string): void;
+  /**
+   * Writes the live area tree (including viewport kinds) into the active
+   * workspace and persists it.
+   */
+  persistActiveWorkspaceLayout(): void;
 }
 
 /**
@@ -37,11 +42,11 @@ export interface LayoutViewportChromeHost {
  * @param host Layout chrome host.
  */
 export function setupViewportMaximizeControls(host: LayoutViewportChromeHost): void {
-  host.viewportRegistry.getPanes().forEach((pane, index) => {
+  host.viewportRegistry.getPanes().forEach((pane) => {
     const viewport = pane.getViewport();
     if (!viewport) return;
     viewport.getViewportToolbar().setOnToggleMaximize(() => {
-      toggleMaximizeForPane(host, index);
+      toggleMaximizeForPane(host, pane.getId());
     });
   });
 }
@@ -69,31 +74,50 @@ export function syncActivePanesFromSlots(host: LayoutViewportChromeHost, slots: 
 }
 
 /**
- * Maximizes a pane by deactivating others (no render), or restores the layout.
+ * Marks only layout-visible areas active so multi-view does not prepare or draw
+ * hidden panes. When maximized, the display tree has a single leaf, so only
+ * that pane stays in the render list.
  *
  * @param host Layout chrome host.
- * @param paneIndex Pane index in registry order.
  */
-export function toggleMaximizeForPane(host: LayoutViewportChromeHost, paneIndex: number): void {
-  const maximizedIndex = host.viewportPaneLayout.toggleMaximized(paneIndex);
-  if (maximizedIndex === null) {
+export function syncActivePanesFromVisibleLayout(host: LayoutViewportChromeHost): void {
+  const placements = host.viewportPaneLayout.getAreaLayoutController().getPlacements();
+  const activeIds = placements.map((placement) => placement.payload.areaId);
+  if (activeIds.length === 0) {
     host.viewportRegistry.activateAllPanes();
-    host.viewportRegistry.getAllViewports().forEach((viewport) => {
-      viewport.getViewportToolbar().setMaximized(false);
-    });
-  } else {
-    const maximizedPane = host.viewportRegistry.getPaneByIndex(maximizedIndex);
-    if (maximizedPane) {
-      host.viewportRegistry.setActivePaneIds([maximizedPane.getId()]);
-    }
-    host.viewportRegistry.getPanes().forEach((pane, candidateIndex) => {
-      pane
-        .getViewport()
-        ?.getViewportToolbar()
-        .setMaximized(candidateIndex === maximizedIndex);
-    });
+    return;
   }
+  host.viewportRegistry.setActivePaneIds(activeIds);
+}
+
+/**
+ * Maximizes a pane by area/pane id (deactivates siblings so they are not
+ * rendered), or restores the full layout when the same pane is toggled again.
+ *
+ * @param host Layout chrome host.
+ * @param paneId Stable area / registry pane id.
+ */
+export function toggleMaximizeForPane(host: LayoutViewportChromeHost, paneId: string): void {
+  const controller = host.viewportPaneLayout.getAreaLayoutController();
+  const maximizedAreaId = controller.toggleMaximized(paneId);
+  syncActivePanesFromVisibleLayout(host);
+  updateMaximizeToolbarState(host, maximizedAreaId);
   host.resizeAll();
+}
+
+/**
+ * Updates maximize/restore button appearance on every pane toolbar.
+ *
+ * @param host Layout chrome host.
+ * @param maximizedAreaId Maximized area id, or null when restored.
+ */
+function updateMaximizeToolbarState(host: LayoutViewportChromeHost, maximizedAreaId: string | null): void {
+  host.viewportRegistry.getPanes().forEach((pane) => {
+    pane
+      .getViewport()
+      ?.getViewportToolbar()
+      .setMaximized(pane.getId() === maximizedAreaId);
+  });
 }
 
 /**
@@ -123,12 +147,14 @@ export function onViewportKindChange(host: LayoutViewportChromeHost, paneId: str
   if (!pane || pane.getKind() === kind) return;
   const created = host.viewportRegistry.replaceKind(paneId, kind);
   if (!created) return;
+  host.viewportPaneLayout.getAreaLayoutController().setViewportKind(paneId, kind);
   wireReplacedPane(host, pane, created);
   host.refreshNamedViewportFields();
   host.attachCadRulers();
   host.shadingModeCoordinator?.rebindViewportUi();
   host.faceModeCoordinator?.rebindViewportFaceCallbacks();
   resizeReplacedPane(created);
+  host.persistActiveWorkspaceLayout();
   host.showStatusMessage(`Viewport set to ${getViewportKindDisplayLabel(kind)}`);
 }
 
@@ -161,13 +187,12 @@ export function wireReplacedPane(host: LayoutViewportChromeHost, pane: ViewportP
  * @param viewport Live viewport in that pane.
  */
 export function wireToolbarForPane(host: LayoutViewportChromeHost, pane: ViewportPane, viewport: EditorViewport): void {
-  const paneIndex = host.viewportRegistry.getPanes().findIndex((candidate) => candidate.getId() === pane.getId());
   const toolbar = viewport.getViewportToolbar();
   toolbar.setViewportKind(pane.getKind());
   toolbar.setOnViewportKindChange((kind) => onViewportKindChange(host, pane.getId(), kind));
-  if (paneIndex >= 0) {
-    toolbar.setOnToggleMaximize(() => toggleMaximizeForPane(host, paneIndex));
-  }
+  toolbar.setOnToggleMaximize(() => toggleMaximizeForPane(host, pane.getId()));
+  const maximizedId = host.viewportPaneLayout.getAreaLayoutController().getMaximizedAreaId();
+  toolbar.setMaximized(pane.getId() === maximizedId);
 }
 
 /**

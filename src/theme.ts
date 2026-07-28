@@ -50,6 +50,8 @@ export const Theme = Object.freeze({
   gizmoXAxisColor: 0xff3333,
   gizmoYAxisColor: 0x33ff33,
   gizmoZAxisColor: 0x3333ff,
+  /** Free-move center handle on the translate gizmo (Unity-style). */
+  gizmoCenterColor: 0xd8d8d8,
   gizmoHoverColor: 0xffffff,
   boundsWireColor: 0x66c2ff,
   /** Quiet steel fill for CAD-style mid-face resize grips (not axis candy). */

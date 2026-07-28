@@ -438,6 +438,14 @@ export class Viewport3D extends BaseViewport {
   }
 
   /**
+   * Syncs flying-camera yaw/pitch from the camera orientation after external
+   * pose restores (workspace layout switch, fit, etc.).
+   */
+  syncFlyingCameraOrientation(): void {
+    this.flyingCamera.syncOrientationFromCamera();
+  }
+
+  /**
    * Returns a copy of the current camera position.
    *
    * @returns The camera position vector.

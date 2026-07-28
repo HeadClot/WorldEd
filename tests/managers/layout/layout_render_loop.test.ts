@@ -99,4 +99,40 @@ describe('LayoutRenderLoop', () => {
     expect(prepareForCamera).toHaveBeenCalledWith(camera);
     expect(endCameraPass).toHaveBeenCalled();
   });
+
+  it('reuses the same multi-view pass objects and hooks across frames', async () => {
+    loop = new LayoutRenderLoop();
+    const visible = createViewportMock();
+    const cameraFitCoordinator = { updateAnimations: vi.fn() } as unknown as CameraFitCoordinator;
+    const render = vi.fn();
+    const multiViewComposer = { render } as unknown as MultiViewComposer;
+    const sharedScene = { getScene: () => new THREE.Scene() } as unknown as SharedWorldScene;
+    loop.bind({
+      getActiveViewports: () => [visible],
+      cameraFitCoordinator,
+      clipPlaneHandler: null,
+      onBeforeRender: () => undefined,
+      multiViewComposer,
+      sharedScene,
+    });
+    loop.start();
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    expect(render.mock.calls.length).toBeGreaterThanOrEqual(2);
+    const firstPasses = render.mock.calls[0]?.[1] as Array<{
+      prepare?: () => void;
+      finalize?: () => void;
+      syncCameraSize?: (width: number, height: number) => void;
+    }>;
+    const secondPasses = render.mock.calls[1]?.[1] as Array<{
+      prepare?: () => void;
+      finalize?: () => void;
+      syncCameraSize?: (width: number, height: number) => void;
+    }>;
+    expect(secondPasses).toBe(firstPasses);
+    expect(secondPasses[0]).toBe(firstPasses[0]);
+    expect(secondPasses[0]?.prepare).toBe(firstPasses[0]?.prepare);
+    expect(secondPasses[0]?.finalize).toBe(firstPasses[0]?.finalize);
+    expect(secondPasses[0]?.syncCameraSize).toBe(firstPasses[0]?.syncCameraSize);
+  });
 });

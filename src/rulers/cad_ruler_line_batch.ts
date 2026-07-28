@@ -1,6 +1,16 @@
 import * as THREE from 'three';
+import { createScreenPixelDashedLineMaterial } from '../transform/bounds/bounds_guide_line_material.js';
 import { CadRulerStyle } from './cad_ruler_style.js';
 import type { CadLineSegment } from './cad_dimension_geometry.js';
+
+/** Optional construction flags for a CAD line batch. */
+export interface CadRulerLineBatchOptions {
+  /**
+   * When true, strokes use screen-pixel dashing (same shader as bounds guide
+   * lines). Requires lineStart/lineEnd attributes on every segment.
+   */
+  dashed?: boolean;
+}
 
 /**
  * Dual-pass (front + occluded) line batch for CAD ruler geometry. Reuses typed
@@ -10,17 +20,22 @@ import type { CadLineSegment } from './cad_dimension_geometry.js';
 export class CadRulerLineBatch {
   private rootGroup: THREE.Group;
   private geometry: THREE.BufferGeometry;
-  private frontMaterial: THREE.LineBasicMaterial;
-  private occludedMaterial: THREE.LineBasicMaterial;
+  private frontMaterial: THREE.Material;
+  private occludedMaterial: THREE.Material;
   private frontLines: THREE.LineSegments;
   private occludedLines: THREE.LineSegments;
   private positions: Float32Array;
   private colors: Float32Array;
+  private lineStarts: Float32Array;
+  private lineEnds: Float32Array;
   private positionAttribute: THREE.BufferAttribute | null;
   private colorAttribute: THREE.BufferAttribute | null;
+  private lineStartAttribute: THREE.BufferAttribute | null;
+  private lineEndAttribute: THREE.BufferAttribute | null;
   private capacityVertices: number;
   private usedVertices: number;
   private depthOcclusionEnabled: boolean;
+  private dashed: boolean;
 
   /**
    * Creates an empty dual-pass line batch.
@@ -28,17 +43,24 @@ export class CadRulerLineBatch {
    * @param name Root group name for debugging.
    * @param frontOpacity Front-pass opacity.
    * @param occludedOpacity Occluded-pass opacity.
+   * @param options Optional dashed-stroke mode.
    */
   constructor(
     name: string,
     frontOpacity: number = CadRulerStyle.lineFrontOpacity,
     occludedOpacity: number = CadRulerStyle.lineOccludedOpacity,
+    options: CadRulerLineBatchOptions = {},
   ) {
+    this.dashed = options.dashed === true;
     this.geometry = new THREE.BufferGeometry();
     this.positions = new Float32Array(0);
     this.colors = new Float32Array(0);
+    this.lineStarts = new Float32Array(0);
+    this.lineEnds = new Float32Array(0);
     this.positionAttribute = null;
     this.colorAttribute = null;
+    this.lineStartAttribute = null;
+    this.lineEndAttribute = null;
     this.capacityVertices = 0;
     this.usedVertices = 0;
     this.depthOcclusionEnabled = true;
@@ -113,11 +135,20 @@ export class CadRulerLineBatch {
   }
 
   /**
+   * Returns whether this batch draws dashed strokes.
+   *
+   * @returns True when constructed with dashed mode.
+   */
+  isDashed(): boolean {
+    return this.dashed;
+  }
+
+  /**
    * Returns the front-pass material (tests / debugging).
    *
    * @returns Front line material.
    */
-  getFrontMaterial(): THREE.LineBasicMaterial {
+  getFrontMaterial(): THREE.Material {
     return this.frontMaterial;
   }
 
@@ -126,7 +157,7 @@ export class CadRulerLineBatch {
    *
    * @returns Occluded line material.
    */
-  getOccludedMaterial(): THREE.LineBasicMaterial {
+  getOccludedMaterial(): THREE.Material {
     return this.occludedMaterial;
   }
 
@@ -192,36 +223,45 @@ export class CadRulerLineBatch {
   }
 
   /**
-   * Creates the front-pass line material.
+   * Creates the front-pass line material (solid or dashed).
    *
    * @param opacity Front opacity.
    * @returns Configured material.
    */
-  private createFrontMaterial(opacity: number): THREE.LineBasicMaterial {
-    return new THREE.LineBasicMaterial({
-      vertexColors: true,
-      depthTest: true,
-      depthWrite: false,
-      depthFunc: THREE.LessEqualDepth,
-      transparent: true,
-      opacity,
-      toneMapped: false,
-      linewidth: 1,
-    });
+  private createFrontMaterial(opacity: number): THREE.Material {
+    if (this.dashed) {
+      return createScreenPixelDashedLineMaterial(opacity, THREE.LessEqualDepth);
+    }
+    return this.createSolidLineMaterial(opacity, THREE.LessEqualDepth);
   }
 
   /**
-   * Creates the occluded ghost line material.
+   * Creates the occluded ghost line material (solid or dashed).
    *
    * @param opacity Occluded opacity.
    * @returns Configured material.
    */
-  private createOccludedMaterial(opacity: number): THREE.LineBasicMaterial {
+  private createOccludedMaterial(opacity: number): THREE.Material {
+    if (this.dashed) {
+      return createScreenPixelDashedLineMaterial(opacity, THREE.GreaterDepth);
+    }
+    return this.createSolidLineMaterial(opacity, THREE.GreaterDepth);
+  }
+
+  /**
+   * Builds a vertex-colored solid LineBasicMaterial for extension and delta
+   * strokes.
+   *
+   * @param opacity Pass opacity.
+   * @param depthFunc Depth comparison.
+   * @returns Configured solid line material.
+   */
+  private createSolidLineMaterial(opacity: number, depthFunc: THREE.DepthModes): THREE.LineBasicMaterial {
     return new THREE.LineBasicMaterial({
       vertexColors: true,
       depthTest: true,
       depthWrite: false,
-      depthFunc: THREE.GreaterDepth,
+      depthFunc,
       transparent: true,
       opacity,
       toneMapped: false,
@@ -237,7 +277,7 @@ export class CadRulerLineBatch {
    * @param occludedDepthFunc Depth function when occlusion is on.
    */
   private applyDepthMode(
-    material: THREE.LineBasicMaterial,
+    material: THREE.Material,
     depthOcclusionEnabled: boolean,
     occludedDepthFunc: THREE.DepthModes,
   ): void {
@@ -263,7 +303,7 @@ export class CadRulerLineBatch {
    * @param renderOrder Draw order.
    * @returns Configured line object.
    */
-  private createLinePass(suffix: string, material: THREE.LineBasicMaterial, renderOrder: number): THREE.LineSegments {
+  private createLinePass(suffix: string, material: THREE.Material, renderOrder: number): THREE.LineSegments {
     const lines = new THREE.LineSegments(this.geometry, material);
     lines.name = `cad_ruler_lines_${suffix}`;
     lines.renderOrder = renderOrder;
@@ -281,9 +321,15 @@ export class CadRulerLineBatch {
     const nextCapacity = Math.max(vertexCount, Math.max(64, this.capacityVertices * 2));
     this.positions = new Float32Array(nextCapacity * 3);
     this.colors = new Float32Array(nextCapacity * 3);
+    if (this.dashed) {
+      this.lineStarts = new Float32Array(nextCapacity * 3);
+      this.lineEnds = new Float32Array(nextCapacity * 3);
+    }
     this.capacityVertices = nextCapacity;
     this.positionAttribute = null;
     this.colorAttribute = null;
+    this.lineStartAttribute = null;
+    this.lineEndAttribute = null;
   }
 
   /**
@@ -294,21 +340,56 @@ export class CadRulerLineBatch {
   private writeSegments(segments: CadLineSegment[]): void {
     let offset = 0;
     for (const segment of segments) {
-      this.positions[offset] = segment.ax;
-      this.positions[offset + 1] = segment.ay;
-      this.positions[offset + 2] = segment.az;
-      this.colors[offset] = segment.colorA.r;
-      this.colors[offset + 1] = segment.colorA.g;
-      this.colors[offset + 2] = segment.colorA.b;
-      offset += 3;
-      this.positions[offset] = segment.bx;
-      this.positions[offset + 1] = segment.by;
-      this.positions[offset + 2] = segment.bz;
-      this.colors[offset] = segment.colorB.r;
-      this.colors[offset + 1] = segment.colorB.g;
-      this.colors[offset + 2] = segment.colorB.b;
-      offset += 3;
+      this.writeSegmentAt(offset, segment);
+      offset += 6;
     }
+  }
+
+  /**
+   * Writes one segment's twelve floats (two vertices × position/color, and
+   * optional dashed lineStart/lineEnd) at a flat component offset.
+   *
+   * @param offset Flat float index into the attribute streams.
+   * @param segment Source segment.
+   */
+  private writeSegmentAt(offset: number, segment: CadLineSegment): void {
+    this.positions[offset] = segment.ax;
+    this.positions[offset + 1] = segment.ay;
+    this.positions[offset + 2] = segment.az;
+    this.colors[offset] = segment.colorA.r;
+    this.colors[offset + 1] = segment.colorA.g;
+    this.colors[offset + 2] = segment.colorA.b;
+    this.positions[offset + 3] = segment.bx;
+    this.positions[offset + 4] = segment.by;
+    this.positions[offset + 5] = segment.bz;
+    this.colors[offset + 3] = segment.colorB.r;
+    this.colors[offset + 4] = segment.colorB.g;
+    this.colors[offset + 5] = segment.colorB.b;
+    if (this.dashed) {
+      this.writeDashedEndpoints(offset, segment);
+    }
+  }
+
+  /**
+   * Duplicates world endpoints onto both vertices so the dash shader can treat
+   * screen-space start/end as constants (no perspective warp).
+   *
+   * @param offset Flat float index into the attribute streams.
+   * @param segment Source segment.
+   */
+  private writeDashedEndpoints(offset: number, segment: CadLineSegment): void {
+    this.lineStarts[offset] = segment.ax;
+    this.lineStarts[offset + 1] = segment.ay;
+    this.lineStarts[offset + 2] = segment.az;
+    this.lineStarts[offset + 3] = segment.ax;
+    this.lineStarts[offset + 4] = segment.ay;
+    this.lineStarts[offset + 5] = segment.az;
+    this.lineEnds[offset] = segment.bx;
+    this.lineEnds[offset + 1] = segment.by;
+    this.lineEnds[offset + 2] = segment.bz;
+    this.lineEnds[offset + 3] = segment.bx;
+    this.lineEnds[offset + 4] = segment.by;
+    this.lineEnds[offset + 5] = segment.bz;
   }
 
   /**
@@ -323,9 +404,14 @@ export class CadRulerLineBatch {
       return;
     }
     this.bindAttributesIfNeeded();
+    const componentCount = vertexCount * 3;
     if (this.positionAttribute && this.colorAttribute) {
-      this.markAttributeUpdated(this.positionAttribute, vertexCount * 3);
-      this.markAttributeUpdated(this.colorAttribute, vertexCount * 3);
+      this.markAttributeUpdated(this.positionAttribute, componentCount);
+      this.markAttributeUpdated(this.colorAttribute, componentCount);
+    }
+    if (this.dashed && this.lineStartAttribute && this.lineEndAttribute) {
+      this.markAttributeUpdated(this.lineStartAttribute, componentCount);
+      this.markAttributeUpdated(this.lineEndAttribute, componentCount);
     }
     this.geometry.setDrawRange(0, vertexCount);
   }
@@ -353,5 +439,13 @@ export class CadRulerLineBatch {
     this.colorAttribute.setUsage(THREE.DynamicDrawUsage);
     this.geometry.setAttribute('position', this.positionAttribute);
     this.geometry.setAttribute('color', this.colorAttribute);
+    if (this.dashed) {
+      this.lineStartAttribute = new THREE.BufferAttribute(this.lineStarts, 3);
+      this.lineEndAttribute = new THREE.BufferAttribute(this.lineEnds, 3);
+      this.lineStartAttribute.setUsage(THREE.DynamicDrawUsage);
+      this.lineEndAttribute.setUsage(THREE.DynamicDrawUsage);
+      this.geometry.setAttribute('lineStart', this.lineStartAttribute);
+      this.geometry.setAttribute('lineEnd', this.lineEndAttribute);
+    }
   }
 }

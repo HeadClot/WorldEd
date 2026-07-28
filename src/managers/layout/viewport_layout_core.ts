@@ -124,10 +124,12 @@ export abstract class ViewportLayoutCore {
   protected multiViewComposer!: MultiViewComposer;
   protected detachedViewportWindow: DetachedViewportWindow;
   protected sceneBootstrap!: ViewportSceneBootstrap;
-  protected viewport3D!: Viewport3D;
-  protected viewport2DTop!: Viewport2D;
-  protected viewport2DFront!: Viewport2D;
-  protected viewport2DSide!: Viewport2D;
+  /** Perspective viewport when present; null for orthographic-only layouts. */
+  protected viewport3D: Viewport3D | null = null;
+  /** Named 2D roles when present; null if that kind is not in the layout. */
+  protected viewport2DTop: Viewport2D | null = null;
+  protected viewport2DFront: Viewport2D | null = null;
+  protected viewport2DSide: Viewport2D | null = null;
   protected inputManager!: InputManager;
   protected worldObject!: THREE.Group;
   protected isDisposed: boolean;
@@ -413,10 +415,12 @@ export abstract class ViewportLayoutCore {
   protected prepareDetachedBoundsGizmoScreenSpace(viewport: EditorViewport): void {
     const group = viewport.getGizmoGroup();
     if (!group) return;
+    const camera = viewport.getCamera();
     const content = viewport.getContentElement();
     const height = Math.max(1, content.clientHeight || content.offsetHeight || 512);
     const viewPlane = getCadViewPlaneForKind(viewport.getViewportKind());
-    this.transformGizmo.prepareBoundsCloneForCamera(group, viewport.getCamera(), viewPlane, height);
+    this.transformGizmo.prepareTransformCloneForCamera(group, camera);
+    this.transformGizmo.prepareBoundsCloneForCamera(group, camera, viewPlane, height);
   }
 
   /**
@@ -476,11 +480,12 @@ export abstract class ViewportLayoutCore {
   }
 
   /**
-   * Returns live viewports currently considered active for render and input.
+   * Returns live viewports currently considered active for render and input, in
+   * multi-view draw order (orthographic first, then perspective).
    *
    * @returns Active editor viewports.
    */
-  protected getActiveViewports(): EditorViewport[] {
+  protected getActiveViewports(): readonly EditorViewport[] {
     return this.viewportRegistry.getActiveViewports();
   }
 
@@ -566,7 +571,11 @@ export abstract class ViewportLayoutCore {
       const viewport = coordinator.getOrderedViewports()[coordinator.getActiveViewportIndex()];
       if (viewport) return viewport.getCamera();
     }
-    return this.getActiveViewports()[0]?.getCamera() ?? this.viewport3D.getCamera();
+    return (
+      this.getActiveViewports()[0]?.getCamera() ??
+      this.viewport3D?.getCamera() ??
+      this.getAllLiveViewports()[0]!.getCamera()
+    );
   }
 
   /** Creates object, CSG, and alignment action handlers. */
@@ -655,6 +664,7 @@ export abstract class ViewportLayoutCore {
       attachCadRulers: () => this.attachCadRulers(),
       refreshNamedViewportFields: () => this.refreshNamedViewportFields(),
       showStatusMessage: (message: string) => this.showStatusMessage(message),
+      persistActiveWorkspaceLayout: () => this.workspaceController?.persistCurrentIntoActive(),
     };
   }
 
@@ -708,7 +718,6 @@ export abstract class ViewportLayoutCore {
       clipPlaneTool: this.clipPlaneTool,
       faceModeCoordinator: this.faceModeCoordinator,
       toolbarContainer: this.toolbarContainer,
-      anchorViewport: this.viewports[3] ?? this.viewports[0]!,
       getViewports: () => this.getAllLiveViewports(),
       keyboardShortcutHandler: this.keyboardShortcutHandler,
       showStatusMessage: (message) => this.showStatusMessage(message),
@@ -847,7 +856,12 @@ export abstract class ViewportLayoutCore {
     }
     const parts = createLayoutSettingsSystem({
       container: this.container,
-      viewport3D: this.viewport3D,
+      getPerspectiveViewport: () => this.getPrimaryPerspectiveViewport(),
+      getRendererHost: () =>
+        this.getPrimaryPerspectiveViewport() ??
+        this.getAllLiveViewports()[0] ??
+        this.getAllInteractiveViewports()[0] ??
+        null,
       viewportPaneLayout: this.viewportPaneLayout,
       toolbar: this.toolbar,
       resizeAll: () => this.resizeAll(),

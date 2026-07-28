@@ -162,6 +162,28 @@ export class OutlinerItem {
   }
 
   /**
+   * Updates indentation depth without recreating the row (search/filter reuse).
+   *
+   * @param depth Hierarchy depth starting at 0 for root children.
+   */
+  setDepth(depth: number): void {
+    if (this.depth === depth) return;
+    this.depth = depth;
+    this.rowElement.style.paddingLeft = `${4 + this.depth * 16}px`;
+  }
+
+  /**
+   * Updates whether the chevron should show children.
+   *
+   * @param hasChildren True when the object has content children.
+   */
+  setHasChildren(hasChildren: boolean): void {
+    if (this.hasChildren === hasChildren) return;
+    this.hasChildren = hasChildren;
+    this.updateChevron();
+  }
+
+  /**
    * Sets the expanded state and updates the chevron.
    *
    * @param expanded True to show the expanded chevron state.

@@ -19,7 +19,8 @@ export interface SolidModelLayoutHost {
   toolbarContainer: HTMLElement;
   solidPanelAnchor: HTMLElement;
   viewportSyncManager: ViewportSyncManager;
-  viewport3D: Viewport3D;
+  /** Perspective viewport when present; solid spawn may fall back elsewhere. */
+  viewport3D: Viewport3D | null;
   gridSnap: GridSnap;
   textureLock: TextureLockSettings;
   refreshAfterWorldMutation: () => void;
@@ -69,7 +70,7 @@ function wireSolidModelController(host: SolidModelLayoutHost, controller: SolidM
   controller.setRefreshOutliner(() => host.refreshOutliner());
   controller.setShowStatus((message) => host.showStatusMessage(message));
   controller.setTextureLockSettings(host.textureLock);
-  controller.setActiveCameraProvider(() => host.viewport3D.getCamera());
+  controller.setActiveCameraProvider(() => host.viewport3D?.getCamera() ?? null);
   controller.setGridIntervalProvider(() => host.gridSnap.getInterval());
   controller.setOnLiveGeometryUpdated((resultMeshes) => {
     host.viewportSyncManager.syncMeshGeometriesToClones(resultMeshes);

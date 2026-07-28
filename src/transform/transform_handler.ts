@@ -259,6 +259,7 @@ export class TransformHandler {
     }
     this.transformGizmo.setActiveHandle(null);
     this.transformGizmo.setBoundsGuideLinesVisible(false);
+    this.transformGizmo.setBoundsResizeHandlesVisible(true);
     this.transformGizmo.setHighlightedBoundsFace(null);
     this.session.clearInteractionTargets();
     return selectionClick;
@@ -537,6 +538,9 @@ export class TransformHandler {
    * @returns Constrained world-space delta.
    */
   private constrainDeltaToOrientedAxis(delta: THREE.Vector3, axis: GizmoAxis): THREE.Vector3 {
+    if (axis === GizmoAxis.VIEW) {
+      return delta.clone();
+    }
     const orientation = this.transformGizmo.getOrientation();
     if (axis === GizmoAxis.X || axis === GizmoAxis.Y || axis === GizmoAxis.Z) {
       const worldAxis = TransformProjectionMath.axisToWorldVector(axis, orientation);

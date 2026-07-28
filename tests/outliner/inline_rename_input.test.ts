@@ -52,10 +52,20 @@ describe('InlineRenameInput', () => {
   it('should deactivate and restore text span', () => {
     renameInput.activate();
     renameInput.deactivate('NewName');
-    expect(textSpan.style.display).toBe('inline');
+    expect(textSpan.style.display).toBe('');
     expect(textSpan.textContent).toBe('NewName');
     const input = parentElement.querySelector('input');
     expect(input).toBeNull();
+  });
+
+  it('matches the name span height so chrome does not reflow when editing', () => {
+    Object.defineProperty(textSpan, 'offsetHeight', { configurable: true, get: () => 16 });
+    renameInput.activate();
+    const input = renameInput.getInputElement();
+    expect(input.style.height).toBe('16px');
+    expect(input.style.maxHeight).toBe('16px');
+    expect(input.style.boxSizing).toBe('border-box');
+    expect(input.style.padding).toBe('0px 4px');
   });
 
   it('should confirm rename and call confirm callback', () => {
@@ -160,7 +170,7 @@ describe('InlineRenameInput', () => {
     renameInput.activate();
     const input = parentElement.querySelector('input') as HTMLInputElement;
     expect(input.style.border).toBe('1px solid rgb(230, 126, 34)');
-    expect(input.style.fontFamily).toBe('monospace');
-    expect(input.style.fontSize).toBe('12px');
+    expect(input.style.padding).toBe('0px 4px');
+    expect(input.style.boxSizing).toBe('border-box');
   });
 });

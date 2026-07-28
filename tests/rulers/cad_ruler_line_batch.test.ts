@@ -97,4 +97,25 @@ describe('CadRulerLineBatch', () => {
     expect(batch.getOccludedMaterial().depthFunc).toBe(THREE.GreaterDepth);
     expect(batch.isOccludedPassVisible()).toBe(true);
   });
+
+  it('uses the screen-pixel dashed shader and line endpoint attributes when dashed', () => {
+    const dashedBatch = new CadRulerLineBatch('dashed_batch', 0.95, 0.22, { dashed: true });
+    const color = new THREE.Color(0x5ec8ff);
+    dashedBatch.setSegments([{ ax: 0, ay: 0, az: 0, bx: 2, by: 0, bz: 0, colorA: color, colorB: color }]);
+    expect(dashedBatch.isDashed()).toBe(true);
+    expect(dashedBatch.getFrontMaterial()).toBeInstanceOf(THREE.ShaderMaterial);
+    expect(dashedBatch.getOccludedMaterial()).toBeInstanceOf(THREE.ShaderMaterial);
+    const geometry = dashedBatch.getObject().children.find((child) => child instanceof THREE.LineSegments) as
+      THREE.LineSegments | undefined;
+    expect(geometry).toBeDefined();
+    expect(geometry!.geometry.getAttribute('lineStart')).toBeDefined();
+    expect(geometry!.geometry.getAttribute('lineEnd')).toBeDefined();
+    const lineStart = geometry!.geometry.getAttribute('lineStart') as THREE.BufferAttribute;
+    expect(lineStart.getX(0)).toBeCloseTo(0);
+    expect(lineStart.getX(1)).toBeCloseTo(0);
+    const lineEnd = geometry!.geometry.getAttribute('lineEnd') as THREE.BufferAttribute;
+    expect(lineEnd.getX(0)).toBeCloseTo(2);
+    expect(lineEnd.getX(1)).toBeCloseTo(2);
+    dashedBatch.dispose();
+  });
 });

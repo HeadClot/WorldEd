@@ -3,6 +3,26 @@ import { Theme } from '../../theme.js';
 import { GridPlane } from './grid_plane.js';
 import { GridLineBuffer } from './grid_line_buffer.js';
 
+/** Reusable orthographic view bounds on a grid plane. */
+interface GridViewBounds {
+  minU: number;
+  maxU: number;
+  minV: number;
+  maxV: number;
+}
+
+/** Reusable adaptive LOD result for the current zoom. */
+interface GridLodResult {
+  cell: number;
+  minorFade: number;
+}
+
+/** Reusable plane UV pair. */
+interface GridPlaneUv {
+  u: number;
+  v: number;
+}
+
 /**
  * Adaptive infinite orthographic grid for 2D viewports. Uses an adaptive base
  * cell (grows when zoomed out) with minor lines, brighter section lines every 4
@@ -26,6 +46,10 @@ export class InfiniteGrid2D {
   private scratchOrigin: THREE.Vector3;
   private scratchViewDirection: THREE.Vector3;
   private scratchWorldPoint: THREE.Vector3;
+  private scratchCorners: THREE.Vector3[];
+  private scratchViewBounds: GridViewBounds;
+  private scratchLod: GridLodResult;
+  private scratchUv: GridPlaneUv;
 
   /**
    * Creates a 2D infinite grid for the given plane.
@@ -53,6 +77,10 @@ export class InfiniteGrid2D {
     this.scratchOrigin = new THREE.Vector3();
     this.scratchViewDirection = new THREE.Vector3();
     this.scratchWorldPoint = new THREE.Vector3();
+    this.scratchCorners = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+    this.scratchViewBounds = { minU: 0, maxU: 0, minV: 0, maxV: 0 };
+    this.scratchLod = { cell: 0, minorFade: 0 };
+    this.scratchUv = { u: 0, v: 0 };
   }
 
   /**
@@ -120,67 +148,70 @@ export class InfiniteGrid2D {
    * Computes world-space U/V bounds of the orthographic view on this plane.
    *
    * @param camera Orthographic camera.
-   * @returns Min/max along plane U and V axes.
+   * @returns Scratch bounds object reused across frames.
    */
-  private computeViewBounds(camera: THREE.OrthographicCamera): {
-    minU: number;
-    maxU: number;
-    minV: number;
-    maxV: number;
-  } {
+  private computeViewBounds(camera: THREE.OrthographicCamera): GridViewBounds {
     camera.updateMatrixWorld(true);
     camera.getWorldPosition(this.scratchOrigin);
-    const corners = this.buildFrustumCorners(camera);
+    this.fillFrustumCorners(camera);
+    this.fillViewBoundsFromCorners();
+    return this.scratchViewBounds;
+  }
+
+  /** Writes frustum-corner UVs into the scratch view bounds with padding. */
+  private fillViewBoundsFromCorners(): void {
     let minU = Infinity;
     let maxU = -Infinity;
     let minV = Infinity;
     let maxV = -Infinity;
-    corners.forEach((corner) => {
+    for (let i = 0; i < this.scratchCorners.length; i++) {
+      const corner = this.scratchCorners[i];
+      if (!corner) continue;
       const uv = this.worldToPlaneUV(corner);
       minU = Math.min(minU, uv.u);
       maxU = Math.max(maxU, uv.u);
       minV = Math.min(minV, uv.v);
       maxV = Math.max(maxV, uv.v);
-    });
+    }
     const pad = Math.max(this.snapInterval, (maxU - minU) * 0.02);
-    return {
-      minU: minU - pad,
-      maxU: maxU + pad,
-      minV: minV - pad,
-      maxV: maxV + pad,
-    };
+    this.scratchViewBounds.minU = minU - pad;
+    this.scratchViewBounds.maxU = maxU + pad;
+    this.scratchViewBounds.minV = minV - pad;
+    this.scratchViewBounds.maxV = maxV + pad;
   }
 
   /**
-   * Builds the four near-plane frustum corners in world space.
+   * Unprojects the four near-plane frustum corners into reused world vectors.
    *
    * @param camera Orthographic camera.
-   * @returns Corner positions.
    */
-  private buildFrustumCorners(camera: THREE.OrthographicCamera): THREE.Vector3[] {
-    const corners: THREE.Vector3[] = [];
-    const ndc = [
-      [-1, -1],
-      [1, -1],
-      [-1, 1],
-      [1, 1],
-    ];
-    ndc.forEach(([x, y]) => {
-      corners.push(new THREE.Vector3(x, y, 0).unproject(camera));
-    });
-    return corners;
+  private fillFrustumCorners(camera: THREE.OrthographicCamera): void {
+    this.scratchCorners[0]!.set(-1, -1, 0).unproject(camera);
+    this.scratchCorners[1]!.set(1, -1, 0).unproject(camera);
+    this.scratchCorners[2]!.set(-1, 1, 0).unproject(camera);
+    this.scratchCorners[3]!.set(1, 1, 0).unproject(camera);
   }
 
   /**
    * Projects a world point onto plane UV coordinates.
    *
    * @param point World position.
-   * @returns Plane U/V components.
+   * @returns Scratch UV object reused across calls.
    */
-  private worldToPlaneUV(point: THREE.Vector3): { u: number; v: number } {
-    if (this.plane === 'xz') return { u: point.x, v: point.z };
-    if (this.plane === 'xy') return { u: point.x, v: point.y };
-    return { u: point.z, v: point.y };
+  private worldToPlaneUV(point: THREE.Vector3): GridPlaneUv {
+    if (this.plane === 'xz') {
+      this.scratchUv.u = point.x;
+      this.scratchUv.v = point.z;
+      return this.scratchUv;
+    }
+    if (this.plane === 'xy') {
+      this.scratchUv.u = point.x;
+      this.scratchUv.v = point.y;
+      return this.scratchUv;
+    }
+    this.scratchUv.u = point.z;
+    this.scratchUv.v = point.y;
+    return this.scratchUv;
   }
 
   /**
@@ -203,12 +234,9 @@ export class InfiniteGrid2D {
    * grows by 4x when too dense; minorFade smoothly eases within a LOD band.
    *
    * @param camera Orthographic camera.
-   * @returns Display cell size and minor-line visibility 0..1.
+   * @returns Scratch LOD object reused across frames.
    */
-  private computeAdaptiveLod(camera: THREE.OrthographicCamera): {
-    cell: number;
-    minorFade: number;
-  } {
+  private computeAdaptiveLod(camera: THREE.OrthographicCamera): GridLodResult {
     let cell = this.snapInterval;
     let factor = this.measureCellScreenFactor(camera, cell);
     let steps = 0;
@@ -218,8 +246,9 @@ export class InfiniteGrid2D {
       factor = this.measureCellScreenFactor(camera, cell);
       steps += 1;
     }
-    const minorFade = THREE.MathUtils.clamp(THREE.MathUtils.inverseLerp(0.35, 1.0, factor), 0, 1);
-    return { cell, minorFade };
+    this.scratchLod.cell = cell;
+    this.scratchLod.minorFade = THREE.MathUtils.clamp(THREE.MathUtils.inverseLerp(0.35, 1.0, factor), 0, 1);
+    return this.scratchLod;
   }
 
   /**
@@ -245,12 +274,7 @@ export class InfiniteGrid2D {
    * @param minorFade Minor-line opacity 0..1.
    * @param planeDepth World constant for the plane normal axis.
    */
-  private appendGridLines(
-    view: { minU: number; maxU: number; minV: number; maxV: number },
-    cell: number,
-    minorFade: number,
-    planeDepth: number,
-  ): void {
+  private appendGridLines(view: GridViewBounds, cell: number, minorFade: number, planeDepth: number): void {
     const cell4 = cell * 4;
     const cell8 = cell * 8;
     this.prepareLineColors(minorFade);
@@ -269,7 +293,7 @@ export class InfiniteGrid2D {
    * @param planeDepth World constant for the plane normal axis.
    */
   private appendConstantUGridLines(
-    view: { minU: number; maxU: number; minV: number; maxV: number },
+    view: GridViewBounds,
     cell: number,
     cell4: number,
     cell8: number,
@@ -295,7 +319,7 @@ export class InfiniteGrid2D {
    * @param planeDepth World constant for the plane normal axis.
    */
   private appendConstantVGridLines(
-    view: { minU: number; maxU: number; minV: number; maxV: number },
+    view: GridViewBounds,
     cell: number,
     cell4: number,
     cell8: number,
@@ -395,7 +419,7 @@ export class InfiniteGrid2D {
    * @param view Visible plane bounds.
    * @param planeDepth World constant for the plane normal axis.
    */
-  private appendCenterAxes(view: { minU: number; maxU: number; minV: number; maxV: number }, planeDepth: number): void {
+  private appendCenterAxes(view: GridViewBounds, planeDepth: number): void {
     this.appendConstantVLine(0, view.minU, view.maxU, this.axisUColor, planeDepth);
     this.appendConstantULine(0, view.minV, view.maxV, this.axisVColor, planeDepth);
   }

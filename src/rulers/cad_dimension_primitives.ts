@@ -97,7 +97,7 @@ export function appendCadDimension(
   appendExtensionLeg(end, scratchOutward, gap, offsetDistance + overshoot, extensionColor, segments);
   scratchDimA.copy(start).addScaledVector(scratchOutward, offsetDistance);
   scratchDimB.copy(end).addScaledVector(scratchOutward, offsetDistance);
-  pushSegment(segments, scratchDimA, scratchDimB, lineColor, lineColor);
+  pushSegment(segments, scratchDimA, scratchDimB, lineColor, lineColor, true);
   labels.push({
     id: labelId,
     worldPosition: scratchMid.copy(scratchDimA).lerp(scratchDimB, 0.5).clone(),
@@ -138,7 +138,9 @@ export function appendGhostBoxSegments(
 }
 
 /**
- * Appends one extension leg from the measured point outward.
+ * Appends one extension leg from the measured point outward. Kept solid (not
+ * dashed): on dark viewports, dashing removes too many gray pixels and the legs
+ * disappear into the clear color.
  *
  * @param point Measured corner or edge point.
  * @param outward Outward unit direction.
@@ -158,7 +160,7 @@ export function appendExtensionLeg(
   scratchWorkA.copy(point).addScaledVector(outward, gap);
   scratchWorkB.copy(point).addScaledVector(outward, length);
   const tip = color.clone().multiplyScalar(0.55);
-  pushSegment(segments, scratchWorkA, scratchWorkB, color, tip);
+  pushSegment(segments, scratchWorkA, scratchWorkB, color, tip, false);
 }
 
 /**
@@ -228,6 +230,7 @@ export function appendBoxEdge(
  * @param b End point.
  * @param colorA Start color.
  * @param colorB End color.
+ * @param dashed When true, stroke uses screen-pixel dashing at draw time.
  */
 export function pushSegment(
   segments: CadLineSegment[],
@@ -235,6 +238,7 @@ export function pushSegment(
   b: THREE.Vector3,
   colorA: THREE.Color,
   colorB: THREE.Color,
+  dashed: boolean = false,
 ): void {
   segments.push({
     ax: a.x,
@@ -245,6 +249,7 @@ export function pushSegment(
     bz: b.z,
     colorA,
     colorB,
+    dashed,
   });
 }
 

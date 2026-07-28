@@ -4,7 +4,7 @@ import { ToolbarIcons } from '../toolbar_icons.js';
 import { FaceTextureAlign, FaceTextureMappingTrs } from '../../texture/uv/face_texture_mapping.js';
 import type { UvEditorTrsFieldState } from '../../texture/uv/face_texture_applier.js';
 import { UV_OFFSET_NUDGE, type UvRelativeTrsOp } from '../../texture/uv/uv_trs_ops.js';
-import { FloatingPanelStack } from '../floating_panel_stack.js';
+import { FloatingPanel } from '../floating_panel/floating_panel.js';
 
 /** Unity-style dash for mixed multi-selection values. */
 const MIXED_VALUE_DISPLAY = '—';
@@ -47,22 +47,16 @@ export interface UvEditorHandlers {
  * Floating UV editor for face texture mapping. Compact numeric fields with
  * Hammer/TrenchBroom-style nudge buttons (×2 / ½ scale, ±¼ tile offset, ±90°
  * rotation) and multi-select support (mixed dashes + relative ops on all).
+ * Placement and windowing come from {@link FloatingPanel}.
  */
-export class UvEditor {
-  private root: HTMLElement;
-  private host: HTMLElement;
+export class UvEditor extends FloatingPanel {
   private handlers: UvEditorHandlers;
-  private defaultAnchor: HTMLElement | null;
-  private isVisible: boolean;
   private scaleUInput: HTMLInputElement;
   private scaleVInput: HTMLInputElement;
   private offsetUInput: HTMLInputElement;
   private offsetVInput: HTMLInputElement;
   private rotationInput: HTMLInputElement;
   private statusLabel: HTMLElement;
-  private dragOffsetX: number;
-  private dragOffsetY: number;
-  private isDragging: boolean;
   private lastAlign: FaceTextureAlign;
   private suppressFieldEmit: boolean;
 
@@ -75,13 +69,8 @@ export class UvEditor {
    *   position.
    */
   constructor(host: HTMLElement, handlers: UvEditorHandlers, defaultAnchor: HTMLElement | null = null) {
-    this.host = host;
+    super(host, { corner: 'bottom-left' }, defaultAnchor);
     this.handlers = handlers;
-    this.defaultAnchor = defaultAnchor;
-    this.isVisible = false;
-    this.isDragging = false;
-    this.dragOffsetX = 0;
-    this.dragOffsetY = 0;
     this.lastAlign = 'auto';
     this.suppressFieldEmit = false;
     this.scaleUInput = document.createElement('input');
@@ -90,8 +79,7 @@ export class UvEditor {
     this.offsetVInput = document.createElement('input');
     this.rotationInput = document.createElement('input');
     this.statusLabel = document.createElement('div');
-    this.root = this.buildRoot();
-    this.host.appendChild(this.root);
+    this.populateRoot();
     this.setFromFieldState({
       scaleU: 1,
       scaleV: 1,
@@ -101,57 +89,6 @@ export class UvEditor {
       align: 'auto',
       targetCount: 0,
     });
-  }
-
-  /**
-   * Sets the element used for the default open position (bottom-left of
-   * anchor).
-   *
-   * @param anchor Viewport or other container element, or null for host.
-   */
-  setDefaultAnchor(anchor: HTMLElement | null): void {
-    this.defaultAnchor = anchor;
-  }
-
-  /** Shows the UV editor at the default anchor (bottom-left of the 3D viewport). */
-  show(): void {
-    if (this.isVisible) {
-      FloatingPanelStack.bringToFront(this.root);
-      return;
-    }
-    this.isVisible = true;
-    this.root.style.display = 'flex';
-    this.positionDefault();
-    FloatingPanelStack.bringToFront(this.root);
-  }
-
-  /**
-   * Hides the UV editor.
-   *
-   * @param _force Kept for call-site compatibility; always hides.
-   */
-  hide(_force: boolean = false): void {
-    if (!this.isVisible) return;
-    this.isVisible = false;
-    this.root.style.display = 'none';
-  }
-
-  /** Toggles visibility. */
-  toggle(): void {
-    if (this.isVisible) {
-      this.hide(true);
-      return;
-    }
-    this.show();
-  }
-
-  /**
-   * Returns whether the panel is visible.
-   *
-   * @returns True when shown.
-   */
-  isOpen(): boolean {
-    return this.isVisible;
   }
 
   /**
@@ -210,31 +147,17 @@ export class UvEditor {
     });
   }
 
-  /** Disposes DOM and listeners. */
-  dispose(): void {
-    this.hide(true);
-    if (this.root.parentNode) {
-      this.root.parentNode.removeChild(this.root);
-    }
-  }
-
-  /**
-   * Builds the root panel element.
-   *
-   * @returns Styled root.
-   */
-  private buildRoot(): HTMLElement {
-    const root = document.createElement('div');
-    this.styleRoot(root);
-    root.appendChild(this.buildTitleBar());
-    root.appendChild(this.buildIconStrip());
-    root.appendChild(this.buildScaleSection());
-    root.appendChild(this.buildOffsetSection());
-    root.appendChild(this.buildRotationSection());
+  /** Fills the shared floating-panel shell with UV editor chrome. */
+  private populateRoot(): void {
+    this.styleRoot(this.root);
+    this.root.appendChild(this.buildTitleBar());
+    this.root.appendChild(this.buildIconStrip());
+    this.root.appendChild(this.buildScaleSection());
+    this.root.appendChild(this.buildOffsetSection());
+    this.root.appendChild(this.buildRotationSection());
     this.styleStatusLabel();
-    root.appendChild(this.statusLabel);
+    this.root.appendChild(this.statusLabel);
     this.bindNumericApply();
-    return root;
   }
 
   /**
@@ -243,9 +166,6 @@ export class UvEditor {
    * @param root Panel root.
    */
   private styleRoot(root: HTMLElement): void {
-    root.style.position = 'fixed';
-    root.style.display = 'none';
-    root.style.flexDirection = 'column';
     root.style.width = `${UV_PANEL_WIDTH_PX}px`;
     root.style.boxSizing = 'border-box';
     root.style.background = hexToRgb(Theme.propertiesPanelBackground);
@@ -253,21 +173,7 @@ export class UvEditor {
     root.style.borderRadius = '6px';
     root.style.boxShadow = '0 8px 24px rgba(0,0,0,0.55)';
     root.style.fontFamily = Theme.uiFontFamily;
-    root.style.userSelect = 'none';
     root.style.paddingBottom = '8px';
-    this.bindBringToFrontOnPointer(root);
-  }
-
-  /**
-   * Raises this panel above other floating windows when the user interacts with
-   * it.
-   *
-   * @param root Panel root element.
-   */
-  private bindBringToFrontOnPointer(root: HTMLElement): void {
-    root.addEventListener('pointerdown', () => {
-      FloatingPanelStack.bringToFront(root);
-    });
   }
 
   /**
@@ -301,7 +207,7 @@ export class UvEditor {
     });
     bar.appendChild(title);
     bar.appendChild(close);
-    this.bindDrag(bar);
+    this.bindTitleBarDrag(bar);
     return bar;
   }
 
@@ -680,47 +586,5 @@ export class UvEditor {
    */
   private writeField(input: HTMLInputElement, value: number | null, decimals: number): void {
     input.value = value === null ? MIXED_VALUE_DISPLAY : value.toFixed(decimals);
-  }
-
-  /** Places the panel at the bottom-left of the default anchor (3D viewport). */
-  private positionDefault(): void {
-    const paddingPx = 8;
-    const anchor = this.defaultAnchor ?? this.host;
-    const rect = anchor.getBoundingClientRect();
-    const bottomInset = window.innerHeight - rect.bottom + paddingPx;
-    this.root.style.left = `${rect.left + paddingPx}px`;
-    this.root.style.right = 'auto';
-    this.root.style.top = 'auto';
-    this.root.style.bottom = `${bottomInset}px`;
-  }
-
-  /**
-   * Enables dragging the panel from the title bar.
-   *
-   * @param bar Title bar element.
-   */
-  private bindDrag(bar: HTMLElement): void {
-    bar.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0) return;
-      if ((event.target as HTMLElement).tagName === 'BUTTON') return;
-      this.isDragging = true;
-      const rect = this.root.getBoundingClientRect();
-      this.dragOffsetX = event.clientX - rect.left;
-      this.dragOffsetY = event.clientY - rect.top;
-      const onMove = (moveEvent: PointerEvent) => {
-        if (!this.isDragging) return;
-        this.root.style.left = `${moveEvent.clientX - this.dragOffsetX}px`;
-        this.root.style.top = `${moveEvent.clientY - this.dragOffsetY}px`;
-        this.root.style.bottom = 'auto';
-        this.root.style.right = 'auto';
-      };
-      const onUp = () => {
-        this.isDragging = false;
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-      };
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-    });
   }
 }

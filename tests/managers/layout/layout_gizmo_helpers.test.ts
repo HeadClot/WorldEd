@@ -5,7 +5,6 @@ import {
   updateLayoutGizmoCameraScale,
   type LayoutGizmoContext,
 } from '../../../src/managers/layout/layout_gizmo_helpers.js';
-import { TransformMode } from '../../../src/types/transform_mode.js';
 import { TransformSpace } from '../../../src/types/transform_space.js';
 
 describe('layout_gizmo_helpers', () => {
@@ -38,24 +37,18 @@ describe('layout_gizmo_helpers', () => {
     expect(orientation.equals(new THREE.Quaternion())).toBe(true);
   });
 
-  it('does not rebuild bounds gizmos from camera motion on the per-frame scale path', () => {
+  it('does not stamp a shared camera scale onto viewport clones from the global path', () => {
     const updateScaleForCamera = vi.fn();
-    const updateBoundsFromMeshes = vi.fn();
     const context = {
       selectionManager: {
         getSelectedObjectCount: () => 1,
       },
       transformGizmo: {
         updateScaleForCamera,
-        updateBoundsFromMeshes,
-        getMode: () => TransformMode.BOUNDS,
       },
-      viewport3D: {
-        getCamera: () => new THREE.PerspectiveCamera(),
-      },
+      getGizmoScaleCamera: () => new THREE.PerspectiveCamera(),
     } as unknown as LayoutGizmoContext;
     updateLayoutGizmoCameraScale(context);
-    expect(updateScaleForCamera).toHaveBeenCalledTimes(1);
-    expect(updateBoundsFromMeshes).not.toHaveBeenCalled();
+    expect(updateScaleForCamera).not.toHaveBeenCalled();
   });
 });

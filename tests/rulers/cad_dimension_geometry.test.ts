@@ -101,6 +101,10 @@ describe('cad_dimension_geometry', () => {
     );
     // Three axes × (2 extension legs + 1 dimension line), no end ticks.
     expect(segments.length).toBe(9);
+    const dashedCount = segments.filter((segment) => segment.dashed).length;
+    const solidCount = segments.filter((segment) => !segment.dashed).length;
+    expect(dashedCount).toBe(3);
+    expect(solidCount).toBe(6);
     const texts = labels.map((label) => label.text).sort();
     expect(texts).toContain('2');
     expect(texts).toContain('4');

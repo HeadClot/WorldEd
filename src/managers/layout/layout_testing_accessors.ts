@@ -17,10 +17,10 @@ import type { CadRulerSystem } from '../../rulers/cad_ruler_system.js';
 
 /** Subsystems exposed for unit tests of the layout manager. */
 export interface LayoutTestComponents {
-  viewport3D: Viewport3D;
-  viewport2DTop: Viewport2D;
-  viewport2DFront: Viewport2D;
-  viewport2DSide: Viewport2D;
+  viewport3D: Viewport3D | null;
+  viewport2DTop: Viewport2D | null;
+  viewport2DFront: Viewport2D | null;
+  viewport2DSide: Viewport2D | null;
   selectionManager: SelectionManager;
   primitiveTool: PrimitiveCreationTool;
   toolbar: Toolbar;
@@ -44,10 +44,10 @@ export interface LayoutTestComponents {
  * @returns Object suitable for getComponentsForTesting.
  */
 export function buildLayoutTestComponents(parts: {
-  viewport3D: Viewport3D;
-  viewport2DTop: Viewport2D;
-  viewport2DFront: Viewport2D;
-  viewport2DSide: Viewport2D;
+  viewport3D: Viewport3D | null;
+  viewport2DTop: Viewport2D | null;
+  viewport2DFront: Viewport2D | null;
+  viewport2DSide: Viewport2D | null;
   selectionManager: SelectionManager;
   primitiveTool: PrimitiveCreationTool;
   toolbar: Toolbar;

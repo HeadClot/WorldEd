@@ -3,7 +3,6 @@ import { SelectionManager } from '../../selection/object/selection_manager.js';
 import { TransformGizmo } from '../../transform/gizmo/transform_gizmo.js';
 import { TransformExecutor } from '../../transform/transform_executor.js';
 import { TransformSpace } from '../../types/transform_space.js';
-import type { Viewport3D } from '../../viewports/viewport_3d.js';
 import type { Toolbar } from '../../ui/toolbar.js';
 
 /** Dependencies for gizmo pivot and orientation updates. */
@@ -12,7 +11,12 @@ export interface LayoutGizmoContext {
   transformGizmo: TransformGizmo;
   transformExecutor: TransformExecutor;
   transformSpace: TransformSpace;
-  viewport3D: Viewport3D;
+  /**
+   * Optional camera for master-group scale and bounds sizing only. Per-pane
+   * clone scale is applied in the render loop via
+   * {@link TransformGizmo.prepareTransformCloneForCamera}.
+   */
+  getGizmoScaleCamera: () => THREE.Camera | null;
   toolbar: Toolbar;
   showStatusMessage: (message: string) => void;
 }
@@ -25,16 +29,43 @@ export interface LayoutGizmoContext {
 export function updateLayoutGizmoPivot(context: LayoutGizmoContext): void {
   const selected = Array.from(context.selectionManager.getSelectedObjects());
   if (selected.length > 0) {
-    const pivot = context.transformExecutor.computePivot(selected);
-    context.transformGizmo.setPivot(pivot);
-    context.transformGizmo.setOrientation(resolveLayoutGizmoOrientation(context, selected));
-    context.transformGizmo.updateScaleForCamera(context.viewport3D.getCamera());
-    context.transformGizmo.updateBoundsFromMeshes(selected, context.viewport3D.getCamera());
+    applySelectionGizmoPose(context, selected);
     return;
   }
   context.transformGizmo.setPivot(new THREE.Vector3(0, 0, 0));
   context.transformGizmo.setOrientation(new THREE.Quaternion());
   context.transformGizmo.updateBoundsFromMeshes([]);
+}
+
+/**
+ * Applies pivot, orientation, camera scale, and bounds size for a non-empty
+ * selection.
+ *
+ * @param context Gizmo subsystem dependencies.
+ * @param selected Currently selected meshes.
+ */
+function applySelectionGizmoPose(context: LayoutGizmoContext, selected: THREE.Mesh[]): void {
+  const pivot = context.transformExecutor.computePivot(selected);
+  context.transformGizmo.setPivot(pivot);
+  context.transformGizmo.setOrientation(resolveLayoutGizmoOrientation(context, selected));
+  syncGizmoOrthoDepthAxisPolicy(context);
+  const camera = context.getGizmoScaleCamera();
+  if (camera) {
+    context.transformGizmo.updateScaleForCamera(camera);
+    context.transformGizmo.updateBoundsFromMeshes(selected, camera);
+    return;
+  }
+  context.transformGizmo.updateBoundsFromMeshes(selected);
+}
+
+/**
+ * Hides Global-space depth axes in 2D panes; Local space keeps every axis.
+ *
+ * @param context Gizmo subsystem dependencies.
+ */
+function syncGizmoOrthoDepthAxisPolicy(context: LayoutGizmoContext): void {
+  const hideDepthAxes = context.transformSpace !== TransformSpace.Local;
+  context.transformGizmo.setHideOrthoDepthAxes(hideDepthAxes);
 }
 
 /**
@@ -74,22 +105,18 @@ export function applyLayoutTransformSpace(
   const isLocal = space === TransformSpace.Local;
   context.toolbar.setButtonActiveByLabel('Global', !isLocal);
   context.toolbar.setButtonActiveByLabel('Local', isLocal);
-  updateLayoutGizmoPivot({ ...context, transformSpace: space });
+  const nextContext = { ...context, transformSpace: space };
+  syncGizmoOrthoDepthAxisPolicy(nextContext);
+  updateLayoutGizmoPivot(nextContext);
   context.showStatusMessage(isLocal ? 'Gizmo space: Local' : 'Gizmo space: Global');
 }
 
 /**
- * Keeps translate/rotate/scale gizmo handles a readable size relative to the 3D
- * camera. Bounds mode must not rebuild here: camera-distance handle sizes are
- * applied per multi-view pane via
- * {@link TransformGizmo.prepareBoundsCloneForCamera}. Calling
- * {@link TransformGizmo.updateBoundsFromMeshes} every frame deep-clones the
- * entire bounds hierarchy into every viewport group whenever distance changes,
- * which tanks large maps whenever the selection is near the camera.
+ * Intentionally does not stamp a shared scale onto every viewport clone.
+ * Multi-view sizing is per pane in the render loop
+ * ({@link TransformGizmo.prepareTransformCloneForCamera}); a global pass would
+ * let the 3D fly camera inflate Top/Front/Side handles.
  *
- * @param context Gizmo subsystem dependencies.
+ * @param _context Gizmo subsystem dependencies (unused).
  */
-export function updateLayoutGizmoCameraScale(context: LayoutGizmoContext): void {
-  if (context.selectionManager.getSelectedObjectCount() === 0) return;
-  context.transformGizmo.updateScaleForCamera(context.viewport3D.getCamera());
-}
+export function updateLayoutGizmoCameraScale(_context: LayoutGizmoContext): void {}

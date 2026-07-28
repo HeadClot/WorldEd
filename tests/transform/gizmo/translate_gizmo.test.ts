@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Theme } from '../../../src/theme.js';
 import { GizmoAxis } from '../../../src/types/transform_mode.js';
 import { TranslateGizmo } from '../../../src/transform/gizmo/translate_gizmo.js';
+import { GIZMO_PICK_VOLUME_USERDATA } from '../../../src/transform/gizmo/gizmo_visual_style.js';
 
 describe('TranslateGizmo', () => {
   let gizmo: TranslateGizmo;
@@ -11,12 +12,13 @@ describe('TranslateGizmo', () => {
     gizmo = new TranslateGizmo(Theme);
   });
 
-  it('should create 3 axis handles only', () => {
+  it('should create three axis handles plus a free-move center handle', () => {
     const handles = gizmo.createHandles();
-    expect(handles.length).toBe(3);
+    expect(handles.length).toBe(4);
+    expect(handles.some((handle) => handle.getAxis() === GizmoAxis.VIEW)).toBe(true);
   });
 
-  it('should not create plane handles', () => {
+  it('should not create axis-plane squares (only free-move center)', () => {
     const handles = gizmo.createHandles();
     const planeHandles = handles.filter(
       (h) =>
@@ -64,10 +66,24 @@ describe('TranslateGizmo', () => {
     });
   });
 
+  it('should expose thick invisible pick volumes for easier clicking', () => {
+    gizmo.createHandles();
+    const sceneObjects = gizmo.getAllSceneObjects();
+    let pickCount = 0;
+    sceneObjects.forEach((root) => {
+      root.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.userData[GIZMO_PICK_VOLUME_USERDATA] === true) {
+          pickCount += 1;
+        }
+      });
+    });
+    expect(pickCount).toBeGreaterThanOrEqual(7);
+  });
+
   it('should have scene objects that can be added to a scene', () => {
     gizmo.createHandles();
     const sceneObjects = gizmo.getAllSceneObjects();
-    expect(sceneObjects.length).toBe(3);
+    expect(sceneObjects.length).toBe(4);
   });
 
   it('should dispose without errors', () => {
@@ -78,7 +94,7 @@ describe('TranslateGizmo', () => {
   it('should clear handles on new creation', () => {
     const first = gizmo.createHandles();
     const second = gizmo.createHandles();
-    expect(second.length).toBe(3);
+    expect(second.length).toBe(4);
     expect(second).not.toBe(first);
   });
 });

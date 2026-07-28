@@ -113,17 +113,15 @@ describe('TextureBrowser', () => {
         toJSON: () => ({}),
       }),
     });
-    Object.defineProperty(window, 'innerHeight', {
-      configurable: true,
-      value: 1000,
-    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1200 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000 });
     browser.setDefaultAnchor(anchor);
     browser.show();
     const panel = browser.getRootElement();
     const paddingPx = 8;
     expect(panel.style.left).toBe(`${900 - TEXTURE_BROWSER_DEFAULT_WIDTH_PX - paddingPx}px`);
-    expect(panel.style.bottom).toBe(`${1000 - 700 + paddingPx}px`);
-    expect(panel.style.top).toBe('auto');
+    expect(panel.style.top).toBe(`${700 - TEXTURE_BROWSER_DEFAULT_HEIGHT_PX - paddingPx}px`);
+    expect(panel.style.bottom).toBe('auto');
     expect(panel.style.width).toBe(`${TEXTURE_BROWSER_DEFAULT_WIDTH_PX}px`);
     expect(panel.style.height).toBe(`${TEXTURE_BROWSER_DEFAULT_HEIGHT_PX}px`);
     document.body.removeChild(anchor);

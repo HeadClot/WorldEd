@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   GizmoVisualStyle,
+  GIZMO_PICK_VOLUME_USERDATA,
   createGizmoFrontMaterial,
   createGizmoOccludedMaterial,
   createGizmoOccludedMesh,
   createGizmoFrontLineMaterial,
   createGizmoOccludedLineMaterial,
+  createGizmoPickMesh,
 } from '../../../src/transform/gizmo/gizmo_visual_style.js';
 
 describe('GizmoVisualStyle', () => {
@@ -56,5 +58,17 @@ describe('GizmoVisualStyle', () => {
     expect(material.vertexColors).toBe(true);
     expect(material.opacity).toBe(GizmoVisualStyle.occludedOpacity);
     material.dispose();
+  });
+
+  it('should create invisible pick meshes thicker than visual stems', () => {
+    expect(GizmoVisualStyle.stemPickRadius).toBeGreaterThan(GizmoVisualStyle.stemRadius);
+    expect(GizmoVisualStyle.ringPickTubeRadius).toBeGreaterThan(GizmoVisualStyle.stemRadius);
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const mesh = createGizmoPickMesh(geometry, 7);
+    expect(mesh.userData[GIZMO_PICK_VOLUME_USERDATA]).toBe(true);
+    expect(mesh.userData['handleId']).toBe(7);
+    expect((mesh.material as THREE.Material).visible).toBe(false);
+    geometry.dispose();
+    (mesh.material as THREE.Material).dispose();
   });
 });

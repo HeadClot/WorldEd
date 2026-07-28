@@ -1,12 +1,21 @@
+import type * as THREE from 'three';
 import type { EditorViewport } from '../../viewports/editor_viewport.js';
 import { getCadViewPlaneForKind, isPerspectiveViewport } from '../../viewports/editor_viewport.js';
 import { CameraFitCoordinator } from '../camera/camera_fit_coordinator.js';
 import { ClipPlaneHandler } from '../clip_plane/clip_plane_handler.js';
-import { MultiViewComposer } from '../../viewports/multi_view_composer.js';
+import { MultiViewComposer, type MultiViewPanePass } from '../../viewports/multi_view_composer.js';
 import type { SharedWorldScene } from '../../viewports/shared_world_scene.js';
 import type { CadRulerSystem } from '../../rulers/cad_ruler_system.js';
 import type { TransformGizmo } from '../../transform/gizmo/transform_gizmo.js';
 import { Theme } from '../../theme.js';
+
+/**
+ * Mutable multi-view pass with a stable viewport reference so per-frame
+ * closures can be created once and reused.
+ */
+interface ReusableMultiViewPass extends MultiViewPanePass {
+  viewport: EditorViewport;
+}
 
 /** Owns the editor animation frame loop and resize disconnect helpers. */
 export class LayoutRenderLoop {
@@ -23,6 +32,9 @@ export class LayoutRenderLoop {
   private onBeforeRender: (() => void) | null;
   private multiViewComposer: MultiViewComposer | null;
   private sharedScene: SharedWorldScene | null;
+  private boundOnAnimationFrame: () => void;
+  private multiViewPassPool: ReusableMultiViewPass[];
+  private multiViewPasses: ReusableMultiViewPass[];
 
   /** Creates an idle render loop. */
   constructor() {
@@ -39,6 +51,9 @@ export class LayoutRenderLoop {
     this.onBeforeRender = null;
     this.multiViewComposer = null;
     this.sharedScene = null;
+    this.boundOnAnimationFrame = () => this.onAnimationFrame();
+    this.multiViewPassPool = [];
+    this.multiViewPasses = [];
   }
 
   /**
@@ -126,7 +141,7 @@ export class LayoutRenderLoop {
 
   /** Schedules the next animation frame while running. */
   private scheduleNextFrame(): void {
-    this.animationFrameId = requestAnimationFrame(() => this.onAnimationFrame());
+    this.animationFrameId = requestAnimationFrame(this.boundOnAnimationFrame);
   }
 
   /** Advances one frame of viewport updates and multi-view rendering. */
@@ -160,14 +175,70 @@ export class LayoutRenderLoop {
    */
   private renderMultiView(viewports: readonly EditorViewport[]): void {
     if (!this.multiViewComposer || !this.sharedScene) return;
-    const passes = viewports.map((viewport) => ({
-      camera: viewport.getCamera(),
-      contentElement: viewport.getContentElement(),
-      syncCameraSize: (width: number, height: number) => viewport.resize(width, height),
-      prepare: () => this.prepareViewportPass(viewport),
-      finalize: () => this.finalizeViewportPass(viewport),
-    }));
-    this.multiViewComposer.render(this.sharedScene.getScene(), passes, Theme.separatorColor);
+    this.syncMultiViewPasses(viewports);
+    this.multiViewComposer.render(this.sharedScene.getScene(), this.multiViewPasses, Theme.separatorColor);
+  }
+
+  /**
+   * Refreshes reusable pass slots for the active viewport list without
+   * allocating pass objects or per-frame closures.
+   *
+   * @param viewports Active panes this frame.
+   */
+  private syncMultiViewPasses(viewports: readonly EditorViewport[]): void {
+    this.ensurePassPoolCount(viewports.length);
+    this.multiViewPasses.length = viewports.length;
+    for (let i = 0; i < viewports.length; i++) {
+      const pass = this.multiViewPassPool[i]!;
+      this.writePassFields(pass, viewports[i]!);
+      this.multiViewPasses[i] = pass;
+    }
+  }
+
+  /**
+   * Grows the pass pool until it can hold the required number of panes. Pool
+   * slots are never discarded when the active count shrinks.
+   *
+   * @param requiredCount Number of active panes.
+   */
+  private ensurePassPoolCount(requiredCount: number): void {
+    while (this.multiViewPassPool.length < requiredCount) {
+      this.multiViewPassPool.push(this.createPassSlot());
+    }
+  }
+
+  /**
+   * Creates one reusable pass with stable prepare/finalize/sync closures.
+   *
+   * @returns Pass slot owned by the loop.
+   */
+  private createPassSlot(): ReusableMultiViewPass {
+    const pass = {} as ReusableMultiViewPass;
+    pass.viewport = null as unknown as EditorViewport;
+    pass.camera = null as unknown as THREE.Camera;
+    pass.contentElement = null as unknown as HTMLElement;
+    pass.syncCameraSize = (width: number, height: number) => {
+      pass.viewport.resize(width, height);
+    };
+    pass.prepare = () => {
+      this.prepareViewportPass(pass.viewport);
+    };
+    pass.finalize = () => {
+      this.finalizeViewportPass(pass.viewport);
+    };
+    return pass;
+  }
+
+  /**
+   * Updates camera and DOM fields for a pass slot from the live viewport.
+   *
+   * @param pass Reusable pass slot.
+   * @param viewport Source viewport for this pane.
+   */
+  private writePassFields(pass: ReusableMultiViewPass, viewport: EditorViewport): void {
+    pass.viewport = viewport;
+    pass.camera = viewport.getCamera();
+    pass.contentElement = viewport.getContentElement();
   }
 
   /**
@@ -177,26 +248,29 @@ export class LayoutRenderLoop {
    */
   private prepareViewportPass(viewport: EditorViewport): void {
     this.cadRulerSystem?.prepareForCamera(viewport.getCamera());
-    this.prepareBoundsGizmoScreenSpace(viewport);
+    this.prepareGizmoScreenSpace(viewport);
     viewport.prepareRender();
   }
 
   /**
-   * Sizes bounds grips in screen space for the active pane camera (2D ears and
-   * 3D pick/visual arrows).
+   * Sizes gizmo handles for the active pane camera only: bounds grips and
+   * translate/rotate/scale clones. Each pane uses its own camera so 2D zoom
+   * stays independent of 3D fly distance.
    *
    * @param viewport Active multi-view pane.
    */
-  private prepareBoundsGizmoScreenSpace(viewport: EditorViewport): void {
+  private prepareGizmoScreenSpace(viewport: EditorViewport): void {
     if (!this.transformGizmo) return;
     if (typeof viewport.getGizmoGroup !== 'function') return;
     if (typeof viewport.getViewportKind !== 'function') return;
     const group = viewport.getGizmoGroup();
     if (!group) return;
+    const camera = viewport.getCamera();
     const content = viewport.getContentElement();
     const height = Math.max(1, content.clientHeight || content.offsetHeight || 512);
     const viewPlane = getCadViewPlaneForKind(viewport.getViewportKind());
-    this.transformGizmo.prepareBoundsCloneForCamera(group, viewport.getCamera(), viewPlane, height);
+    this.transformGizmo.prepareTransformCloneForCamera(group, camera);
+    this.transformGizmo.prepareBoundsCloneForCamera(group, camera, viewPlane, height);
   }
 
   /**
@@ -218,11 +292,13 @@ export class LayoutRenderLoop {
    * @param delta Elapsed seconds.
    */
   private updatePerspectiveViewports(viewports: readonly EditorViewport[], delta: number): void {
-    viewports.forEach((viewport) => {
+    for (let i = 0; i < viewports.length; i++) {
+      const viewport = viewports[i];
+      if (!viewport) continue;
       if (isPerspectiveViewport(viewport)) {
         viewport.update(delta);
       }
-    });
+    }
   }
 
   /**
@@ -232,11 +308,27 @@ export class LayoutRenderLoop {
    */
   private updateClipPreviewScales(viewports: readonly EditorViewport[]): void {
     if (!this.clipPlaneHandler) return;
-    const perspective = viewports.find((viewport) => isPerspectiveViewport(viewport));
-    const camera = perspective?.getCamera() ?? viewports[0]?.getCamera();
+    const camera = this.findScaleCamera(viewports);
     if (camera) {
       this.clipPlaneHandler.updatePreviewScales(camera);
     }
+  }
+
+  /**
+   * Picks the camera used for clip preview scaling (prefer perspective).
+   *
+   * @param viewports Active viewports this frame.
+   * @returns Camera or undefined when no panes are active.
+   */
+  private findScaleCamera(viewports: readonly EditorViewport[]): THREE.Camera | undefined {
+    for (let i = 0; i < viewports.length; i++) {
+      const viewport = viewports[i];
+      if (!viewport) continue;
+      if (isPerspectiveViewport(viewport)) {
+        return viewport.getCamera();
+      }
+    }
+    return viewports[0]?.getCamera();
   }
 
   /** Disconnects the viewport resize observer when present. */

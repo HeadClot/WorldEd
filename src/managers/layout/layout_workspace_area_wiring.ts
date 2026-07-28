@@ -8,7 +8,8 @@ import { AreaLayoutInteraction } from './area/area_layout_interaction.js';
 import type { AreaLayoutController } from './area/area_layout_controller.js';
 import type { ViewportRegistry } from './viewport_registry.js';
 import type { ViewportPane } from './viewport_pane.js';
-import { wireReplacedPane, wireToolbarForPane } from './layout_viewport_chrome.js';
+import { syncActivePanesFromVisibleLayout, wireReplacedPane, wireToolbarForPane } from './layout_viewport_chrome.js';
+import { areEditorStorageWritesSuppressed } from '../../settings/clear_editor_storage.js';
 
 /**
  * Host surface required to wire area tiling interaction and the workspace
@@ -53,8 +54,25 @@ export function wireWorkspaceSystem(host: WorkspaceAreaWiringHost): void {
   const switcherBar = new WorkspaceSwitcherBar(host.getToolbarContainer(), createSwitcherActions(host));
   host.setWorkspaceSwitcherBar(switcherBar);
   insertWorkspaceSwitcherBeforeMainLayout(host);
-  controller.applyActiveWorkspace();
+  controller.applyActiveWorkspace({ restoreCameras: false });
   refreshWorkspaceSwitcherBar(host);
+  registerWorkspaceLayoutPageHidePersistence(host);
+}
+
+/**
+ * Persists the active workspace layout when the editor page unloads so split,
+ * join, and kind edits are not lost on refresh.
+ *
+ * @param host Layout wiring host.
+ */
+function registerWorkspaceLayoutPageHidePersistence(host: WorkspaceAreaWiringHost): void {
+  if (typeof window === 'undefined') return;
+  const persist = () => {
+    if (areEditorStorageWritesSuppressed()) return;
+    host.getWorkspaceController()?.persistCurrentIntoActive();
+  };
+  window.addEventListener('pagehide', persist);
+  window.addEventListener('beforeunload', persist);
 }
 
 /**
@@ -127,7 +145,10 @@ export function wireAreaLayoutInteraction(host: WorkspaceAreaWiringHost): void {
   const interaction = new AreaLayoutInteraction(host.getViewportPaneGrid(), host.getAreaLayoutController(), {
     ...createStructureCallbacks(host),
     onDetachArea: (viewportKind) => host.openDetachedViewport(viewportKind),
-    onGeometryChanged: () => host.resizeAll(),
+    onGeometryChanged: () => {
+      host.resizeAll();
+      host.getWorkspaceController()?.persistCurrentIntoActive();
+    },
   });
   host.setAreaLayoutInteraction(interaction);
 }
@@ -170,7 +191,7 @@ export function handleAreaLayoutAreaRemoved(host: WorkspaceAreaWiringHost, areaI
  */
 export function handleAreaLayoutStructureChanged(host: WorkspaceAreaWiringHost): void {
   host.refreshNamedViewportFields();
-  host.getViewportRegistry().activateAllPanes();
+  syncActivePanesFromVisibleLayout(host.getViewportChromeHost());
   host
     .getViewportRegistry()
     .getPanes()
@@ -180,6 +201,28 @@ export function handleAreaLayoutStructureChanged(host: WorkspaceAreaWiringHost):
       wireToolbarForPane(host.getViewportChromeHost(), pane, viewport as EditorViewport);
     });
   host.rewireAfterAreaStructureChange();
+  host.getWorkspaceController()?.persistCurrentIntoActive();
+}
+
+/**
+ * Replaces the live viewport kind when a workspace layout carries a different
+ * kind for an existing area id (e.g. dual layout with TOP after a previous
+ * FRONT).
+ *
+ * @param host Layout wiring host.
+ * @param areaId Area / pane id.
+ * @param viewportKind Kind from the applied layout.
+ */
+export function handleAreaLayoutAreaKindChanged(
+  host: WorkspaceAreaWiringHost,
+  areaId: string,
+  viewportKind: ViewportKind,
+): void {
+  const pane = host.getViewportRegistry().getPaneById(areaId);
+  if (!pane || pane.getKind() === viewportKind) return;
+  const created = host.getViewportRegistry().replaceKind(areaId, viewportKind);
+  if (!created) return;
+  wireReplacedPane(host.getViewportChromeHost(), pane, created);
 }
 
 /**
@@ -193,6 +236,8 @@ function createStructureCallbacks(host: WorkspaceAreaWiringHost) {
     onAreaAdded: (areaId: string, container: HTMLElement, viewportKind: ViewportKind) =>
       handleAreaLayoutAreaAdded(host, areaId, container, viewportKind),
     onAreaRemoved: (areaId: string) => handleAreaLayoutAreaRemoved(host, areaId),
+    onAreaKindChanged: (areaId: string, viewportKind: ViewportKind) =>
+      handleAreaLayoutAreaKindChanged(host, areaId, viewportKind),
     onStructureChanged: () => handleAreaLayoutStructureChanged(host),
   };
 }

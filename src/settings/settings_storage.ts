@@ -1,3 +1,5 @@
+import { areEditorStorageWritesSuppressed } from './clear_editor_storage.js';
+
 /**
  * Key-value storage abstraction used by settings persistence. Allows tests to
  * inject an in-memory backend instead of localStorage.
@@ -50,6 +52,7 @@ export class MemorySettingsStorage implements SettingsStorage {
 
   /** @inheritdoc */
   setItem(key: string, value: string): void {
+    if (areEditorStorageWritesSuppressed()) return;
     this.values.set(key, value);
   }
 
@@ -84,6 +87,7 @@ export class LocalSettingsStorage implements SettingsStorage {
 
   /** @inheritdoc */
   setItem(key: string, value: string): void {
+    if (areEditorStorageWritesSuppressed()) return;
     this.storage.setItem(key, value);
   }
 

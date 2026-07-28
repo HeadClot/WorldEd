@@ -30,14 +30,34 @@ export interface PaneCssRect {
  * @returns CSS rect relative to the origin element.
  */
 export function measureRelativeCssRect(targetElement: HTMLElement, originElement: HTMLElement): PaneCssRect {
+  return measureRelativeCssRectInto(targetElement, originElement, {
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  });
+}
+
+/**
+ * Measures an element relative to a reference element into an existing rect.
+ *
+ * @param targetElement Element to measure (pane content or container).
+ * @param originElement Reference element whose top-left is (0, 0).
+ * @param out Destination CSS rect.
+ * @returns The same out rect for chaining.
+ */
+export function measureRelativeCssRectInto(
+  targetElement: HTMLElement,
+  originElement: HTMLElement,
+  out: PaneCssRect,
+): PaneCssRect {
   const target = targetElement.getBoundingClientRect();
   const origin = originElement.getBoundingClientRect();
-  return {
-    left: target.left - origin.left,
-    top: target.top - origin.top,
-    width: Math.max(0, target.width),
-    height: Math.max(0, target.height),
-  };
+  out.left = target.left - origin.left;
+  out.top = target.top - origin.top;
+  out.width = Math.max(0, target.width);
+  out.height = Math.max(0, target.height);
+  return out;
 }
 
 /**
@@ -69,16 +89,41 @@ export function cssRectToLogicalRect(
   logicalWidth: number,
   logicalHeight: number,
 ): PaneLogicalRect {
+  return cssRectToLogicalRectInto(cssRect, logicalWidth, logicalHeight, {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+}
+
+/**
+ * Converts a top-left CSS pane rect into a lower-left logical rect, writing
+ * into an existing object to avoid per-frame allocation on the render path.
+ *
+ * @param cssRect CSS rect relative to the surface top-left.
+ * @param logicalWidth Surface width from setSize.
+ * @param logicalHeight Surface height from setSize.
+ * @param out Destination logical rect.
+ * @returns The same out rect for chaining.
+ */
+export function cssRectToLogicalRectInto(
+  cssRect: PaneCssRect,
+  logicalWidth: number,
+  logicalHeight: number,
+  out: PaneLogicalRect,
+): PaneLogicalRect {
   const surfaceWidth = Math.max(1, Math.floor(logicalWidth));
   const surfaceHeight = Math.max(1, Math.floor(logicalHeight));
   const x0 = clampInt(Math.floor(cssRect.left + 1e-6), 0, surfaceWidth);
   const y0Top = clampInt(Math.floor(cssRect.top + 1e-6), 0, surfaceHeight);
   const x1 = clampInt(Math.ceil(cssRect.left + cssRect.width - 1e-6), x0, surfaceWidth);
   const y1Top = clampInt(Math.ceil(cssRect.top + cssRect.height - 1e-6), y0Top, surfaceHeight);
-  const width = Math.max(0, x1 - x0);
-  const height = Math.max(0, y1Top - y0Top);
-  const y = surfaceHeight - y1Top;
-  return { x: x0, y, width, height };
+  out.x = x0;
+  out.y = surfaceHeight - y1Top;
+  out.width = Math.max(0, x1 - x0);
+  out.height = Math.max(0, y1Top - y0Top);
+  return out;
 }
 
 /**

@@ -4,6 +4,8 @@ import { FaceExtrusionController } from '../face/face_extrusion_controller.js';
 import { UvEditor } from '../../ui/uv/uv_editor.js';
 import { UvEditorController } from '../texture/uv_editor_controller.js';
 import { StatusBar } from '../../ui/status_bar.js';
+import type { EditorViewport } from '../../viewports/editor_viewport.js';
+import { bindFloatingPanelToViewports, scheduleStartupFloatingPanelLayoutPass } from './layout_clip_tools_setup.js';
 
 /** Dependencies for constructing the UV editor floating panel. */
 export interface UvEditorSetupDeps {
@@ -11,7 +13,7 @@ export interface UvEditorSetupDeps {
   faceController: FaceExtrusionController;
   commandStack: CommandStack;
   toolbarContainer: HTMLElement;
-  anchorViewport: HTMLElement;
+  getViewports: () => readonly EditorViewport[];
   statusBar: StatusBar | null;
   afterSurfaceChange: () => void;
 }
@@ -31,6 +33,8 @@ export interface UvEditorSetupResult {
 export function setupUvEditorPanel(deps: UvEditorSetupDeps): UvEditorSetupResult {
   const uvEditorController = createUvEditorController(deps);
   const uvEditor = createUvEditorUi(deps, uvEditorController);
+  bindFloatingPanelToViewports(uvEditor, deps.getViewports);
+  scheduleStartupFloatingPanelLayoutPass(uvEditor, deps.getViewports);
   wireUvEditorRefresh(deps, uvEditor, uvEditorController);
   return { uvEditor, uvEditorController };
 }
@@ -57,28 +61,24 @@ function createUvEditorController(deps: UvEditorSetupDeps): UvEditorController {
  * @returns Created UV editor panel.
  */
 function createUvEditorUi(deps: UvEditorSetupDeps, controller: UvEditorController): UvEditor {
-  return new UvEditor(
-    deps.toolbarContainer,
-    {
-      onAlign: (align) => {
-        controller.applyAlign(align);
-        deps.afterSurfaceChange();
-      },
-      onApplyPartialTrs: (fields) => {
-        controller.applyPartialTrsFields(fields);
-        deps.afterSurfaceChange();
-      },
-      onRelativeOp: (op) => {
-        controller.applyRelativeOp(op);
-        deps.afterSurfaceChange();
-      },
-      onReset: () => {
-        controller.resetMapping();
-        deps.afterSurfaceChange();
-      },
+  return new UvEditor(deps.toolbarContainer, {
+    onAlign: (align) => {
+      controller.applyAlign(align);
+      deps.afterSurfaceChange();
     },
-    deps.anchorViewport,
-  );
+    onApplyPartialTrs: (fields) => {
+      controller.applyPartialTrsFields(fields);
+      deps.afterSurfaceChange();
+    },
+    onRelativeOp: (op) => {
+      controller.applyRelativeOp(op);
+      deps.afterSurfaceChange();
+    },
+    onReset: () => {
+      controller.resetMapping();
+      deps.afterSurfaceChange();
+    },
+  });
 }
 
 /**

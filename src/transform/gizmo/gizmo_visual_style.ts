@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { tagGizmoDepthRole } from './gizmo_depth_style.js';
 
 /**
  * Shared visual constants for Move, Rotate, and Scale gizmos. Keeps stem
@@ -7,18 +8,31 @@ import * as THREE from 'three';
 export const GizmoVisualStyle = {
   /** Cylinder radius used by move stems, scale stems, and rotate ring tubes. */
   stemRadius: 0.045,
+  /**
+   * Invisible pick cylinder radius for stems/rings so clicks need not be pixel
+   * perfect while visuals stay thin.
+   */
+  stemPickRadius: 0.14,
   /** Length of the move arrow stem cylinder. */
   moveStemLength: 1.65,
   /** Cone radius of the move arrow head. */
   moveHeadRadius: 0.11,
   /** Cone height of the move arrow head. */
   moveHeadLength: 0.38,
+  /** Invisible pick cone radius for move arrow heads. */
+  moveHeadPickRadius: 0.18,
   /** Length of the scale stem cylinder. */
   scaleStemLength: 1.65,
   /** Edge length of the scale tip cube. */
   scaleTipSize: 0.18,
+  /** Invisible pick cube edge for scale tips. */
+  scaleTipPickSize: 0.32,
   /** Major radius of rotate rings. */
   ringRadius: 1.75,
+  /** Invisible pick tube radius for rotate rings. */
+  ringPickTubeRadius: 0.13,
+  /** Edge length of the free-move center cube on the translate gizmo. */
+  centerHandleSize: 0.28,
   /** Opacity of gizmo parts in front of scene geometry. */
   frontOpacity: 0.95,
   /** Opacity of gizmo parts occluded by scene geometry. */
@@ -29,6 +43,9 @@ export const GizmoVisualStyle = {
   frontRenderOrder: 999,
 } as const;
 
+/** UserData flag on invisible pick-volume meshes. */
+export const GIZMO_PICK_VOLUME_USERDATA = 'isGizmoPickVolume';
+
 /**
  * Creates the solid front-facing gizmo material with depth testing. Parts
  * behind scene objects fail the depth test and are not drawn with this
@@ -38,7 +55,7 @@ export const GizmoVisualStyle = {
  * @returns Configured MeshBasicMaterial.
  */
 export function createGizmoFrontMaterial(color: number): THREE.MeshBasicMaterial {
-  return new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshBasicMaterial({
     color,
     depthTest: true,
     depthWrite: false,
@@ -48,6 +65,8 @@ export function createGizmoFrontMaterial(color: number): THREE.MeshBasicMaterial
     side: THREE.DoubleSide,
     toneMapped: false,
   });
+  tagGizmoDepthRole(material, 'front');
+  return material;
 }
 
 /**
@@ -59,7 +78,7 @@ export function createGizmoFrontMaterial(color: number): THREE.MeshBasicMaterial
  * @returns Configured MeshBasicMaterial.
  */
 export function createGizmoOccludedMaterial(color: number): THREE.MeshBasicMaterial {
-  return new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshBasicMaterial({
     color,
     depthTest: true,
     depthWrite: false,
@@ -69,6 +88,8 @@ export function createGizmoOccludedMaterial(color: number): THREE.MeshBasicMater
     side: THREE.DoubleSide,
     toneMapped: false,
   });
+  tagGizmoDepthRole(material, 'occluded');
+  return material;
 }
 
 /**
@@ -99,13 +120,46 @@ export function applyGizmoFrontRenderOrder(mesh: THREE.Mesh): void {
 }
 
 /**
+ * Creates an invisible pick material (raycastable, not drawn).
+ *
+ * @returns Configured MeshBasicMaterial.
+ */
+export function createGizmoPickMaterial(): THREE.MeshBasicMaterial {
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    depthTest: false,
+    depthWrite: false,
+    colorWrite: false,
+    transparent: false,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  });
+  material.visible = false;
+  return material;
+}
+
+/**
+ * Builds an invisible pick mesh tagged for handle id matching.
+ *
+ * @param geometry Pick volume geometry (not shared with visual meshes).
+ * @param handleId Handle id for raycast matching.
+ * @returns Pick mesh ready to parent under a handle group.
+ */
+export function createGizmoPickMesh(geometry: THREE.BufferGeometry, handleId: number): THREE.Mesh {
+  const mesh = new THREE.Mesh(geometry, createGizmoPickMaterial());
+  mesh.userData['handleId'] = handleId;
+  mesh.userData[GIZMO_PICK_VOLUME_USERDATA] = true;
+  return mesh;
+}
+
+/**
  * Creates a front-facing vertex-colored line material with depth testing.
  * Segments behind scene geometry fail the depth test and are not drawn.
  *
  * @returns Configured line material for unoccluded gizmo lines.
  */
 export function createGizmoFrontLineMaterial(): THREE.LineBasicMaterial {
-  return new THREE.LineBasicMaterial({
+  const material = new THREE.LineBasicMaterial({
     vertexColors: true,
     depthTest: true,
     depthWrite: false,
@@ -115,6 +169,8 @@ export function createGizmoFrontLineMaterial(): THREE.LineBasicMaterial {
     toneMapped: false,
     linewidth: 1,
   });
+  tagGizmoDepthRole(material, 'front');
+  return material;
 }
 
 /**
@@ -124,7 +180,7 @@ export function createGizmoFrontLineMaterial(): THREE.LineBasicMaterial {
  * @returns Configured line material for occluded gizmo lines.
  */
 export function createGizmoOccludedLineMaterial(): THREE.LineBasicMaterial {
-  return new THREE.LineBasicMaterial({
+  const material = new THREE.LineBasicMaterial({
     vertexColors: true,
     depthTest: true,
     depthWrite: false,
@@ -134,4 +190,6 @@ export function createGizmoOccludedLineMaterial(): THREE.LineBasicMaterial {
     toneMapped: false,
     linewidth: 1,
   });
+  tagGizmoDepthRole(material, 'occluded');
+  return material;
 }

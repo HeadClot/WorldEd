@@ -5,6 +5,7 @@ import {
   BOUNDS_GUIDE_GAP_PIXELS,
   createBoundsGuideFrontLineMaterial,
   createBoundsGuideOccludedLineMaterial,
+  createScreenPixelDashedLineMaterial,
   isBoundsGuideDashPixelDrawn,
   measureScreenPixelDistanceAlongSegment,
 } from '../../../src/transform/bounds/bounds_guide_line_material.js';
@@ -22,6 +23,15 @@ describe('bounds_guide_line_material', () => {
     expect(material.uniforms['dashSize']!.value).toBeCloseTo(BOUNDS_GUIDE_DASH_PIXELS);
     expect(material.uniforms['gapSize']!.value).toBeCloseTo(BOUNDS_GUIDE_GAP_PIXELS);
     expect(material.uniforms['viewport']!.value).toBeInstanceOf(THREE.Vector4);
+    material.dispose();
+  });
+
+  it('creates a reusable screen-pixel dashed material with custom opacity', () => {
+    const material = createScreenPixelDashedLineMaterial(0.88, THREE.LessEqualDepth);
+    expect(material).toBeInstanceOf(THREE.ShaderMaterial);
+    expect(material.uniforms['opacity']!.value).toBeCloseTo(0.88);
+    expect(material.uniforms['dashSize']!.value).toBeCloseTo(BOUNDS_GUIDE_DASH_PIXELS);
+    expect(material.fragmentShader).toContain('discard');
     material.dispose();
   });
 

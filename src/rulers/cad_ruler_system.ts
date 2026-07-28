@@ -277,6 +277,27 @@ export class CadRulerSystem {
   }
 
   /**
+   * Returns dashed size-wing segment count from the first viewport (tests).
+   *
+   * @returns Dashed segment count, or 0.
+   */
+  getDashedDimensionSegmentCount(): number {
+    if (this.viewports.length === 0) return 0;
+    return this.viewports[0]!.getDashedDimensionSegmentCount();
+  }
+
+  /**
+   * Returns solid extension/delta segment count from the first viewport
+   * (tests).
+   *
+   * @returns Solid segment count, or 0.
+   */
+  getSolidDimensionSegmentCount(): number {
+    if (this.viewports.length === 0) return 0;
+    return this.viewports[0]!.getSolidDimensionSegmentCount();
+  }
+
+  /**
    * Returns whether the first viewport uses dual-pass depth darkening (tests).
    *
    * @returns True when depth occlusion is enabled.
@@ -463,7 +484,9 @@ export class CadRulerSystem {
   }
 
   /**
-   * Appends size dimensions for the live selection bounds.
+   * Appends size dimensions for the live selection bounds. Skipped during
+   * translate-mode drags (move, rotate, bounds pan) because extents do not
+   * change and the wings only add clutter next to the bounds wire.
    *
    * @param placement Viewport placement context.
    * @param segments Output segments.
@@ -475,6 +498,7 @@ export class CadRulerSystem {
     labels: CadLabelSpec[],
   ): void {
     if (!this.currentBounds) return;
+    if (this.dragMode === 'translate') return;
     appendSelectionSizeDimensions(
       this.currentBounds,
       this.sizeColor,

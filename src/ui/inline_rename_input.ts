@@ -11,8 +11,7 @@ export type RenameCancelCallback = () => void;
 /**
  * Shared inline text input for renaming a label in place (outliner rows,
  * workspace tabs, and similar chrome). Replaces a text span with an editable
- * input; styling matches the existing outliner look and must stay stable for
- * that caller.
+ * input sized to that span so the surrounding chrome does not reflow.
  */
 export class InlineRenameInput {
   private inputElement: HTMLInputElement;
@@ -62,11 +61,13 @@ export class InlineRenameInput {
 
   /**
    * Activates the inline rename by placing the input where the name span sits,
-   * before trailing row controls (visibility / lock).
+   * before trailing row controls (visibility / lock). Input metrics are copied
+   * from the span first so tabs and outliner rows keep their height.
    */
   activate(): void {
     if (this.isDisposed) return;
     this.isFinishing = false;
+    this.matchInputLayoutToTextSpan();
     this.textSpan.style.display = 'none';
     this.parentElement.insertBefore(this.inputElement, this.textSpan.nextSibling);
     this.inputElement.focus();
@@ -80,7 +81,7 @@ export class InlineRenameInput {
    */
   deactivate(newText: string): void {
     if (this.isDisposed) return;
-    this.textSpan.style.display = 'inline';
+    this.textSpan.style.display = '';
     this.textSpan.textContent = newText;
     this.detachInputElement();
   }
@@ -121,6 +122,15 @@ export class InlineRenameInput {
     this.cancelCallback = null;
   }
 
+  /**
+   * Returns the live input element for tests.
+   *
+   * @returns Input element used while renaming.
+   */
+  getInputElement(): HTMLInputElement {
+    return this.inputElement;
+  }
+
   /** Detaches the input from the DOM without assuming its current parent. */
   private detachInputElement(): void {
     if (this.inputElement.parentNode) {
@@ -139,17 +149,42 @@ export class InlineRenameInput {
     input.value = this.originalText;
     input.style.border = '1px solid #e67e22';
     input.style.borderRadius = '2px';
-    input.style.padding = '1px 4px';
+    input.style.padding = '0 4px';
+    input.style.margin = '0';
     input.style.background = '#2a2a2a';
     input.style.color = '#cccccc';
     input.style.fontFamily = 'monospace';
     input.style.fontSize = '12px';
+    input.style.lineHeight = '1';
     input.style.outline = 'none';
     input.style.flex = '1';
     input.style.minWidth = '0';
     input.style.boxSizing = 'border-box';
+    input.style.verticalAlign = 'middle';
     this.bindInputElementEvents(input);
     return input;
+  }
+
+  /**
+   * Copies font and height from the visible name span so swapping in the input
+   * does not grow workspace tabs or outliner rows.
+   */
+  private matchInputLayoutToTextSpan(): void {
+    const spanStyle = window.getComputedStyle(this.textSpan);
+    const spanHeight = this.textSpan.offsetHeight;
+    if (spanHeight > 0) {
+      this.inputElement.style.height = `${spanHeight}px`;
+      this.inputElement.style.maxHeight = `${spanHeight}px`;
+    }
+    if (spanStyle.fontSize) {
+      this.inputElement.style.fontSize = spanStyle.fontSize;
+    }
+    if (spanStyle.fontFamily) {
+      this.inputElement.style.fontFamily = spanStyle.fontFamily;
+    }
+    if (spanStyle.lineHeight && spanStyle.lineHeight !== 'normal') {
+      this.inputElement.style.lineHeight = spanStyle.lineHeight;
+    }
   }
 
   /**

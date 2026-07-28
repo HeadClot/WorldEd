@@ -3,7 +3,7 @@ import { hexToRgb } from '../utils/color_utils.js';
 import { ToolbarIcons } from './toolbar_icons.js';
 import { EditorToolId } from '../types/editor_tool_id.js';
 import { TransformMode } from '../types/transform_mode.js';
-import { FloatingPanelStack } from './floating_panel_stack.js';
+import { FloatingPanel } from './floating_panel/floating_panel.js';
 
 /** Callbacks the Tools palette uses for tool activation and context actions. */
 export interface ToolsPaletteHandlers {
@@ -19,14 +19,10 @@ export interface ToolsPaletteHandlers {
 /**
  * Floating tool palette with context-sensitive actions per active tool. Object
  * mode shows transform modes; face mode shows UV/extrude; clip shows cut
- * actions.
+ * actions. Placement and windowing come from {@link FloatingPanel}.
  */
-export class ToolsPalette {
-  private root: HTMLElement;
-  private host: HTMLElement;
+export class ToolsPalette extends FloatingPanel {
   private handlers: ToolsPaletteHandlers;
-  private defaultAnchor: HTMLElement | null;
-  private isVisible: boolean;
   private activeTool: EditorToolId;
   private activeTransformMode: TransformMode;
   private toolButtons: Map<EditorToolId, HTMLButtonElement>;
@@ -40,9 +36,6 @@ export class ToolsPalette {
   private flipButton: HTMLButtonElement;
   private clipButton: HTMLButtonElement;
   private splitButton: HTMLButtonElement;
-  private dragOffsetX: number;
-  private dragOffsetY: number;
-  private isDragging: boolean;
 
   /**
    * Creates a tools palette attached to the host element.
@@ -52,13 +45,8 @@ export class ToolsPalette {
    * @param defaultAnchor Element whose top-left is the default panel position.
    */
   constructor(host: HTMLElement, handlers: ToolsPaletteHandlers, defaultAnchor: HTMLElement | null = null) {
-    this.host = host;
+    super(host, { corner: 'top-left', insetBelowViewportToolbar: true }, defaultAnchor);
     this.handlers = handlers;
-    this.defaultAnchor = defaultAnchor;
-    this.isVisible = false;
-    this.isDragging = false;
-    this.dragOffsetX = 0;
-    this.dragOffsetY = 0;
     this.activeTool = EditorToolId.OBJECT;
     this.activeTransformMode = TransformMode.BOUNDS;
     this.toolButtons = new Map();
@@ -72,62 +60,11 @@ export class ToolsPalette {
     this.flipButton = document.createElement('button');
     this.clipButton = document.createElement('button');
     this.splitButton = document.createElement('button');
-    this.root = this.buildRoot();
-    this.host.appendChild(this.root);
+    this.populateRoot();
     this.setActiveTool(EditorToolId.OBJECT);
     this.setActiveTransformMode(TransformMode.BOUNDS);
     this.setContextStatus('Select objects in the viewport');
     this.setClipActionsEnabled(false);
-  }
-
-  /**
-   * Sets the element used for the default open position.
-   *
-   * @param anchor Viewport or other container element, or null for host.
-   */
-  setDefaultAnchor(anchor: HTMLElement | null): void {
-    this.defaultAnchor = anchor;
-  }
-
-  /** Shows the palette at the default anchor (top-left of the 3D viewport). */
-  show(): void {
-    if (this.isVisible) {
-      FloatingPanelStack.bringToFront(this.root);
-      return;
-    }
-    this.isVisible = true;
-    this.root.style.display = 'flex';
-    this.positionDefault();
-    FloatingPanelStack.bringToFront(this.root);
-  }
-
-  /**
-   * Hides the palette.
-   *
-   * @param _force Kept for call-site compatibility; always hides.
-   */
-  hide(_force: boolean = false): void {
-    if (!this.isVisible) return;
-    this.isVisible = false;
-    this.root.style.display = 'none';
-  }
-
-  /** Toggles visibility. */
-  toggle(): void {
-    if (this.isVisible) {
-      this.hide(true);
-      return;
-    }
-    this.show();
-  }
-
-  /**
-   * Returns whether the panel is visible.
-   *
-   * @returns True when open.
-   */
-  isOpen(): boolean {
-    return this.isVisible;
   }
 
   /**
@@ -199,24 +136,12 @@ export class ToolsPalette {
     this.splitButton.style.opacity = opacity;
   }
 
-  /** Disposes the palette and removes it from the DOM. */
-  dispose(): void {
-    this.hide(true);
-    this.root.remove();
-  }
-
-  /**
-   * Builds the root panel element.
-   *
-   * @returns Styled root.
-   */
-  private buildRoot(): HTMLElement {
-    const root = document.createElement('div');
-    this.styleRoot(root);
-    root.appendChild(this.buildTitleBar());
-    root.appendChild(this.buildToolGrid());
-    root.appendChild(this.buildContextSection());
-    return root;
+  /** Fills the shared floating-panel shell with Tools chrome. */
+  private populateRoot(): void {
+    this.styleRoot(this.root);
+    this.root.appendChild(this.buildTitleBar());
+    this.root.appendChild(this.buildToolGrid());
+    this.root.appendChild(this.buildContextSection());
   }
 
   /**
@@ -226,30 +151,13 @@ export class ToolsPalette {
    */
   private styleRoot(root: HTMLElement): void {
     root.classList.add('editor-tools-palette');
-    root.style.position = 'fixed';
-    root.style.display = 'none';
-    root.style.flexDirection = 'column';
     root.style.width = '212px';
     root.style.background = hexToRgb(Theme.propertiesPanelBackground);
     root.style.border = `1px solid ${hexToRgb(Theme.separatorColor)}`;
     root.style.borderRadius = '8px';
     root.style.boxShadow = '0 10px 28px rgba(0,0,0,0.55)';
     root.style.fontFamily = Theme.uiFontFamily;
-    root.style.userSelect = 'none';
     root.style.paddingBottom = '10px';
-    this.bindBringToFrontOnPointer(root);
-  }
-
-  /**
-   * Raises this panel above other floating windows when the user interacts with
-   * it.
-   *
-   * @param root Panel root element.
-   */
-  private bindBringToFrontOnPointer(root: HTMLElement): void {
-    root.addEventListener('pointerdown', () => {
-      FloatingPanelStack.bringToFront(root);
-    });
   }
 
   /**
@@ -283,7 +191,7 @@ export class ToolsPalette {
     });
     bar.appendChild(title);
     bar.appendChild(close);
-    this.bindDrag(bar);
+    this.bindTitleBarDrag(bar);
     return bar;
   }
 
@@ -580,48 +488,5 @@ export class ToolsPalette {
     button.style.padding = '2px 7px';
     button.style.cursor = 'pointer';
     button.style.lineHeight = '1.2';
-  }
-
-  /**
-   * Positions the panel at the top-left of the default anchor (3D viewport).
-   * Sits just below the viewport toolbar strip with a small inset.
-   */
-  private positionDefault(): void {
-    const paddingPx = 8;
-    const anchor = this.defaultAnchor ?? this.host;
-    const rect = anchor.getBoundingClientRect();
-    const topInset = this.defaultAnchor ? Theme.viewportToolbarHeightPx + paddingPx : paddingPx;
-    this.root.style.left = `${rect.left + paddingPx}px`;
-    this.root.style.top = `${rect.top + topInset}px`;
-    this.root.style.right = 'auto';
-  }
-
-  /**
-   * Binds title-bar drag movement.
-   *
-   * @param bar Title bar element.
-   */
-  private bindDrag(bar: HTMLElement): void {
-    bar.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0) return;
-      const target = event.target as HTMLElement;
-      if (target.tagName === 'BUTTON') return;
-      this.isDragging = true;
-      const rect = this.root.getBoundingClientRect();
-      this.dragOffsetX = event.clientX - rect.left;
-      this.dragOffsetY = event.clientY - rect.top;
-      const onMove = (moveEvent: PointerEvent) => {
-        if (!this.isDragging) return;
-        this.root.style.left = `${moveEvent.clientX - this.dragOffsetX}px`;
-        this.root.style.top = `${moveEvent.clientY - this.dragOffsetY}px`;
-      };
-      const onUp = () => {
-        this.isDragging = false;
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-      };
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-    });
   }
 }

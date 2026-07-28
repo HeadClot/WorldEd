@@ -127,6 +127,38 @@ describe('CadRulerSystem', () => {
     expect(system.getStatusText().length).toBeGreaterThan(0);
   });
 
+  it('hides size wings and size labels during translate drag because extents are fixed', () => {
+    const mesh = createBoxMesh(new THREE.Vector3(0, 0, 0), new THREE.Vector3(2, 1, 3));
+    system.setSelectionMeshes([mesh]);
+    expect(system.getLabels().some((label) => label.id.startsWith('size-'))).toBe(true);
+    expect(system.getDashedDimensionSegmentCount()).toBeGreaterThan(0);
+    const start = makeBounds(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0.5, 1.5));
+    system.beginDrag(start, 'translate');
+    system.updateTranslateDrag(new THREE.Vector3(1, 0, 0), start);
+    expect(system.getLabels().some((label) => label.id.startsWith('size-'))).toBe(false);
+    expect(system.getDashedDimensionSegmentCount()).toBe(0);
+    expect(system.getLabels().some((label) => label.id === 'delta-x')).toBe(true);
+  });
+
+  it('keeps size wings during resize drag because extents change', () => {
+    const mesh = createBoxMesh(new THREE.Vector3(0, 0, 0), new THREE.Vector3(2, 2, 2));
+    system.setSelectionMeshes([mesh]);
+    const start = makeBounds(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1));
+    const current = makeBounds(new THREE.Vector3(1, 0, 0), new THREE.Vector3(2, 1, 1));
+    system.beginDrag(start, 'resize');
+    system.updateResizeDrag(current);
+    expect(system.getLabels().some((label) => label.id.startsWith('size-'))).toBe(true);
+    expect(system.getDashedDimensionSegmentCount()).toBeGreaterThan(0);
+  });
+
+  it('draws size dimension wings as dashed strokes and gray extension legs as solid', () => {
+    const mesh = createBoxMesh(new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(2, 1, 3));
+    system.setSelectionMeshes([mesh]);
+    expect(system.getDashedDimensionSegmentCount()).toBe(3);
+    expect(system.getSolidDimensionSegmentCount()).toBe(6);
+    expect(system.getDimensionSegmentCount()).toBe(9);
+  });
+
   it('should show only X face-travel labels for one-sided X resize', () => {
     const start = makeBounds(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1));
     const current = makeBounds(new THREE.Vector3(1, 0, 0), new THREE.Vector3(2, 1, 1));

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GizmoHandle } from './gizmo_handle.js';
 import { pointerEventToNdc } from '../../utils/pointer_ndc.js';
 import { isGizmoWantedVisible } from './gizmo_viewport_visibility.js';
+import { GizmoAxis } from '../../types/transform_mode.js';
 
 /**
  * Picks which gizmo handle was clicked using raycasting. Converts mouse events
@@ -46,7 +47,7 @@ export class GizmoRaycaster {
     const meshes = this.collectHandleMeshes(gizmoGroup);
     if (meshes.length === 0) return null;
     const intersections = this.raycaster.intersectObjects(meshes, false);
-    return this.findFirstHandleHit(handles, intersections);
+    return this.findPreferredHandleHit(handles, intersections);
   }
 
   /**
@@ -104,19 +105,28 @@ export class GizmoRaycaster {
   }
 
   /**
-   * Returns the closest intersection that maps to a known gizmo handle.
+   * Chooses a handle from ray hits. Free-move center ({@link GizmoAxis.VIEW})
+   * wins over axis arrows when both are hit so the thick stem pick volumes at
+   * the origin do not steal center grabs.
    *
    * @param handles Master handles for id matching.
    * @param intersections Ray hits sorted by distance.
-   * @returns The matching handle, or null.
+   * @returns The preferred matching handle, or null.
    */
-  private findFirstHandleHit(handles: GizmoHandle[], intersections: THREE.Intersection[]): GizmoHandle | null {
+  private findPreferredHandleHit(handles: GizmoHandle[], intersections: THREE.Intersection[]): GizmoHandle | null {
+    let closest: GizmoHandle | null = null;
+    let viewHandle: GizmoHandle | null = null;
     for (const hit of intersections) {
       if (!(hit.object instanceof THREE.Mesh)) continue;
       const handle = this.findHandleForMesh(handles, hit.object);
-      if (handle) return handle;
+      if (!handle) continue;
+      if (!closest) closest = handle;
+      if (handle.getAxis() === GizmoAxis.VIEW) {
+        viewHandle = handle;
+        break;
+      }
     }
-    return null;
+    return viewHandle ?? closest;
   }
 
   /**

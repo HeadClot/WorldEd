@@ -1,5 +1,14 @@
 import type { AreaLeafPayload } from './area_editor_type.js';
-import { areRectsJoinable, clampAreaNumber, createUnitAreaRect, type AreaRect } from './area_rect.js';
+import {
+  areRectsJoinable,
+  areaRectBottom,
+  areaRectRight,
+  clampAreaNumber,
+  createUnitAreaRect,
+  shareFullHorizontalEdge,
+  shareFullVerticalEdge,
+  type AreaRect,
+} from './area_rect.js';
 import type { AreaSplitDirection } from './area_split_direction.js';
 import {
   createAreaLeafNode,
@@ -121,15 +130,14 @@ export function updateMatchingSplitRatio(
 }
 
 /**
- * Sets the ratio on the lowest split whose first/second subtrees contain the
- * two area ids (supports non-sibling neighbors such as top|side in the quad
- * layout).
+ * Moves the shared border between two leaves by resizing only those two panes,
+ * then rebuilds the BSP tree. Other panes keep their rects (T-junction safe).
  *
  * @param root Layout tree root.
- * @param firstAreaId Area on the first side of the border (left or top).
- * @param secondAreaId Area on the second side (right or bottom).
- * @param ratio New first-child ratio.
- * @returns Updated root, or the original root when no separating split exists.
+ * @param firstAreaId Area on the left or top of the shared border.
+ * @param secondAreaId Area on the right or bottom of the shared border.
+ * @param ratio Fraction of the two-pane span kept by `firstAreaId`.
+ * @returns Updated root, or the original root when the pair is not adjacent.
  */
 export function setSplitRatioBetweenAreas(
   root: AreaTreeNode,
@@ -137,7 +145,42 @@ export function setSplitRatioBetweenAreas(
   secondAreaId: string,
   ratio: number,
 ): AreaTreeNode {
-  return updateSplitSeparating(root, firstAreaId, secondAreaId, clampAreaSplitRatio(ratio)) ?? root;
+  const placements = cloneLeafPlacements(listAreaLeafPlacements(root));
+  const first = placements.find((item) => item.payload.areaId === firstAreaId);
+  const second = placements.find((item) => item.payload.areaId === secondAreaId);
+  if (!first || !second) return root;
+  if (!applySharedBorderRatio(first, second, clampAreaSplitRatio(ratio))) return root;
+  return rebuildAreaTreeFromPlacements(placements, createUnitAreaRect());
+}
+
+/**
+ * Converts a normalized pointer into the two-pane ratio for
+ * {@link setSplitRatioBetweenAreas}.
+ *
+ * @param root Layout tree root.
+ * @param firstAreaId Left or top area id of the border.
+ * @param secondAreaId Right or bottom area id of the border.
+ * @param borderDirection Border axis (`horizontal` = vertical divider).
+ * @param normalizedX Pointer x in layer unit space [0,1].
+ * @param normalizedY Pointer y in layer unit space [0,1].
+ * @returns Ratio for `firstAreaId` within the two-pane span, or 0.5.
+ */
+export function computeSplitRatioFromNormalizedPointer(
+  root: AreaTreeNode,
+  firstAreaId: string,
+  secondAreaId: string,
+  borderDirection: AreaSplitDirection,
+  normalizedX: number,
+  normalizedY: number,
+): number {
+  const placements = listAreaLeafPlacements(root);
+  const first = placements.find((item) => item.payload.areaId === firstAreaId);
+  const second = placements.find((item) => item.payload.areaId === secondAreaId);
+  if (!first || !second) return 0.5;
+  if (borderDirection === 'horizontal') {
+    return ratioAlongHorizontalPair(first.rect, second.rect, normalizedX);
+  }
+  return ratioAlongVerticalPair(first.rect, second.rect, normalizedY);
 }
 
 /**
@@ -274,52 +317,100 @@ function mapTree(node: AreaTreeNode, mapper: (candidate: AreaTreeNode) => AreaTr
 }
 
 /**
- * Recursively finds the split that separates two area ids and updates its
- * ratio.
+ * Deep-copies leaf placements so border edits do not mutate live tree state.
  *
- * @param node Current node.
- * @param firstAreaId First area id.
- * @param secondAreaId Second area id.
- * @param ratio Clamped ratio.
- * @returns Updated node when a match is found below, else null.
+ * @param placements Source placements.
+ * @returns Independent placement list.
  */
-function updateSplitSeparating(
-  node: AreaTreeNode,
-  firstAreaId: string,
-  secondAreaId: string,
-  ratio: number,
-): AreaTreeNode | null {
-  if (isAreaLeafNode(node)) return null;
-  const firstHasA = subtreeHasArea(node.first, firstAreaId);
-  const firstHasB = subtreeHasArea(node.first, secondAreaId);
-  const secondHasA = subtreeHasArea(node.second, firstAreaId);
-  const secondHasB = subtreeHasArea(node.second, secondAreaId);
-  if ((firstHasA && secondHasB) || (firstHasB && secondHasA)) {
-    const firstIsFirstSide = firstHasA && secondHasB;
-    const appliedRatio = firstIsFirstSide ? ratio : 1 - ratio;
-    return createAreaSplitNode(node.direction, clampAreaSplitRatio(appliedRatio), node.first, node.second);
-  }
-  const firstUpdate = updateSplitSeparating(node.first, firstAreaId, secondAreaId, ratio);
-  if (firstUpdate) {
-    return createAreaSplitNode(node.direction, node.ratio, firstUpdate, node.second);
-  }
-  const secondUpdate = updateSplitSeparating(node.second, firstAreaId, secondAreaId, ratio);
-  if (secondUpdate) {
-    return createAreaSplitNode(node.direction, node.ratio, node.first, secondUpdate);
-  }
-  return null;
+function cloneLeafPlacements(placements: readonly AreaLeafPlacement[]): AreaLeafPlacement[] {
+  return placements.map((item) => ({
+    payload: { ...item.payload },
+    rect: { ...item.rect },
+  }));
 }
 
 /**
- * Returns whether a subtree contains the given area id.
+ * Resizes two adjacent leaves so `first` keeps `ratio` of their shared span.
  *
- * @param node Subtree root.
- * @param areaId Target area id.
- * @returns True when present.
+ * @param first Left or top placement (mutated).
+ * @param second Right or bottom placement (mutated).
+ * @param ratio Clamped fraction for `first`.
+ * @returns True when the pair shared a full edge and was updated.
  */
-function subtreeHasArea(node: AreaTreeNode, areaId: string): boolean {
-  if (isAreaLeafNode(node)) return node.payload.areaId === areaId;
-  return subtreeHasArea(node.first, areaId) || subtreeHasArea(node.second, areaId);
+function applySharedBorderRatio(first: AreaLeafPlacement, second: AreaLeafPlacement, ratio: number): boolean {
+  if (shareFullVerticalEdge(first.rect, second.rect)) {
+    applyHorizontalNeighborRatio(first, second, ratio);
+    return true;
+  }
+  if (shareFullHorizontalEdge(first.rect, second.rect)) {
+    applyVerticalNeighborRatio(first, second, ratio);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Applies a left|right cut between two full-edge neighbors.
+ *
+ * @param left Left placement (mutated).
+ * @param right Right placement (mutated).
+ * @param ratio Fraction of the pair width for the left pane.
+ */
+function applyHorizontalNeighborRatio(left: AreaLeafPlacement, right: AreaLeafPlacement, ratio: number): void {
+  const pairLeft = left.rect.x;
+  const pairRight = areaRectRight(right.rect);
+  const pairWidth = pairRight - pairLeft;
+  const cut = pairLeft + pairWidth * ratio;
+  left.rect = { x: pairLeft, y: left.rect.y, width: cut - pairLeft, height: left.rect.height };
+  right.rect = { x: cut, y: right.rect.y, width: pairRight - cut, height: right.rect.height };
+}
+
+/**
+ * Applies a top|bottom cut between two full-edge neighbors.
+ *
+ * @param top Top placement (mutated).
+ * @param bottom Bottom placement (mutated).
+ * @param ratio Fraction of the pair height for the top pane.
+ */
+function applyVerticalNeighborRatio(top: AreaLeafPlacement, bottom: AreaLeafPlacement, ratio: number): void {
+  const pairTop = top.rect.y;
+  const pairBottom = areaRectBottom(bottom.rect);
+  const pairHeight = pairBottom - pairTop;
+  const cut = pairTop + pairHeight * ratio;
+  top.rect = { x: top.rect.x, y: pairTop, width: top.rect.width, height: cut - pairTop };
+  bottom.rect = { x: bottom.rect.x, y: cut, width: bottom.rect.width, height: pairBottom - cut };
+}
+
+/**
+ * Computes first-pane ratio along a left|right pair from a normalized x.
+ *
+ * @param first Left rect.
+ * @param second Right rect.
+ * @param normalizedX Pointer x in [0,1] layer space.
+ * @returns Ratio for the left pane within the pair span.
+ */
+function ratioAlongHorizontalPair(first: AreaRect, second: AreaRect, normalizedX: number): number {
+  const parentLeft = Math.min(first.x, second.x);
+  const parentRight = Math.max(areaRectRight(first), areaRectRight(second));
+  const parentWidth = parentRight - parentLeft;
+  if (parentWidth <= 0) return 0.5;
+  return (normalizedX - parentLeft) / parentWidth;
+}
+
+/**
+ * Computes first-pane ratio along a top|bottom pair from a normalized y.
+ *
+ * @param first Top rect.
+ * @param second Bottom rect.
+ * @param normalizedY Pointer y in [0,1] layer space.
+ * @returns Ratio for the top pane within the pair span.
+ */
+function ratioAlongVerticalPair(first: AreaRect, second: AreaRect, normalizedY: number): number {
+  const parentTop = Math.min(first.y, second.y);
+  const parentBottom = Math.max(areaRectBottom(first), areaRectBottom(second));
+  const parentHeight = parentBottom - parentTop;
+  if (parentHeight <= 0) return 0.5;
+  return (normalizedY - parentTop) / parentHeight;
 }
 
 /**

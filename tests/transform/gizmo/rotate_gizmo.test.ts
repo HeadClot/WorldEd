@@ -38,6 +38,19 @@ describe('RotateGizmo', () => {
     expect(torus.parameters.tube).toBeCloseTo(0.045, 5);
   });
 
+  it('should attach invisible thick pick tori for easier ring clicks', () => {
+    gizmo.createHandles();
+    let pickCount = 0;
+    gizmo.getAllSceneObjects().forEach((root) => {
+      root.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.userData['isGizmoPickVolume'] === true) {
+          pickCount += 1;
+        }
+      });
+    });
+    expect(pickCount).toBe(3);
+  });
+
   it('should enable depth testing so occluded ring parts can fade', () => {
     const handles = gizmo.createHandles();
     const material = handles[0]!.getVisualMesh().material as THREE.MeshBasicMaterial;

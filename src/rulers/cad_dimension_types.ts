@@ -11,6 +11,11 @@ export interface CadLineSegment {
   bz: number;
   colorA: THREE.Color;
   colorB: THREE.Color;
+  /**
+   * When true, stroke uses screen-pixel dashing (blue size-dimension wings).
+   * Gray extension legs stay solid so they remain readable on dark viewports.
+   */
+  dashed?: boolean;
 }
 
 /** Screen-projected label specification in world space. */

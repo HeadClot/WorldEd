@@ -5,6 +5,7 @@ import {
   DEFAULT_VIEWPORT_QUAD_KINDS,
   ViewportKind,
   getViewportKindDisplayLabel,
+  isPerspectiveViewportKind,
 } from '../../viewports/viewport_kind.js';
 import { ViewportPane } from './viewport_pane.js';
 
@@ -28,11 +29,22 @@ export type ViewportCreateFn = (
 /**
  * Owns layout panes and their live viewport instances. Consumers iterate active
  * viewports instead of hard-coded Top/Front/Side/Perspective fields.
+ *
+ * Pane registration order is layout-stable (maximize / slot indices). Active
+ * multi-view render order is a separate cache: orthographic panes first, then
+ * perspective, rebuilt only when structure, kind, or active flags change so
+ * shared-material depth modes flip at most once per frame instead of 2D↔3D
+ * every alternating pane.
  */
 export class ViewportRegistry {
   private panes: ViewportPane[];
   private factoryDependencies: ViewportFactoryDependencies | null;
   private createViewport: ViewportCreateFn;
+  /**
+   * Active viewports in multi-view draw order (all orthographic, then all
+   * perspective). Invalidated and rebuilt by layout/kind mutations only.
+   */
+  private activeRenderViewports: EditorViewport[];
 
   /**
    * Creates an empty registry. Call populateDefaultQuad or addPane to fill.
@@ -43,6 +55,7 @@ export class ViewportRegistry {
     this.panes = [];
     this.factoryDependencies = null;
     this.createViewport = createViewport;
+    this.activeRenderViewports = [];
   }
 
   /**
@@ -64,6 +77,7 @@ export class ViewportRegistry {
     this.setFactoryDependencies(dependencies);
     this.disposeAllViewports();
     this.panes = [];
+    this.activeRenderViewports = [];
     DEFAULT_VIEWPORT_QUAD_KINDS.forEach((kind, index) => {
       const container = containers[index];
       if (!container) return;
@@ -84,11 +98,13 @@ export class ViewportRegistry {
     const pane = new ViewportPane(id, container, kind);
     this.panes.push(pane);
     this.createViewportInPane(pane, kind);
+    this.rebuildActiveRenderViewports();
     return pane;
   }
 
   /**
-   * Returns all panes in registration order.
+   * Returns all panes in registration / layout order (not multi-view draw
+   * order). Use this for maximize indices and area chrome.
    *
    * @returns Readonly pane list.
    */
@@ -109,7 +125,7 @@ export class ViewportRegistry {
   /**
    * Returns a pane by index when present.
    *
-   * @param index Zero-based pane index.
+   * @param index Zero-based pane index in registration order.
    * @returns Matching pane or null.
    */
   getPaneByIndex(index: number): ViewportPane | null {
@@ -117,19 +133,20 @@ export class ViewportRegistry {
   }
 
   /**
-   * Returns live viewport instances for active panes that have an instance.
+   * Returns live viewport instances for active panes in multi-view draw order:
+   * every orthographic pane first (registration order preserved within the
+   * group), then every perspective pane. The list is cached and only rebuilt
+   * when panes, kinds, or active flags change.
    *
-   * @returns Active editor viewports.
+   * @returns Active editor viewports ready for the render loop.
    */
-  getActiveViewports(): EditorViewport[] {
-    return this.panes
-      .filter((pane) => pane.isActive())
-      .map((pane) => pane.getViewport())
-      .filter((viewport): viewport is EditorViewport => viewport !== null);
+  getActiveViewports(): readonly EditorViewport[] {
+    return this.activeRenderViewports;
   }
 
   /**
-   * Returns every live viewport instance regardless of active flag.
+   * Returns every live viewport instance regardless of active flag, in
+   * registration order.
    *
    * @returns All non-null viewport instances.
    */
@@ -158,11 +175,13 @@ export class ViewportRegistry {
     this.panes.forEach((pane) => {
       pane.setActive(activeSet.has(pane.getId()));
     });
+    this.rebuildActiveRenderViewports();
   }
 
   /** Marks every pane active. */
   activateAllPanes(): void {
     this.panes.forEach((pane) => pane.setActive(true));
+    this.rebuildActiveRenderViewports();
   }
 
   /**
@@ -178,7 +197,9 @@ export class ViewportRegistry {
     if (!pane) return null;
     this.disposeViewportInPane(pane);
     pane.setKind(kind);
-    return this.createViewportInPane(pane, kind);
+    const created = this.createViewportInPane(pane, kind);
+    this.rebuildActiveRenderViewports();
+    return created;
   }
 
   /**
@@ -190,6 +211,7 @@ export class ViewportRegistry {
     const pane = this.getPaneById(paneId);
     if (!pane) return;
     this.disposeViewportInPane(pane);
+    this.rebuildActiveRenderViewports();
   }
 
   /**
@@ -204,19 +226,44 @@ export class ViewportRegistry {
     const pane = this.panes[index]!;
     this.disposeViewportInPane(pane);
     this.panes.splice(index, 1);
+    this.rebuildActiveRenderViewports();
     return true;
   }
 
   /** Disposes every live viewport instance while keeping pane descriptors. */
   disposeAllViewports(): void {
     this.panes.forEach((pane) => this.disposeViewportInPane(pane));
+    this.rebuildActiveRenderViewports();
   }
 
   /** Disposes all viewports and clears pane registration. */
   dispose(): void {
     this.disposeAllViewports();
     this.panes = [];
+    this.activeRenderViewports = [];
     this.factoryDependencies = null;
+  }
+
+  /**
+   * Rebuilds the cached multi-view list: active orthographic panes first, then
+   * active perspective panes. Relative registration order is preserved within
+   * each group so draw order stays stable for equal-projection panes.
+   */
+  private rebuildActiveRenderViewports(): void {
+    const orthographic: EditorViewport[] = [];
+    const perspective: EditorViewport[] = [];
+    for (let i = 0; i < this.panes.length; i++) {
+      const pane = this.panes[i];
+      if (!pane || !pane.isActive()) continue;
+      const viewport = pane.getViewport();
+      if (!viewport) continue;
+      if (isPerspectiveViewportKind(pane.getKind())) {
+        perspective.push(viewport);
+      } else {
+        orthographic.push(viewport);
+      }
+    }
+    this.activeRenderViewports = orthographic.concat(perspective);
   }
 
   /**

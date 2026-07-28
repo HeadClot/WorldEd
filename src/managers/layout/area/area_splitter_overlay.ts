@@ -3,6 +3,7 @@ import { WindowPointerDragSession } from '../../../utils/window_pointer_drag_ses
 import { listSharedBorders, type AreaSharedBorder } from './area_adjacency.js';
 import type { AreaLeafPlacement } from './area_leaf_placement.js';
 import type { AreaLayoutController } from './area_layout_controller.js';
+import { computeSplitRatioFromNormalizedPointer } from './area_layout_tree.js';
 
 /** Hit target thickness for resize splitters in CSS pixels. */
 const SPLITTER_HIT_PX = 6;
@@ -144,49 +145,43 @@ export class AreaSplitterOverlay {
    *
    * @param event Pointer move.
    * @param border Border being resized.
-   * @param layerRect Layer client rect.
-   * @param _startRatio Ratio at drag start (reserved).
+   * @param layerRect Layer client rect at drag start.
+   * @param _startRatio Ratio at drag start (unused; absolute pointer mapping).
    */
   private onSplitterDrag(event: PointerEvent, border: AreaSharedBorder, layerRect: DOMRect, _startRatio: number): void {
     void _startRatio;
     if (layerRect.width <= 0 || layerRect.height <= 0) return;
     const ratio = this.computeRatioFromPointer(event, border, layerRect);
     this.controller.setSplitRatioBetween(border.firstAreaId, border.secondAreaId, ratio);
-    this.rebuild(this.controller.getPlacements());
   }
 
   /**
-   * Computes a first-child ratio from pointer position along the border axis.
+   * Computes the two-pane ratio from the pointer along the shared border span.
    *
    * @param event Pointer event.
    * @param border Border.
    * @param layerRect Layer bounds.
-   * @returns Ratio in [0,1].
+   * @returns Ratio in [0,1] for
+   *   {@link AreaLayoutController.setSplitRatioBetween}.
    */
   private computeRatioFromPointer(event: PointerEvent, border: AreaSharedBorder, layerRect: DOMRect): number {
-    const placements = this.controller.getPlacements();
-    const first = placements.find((item) => item.payload.areaId === border.firstAreaId);
-    const second = placements.find((item) => item.payload.areaId === border.secondAreaId);
-    if (!first || !second) return 0.5;
-    if (border.direction === 'horizontal') {
-      const parentLeft = Math.min(first.rect.x, second.rect.x);
-      const parentRight = Math.max(first.rect.x + first.rect.width, second.rect.x + second.rect.width);
-      const parentWidth = parentRight - parentLeft;
-      const pointerX = (event.clientX - layerRect.left) / layerRect.width;
-      return (pointerX - parentLeft) / parentWidth;
-    }
-    const parentTop = Math.min(first.rect.y, second.rect.y);
-    const parentBottom = Math.max(first.rect.y + first.rect.height, second.rect.y + second.rect.height);
-    const parentHeight = parentBottom - parentTop;
-    const pointerY = (event.clientY - layerRect.top) / layerRect.height;
-    return (pointerY - parentTop) / parentHeight;
+    const normalizedX = (event.clientX - layerRect.left) / layerRect.width;
+    const normalizedY = (event.clientY - layerRect.top) / layerRect.height;
+    return computeSplitRatioFromNormalizedPointer(
+      this.controller.getRoot(),
+      border.firstAreaId,
+      border.secondAreaId,
+      border.direction,
+      normalizedX,
+      normalizedY,
+    );
   }
 
   /**
-   * Reads the current ratio of the parent split for the border pair.
+   * Reads the current two-pane ratio for the border pair.
    *
    * @param border Border pair.
-   * @returns Approximate ratio from placements.
+   * @returns Fraction of the shared span owned by the first area.
    */
   private readCurrentRatio(border: AreaSharedBorder): number {
     const placements = this.controller.getPlacements();

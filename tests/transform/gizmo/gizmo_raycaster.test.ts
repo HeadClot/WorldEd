@@ -136,7 +136,57 @@ describe('GizmoRaycaster', () => {
     const result = raycaster.pickHandle(setup.handles, setup.camera, setup.pickElement, event, setup.gizmoGroup);
     expect(result).toBe(setup.handles[0]);
   });
+
+  it('prefers free-move center over nearer axis stem hits at the origin', () => {
+    const setup = createCenterOverAxisPickSetup();
+    const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.pickElement, event, setup.gizmoGroup);
+    expect(result).toBe(setup.viewHandle);
+    expect(result?.getAxis()).toBe(GizmoAxis.VIEW);
+  });
 });
+
+/**
+ * Axis stem pick sits closer to the camera than the center cube so distance
+ * alone would prefer the arrow; free-move center must still win.
+ *
+ * @returns Fixtures with overlapping axis and VIEW handles.
+ */
+function createCenterOverAxisPickSetup(): {
+  handles: GizmoHandle[];
+  viewHandle: GizmoHandle;
+  camera: THREE.PerspectiveCamera;
+  pickElement: HTMLElement;
+  gizmoGroup: THREE.Group;
+} {
+  const stemMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2, 0.5), new THREE.MeshBasicMaterial());
+  stemMesh.position.set(0, 0.4, 0.1);
+  const axisHandle = new GizmoHandle(GizmoAxis.Y, 0x00ff00, stemMesh);
+  stemMesh.userData['handleId'] = axisHandle.getHandleId();
+  const centerMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshBasicMaterial());
+  centerMesh.position.set(0, 0, 0);
+  const viewHandle = new GizmoHandle(GizmoAxis.VIEW, 0xffffff, centerMesh);
+  centerMesh.userData['handleId'] = viewHandle.getHandleId();
+  const gizmoGroup = new THREE.Group();
+  gizmoGroup.add(stemMesh);
+  gizmoGroup.add(centerMesh);
+  gizmoGroup.visible = true;
+  gizmoGroup.updateMatrixWorld(true);
+  const camera = new THREE.PerspectiveCamera(60, 800 / 600, 0.1, 1000);
+  camera.position.set(0, 0, 5);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+  const canvas = {
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+  };
+  return {
+    handles: [axisHandle, viewHandle],
+    viewHandle,
+    camera,
+    pickElement: canvas as unknown as HTMLElement,
+    gizmoGroup,
+  };
+}
 
 /**
  * Builds a camera, pickElement: renderer.domElement as HTMLElement, handle, and

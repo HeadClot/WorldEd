@@ -49,6 +49,31 @@ describe('ViewportRegistry', () => {
     expect(kinds).toEqual([ViewportKind.TOP, ViewportKind.FRONT, ViewportKind.SIDE, ViewportKind.PERSPECTIVE]);
   });
 
+  it('returns active viewports orthographic-first then perspective for multi-view draw', () => {
+    registry.populateDefaultQuad(containers, { inputManager, sharedScene: {} as never, surface: {} as never });
+    const defaultKinds = registry.getActiveViewports().map((viewport) => viewport.getViewportKind());
+    expect(defaultKinds).toEqual([ViewportKind.TOP, ViewportKind.FRONT, ViewportKind.SIDE, ViewportKind.PERSPECTIVE]);
+    registry.replaceKind(registry.getPanes()[0]!.getId(), ViewportKind.PERSPECTIVE);
+    registry.replaceKind(registry.getPanes()[3]!.getId(), ViewportKind.TOP);
+    const reorderedKinds = registry.getActiveViewports().map((viewport) => viewport.getViewportKind());
+    expect(reorderedKinds).toEqual([ViewportKind.FRONT, ViewportKind.SIDE, ViewportKind.TOP, ViewportKind.PERSPECTIVE]);
+    const registrationKinds = registry.getAllViewports().map((viewport) => viewport.getViewportKind());
+    expect(registrationKinds).toEqual([
+      ViewportKind.PERSPECTIVE,
+      ViewportKind.FRONT,
+      ViewportKind.SIDE,
+      ViewportKind.TOP,
+    ]);
+  });
+
+  it('keeps registration pane indices stable when render order changes', () => {
+    registry.populateDefaultQuad(containers, { inputManager, sharedScene: {} as never, surface: {} as never });
+    const topPaneId = registry.getPanes()[0]!.getId();
+    registry.replaceKind(topPaneId, ViewportKind.PERSPECTIVE);
+    expect(registry.getPaneByIndex(0)?.getId()).toBe(topPaneId);
+    expect(registry.getPaneByIndex(0)?.getKind()).toBe(ViewportKind.PERSPECTIVE);
+  });
+
   it('should replace a pane kind by disposing and creating a new instance', () => {
     registry.populateDefaultQuad(containers, { inputManager, sharedScene: {} as never, surface: {} as never });
     const pane = registry.getPanes()[0]!;

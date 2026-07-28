@@ -115,18 +115,46 @@ export class GizmoHandle {
   }
 
   /**
-   * Applies idle or hover color to the handle mesh and any bounds-arrow visual
-   * children (front and occluded).
+   * Applies idle or hover color to every mesh part of this handle: tip/head,
+   * stem, occluded ghosts, and bounds arrow children. Parts are matched by
+   * handle id under the shared parent group so translate/scale lines light up
+   * with their heads.
    */
   private updateMeshColor(): void {
     const targetColor = this.isHovered ? this.hoverColor : this.baseColor;
-    this.applyColorToMesh(this.visualMesh, targetColor, this.isHovered);
-    this.visualMesh.traverse((child) => {
-      if (child === this.visualMesh) return;
+    for (const mesh of this.collectHandleMeshes()) {
+      this.applyColorToMesh(mesh, targetColor, this.isHovered);
+    }
+  }
+
+  /**
+   * Lists meshes that belong to this handle (visual tip plus same-id siblings).
+   *
+   * @returns Meshes to tint for idle/hover state.
+   */
+  private collectHandleMeshes(): THREE.Mesh[] {
+    const meshes: THREE.Mesh[] = [];
+    const searchRoot = this.visualMesh.parent ?? this.visualMesh;
+    searchRoot.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
-      if (child.userData['boundsCubeVisual'] !== true) return;
-      this.applyColorToMesh(child, targetColor, this.isHovered);
+      if (!this.meshBelongsToThisHandle(child)) return;
+      meshes.push(child);
     });
+    if (meshes.length === 0) {
+      meshes.push(this.visualMesh);
+    }
+    return meshes;
+  }
+
+  /**
+   * Returns whether a mesh is part of this handle's drawable set.
+   *
+   * @param mesh Candidate mesh under the handle parent.
+   * @returns True when the mesh is the visual tip or shares this handle id.
+   */
+  private meshBelongsToThisHandle(mesh: THREE.Mesh): boolean {
+    if (mesh === this.visualMesh) return true;
+    return mesh.userData['handleId'] === this.handleId;
   }
 
   /**
@@ -138,6 +166,7 @@ export class GizmoHandle {
    * @param isHovered Whether hover styling is active.
    */
   private applyColorToMesh(mesh: THREE.Mesh, targetColor: number, isHovered: boolean): void {
+    if (mesh.userData['isGizmoPickVolume'] === true) return;
     const material = mesh.material;
     if (!material || Array.isArray(material) || !('color' in material)) return;
     const meshMaterial = material as THREE.MeshBasicMaterial;

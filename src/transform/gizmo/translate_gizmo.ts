@@ -7,6 +7,7 @@ import {
   applyGizmoFrontRenderOrder,
   createGizmoFrontMaterial,
   createGizmoOccludedMesh,
+  createGizmoPickMesh,
 } from './gizmo_visual_style.js';
 
 /** Data stored alongside each arrow handle for proper scene management. */
@@ -17,13 +18,14 @@ interface ArrowData {
 }
 
 /**
- * Creates the translate transform gizmo with axis arrows only. Uses shared
- * gizmo sizing and depth-aware materials.
+ * Creates the translate transform gizmo with axis arrows, thick invisible pick
+ * volumes, and a Unity-style free-move center cube (camera-plane drag).
  */
 export class TranslateGizmo {
   private theme: typeof Theme;
   private handles: GizmoHandle[];
   private arrowData: ArrowData[];
+  private centerGroup: THREE.Group | null;
 
   /**
    * Creates a new translate gizmo builder.
@@ -34,19 +36,22 @@ export class TranslateGizmo {
     this.theme = theme;
     this.handles = [];
     this.arrowData = [];
+    this.centerGroup = null;
   }
 
   /**
-   * Creates the three axis arrow handles and returns them.
+   * Creates three axis arrows plus a free-move center handle.
    *
-   * @returns An array of GizmoHandle instances for X, Y, and Z.
+   * @returns GizmoHandle instances for X, Y, Z, and VIEW.
    */
   createHandles(): GizmoHandle[] {
     this.handles = [];
     this.arrowData = [];
+    this.centerGroup = null;
     this.createAxisArrow(GizmoAxis.X, this.theme.gizmoXAxisColor, new THREE.Vector3(1, 0, 0));
     this.createAxisArrow(GizmoAxis.Y, this.theme.gizmoYAxisColor, new THREE.Vector3(0, 1, 0));
     this.createAxisArrow(GizmoAxis.Z, this.theme.gizmoZAxisColor, new THREE.Vector3(0, 0, 1));
+    this.createCenterHandle();
     return this.handles;
   }
 
@@ -58,19 +63,21 @@ export class TranslateGizmo {
   getAllSceneObjects(): THREE.Object3D[] {
     const objects: THREE.Object3D[] = [];
     this.arrowData.forEach((data) => objects.push(data.group));
+    if (this.centerGroup) objects.push(this.centerGroup);
     return objects;
   }
 
   /** Disposes all geometries and materials created by this gizmo. */
   dispose(): void {
     this.arrowData.forEach((data) => this.disposeObject3D(data.group));
+    if (this.centerGroup) this.disposeObject3D(this.centerGroup);
     this.arrowData = [];
+    this.centerGroup = null;
     this.handles = [];
   }
 
   /**
-   * Creates a single axis arrow handle with a cone head and cylinder stem.
-   * Front and occluded ghost meshes share geometry and handle id.
+   * Creates a single axis arrow with thin visuals and a thicker pick volume.
    *
    * @param axis The gizmo axis for this arrow.
    * @param color The hex color of the arrow.
@@ -78,28 +85,133 @@ export class TranslateGizmo {
    */
   private createAxisArrow(axis: GizmoAxis, color: number, direction: THREE.Vector3): void {
     const group = new THREE.Group();
+    const stemMesh = this.createMoveStemMesh(color);
+    const headMesh = this.createMoveHeadMesh(color);
+    const handle = new GizmoHandle(axis, color, headMesh);
+    const handleId = handle.getHandleId();
+    this.attachAxisArrowMeshes(group, stemMesh, headMesh, handleId);
+    this.alignGroupToDirection(group, direction);
+    this.arrowData.push({ group, headMesh, stemMesh });
+    this.handles.push(handle);
+  }
+
+  /**
+   * Creates the thin cylinder stem for a move arrow.
+   *
+   * @param color Axis color.
+   * @returns Front stem mesh positioned along local +Y.
+   */
+  private createMoveStemMesh(color: number): THREE.Mesh {
     const stemGeometry = new THREE.CylinderGeometry(
       GizmoVisualStyle.stemRadius,
       GizmoVisualStyle.stemRadius,
       GizmoVisualStyle.moveStemLength,
       8,
     );
-    const headGeometry = new THREE.ConeGeometry(GizmoVisualStyle.moveHeadRadius, GizmoVisualStyle.moveHeadLength, 8);
     const stemMesh = this.createFrontMesh(stemGeometry, color);
     stemMesh.position.set(0, GizmoVisualStyle.moveStemLength * 0.5, 0);
+    return stemMesh;
+  }
+
+  /**
+   * Creates the cone head for a move arrow.
+   *
+   * @param color Axis color.
+   * @returns Front head mesh positioned at the stem tip.
+   */
+  private createMoveHeadMesh(color: number): THREE.Mesh {
+    const headGeometry = new THREE.ConeGeometry(GizmoVisualStyle.moveHeadRadius, GizmoVisualStyle.moveHeadLength, 8);
     const headMesh = this.createFrontMesh(headGeometry, color);
     const headOffset = GizmoVisualStyle.moveStemLength + GizmoVisualStyle.moveHeadLength * 0.5;
     headMesh.position.set(0, headOffset, 0);
-    const handle = new GizmoHandle(axis, color, headMesh);
-    const handleId = handle.getHandleId();
+    return headMesh;
+  }
+
+  /**
+   * Tags, ghosts, pick-volumes, and parents stem and head under the axis group.
+   *
+   * @param group Axis handle group.
+   * @param stemMesh Visual stem.
+   * @param headMesh Visual head.
+   * @param handleId Shared handle id.
+   */
+  private attachAxisArrowMeshes(
+    group: THREE.Group,
+    stemMesh: THREE.Mesh,
+    headMesh: THREE.Mesh,
+    handleId: number,
+  ): void {
     this.tagHandleId(stemMesh, handleId);
     this.tagHandleId(headMesh, handleId);
-    this.addOccludedPair(group, stemGeometry, color, handleId, stemMesh.position);
-    this.addOccludedPair(group, headGeometry, color, handleId, headMesh.position);
+    this.addOccludedPair(group, stemMesh.geometry, this.materialColorOf(stemMesh), handleId, stemMesh.position);
+    this.addOccludedPair(group, headMesh.geometry, this.materialColorOf(headMesh), handleId, headMesh.position);
+    this.addAxisPickVolumes(group, handleId, stemMesh.position, headMesh.position);
     group.add(stemMesh);
     group.add(headMesh);
-    this.alignGroupToDirection(group, direction);
-    this.arrowData.push({ group, headMesh, stemMesh });
+  }
+
+  /**
+   * Reads the hex color from a mesh basic material.
+   *
+   * @param mesh Mesh with MeshBasicMaterial.
+   * @returns Hex color, or white when unavailable.
+   */
+  private materialColorOf(mesh: THREE.Mesh): number {
+    const material = mesh.material;
+    if (material instanceof THREE.MeshBasicMaterial) {
+      return material.color.getHex();
+    }
+    return 0xffffff;
+  }
+
+  /**
+   * Adds invisible thicker pick meshes for stem and head along local Y.
+   *
+   * @param group Axis handle group.
+   * @param handleId Shared handle id.
+   * @param stemPosition Local stem center.
+   * @param headPosition Local head center.
+   */
+  private addAxisPickVolumes(
+    group: THREE.Group,
+    handleId: number,
+    stemPosition: THREE.Vector3,
+    headPosition: THREE.Vector3,
+  ): void {
+    const stemPick = createGizmoPickMesh(
+      new THREE.CylinderGeometry(
+        GizmoVisualStyle.stemPickRadius,
+        GizmoVisualStyle.stemPickRadius,
+        GizmoVisualStyle.moveStemLength,
+        8,
+      ),
+      handleId,
+    );
+    stemPick.position.copy(stemPosition);
+    const headPick = createGizmoPickMesh(
+      new THREE.ConeGeometry(GizmoVisualStyle.moveHeadPickRadius, GizmoVisualStyle.moveHeadLength, 8),
+      handleId,
+    );
+    headPick.position.copy(headPosition);
+    group.add(stemPick);
+    group.add(headPick);
+  }
+
+  /** Creates the free-move center cube used for camera-plane translation. */
+  private createCenterHandle(): void {
+    const group = new THREE.Group();
+    const size = GizmoVisualStyle.centerHandleSize;
+    const geometry = new THREE.BoxGeometry(size, size, size);
+    const color = this.theme.gizmoCenterColor;
+    const mesh = this.createFrontMesh(geometry, color);
+    const handle = new GizmoHandle(GizmoAxis.VIEW, color, mesh);
+    const handleId = handle.getHandleId();
+    this.tagHandleId(mesh, handleId);
+    this.addOccludedPair(group, geometry, color, handleId, mesh.position);
+    const pick = createGizmoPickMesh(new THREE.BoxGeometry(size * 1.35, size * 1.35, size * 1.35), handleId);
+    group.add(pick);
+    group.add(mesh);
+    this.centerGroup = group;
     this.handles.push(handle);
   }
 

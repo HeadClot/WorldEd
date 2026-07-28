@@ -37,9 +37,10 @@ describe('TransformGizmo', () => {
     expect(gizmo.getHandles().length).toBe(6);
   });
 
-  it('should produce 3 axis handles in TRANSLATE mode', () => {
+  it('should produce three axis handles plus free-move center in TRANSLATE mode', () => {
     gizmo.setMode(TransformMode.TRANSLATE);
-    expect(gizmo.getHandles().length).toBe(3);
+    expect(gizmo.getHandles().length).toBe(4);
+    expect(gizmo.getHandles().some((handle) => handle.getAxis() === GizmoAxis.VIEW)).toBe(true);
   });
 
   it('should produce 3 handles in ROTATE mode', () => {
@@ -128,7 +129,7 @@ describe('TransformGizmo', () => {
     gizmo.setMode(TransformMode.ROTATE);
     expect(gizmo.getHandles().length).toBe(3);
     gizmo.setMode(TransformMode.TRANSLATE);
-    expect(gizmo.getHandles().length).toBe(3);
+    expect(gizmo.getHandles().length).toBe(4);
     gizmo.setMode(TransformMode.SCALE);
     expect(gizmo.getHandles().length).toBe(3);
   });
@@ -218,6 +219,22 @@ describe('TransformGizmo', () => {
     expect(countGuideSegments(geometry!)).toBe(24);
   });
 
+  it('hides bounds resize grips on master and clones during body-move suppression only', () => {
+    const clone = gizmo.getHandleGroupClone('xyz');
+    const selected = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selected.updateMatrixWorld(true);
+    gizmo.setVisible(true);
+    gizmo.updateBoundsFromMeshes([selected]);
+    expect(countVisibleBoundsPickHandles(gizmo.getHandleGroup())).toBe(6);
+    expect(countVisibleBoundsPickHandles(clone)).toBe(6);
+    gizmo.setBoundsResizeHandlesVisible(false);
+    expect(countVisibleBoundsPickHandles(gizmo.getHandleGroup())).toBe(0);
+    expect(countVisibleBoundsPickHandles(clone)).toBe(0);
+    gizmo.setBoundsResizeHandlesVisible(true);
+    expect(countVisibleBoundsPickHandles(gizmo.getHandleGroup())).toBe(6);
+    expect(countVisibleBoundsPickHandles(clone)).toBe(6);
+  });
+
   it('does not deep-clone viewport bounds groups when only camera distance changes', () => {
     const clone = gizmo.getHandleGroupClone('xyz');
     gizmo.setVisible(true);
@@ -233,7 +250,91 @@ describe('TransformGizmo', () => {
     gizmo.updateBoundsFromMeshes([selected], farCamera);
     expect(clone.children[0]).toBe(childAfterFirst);
   });
+
+  it('sizes translate handles from orthographic frustum instead of camera distance', () => {
+    gizmo.setMode(TransformMode.TRANSLATE);
+    gizmo.setPivot(new THREE.Vector3(0, 0, 0));
+    const camera = new THREE.OrthographicCamera(-2, 2, 1.5, -1.5, 0.1, 1000);
+    camera.position.set(0, 100, 0);
+    gizmo.updateScaleForCamera(camera);
+    const scale = gizmo.getHandleGroup().scale.x;
+    expect(scale).toBeCloseTo(3 * 0.08);
+    expect(scale).toBeLessThan(100 * 0.08);
+  });
+
+  it('scales each viewport clone from its own camera so 3D fly does not inflate 2D', () => {
+    gizmo.setMode(TransformMode.TRANSLATE);
+    gizmo.setVisible(true);
+    gizmo.setPivot(new THREE.Vector3(0, 0, 0));
+    const orthoClone = gizmo.getHandleGroupClone('xz');
+    const perspectiveClone = gizmo.getHandleGroupClone('xyz');
+    const ortho = new THREE.OrthographicCamera(-4, 4, 3, -3, 0.1, 1000);
+    ortho.position.set(0, 50, 0);
+    const perspective = new THREE.PerspectiveCamera(60, 1, 0.1, 10000);
+    perspective.position.set(0, 0, 200);
+    gizmo.prepareTransformCloneForCamera(orthoClone, ortho);
+    gizmo.prepareTransformCloneForCamera(perspectiveClone, perspective);
+    expect(orthoClone.scale.x).toBeCloseTo(6 * 0.08);
+    expect(perspectiveClone.scale.x).toBeCloseTo(200 * 0.08);
+    expect(orthoClone.scale.x).toBeLessThan(perspectiveClone.scale.x);
+    gizmo.updateScaleForCamera(perspective);
+    expect(gizmo.getHandleGroup().scale.x).toBeCloseTo(200 * 0.08);
+    expect(orthoClone.scale.x).toBeCloseTo(6 * 0.08);
+  });
+
+  it('hides Global depth-axis translate handles in orthographic panes', () => {
+    gizmo.setMode(TransformMode.TRANSLATE);
+    gizmo.setHideOrthoDepthAxes(true);
+    const top = gizmo.getHandleGroupClone('xz');
+    const front = gizmo.getHandleGroupClone('xy');
+    const side = gizmo.getHandleGroupClone('yz');
+    const perspective = gizmo.getHandleGroupClone('xyz');
+    expect(isAxisVisibleOnClone(top, gizmo, GizmoAxis.Y)).toBe(false);
+    expect(isAxisVisibleOnClone(top, gizmo, GizmoAxis.X)).toBe(true);
+    expect(isAxisVisibleOnClone(front, gizmo, GizmoAxis.Z)).toBe(false);
+    expect(isAxisVisibleOnClone(side, gizmo, GizmoAxis.X)).toBe(false);
+    expect(isAxisVisibleOnClone(perspective, gizmo, GizmoAxis.Y)).toBe(true);
+  });
+
+  it('shows all translate axes in orthographic panes when Local space is active', () => {
+    gizmo.setMode(TransformMode.TRANSLATE);
+    const top = gizmo.getHandleGroupClone('xz');
+    gizmo.setHideOrthoDepthAxes(true);
+    expect(isAxisVisibleOnClone(top, gizmo, GizmoAxis.Y)).toBe(false);
+    gizmo.setHideOrthoDepthAxes(false);
+    expect(isAxisVisibleOnClone(top, gizmo, GizmoAxis.Y)).toBe(true);
+    expect(isAxisVisibleOnClone(top, gizmo, GizmoAxis.X)).toBe(true);
+  });
+
+  it('hides Global depth-axis scale handles in orthographic panes', () => {
+    gizmo.setMode(TransformMode.SCALE);
+    gizmo.setHideOrthoDepthAxes(true);
+    const top = gizmo.getHandleGroupClone('xz');
+    expect(isAxisVisibleOnClone(top, gizmo, GizmoAxis.Y)).toBe(false);
+    expect(isAxisVisibleOnClone(top, gizmo, GizmoAxis.Z)).toBe(true);
+  });
 });
+
+/**
+ * Returns whether any mesh for the given axis is visible on a viewport clone.
+ *
+ * @param clone Viewport gizmo group.
+ * @param gizmo Source gizmo with master handles.
+ * @param axis Axis to query.
+ * @returns True when at least one matching mesh is visible.
+ */
+function isAxisVisibleOnClone(clone: THREE.Group, gizmo: TransformGizmo, axis: GizmoAxis): boolean {
+  const handle = gizmo.getHandles().find((entry) => entry.getAxis() === axis);
+  if (!handle) return false;
+  const handleId = handle.getHandleId();
+  let visible = false;
+  clone.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    if (child.userData['handleId'] !== handleId) return;
+    if (child.visible) visible = true;
+  });
+  return visible;
+}
 
 /**
  * Finds the first bounds guide LineSegments geometry under a gizmo group.
@@ -264,4 +365,20 @@ function countGuideSegments(geometry: THREE.BufferGeometry): number {
   const position = geometry.getAttribute('position');
   if (!position) return 0;
   return Math.floor(position.count / 2);
+}
+
+/**
+ * Counts visible 3D bounds resize pick roots under a gizmo group.
+ *
+ * @param group Master or viewport gizmo group.
+ * @returns Number of visible pick handles.
+ */
+function countVisibleBoundsPickHandles(group: THREE.Group): number {
+  let count = 0;
+  group.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    if (child.userData['boundsCubePick'] !== true) return;
+    if (child.visible) count += 1;
+  });
+  return count;
 }

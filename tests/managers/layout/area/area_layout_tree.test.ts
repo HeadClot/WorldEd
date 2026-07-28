@@ -7,6 +7,7 @@ import {
 } from '../../../../src/managers/layout/area/area_rect.js';
 import {
   cloneAreaTree,
+  computeSplitRatioFromNormalizedPointer,
   countAreaLeaves,
   joinAreaLeaves,
   listAreaLeafPlacements,
@@ -97,15 +98,97 @@ describe('area_layout_tree', () => {
     expect(result).toBeNull();
   });
 
-  it('should resize non-sibling neighbors by updating the separating ancestor ratio', () => {
+  it('should resize non-sibling neighbors without moving unrelated panes', () => {
     const root = createQuadLayout();
+    const before = listAreaLeafPlacements(root);
+    const frontBefore = before.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.front)!;
     const resized = setSplitRatioBetweenAreas(root, DEFAULT_AREA_IDS.top, DEFAULT_AREA_IDS.side, 0.25);
     const placements = listAreaLeafPlacements(resized);
     const top = placements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.top)!;
     const side = placements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.side)!;
+    const frontAfter = placements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.front)!;
     expect(top.rect.height).toBeCloseTo(0.25, 6);
     expect(side.rect.y).toBeCloseTo(0.25, 6);
     expect(side.rect.height).toBeCloseTo(0.75, 6);
+    expect(frontAfter.rect.height).toBeCloseTo(frontBefore.rect.height, 6);
+    expect(frontAfter.rect.y).toBeCloseTo(frontBefore.rect.y, 6);
+  });
+
+  it('keeps the middle|right T-junction border under the pointer without resizing the left pane', () => {
+    const newId = 'pane_split_right';
+    let root = createDualTopPerspectiveLayout();
+    root = splitAreaLeaf(
+      root,
+      DEFAULT_AREA_IDS.top,
+      'horizontal',
+      0.5,
+      createViewportLeafPayload(newId, ViewportKind.TOP),
+    );
+    const placements = listAreaLeafPlacements(root);
+    const left = placements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.top)!;
+    const middle = placements.find((item) => item.payload.areaId === newId)!;
+    const right = placements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.perspective)!;
+    const borderX = right.rect.x;
+    const leftWidthBefore = left.rect.width;
+    const ratioAtBorder = computeSplitRatioFromNormalizedPointer(
+      root,
+      newId,
+      DEFAULT_AREA_IDS.perspective,
+      'horizontal',
+      borderX,
+      0.5,
+    );
+    expect(ratioAtBorder).toBeCloseTo(middle.rect.width / (middle.rect.width + right.rect.width), 6);
+    const resized = setSplitRatioBetweenAreas(root, newId, DEFAULT_AREA_IDS.perspective, ratioAtBorder);
+    const after = listAreaLeafPlacements(resized);
+    const leftAfter = after.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.top)!;
+    const middleAfter = after.find((item) => item.payload.areaId === newId)!;
+    const rightAfter = after.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.perspective)!;
+    expect(middleAfter.rect.x + middleAfter.rect.width).toBeCloseTo(borderX, 6);
+    expect(rightAfter.rect.x).toBeCloseTo(borderX, 6);
+    expect(leftAfter.rect.width).toBeCloseTo(leftWidthBefore, 6);
+    const moved = setSplitRatioBetweenAreas(root, newId, DEFAULT_AREA_IDS.perspective, 0.5);
+    const movedPlacements = listAreaLeafPlacements(moved);
+    const leftMoved = movedPlacements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.top)!;
+    const middleMoved = movedPlacements.find((item) => item.payload.areaId === newId)!;
+    const rightMoved = movedPlacements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.perspective)!;
+    expect(leftMoved.rect.width).toBeCloseTo(leftWidthBefore, 6);
+    expect(middleMoved.rect.width + rightMoved.rect.width).toBeCloseTo(middle.rect.width + right.rect.width, 6);
+    expect(middleMoved.rect.width).toBeCloseTo(rightMoved.rect.width, 6);
+  });
+
+  it('maps pointer on a sibling border within a nested parent without jumping', () => {
+    const newId = 'pane_nested';
+    let root = createDualTopPerspectiveLayout();
+    root = splitAreaLeaf(
+      root,
+      DEFAULT_AREA_IDS.perspective,
+      'horizontal',
+      0.4,
+      createViewportLeafPayload(newId, ViewportKind.PERSPECTIVE),
+    );
+    const placements = listAreaLeafPlacements(root);
+    const leftOfWorkspace = placements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.top)!;
+    const leftOfPair = placements.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.perspective)!;
+    const rightOfPair = placements.find((item) => item.payload.areaId === newId)!;
+    const borderX = rightOfPair.rect.x;
+    const leftWorkspaceWidth = leftOfWorkspace.rect.width;
+    const ratioAtBorder = computeSplitRatioFromNormalizedPointer(
+      root,
+      DEFAULT_AREA_IDS.perspective,
+      newId,
+      'horizontal',
+      borderX,
+      0.5,
+    );
+    expect(ratioAtBorder).toBeCloseTo(0.4, 6);
+    const resized = setSplitRatioBetweenAreas(root, DEFAULT_AREA_IDS.perspective, newId, ratioAtBorder);
+    const after = listAreaLeafPlacements(resized);
+    const leftAfter = after.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.perspective)!;
+    const workspaceLeftAfter = after.find((item) => item.payload.areaId === DEFAULT_AREA_IDS.top)!;
+    expect(leftAfter.rect.x + leftAfter.rect.width).toBeCloseTo(borderX, 6);
+    expect(workspaceLeftAfter.rect.width).toBeCloseTo(leftWorkspaceWidth, 6);
+    void leftOfPair;
   });
 
   it('should deep clone trees without sharing node identity', () => {

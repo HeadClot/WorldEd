@@ -342,6 +342,7 @@ export class BoundsDragController {
     this.session.boundsPointerMoved = false;
     this.transformGizmo.setHighlightedBoundsFace(null);
     this.transformGizmo.setBoundsGuideLinesVisible(true);
+    this.transformGizmo.setBoundsResizeHandlesVisible(false);
     return true;
   }
 

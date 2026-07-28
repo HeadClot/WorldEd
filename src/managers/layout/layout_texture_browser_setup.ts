@@ -5,6 +5,8 @@ import { TextureBrowser } from '../../ui/texture/texture_browser.js';
 import { TextureBrowserController } from '../texture/texture_browser_controller.js';
 import { TextureAssignmentController } from '../texture/texture_assignment_controller.js';
 import { StatusBar } from '../../ui/status_bar.js';
+import type { EditorViewport } from '../../viewports/editor_viewport.js';
+import { bindFloatingPanelToViewports, scheduleStartupFloatingPanelLayoutPass } from './layout_clip_tools_setup.js';
 
 /** Dependencies for constructing the texture browser floating panel. */
 export interface TextureBrowserSetupDeps {
@@ -12,7 +14,7 @@ export interface TextureBrowserSetupDeps {
   faceController: FaceExtrusionController;
   commandStack: CommandStack;
   toolbarContainer: HTMLElement;
-  anchorViewport: HTMLElement;
+  getViewports: () => readonly EditorViewport[];
   statusBar: StatusBar | null;
   afterSurfaceChange: () => void;
 }
@@ -36,6 +38,8 @@ export function setupTextureBrowserPanel(deps: TextureBrowserSetupDeps): Texture
     current: null,
   };
   const textureBrowser = createTextureBrowserUi(deps, controllerHolder);
+  bindFloatingPanelToViewports(textureBrowser, deps.getViewports);
+  scheduleStartupFloatingPanelLayoutPass(textureBrowser, deps.getViewports);
   const textureBrowserController = createTextureBrowserController(deps, textureBrowser, textureAssignmentController);
   controllerHolder.current = textureBrowserController;
   return {
@@ -70,18 +74,14 @@ function createTextureBrowserUi(
   deps: TextureBrowserSetupDeps,
   controllerHolder: { current: TextureBrowserController | null },
 ): TextureBrowser {
-  return new TextureBrowser(
-    deps.toolbarContainer,
-    {
-      onOpenFolder: () => {
-        void controllerHolder.current?.openFolder();
-      },
-      onSelectTexture: (entryId) => {
-        controllerHolder.current?.selectTexture(entryId);
-      },
+  return new TextureBrowser(deps.toolbarContainer, {
+    onOpenFolder: () => {
+      void controllerHolder.current?.openFolder();
     },
-    deps.anchorViewport,
-  );
+    onSelectTexture: (entryId) => {
+      controllerHolder.current?.selectTexture(entryId);
+    },
+  });
 }
 
 /**

@@ -150,17 +150,16 @@ describe('UvEditor', () => {
         toJSON: () => ({}),
       }),
     });
-    Object.defineProperty(window, 'innerHeight', {
-      configurable: true,
-      value: 900,
-    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1200 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 });
     editor.setDefaultAnchor(anchor);
     editor.show();
     const panel = host.querySelector('div') as HTMLElement;
     const paddingPx = 8;
+    const panelHeight = parseFloat(panel.style.height) || panel.getBoundingClientRect().height || 200;
     expect(panel.style.left).toBe(`${400 + paddingPx}px`);
-    expect(panel.style.top).toBe('auto');
-    expect(panel.style.bottom).toBe(`${900 - 600 + paddingPx}px`);
+    expect(panel.style.top).toBe(`${600 - panelHeight - paddingPx}px`);
+    expect(panel.style.bottom).toBe('auto');
     expect(panel.style.right).toBe('auto');
     document.body.removeChild(anchor);
   });

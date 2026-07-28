@@ -77,4 +77,23 @@ describe('GizmoHandle', () => {
     expect(planeHandle.getAxis()).toBe(GizmoAxis.XY_PLANE);
     expect(planeHandle.getColor()).toBe(0xffaa33);
   });
+
+  it('should hover the stem as well as the tip when they share a handle id', () => {
+    const group = new THREE.Group();
+    const stemMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.9 });
+    const tipMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.9 });
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 8), stemMaterial);
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), tipMaterial);
+    const multiHandle = new GizmoHandle(GizmoAxis.X, 0xff0000, tip);
+    const handleId = multiHandle.getHandleId();
+    stem.userData['handleId'] = handleId;
+    tip.userData['handleId'] = handleId;
+    group.add(stem, tip);
+    multiHandle.setHoverColor(true);
+    expect(tipMaterial.color.getHex()).toBe(0xffffff);
+    expect(stemMaterial.color.getHex()).toBe(0xffffff);
+    multiHandle.setHoverColor(false);
+    expect(tipMaterial.color.getHex()).toBe(0xff0000);
+    expect(stemMaterial.color.getHex()).toBe(0xff0000);
+  });
 });

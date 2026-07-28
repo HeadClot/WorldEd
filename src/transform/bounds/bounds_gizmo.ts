@@ -69,6 +69,7 @@ export class BoundsGizmo {
   private cubeVisualWorldSize: number;
   private earWorldSize: number;
   private guideLinesWanted: boolean;
+  private resizeHandlesWanted: boolean;
   private highlightedFace: BoundsFace | null;
   private highlightMode: BoundsFaceHighlightMode;
 
@@ -92,6 +93,7 @@ export class BoundsGizmo {
     this.cubeVisualWorldSize = 0.12;
     this.earWorldSize = 0.18;
     this.guideLinesWanted = false;
+    this.resizeHandlesWanted = true;
     this.highlightedFace = null;
     this.highlightMode = 'resize';
   }
@@ -238,6 +240,28 @@ export class BoundsGizmo {
    */
   areGuideLinesVisible(): boolean {
     return this.guideLinesWanted && (this.guideLines?.isVisible() ?? false);
+  }
+
+  /**
+   * Shows or hides mid-face resize grips (2D CAD ears and 3D face arrows).
+   * Hidden during bounds body-move (position) drags where extents do not
+   * change; kept visible during resize so the active grip stays on the face.
+   * Face pick planes stay so the drag can continue.
+   *
+   * @param visible Whether resize grips should be drawn.
+   */
+  setResizeHandlesVisible(visible: boolean): void {
+    this.resizeHandlesWanted = visible;
+    this.applyResizeHandleVisibility();
+  }
+
+  /**
+   * Returns whether resize grips are requested to be shown.
+   *
+   * @returns True when 2D ears / 3D arrows should draw.
+   */
+  areResizeHandlesVisible(): boolean {
+    return this.resizeHandlesWanted;
   }
 
   /**
@@ -511,6 +535,8 @@ export class BoundsGizmo {
       if (!(child instanceof THREE.Mesh)) return;
       if (child.userData[BOUNDS_CUBE_PICK_KEY] !== true) return;
       if (child.userData[BOUNDS_HANDLE_IS_EAR_KEY] === true) return;
+      child.visible = this.resizeHandlesWanted;
+      if (!this.resizeHandlesWanted) return;
       this.scaleArrowPickAndVisual(child, pickSize, visualSize);
     });
   }
@@ -542,7 +568,8 @@ export class BoundsGizmo {
       const sideLength = this.earSideLengthWorld(face, viewPlane);
       const layout = computeBoundsEarScreenLayout(camera, viewportHeightPx, sideLength);
       this.placeEarOnFace(child, face, orientation, layout);
-      child.visible = this.isEarAlongEdgeLongEnough(layout.alongEdge, camera, viewportHeightPx);
+      child.visible =
+        this.resizeHandlesWanted && this.isEarAlongEdgeLongEnough(layout.alongEdge, camera, viewportHeightPx);
     });
     this.applyEarHighlightColors(root);
   }
@@ -605,6 +632,10 @@ export class BoundsGizmo {
     const isHandle = typeof child.userData['handleId'] === 'number';
     const isEdgeHighlight = child.userData[BOUNDS_FACE_EDGE_HIGHLIGHT_KEY] === true;
     if (!isHandle && !isEdgeHighlight) return;
+    if (isHandle && !this.resizeHandlesWanted) {
+      child.visible = false;
+      return;
+    }
     if (hiddenAxes.includes(axis)) {
       child.visible = false;
       return;
@@ -635,7 +666,7 @@ export class BoundsGizmo {
       offset: this.earWorldSize * 0.28,
     };
     this.placeEarOnFace(mesh, face, orientation, fallbackLayout);
-    mesh.visible = true;
+    mesh.visible = this.resizeHandlesWanted;
   }
 
   /**
@@ -898,13 +929,21 @@ export class BoundsGizmo {
     object.quaternion.copy(quaternion);
   }
 
-  /** Shows handles and face picks; edge highlights stay hover-driven. */
+  /** Shows face picks and applies the current resize-grip visibility policy. */
   private showInteractiveParts(): void {
-    this.handleMeshes.forEach((mesh) => {
-      mesh.visible = true;
-    });
+    this.applyResizeHandleVisibility();
     this.facePickMeshes.forEach((mesh) => {
       mesh.visible = true;
+    });
+  }
+
+  /**
+   * Applies {@link resizeHandlesWanted} to every mid-face resize grip root
+   * (including nested 3D arrow visuals).
+   */
+  private applyResizeHandleVisibility(): void {
+    this.handleMeshes.forEach((mesh) => {
+      mesh.visible = this.resizeHandlesWanted;
     });
   }
 
@@ -959,6 +998,7 @@ export class BoundsGizmo {
     this.edgeHighlightMeshes.clear();
     this.currentBounds = null;
     this.guideLinesWanted = false;
+    this.resizeHandlesWanted = true;
     this.highlightedFace = null;
   }
 

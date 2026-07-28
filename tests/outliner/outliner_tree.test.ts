@@ -164,6 +164,49 @@ describe('OutlinerTree', () => {
     expect(treeElement.children.length).toBe(2);
   });
 
+  it('keeps scene selection highlight after search hides then shows the selected row', () => {
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshA.name = 'Apple';
+    const meshB = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial());
+    meshB.name = 'Banana';
+    root.add(meshA);
+    root.add(meshB);
+    const selection = new Set<THREE.Mesh>([meshB]);
+    tree.refresh(selection);
+    const searchInput = container.children[0] as HTMLInputElement;
+    searchInput.value = 'App';
+    searchInput.dispatchEvent(new Event('input'));
+    const treeElement = container.children[1] as HTMLElement;
+    expect(treeElement.children.length).toBe(1);
+    expect((treeElement.children[0] as HTMLElement).style.background).toBe('transparent');
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input'));
+    expect(treeElement.children.length).toBe(2);
+    const bananaRow = Array.from(treeElement.children).find((row) =>
+      (row as HTMLElement).textContent?.includes('Banana'),
+    ) as HTMLElement;
+    expect(bananaRow.style.background).toBe('rgba(232, 106, 23, 0.3)');
+  });
+
+  it('reuses matching row elements while refining the search query', () => {
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshA.name = 'Apple';
+    const meshB = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial());
+    meshB.name = 'Banana';
+    root.add(meshA);
+    root.add(meshB);
+    tree.refresh(new Set());
+    const searchInput = container.children[0] as HTMLInputElement;
+    searchInput.value = 'B';
+    searchInput.dispatchEvent(new Event('input'));
+    const treeElement = container.children[1] as HTMLElement;
+    const bananaRowBefore = treeElement.children[0] as HTMLElement;
+    expect(bananaRowBefore.textContent).toContain('Banana');
+    searchInput.value = 'Bana';
+    searchInput.dispatchEvent(new Event('input'));
+    expect(treeElement.children[0]).toBe(bananaRowBefore);
+  });
+
   it('should show search bar with placeholder', () => {
     const searchInput = container.children[0] as HTMLInputElement;
     expect(searchInput.placeholder).toBe('Search...');

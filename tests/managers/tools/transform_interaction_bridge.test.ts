@@ -165,6 +165,23 @@ describe('TransformInteractionBridge', () => {
     window.dispatchEvent(new PointerEvent('pointerup', { button: 0 }));
   });
 
+  it('updates bounds from the drag viewport camera without a perspective viewport', () => {
+    const orthoGroup = transformGizmo.getHandleGroupClone('xz');
+    viewport = new MockViewport(orthoGroup, createTopOrthographicCamera());
+    const bridge = createBridge(() => true);
+    const updateBounds = vi.spyOn(transformGizmo, 'updateBoundsFromMeshes');
+    const downEvent = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
+    expect(bridge.onTransformEvent(downEvent, viewport as unknown as Viewport3D)).toBe(true);
+    expect(transformHandler.isDragging()).toBe(true);
+    expect(() => {
+      window.dispatchEvent(new PointerEvent('pointermove', { clientX: 420, clientY: 310 }));
+    }).not.toThrow();
+    expect(updateBounds).toHaveBeenCalled();
+    const lastCall = updateBounds.mock.calls[updateBounds.mock.calls.length - 1];
+    expect(lastCall?.[1]).toBe(viewport.getCamera());
+    window.dispatchEvent(new PointerEvent('pointerup', { button: 0 }));
+  });
+
   it('duplicates the selection before starting a valid Alt-drag', () => {
     const duplicate = mesh.clone();
     const onDuplicateSelectedForDrag = vi.fn(() => selectionManager.setSelection([duplicate]));
@@ -251,9 +268,6 @@ describe('TransformInteractionBridge', () => {
       } as never,
       propertiesPanel: { refreshBoundObject: () => undefined } as never,
       worldObject: new THREE.Group(),
-      viewport3D: {
-        getCamera: () => viewport.getCamera(),
-      } as never,
       getUserSnapEnabled: () => false,
       isTransformSpaceLocal: () => false,
       onAfterTransformCommit: () => undefined,

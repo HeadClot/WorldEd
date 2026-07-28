@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GizmoVisualStyle } from '../gizmo/gizmo_visual_style.js';
+import { tagGizmoDepthRole } from '../gizmo/gizmo_depth_style.js';
 
 /** Drawn dash length in framebuffer pixels along the projected line. */
 export const BOUNDS_GUIDE_DASH_PIXELS = 6;
@@ -72,7 +73,7 @@ const GUIDE_LINE_FRAGMENT_SHADER = `
  * @returns Shader material that draws unoccluded dashed rays.
  */
 export function createBoundsGuideFrontLineMaterial(): THREE.ShaderMaterial {
-  return createBoundsGuideLineMaterial(GizmoVisualStyle.frontOpacity, THREE.LessEqualDepth);
+  return createScreenPixelDashedLineMaterial(GizmoVisualStyle.frontOpacity, THREE.LessEqualDepth);
 }
 
 /**
@@ -81,17 +82,22 @@ export function createBoundsGuideFrontLineMaterial(): THREE.ShaderMaterial {
  * @returns Shader material that draws dashed rays behind scene geometry.
  */
 export function createBoundsGuideOccludedLineMaterial(): THREE.ShaderMaterial {
-  return createBoundsGuideLineMaterial(GizmoVisualStyle.occludedOpacity, THREE.GreaterDepth);
+  return createScreenPixelDashedLineMaterial(GizmoVisualStyle.occludedOpacity, THREE.GreaterDepth);
 }
 
 /**
- * Builds one dual-pass-compatible dashed guide line material.
+ * Builds a dual-pass-compatible screen-pixel dashed line material. Shared by
+ * bounds guide rays and CAD size-dimension strokes so dashes stay true monitor
+ * pixels under perspective.
  *
  * @param opacity Base alpha for the pass.
  * @param depthFunc Depth comparison for front or occluded rendering.
  * @returns Configured shader material.
  */
-function createBoundsGuideLineMaterial(opacity: number, depthFunc: THREE.DepthModes): THREE.ShaderMaterial {
+export function createScreenPixelDashedLineMaterial(
+  opacity: number,
+  depthFunc: THREE.DepthModes,
+): THREE.ShaderMaterial {
   const material = new THREE.ShaderMaterial({
     uniforms: buildBoundsGuideLineUniforms(opacity),
     vertexShader: GUIDE_LINE_VERTEX_SHADER,
@@ -105,6 +111,7 @@ function createBoundsGuideLineMaterial(opacity: number, depthFunc: THREE.DepthMo
   material.onBeforeRender = (renderer) => {
     updateBoundsGuideViewportUniform(material, renderer);
   };
+  tagGizmoDepthRole(material, depthFunc === THREE.GreaterDepth ? 'occluded' : 'front');
   return material;
 }
 

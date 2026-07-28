@@ -11,7 +11,8 @@ export enum TransformMode {
 
 /**
  * Individual gizmo axes and planes that can be interacted with. X, Y, Z are
- * single-axis handles. XY_PLANE, YZ_PLANE, XZ_PLANE are planar handles.
+ * single-axis handles. XY_PLANE, YZ_PLANE, XZ_PLANE are planar handles. VIEW is
+ * free translation in the camera plane (center grab on the move gizmo).
  */
 export enum GizmoAxis {
   X = 'x',
@@ -20,4 +21,5 @@ export enum GizmoAxis {
   XY_PLANE = 'xy_plane',
   YZ_PLANE = 'yz_plane',
   XZ_PLANE = 'xz_plane',
+  VIEW = 'view',
 }

@@ -1,47 +1,104 @@
 import { UiStackLayers } from './ui_stack_layers.js';
 
 /**
- * Shared stacking order for floating editor panels. Each bring-to-front call
- * increments a counter so the focused panel draws above peers, but never above
- * the menu band (dropdowns / context menus always win).
+ * Window manager for floating editor tool panels. Maintains a last-focused
+ * stacking order with z-indices always below menus so dropdowns and context
+ * menus never draw underneath Tools / UV / Texture windows.
  */
 export class FloatingPanelStack {
-  /**
-   * Next z-index to assign; kept as number so base/ceiling literals can both
-   * assign.
-   */
-  private static nextZIndex: number = UiStackLayers.floatingPanelBase;
+  private static readonly registeredPanels: HTMLElement[] = [];
+  private static readonly clampHandlers = new Map<HTMLElement, () => void>();
+  private static windowResizeBound = false;
 
   /**
-   * Assigns the next highest z-index so the panel appears above other floating
-   * panels without covering menus.
+   * Registers a floating panel for stacking and optional resize clamping.
+   *
+   * @param panel Panel root element.
+   * @param onWindowResize Optional callback when the browser window resizes.
+   */
+  static register(panel: HTMLElement, onWindowResize?: () => void): void {
+    if (this.registeredPanels.includes(panel)) return;
+    this.registeredPanels.push(panel);
+    if (onWindowResize) {
+      this.clampHandlers.set(panel, onWindowResize);
+    }
+    this.ensureWindowResizeListener();
+    this.reassignZIndices();
+  }
+
+  /**
+   * Unregisters a panel when it is disposed.
+   *
+   * @param panel Panel root element.
+   */
+  static unregister(panel: HTMLElement): void {
+    const index = this.registeredPanels.indexOf(panel);
+    if (index >= 0) {
+      this.registeredPanels.splice(index, 1);
+    }
+    this.clampHandlers.delete(panel);
+    this.reassignZIndices();
+  }
+
+  /**
+   * Moves a panel to the top of the floating stack (last one clicked is front).
+   * Menus stay above the floating ceiling defined in {@link UiStackLayers}.
    *
    * @param panel Root element of the floating panel.
    */
   static bringToFront(panel: HTMLElement): void {
-    const ceiling = UiStackLayers.floatingPanelCeiling;
-    const base = UiStackLayers.floatingPanelBase;
-    if (FloatingPanelStack.nextZIndex >= ceiling) {
-      FloatingPanelStack.nextZIndex = base;
+    const index = this.registeredPanels.indexOf(panel);
+    if (index >= 0) {
+      this.registeredPanels.splice(index, 1);
     }
-    FloatingPanelStack.nextZIndex += 1;
-    if (FloatingPanelStack.nextZIndex > ceiling) {
-      FloatingPanelStack.nextZIndex = ceiling;
-    }
-    panel.style.zIndex = String(FloatingPanelStack.nextZIndex);
+    this.registeredPanels.push(panel);
+    this.reassignZIndices();
   }
 
-  /** Resets the stack counter (for tests). */
+  /** Resets registry state (for tests). */
   static resetForTests(): void {
-    FloatingPanelStack.nextZIndex = UiStackLayers.floatingPanelBase;
+    this.registeredPanels.length = 0;
+    this.clampHandlers.clear();
   }
 
   /**
-   * Returns the current top z-index value without consuming a new one.
+   * Returns how many panels are currently registered (tests).
    *
-   * @returns Last assigned z-index.
+   * @returns Registered panel count.
+   */
+  static getRegisteredCount(): number {
+    return this.registeredPanels.length;
+  }
+
+  /**
+   * Returns the current top z-index value among floating panels (tests).
+   *
+   * @returns Last assigned floating z-index, or base when empty.
    */
   static getCurrentTopZIndex(): number {
-    return FloatingPanelStack.nextZIndex;
+    if (this.registeredPanels.length === 0) {
+      return UiStackLayers.floatingPanelBase;
+    }
+    return UiStackLayers.floatingPanelBase + this.registeredPanels.length - 1;
+  }
+
+  /** Reassigns sequential z-indices in registration focus order. */
+  private static reassignZIndices(): void {
+    const base = UiStackLayers.floatingPanelBase;
+    const ceiling = UiStackLayers.floatingPanelCeiling;
+    for (let i = 0; i < this.registeredPanels.length; i++) {
+      const panel = this.registeredPanels[i]!;
+      const zIndex = Math.min(ceiling, base + i);
+      panel.style.zIndex = String(zIndex);
+    }
+  }
+
+  /** Installs a single window resize listener for all registered clamps. */
+  private static ensureWindowResizeListener(): void {
+    if (this.windowResizeBound || typeof window === 'undefined') return;
+    this.windowResizeBound = true;
+    window.addEventListener('resize', () => {
+      this.clampHandlers.forEach((handler) => handler());
+    });
   }
 }

@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { Theme } from '../theme.js';
-import { measurePaneLogicalRectAgainst } from './pane_content_rect.js';
+import {
+  type PaneCssRect,
+  type PaneLogicalRect,
+  cssRectToLogicalRectInto,
+  measureRelativeCssRectInto,
+} from './pane_content_rect.js';
 import type { RenderSurface, SurfaceRenderPane } from './render_surface.js';
 
 /** Pane contribution for one multi-view frame. */
@@ -28,6 +33,10 @@ export interface MultiViewPanePass {
 /** Builds scissor passes and draws all active panes through one render surface. */
 export class MultiViewComposer {
   private surface: RenderSurface;
+  private surfacePanePool: SurfaceRenderPane[];
+  private surfacePanes: SurfaceRenderPane[];
+  private scratchCssRect: PaneCssRect;
+  private scratchLogicalRect: PaneLogicalRect;
 
   /**
    * Creates a composer bound to a render surface.
@@ -36,6 +45,10 @@ export class MultiViewComposer {
    */
   constructor(surface: RenderSurface) {
     this.surface = surface;
+    this.surfacePanePool = [];
+    this.surfacePanes = [];
+    this.scratchCssRect = { left: 0, top: 0, width: 0, height: 0 };
+    this.scratchLogicalRect = { x: 0, y: 0, width: 0, height: 0 };
   }
 
   /**
@@ -58,43 +71,122 @@ export class MultiViewComposer {
     this.surface.syncSizeFromWorkspace();
     const canvas = this.surface.getCanvas();
     const logicalSize = this.surface.getLogicalSize();
-    const surfacePanes: SurfaceRenderPane[] = panes.map((pane) => {
-      const viewportRect = measurePaneLogicalRectAgainst(
-        pane.contentElement,
-        canvas,
-        logicalSize.width,
-        logicalSize.height,
-      );
-      if (viewportRect.width > 0 && viewportRect.height > 0) {
-        pane.syncCameraSize?.(viewportRect.width, viewportRect.height);
-      }
-      return this.toSurfaceRenderPane(pane, viewportRect);
-    });
-    this.surface.renderPanes(scene, surfacePanes, clearColor);
+    this.syncSurfacePanes(panes, canvas, logicalSize.width, logicalSize.height);
+    this.surface.renderPanes(scene, this.surfacePanes, clearColor);
   }
 
   /**
-   * Builds a surface pane, omitting optional hooks when absent so
-   * exactOptionalPropertyTypes is satisfied.
+   * Fills reusable surface panes for the current multi-view frame.
    *
-   * @param pane Multi-view pane pass.
-   * @param viewportRect Measured scissor rect for the pane.
-   * @returns Surface pane for renderPanes.
+   * @param panes Active multi-view pane passes.
+   * @param canvas Drawing canvas used as the scissor origin.
+   * @param logicalWidth Surface logical width.
+   * @param logicalHeight Surface logical height.
    */
-  private toSurfaceRenderPane(
-    pane: MultiViewPanePass,
-    viewportRect: SurfaceRenderPane['viewportRect'],
-  ): SurfaceRenderPane {
-    const surfacePane: SurfaceRenderPane = {
-      camera: pane.camera,
-      viewportRect,
+  private syncSurfacePanes(
+    panes: readonly MultiViewPanePass[],
+    canvas: HTMLCanvasElement,
+    logicalWidth: number,
+    logicalHeight: number,
+  ): void {
+    this.ensureSurfacePanePoolCount(panes.length);
+    this.surfacePanes.length = panes.length;
+    for (let i = 0; i < panes.length; i++) {
+      const surfacePane = this.surfacePanePool[i]!;
+      this.writeSurfacePane(surfacePane, panes[i]!, canvas, logicalWidth, logicalHeight);
+      this.surfacePanes[i] = surfacePane;
+    }
+  }
+
+  /**
+   * Grows the surface-pane pool until it can hold the required count. Pool
+   * slots are never discarded when the active count shrinks.
+   *
+   * @param requiredCount Number of active panes.
+   */
+  private ensureSurfacePanePoolCount(requiredCount: number): void {
+    while (this.surfacePanePool.length < requiredCount) {
+      this.surfacePanePool.push(this.createSurfacePaneSlot());
+    }
+  }
+
+  /**
+   * Creates one reusable surface pane with its own viewport rect object.
+   *
+   * @returns Empty surface pane slot.
+   */
+  private createSurfacePaneSlot(): SurfaceRenderPane {
+    return {
+      camera: null as unknown as THREE.Camera,
+      viewportRect: { x: 0, y: 0, width: 0, height: 0 },
     };
+  }
+
+  /**
+   * Writes camera, rect, and optional hooks into a reusable surface pane.
+   *
+   * @param surfacePane Destination surface pane.
+   * @param pane Source multi-view pass.
+   * @param canvas Drawing canvas used as the scissor origin.
+   * @param logicalWidth Surface logical width.
+   * @param logicalHeight Surface logical height.
+   */
+  private writeSurfacePane(
+    surfacePane: SurfaceRenderPane,
+    pane: MultiViewPanePass,
+    canvas: HTMLCanvasElement,
+    logicalWidth: number,
+    logicalHeight: number,
+  ): void {
+    this.measurePaneRectInto(pane.contentElement, canvas, logicalWidth, logicalHeight, surfacePane.viewportRect);
+    surfacePane.camera = pane.camera;
+    this.assignOptionalHooks(surfacePane, pane);
+    const rect = surfacePane.viewportRect;
+    if (rect.width > 0 && rect.height > 0) {
+      pane.syncCameraSize?.(rect.width, rect.height);
+    }
+  }
+
+  /**
+   * Measures a pane content element into an existing logical rect.
+   *
+   * @param contentElement Pane content hit target.
+   * @param canvas Drawing canvas used as the scissor origin.
+   * @param logicalWidth Surface logical width.
+   * @param logicalHeight Surface logical height.
+   * @param out Destination logical rect.
+   */
+  private measurePaneRectInto(
+    contentElement: HTMLElement,
+    canvas: HTMLCanvasElement,
+    logicalWidth: number,
+    logicalHeight: number,
+    out: PaneLogicalRect,
+  ): void {
+    measureRelativeCssRectInto(contentElement, canvas, this.scratchCssRect);
+    cssRectToLogicalRectInto(this.scratchCssRect, logicalWidth, logicalHeight, this.scratchLogicalRect);
+    out.x = this.scratchLogicalRect.x;
+    out.y = this.scratchLogicalRect.y;
+    out.width = this.scratchLogicalRect.width;
+    out.height = this.scratchLogicalRect.height;
+  }
+
+  /**
+   * Copies optional prepare/finalize hooks, clearing them when absent.
+   *
+   * @param surfacePane Destination surface pane.
+   * @param pane Source multi-view pass.
+   */
+  private assignOptionalHooks(surfacePane: SurfaceRenderPane, pane: MultiViewPanePass): void {
     if (pane.prepare) {
       surfacePane.prepare = pane.prepare;
+    } else {
+      delete surfacePane.prepare;
     }
     if (pane.finalize) {
       surfacePane.finalize = pane.finalize;
+    } else {
+      delete surfacePane.finalize;
     }
-    return surfacePane;
   }
 }

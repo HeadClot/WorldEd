@@ -1,5 +1,6 @@
 import { createDefaultWorkspaces, type WorkspaceDefinition, WORKSPACE_IDS } from './workspace_definition.js';
 import { deserializeAreaLayout } from '../area/area_layout_serializer.js';
+import { areEditorStorageWritesSuppressed } from '../../../settings/clear_editor_storage.js';
 
 /** Persistence shape for workspace preferences. */
 export interface WorkspaceStoreSnapshot {
@@ -191,10 +192,11 @@ export class WorkspaceStore {
   /** Writes the current state to storage when available. */
   private persist(): void {
     if (!this.storage) return;
+    if (areEditorStorageWritesSuppressed()) return;
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(this.getSnapshot()));
     } catch {
-      /* ignore quota errors */
+      return;
     }
   }
 }

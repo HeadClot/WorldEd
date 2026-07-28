@@ -32,7 +32,6 @@ export interface TransformInteractionDependencies {
   viewportSyncManager: ViewportSyncManager;
   propertiesPanel: PropertiesPanel;
   worldObject: THREE.Group;
-  viewport3D: Viewport3D;
   getUserSnapEnabled: () => boolean;
   /** Returns true when gizmo handles should follow object-local axes. */
   isTransformSpaceLocal: () => boolean;
@@ -409,7 +408,7 @@ export class TransformInteractionBridge {
     this.deps.selectionVisualController.syncDuringTransform();
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
     this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(selected));
-    this.deps.transformGizmo.updateBoundsFromMeshes(selected, this.deps.viewport3D.getCamera());
+    this.deps.transformGizmo.updateBoundsFromMeshes(selected, camera);
     this.deps.onRulerTransformFeedback?.(selected, 'move');
     this.refreshPropertiesPanelTransform();
     return true;

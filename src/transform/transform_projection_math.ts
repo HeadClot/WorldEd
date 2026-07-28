@@ -64,6 +64,9 @@ export class TransformProjectionMath {
    * @returns The constrained delta vector.
    */
   static constrainDelta(delta: THREE.Vector3, axis: GizmoAxis): THREE.Vector3 {
+    if (axis === GizmoAxis.VIEW) {
+      return delta.clone();
+    }
     if (axis === GizmoAxis.X || axis === GizmoAxis.Y || axis === GizmoAxis.Z) {
       return TransformConstraint.constrainTranslationToAxis(delta, axis);
     }

@@ -102,6 +102,21 @@ describe('BoundsGizmo', () => {
     expect(gizmo.areGuideLinesVisible()).toBe(true);
   });
 
+  it('hides resize grips during drag and keeps them hidden across bounds updates', () => {
+    gizmo.createHandles();
+    const bounds = createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1));
+    gizmo.updateFromBounds(bounds);
+    expect(gizmo.areResizeHandlesVisible()).toBe(true);
+    expect(countVisibleResizeHandles(gizmo)).toBe(6);
+    gizmo.setResizeHandlesVisible(false);
+    expect(gizmo.areResizeHandlesVisible()).toBe(false);
+    expect(countVisibleResizeHandles(gizmo)).toBe(0);
+    gizmo.updateFromBounds(createBounds(new THREE.Vector3(1, 0, 0), new THREE.Vector3(1.5, 1, 1)));
+    expect(countVisibleResizeHandles(gizmo)).toBe(0);
+    gizmo.setResizeHandlesVisible(true);
+    expect(countVisibleResizeHandles(gizmo)).toBe(6);
+  });
+
   it('should include guide line object under the root group', () => {
     gizmo.createHandles();
     const root = gizmo.getAllSceneObjects()[0]!;
@@ -126,4 +141,21 @@ function createBounds(center: THREE.Vector3, halfExtents: THREE.Vector3): Orient
     quaternion: new THREE.Quaternion(),
     halfExtents,
   };
+}
+
+/**
+ * Counts visible mid-face resize grip roots under the bounds gizmo.
+ *
+ * @param gizmo Bounds gizmo under test.
+ * @returns Number of visible pick-root handle meshes.
+ */
+function countVisibleResizeHandles(gizmo: BoundsGizmo): number {
+  let count = 0;
+  const root = gizmo.getAllSceneObjects()[0]!;
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    if (child.userData['boundsCubePick'] !== true) return;
+    if (child.visible) count += 1;
+  });
+  return count;
 }

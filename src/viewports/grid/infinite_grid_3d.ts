@@ -45,6 +45,8 @@ export class InfiniteGrid3D {
   private axisXColor: THREE.Color;
   private axisZColor: THREE.Color;
   private scratchCamPos: THREE.Vector3;
+  private displayCell: number;
+  private displayLineCount: number;
 
   /**
    * Creates a 3D infinite floor grid.
@@ -55,7 +57,6 @@ export class InfiniteGrid3D {
     this.group = new THREE.Group();
     this.group.name = 'infinite_grid_3d';
     this.buffer = new GridLineBuffer();
-    // Perspective floor must depth-test so solids occlude lines under brushes.
     this.buffer.setDepthTest(true);
     this.buffer.setRenderOrder(GRID_3D_RENDER_ORDER);
     this.group.renderOrder = GRID_3D_RENDER_ORDER;
@@ -69,6 +70,8 @@ export class InfiniteGrid3D {
     this.axisXColor = new THREE.Color(Theme.gridXAxisColor);
     this.axisZColor = new THREE.Color(Theme.gridZAxisColor);
     this.scratchCamPos = new THREE.Vector3();
+    this.displayCell = cellSize;
+    this.displayLineCount = 0;
   }
 
   /**
@@ -96,9 +99,9 @@ export class InfiniteGrid3D {
    */
   update(camera: THREE.Camera): void {
     camera.getWorldPosition(this.scratchCamPos);
-    const display = this.resolveDisplayCell();
-    const cell = display.cell;
-    const lineCount = display.lineCount;
+    this.resolveDisplayCell();
+    const cell = this.displayCell;
+    const lineCount = this.displayLineCount;
     const offsetX = this.snapTowardCamera(this.scratchCamPos.x, cell);
     const offsetZ = this.snapTowardCamera(this.scratchCamPos.z, cell);
     const halfWorld = PATCH_HALF_EXTENT;
@@ -111,17 +114,17 @@ export class InfiniteGrid3D {
 
   /**
    * Resolves the display cell to the editor snap size so 3D matches 2D. Patch
-   * coverage stays large; only an extreme safety cap may shrink span.
-   *
-   * @returns Display cell size and number of lines per axis.
+   * coverage stays large; only an extreme safety cap may shrink span. Writes
+   * into displayCell / displayLineCount without allocating.
    */
-  private resolveDisplayCell(): { cell: number; lineCount: number } {
+  private resolveDisplayCell(): void {
     const cell = this.cellSize;
     let lineCount = Math.ceil((PATCH_HALF_EXTENT * 2) / cell) + 1;
     if (lineCount > MAX_LINES_PER_AXIS) {
       lineCount = MAX_LINES_PER_AXIS;
     }
-    return { cell, lineCount };
+    this.displayCell = cell;
+    this.displayLineCount = lineCount;
   }
 
   /**

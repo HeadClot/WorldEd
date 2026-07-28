@@ -1,6 +1,7 @@
 import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
-import { FloatingPanelStack } from '../floating_panel_stack.js';
+import { FloatingPanel } from '../floating_panel/floating_panel.js';
+import { clampFloatingPanelRectToScreen } from '../floating_panel/floating_panel_screen_bounds.js';
 import { TextureBrowserEntry } from '../../texture/library/texture_browser_entry.js';
 import { TEXTURE_BROWSER_MIN_THUMB_PX } from './texture_browser_layout.js';
 import {
@@ -36,21 +37,15 @@ export interface TextureBrowserHandlers {
 /**
  * Floating texture browser with a Hammer / UnrealEd / TrenchBroom style grid.
  * Tile size is pure CSS: auto-fill columns and cqi-based square thumbs.
+ * Placement and windowing come from {@link FloatingPanel}.
  */
-export class TextureBrowser {
-  private root: HTMLElement;
-  private host: HTMLElement;
+export class TextureBrowser extends FloatingPanel {
   private handlers: TextureBrowserHandlers;
-  private defaultAnchor: HTMLElement | null;
-  private isVisible: boolean;
   private gridElement: HTMLElement;
   private statusLabel: HTMLElement;
   private folderLabel: HTMLElement;
   private selectedId: string | null;
   private tileElements: Map<string, HTMLElement>;
-  private dragOffsetX: number;
-  private dragOffsetY: number;
-  private isDragging: boolean;
   private isResizing: boolean;
   private resizeStartX: number;
   private resizeStartY: number;
@@ -66,14 +61,9 @@ export class TextureBrowser {
    */
   constructor(host: HTMLElement, handlers: TextureBrowserHandlers, defaultAnchor: HTMLElement | null = null) {
     ensureTextureBrowserStylesheet();
-    this.host = host;
+    super(host, { corner: 'bottom-right' }, defaultAnchor);
     this.handlers = handlers;
-    this.defaultAnchor = defaultAnchor;
-    this.isVisible = false;
-    this.isDragging = false;
     this.isResizing = false;
-    this.dragOffsetX = 0;
-    this.dragOffsetY = 0;
     this.resizeStartX = 0;
     this.resizeStartY = 0;
     this.resizeStartWidth = TEXTURE_BROWSER_DEFAULT_WIDTH_PX;
@@ -83,68 +73,8 @@ export class TextureBrowser {
     this.gridElement = document.createElement('div');
     this.statusLabel = document.createElement('div');
     this.folderLabel = document.createElement('div');
-    this.root = this.buildRoot();
-    this.host.appendChild(this.root);
+    this.populateRoot();
     this.setEmptyState();
-  }
-
-  /**
-   * Sets the element used for the default open position.
-   *
-   * @param anchor Viewport or other container, or null for host.
-   */
-  setDefaultAnchor(anchor: HTMLElement | null): void {
-    this.defaultAnchor = anchor;
-  }
-
-  /** Shows the browser panel. */
-  show(): void {
-    if (this.isVisible) {
-      FloatingPanelStack.bringToFront(this.root);
-      return;
-    }
-    this.isVisible = true;
-    this.root.style.display = 'flex';
-    this.positionDefault();
-    FloatingPanelStack.bringToFront(this.root);
-  }
-
-  /**
-   * Hides the browser panel.
-   *
-   * @param _force Kept for call-site compatibility; always hides.
-   */
-  hide(_force: boolean = false): void {
-    if (!this.isVisible) return;
-    this.isVisible = false;
-    this.root.style.display = 'none';
-  }
-
-  /** Toggles panel visibility. */
-  toggle(): void {
-    if (this.isVisible) {
-      this.hide(true);
-      return;
-    }
-    this.show();
-  }
-
-  /**
-   * Returns whether the panel is open.
-   *
-   * @returns True when visible.
-   */
-  isOpen(): boolean {
-    return this.isVisible;
-  }
-
-  /**
-   * Returns the panel root element (for tests and layout introspection).
-   *
-   * @returns Root HTML element.
-   */
-  getRootElement(): HTMLElement {
-    return this.root;
   }
 
   /**
@@ -197,31 +127,22 @@ export class TextureBrowser {
     this.statusLabel.textContent = message;
   }
 
-  /** Disposes the panel and removes it from the DOM. */
-  dispose(): void {
-    this.hide(true);
+  /** Disposes tiles and the shared floating-panel shell. */
+  override dispose(): void {
     this.tileElements.clear();
-    if (this.root.parentNode) {
-      this.root.parentNode.removeChild(this.root);
-    }
+    super.dispose();
   }
 
-  /**
-   * Builds the root panel element.
-   *
-   * @returns Styled root.
-   */
-  private buildRoot(): HTMLElement {
-    const root = document.createElement('div');
-    root.className = TEXTURE_BROWSER_ROOT_CLASS;
-    this.styleRoot(root);
-    root.appendChild(this.buildTitleBar());
-    root.appendChild(this.buildToolbarRow());
-    root.appendChild(this.buildFolderLabel());
-    root.appendChild(this.buildGrid());
-    root.appendChild(this.buildStatusLabel());
-    root.appendChild(this.buildResizeHandle());
-    return root;
+  /** Fills the shared floating-panel shell with texture browser chrome. */
+  private populateRoot(): void {
+    this.root.className = TEXTURE_BROWSER_ROOT_CLASS;
+    this.styleRoot(this.root);
+    this.root.appendChild(this.buildTitleBar());
+    this.root.appendChild(this.buildToolbarRow());
+    this.root.appendChild(this.buildFolderLabel());
+    this.root.appendChild(this.buildGrid());
+    this.root.appendChild(this.buildStatusLabel());
+    this.root.appendChild(this.buildResizeHandle());
   }
 
   /**
@@ -230,9 +151,6 @@ export class TextureBrowser {
    * @param root Panel root.
    */
   private styleRoot(root: HTMLElement): void {
-    root.style.position = 'fixed';
-    root.style.display = 'none';
-    root.style.flexDirection = 'column';
     root.style.boxSizing = 'border-box';
     root.style.width = `${TEXTURE_BROWSER_DEFAULT_WIDTH_PX}px`;
     root.style.height = `${TEXTURE_BROWSER_DEFAULT_HEIGHT_PX}px`;
@@ -244,19 +162,6 @@ export class TextureBrowser {
     root.style.borderRadius = '6px';
     root.style.boxShadow = '0 8px 24px rgba(0,0,0,0.55)';
     root.style.fontFamily = Theme.uiFontFamily;
-    root.style.userSelect = 'none';
-    this.bindBringToFrontOnPointer(root);
-  }
-
-  /**
-   * Raises this panel above other floating windows on interaction.
-   *
-   * @param root Panel root element.
-   */
-  private bindBringToFrontOnPointer(root: HTMLElement): void {
-    root.addEventListener('pointerdown', () => {
-      FloatingPanelStack.bringToFront(root);
-    });
   }
 
   /**
@@ -288,7 +193,7 @@ export class TextureBrowser {
     });
     bar.appendChild(title);
     bar.appendChild(close);
-    this.bindDrag(bar);
+    this.bindTitleBarDrag(bar);
     return bar;
   }
 
@@ -546,69 +451,6 @@ export class TextureBrowser {
     button.style.fontFamily = Theme.uiFontFamily;
   }
 
-  /** Positions the panel near the bottom-right of the default anchor. */
-  private positionDefault(): void {
-    const paddingPx = 8;
-    const panelWidthPx = TEXTURE_BROWSER_DEFAULT_WIDTH_PX;
-    const anchor = this.defaultAnchor ?? this.host;
-    const rect = anchor.getBoundingClientRect();
-    const left = Math.max(paddingPx, rect.right - panelWidthPx - paddingPx);
-    const bottomInset = window.innerHeight - rect.bottom + paddingPx;
-    this.root.style.left = `${left}px`;
-    this.root.style.right = 'auto';
-    this.root.style.top = 'auto';
-    this.root.style.bottom = `${bottomInset}px`;
-    this.root.style.width = `${TEXTURE_BROWSER_DEFAULT_WIDTH_PX}px`;
-    this.root.style.height = `${TEXTURE_BROWSER_DEFAULT_HEIGHT_PX}px`;
-  }
-
-  /**
-   * Enables dragging the panel from the title bar.
-   *
-   * @param bar Title bar element.
-   */
-  private bindDrag(bar: HTMLElement): void {
-    bar.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0) return;
-      if ((event.target as HTMLElement).tagName === 'BUTTON') return;
-      this.beginDrag(event);
-    });
-  }
-
-  /**
-   * Starts a drag session from a pointer event.
-   *
-   * @param event Pointer down event.
-   */
-  private beginDrag(event: PointerEvent): void {
-    this.isDragging = true;
-    const rect = this.root.getBoundingClientRect();
-    this.dragOffsetX = event.clientX - rect.left;
-    this.dragOffsetY = event.clientY - rect.top;
-    this.convertBottomToTopPosition(rect);
-    const onMove = (moveEvent: PointerEvent) => this.onDragMove(moveEvent);
-    const onUp = () => {
-      this.isDragging = false;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }
-
-  /**
-   * Moves the panel while dragging.
-   *
-   * @param moveEvent Pointer move event.
-   */
-  private onDragMove(moveEvent: PointerEvent): void {
-    if (!this.isDragging) return;
-    this.root.style.left = `${moveEvent.clientX - this.dragOffsetX}px`;
-    this.root.style.top = `${moveEvent.clientY - this.dragOffsetY}px`;
-    this.root.style.bottom = 'auto';
-    this.root.style.right = 'auto';
-  }
-
   /**
    * Enables southeast resize from the handle.
    *
@@ -638,6 +480,7 @@ export class TextureBrowser {
     const onMove = (moveEvent: PointerEvent) => this.onResizeMove(moveEvent);
     const onUp = () => {
       this.isResizing = false;
+      this.clampToScreen();
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
@@ -646,7 +489,7 @@ export class TextureBrowser {
   }
 
   /**
-   * Updates panel size while resizing.
+   * Updates panel size while resizing and keeps the window on screen.
    *
    * @param moveEvent Pointer move event.
    */
@@ -658,17 +501,12 @@ export class TextureBrowser {
     const nextHeight = Math.max(TEXTURE_BROWSER_MIN_HEIGHT_PX, this.resizeStartHeight + deltaY);
     this.root.style.width = `${nextWidth}px`;
     this.root.style.height = `${nextHeight}px`;
-  }
-
-  /**
-   * Converts bottom-anchored layout to top/left so drag/resize stay stable.
-   *
-   * @param rect Current panel bounding rect.
-   */
-  private convertBottomToTopPosition(rect: DOMRect): void {
-    this.root.style.left = `${rect.left}px`;
-    this.root.style.top = `${rect.top}px`;
-    this.root.style.bottom = 'auto';
-    this.root.style.right = 'auto';
+    const rect = this.root.getBoundingClientRect();
+    const clamped = clampFloatingPanelRectToScreen(
+      { left: rect.left, top: rect.top, width: nextWidth, height: nextHeight },
+      window.innerWidth,
+      window.innerHeight,
+    );
+    this.setTopLeftPosition(clamped.left, clamped.top);
   }
 }

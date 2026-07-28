@@ -2,7 +2,7 @@ import { AboutDialog } from '../../ui/about/about_dialog.js';
 import { SettingsDialog } from '../../ui/settings/settings_dialog.js';
 import { EditorSettingsStore } from '../../settings/editor_settings_store.js';
 import { SettingsApplicator } from '../../settings/settings_applicator.js';
-import { clearEditorLocalStorage } from '../../settings/clear_editor_storage.js';
+import { performEditorFactoryReset } from '../../settings/clear_editor_storage.js';
 import type { ViewSettings } from '../../settings/settings_types.js';
 import { getTextureMapCache } from '../../texture/library/texture_map_cache.js';
 import { createTextureFilterPolicy } from '../../texture/library/texture_filter_policy.js';
@@ -10,6 +10,7 @@ import type { Viewport3D } from '../../viewports/viewport_3d.js';
 import type { ViewportPaneLayout } from './viewport_pane_layout.js';
 import type { StatusBar } from '../../ui/status_bar.js';
 import type { Toolbar } from '../../ui/toolbar.js';
+import type * as THREE from 'three';
 
 /** Result of creating the settings store, applicator, and dialog. */
 export interface LayoutSettingsSystemParts {
@@ -19,10 +20,25 @@ export interface LayoutSettingsSystemParts {
   settingsUnsubscribe: () => void;
 }
 
+/** Host that can report WebGL max anisotropy for texture filter policy. */
+export interface LayoutSettingsRendererHost {
+  getRenderer(): THREE.WebGLRenderer;
+}
+
 /** Dependencies required to create and wire the settings subsystem. */
 export interface LayoutSettingsCreateDeps {
   container: HTMLElement;
-  viewport3D: Viewport3D;
+  /**
+   * Live perspective viewport when one exists. Read through a getter so
+   * orthographic-only layouts (e.g. a single remaining 2D pane) do not crash
+   * settings startup.
+   */
+  getPerspectiveViewport: () => Viewport3D | null;
+  /**
+   * Any live viewport that can report renderer capabilities for texture
+   * filtering (2D or 3D).
+   */
+  getRendererHost: () => LayoutSettingsRendererHost | null;
   viewportPaneLayout: ViewportPaneLayout;
   toolbar: Toolbar;
   resizeAll: () => void;
@@ -49,8 +65,8 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
     deps.onVisibleSlots,
     deps.onViewportPaneCount,
   );
-  deps.viewport3D.setFlyingCameraMoveSpeed(settingsStore.getMouseSettings().moveSpeed);
-  applyLayoutTextureFilterSettings(deps.viewport3D, settingsStore.getViewSettings());
+  applyFlyingCameraMoveSpeed(deps.getPerspectiveViewport(), settingsStore.getMouseSettings().moveSpeed);
+  applyLayoutTextureFilterSettings(deps.getRendererHost(), settingsStore.getViewSettings());
   const settingsUnsubscribe = settingsStore.subscribe((snapshot) => {
     settingsApplicator.applySnapshot(snapshot);
     deps.toolbar.setButtonLabelsEnabled(snapshot.view.toolbarButtonLabels);
@@ -61,26 +77,49 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
       deps.onVisibleSlots,
       deps.onViewportPaneCount,
     );
-    deps.viewport3D.setFlyingCameraMoveSpeed(snapshot.mouse.moveSpeed);
-    applyLayoutTextureFilterSettings(deps.viewport3D, snapshot.view);
+    applyFlyingCameraMoveSpeed(deps.getPerspectiveViewport(), snapshot.mouse.moveSpeed);
+    applyLayoutTextureFilterSettings(deps.getRendererHost(), snapshot.view);
   });
   const settingsDialog = new SettingsDialog(deps.container, settingsStore, {
     onResetAllSettings: () => {
-      clearEditorLocalStorage();
-      window.location.reload();
+      runEditorFactoryResetAndReload();
     },
   });
   return { settingsStore, settingsApplicator, settingsDialog, settingsUnsubscribe };
 }
 
 /**
+ * Wipes every editor-owned preference (settings, workspaces, profiles, etc.),
+ * blocks unload re-persistence, and reloads so code defaults take effect.
+ * Nothing from the previous session is allowed to write back.
+ */
+export function runEditorFactoryResetAndReload(): void {
+  performEditorFactoryReset();
+  window.location.reload();
+}
+
+/**
+ * Applies flying-camera move speed when a perspective viewport is present.
+ *
+ * @param viewport Perspective viewport or null.
+ * @param moveSpeed Move speed from mouse settings.
+ */
+export function applyFlyingCameraMoveSpeed(viewport: Viewport3D | null, moveSpeed: number): void {
+  viewport?.setFlyingCameraMoveSpeed(moveSpeed);
+}
+
+/**
  * Applies view texture filter preferences to the shared content map cache.
  *
- * @param viewport3D Viewport providing WebGL max anisotropy.
+ * @param rendererHost Viewport providing WebGL max anisotropy, or null.
  * @param view Current view settings snapshot.
  */
-export function applyLayoutTextureFilterSettings(viewport3D: Viewport3D, view: ViewSettings): void {
-  const maxAnisotropy = viewport3D.getRenderer().capabilities.getMaxAnisotropy();
+export function applyLayoutTextureFilterSettings(
+  rendererHost: LayoutSettingsRendererHost | null,
+  view: ViewSettings,
+): void {
+  if (!rendererHost) return;
+  const maxAnisotropy = rendererHost.getRenderer().capabilities.getMaxAnisotropy();
   const policy = createTextureFilterPolicy(view.textureFilterMode, view.anisotropyPreference, maxAnisotropy);
   getTextureMapCache().setFilterPolicy(policy);
 }
@@ -93,6 +132,7 @@ export function applyLayoutTextureFilterSettings(viewport3D: Viewport3D, view: V
  * @param paneCount Number of viewport panes to display.
  * @param onVisibleSlots Optional callback with visible slot names for
  *   active-set sync.
+ * @param onViewportPaneCount Optional workspace-driven pane count migration.
  */
 export function applyLayoutViewportPaneCount(
   viewportPaneLayout: ViewportPaneLayout,

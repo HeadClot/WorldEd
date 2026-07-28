@@ -16,6 +16,9 @@ import {
   computeBoundsCubeWorldSize,
   computeBoundsEarWorldSize,
 } from '../bounds/bounds_handle_screen_size.js';
+import { computeGizmoCameraScale } from './gizmo_camera_scale.js';
+import { isGizmoAxisHiddenInViewPlane } from './gizmo_view_plane_axes.js';
+import { applyGizmoCloneDepthStyle } from './gizmo_depth_style.js';
 
 /**
  * Main orchestrator for the transform gizmo. Manages mode switching, handle
@@ -36,6 +39,11 @@ export class TransformGizmo {
   private boundsGizmo: BoundsGizmo;
   private boundsBuilder: OrientedBoundsBuilder;
   private gizmoVisible: boolean;
+  /**
+   * When true (Global space), orthographic clones hide the view depth axis on
+   * translate/scale handles. Local space keeps every axis visible.
+   */
+  private hideOrthoDepthAxes: boolean;
   /**
    * Stable signature of the last applied bounds pose used to skip redundant
    * rebuilds.
@@ -62,6 +70,7 @@ export class TransformGizmo {
     this.boundsBuilder = new OrientedBoundsBuilder();
     this.gizmoVisible = false;
     this.handleGroup.visible = false;
+    this.hideOrthoDepthAxes = true;
     this.lastBoundsPoseSignature = '';
     this.buildHandlesForMode(this.currentMode);
   }
@@ -125,8 +134,20 @@ export class TransformGizmo {
     this.viewportGroups.push(clone);
     this.viewportPlanes.push(viewPlane);
     setGizmoWantedVisible(clone, this.gizmoVisible);
-    this.applyViewPlaneBoundsFilter(clone, viewPlane);
+    this.applyViewPlaneFilters(clone, viewPlane);
     return clone;
+  }
+
+  /**
+   * Controls whether orthographic panes hide the Global-space depth axis on
+   * translate/scale tools (TOP hides Y, FRONT hides Z, SIDE hides X).
+   *
+   * @param hide True for Global space; false for Local space.
+   */
+  setHideOrthoDepthAxes(hide: boolean): void {
+    if (this.hideOrthoDepthAxes === hide) return;
+    this.hideOrthoDepthAxes = hide;
+    this.refreshViewPlaneAxisFilters();
   }
 
   /**
@@ -247,6 +268,35 @@ export class TransformGizmo {
     if (this.currentMode !== TransformMode.BOUNDS) return;
     if (!this.gizmoVisible) return;
     this.boundsGizmo.applyScreenSpaceStyleToClone(group, viewPlane, camera, viewportHeightPx);
+    this.applyCloneDepthStyleForCamera(group, camera);
+  }
+
+  /**
+   * Scales one viewport gizmo clone for that pane's camera only. 2D
+   * orthographic panes use frustum height; perspective uses distance. Call per
+   * pane so flying the 3D camera cannot inflate Top/Front/Side handles.
+   *
+   * @param group Viewport gizmo clone.
+   * @param camera Pane camera.
+   * @param targetScale Optional extra multiplier.
+   */
+  prepareTransformCloneForCamera(group: THREE.Group, camera: THREE.Camera, targetScale: number = 1): void {
+    if (this.currentMode === TransformMode.BOUNDS) return;
+    if (!this.gizmoVisible) return;
+    const scale = computeGizmoCameraScale(camera, group.position) * targetScale;
+    group.scale.setScalar(scale);
+    this.applyCloneDepthStyleForCamera(group, camera);
+  }
+
+  /**
+   * 2D panes draw gizmos fully on top; 3D keeps transparent occlusion behind
+   * geometry. Applied per multi-view pass for the pane about to render.
+   *
+   * @param group Viewport gizmo clone.
+   * @param camera Pane camera.
+   */
+  private applyCloneDepthStyleForCamera(group: THREE.Group, camera: THREE.Camera): void {
+    applyGizmoCloneDepthStyle(group, camera instanceof THREE.OrthographicCamera);
   }
 
   /**
@@ -265,6 +315,19 @@ export class TransformGizmo {
    */
   setBoundsGuideLinesVisible(visible: boolean): void {
     this.boundsGizmo.setGuideLinesVisible(visible);
+    this.lastBoundsPoseSignature = '';
+    this.syncMasterTransformToClones();
+  }
+
+  /**
+   * Shows or hides bounds mid-face resize grips (2D CAD ears and 3D arrows) in
+   * all viewports. Used while a bounds body-move (position) drag is active;
+   * resize drags leave grips visible.
+   *
+   * @param visible Whether resize grips should be drawn.
+   */
+  setBoundsResizeHandlesVisible(visible: boolean): void {
+    this.boundsGizmo.setResizeHandlesVisible(visible);
     this.lastBoundsPoseSignature = '';
     this.syncMasterTransformToClones();
   }
@@ -335,20 +398,17 @@ export class TransformGizmo {
   }
 
   /**
-   * Scales gizmo groups so handles stay readable at camera distance. No-op in
-   * Bounds mode where size comes from the selection OBB.
+   * Scales the master handle group only. Viewport clones must use
+   * {@link prepareTransformCloneForCamera} with their own camera so multi-view
+   * 2D panes do not inherit the 3D camera's distance scale.
    *
-   * @param camera The active camera used to estimate distance.
-   * @param targetScale Multiplier applied after distance compensation.
+   * @param camera Camera used for the master group estimate.
+   * @param targetScale Multiplier applied after distance/frustum compensation.
    */
   updateScaleForCamera(camera: THREE.Camera, targetScale: number = 1): void {
     if (this.currentMode === TransformMode.BOUNDS) return;
-    const distance = camera.position.distanceTo(this.handleGroup.position);
-    const scale = Math.max(0.5, distance * 0.08) * targetScale;
+    const scale = computeGizmoCameraScale(camera, this.handleGroup.position) * targetScale;
     this.handleGroup.scale.setScalar(scale);
-    this.viewportGroups.forEach((group) => {
-      group.scale.setScalar(scale);
-    });
   }
 
   /** Disposes all gizmo resources including viewport group clones. */
@@ -434,29 +494,34 @@ export class TransformGizmo {
    */
   private populateMasterGroup(mode: TransformMode): void {
     if (mode === TransformMode.TRANSLATE) {
-      this.currentHandles = this.translateGizmo.createHandles();
-      this.translateGizmo.getAllSceneObjects().forEach((obj) => {
-        this.handleGroup.add(obj);
-      });
+      this.attachModeGizmo(this.translateGizmo);
+      return;
     }
     if (mode === TransformMode.ROTATE) {
-      this.currentHandles = this.rotateGizmo.createHandles();
-      this.rotateGizmo.getAllSceneObjects().forEach((obj) => {
-        this.handleGroup.add(obj);
-      });
+      this.attachModeGizmo(this.rotateGizmo);
+      return;
     }
     if (mode === TransformMode.SCALE) {
-      this.currentHandles = this.scaleGizmo.createHandles();
-      this.scaleGizmo.getAllSceneObjects().forEach((obj) => {
-        this.handleGroup.add(obj);
-      });
+      this.attachModeGizmo(this.scaleGizmo);
+      return;
     }
     if (mode === TransformMode.BOUNDS) {
-      this.currentHandles = this.boundsGizmo.createHandles();
-      this.boundsGizmo.getAllSceneObjects().forEach((obj) => {
-        this.handleGroup.add(obj);
-      });
+      this.attachModeGizmo(this.boundsGizmo);
     }
+  }
+
+  /**
+   * Creates handles for a mode builder and adds its scene objects to the master
+   * group.
+   *
+   * @param modeGizmo Mode-specific gizmo that can create handles and list
+   *   objects.
+   */
+  private attachModeGizmo(modeGizmo: { createHandles(): GizmoHandle[]; getAllSceneObjects(): THREE.Object3D[] }): void {
+    this.currentHandles = modeGizmo.createHandles();
+    modeGizmo.getAllSceneObjects().forEach((obj) => {
+      this.handleGroup.add(obj);
+    });
   }
 
   /**
@@ -493,8 +558,15 @@ export class TransformGizmo {
       this.clearViewportGroup(group);
       this.copyMasterIntoGroup(group);
       const viewPlane = this.viewportPlanes[index] ?? 'xyz';
-      this.applyViewPlaneBoundsFilter(group, viewPlane);
+      this.applyViewPlaneFilters(group, viewPlane);
       this.boundsGizmo.applyHighlightToRoot(group, viewPlane === 'xyz');
+    });
+  }
+
+  /** Re-applies depth-axis visibility on every viewport clone. */
+  private refreshViewPlaneAxisFilters(): void {
+    this.viewportGroups.forEach((group, index) => {
+      this.applyAxisVisibilityForViewPlane(group, this.viewportPlanes[index] ?? 'xyz');
     });
   }
 
@@ -509,13 +581,15 @@ export class TransformGizmo {
    */
   private buildBoundsPoseSignature(bounds: OrientedBoundsData | null): string {
     const guides = this.boundsGizmo.areGuideLinesVisible() ? '1' : '0';
-    if (!bounds) return `empty|${guides}`;
+    const grips = this.boundsGizmo.areResizeHandlesVisible() ? '1' : '0';
+    if (!bounds) return `empty|${guides}|${grips}`;
     const quantizePose = (value: number): string => (Math.round(value * 10000) / 10000).toFixed(4);
     const c = bounds.center;
     const e = bounds.halfExtents;
     const r = bounds.quaternion;
     return [
       guides,
+      grips,
       quantizePose(c.x),
       quantizePose(c.y),
       quantizePose(c.z),
@@ -530,15 +604,59 @@ export class TransformGizmo {
   }
 
   /**
-   * Applies bounds-specific styling per viewport: arrows in 3D, CAD ears in 2D
-   * with depth-axis grips hidden.
+   * Applies per-viewport handle filters: bounds CAD ears, and Global-space
+   * depth-axis hiding for translate/scale.
    *
    * @param group Viewport gizmo clone.
    * @param viewPlane View plane for this clone.
    */
-  private applyViewPlaneBoundsFilter(group: THREE.Group, viewPlane: CadViewPlane): void {
-    if (this.currentMode !== TransformMode.BOUNDS) return;
-    this.boundsGizmo.styleCloneForViewPlane(group, viewPlane);
+  private applyViewPlaneFilters(group: THREE.Group, viewPlane: CadViewPlane): void {
+    if (this.currentMode === TransformMode.BOUNDS) {
+      this.boundsGizmo.styleCloneForViewPlane(group, viewPlane);
+      return;
+    }
+    this.applyAxisVisibilityForViewPlane(group, viewPlane);
+  }
+
+  /**
+   * Shows or hides translate/scale axis meshes for an orthographic depth axis
+   * when Global space is active. Local space and rotate mode leave all
+   * visible.
+   *
+   * @param group Viewport gizmo clone.
+   * @param viewPlane View plane for this clone.
+   */
+  private applyAxisVisibilityForViewPlane(group: THREE.Group, viewPlane: CadViewPlane): void {
+    if (this.currentMode !== TransformMode.TRANSLATE && this.currentMode !== TransformMode.SCALE) {
+      return;
+    }
+    const hideOccludedGhosts = viewPlane !== 'xyz';
+    group.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const handleId = child.userData['handleId'];
+      if (typeof handleId !== 'number') return;
+      const handle = this.findHandleById(handleId);
+      if (!handle) return;
+      if (isGizmoAxisHiddenInViewPlane(handle.getAxis(), viewPlane, this.hideOrthoDepthAxes)) {
+        child.visible = false;
+        return;
+      }
+      if (hideOccludedGhosts && child.userData['isGizmoOccludedGhost'] === true) {
+        child.visible = false;
+        return;
+      }
+      child.visible = true;
+    });
+  }
+
+  /**
+   * Finds a master handle by stable handle id.
+   *
+   * @param handleId Handle id stored on clone meshes.
+   * @returns Matching handle, or null.
+   */
+  private findHandleById(handleId: number): GizmoHandle | null {
+    return this.currentHandles.find((handle) => handle.getHandleId() === handleId) ?? null;
   }
 
   /** Removes the active highlight from any previously active handle. */

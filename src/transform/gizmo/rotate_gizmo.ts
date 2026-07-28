@@ -7,12 +7,12 @@ import {
   applyGizmoFrontRenderOrder,
   createGizmoFrontMaterial,
   createGizmoOccludedMesh,
+  createGizmoPickMesh,
 } from './gizmo_visual_style.js';
 
 /**
- * Creates the rotate transform gizmo with thin torus rings for each axis.
- * Front-facing ring segments stay solid; segments behind geometry draw faint.
- * Produces 3 handles: X, Y, Z ring handles.
+ * Creates the rotate transform gizmo with thin torus rings for each axis and
+ * thicker invisible pick tori so rings are easy to grab without looking fat.
  */
 export class RotateGizmo {
   private theme: typeof Theme;
@@ -61,7 +61,7 @@ export class RotateGizmo {
   }
 
   /**
-   * Creates a single ring handle with front and occluded ghost meshes.
+   * Creates a single ring handle with front, occluded ghost, and pick meshes.
    *
    * @param axis The gizmo axis for this ring.
    * @param color The hex color of the ring.
@@ -73,14 +73,40 @@ export class RotateGizmo {
     const frontMesh = new THREE.Mesh(geometry, createGizmoFrontMaterial(color));
     applyGizmoFrontRenderOrder(frontMesh);
     const handle = new GizmoHandle(axis, color, frontMesh);
-    const handleId = handle.getHandleId();
-    frontMesh.userData['handleId'] = handleId;
-    const ghostMesh = createGizmoOccludedMesh(geometry, color, handleId);
-    group.add(ghostMesh);
-    group.add(frontMesh);
+    this.attachRingMeshes(group, geometry, frontMesh, color, handle.getHandleId());
     this.alignRingToAxis(group, axisDirection);
     this.ringGroups.push(group);
     this.handles.push(handle);
+  }
+
+  /**
+   * Tags the front mesh and adds ghost plus thick pick torus under the ring
+   * group.
+   *
+   * @param group Ring handle group.
+   * @param geometry Shared torus geometry for front and ghost.
+   * @param frontMesh Visible front ring.
+   * @param color Axis color.
+   * @param handleId Shared handle id.
+   */
+  private attachRingMeshes(
+    group: THREE.Group,
+    geometry: THREE.BufferGeometry,
+    frontMesh: THREE.Mesh,
+    color: number,
+    handleId: number,
+  ): void {
+    frontMesh.userData['handleId'] = handleId;
+    const ghostMesh = createGizmoOccludedMesh(geometry, color, handleId);
+    const pickGeometry = new THREE.TorusGeometry(
+      GizmoVisualStyle.ringRadius,
+      GizmoVisualStyle.ringPickTubeRadius,
+      10,
+      48,
+    );
+    group.add(createGizmoPickMesh(pickGeometry, handleId));
+    group.add(ghostMesh);
+    group.add(frontMesh);
   }
 
   /**
