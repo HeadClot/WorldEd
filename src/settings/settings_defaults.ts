@@ -54,7 +54,7 @@ export function createDefaultViewSettings(): ViewSettings {
 export function createDefaultMouseSettings(): MouseSettings {
   return {
     orbitSensitivity: 50,
-    orbitInvertYAxis: false,
+    orbitInvertYAxis: true,
     orbitBinding: { button: 0, ctrl: true, shift: false, alt: true, meta: false },
     lookSensitivity: 50,
     lookInvertXAxis: false,

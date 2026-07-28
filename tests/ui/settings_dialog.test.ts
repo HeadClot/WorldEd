@@ -261,7 +261,7 @@ describe('SettingsDialog', () => {
     expect(mouse.lookSensitivity).toBe(61);
     expect(mouse.panInvertYAxis).toBe(true);
     expect(mouse.moveCameraTowardsCursor).toBe(true);
-    expect(mouse.orbitInvertYAxis).toBe(true);
+    expect(mouse.orbitInvertYAxis).toBe(false);
     expect(mouse.orbitBinding).toEqual({ button: 1, ctrl: false, shift: true, alt: false, meta: false });
     expect(orbitBinding.value).toBe('Shift+Middle Mouse');
   });

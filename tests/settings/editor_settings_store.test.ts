@@ -160,7 +160,7 @@ describe('EditorSettingsStore', () => {
 
     expect(mouse.lookSensitivity).toBe(24);
     expect(mouse.orbitSensitivity).toBe(50);
-    expect(mouse.orbitInvertYAxis).toBe(false);
+    expect(mouse.orbitInvertYAxis).toBe(true);
     expect(mouse.orbitBinding).toEqual({ button: 0, ctrl: true, shift: false, alt: true, meta: false });
   });
 
