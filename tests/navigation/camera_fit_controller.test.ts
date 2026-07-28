@@ -218,6 +218,7 @@ function createPerspectiveViewport() {
   return {
     getCamera: () => camera,
     getScene: () => scene,
+    setNavigationFocus: (_focus: THREE.Vector3): void => {},
   };
 }
 
