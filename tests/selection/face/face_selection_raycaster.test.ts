@@ -55,6 +55,18 @@ describe('FaceSelectionRaycaster', () => {
     expect(result?.hitPoint).toBeInstanceOf(THREE.Vector3);
   });
 
+  it('should return a unit face normal facing the camera on hit', () => {
+    const canvas = createMockCanvas(800, 600);
+    const renderer = createMockRenderer(canvas);
+    const camera = createCameraAt(0, 0, 5);
+    const facingPositiveZ = createDoubleSidedPlaneAt(0, 0, 0);
+    const event = createMockMouseEvent(400, 300);
+    const result = raycaster.pickFace(event, camera, renderer.domElement, [facingPositiveZ]);
+    expect(result).not.toBeNull();
+    expect(result!.faceNormal.length()).toBeCloseTo(1);
+    expect(result!.faceNormal.z).toBeGreaterThan(0.5);
+  });
+
   it('should return the closest mesh when multiple meshes intersect', () => {
     const canvas = createMockCanvas(800, 600);
     const renderer = createMockRenderer(canvas);

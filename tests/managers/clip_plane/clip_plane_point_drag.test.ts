@@ -62,7 +62,7 @@ describe('ClipPlanePointDrag', () => {
 
   it('should use a pick radius large enough for comfortable grabbing', () => {
     expect(CLIP_MARKER_PICK_PIXELS).toBeGreaterThanOrEqual(10);
-    expect(CLIP_MARKER_PICK_PIXELS).toBeLessThanOrEqual(20);
+    expect(CLIP_MARKER_PICK_PIXELS).toBeLessThanOrEqual(24);
   });
 
   it('should project pointer motion onto a view-aligned drag plane', () => {
@@ -72,5 +72,18 @@ describe('ClipPlanePointDrag', () => {
     const hit = drag.projectOntoDragPlane(centerEvent, camera, renderer.domElement, plane);
     expect(hit).not.toBeNull();
     expect(hit!.z).toBeCloseTo(0, 1);
+  });
+
+  it('should skip grid snap when applySnap is false (Shift precision mode)', () => {
+    const snapOn = new ClipPlanePointDrag(new GridSnap(true, 1));
+    const origin = new THREE.Vector3(0, 0, 0);
+    const plane = snapOn.createDragPlane(origin, camera);
+    const offsetEvent = { clientX: 120, clientY: 100 } as MouseEvent;
+    const snapped = snapOn.projectOntoDragPlane(offsetEvent, camera, renderer.domElement, plane, true);
+    const free = snapOn.projectOntoDragPlane(offsetEvent, camera, renderer.domElement, plane, false);
+    expect(snapped).not.toBeNull();
+    expect(free).not.toBeNull();
+    expect(snapped!.x % 1).toBeCloseTo(0, 5);
+    expect(Math.abs(free!.x - snapped!.x) > 1e-6 || Math.abs(free!.y - snapped!.y) > 1e-6).toBe(true);
   });
 });

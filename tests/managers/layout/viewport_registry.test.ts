@@ -71,6 +71,17 @@ describe('ViewportRegistry', () => {
     expect(registry.getAllViewports()).toHaveLength(4);
   });
 
+  it('should remove a pane entirely from the registry', () => {
+    registry.populateDefaultQuad(containers, { inputManager, sharedScene: {} as never, surface: {} as never });
+    const pane = registry.getPanes()[1]!;
+    const instance = pane.getViewport()!;
+    const paneId = pane.getId();
+    expect(registry.removePane(paneId)).toBe(true);
+    expect(registry.getPaneById(paneId)).toBeNull();
+    expect(registry.getPanes()).toHaveLength(3);
+    expect(instance.getIsDisposed()).toBe(true);
+  });
+
   it('should clear a viewport instance without removing the pane', () => {
     registry.populateDefaultQuad(containers, { inputManager, sharedScene: {} as never, surface: {} as never });
     const pane = registry.getPanes()[1]!;

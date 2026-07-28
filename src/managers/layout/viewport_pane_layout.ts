@@ -1,148 +1,131 @@
 import type { ViewportPaneCount } from '../../settings/settings_types.js';
+import { AreaLayoutController } from './area/area_layout_controller.js';
+import { DEFAULT_AREA_IDS } from './area/area_layout_presets.js';
+import type { AreaLeafPlacement } from './area/area_leaf_placement.js';
+import { listAreaLeafPlacements } from './area/area_layout_tree.js';
 
-type ViewportSlot = 'top' | 'front' | 'side' | 'perspective';
-
-interface PaneLayoutDefinition {
-  columns: string;
-  rows: string;
-  areas: string;
-  visibleSlots: readonly ViewportSlot[];
-}
-
-const PANE_LAYOUTS: Readonly<Record<ViewportPaneCount, PaneLayoutDefinition>> = {
-  1: {
-    columns: '1fr',
-    rows: '1fr',
-    areas: '"perspective"',
-    visibleSlots: ['perspective'],
-  },
-  2: {
-    columns: '1fr 1fr',
-    rows: '1fr',
-    areas: '"top perspective"',
-    visibleSlots: ['top', 'perspective'],
-  },
-  3: {
-    columns: '1fr 1fr',
-    rows: '1fr 1fr',
-    areas: '"top front"\n"perspective perspective"',
-    visibleSlots: ['top', 'front', 'perspective'],
-  },
-  4: {
-    columns: '1fr 1fr',
-    rows: '1fr 1fr',
-    areas: '"top front"\n"side perspective"',
-    visibleSlots: ['top', 'front', 'side', 'perspective'],
-  },
-};
+/** Historical slot names used by settings and chrome sync. */
+export type ViewportSlot = 'top' | 'front' | 'side' | 'perspective';
 
 /**
- * Applies the selected viewport arrangement while retaining all viewport
- * instances.
+ * Applies viewport arrangements through the area tiling controller while
+ * retaining compatibility helpers (pane count presets, maximize, visible
+ * slots).
  */
 export class ViewportPaneLayout {
-  private readonly viewportArea: HTMLElement;
-  private readonly viewports: readonly HTMLElement[];
-  private paneCount: ViewportPaneCount;
-  private maximizedIndex: number | null;
+  private readonly controller: AreaLayoutController;
+  private readonly areaIdByIndex: string[];
 
   /**
-   * Creates a layout controller for viewport containers ordered top, front,
-   * side, perspective.
+   * Creates a layout controller for the absolute pane layer.
    *
-   * @param viewportArea Grid element that hosts the viewport containers.
-   * @param viewports Viewport containers ordered top, front, side, perspective.
+   * @param paneLayer Absolute host for pane chrome containers.
+   * @param _legacyViewports Ignored; containers are owned by the area DOM
+   *   layer. Kept so existing call sites compile during migration.
    */
-  constructor(viewportArea: HTMLElement, viewports: readonly HTMLElement[]) {
-    this.viewportArea = viewportArea;
-    this.viewports = viewports;
-    this.paneCount = 4;
-    this.maximizedIndex = null;
+  constructor(paneLayer: HTMLElement, _legacyViewports: readonly HTMLElement[] = []) {
+    void _legacyViewports;
+    this.controller = new AreaLayoutController(paneLayer);
+    this.areaIdByIndex = [
+      DEFAULT_AREA_IDS.top,
+      DEFAULT_AREA_IDS.front,
+      DEFAULT_AREA_IDS.side,
+      DEFAULT_AREA_IDS.perspective,
+    ];
+    this.controller.apply();
   }
 
   /**
-   * Applies the requested visible-pane layout.
+   * Returns the underlying area layout controller.
+   *
+   * @returns Area layout controller.
+   */
+  getAreaLayoutController(): AreaLayoutController {
+    return this.controller;
+  }
+
+  /**
+   * Applies the requested visible-pane layout preset (1–4).
    *
    * @param paneCount Number of panes to display.
    */
   apply(paneCount: ViewportPaneCount): void {
-    this.paneCount = paneCount;
-    if (this.maximizedIndex !== null) return;
-    const definition = PANE_LAYOUTS[paneCount];
-    this.applyGridDefinition(definition);
-    this.applyViewportVisibility(definition.visibleSlots);
+    this.controller.applyPaneCountPreset(paneCount);
   }
 
   /**
-   * Returns the currently visible slot names for the active layout.
+   * Returns currently visible historical slot names for settings chrome sync.
    *
-   * @returns Visible grid slot names.
+   * @returns Visible slot names.
    */
   getVisibleSlots(): readonly ViewportSlot[] {
-    if (this.maximizedIndex !== null) {
-      return [this.getSlot(this.maximizedIndex)];
-    }
-    return PANE_LAYOUTS[this.paneCount].visibleSlots;
+    const placements = this.controller.getPlacements();
+    return placements
+      .map((placement) => this.slotForAreaId(placement.payload.areaId))
+      .filter((slot): slot is ViewportSlot => slot !== null);
   }
 
   /**
-   * Maximizes one viewport, or restores the configured pane layout when the
-   * same viewport is toggled again.
+   * Maximizes one viewport by index, or restores when toggled again.
    *
-   * @param viewportIndex Viewport index ordered top, front, side, perspective.
-   * @returns Maximized viewport index, or null after restoring the layout.
+   * @param viewportIndex Viewport index in default quad order (top, front,
+   *   side, perspective) when possible; falls back to logical placement order.
+   * @returns Maximized index, or null after restore.
    */
   toggleMaximized(viewportIndex: number): number | null {
-    if (this.maximizedIndex === viewportIndex) {
-      this.maximizedIndex = null;
-      this.apply(this.paneCount);
-      return null;
-    }
-    this.maximizedIndex = viewportIndex;
-    this.applyMaximizedLayout(viewportIndex);
+    const areaId = this.resolveAreaIdForIndex(viewportIndex);
+    if (!areaId) return null;
+    const result = this.controller.toggleMaximized(areaId);
+    if (result === null) return null;
     return viewportIndex;
   }
 
   /**
-   * Shows one viewport across the complete grid.
+   * Returns current leaf placements after the last apply.
    *
-   * @param viewportIndex Viewport container index to maximize.
+   * @returns Leaf placements.
    */
-  private applyMaximizedLayout(viewportIndex: number): void {
-    const slot = this.getSlot(viewportIndex);
-    this.applyGridDefinition({ columns: '1fr', rows: '1fr', areas: `"${slot}"`, visibleSlots: [slot] });
-    this.applyViewportVisibility([slot]);
+  getPlacements(): readonly AreaLeafPlacement[] {
+    return this.controller.getPlacements();
   }
 
   /**
-   * Updates the grid dimensions and named areas.
+   * Registers a layout-change listener on the area controller.
    *
-   * @param definition Layout definition to apply.
+   * @param handler Callback with placements.
    */
-  private applyGridDefinition(definition: PaneLayoutDefinition): void {
-    this.viewportArea.style.gridTemplateColumns = definition.columns;
-    this.viewportArea.style.gridTemplateRows = definition.rows;
-    this.viewportArea.style.gridTemplateAreas = definition.areas;
+  setOnLayoutChanged(handler: ((placements: readonly AreaLeafPlacement[]) => void) | null): void {
+    this.controller.setOnLayoutChanged(handler);
   }
 
   /**
-   * Shows only containers included by the selected layout.
+   * Resolves an area id for a maximize index using the logical tree (not the
+   * temporary maximized display) so maximize can switch between panes.
    *
-   * @param visibleSlots Slot names that should remain visible.
+   * @param viewportIndex Requested index.
+   * @returns Area id or null.
    */
-  private applyViewportVisibility(visibleSlots: readonly ViewportSlot[]): void {
-    this.viewports.forEach((viewport, index) => {
-      viewport.style.display = visibleSlots.includes(this.getSlot(index)) ? '' : 'none';
-    });
+  private resolveAreaIdForIndex(viewportIndex: number): string | null {
+    const byDefault = this.areaIdByIndex[viewportIndex];
+    if (byDefault) {
+      const logicalIds = listAreaLeafPlacements(this.controller.getRoot()).map((item) => item.payload.areaId);
+      if (logicalIds.includes(byDefault)) return byDefault;
+    }
+    const logicalPlacements = listAreaLeafPlacements(this.controller.getRoot());
+    return logicalPlacements[viewportIndex]?.payload.areaId ?? null;
   }
 
   /**
-   * Resolves a viewport container index to its grid slot name.
+   * Maps a known default area id to a historical slot name.
    *
-   * @param index Viewport container index.
-   * @returns Corresponding named grid slot.
+   * @param areaId Area identifier.
+   * @returns Slot name or null when unknown.
    */
-  private getSlot(index: number): ViewportSlot {
-    return ['top', 'front', 'side', 'perspective'][index] as ViewportSlot;
+  private slotForAreaId(areaId: string): ViewportSlot | null {
+    if (areaId === DEFAULT_AREA_IDS.top) return 'top';
+    if (areaId === DEFAULT_AREA_IDS.front) return 'front';
+    if (areaId === DEFAULT_AREA_IDS.side) return 'side';
+    if (areaId === DEFAULT_AREA_IDS.perspective) return 'perspective';
+    return null;
   }
 }

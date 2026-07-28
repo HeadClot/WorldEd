@@ -10,6 +10,8 @@ import { FaceModeCoordinator } from '../face/face_mode_coordinator.js';
 import { CommandStack } from '../../commands/command_stack.js';
 import { GridSnap } from '../../transform/snap/grid_snap.js';
 import { ToolsPaletteController } from '../tools/tools_palette_controller.js';
+import { EditorOverlayPolicy } from '../tools/editor_overlay_policy.js';
+import { ModalToolSessionRegistry } from '../tools/modal_tool_session_registry.js';
 import { setupClipToolsAndPalette, cancelClipAndSelectObject } from './layout_clip_tools_setup.js';
 import { ClipPlaneTool } from '../clip_plane/clip_plane_tool.js';
 import { ClipPlaneHandler } from '../clip_plane/clip_plane_handler.js';
@@ -115,6 +117,8 @@ export function setupToolsPaletteAndClipWiring(parts: {
   onClipCancel: () => void;
   onTransformMode: (mode: TransformMode) => void;
   onOpenUvEditor: () => void;
+  editorOverlayPolicy: EditorOverlayPolicy;
+  modalToolSessionRegistry: ModalToolSessionRegistry;
 }): {
   clipPlaneHandler: ClipPlaneHandler;
   toolsPalette: ToolsPalette;
@@ -137,6 +141,8 @@ export function setupToolsPaletteAndClipWiring(parts: {
     updateShadingMeshes: parts.updateShadingMeshes,
     onToolStateChanged: parts.onToolStateChanged,
     onClipCancel: parts.onClipCancel,
+    editorOverlayPolicy: parts.editorOverlayPolicy,
+    modalToolSessionRegistry: parts.modalToolSessionRegistry,
     onTransformMode: parts.onTransformMode,
     onOpenUvEditor: parts.onOpenUvEditor,
     onExtrudeFaces: () => parts.faceModeCoordinator.onExtrudeFaces(),

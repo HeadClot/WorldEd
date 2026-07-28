@@ -11,8 +11,23 @@ export const Theme = Object.freeze({
   gridYAxisColor: 0x006400,
   gridZAxisColor: 0x00008b,
   selectionColor: 0xe86a17,
-  /** Clip plane placement point markers. */
-  clipMarkerColor: 0xffdd22,
+  /** Legacy single clip marker color (point 1 fallback). */
+  clipMarkerColor: 0xf0b429,
+  /**
+   * Clip placement points — warm amber / cool teal / soft violet for contrast
+   * on dark viewports without neon glare.
+   */
+  clipPoint1Color: 0xf0b429,
+  clipPoint2Color: 0x3db8c9,
+  clipPoint3Color: 0xc48ad9,
+  /** Keep-side half-brush preview fill (muted forest). */
+  clipKeepColor: 0x3a8f6e,
+  /** Discard-side half-brush preview fill (stronger coral, readable ghost). */
+  clipDiscardColor: 0xe45b4c,
+  /** Thin construction polyline between clip points (steel, not bright white). */
+  clipConstructionLineColor: 0x7a8a9a,
+  /** Plane∩brush cut edge silhouette (selection orange family). */
+  clipCutEdgeColor: 0xe07a2f,
   separatorColor: 0x0a0a0a,
   separatorGapPx: 4,
   boxColor: 0xffffff,

@@ -3,6 +3,14 @@ import { FaceSelectionRaycaster } from '../../selection/face/face_selection_rayc
 import { GridSnap } from '../../transform/snap/grid_snap.js';
 import { pointerEventToNdc } from '../../utils/pointer_ndc.js';
 
+/** World pick result for clip plane placement, including optional surface data. */
+export interface ClipPlanePickResult {
+  /** Snapped world-space placement point. */
+  point: THREE.Vector3;
+  /** Outward face normal when the hit was on a mesh surface. */
+  surfaceNormal: THREE.Vector3 | null;
+}
+
 /** Picks world points for clip plane placement from mesh hits or a ground plane. */
 export class ClipPlanePointPicker {
   private faceRaycaster: FaceSelectionRaycaster;
@@ -24,27 +32,35 @@ export class ClipPlanePointPicker {
 
   /**
    * Picks a world point from a pointer event. Prefers mesh surface hits, then
-   * falls back to the XZ ground plane.
+   * falls back to the XZ ground plane. Hold Shift to skip grid snap (precision
+   * placement, same convention as bounds/transform tools).
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
    * @param pickElement Viewport pickElement.
    * @param meshes Candidate meshes for surface hits.
-   * @returns Snapped world point, or null when nothing was hit.
+   * @returns Pick result, or null when nothing was hit.
    */
   pickPoint(
     event: MouseEvent,
     camera: THREE.Camera,
     pickElement: HTMLElement,
     meshes: THREE.Mesh[],
-  ): THREE.Vector3 | null {
+  ): ClipPlanePickResult | null {
+    const applySnap = !event.shiftKey;
     const surfaceHit = this.faceRaycaster.pickFace(event, camera, pickElement, meshes);
     if (surfaceHit) {
-      return this.snapPoint(surfaceHit.hitPoint);
+      return {
+        point: this.resolvePoint(surfaceHit.hitPoint, applySnap),
+        surfaceNormal: surfaceHit.faceNormal.clone().normalize(),
+      };
     }
     const groundHit = this.pickGroundPlane(event, camera, pickElement);
     if (!groundHit) return null;
-    return this.snapPoint(groundHit);
+    return {
+      point: this.resolvePoint(groundHit, applySnap),
+      surfaceNormal: null,
+    };
   }
 
   /**
@@ -66,14 +82,17 @@ export class ClipPlanePointPicker {
   }
 
   /**
-   * Applies grid snap when enabled.
+   * Clones a hit point and optionally applies grid snap.
    *
-   * @param point World point to snap.
-   * @returns Possibly snapped clone.
+   * @param point World point.
+   * @param applySnap Whether snapping is allowed for this pick.
+   * @returns Resolved placement point.
    */
-  private snapPoint(point: THREE.Vector3): THREE.Vector3 {
-    const snapped = point.clone();
-    this.gridSnap.snapVector3(snapped);
-    return snapped;
+  private resolvePoint(point: THREE.Vector3, applySnap: boolean): THREE.Vector3 {
+    const result = point.clone();
+    if (applySnap) {
+      this.gridSnap.snapVector3(result);
+    }
+    return result;
   }
 }

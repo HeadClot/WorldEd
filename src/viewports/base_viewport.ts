@@ -32,6 +32,38 @@ export function applyViewportContentDrawableStyles(contentElement: HTMLElement):
 }
 
 /**
+ * Returns whether a pane host is geometry-managed by the area tiling layout.
+ *
+ * @param container Pane host element.
+ * @returns True when the host carries a stable area id.
+ */
+export function isLayoutManagedAreaContainer(container: HTMLElement): boolean {
+  const areaId = container.dataset['areaId'];
+  return typeof areaId === 'string' && areaId.length > 0;
+}
+
+/**
+ * Applies chrome styles to a pane host without clobbering area-tiling geometry.
+ * Layout-managed containers keep their absolute left/top/width/height; other
+ * hosts (detached popups) fill their parent with relative 100%.
+ *
+ * @param container Pane host element.
+ */
+export function applyViewportContainerChromeStyles(container: HTMLElement): void {
+  container.style.overflow = 'hidden';
+  container.style.zIndex = '1';
+  container.style.background = 'transparent';
+  container.style.minWidth = '0';
+  container.style.minHeight = '0';
+  if (isLayoutManagedAreaContainer(container)) {
+    return;
+  }
+  container.style.position = 'relative';
+  container.style.width = '100%';
+  container.style.height = '100%';
+}
+
+/**
  * Pane viewport without a private WebGL context. Cameras and helpers live in a
  * shared scene; drawing is performed by MultiViewComposer through the surface.
  */
@@ -78,16 +110,14 @@ export abstract class BaseViewport {
     }
   }
 
-  /** Styles the pane host that owns the title bar and content stack. */
+  /**
+   * Styles the pane host that owns the title bar and content stack. Area-tiled
+   * panes already have absolute left/top/width/height from the layout
+   * controller; overwriting those with relative 100% breaks split geometry.
+   * Detached / non-tiled hosts still fill their parent with relative 100%.
+   */
   private applyContainerChromeStyles(): void {
-    this.container.style.position = 'relative';
-    this.container.style.overflow = 'hidden';
-    this.container.style.zIndex = '1';
-    this.container.style.background = 'transparent';
-    this.container.style.width = '100%';
-    this.container.style.height = '100%';
-    this.container.style.minWidth = '0';
-    this.container.style.minHeight = '0';
+    applyViewportContainerChromeStyles(this.container);
   }
 
   /** Places the hit/scissor target in the visible region under the title bar. */

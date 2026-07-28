@@ -149,11 +149,35 @@ export function styleSettingsTabBar(tabBar: HTMLElement): void {
   tabBar.classList.add('settings-dialog-tab-bar');
   tabBar.style.display = 'flex';
   tabBar.style.flexWrap = 'wrap';
+  tabBar.style.alignItems = 'center';
   tabBar.style.gap = '4px';
   tabBar.style.padding = '8px 12px';
   tabBar.style.borderBottom = `1px solid ${hexToRgb(Theme.separatorColor)}`;
   tabBar.style.background = hexToRgb(Theme.toolbarBackground);
   tabBar.setAttribute('role', 'tablist');
+}
+
+/**
+ * Applies styles to the Settings → Reset control on the right of the tab bar.
+ *
+ * @param button Reset button element.
+ */
+export function styleSettingsResetButton(button: HTMLButtonElement): void {
+  button.type = 'button';
+  button.classList.add('settings-dialog-reset-button');
+  button.style.marginLeft = 'auto';
+  button.style.cursor = 'pointer';
+  button.style.border = `1px solid ${Theme.inputBorderColor}`;
+  button.style.borderRadius = '4px';
+  button.style.padding = '5px 10px';
+  button.style.fontSize = '12px';
+  button.style.fontWeight = '500';
+  button.style.fontFamily = Theme.uiFontFamily;
+  button.style.background = hexToRgb(Theme.buttonBackground);
+  button.style.color = Theme.buttonTextColor;
+  button.style.letterSpacing = '0.01em';
+  button.style.flexShrink = '0';
+  bindHoverBackground(button, hexToRgb(Theme.buttonHoverColor), hexToRgb(Theme.buttonBackground));
 }
 
 /**

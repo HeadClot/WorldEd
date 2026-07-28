@@ -10,9 +10,11 @@ import { ClipPlaneTool } from './clip_plane_tool.js';
 import { ClipPlanePointPicker } from './clip_plane_point_picker.js';
 import { ClipPlanePointDrag } from './clip_plane_point_drag.js';
 import { ClipPlanePreview, CLIP_PREVIEW_USERDATA_KEY } from './clip_plane_preview.js';
+import { createClipPlanePlacementHint } from './clip_plane_depth_axis.js';
 import { GridSnap } from '../../transform/snap/grid_snap.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
+import type { ModalToolSessionRegistry } from '../tools/modal_tool_session_registry.js';
 
 /** Dependencies for running clip/split operations from the clip tool. */
 export interface ClipPlaneHandlerDependencies {
@@ -21,6 +23,7 @@ export interface ClipPlaneHandlerDependencies {
   selectionManager: SelectionManager;
   gridSnap: GridSnap;
   clipPlaneTool: ClipPlaneTool;
+  modalToolSessionRegistry: ModalToolSessionRegistry;
   showStatusMessage: (message: string) => void;
   syncPrimitivesToViewports: () => void;
   refreshOutliner: () => void;
@@ -61,6 +64,7 @@ export class ClipPlaneHandler {
     this.boundDragUp = null;
     deps.worldObject.add(this.preview.getRoot());
     deps.clipPlaneTool.setChangeCallback(() => this.onToolChanged());
+    deps.selectionManager.onSelectionChanged(() => this.onSelectionChangedWhileClipActive());
   }
 
   /**
@@ -81,7 +85,7 @@ export class ClipPlaneHandler {
     if (previewRoot.parent !== this.deps.worldObject) {
       this.deps.worldObject.add(previewRoot);
     }
-    this.preview.syncFromTool(this.deps.clipPlaneTool);
+    this.syncPreviewFromTool();
   }
 
   /**
@@ -128,19 +132,7 @@ export class ClipPlaneHandler {
     let clippedCount = 0;
     const keepFront = this.deps.clipPlaneTool.getKeepFront();
     targets.forEach((mesh) => {
-      const brushResult = this.clipSolidBrushTarget(mesh, plane, keepFront);
-      if (brushResult) {
-        results.push(brushResult);
-        clippedCount += 1;
-        return;
-      }
-      if (SolidBrushVisual.isBrushObject(mesh)) return;
-      const result = this.planeSplit.clipMeshToPlane(mesh, plane, keepFront);
-      if (!result) return;
-      const command = new ClipMeshCommand(mesh, result, this.deps.worldObject);
-      this.deps.commandStack.push(command);
-      results.push(result);
-      clippedCount += 1;
+      clippedCount += this.clipOneTarget(mesh, plane, keepFront, results) ? 1 : 0;
     });
     this.finishCommit(results, clippedCount, targets.length, 'Clipped');
   }
@@ -154,21 +146,54 @@ export class ClipPlaneHandler {
     const results: THREE.Mesh[] = [];
     let splitCount = 0;
     targets.forEach((mesh) => {
-      const brushResults = this.splitSolidBrushTarget(mesh, plane);
-      if (brushResults) {
-        results.push(...brushResults);
-        splitCount += 1;
-        return;
-      }
-      if (SolidBrushVisual.isBrushObject(mesh)) return;
-      const split = this.planeSplit.splitMeshByPlane(mesh, plane);
-      if (!split) return;
-      const command = new SplitMeshCommand(mesh, split.frontMesh, split.backMesh, this.deps.worldObject);
-      this.deps.commandStack.push(command);
-      results.push(split.frontMesh, split.backMesh);
-      splitCount += 1;
+      splitCount += this.splitOneTarget(mesh, plane, results) ? 1 : 0;
     });
     this.finishCommit(results, splitCount, targets.length, 'Split');
+  }
+
+  /**
+   * Clips one mesh or solid brush into the keep half-space.
+   *
+   * @param mesh Selected mesh target.
+   * @param plane Clip plane.
+   * @param keepFront Whether to keep the front half-space.
+   * @param results Accumulator for result meshes.
+   * @returns True when a clip was applied.
+   */
+  private clipOneTarget(mesh: THREE.Mesh, plane: THREE.Plane, keepFront: boolean, results: THREE.Mesh[]): boolean {
+    const brushResult = this.clipSolidBrushTarget(mesh, plane, keepFront);
+    if (brushResult) {
+      results.push(brushResult);
+      return true;
+    }
+    if (SolidBrushVisual.isBrushObject(mesh)) return false;
+    const result = this.planeSplit.clipMeshToPlane(mesh, plane, keepFront);
+    if (!result) return false;
+    this.deps.commandStack.push(new ClipMeshCommand(mesh, result, this.deps.worldObject));
+    results.push(result);
+    return true;
+  }
+
+  /**
+   * Splits one mesh or solid brush into two halves.
+   *
+   * @param mesh Selected mesh target.
+   * @param plane Split plane.
+   * @param results Accumulator for result meshes.
+   * @returns True when a split was applied.
+   */
+  private splitOneTarget(mesh: THREE.Mesh, plane: THREE.Plane, results: THREE.Mesh[]): boolean {
+    const brushResults = this.splitSolidBrushTarget(mesh, plane);
+    if (brushResults) {
+      results.push(...brushResults);
+      return true;
+    }
+    if (SolidBrushVisual.isBrushObject(mesh)) return false;
+    const split = this.planeSplit.splitMeshByPlane(mesh, plane);
+    if (!split) return false;
+    this.deps.commandStack.push(new SplitMeshCommand(mesh, split.frontMesh, split.backMesh, this.deps.worldObject));
+    results.push(split.frontMesh, split.backMesh);
+    return true;
   }
 
   /**
@@ -263,7 +288,14 @@ export class ClipPlaneHandler {
   private onMarkerDragMove(event: PointerEvent): void {
     if (this.draggingPointIndex < 0) return;
     if (!this.dragPlane || !this.dragCamera || !this.dragRenderer) return;
-    const point = this.pointDrag.projectOntoDragPlane(event, this.dragCamera, this.dragRenderer, this.dragPlane);
+    const applySnap = !event.shiftKey;
+    const point = this.pointDrag.projectOntoDragPlane(
+      event,
+      this.dragCamera,
+      this.dragRenderer,
+      this.dragPlane,
+      applySnap,
+    );
     if (!point) return;
     this.deps.clipPlaneTool.setPoint(this.draggingPointIndex, point);
   }
@@ -303,23 +335,53 @@ export class ClipPlaneHandler {
    */
   private placeNewPoint(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): boolean {
     const meshes = this.collectWorldMeshes();
-    const point = this.pointPicker.pickPoint(event, camera, pickElement, meshes);
-    if (!point) {
+    const pick = this.pointPicker.pickPoint(event, camera, pickElement, meshes);
+    if (!pick) {
       this.deps.showStatusMessage('Click a mesh or the ground plane');
       return true;
     }
-    this.deps.clipPlaneTool.addPoint(point);
+    const placementHint = createClipPlanePlacementHint(camera, pick.surfaceNormal);
+    this.deps.clipPlaneTool.addPoint(pick.point, placementHint);
     this.deps.showStatusMessage(this.deps.clipPlaneTool.getStatusMessage());
     return true;
   }
 
   /** Syncs preview visuals after tool state changes. */
   private onToolChanged(): void {
-    this.preview.syncFromTool(this.deps.clipPlaneTool);
+    this.syncPreviewFromTool();
     this.deps.onToolStateChanged();
     if (this.draggingPointIndex < 0) {
       this.deps.syncPrimitivesToViewports();
     }
+  }
+
+  /**
+   * Refreshes cut silhouettes when the selection changes while the clip tool is
+   * active. No-op when inactive so large selection edits stay cheap.
+   */
+  private onSelectionChangedWhileClipActive(): void {
+    if (!this.deps.clipPlaneTool.isActive()) return;
+    this.syncPreviewFromTool();
+  }
+
+  /**
+   * Rebuilds clip preview markers, guide line, and cut silhouettes for the
+   * current selection only (never the full scene).
+   */
+  private syncPreviewFromTool(): void {
+    this.preview.syncFromTool(this.deps.clipPlaneTool, this.collectClipPreviewTargets());
+  }
+
+  /**
+   * Returns selected meshes used for cut-edge silhouettes. Intentionally
+   * selection-scoped so large maps stay interactive.
+   *
+   * @returns Selected mesh targets.
+   */
+  private collectClipPreviewTargets(): THREE.Mesh[] {
+    return this.deps.selectionManager.getAllSelectedObjectsAsArray().filter((object) => {
+      return object instanceof THREE.Mesh && !this.isClipPreviewObject(object);
+    });
   }
 
   /**
@@ -365,7 +427,9 @@ export class ClipPlaneHandler {
       this.deps.showStatusMessage('Plane does not cut the selection');
       return;
     }
-    this.selectCommitResults(results);
+    this.deps.modalToolSessionRegistry.runWithSelectionEndSuppressed(() => {
+      this.selectCommitResults(results);
+    });
     this.deps.clipPlaneTool.resetPlacementForNextCut();
     this.deps.syncPrimitivesToViewports();
     this.deps.refreshOutliner();

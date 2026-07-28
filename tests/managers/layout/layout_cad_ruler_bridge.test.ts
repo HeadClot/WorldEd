@@ -3,11 +3,14 @@ import * as THREE from 'three';
 import {
   buildCadRulerBindingsFromViewports,
   reattachCadRulersToViewports,
+  refreshCadRulersFromSelection,
 } from '../../../src/managers/layout/layout_cad_ruler_bridge.js';
 import { CadRulerSystem } from '../../../src/rulers/cad_ruler_system.js';
 import { ViewportKind } from '../../../src/viewports/viewport_kind.js';
 import type { EditorViewport } from '../../../src/viewports/editor_viewport.js';
 import type { SelectionManager } from '../../../src/selection/object/selection_manager.js';
+import { EditorOverlayPolicy } from '../../../src/managers/tools/editor_overlay_policy.js';
+import { EditorOverlayId } from '../../../src/managers/tools/editor_overlay_id.js';
 
 /**
  * Builds a minimal editor viewport stub for CAD binding tests.
@@ -77,6 +80,7 @@ describe('layout_cad_ruler_bridge', () => {
       rulerBoundsBuilder: { buildFromMeshes: vi.fn() },
       transformHandler: {},
       transformGizmo: {},
+      editorOverlayPolicy: { isAllowed: () => true },
       selectionManager: {
         getAllSelectedObjectsAsArray: () => [mesh],
       } as unknown as SelectionManager,
@@ -87,5 +91,29 @@ describe('layout_cad_ruler_bridge', () => {
     expect(cadRulerSystem.getDimensionSegmentCount()).toBeGreaterThan(0);
     cadRulerSystem.dispose();
     container.remove();
+  });
+
+  it('should clear CAD bounds rulers when the overlay policy suppresses them', () => {
+    const mesh = createBoxMesh(new THREE.Vector3(2, 1, 3));
+    const cadRulerSystem = new CadRulerSystem();
+    const setSelectionMeshes = vi.spyOn(cadRulerSystem, 'setSelectionMeshes');
+    const policy = new EditorOverlayPolicy();
+    policy.suppress(EditorOverlayId.CAD_BOUNDS_RULERS, 'clip_plane');
+    const host = {
+      cadRulerSystem,
+      rulerBoundsBuilder: { buildFromMeshes: vi.fn() },
+      transformHandler: {},
+      transformGizmo: {},
+      editorOverlayPolicy: policy,
+      selectionManager: {
+        getAllSelectedObjectsAsArray: () => [mesh],
+      } as unknown as SelectionManager,
+      statusBar: null,
+    };
+    refreshCadRulersFromSelection(host as never);
+    expect(setSelectionMeshes).toHaveBeenCalledWith([]);
+    policy.release(EditorOverlayId.CAD_BOUNDS_RULERS, 'clip_plane');
+    refreshCadRulersFromSelection(host as never);
+    expect(setSelectionMeshes).toHaveBeenLastCalledWith([mesh]);
   });
 });

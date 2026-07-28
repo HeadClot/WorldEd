@@ -9,6 +9,8 @@ import { filterUnlockedObjects } from '../../utils/object_lock.js';
 import type { SelectionManager } from '../../selection/object/selection_manager.js';
 import type { EditorViewport } from '../../viewports/editor_viewport.js';
 import { getCadViewPlaneForKind } from '../../viewports/editor_viewport.js';
+import { EditorOverlayId } from '../tools/editor_overlay_id.js';
+import type { EditorOverlayPolicy } from '../tools/editor_overlay_policy.js';
 
 /** Host surface for CAD ruler selection and transform feedback. */
 export interface LayoutCadRulerHost {
@@ -18,6 +20,11 @@ export interface LayoutCadRulerHost {
   transformGizmo: TransformGizmo;
   selectionManager: SelectionManager;
   statusBar: StatusBar | null;
+  /**
+   * Shared overlay policy; when CAD rulers are suppressed, selection dims
+   * clear.
+   */
+  editorOverlayPolicy: EditorOverlayPolicy;
 }
 
 /**
@@ -61,11 +68,16 @@ export function reattachCadRulersToViewports(
 }
 
 /**
- * Rebuilds CAD size dimensions for the current object selection.
+ * Rebuilds CAD size dimensions for the current object selection, or clears them
+ * when a tool has suppressed the CAD bounds overlay.
  *
  * @param host CAD ruler host.
  */
 export function refreshCadRulersFromSelection(host: LayoutCadRulerHost): void {
+  if (!host.editorOverlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)) {
+    host.cadRulerSystem.setSelectionMeshes([]);
+    return;
+  }
   const selected = filterUnlockedObjects(host.selectionManager.getAllSelectedObjectsAsArray());
   host.cadRulerSystem.setSelectionMeshes(selected);
 }

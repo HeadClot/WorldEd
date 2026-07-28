@@ -43,6 +43,8 @@ import { CameraFitCoordinator } from '../camera/camera_fit_coordinator.js';
 import { ShadingModeCoordinator } from '../camera/shading_mode_coordinator.js';
 import { ToolsPalette } from '../../ui/tools_palette.js';
 import { ToolsPaletteController } from '../tools/tools_palette_controller.js';
+import { EditorOverlayPolicy } from '../tools/editor_overlay_policy.js';
+import { ModalToolSessionRegistry } from '../tools/modal_tool_session_registry.js';
 import { ClipPlaneTool } from '../clip_plane/clip_plane_tool.js';
 import { ClipPlaneHandler } from '../clip_plane/clip_plane_handler.js';
 import { EditorToolId } from '../../types/editor_tool_id.js';
@@ -81,12 +83,25 @@ import { createLayoutSettingsSystem, openLayoutAboutDialog } from './layout_sett
 import { DocumentationLink } from '../../ui/documentation_link.js';
 import { CadRulerSystem } from '../../rulers/cad_ruler_system.js';
 import { OrientedBoundsBuilder } from '../../transform/bounds/oriented_bounds.js';
-import { reattachCadRulersToViewports } from './layout_cad_ruler_bridge.js';
+import {
+  reattachCadRulersToViewports,
+  refreshCadRulersFromSelection as rebuildCadRulersFromSelection,
+} from './layout_cad_ruler_bridge.js';
 import { ViewportRegistry } from './viewport_registry.js';
 import { SharedWebGLSurface } from '../../viewports/shared_webgl_surface.js';
 import { SharedWorldScene } from '../../viewports/shared_world_scene.js';
 import { MultiViewComposer } from '../../viewports/multi_view_composer.js';
 import { DetachedViewportWindow } from '../../viewports/detached_viewport_window.js';
+import { AreaLayoutInteraction } from './area/area_layout_interaction.js';
+import { WorkspaceStore } from './workspace/workspace_store.js';
+import { WorkspaceController } from './workspace/workspace_controller.js';
+import { WorkspaceSwitcherBar } from '../../ui/workspace/workspace_switcher_bar.js';
+import {
+  type WorkspaceAreaWiringHost,
+  wireWorkspaceSystem,
+  wireAreaLayoutInteraction,
+  refreshWorkspaceSwitcherBar,
+} from './layout_workspace_area_wiring.js';
 
 /**
  * Bootstrap and wiring base for the viewport layout manager. Owns shared fields
@@ -97,7 +112,12 @@ export abstract class ViewportLayoutCore {
   protected container: HTMLElement;
   protected viewports!: HTMLElement[];
   protected viewportArea!: HTMLElement;
+  protected viewportPaneGrid!: HTMLElement;
   protected viewportPaneLayout!: ViewportPaneLayout;
+  protected areaLayoutInteraction!: AreaLayoutInteraction | null;
+  protected workspaceStore!: WorkspaceStore;
+  protected workspaceController!: WorkspaceController | null;
+  protected workspaceSwitcherBar!: WorkspaceSwitcherBar | null;
   protected viewportRegistry!: ViewportRegistry;
   protected sharedSurface!: SharedWebGLSurface;
   protected sharedWorldScene!: SharedWorldScene;
@@ -162,6 +182,8 @@ export abstract class ViewportLayoutCore {
   protected solidModelController!: SolidModelController | null;
   protected cadRulerSystem!: CadRulerSystem;
   protected rulerBoundsBuilder!: OrientedBoundsBuilder;
+  protected editorOverlayPolicy!: EditorOverlayPolicy;
+  protected modalToolSessionRegistry!: ModalToolSessionRegistry;
 
   /**
    * Creates the viewport layout with toolbar, outliner, and four viewports.
@@ -231,15 +253,97 @@ export abstract class ViewportLayoutCore {
     );
     this.toolbarContainer = shell.toolbarContainer;
     this.viewportArea = shell.viewportArea;
+    this.viewportPaneGrid = shell.viewportPaneGrid;
     this.viewports = shell.viewports;
     this.viewportPaneLayout = new ViewportPaneLayout(shell.viewportPaneGrid, this.viewports);
+    this.areaLayoutInteraction = null;
+    this.workspaceStore = new WorkspaceStore();
+    this.workspaceController = null;
+    this.workspaceSwitcherBar = null;
     this.toolbar = shell.toolbar;
     this.outlinerPanel = shell.outlinerPanel;
     this.propertiesPanel = shell.propertiesPanel;
     this.statusBar = shell.statusBar;
     this.assignViewportsFromBootstrap();
+    this.bindAreaLayoutInteraction();
+    this.bindWorkspaceSystem();
     this.syncPrimitivesToViewports();
     this.updateTransformButtons();
+  }
+
+  /**
+   * Creates the workspace controller and switcher bar after the registry
+   * exists.
+   */
+  protected bindWorkspaceSystem(): void {
+    wireWorkspaceSystem(this.getWorkspaceAreaWiringHost());
+  }
+
+  /** Rebuilds workspace switcher tabs from the store. */
+  protected refreshWorkspaceSwitcher(): void {
+    refreshWorkspaceSwitcherBar(this.getWorkspaceAreaWiringHost());
+  }
+
+  /**
+   * Wires splitters and corner gestures after the registry exists so structural
+   * mutations can create and dispose panes safely.
+   */
+  protected bindAreaLayoutInteraction(): void {
+    wireAreaLayoutInteraction(this.getWorkspaceAreaWiringHost());
+  }
+
+  /**
+   * Builds the host bag for workspace and area tiling wiring helpers.
+   *
+   * @returns Workspace/area wiring host.
+   */
+  protected getWorkspaceAreaWiringHost(): WorkspaceAreaWiringHost {
+    return {
+      getToolbarContainer: () => this.toolbarContainer,
+      getViewportArea: () => this.viewportArea,
+      getViewportPaneGrid: () => this.viewportPaneGrid,
+      getWorkspaceStore: () => this.workspaceStore,
+      getWorkspaceController: () => this.workspaceController,
+      getWorkspaceSwitcherBar: () => this.workspaceSwitcherBar,
+      getAreaLayoutInteraction: () => this.areaLayoutInteraction,
+      getViewportRegistry: () => this.viewportRegistry,
+      getAreaLayoutController: () => this.viewportPaneLayout.getAreaLayoutController(),
+      setWorkspaceController: (controller) => {
+        this.workspaceController = controller;
+      },
+      setWorkspaceSwitcherBar: (bar) => {
+        this.workspaceSwitcherBar = bar;
+      },
+      setAreaLayoutInteraction: (interaction) => {
+        this.areaLayoutInteraction = interaction;
+      },
+      openDetachedViewport: (viewportKind) => this.detachedViewportWindow.open({ initialKind: viewportKind }),
+      getViewportChromeHost: () => this.getViewportChromeHost(),
+      resizeAll: () => this.resizeAll(),
+      refreshNamedViewportFields: () => this.refreshNamedViewportFields(),
+      rewireAfterAreaStructureChange: () => this.rewireAfterAreaStructureChange(),
+    };
+  }
+
+  /**
+   * Rebinds shared scene objects, tools, and chrome after area structure
+   * changes (split, join, workspace switch).
+   */
+  protected rewireAfterAreaStructureChange(): void {
+    this.sceneBootstrap.rewireAfterViewportMutation(
+      this.worldObject,
+      this.viewportRegistry,
+      this.sharedWorldScene,
+      this.viewportSyncManager,
+      this.transformGizmo,
+    );
+    this.selectionVisualController?.wireViewports(this.getAllLiveViewports());
+    this.transformInteractionBridge?.wireViewports(this.getAllLiveViewports());
+    this.faceModeCoordinator?.rebindViewportFaceCallbacks();
+    this.shadingModeCoordinator?.rebindViewportUi();
+    this.attachCadRulers();
+    this.watchResize();
+    this.resizeAll();
   }
 
   /** Creates viewports, sync manager, and shared scene objects. */
@@ -402,6 +506,14 @@ export abstract class ViewportLayoutCore {
    * Attaches CAD ruler overlays to every interactive viewport (main-window
    * panes and open detached multi-monitor panes) using the shared world scene.
    */
+  /**
+   * Rebuilds CAD size dimensions for the current selection (or clears when
+   * suppressed).
+   */
+  protected refreshCadRulersFromSelection(): void {
+    rebuildCadRulersFromSelection(this.getCadRulerHost());
+  }
+
   protected attachCadRulers(): void {
     reattachCadRulersToViewports(
       this.getCadRulerHost(),
@@ -465,7 +577,6 @@ export abstract class ViewportLayoutCore {
       this.selectionManager,
       this.gridSnap,
       {
-        // Full mutation refresh: clones, selection/hulls, CAD rulers, gizmo.
         syncViewports: () => this.refreshAfterWorldMutation(),
         refreshOutliner: () => this.refreshOutliner(),
         showStatusMessage: (message) => this.showStatusMessage(message),
@@ -560,6 +671,7 @@ export abstract class ViewportLayoutCore {
       transformGizmo: this.transformGizmo,
       selectionManager: this.selectionManager,
       statusBar: this.statusBar,
+      editorOverlayPolicy: this.editorOverlayPolicy,
     };
   }
 
@@ -607,11 +719,14 @@ export abstract class ViewportLayoutCore {
       onClipCancel: () => this.onClipCancel(),
       onTransformMode: (mode) => this.onTransformMode(mode),
       onOpenUvEditor: () => this.onToggleUvEditor(),
+      editorOverlayPolicy: this.editorOverlayPolicy,
+      modalToolSessionRegistry: this.modalToolSessionRegistry,
     });
     this.clipPlaneHandler = result.clipPlaneHandler;
     this.toolsPalette = result.toolsPalette;
     this.toolsPaletteController = result.toolsPaletteController;
     this.renderLoop.setClipPlaneHandler(result.clipPlaneHandler);
+    this.editorOverlayPolicy.addChangeListener(() => this.refreshCadRulersFromSelection());
   }
 
   /** Cancels the clip tool and returns to object select in the palette. */
@@ -672,7 +787,6 @@ export abstract class ViewportLayoutCore {
     this.solidModelController = setup.solidModelController;
     this.solidModelController.setTransformModeProvider(() => this.transformHandler.getMode());
     this.solidModelController.setActiveCameraProvider(() => this.getActiveSpawnCamera());
-    // Startup seeds a solid model before this panel exists; claim it as active.
     this.solidModelController.adoptFirstSolidModelInWorld();
   }
 
@@ -738,6 +852,10 @@ export abstract class ViewportLayoutCore {
       toolbar: this.toolbar,
       resizeAll: () => this.resizeAll(),
       onVisibleSlots: (slots) => this.syncActivePanesFromSlots(slots),
+      onViewportPaneCount: (paneCount) => {
+        this.workspaceController?.applyPaneCountMigration(paneCount);
+        this.refreshWorkspaceSwitcher();
+      },
     });
     this.settingsStore = parts.settingsStore;
     this.settingsApplicator = parts.settingsApplicator;

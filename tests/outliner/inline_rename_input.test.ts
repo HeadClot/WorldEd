@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { InlineRenameInput } from '../../src/ui/outliner/inline_rename_input.js';
+import { InlineRenameInput } from '../../src/ui/inline_rename_input.js';
 
 describe('InlineRenameInput', () => {
   let parentElement: HTMLElement;

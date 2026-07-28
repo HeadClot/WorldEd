@@ -3,10 +3,7 @@ import { ViewportLayoutCore } from './viewport_layout_core.js';
 import { createOutlinerShellActions, createToolbarShellActions } from './layout_shell_action_builders.js';
 import { buildLayoutShellActionSource } from './layout_shell_source.js';
 import { createShellSourceHostFromLayout } from './layout_manager_hosts.js';
-import {
-  onCadRulerTransformFeedback as handleCadRulerTransformFeedback,
-  refreshCadRulersFromSelection as rebuildCadRulersFromSelection,
-} from './layout_cad_ruler_bridge.js';
+import { onCadRulerTransformFeedback as handleCadRulerTransformFeedback } from './layout_cad_ruler_bridge.js';
 import { TransformInteractionBridge } from '../tools/transform_interaction_bridge.js';
 import { createAndRegisterKeyboardShortcuts } from './layout_keyboard_bindings.js';
 import { setupUvEditorPanel } from './layout_uv_editor_setup.js';
@@ -321,15 +318,11 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
    * rebuilds on hierarchy mutations stay on refreshOutliner).
    */
   private onSelectionChanged(): void {
+    this.modalToolSessionRegistry.onSelectionChanged();
     this.updateGizmoVisibility();
     this.updateGizmoPivot();
     this.uvEditorController?.refreshFromSelection();
     this.refreshCadRulersFromSelection();
-  }
-
-  /** Rebuilds CAD size dimensions for the current object selection. */
-  private refreshCadRulersFromSelection(): void {
-    rebuildCadRulersFromSelection(this.getCadRulerHost());
   }
 
   /**
@@ -622,7 +615,6 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
       getActiveViewports: () => this.getActiveViewports(),
       cameraFitCoordinator: this.cameraFitCoordinator,
       clipPlaneHandler: this.clipPlaneHandler,
-      // Required so multi-view can show CAD line batches per scissor pass.
       cadRulerSystem: this.cadRulerSystem,
       transformGizmo: this.transformGizmo,
       onBeforeRender: () => {
@@ -643,6 +635,7 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
 
   /** Resizes the shared surface and every active pane camera. */
   protected resizeAll(): void {
+    this.viewportPaneLayout.getAreaLayoutController().snapGeometryToPixels();
     const width = this.viewportArea.clientWidth;
     const height = this.viewportArea.clientHeight;
     if (width > 0 && height > 0) {
@@ -651,7 +644,6 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
     this.viewportRegistry.getPanes().forEach((pane) => {
       const viewport = pane.getViewport();
       if (!viewport || !pane.isActive()) return;
-      // Match camera aspect to the drawable content box (below the title bar).
       const rect = viewport.getContentElement().getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
         viewport.resize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
@@ -688,6 +680,11 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
     this.inputManager?.dispose();
     this.viewportRegistry?.dispose();
     this.sharedSurface?.dispose();
+    this.areaLayoutInteraction?.dispose();
+    this.areaLayoutInteraction = null;
+    this.workspaceSwitcherBar?.dispose();
+    this.workspaceSwitcherBar = null;
+    this.workspaceController = null;
     this.detachedViewportWindow?.dispose();
     this.disposeOwnedUiAndManagers();
   }

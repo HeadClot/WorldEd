@@ -186,6 +186,7 @@ export class MenuPanel {
    */
   private createActionRow(entry: ToolbarMenuAction): HTMLButtonElement {
     const button = this.createBaseRowButton(entry.label);
+    applyMenuItemTooltip(button, entry.tooltip);
     const shortcutElement = this.appendShortcutSlot(button);
     this.bindActionActivation(button, entry);
     this.bindActionRowHover(button);
@@ -212,6 +213,7 @@ export class MenuPanel {
     host.style.position = 'relative';
     host.style.width = '100%';
     const button = this.createBaseRowButton(entry.label);
+    applyMenuItemTooltip(button, entry.tooltip);
     button.classList.add('editor-toolbar-dropdown-item-has-submenu');
     button.setAttribute('aria-haspopup', 'menu');
     button.setAttribute('aria-expanded', 'false');
@@ -446,6 +448,7 @@ export class MenuPanel {
   private refreshRow(row: BoundMenuRow): void {
     const enabled = row.entry.isEnabled ? row.entry.isEnabled() : true;
     applyMenuItemEnabledState(row.button, enabled);
+    applyMenuItemTooltip(row.button, row.entry.tooltip);
     if (isMenuAction(row.entry) && row.shortcutElement) {
       this.refreshShortcutLabel(row.shortcutElement, row.entry);
     }
@@ -482,4 +485,36 @@ export class MenuPanel {
     }
     return entry.shortcut.trim();
   }
+}
+
+/**
+ * Applies or clears a native title tooltip on a menu row.
+ *
+ * @param element Menu row button.
+ * @param tooltip Static string, live resolver, or undefined.
+ */
+function applyMenuItemTooltip(
+  element: HTMLElement,
+  tooltip: string | (() => string | undefined | null) | undefined,
+): void {
+  const text = resolveMenuTooltipText(tooltip);
+  if (!text) {
+    element.removeAttribute('title');
+    return;
+  }
+  element.title = text;
+}
+
+/**
+ * Resolves a menu tooltip definition to display text.
+ *
+ * @param tooltip Static string, live resolver, or undefined.
+ * @returns Trimmed tooltip text, or empty when none.
+ */
+function resolveMenuTooltipText(tooltip: string | (() => string | undefined | null) | undefined): string {
+  if (!tooltip) return '';
+  if (typeof tooltip === 'function') {
+    return tooltip()?.trim() ?? '';
+  }
+  return tooltip.trim();
 }

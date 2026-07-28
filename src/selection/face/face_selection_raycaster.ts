@@ -8,6 +8,8 @@ export interface FacePickResult {
   mesh: THREE.Mesh;
   faceIndex: number;
   hitPoint: THREE.Vector3;
+  /** Outward world-space face normal at the hit (unit length). */
+  faceNormal: THREE.Vector3;
 }
 
 /**
@@ -52,6 +54,7 @@ export class FaceSelectionRaycaster {
     let bestFaceIndex = -1;
     let bestDistance = Infinity;
     let bestPoint: THREE.Vector3 | null = null;
+    let bestNormal: THREE.Vector3 | null = null;
     for (const mesh of meshes) {
       if (SolidBrushVisual.shouldSkipFacePick(mesh)) continue;
       if (!mesh.visible) continue;
@@ -61,12 +64,14 @@ export class FaceSelectionRaycaster {
       bestFaceIndex = candidate.faceIndex;
       bestDistance = candidate.distance;
       bestPoint = candidate.point;
+      bestNormal = candidate.worldNormal;
     }
-    if (!bestMesh || !bestPoint || bestFaceIndex < 0) return null;
+    if (!bestMesh || !bestPoint || !bestNormal || bestFaceIndex < 0) return null;
     return {
       mesh: bestMesh,
       faceIndex: bestFaceIndex,
       hitPoint: bestPoint,
+      faceNormal: bestNormal,
     };
   }
 
@@ -95,7 +100,7 @@ export class FaceSelectionRaycaster {
   private pickFrontFaceOnMesh(
     mesh: THREE.Mesh,
     maxDistance: number,
-  ): { faceIndex: number; distance: number; point: THREE.Vector3 } | null {
+  ): { faceIndex: number; distance: number; point: THREE.Vector3; worldNormal: THREE.Vector3 } | null {
     mesh.updateMatrixWorld(true);
     if (!this.rayIntersectsWorldBounds(mesh, maxDistance)) {
       return null;
@@ -114,7 +119,12 @@ export class FaceSelectionRaycaster {
     this.normalMatrix.getNormalMatrix(mesh.matrixWorld);
     this.worldNormal.copy(hit.localNormal).applyMatrix3(this.normalMatrix).normalize();
     if (this.worldNormal.dot(this.rayDirection) >= 0) return null;
-    return { faceIndex: hit.faceIndex, distance: worldDistance, point: worldPoint };
+    return {
+      faceIndex: hit.faceIndex,
+      distance: worldDistance,
+      point: worldPoint,
+      worldNormal: this.worldNormal.clone(),
+    };
   }
 
   /**

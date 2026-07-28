@@ -67,7 +67,6 @@ export class OrthoPanHandler {
     this.canvas.addEventListener('pointerdown', this.onPointerDownBound);
     this.canvas.addEventListener('pointermove', this.onPointerMoveBound);
     this.canvas.addEventListener('pointerup', this.onPointerUpBound);
-    // passive: false so preventDefault keeps the page from scrolling while zooming.
     this.canvas.addEventListener('wheel', this.onWheelBound, { passive: false });
     const ownerDocument = this.getOwnerDocument();
     ownerDocument.addEventListener('pointerlockchange', this.onPointerLockChangeBound);
@@ -217,7 +216,6 @@ export class OrthoPanHandler {
     const worldX = (screenDeltaX * frustumWidth) / canvasWidth;
     const worldY = (screenDeltaY * frustumHeight) / canvasHeight;
     this.camera.getWorldDirection(this.tempForward);
-    // Use the camera's own up so top-down views (up = -Z) pan correctly.
     this.tempRight.crossVectors(this.tempForward, this.camera.up).normalize();
     if (this.tempRight.lengthSq() < 1e-10) {
       this.tempRight.set(1, 0, 0);

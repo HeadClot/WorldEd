@@ -10,6 +10,10 @@ import { ClipPlaneHandler } from '../../../src/managers/clip_plane/clip_plane_ha
 import { SelectionManager } from '../../../src/selection/object/selection_manager.js';
 import { CommandStack } from '../../../src/commands/command_stack.js';
 import { GridSnap } from '../../../src/transform/snap/grid_snap.js';
+import { EditorOverlayPolicy } from '../../../src/managers/tools/editor_overlay_policy.js';
+import { ModalToolSessionRegistry } from '../../../src/managers/tools/modal_tool_session_registry.js';
+import { EditorOverlayId } from '../../../src/managers/tools/editor_overlay_id.js';
+import { CLIP_PLANE_SESSION_KEY } from '../../../src/managers/tools/editor_tool_session_keys.js';
 
 describe('ToolsPaletteController', () => {
   let host: HTMLElement;
@@ -19,6 +23,8 @@ describe('ToolsPaletteController', () => {
   let selectionManager: SelectionManager;
   let controller: ToolsPaletteController;
   let showStatus: ReturnType<typeof vi.fn>;
+  let overlayPolicy: EditorOverlayPolicy;
+  let modalRegistry: ModalToolSessionRegistry;
 
   beforeEach(() => {
     host = document.createElement('div');
@@ -38,11 +44,15 @@ describe('ToolsPaletteController', () => {
     clipTool = new ClipPlaneTool();
     selectionManager = new SelectionManager();
     showStatus = vi.fn();
+    overlayPolicy = new EditorOverlayPolicy();
+    modalRegistry = new ModalToolSessionRegistry();
     const clipHandler = {
       flipPlane: () => undefined,
       commitClip: () => undefined,
       commitSplit: () => undefined,
-      cancel: () => undefined,
+      cancel: () => {
+        clipTool.deactivate();
+      },
     } as unknown as ClipPlaneHandler;
     controller = new ToolsPaletteController({
       toolsPalette: palette,
@@ -50,6 +60,8 @@ describe('ToolsPaletteController', () => {
       clipPlaneTool: clipTool,
       clipPlaneHandler: clipHandler,
       selectionManager,
+      editorOverlayPolicy: overlayPolicy,
+      modalToolSessionRegistry: modalRegistry,
       showStatusMessage: showStatus,
     });
   });
@@ -88,5 +100,42 @@ describe('ToolsPaletteController', () => {
     controller.onExternalSelectionModeChanged(SelectionMode.FACE);
     expect(clipTool.isActive()).toBe(false);
     expect(controller.getActiveTool()).toBe(EditorToolId.FACE);
+  });
+
+  it('should suppress CAD bounds rulers while clip is active', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selectionManager.selectObject(mesh);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(true);
+    controller.selectTool(EditorToolId.CLIP_PLANE);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(false);
+    controller.selectTool(EditorToolId.OBJECT);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(true);
+  });
+
+  it('should end clip when selection changes externally via modal registry', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const other = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selectionManager.selectObject(mesh);
+    controller.selectTool(EditorToolId.CLIP_PLANE);
+    expect(clipTool.isActive()).toBe(true);
+    expect(modalRegistry.has(CLIP_PLANE_SESSION_KEY)).toBe(true);
+    selectionManager.selectObject(other);
+    modalRegistry.onSelectionChanged();
+    expect(clipTool.isActive()).toBe(false);
+    expect(controller.getActiveTool()).toBe(EditorToolId.OBJECT);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(true);
+  });
+
+  it('should not end clip when selection change is suppressed by the modal registry', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const other = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selectionManager.selectObject(mesh);
+    controller.selectTool(EditorToolId.CLIP_PLANE);
+    modalRegistry.runWithSelectionEndSuppressed(() => {
+      selectionManager.selectObject(other);
+      modalRegistry.onSelectionChanged();
+    });
+    expect(clipTool.isActive()).toBe(true);
+    expect(controller.getActiveTool()).toBe(EditorToolId.CLIP_PLANE);
   });
 });

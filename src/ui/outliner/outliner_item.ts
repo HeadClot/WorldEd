@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
 import { ObjectIconFactory } from './object_icon_factory.js';
-import { InlineRenameInput } from './inline_rename_input.js';
+import { InlineRenameInput } from '../inline_rename_input.js';
 
 /**
  * Callback type for item selection events.

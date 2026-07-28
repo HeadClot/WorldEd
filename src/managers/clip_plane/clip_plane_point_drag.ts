@@ -70,28 +70,33 @@ export class ClipPlanePointDrag {
   }
 
   /**
-   * Projects the pointer onto a drag plane and applies grid snap.
+   * Projects the pointer onto a drag plane. Applies grid snap unless the caller
+   * disables it (Shift held — precision mode, same as bounds/transform).
    *
    * @param event Pointer event.
    * @param camera Viewport camera.
    * @param pickElement Viewport pickElement.
    * @param dragPlane Plane established at drag start.
-   * @returns Snapped world hit, or null when the ray misses the plane.
+   * @param applySnap When false, returns the raw plane hit without snapping.
+   * @returns World hit, or null when the ray misses the plane.
    */
   projectOntoDragPlane(
     event: MouseEvent,
     camera: THREE.Camera,
     pickElement: HTMLElement,
     dragPlane: THREE.Plane,
+    applySnap: boolean = true,
   ): THREE.Vector3 | null {
     camera.updateMatrixWorld(true);
     pointerEventToNdc(event, pickElement, this.ndc);
     this.raycaster.setFromCamera(this.ndc, camera);
     const hit = this.raycaster.ray.intersectPlane(dragPlane, this.scratchHit);
     if (!hit) return null;
-    const snapped = hit.clone();
-    this.gridSnap.snapVector3(snapped);
-    return snapped;
+    const result = hit.clone();
+    if (applySnap) {
+      this.gridSnap.snapVector3(result);
+    }
+    return result;
   }
 
   /**

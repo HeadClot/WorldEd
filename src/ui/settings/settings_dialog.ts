@@ -1,5 +1,6 @@
 import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
 import { SETTINGS_TAB_LABELS, SETTINGS_TAB_ORDER, type SettingsTabId } from '../../settings/settings_types.js';
+import { showMessageBox } from '../message_box.js';
 import {
   ensureSettingsDialogStyles,
   styleSettingsBackdrop,
@@ -7,6 +8,7 @@ import {
   styleSettingsContent,
   styleSettingsHeader,
   styleSettingsPanel,
+  styleSettingsResetButton,
   styleSettingsTabBar,
   styleSettingsTabButton,
   styleSettingsTitle,
@@ -17,9 +19,18 @@ import { SettingsMouseTab } from './settings_mouse_tab.js';
 import { SettingsUpdaterTab } from './settings_updater_tab.js';
 import { SettingsViewTab } from './settings_view_tab.js';
 
+/** Optional hooks for settings dialog actions that need the host app. */
+export interface SettingsDialogOptions {
+  /**
+   * Invoked after the user confirms Reset. Should clear storage and restore the
+   * editor to factory defaults (typically a full page reload).
+   */
+  onResetAllSettings?: () => void | Promise<void>;
+}
+
 /**
  * Toggleable modal settings menu with Games, View, Mouse, Keyboard, and Update
- * tabs.
+ * tabs, plus a Reset action on the right of the tab bar.
  */
 export class SettingsDialog {
   private readonly host: HTMLElement;
@@ -33,24 +44,29 @@ export class SettingsDialog {
   private readonly keyboardTab: SettingsKeyboardTab;
   private readonly mouseTab: SettingsMouseTab;
   private readonly updaterTab: SettingsUpdaterTab;
+  private readonly onResetAllSettings: (() => void | Promise<void>) | null;
   private readonly unsubscribe: () => void;
   private readonly boundKeyDown: (event: KeyboardEvent) => void;
   private activeTabId: SettingsTabId;
   private isVisible: boolean;
   private isDisposed: boolean;
+  private isResetInProgress: boolean;
 
   /**
    * Creates the settings dialog and mounts it under the host.
    *
    * @param host Parent element owning the modal overlay.
    * @param store Shared editor settings store.
+   * @param options Optional host hooks (reset).
    */
-  constructor(host: HTMLElement, store: EditorSettingsStore) {
+  constructor(host: HTMLElement, store: EditorSettingsStore, options: SettingsDialogOptions = {}) {
     this.host = host;
     this.isVisible = false;
     this.isDisposed = false;
+    this.isResetInProgress = false;
     this.activeTabId = 'games';
     this.tabButtons = new Map();
+    this.onResetAllSettings = options.onResetAllSettings ?? null;
     this.boundKeyDown = (event) => this.handleKeyDown(event);
     ensureSettingsDialogStyles();
     this.backdrop = document.createElement('div');
@@ -211,7 +227,7 @@ export class SettingsDialog {
   }
 
   /**
-   * Builds the tab bar buttons.
+   * Builds the tab bar buttons with a Reset control on the right.
    *
    * @returns Tab bar element.
    */
@@ -222,7 +238,47 @@ export class SettingsDialog {
       this.tabButtons.set(tabId, button);
       this.tabBar.appendChild(button);
     });
+    this.tabBar.appendChild(this.createResetButton());
     return this.tabBar;
+  }
+
+  /**
+   * Creates the Reset... button that clears all editor storage after confirm.
+   *
+   * @returns Reset button element.
+   */
+  private createResetButton(): HTMLButtonElement {
+    const button = document.createElement('button');
+    styleSettingsResetButton(button);
+    button.textContent = 'Reset...';
+    button.title = 'Reset all settings to defaults';
+    button.dataset['settingsAction'] = 'reset-all-settings';
+    button.addEventListener('click', () => {
+      void this.onResetClicked();
+    });
+    return button;
+  }
+
+  /** Confirms and runs a full settings reset via the host callback. */
+  private async onResetClicked(): Promise<void> {
+    if (this.isDisposed || this.isResetInProgress) return;
+    if (!this.onResetAllSettings) return;
+    this.isResetInProgress = true;
+    try {
+      const confirmed = await showMessageBox({
+        host: this.host,
+        title: 'Reset All Settings',
+        message:
+          'Are you sure you want to reset all settings to their defaults?\n\nThis clears saved preferences, workspaces, game profiles, and related data. The editor will reload.',
+        boldMessage: 'Any unsaved changes will be permanently lost.',
+        confirmLabel: 'Yes',
+        cancelLabel: 'No',
+      });
+      if (!confirmed || this.isDisposed) return;
+      await this.onResetAllSettings();
+    } finally {
+      this.isResetInProgress = false;
+    }
   }
 
   /**

@@ -8,7 +8,6 @@ import {
   MATERIAL_BROWSER_ICON_SIZE_OPTIONS,
   TEXTURE_FILTER_MODE_LABELS,
   TEXTURE_FILTER_MODE_OPTIONS,
-  VIEWPORT_PANE_COUNT_OPTIONS,
   UI_THEME_LABELS,
   UI_THEME_OPTIONS,
   type AnisotropyPreference,
@@ -24,7 +23,7 @@ import {
 
 /**
  * View tab content: UI theme, brightness, textures, material browser, and
- * fonts.
+ * fonts. Workspace layouts are managed from the workspace tab bar, not here.
  */
 export class SettingsViewTab {
   private readonly store: EditorSettingsStore;
@@ -56,7 +55,6 @@ export class SettingsViewTab {
   rebuild(): void {
     this.root.replaceChildren();
     this.root.appendChild(this.buildUserInterfaceCategory());
-    this.root.appendChild(this.buildViewportsCategory());
     this.root.appendChild(this.buildTexturesCategory());
     this.root.appendChild(this.buildMaterialBrowserCategory());
     this.root.appendChild(this.buildFontsCategory());
@@ -104,18 +102,6 @@ export class SettingsViewTab {
   }
 
   /**
-   * Builds the viewport layout category.
-   *
-   * @returns Section containing the pane count control.
-   */
-  private buildViewportsCategory(): HTMLElement {
-    const view = this.store.getViewSettings();
-    const { section, body } = createSettingsCategory('Viewports');
-    body.appendChild(this.createPaneCountRow(view.viewportPaneCount));
-    return section;
-  }
-
-  /**
    * Builds content texture filtering controls.
    *
    * @returns Section containing filter mode and anisotropy.
@@ -126,24 +112,6 @@ export class SettingsViewTab {
     body.appendChild(this.createTextureFilterModeRow(view.textureFilterMode));
     body.appendChild(this.createAnisotropyRow(view.anisotropyPreference, view.textureFilterMode === 'point'));
     return section;
-  }
-
-  /**
-   * Creates the viewport pane count dropdown.
-   *
-   * @param paneCount Current number of visible viewport panes.
-   * @returns Control row for the pane count preference.
-   */
-  private createPaneCountRow(paneCount: number): HTMLElement {
-    const options = VIEWPORT_PANE_COUNT_OPTIONS.map((value) => ({
-      value: String(value),
-      label: `${value} pane${value === 1 ? '' : 's'}`,
-    }));
-    const select = createSettingsSelect(options, String(paneCount), (value) => {
-      this.store.setViewportPaneCount(Number(value));
-    });
-    select.dataset['settingsField'] = 'viewport-pane-count';
-    return createSettingsControlRow('Visible panes', select);
   }
 
   /**

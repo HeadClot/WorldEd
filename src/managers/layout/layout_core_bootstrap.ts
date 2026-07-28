@@ -16,6 +16,8 @@ import { TextureLockSettings } from '../../texture/lock/texture_lock_settings.js
 import { ClipPlaneTool } from '../clip_plane/clip_plane_tool.js';
 import { TerrainGenerator } from '../../terrain/terrain_generator.js';
 import { DEFAULT_COMMAND_STACK_MAX_SIZE, DEFAULT_GRID_SNAP_INTERVAL } from '../../types/editor_config.js';
+import { EditorOverlayPolicy } from '../tools/editor_overlay_policy.js';
+import { ModalToolSessionRegistry } from '../tools/modal_tool_session_registry.js';
 
 /** Core editor services created before the DOM shell exists. */
 export interface LayoutCoreSystems {
@@ -35,6 +37,8 @@ export interface LayoutCoreSystems {
   textureLock: TextureLockSettings;
   hierarchyReparentHandler: HierarchyReparentHandler;
   clipPlaneTool: ClipPlaneTool;
+  editorOverlayPolicy: EditorOverlayPolicy;
+  modalToolSessionRegistry: ModalToolSessionRegistry;
   terrainGenerator: TerrainGenerator;
   lastTime: number;
   animationFrameId: number | null;
@@ -51,7 +55,6 @@ export interface LayoutCoreSystems {
 export function createLayoutCoreSystems(): LayoutCoreSystems {
   const worldObject = new THREE.Group();
   const snapBundle = createSnapAndTransformStack();
-  // Pos Lock on, Stretch Lock off (world tile density when scaling).
   const textureLock = new TextureLockSettings(true, false);
   snapBundle.transformHandler.setTextureLockSettings(textureLock);
   return {
@@ -60,6 +63,8 @@ export function createLayoutCoreSystems(): LayoutCoreSystems {
     ...snapBundle,
     textureLock,
     clipPlaneTool: new ClipPlaneTool(),
+    editorOverlayPolicy: new EditorOverlayPolicy(),
+    modalToolSessionRegistry: new ModalToolSessionRegistry(),
     terrainGenerator: new TerrainGenerator(),
     userSnapEnabled: true,
   };

@@ -3,6 +3,9 @@ import * as THREE from 'three';
 /** Epsilon used when testing collinear or parallel point sets. */
 const PLANE_POINT_EPSILON = 1e-8;
 
+/** Default world up used when no depth axis is supplied for two-point planes. */
+const DEFAULT_WORLD_UP = new THREE.Vector3(0, 1, 0);
+
 /**
  * Builds a vertical clipping plane through two world points. The plane contains
  * both points and is parallel to world up when possible.
@@ -15,11 +18,30 @@ const PLANE_POINT_EPSILON = 1e-8;
 export function buildVerticalPlaneFromTwoPoints(
   pointA: THREE.Vector3,
   pointB: THREE.Vector3,
-  worldUp: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
+  worldUp: THREE.Vector3 = DEFAULT_WORLD_UP,
+): THREE.Plane | null {
+  return buildPlaneFromTwoPointsAndDepth(pointA, pointB, worldUp);
+}
+
+/**
+ * Builds a two-point plane that contains both points and the depth axis. Used
+ * for view-aware or surface-aware clip cuts (depth is camera look or face
+ * normal). Falls back when edge and depth are parallel.
+ *
+ * @param pointA First world-space point on the plane.
+ * @param pointB Second world-space point on the plane.
+ * @param depthAxis Direction lying in the plane (into the view or into the
+ *   brush).
+ * @returns A plane, or null when the points are too close or fully degenerate.
+ */
+export function buildPlaneFromTwoPointsAndDepth(
+  pointA: THREE.Vector3,
+  pointB: THREE.Vector3,
+  depthAxis: THREE.Vector3,
 ): THREE.Plane | null {
   const edge = new THREE.Vector3().subVectors(pointB, pointA);
   if (edge.lengthSq() < PLANE_POINT_EPSILON) return null;
-  const normal = computeVerticalPlaneNormal(edge, worldUp);
+  const normal = computePlaneNormalFromEdgeAndDepth(edge, depthAxis);
   if (normal.lengthSq() < PLANE_POINT_EPSILON) return null;
   normal.normalize();
   return new THREE.Plane().setFromNormalAndCoplanarPoint(normal, pointA);
@@ -49,22 +71,24 @@ export function buildPlaneFromThreePoints(
 }
 
 /**
- * Builds a plane from two or three placement points. Two points use a vertical
- * plane; three points use a free orientation.
+ * Builds a plane from two or three placement points. Two points use the depth
+ * axis (camera or surface) when provided, otherwise a vertical fallback. Three
+ * points use free orientation and ignore depth.
  *
  * @param points Ordered world points (length 2 or 3).
- * @param worldUp Up axis for the two-point vertical case.
+ * @param depthAxis Optional free axis for the two-point case.
  * @returns A plane, or null when the set is invalid.
  */
 export function buildPlaneFromPlacementPoints(
   points: THREE.Vector3[],
-  worldUp: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
+  depthAxis?: THREE.Vector3 | null,
 ): THREE.Plane | null {
   if (points.length >= 3) {
     return buildPlaneFromThreePoints(points[0]!, points[1]!, points[2]!);
   }
   if (points.length === 2) {
-    return buildVerticalPlaneFromTwoPoints(points[0]!, points[1]!, worldUp);
+    const axis = depthAxis && depthAxis.lengthSq() >= PLANE_POINT_EPSILON ? depthAxis : DEFAULT_WORLD_UP;
+    return buildPlaneFromTwoPointsAndDepth(points[0]!, points[1]!, axis);
   }
   return null;
 }
@@ -94,19 +118,22 @@ export function planeToCsgForm(plane: THREE.Plane): { normal: THREE.Vector3; con
 }
 
 /**
- * Chooses a normal for a vertical plane containing the given edge.
+ * Chooses a plane normal from the placement edge and preferred depth axis.
  *
  * @param edge Direction between the two placement points.
- * @param worldUp Preferred world up axis.
+ * @param depthAxis Preferred direction lying in the plane.
  * @returns Unnormalized normal, or zero if fully degenerate.
  */
-function computeVerticalPlaneNormal(edge: THREE.Vector3, worldUp: THREE.Vector3): THREE.Vector3 {
-  const primary = new THREE.Vector3().crossVectors(edge, worldUp);
+function computePlaneNormalFromEdgeAndDepth(edge: THREE.Vector3, depthAxis: THREE.Vector3): THREE.Vector3 {
+  const primary = new THREE.Vector3().crossVectors(edge, depthAxis);
   if (primary.lengthSq() >= PLANE_POINT_EPSILON) {
     return primary;
   }
-  const fallbackUp = pickFallbackAxis(edge);
-  return new THREE.Vector3().crossVectors(edge, fallbackUp);
+  const worldUpFallback = new THREE.Vector3().crossVectors(edge, DEFAULT_WORLD_UP);
+  if (worldUpFallback.lengthSq() >= PLANE_POINT_EPSILON) {
+    return worldUpFallback;
+  }
+  return new THREE.Vector3().crossVectors(edge, pickFallbackAxis(edge));
 }
 
 /**

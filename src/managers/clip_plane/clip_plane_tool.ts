@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { buildPlaneFromPlacementPoints } from '../../csg/csg_plane_from_points.js';
+import { ClipPlanePlacementHint, resolveClipPlaneDepthAxis } from './clip_plane_depth_axis.js';
 
 /** Interactive state for placing a 2–3 point clipping plane. */
 export class ClipPlaneTool {
@@ -7,6 +8,7 @@ export class ClipPlaneTool {
   private points: THREE.Vector3[];
   private plane: THREE.Plane | null;
   private keepFront: boolean;
+  private depthAxis: THREE.Vector3 | null;
   private changeCallback: (() => void) | null;
 
   /** Creates an inactive clip plane tool. */
@@ -15,6 +17,7 @@ export class ClipPlaneTool {
     this.points = [];
     this.plane = null;
     this.keepFront = true;
+    this.depthAxis = null;
     this.changeCallback = null;
   }
 
@@ -51,17 +54,20 @@ export class ClipPlaneTool {
   }
 
   /**
-   * Adds a world-space placement point (up to three).
+   * Adds a world-space placement point (up to three). With two points the plane
+   * is view- or surface-aware via the placement hint. A third point unlocks
+   * free orientation and drops depth awareness.
    *
    * @param point World point to add.
+   * @param placementHint Optional camera/surface context for two-point planes.
    * @returns True when the point was accepted.
    */
-  addPoint(point: THREE.Vector3): boolean {
+  addPoint(point: THREE.Vector3, placementHint?: ClipPlanePlacementHint | null): boolean {
     if (!this.active) return false;
     if (this.points.length >= 3) {
-      this.points = [point.clone()];
+      this.beginNewPlacementFromPoint(point, placementHint);
     } else {
-      this.points.push(point.clone());
+      this.appendPlacementPoint(point, placementHint);
     }
     this.rebuildPlane();
     this.notifyChange();
@@ -69,7 +75,8 @@ export class ClipPlaneTool {
   }
 
   /**
-   * Moves an existing placement point and rebuilds the plane.
+   * Moves an existing placement point and rebuilds the plane. Keeps the locked
+   * two-point depth axis so drags stay stable.
    *
    * @param index Zero-based point index.
    * @param point New world position.
@@ -131,6 +138,16 @@ export class ClipPlaneTool {
   }
 
   /**
+   * Returns the locked two-point depth axis when active, or null for free
+   * three-point mode / incomplete placement.
+   *
+   * @returns Unit depth axis clone, or null.
+   */
+  getDepthAxis(): THREE.Vector3 | null {
+    return this.depthAxis ? this.depthAxis.clone() : null;
+  }
+
+  /**
    * Returns a short status string for the UI.
    *
    * @returns Human-readable status.
@@ -138,9 +155,11 @@ export class ClipPlaneTool {
   getStatusMessage(): string {
     if (!this.active) return 'Clip tool inactive';
     if (this.points.length === 0) return 'Click point 1 (mesh or grid)';
-    if (this.points.length === 1) return 'Click point 2';
+    if (this.points.length === 1) return 'Click point 2 · cuts into view / brush';
     if (this.points.length === 2) {
-      return this.plane ? 'Plane ready (optional point 3) · Flip / Clip / Split' : 'Need a valid second point';
+      return this.plane
+        ? 'Plane ready (optional point 3 for free tilt) · Flip / Clip / Split'
+        : 'Need a valid second point';
     }
     return this.plane ? '3-point plane ready · Flip / Clip / Split' : 'Invalid 3-point plane';
   }
@@ -152,6 +171,7 @@ export class ClipPlaneTool {
   clearPlacement(): void {
     this.points = [];
     this.plane = null;
+    this.depthAxis = null;
     this.keepFront = true;
   }
 
@@ -163,12 +183,74 @@ export class ClipPlaneTool {
     if (!this.active) return;
     this.points = [];
     this.plane = null;
+    this.depthAxis = null;
     this.notifyChange();
   }
 
-  /** Rebuilds the plane from the current points. */
+  /**
+   * Starts a fresh placement sequence after three points were already set.
+   *
+   * @param point First point of the new sequence.
+   * @param placementHint Optional depth context for later two-point lock.
+   */
+  private beginNewPlacementFromPoint(point: THREE.Vector3, placementHint?: ClipPlanePlacementHint | null): void {
+    this.points = [point.clone()];
+    this.depthAxis = null;
+    this.rememberDepthHint(placementHint);
+  }
+
+  /**
+   * Appends a point and locks depth when the plane becomes two-point ready.
+   *
+   * @param point World point to append.
+   * @param placementHint Optional camera/surface context.
+   */
+  private appendPlacementPoint(point: THREE.Vector3, placementHint?: ClipPlanePlacementHint | null): void {
+    this.points.push(point.clone());
+    if (this.points.length === 1) {
+      this.rememberDepthHint(placementHint);
+      return;
+    }
+    if (this.points.length === 2) {
+      this.lockDepthAxisFromHint(placementHint);
+      return;
+    }
+    this.depthAxis = null;
+  }
+
+  /**
+   * Stores a provisional depth axis from the first pick so a second ground pick
+   * can still cut into the brush when the first hit was on a face.
+   *
+   * @param placementHint Optional first-point context.
+   */
+  private rememberDepthHint(placementHint?: ClipPlanePlacementHint | null): void {
+    if (!placementHint) return;
+    this.depthAxis = resolveClipPlaneDepthAxis(placementHint);
+  }
+
+  /**
+   * Locks the two-point depth axis when the plane becomes ready. Orthographic
+   * and surface picks replace the provisional first-pick axis. A perspective
+   * ground/void second pick keeps the first surface axis when present so the
+   * cut still slices into the brush.
+   *
+   * @param placementHint Optional second-point context.
+   */
+  private lockDepthAxisFromHint(placementHint?: ClipPlanePlacementHint | null): void {
+    if (!placementHint) {
+      if (!this.depthAxis) this.depthAxis = new THREE.Vector3(0, 1, 0);
+      return;
+    }
+    const secondHasSurface = placementHint.surfaceNormal !== null;
+    if (placementHint.isOrthographic || secondHasSurface || !this.depthAxis) {
+      this.depthAxis = resolveClipPlaneDepthAxis(placementHint);
+    }
+  }
+
+  /** Rebuilds the plane from the current points and locked depth axis. */
   private rebuildPlane(): void {
-    this.plane = buildPlaneFromPlacementPoints(this.points);
+    this.plane = buildPlaneFromPlacementPoints(this.points, this.depthAxis);
   }
 
   /** Notifies listeners of state changes. */

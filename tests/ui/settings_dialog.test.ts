@@ -39,6 +39,37 @@ describe('SettingsDialog', () => {
     expect(panel.querySelector('[data-settings-tab="themes"]')).toBeNull();
   });
 
+  it('should place a Reset... control on the right of the tab bar', () => {
+    dialog.show();
+    const panel = dialog.getPanelElement();
+    const reset = panel.querySelector('[data-settings-action="reset-all-settings"]') as HTMLButtonElement;
+    expect(reset).toBeTruthy();
+    expect(reset.textContent).toBe('Reset...');
+    expect(reset.style.marginLeft).toBe('auto');
+  });
+
+  it('should confirm before invoking the reset host callback', async () => {
+    let resetCalls = 0;
+    dialog.dispose();
+    dialog = new SettingsDialog(host, store, {
+      onResetAllSettings: () => {
+        resetCalls += 1;
+      },
+    });
+    dialog.show();
+    const reset = dialog
+      .getPanelElement()
+      .querySelector('[data-settings-action="reset-all-settings"]') as HTMLButtonElement;
+    reset.click();
+    await Promise.resolve();
+    const yes = host.querySelector('[data-message-box-accept="true"]') as HTMLButtonElement;
+    expect(yes).toBeTruthy();
+    expect(resetCalls).toBe(0);
+    yes.click();
+    await Promise.resolve();
+    expect(resetCalls).toBe(1);
+  });
+
   it('should add a game profile from the Games tab plus button', () => {
     dialog.show();
     const before = store.getSnapshot().gameProfiles.length;
@@ -52,7 +83,7 @@ describe('SettingsDialog', () => {
 
   it('should place Load Game Profile immediately after Add Game Profile', () => {
     dialog.show();
-    const actions = Array.from(dialog.getPanelElement().querySelectorAll('[data-settings-action]')).map((element) =>
+    const actions = Array.from(dialog.getContentElement().querySelectorAll('[data-settings-action]')).map((element) =>
       element.getAttribute('data-settings-action'),
     );
     expect(actions.slice(0, 3)).toEqual(['add-game-profile', 'load-game-profile', 'save-game-profile']);
@@ -109,12 +140,13 @@ describe('SettingsDialog', () => {
     expect(store.getActiveGameProfile()?.unitSystem).toBe('imperial');
   });
 
-  it('should expose View tab controls for theme brightness panes textures icon size and font', () => {
+  it('should expose View tab controls for theme brightness textures icon size and font', () => {
     dialog.show();
     dialog.showTab('view');
     const content = dialog.getContentElement();
     expect(content.textContent).toContain('User Interface');
-    expect(content.textContent).toContain('Viewports');
+    expect(content.textContent).not.toContain('Viewports');
+    expect(content.querySelector('[data-settings-field="viewport-pane-count"]')).toBeNull();
     expect(content.textContent).toContain('Textures');
     expect(content.textContent).toContain('Material browser');
     expect(content.textContent).toContain('Fonts');
@@ -133,11 +165,6 @@ describe('SettingsDialog', () => {
     toolbarLabels.checked = false;
     toolbarLabels.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.getViewSettings().toolbarButtonLabels).toBe(false);
-
-    const paneCount = content.querySelector('[data-settings-field="viewport-pane-count"]') as HTMLSelectElement;
-    paneCount.value = '3';
-    paneCount.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(store.getViewSettings().viewportPaneCount).toBe(3);
 
     const textureFilter = content.querySelector('[data-settings-field="texture-filter-mode"]') as HTMLSelectElement;
     expect(textureFilter.value).toBe('trilinear');

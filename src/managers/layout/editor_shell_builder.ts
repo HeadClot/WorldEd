@@ -223,53 +223,51 @@ export class EditorShellBuilder {
   }
 
   /**
-   * Creates the absolute CSS grid layer for pane chrome containers.
+   * Creates the absolute pane layer for chrome containers. Tiling geometry is
+   * applied by AreaLayoutController; this layer is not a CSS grid.
    *
-   * @returns Pane grid element.
+   * @returns Pane layer element.
    */
   private createViewportPaneGrid(): HTMLElement {
     const paneGrid = document.createElement('div');
     paneGrid.classList.add('editor-viewport-pane-grid');
     paneGrid.style.position = 'absolute';
     paneGrid.style.inset = '0';
-    paneGrid.style.display = 'grid';
-    paneGrid.style.gridTemplateColumns = '1fr 1fr';
-    paneGrid.style.gridTemplateRows = '1fr 1fr';
-    paneGrid.style.gridTemplateAreas = '"top front"\n"side perspective"';
-    paneGrid.style.gap = `${Theme.separatorGapPx}px`;
-    paneGrid.style.padding = `${Theme.separatorGapPx}px`;
+    paneGrid.style.display = 'block';
     paneGrid.style.boxSizing = 'border-box';
     paneGrid.style.zIndex = '1';
     return paneGrid;
   }
 
   /**
-   * Creates viewport container elements for each grid area.
+   * Creates seed containers for the default quad area ids. The area layout
+   * controller repositions them; ids match DEFAULT_AREA_IDS / pane registry.
    *
-   * @param paneGrid Absolute grid layer that hosts pane chrome.
+   * @param paneGrid Absolute layer that hosts pane chrome.
    * @returns Containers ordered top, front, side, perspective.
    */
   private createViewportContainers(paneGrid: HTMLElement): HTMLElement[] {
     return [
-      this.createContainer(paneGrid, 'top'),
-      this.createContainer(paneGrid, 'front'),
-      this.createContainer(paneGrid, 'side'),
-      this.createContainer(paneGrid, 'perspective'),
+      this.createContainer(paneGrid, 'pane_top'),
+      this.createContainer(paneGrid, 'pane_front'),
+      this.createContainer(paneGrid, 'pane_side'),
+      this.createContainer(paneGrid, 'pane_perspective'),
     ];
   }
 
   /**
-   * Creates a viewport container element for a grid area.
+   * Creates a viewport container element for an area id.
    *
-   * @param paneGrid Parent grid container.
-   * @param area The grid area name for the viewport.
+   * @param paneGrid Parent pane layer.
+   * @param areaId Stable area / pane id.
    * @returns The created container element.
    */
-  private createContainer(paneGrid: HTMLElement, area: string): HTMLElement {
+  private createContainer(paneGrid: HTMLElement, areaId: string): HTMLElement {
     const el = document.createElement('div');
-    el.style.gridArea = area;
+    el.dataset['areaId'] = areaId;
+    el.classList.add('editor-area-pane');
+    el.style.position = 'absolute';
     el.style.overflow = 'hidden';
-    el.style.position = 'relative';
     el.style.background = 'transparent';
     paneGrid.appendChild(el);
     return el;
@@ -385,9 +383,19 @@ export class EditorShellBuilder {
    * @param actions Callbacks for each toolbar control.
    */
   private addFileMenu(toolbar: Toolbar, actions: EditorToolbarActions): void {
-    toolbar.addDropdown('File', [
+    toolbar.addDropdown('File', this.buildFileMenuEntries(actions));
+  }
+
+  /**
+   * Builds declarative File menu entries.
+   *
+   * @param actions Toolbar action callbacks.
+   * @returns File menu entries.
+   */
+  private buildFileMenuEntries(actions: EditorToolbarActions) {
+    return [
       { label: 'New', onClick: () => actions.onNewScene() },
-      { kind: 'separator' },
+      { kind: 'separator' as const },
       {
         label: 'Save',
         onClick: () => actions.onSaveScene(),
@@ -398,37 +406,57 @@ export class EditorShellBuilder {
         onClick: () => actions.onLoadScene(),
         shortcut: () => actions.getShortcutLabel('load'),
       },
-      { kind: 'separator' },
-      {
-        kind: 'submenu',
-        label: 'Import',
-        children: [
-          {
-            label: 'Valve Map Format 2006 (.vmf)…',
-            onClick: () => actions.onImportVmf(),
-          },
-        ],
-      },
-      {
-        kind: 'submenu',
-        label: 'Export',
-        children: [
-          {
-            label: 'Export GLTF (.glb)…',
-            onClick: () => actions.onExportGlb(),
-            shortcut: () => actions.getShortcutLabel('export_glb'),
-          },
-          {
-            label: 'Wavefront OBJ/MTL (.obj)…',
-            onClick: () => actions.onExportObj(),
-          },
-          {
-            label: 'Autodesk FBX (.fbx)…',
-            onClick: () => actions.onExportFbx(),
-          },
-        ],
-      },
-    ]);
+      { kind: 'separator' as const },
+      this.buildFileImportSubmenu(actions),
+      this.buildFileExportSubmenu(actions),
+    ];
+  }
+
+  /**
+   * Builds the File → Import submenu entry.
+   *
+   * @param actions Toolbar action callbacks.
+   * @returns Submenu entry.
+   */
+  private buildFileImportSubmenu(actions: EditorToolbarActions) {
+    return {
+      kind: 'submenu' as const,
+      label: 'Import',
+      children: [
+        {
+          label: 'Valve Map Format 2006 (.vmf)…',
+          onClick: () => actions.onImportVmf(),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Builds the File → Export submenu entry.
+   *
+   * @param actions Toolbar action callbacks.
+   * @returns Submenu entry.
+   */
+  private buildFileExportSubmenu(actions: EditorToolbarActions) {
+    return {
+      kind: 'submenu' as const,
+      label: 'Export',
+      children: [
+        {
+          label: 'Export GLTF (.glb)…',
+          onClick: () => actions.onExportGlb(),
+          shortcut: () => actions.getShortcutLabel('export_glb'),
+        },
+        {
+          label: 'Wavefront OBJ/MTL (.obj)…',
+          onClick: () => actions.onExportObj(),
+        },
+        {
+          label: 'Autodesk FBX (.fbx)…',
+          onClick: () => actions.onExportFbx(),
+        },
+      ],
+    };
   }
 
   /**

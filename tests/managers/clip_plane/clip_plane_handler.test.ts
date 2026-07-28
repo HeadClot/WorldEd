@@ -23,6 +23,7 @@ describe('ClipPlaneHandler preview after scene load', () => {
       selectionManager: new SelectionManager(),
       gridSnap: new GridSnap(false, 1),
       clipPlaneTool,
+      modalToolSessionRegistry: { runWithSelectionEndSuppressed: (work: () => void) => work() } as never,
       showStatusMessage: vi.fn(),
       syncPrimitivesToViewports: vi.fn(),
       refreshOutliner: vi.fn(),

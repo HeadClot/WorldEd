@@ -2,6 +2,7 @@ import { AboutDialog } from '../../ui/about/about_dialog.js';
 import { SettingsDialog } from '../../ui/settings/settings_dialog.js';
 import { EditorSettingsStore } from '../../settings/editor_settings_store.js';
 import { SettingsApplicator } from '../../settings/settings_applicator.js';
+import { clearEditorLocalStorage } from '../../settings/clear_editor_storage.js';
 import type { ViewSettings } from '../../settings/settings_types.js';
 import { getTextureMapCache } from '../../texture/library/texture_map_cache.js';
 import { createTextureFilterPolicy } from '../../texture/library/texture_filter_policy.js';
@@ -26,6 +27,8 @@ export interface LayoutSettingsCreateDeps {
   toolbar: Toolbar;
   resizeAll: () => void;
   onVisibleSlots?: (slots: readonly string[]) => void;
+  /** Optional workspace-driven pane count migration (preferred over raw grid). */
+  onViewportPaneCount?: (paneCount: 1 | 2 | 3 | 4) => void;
 }
 
 /**
@@ -44,6 +47,7 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
     deps.resizeAll,
     settingsStore.getViewSettings().viewportPaneCount,
     deps.onVisibleSlots,
+    deps.onViewportPaneCount,
   );
   deps.viewport3D.setFlyingCameraMoveSpeed(settingsStore.getMouseSettings().moveSpeed);
   applyLayoutTextureFilterSettings(deps.viewport3D, settingsStore.getViewSettings());
@@ -55,11 +59,17 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
       deps.resizeAll,
       snapshot.view.viewportPaneCount,
       deps.onVisibleSlots,
+      deps.onViewportPaneCount,
     );
     deps.viewport3D.setFlyingCameraMoveSpeed(snapshot.mouse.moveSpeed);
     applyLayoutTextureFilterSettings(deps.viewport3D, snapshot.view);
   });
-  const settingsDialog = new SettingsDialog(deps.container, settingsStore);
+  const settingsDialog = new SettingsDialog(deps.container, settingsStore, {
+    onResetAllSettings: () => {
+      clearEditorLocalStorage();
+      window.location.reload();
+    },
+  });
   return { settingsStore, settingsApplicator, settingsDialog, settingsUnsubscribe };
 }
 
@@ -89,9 +99,14 @@ export function applyLayoutViewportPaneCount(
   resizeAll: () => void,
   paneCount: 1 | 2 | 3 | 4,
   onVisibleSlots?: (slots: readonly string[]) => void,
+  onViewportPaneCount?: (paneCount: 1 | 2 | 3 | 4) => void,
 ): void {
-  viewportPaneLayout.apply(paneCount);
-  onVisibleSlots?.(viewportPaneLayout.getVisibleSlots());
+  if (onViewportPaneCount) {
+    onViewportPaneCount(paneCount);
+  } else {
+    viewportPaneLayout.apply(paneCount);
+    onVisibleSlots?.(viewportPaneLayout.getVisibleSlots());
+  }
   requestAnimationFrame(() => resizeAll());
 }
 

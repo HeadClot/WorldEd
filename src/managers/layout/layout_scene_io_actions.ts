@@ -8,7 +8,7 @@ import type { SelectionManager } from '../../selection/object/selection_manager.
 import type { SnapSettingsController } from '../tools/snap_settings_controller.js';
 import type { PropertiesPanel } from '../../ui/properties/properties_panel.js';
 import type { StatusBar } from '../../ui/status_bar.js';
-import { showConfirmDialog } from '../../ui/confirm_dialog.js';
+import { showMessageBox } from '../../ui/message_box.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
 import { createDefaultStartupSolidModel } from '../../solid/model/default_startup_solid_model.js';
 import type * as THREE from 'three';
@@ -54,10 +54,7 @@ export function applyLayoutHistoryChange(context: LayoutSceneRefreshContext, dir
   context.selectionManager.pruneSelectionNotInScene(context.worldObject);
   context.snapSettingsController.rebakeWorldTexturesIfLocked();
   SolidModel.refreshAfterHistoryChange(context.worldObject);
-  // After solid remesh, drop face selections for deleted brushes/surfaces only.
   context.faceModeCoordinator.getFaceExtrusionController().pruneInvalidFaceSelection(context.worldObject);
-  // refreshAfterWorldMutation owns clones, selection, hulls, rulers, gizmo, and
-  // properties re-read — same contract as inspector transform commits.
   context.refreshAfterWorldMutation();
 }
 
@@ -162,7 +159,7 @@ export async function runLayoutNewScene(
 ): Promise<void> {
   const shouldPrompt = sceneIOHandler.hasSceneContent(worldObject) || commandStack.canUndo() || commandStack.canRedo();
   if (shouldPrompt) {
-    const confirmed = await showConfirmDialog({
+    const confirmed = await showMessageBox({
       host,
       title: 'Create New Scene',
       message: 'Are you sure you want to create a new scene?\n\nAny unsaved changes will be permanently lost.',

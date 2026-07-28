@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   buildVerticalPlaneFromTwoPoints,
+  buildPlaneFromTwoPointsAndDepth,
   buildPlaneFromThreePoints,
   buildPlaneFromPlacementPoints,
   flipPlane,
@@ -26,6 +27,44 @@ describe('csg_plane_from_points', () => {
     expect(buildVerticalPlaneFromTwoPoints(a, a.clone())).toBeNull();
   });
 
+  it('should build a plane containing two points and a camera depth axis', () => {
+    const a = new THREE.Vector3(0, 1, 0);
+    const b = new THREE.Vector3(2, 1, 0);
+    const cameraDepth = new THREE.Vector3(0, 0, -1);
+    const plane = buildPlaneFromTwoPointsAndDepth(a, b, cameraDepth);
+    expect(plane).not.toBeNull();
+    expect(Math.abs(plane!.distanceToPoint(a))).toBeLessThan(1e-6);
+    expect(Math.abs(plane!.distanceToPoint(b))).toBeLessThan(1e-6);
+    expect(Math.abs(plane!.normal.dot(cameraDepth))).toBeLessThan(1e-6);
+    const edge = b.clone().sub(a).normalize();
+    expect(Math.abs(plane!.normal.dot(edge))).toBeLessThan(1e-6);
+  });
+
+  it('should build a plane that cuts into a brush from a face-normal depth', () => {
+    const a = new THREE.Vector3(-1, 0.5, 1);
+    const b = new THREE.Vector3(1, 0.5, 1);
+    const faceNormal = new THREE.Vector3(0, 0, 1);
+    const plane = buildPlaneFromTwoPointsAndDepth(a, b, faceNormal);
+    expect(plane).not.toBeNull();
+    expect(Math.abs(plane!.distanceToPoint(a))).toBeLessThan(1e-6);
+    expect(Math.abs(plane!.distanceToPoint(b))).toBeLessThan(1e-6);
+    expect(Math.abs(plane!.normal.dot(faceNormal))).toBeLessThan(1e-6);
+    const pointDeeperInBrush = new THREE.Vector3(0, 0.5, 0);
+    expect(Math.abs(plane!.distanceToPoint(pointDeeperInBrush))).toBeLessThan(1e-6);
+    const offPlane = new THREE.Vector3(0, 0, 0);
+    expect(Math.abs(plane!.distanceToPoint(offPlane))).toBeGreaterThan(1e-4);
+  });
+
+  it('should fall back when edge is parallel to the preferred depth axis', () => {
+    const a = new THREE.Vector3(0, 0, 0);
+    const b = new THREE.Vector3(0, 0, 2);
+    const depthParallelToEdge = new THREE.Vector3(0, 0, 1);
+    const plane = buildPlaneFromTwoPointsAndDepth(a, b, depthParallelToEdge);
+    expect(plane).not.toBeNull();
+    expect(Math.abs(plane!.distanceToPoint(a))).toBeLessThan(1e-6);
+    expect(Math.abs(plane!.distanceToPoint(b))).toBeLessThan(1e-6);
+  });
+
   it('should build a free plane from three non-collinear points', () => {
     const a = new THREE.Vector3(0, 0, 0);
     const b = new THREE.Vector3(1, 0, 0);
@@ -46,11 +85,20 @@ describe('csg_plane_from_points', () => {
 
   it('should prefer three-point plane when three points are provided', () => {
     const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1)];
-    const plane = buildPlaneFromPlacementPoints(points);
+    const depthIgnored = new THREE.Vector3(0, 1, 0);
+    const plane = buildPlaneFromPlacementPoints(points, depthIgnored);
     expect(plane).not.toBeNull();
     points.forEach((point) => {
       expect(Math.abs(plane!.distanceToPoint(point))).toBeLessThan(1e-6);
     });
+  });
+
+  it('should use the supplied depth axis for two placement points', () => {
+    const points = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0)];
+    const depth = new THREE.Vector3(0, 0, 1);
+    const plane = buildPlaneFromPlacementPoints(points, depth);
+    expect(plane).not.toBeNull();
+    expect(Math.abs(plane!.normal.dot(depth))).toBeLessThan(1e-6);
   });
 
   it('should flip plane half-spaces', () => {

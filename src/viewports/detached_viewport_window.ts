@@ -4,8 +4,10 @@ import {
   DetachedViewportSession,
   type DetachedSurfaceFactory,
   type DetachedViewportSessionHooks,
+  type DetachedViewportSessionOptions,
 } from './detached_viewport_session.js';
 import type { DetachedViewportRenderSource } from './detached_viewport_render_source.js';
+import type { ViewportKind } from './viewport_kind.js';
 
 export type { DetachedViewportRenderSource } from './detached_viewport_render_source.js';
 
@@ -71,18 +73,23 @@ export class DetachedViewportWindow {
    * Opens a new detached viewport window. Each call creates another popup when
    * allowed; existing popups stay open and keep rendering independently.
    *
+   * @param options Optional initial viewport kind for the new pane.
    * @returns True when a new window opened successfully.
    */
-  open(): boolean {
+  open(options: { initialKind?: ViewportKind } = {}): boolean {
     if (this.isDisposed) return false;
     if (!this.renderSource) return false;
     const sessionId = this.allocateSessionId();
-    const session = new DetachedViewportSession({
+    const sessionOptions: DetachedViewportSessionOptions = {
       sessionId,
       renderSource: this.renderSource,
       createSurface: this.createSurface,
       hooks: this.buildSessionHooks(),
-    });
+    };
+    if (options.initialKind !== undefined) {
+      sessionOptions.initialKind = options.initialKind;
+    }
+    const session = new DetachedViewportSession(sessionOptions);
     this.sessions.set(sessionId, session);
     const opened = session.open();
     if (!opened) {

@@ -21,6 +21,11 @@ export interface ToolbarMenuAction {
    * whenever the menu refreshes so rebound settings stay accurate.
    */
   shortcut?: string | (() => string | undefined | null);
+  /**
+   * Optional hover tooltip (native title). A function is re-evaluated whenever
+   * the menu refreshes so dynamic help text stays accurate.
+   */
+  tooltip?: string | (() => string | undefined | null);
 }
 
 /** Horizontal rule between menu sections. */
@@ -40,6 +45,11 @@ export interface ToolbarMenuSubmenu {
    * cannot open.
    */
   isEnabled?: () => boolean;
+  /**
+   * Optional hover tooltip (native title). A function is re-evaluated whenever
+   * the menu refreshes.
+   */
+  tooltip?: string | (() => string | undefined | null);
 }
 
 /** One entry in a toolbar dropdown or nested submenu panel. */

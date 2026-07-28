@@ -192,6 +192,21 @@ export class ViewportRegistry {
     this.disposeViewportInPane(pane);
   }
 
+  /**
+   * Disposes the viewport and removes the pane descriptor from the registry.
+   *
+   * @param paneId Target pane id.
+   * @returns True when a pane was removed.
+   */
+  removePane(paneId: string): boolean {
+    const index = this.panes.findIndex((pane) => pane.getId() === paneId);
+    if (index < 0) return false;
+    const pane = this.panes[index]!;
+    this.disposeViewportInPane(pane);
+    this.panes.splice(index, 1);
+    return true;
+  }
+
   /** Disposes every live viewport instance while keeping pane descriptors. */
   disposeAllViewports(): void {
     this.panes.forEach((pane) => this.disposeViewportInPane(pane));

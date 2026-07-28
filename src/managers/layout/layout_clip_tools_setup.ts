@@ -10,6 +10,8 @@ import { KeyboardShortcutHandler } from '../input/keyboard_shortcut_handler.js';
 import { EditorToolId } from '../../types/editor_tool_id.js';
 import { TransformMode } from '../../types/transform_mode.js';
 import type { EditorViewport } from '../../viewports/editor_viewport.js';
+import type { EditorOverlayPolicy } from '../tools/editor_overlay_policy.js';
+import type { ModalToolSessionRegistry } from '../tools/modal_tool_session_registry.js';
 import * as THREE from 'three';
 
 /** Dependencies for tools palette and clip plane wiring. */
@@ -33,6 +35,8 @@ export interface ClipToolsSetupDeps {
   onTransformMode: (mode: TransformMode) => void;
   onOpenUvEditor: () => void;
   onExtrudeFaces: () => void;
+  editorOverlayPolicy: EditorOverlayPolicy;
+  modalToolSessionRegistry: ModalToolSessionRegistry;
 }
 
 /** Result of tools palette and clip plane construction. */
@@ -75,6 +79,7 @@ function createClipPlaneHandler(deps: ClipToolsSetupDeps): ClipPlaneHandler {
     selectionManager: deps.selectionManager,
     gridSnap: deps.gridSnap,
     clipPlaneTool: deps.clipPlaneTool,
+    modalToolSessionRegistry: deps.modalToolSessionRegistry,
     showStatusMessage: deps.showStatusMessage,
     syncPrimitivesToViewports: deps.syncPrimitivesToViewports,
     refreshOutliner: deps.refreshOutliner,
@@ -130,6 +135,8 @@ function createToolsPaletteController(
     clipPlaneTool: deps.clipPlaneTool,
     clipPlaneHandler,
     selectionManager: deps.selectionManager,
+    editorOverlayPolicy: deps.editorOverlayPolicy,
+    modalToolSessionRegistry: deps.modalToolSessionRegistry,
     showStatusMessage: deps.showStatusMessage,
   });
 }
