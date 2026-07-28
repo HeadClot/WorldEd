@@ -6,6 +6,13 @@ import { TextureMapCache, getTextureMapCache } from '../library/texture_map_cach
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../library/texture_id.js';
 import { getStudioMatcapTexture } from '../../materials/studio_matcap_factory.js';
 import { invalidateFacePickAcceleration } from '../../selection/pick/mesh_pick_acceleration.js';
+import {
+  captureSharedContentMaterials,
+  getSharedContentMaterials,
+  isShadingOverrideMaterial,
+  meshUsesShadingOverrideMaterials,
+} from '../../viewports/shared_content_material_store.js';
+import { invalidateSharedShadingPass } from '../../viewports/shared_shading_pass.js';
 
 /**
  * UserData key for per-triangle brush surface sources on solid result meshes.
@@ -47,6 +54,7 @@ export function rebuildSurfaceMaterials(
   applyMaterialLayout(mesh, perTriangle, materialSlots, options.preserveTriangleOrder === true);
   disposeOwnedMaterials(mesh);
   mesh.material = pickMaterialAssignment(materials);
+  publishContentMaterials(mesh);
 }
 
 /** Region input for solid-result material rebuild (avoids map clone thrash). */
@@ -95,6 +103,7 @@ export function rebuildSolidResultMaterials(
   const materials = materialSlots.map((textureId) => createSurfaceMaterial(color, cache.resolve(textureId)));
   disposeOwnedMaterials(mesh);
   mesh.material = pickMaterialAssignment(materials);
+  publishContentMaterials(mesh);
 }
 
 /**
@@ -473,15 +482,21 @@ function createSurfaceMaterial(color: number, map: THREE.Texture): THREE.MeshMat
 }
 
 /**
- * Reads the first material color from a mesh.
+ * Reads the first material color from a mesh. Prefers the shared content
+ * snapshot when the mesh is wearing temporary shading overrides (e.g. 2D
+ * wireframe black/colorWrite-false materials). Reading overrides would bake
+ * pure black into rebuilt content materials after multi-view layout switches.
  *
  * @param mesh Mesh to inspect.
  * @returns Hex color.
  */
 function extractMeshColor(mesh: THREE.Mesh): number {
+  const snapshotColor = readColorFromSnapshot(mesh.uuid);
+  if (snapshotColor !== null) return snapshotColor;
+  if (meshUsesShadingOverrideMaterials(mesh)) return 0xffffff;
   const material = mesh.material;
   const first = Array.isArray(material) ? material[0] : material;
-  if (first && 'color' in first) {
+  if (first && !isShadingOverrideMaterial(first) && 'color' in first) {
     const color = (first as THREE.MeshMatcapMaterial).color;
     if (color) return color.getHex();
   }
@@ -489,18 +504,71 @@ function extractMeshColor(mesh: THREE.Mesh): number {
 }
 
 /**
- * Disposes previous mesh materials without disposing shared texture maps. Maps
- * are detached first so TextureMapCache / checker stay alive for peers.
+ * Reads tint color from the shared content material snapshot when present.
+ *
+ * @param meshUuid Mesh UUID.
+ * @returns Hex color, or null when no usable snapshot exists.
+ */
+function readColorFromSnapshot(meshUuid: string): number | null {
+  const snapshot = getSharedContentMaterials(meshUuid);
+  if (!snapshot) return null;
+  const first = Array.isArray(snapshot.materials) ? snapshot.materials[0] : snapshot.materials;
+  if (!first || !('color' in first)) return null;
+  const color = (first as THREE.MeshMatcapMaterial).color;
+  return color ? color.getHex() : null;
+}
+
+/**
+ * Disposes previous content materials without disposing shared texture maps.
+ * When the mesh is wearing shading overrides, live materials are owned by the
+ * shading pass and must not be disposed here; only the snapshotted content
+ * materials are freed.
  *
  * @param mesh Mesh whose materials will be replaced.
  */
 function disposeOwnedMaterials(mesh: THREE.Mesh): void {
-  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  if (meshUsesShadingOverrideMaterials(mesh)) {
+    disposeSnapshottedContentMaterials(mesh.uuid);
+    return;
+  }
+  disposeMaterialList(Array.isArray(mesh.material) ? mesh.material : [mesh.material]);
+}
+
+/**
+ * Disposes content materials stored in the shared snapshot for a mesh.
+ *
+ * @param meshUuid Mesh UUID.
+ */
+function disposeSnapshottedContentMaterials(meshUuid: string): void {
+  const snapshot = getSharedContentMaterials(meshUuid);
+  if (!snapshot) return;
+  disposeMaterialList(Array.isArray(snapshot.materials) ? snapshot.materials : [snapshot.materials]);
+}
+
+/**
+ * Disposes materials after detaching shared maps.
+ *
+ * @param materials Materials to dispose.
+ */
+function disposeMaterialList(materials: readonly (THREE.Material | undefined | null)[]): void {
   materials.forEach((material) => {
     if (!material) return;
+    if (isShadingOverrideMaterial(material)) return;
     detachSharedMaps(material);
     material.dispose();
   });
+}
+
+/**
+ * Records rebuilt materials as the authoritative content snapshot and forces
+ * the next multi-view shading pass to re-apply (so wireframe panes do not keep
+ * stale black overrides as if they were content).
+ *
+ * @param mesh Mesh that just received new content materials.
+ */
+function publishContentMaterials(mesh: THREE.Mesh): void {
+  captureSharedContentMaterials(mesh);
+  invalidateSharedShadingPass();
 }
 
 /**

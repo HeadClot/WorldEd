@@ -58,7 +58,10 @@ export class Viewport2D extends BaseViewport {
     this.setupClickSelection();
     this.scene.add(this.gridRoot);
     this.shadingController = new ViewportShadingController(this);
-    this.shadingController.setShadingMode(ShadingMode.WIREFRAME);
+    // Preference only: applying WIREFRAME here would mutate the shared scene
+    // during pane construction (workspace switch Quad↔Single) and leave solid
+    // meshes wearing black outline materials until the next full multi-view pass.
+    this.shadingController.setShadingMode(ShadingMode.WIREFRAME, false);
   }
 
   /** Initializes the mutable state properties of this viewport. */
@@ -381,8 +384,9 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Shows this pane's grid, prepares solid brush edges without depth darkening,
-   * and updates depth range for the shared multi-view pass.
+   * Shows this pane's grid, prepares solid brush edges and selection outlines
+   * without depth darkening, and updates depth range for the shared multi-view
+   * pass.
    */
   prepareRender(): void {
     this.shadingController.applyForRenderPass();
@@ -391,6 +395,7 @@ export class Viewport2D extends BaseViewport {
     if (this.worldGroup) {
       SolidBrushEdgeFader.prepareForOrthographicPass(this.worldGroup);
     }
+    SelectionHighlight.setDepthOcclusionEnabled(false);
     OrthoDepthRanger.update(this.camera, this.scene);
     this.grids.update(this.camera);
   }

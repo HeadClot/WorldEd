@@ -108,6 +108,20 @@ describe('SolidBrushVisual', () => {
     disposeBrushPreview(newlySelected);
   });
 
+  it('does not re-touch selected hull materials when depth occlusion mode is unchanged', () => {
+    const root = new THREE.Group();
+    const mesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
+    root.add(mesh);
+    SolidBrushVisual.setHullFillVisible(mesh, true);
+    SolidBrushVisual.setHullFillDepthOcclusionEnabled(root, false);
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    const versionAfterSwitch = material.version;
+    SolidBrushVisual.setHullFillDepthOcclusionEnabled(root, false);
+    expect(material.version).toBe(versionAfterSwitch);
+    disposeBrushPreview(mesh);
+    SolidBrushVisual.setHullFillDepthOcclusionEnabled(root, true);
+  });
+
   it('rebinds shared edge materials when the brush operation changes', () => {
     const mesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Additive);
     SolidBrushVisual.setHullFillVisible(mesh, true);

@@ -135,6 +135,21 @@ describe('ViewportShadingController', () => {
       controller.updateMeshes([]);
       expect(controller['wireframeOverlayRenderer'].getOverlayCount()).toBe(0);
     });
+
+    it('should not force-apply wireframe materials when only updating mesh lists', () => {
+      controller.setShadingMode(ShadingMode.WIREFRAME, false);
+      controller.updateMeshes([meshA]);
+      expect(meshA.material).toBe(materialA);
+      expect(materialA.colorWrite).not.toBe(false);
+    });
+  });
+
+  describe('deferred shading preference', () => {
+    it('should store wireframe preference without mutating shared scene materials', () => {
+      controller.setShadingMode(ShadingMode.WIREFRAME, false);
+      expect(controller.getShadingMode()).toBe(ShadingMode.WIREFRAME);
+      expect(meshA.material).toBe(materialA);
+    });
   });
 
   describe('dispose', () => {

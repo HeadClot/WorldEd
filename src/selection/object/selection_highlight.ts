@@ -9,6 +9,9 @@ import { GizmoVisualStyle } from '../../transform/gizmo/gizmo_visual_style.js';
  */
 export const SELECTION_HIGHLIGHT_USERDATA_KEY = 'isSelectionHighlight';
 
+/** UserData flag on the dim occluded edge pass (hidden in orthographic 2D). */
+export const SELECTION_HIGHLIGHT_OCCLUDED_USERDATA_KEY = 'isSelectionHighlightOccluded';
+
 /** Front-pass opacity for unoccluded selection edges (matches soft CSG look). */
 const SELECTION_EDGE_FRONT_OPACITY = 0.82;
 
@@ -17,15 +20,20 @@ const SELECTION_EDGE_OCCLUDED_OPACITY = 0.22;
 
 /**
  * Visual selection edge outlines on selected objects. Uses dual-pass depth
- * treatment (front + faint occluded) like gizmos and solid brush edges so
- * object mode is not a flat full-bright always-on-top orange.
+ * treatment (front + faint occluded) in perspective views so object mode is not
+ * a flat full-bright always-on-top orange. Orthographic multi-view panes toggle
+ * shared materials via {@link setDepthOcclusionEnabled} so 2D wireframes are
+ * never blocked by floor/ceiling depth.
  */
 export class SelectionHighlight {
+  private static depthOcclusionEnabled = true;
+  private static sharedFrontMaterial: THREE.LineBasicMaterial | null = null;
+  private static sharedOccludedMaterial: THREE.LineBasicMaterial | null = null;
+  private static activeInstances = new Set<SelectionHighlight>();
+
   private scene: THREE.Scene;
   private highlightMap: Map<THREE.Mesh, THREE.Group>;
   private highlightColor: number;
-  private frontMaterial: THREE.LineBasicMaterial;
-  private occludedMaterial: THREE.LineBasicMaterial;
 
   /**
    * Creates a new selection highlight manager for the given scene.
@@ -37,8 +45,51 @@ export class SelectionHighlight {
     this.scene = scene;
     this.highlightMap = new Map();
     this.highlightColor = theme.selectionColor;
-    this.frontMaterial = this.createFrontMaterial(this.highlightColor);
-    this.occludedMaterial = this.createOccludedMaterial(this.highlightColor);
+    SelectionHighlight.ensureSharedMaterials(this.highlightColor);
+    SelectionHighlight.activeInstances.add(this);
+  }
+
+  /**
+   * Enables dual-pass depth darkening for perspective multi-view panes, or
+   * always-on-top edges for orthographic 2D panes. Shared materials are toggled
+   * each scissor pass because all panes draw the same world hierarchy.
+   *
+   * @param enabled True for 3D occlusion; false for full-bright 2D edges.
+   */
+  static setDepthOcclusionEnabled(enabled: boolean): void {
+    if (this.depthOcclusionEnabled === enabled) return;
+    this.depthOcclusionEnabled = enabled;
+    this.applyDepthModeToSharedMaterials();
+    this.activeInstances.forEach((instance) => instance.syncOccludedPassVisibility());
+  }
+
+  /**
+   * Returns whether shared selection materials currently use dual-pass depth.
+   *
+   * @returns True when depth occlusion is enabled.
+   */
+  static isDepthOcclusionEnabled(): boolean {
+    return this.depthOcclusionEnabled;
+  }
+
+  /**
+   * Returns the shared front-pass material (tests / debugging).
+   *
+   * @returns Front line material.
+   */
+  static getFrontMaterial(): THREE.LineBasicMaterial {
+    this.ensureSharedMaterials(Theme.selectionColor);
+    return this.sharedFrontMaterial!;
+  }
+
+  /**
+   * Returns the shared occluded-pass material (tests / debugging).
+   *
+   * @returns Occluded line material.
+   */
+  static getOccludedMaterial(): THREE.LineBasicMaterial {
+    this.ensureSharedMaterials(Theme.selectionColor);
+    return this.sharedOccludedMaterial!;
   }
 
   /**
@@ -110,15 +161,15 @@ export class SelectionHighlight {
    */
   updateColor(color: number): void {
     this.highlightColor = color;
-    this.frontMaterial.color.setHex(color);
-    this.occludedMaterial.color.setHex(color);
+    SelectionHighlight.ensureSharedMaterials(color);
+    SelectionHighlight.sharedFrontMaterial!.color.setHex(color);
+    SelectionHighlight.sharedOccludedMaterial!.color.setHex(color);
   }
 
   /** Disposes all highlight resources and clears state. */
   dispose(): void {
     this.clearAll();
-    this.frontMaterial.dispose();
-    this.occludedMaterial.dispose();
+    SelectionHighlight.activeInstances.delete(this);
   }
 
   /**
@@ -137,12 +188,22 @@ export class SelectionHighlight {
    * @returns Group containing front and occluded edge passes.
    */
   private createOutlineForMesh(mesh: THREE.Mesh): THREE.Group {
+    SelectionHighlight.ensureSharedMaterials(this.highlightColor);
     const edges = new THREE.EdgesGeometry(mesh.geometry);
     const group = new THREE.Group();
     group.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] = true;
     group.matrixAutoUpdate = true;
-    group.add(this.createEdgePass(edges, this.occludedMaterial, GizmoVisualStyle.occludedRenderOrder));
-    group.add(this.createEdgePass(edges, this.frontMaterial, GizmoVisualStyle.frontRenderOrder));
+    group.add(
+      this.createEdgePass(
+        edges,
+        SelectionHighlight.sharedOccludedMaterial!,
+        GizmoVisualStyle.occludedRenderOrder,
+        true,
+      ),
+    );
+    group.add(
+      this.createEdgePass(edges, SelectionHighlight.sharedFrontMaterial!, GizmoVisualStyle.frontRenderOrder, false),
+    );
     return group;
   }
 
@@ -152,18 +213,79 @@ export class SelectionHighlight {
    * @param edges Shared edge geometry.
    * @param material Front or occluded line material.
    * @param renderOrder Draw order for the pass.
+   * @param isOccludedPass Whether this is the dim behind-geometry pass.
    * @returns Configured line segments.
    */
   private createEdgePass(
     edges: THREE.EdgesGeometry,
     material: THREE.LineBasicMaterial,
     renderOrder: number,
+    isOccludedPass: boolean,
   ): THREE.LineSegments {
     const lineSegments = new THREE.LineSegments(edges, material);
     lineSegments.renderOrder = renderOrder;
     lineSegments.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] = true;
+    if (isOccludedPass) {
+      lineSegments.userData[SELECTION_HIGHLIGHT_OCCLUDED_USERDATA_KEY] = true;
+      lineSegments.visible = SelectionHighlight.depthOcclusionEnabled;
+    }
     lineSegments.matrixAutoUpdate = true;
     return lineSegments;
+  }
+
+  /** Hides the dim occluded pass when drawing full-bright 2D selection edges. */
+  private syncOccludedPassVisibility(): void {
+    const showOccluded = SelectionHighlight.depthOcclusionEnabled;
+    this.highlightMap.forEach((outlineGroup) => {
+      outlineGroup.children.forEach((child) => {
+        if (!(child instanceof THREE.LineSegments)) return;
+        if (child.userData[SELECTION_HIGHLIGHT_OCCLUDED_USERDATA_KEY] !== true) return;
+        child.visible = showOccluded;
+      });
+    });
+  }
+
+  /**
+   * Ensures shared front and occluded materials exist for the current color.
+   *
+   * @param color Selection hex color for first-time creation.
+   */
+  private static ensureSharedMaterials(color: number): void {
+    if (!this.sharedFrontMaterial) {
+      this.sharedFrontMaterial = this.createFrontMaterial(color);
+    }
+    if (!this.sharedOccludedMaterial) {
+      this.sharedOccludedMaterial = this.createOccludedMaterial(color);
+    }
+    this.applyDepthModeToSharedMaterials();
+  }
+
+  /** Applies the current depth-occlusion mode to both shared materials. */
+  private static applyDepthModeToSharedMaterials(): void {
+    if (this.sharedFrontMaterial) {
+      this.applyDepthMode(this.sharedFrontMaterial, this.depthOcclusionEnabled, THREE.LessEqualDepth);
+    }
+    if (this.sharedOccludedMaterial) {
+      this.applyDepthMode(this.sharedOccludedMaterial, this.depthOcclusionEnabled, THREE.GreaterDepth);
+    }
+  }
+
+  /**
+   * Applies depth-test mode for a dual-pass selection material.
+   *
+   * @param material Line material to update.
+   * @param depthOcclusionEnabled Whether 3D occlusion is active.
+   * @param occludedDepthFunc Depth function when occlusion is on.
+   */
+  private static applyDepthMode(
+    material: THREE.LineBasicMaterial,
+    depthOcclusionEnabled: boolean,
+    occludedDepthFunc: THREE.DepthModes,
+  ): void {
+    material.depthTest = depthOcclusionEnabled;
+    material.depthWrite = false;
+    material.depthFunc = depthOcclusionEnabled ? occludedDepthFunc : THREE.AlwaysDepth;
+    material.needsUpdate = true;
   }
 
   /**
@@ -172,14 +294,14 @@ export class SelectionHighlight {
    * @param color Selection hex color.
    * @returns Configured line material.
    */
-  private createFrontMaterial(color: number): THREE.LineBasicMaterial {
+  private static createFrontMaterial(color: number): THREE.LineBasicMaterial {
     return new THREE.LineBasicMaterial({
       color,
       transparent: true,
       opacity: SELECTION_EDGE_FRONT_OPACITY,
-      depthTest: true,
+      depthTest: this.depthOcclusionEnabled,
       depthWrite: false,
-      depthFunc: THREE.LessEqualDepth,
+      depthFunc: this.depthOcclusionEnabled ? THREE.LessEqualDepth : THREE.AlwaysDepth,
       toneMapped: false,
     });
   }
@@ -190,14 +312,14 @@ export class SelectionHighlight {
    * @param color Selection hex color.
    * @returns Configured line material.
    */
-  private createOccludedMaterial(color: number): THREE.LineBasicMaterial {
+  private static createOccludedMaterial(color: number): THREE.LineBasicMaterial {
     return new THREE.LineBasicMaterial({
       color,
       transparent: true,
       opacity: SELECTION_EDGE_OCCLUDED_OPACITY,
-      depthTest: true,
+      depthTest: this.depthOcclusionEnabled,
       depthWrite: false,
-      depthFunc: THREE.GreaterDepth,
+      depthFunc: this.depthOcclusionEnabled ? THREE.GreaterDepth : THREE.AlwaysDepth,
       toneMapped: false,
     });
   }

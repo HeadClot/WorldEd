@@ -50,7 +50,8 @@ export function snapBoundsFaceDelta(
 
 /**
  * Computes absolute position and scale after a one-sided resize of one mesh.
- * The opposite face stays fixed in world space.
+ * The opposite face stays fixed in world space, even when geometry is not
+ * centered on the mesh origin (e.g. after clipping a solid brush).
  *
  * @param startPosition Mesh position at drag start.
  * @param startScale Mesh scale at drag start.
@@ -66,14 +67,11 @@ export function computeOneSidedMeshResize(
   face: BoundsFace,
   deltaAlongNormal: number,
 ): MeshBoundsResizeResult {
-  const oldHalf = getBoundsFaceHalfExtent(startBounds.halfExtents, face);
-  const safeOldHalf = Math.max(oldHalf, MIN_BOUNDS_HALF_EXTENT);
-  const newHalf = Math.max(MIN_BOUNDS_HALF_EXTENT, safeOldHalf + deltaAlongNormal * 0.5);
-  const factor = newHalf / safeOldHalf;
-  const outward = getBoundsFaceLocalNormal(face).applyQuaternion(startBounds.quaternion).normalize();
-  const appliedDelta = (newHalf - safeOldHalf) * 2;
-  const position = startPosition.clone().addScaledVector(outward, appliedDelta * 0.5);
-  const scale = multiplyScaleAlongLocalFace(startScale, face, factor);
+  const resize = resolveResizeExtents(startBounds, face, deltaAlongNormal);
+  const desiredBoundsCenter = startBounds.center.clone().addScaledVector(resize.outward, resize.appliedDelta * 0.5);
+  const worldOffsetAfter = computeScaledGeometryWorldOffset(startPosition, startBounds, face, resize.factor);
+  const position = desiredBoundsCenter.sub(worldOffsetAfter);
+  const scale = multiplyScaleAlongLocalFace(startScale, face, resize.factor);
   return { position, scale };
 }
 
@@ -137,6 +135,8 @@ export function multiplyScaleAlongWorldAxis(
 
 /**
  * Computes multi-mesh one-sided resize using a shared world-axis bounds frame.
+ * Each mesh is scaled from the fixed opposite face plane so the selection
+ * opposite side stays put when geometry is origin-centered.
  *
  * @param startPosition Mesh position at drag start.
  * @param startScale Mesh scale at drag start.
@@ -152,13 +152,88 @@ export function computeOneSidedMultiMeshResize(
   face: BoundsFace,
   deltaAlongNormal: number,
 ): MeshBoundsResizeResult {
+  const resize = resolveResizeExtents(startBounds, face, deltaAlongNormal);
+  const fixedFaceCenter = getFixedFaceWorldCenter(startBounds, face);
+  const alongFromFixed = startPosition.clone().sub(fixedFaceCenter).dot(resize.outward);
+  const position = startPosition.clone().addScaledVector(resize.outward, alongFromFixed * (resize.factor - 1));
+  const scale = multiplyScaleAlongWorldAxis(startScale, resize.outward, resize.factor);
+  return { position, scale };
+}
+
+/** Shared half-extent and normal data for a one-sided face drag. */
+interface ResolvedResizeExtents {
+  factor: number;
+  appliedDelta: number;
+  outward: THREE.Vector3;
+}
+
+/**
+ * Resolves the scale factor, applied face travel, and outward normal for a
+ * one-sided resize.
+ *
+ * @param startBounds Bounds at drag start.
+ * @param face Face being dragged.
+ * @param deltaAlongNormal Signed face displacement.
+ * @returns Factor, applied delta, and outward normal.
+ */
+function resolveResizeExtents(
+  startBounds: OrientedBoundsData,
+  face: BoundsFace,
+  deltaAlongNormal: number,
+): ResolvedResizeExtents {
   const oldHalf = getBoundsFaceHalfExtent(startBounds.halfExtents, face);
   const safeOldHalf = Math.max(oldHalf, MIN_BOUNDS_HALF_EXTENT);
   const newHalf = Math.max(MIN_BOUNDS_HALF_EXTENT, safeOldHalf + deltaAlongNormal * 0.5);
   const factor = newHalf / safeOldHalf;
   const outward = getBoundsFaceLocalNormal(face).applyQuaternion(startBounds.quaternion).normalize();
   const appliedDelta = (newHalf - safeOldHalf) * 2;
-  const position = startPosition.clone().addScaledVector(outward, appliedDelta * 0.5);
-  const scale = multiplyScaleAlongWorldAxis(startScale, outward, factor);
-  return { position, scale };
+  return { factor, appliedDelta, outward };
+}
+
+/**
+ * Computes where the geometry AABB center sits relative to the mesh origin
+ * after scaling along a face axis. Three.js scales about the mesh origin, so an
+ * offset local AABB (common after clipping) expands away from the origin and
+ * must be cancelled by position.
+ *
+ * @param startPosition Mesh position at drag start.
+ * @param startBounds Oriented bounds at drag start.
+ * @param face Face axis being scaled.
+ * @param factor Multiplicative scale factor along that axis.
+ * @returns World-space offset from mesh position to bounds center after scale.
+ */
+function computeScaledGeometryWorldOffset(
+  startPosition: THREE.Vector3,
+  startBounds: OrientedBoundsData,
+  face: BoundsFace,
+  factor: number,
+): THREE.Vector3 {
+  const worldOffsetBefore = startBounds.center.clone().sub(startPosition);
+  const inverseRotation = startBounds.quaternion.clone().invert();
+  const localScaledOffset = worldOffsetBefore.applyQuaternion(inverseRotation);
+  const localScaledOffsetAfter = scaleOffsetAlongLocalFace(localScaledOffset, face, factor);
+  return localScaledOffsetAfter.applyQuaternion(startBounds.quaternion);
+}
+
+/**
+ * Multiplies one component of a free offset vector along a bounds face axis.
+ * Offsets may be zero or negative, so values are not clamped.
+ *
+ * @param offset Local scaled offset from mesh origin to geometry center.
+ * @param face Face defining the local axis.
+ * @param factor Multiplicative factor along that axis.
+ * @returns A new offset vector.
+ */
+function scaleOffsetAlongLocalFace(offset: THREE.Vector3, face: BoundsFace, factor: number): THREE.Vector3 {
+  const result = offset.clone();
+  if (face === BoundsFace.POS_X || face === BoundsFace.NEG_X) {
+    result.x *= factor;
+    return result;
+  }
+  if (face === BoundsFace.POS_Y || face === BoundsFace.NEG_Y) {
+    result.y *= factor;
+    return result;
+  }
+  result.z *= factor;
+  return result;
 }

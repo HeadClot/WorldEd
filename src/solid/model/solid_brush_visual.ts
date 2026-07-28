@@ -239,11 +239,14 @@ export class SolidBrushVisual {
   /**
    * Enables depth-tested selected hull fills (perspective) or always-on-top
    * fills (orthographic multi-view). Updates every selected brush under root.
+   * No-ops when the mode is already active so multi-view panes do not thrash
+   * material.version / needsUpdate on every scissor pass.
    *
    * @param root World group or scene containing brush helpers.
    * @param enabled True for 3D depth occlusion; false for full-bright 2D.
    */
   static setHullFillDepthOcclusionEnabled(root: THREE.Object3D, enabled: boolean): void {
+    if (this.hullFillDepthOcclusionEnabled === enabled) return;
     this.hullFillDepthOcclusionEnabled = enabled;
     this.applyHullFillDepthModeToTree(root);
   }

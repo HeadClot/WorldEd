@@ -33,9 +33,16 @@ export class ViewportShadingController {
    * Switches the viewport to the specified shading mode.
    *
    * @param mode The new shading mode to activate.
+   * @param applyImmediately When false, only stores the preference (used while
+   *   constructing orthographic panes so creating Quad View does not paint the
+   *   shared scene black/wireframe before the next multi-view pass).
    */
-  setShadingMode(mode: ShadingMode): void {
+  setShadingMode(mode: ShadingMode, applyImmediately: boolean = true): void {
     this.currentMode = mode;
+    if (!applyImmediately) {
+      this.updateOverlayVisibility(mode);
+      return;
+    }
     this.refreshShadingMode();
   }
 
@@ -80,15 +87,18 @@ export class ViewportShadingController {
   }
 
   /**
-   * Updates the wireframe overlay with the current mesh list. Should be called
-   * when the scene content changes.
+   * Updates the wireframe overlay with the current mesh list. Invalidates the
+   * shared shading pass so the next pane prepare re-applies materials. Does not
+   * force-apply this viewport's mode immediately: walking every pane and
+   * force-applying left the shared scene stuck on the last (often 2D wireframe)
+   * mode, so brush rebuilds between frames baked black override colors.
    *
    * @param meshes The meshes to generate overlays for.
    */
   updateMeshes(meshes: THREE.Mesh[]): void {
     this.wireframeOverlayRenderer.setMeshes(meshes);
     invalidateSharedShadingPass();
-    this.refreshShadingMode();
+    this.updateOverlayVisibility(this.currentMode);
   }
 
   /** Keeps wireframe overlays glued to their meshes during live transforms. */

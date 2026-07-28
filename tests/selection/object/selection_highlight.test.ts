@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '../../../src/theme.js';
 import {
   SelectionHighlight,
   SELECTION_HIGHLIGHT_USERDATA_KEY,
+  SELECTION_HIGHLIGHT_OCCLUDED_USERDATA_KEY,
 } from '../../../src/selection/object/selection_highlight.js';
 
 describe('SelectionHighlight', () => {
@@ -12,9 +13,15 @@ describe('SelectionHighlight', () => {
   let testMesh: THREE.Mesh;
 
   beforeEach(() => {
+    SelectionHighlight.setDepthOcclusionEnabled(true);
     scene = new THREE.Scene();
     highlight = new SelectionHighlight(scene, Theme);
     testMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+  });
+
+  afterEach(() => {
+    highlight.dispose();
+    SelectionHighlight.setDepthOcclusionEnabled(true);
   });
 
   it('should create without errors', () => {
@@ -53,6 +60,7 @@ describe('SelectionHighlight', () => {
   });
 
   it('should use soft dual-pass depth materials instead of always-on-top lines', () => {
+    SelectionHighlight.setDepthOcclusionEnabled(true);
     scene.add(testMesh);
     highlight.apply(testMesh);
     const materials = collectSelectionMaterials(testMesh);
@@ -67,6 +75,40 @@ describe('SelectionHighlight', () => {
     expect(occluded!.transparent).toBe(true);
     expect(front!.opacity).toBeLessThan(1);
     expect(front!.opacity).toBeGreaterThan(occluded!.opacity);
+  });
+
+  it('should disable depth occlusion for orthographic 2D multi-view passes', () => {
+    SelectionHighlight.setDepthOcclusionEnabled(true);
+    scene.add(testMesh);
+    highlight.apply(testMesh);
+    const occludedLine = collectSelectionLines(testMesh).find(
+      (line) => line.userData[SELECTION_HIGHLIGHT_OCCLUDED_USERDATA_KEY] === true,
+    );
+    expect(occludedLine).toBeDefined();
+    expect(occludedLine!.visible).toBe(true);
+    SelectionHighlight.setDepthOcclusionEnabled(false);
+    expect(SelectionHighlight.isDepthOcclusionEnabled()).toBe(false);
+    expect(SelectionHighlight.getFrontMaterial().depthTest).toBe(false);
+    expect(SelectionHighlight.getFrontMaterial().depthFunc).toBe(THREE.AlwaysDepth);
+    expect(SelectionHighlight.getOccludedMaterial().depthTest).toBe(false);
+    expect(occludedLine!.visible).toBe(false);
+    SelectionHighlight.setDepthOcclusionEnabled(true);
+    expect(SelectionHighlight.isDepthOcclusionEnabled()).toBe(true);
+    expect(SelectionHighlight.getFrontMaterial().depthTest).toBe(true);
+    expect(SelectionHighlight.getFrontMaterial().depthFunc).toBe(THREE.LessEqualDepth);
+    expect(occludedLine!.visible).toBe(true);
+  });
+
+  it('should create new outlines with occluded pass hidden while depth occlusion is off', () => {
+    SelectionHighlight.setDepthOcclusionEnabled(false);
+    scene.add(testMesh);
+    highlight.apply(testMesh);
+    const occludedLine = collectSelectionLines(testMesh).find(
+      (line) => line.userData[SELECTION_HIGHLIGHT_OCCLUDED_USERDATA_KEY] === true,
+    );
+    expect(occludedLine).toBeDefined();
+    expect(occludedLine!.visible).toBe(false);
+    expect(SelectionHighlight.getFrontMaterial().depthTest).toBe(false);
   });
 
   it('should not duplicate highlights on repeated apply calls', () => {

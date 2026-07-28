@@ -215,14 +215,14 @@ export class TransformGizmo {
   updateBoundsFromMeshes(meshes: THREE.Mesh[], camera: THREE.Camera | null = null): void {
     if (this.currentMode !== TransformMode.BOUNDS) return;
     const bounds = this.boundsBuilder.buildFromMeshes(meshes);
-    const cubePickSize = computeBoundsCubeWorldSize(bounds, camera);
-    const cubeVisualSize = computeBoundsCubeVisualWorldSize(bounds, camera);
-    const earSize = computeBoundsEarWorldSize(bounds);
-    const poseSignature = this.buildBoundsPoseSignature(bounds, cubePickSize, earSize, cubeVisualSize);
+    const poseSignature = this.buildBoundsPoseSignature(bounds);
     if (poseSignature === this.lastBoundsPoseSignature) {
       return;
     }
     this.lastBoundsPoseSignature = poseSignature;
+    const cubePickSize = computeBoundsCubeWorldSize(bounds, camera);
+    const cubeVisualSize = computeBoundsCubeVisualWorldSize(bounds, camera);
+    const earSize = computeBoundsEarWorldSize(bounds);
     this.resetHandleGroupTransform();
     this.boundsGizmo.updateFromBounds(bounds, cubePickSize, earSize, cubeVisualSize);
     this.syncMasterTransformToClones();
@@ -499,32 +499,23 @@ export class TransformGizmo {
   }
 
   /**
-   * Builds a quantized signature for bounds pose so pointer jitter with an
-   * unchanged snapped selection does not rebuild the bounds gizmo.
+   * Builds a quantized signature for bounds pose so unchanged selection pose
+   * does not rebuild (and deep-clone) the bounds gizmo. Camera-dependent handle
+   * sizes are intentionally excluded: screen-space sizing is applied each frame
+   * by {@link prepareBoundsCloneForCamera} without rebuilding the hierarchy.
    *
    * @param bounds Oriented bounds, or null when empty.
-   * @param cubeSize Perspective cube world edge length.
-   * @param earSize Orthographic ear base size.
    * @returns Stable string key for the current pose.
    */
-  private buildBoundsPoseSignature(
-    bounds: OrientedBoundsData | null,
-    cubePickSize: number,
-    earSize: number,
-    cubeVisualSize: number,
-  ): string {
+  private buildBoundsPoseSignature(bounds: OrientedBoundsData | null): string {
     const guides = this.boundsGizmo.areGuideLinesVisible() ? '1' : '0';
     if (!bounds) return `empty|${guides}`;
-    const quantizeHandleSize = (value: number): string => (Math.round(value * 100) / 100).toFixed(2);
     const quantizePose = (value: number): string => (Math.round(value * 10000) / 10000).toFixed(4);
     const c = bounds.center;
     const e = bounds.halfExtents;
     const r = bounds.quaternion;
     return [
       guides,
-      quantizeHandleSize(cubePickSize),
-      quantizeHandleSize(cubeVisualSize),
-      quantizePose(earSize),
       quantizePose(c.x),
       quantizePose(c.y),
       quantizePose(c.z),

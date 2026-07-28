@@ -217,6 +217,22 @@ describe('TransformGizmo', () => {
     expect(geometry).not.toBeNull();
     expect(countGuideSegments(geometry!)).toBe(24);
   });
+
+  it('does not deep-clone viewport bounds groups when only camera distance changes', () => {
+    const clone = gizmo.getHandleGroupClone('xyz');
+    gizmo.setVisible(true);
+    const selected = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
+    selected.position.set(0, 1, 0);
+    selected.updateMatrixWorld(true);
+    const nearCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+    nearCamera.position.set(0, 2, 4);
+    gizmo.updateBoundsFromMeshes([selected], nearCamera);
+    const childAfterFirst = clone.children[0]!;
+    const farCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 10000);
+    farCamera.position.set(0, 40, 80);
+    gizmo.updateBoundsFromMeshes([selected], farCamera);
+    expect(clone.children[0]).toBe(childAfterFirst);
+  });
 });
 
 /**

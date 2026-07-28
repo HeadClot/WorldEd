@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   computeOneSidedMeshResize,
+  computeOneSidedMultiMeshResize,
   getFixedFaceWorldCenter,
   snapBoundsFaceDelta,
   MIN_BOUNDS_HALF_EXTENT,
 } from '../../../src/transform/bounds/bounds_resize_math.js';
-import { OrientedBoundsData } from '../../../src/transform/bounds/oriented_bounds.js';
+import { OrientedBoundsBuilder, OrientedBoundsData } from '../../../src/transform/bounds/oriented_bounds.js';
 import { BoundsFace } from '../../../src/types/bounds_face.js';
 
 describe('bounds_resize_math', () => {
@@ -69,6 +70,110 @@ describe('bounds_resize_math', () => {
     expect(result.scale.y).toBeCloseTo(2, 5);
     expect(result.scale.z).not.toBeCloseTo(3, 5);
   });
+
+  it('should keep the opposite face fixed when geometry is offset from the mesh origin', () => {
+    const mesh = createOffsetBoxMesh();
+    const builder = new OrientedBoundsBuilder();
+    const startBounds = builder.buildFromMeshes([mesh])!;
+    const fixedBefore = getFixedFaceWorldCenter(startBounds, BoundsFace.POS_X);
+    const faceTravel = startBounds.halfExtents.x;
+    const result = computeOneSidedMeshResize(
+      mesh.position.clone(),
+      mesh.scale.clone(),
+      startBounds,
+      BoundsFace.POS_X,
+      faceTravel,
+    );
+    mesh.position.copy(result.position);
+    mesh.scale.copy(result.scale);
+    mesh.updateMatrixWorld(true);
+    const afterBounds = builder.buildFromMeshes([mesh])!;
+    const fixedAfter = getFixedFaceWorldCenter(afterBounds, BoundsFace.POS_X);
+    expect(fixedAfter.distanceTo(fixedBefore)).toBeLessThan(1e-5);
+    expect(afterBounds.halfExtents.x).toBeGreaterThan(startBounds.halfExtents.x);
+  });
+
+  it('should keep the opposite face fixed when shrinking offset geometry on -X', () => {
+    const mesh = createOffsetBoxMesh();
+    const builder = new OrientedBoundsBuilder();
+    const startBounds = builder.buildFromMeshes([mesh])!;
+    const fixedBefore = getFixedFaceWorldCenter(startBounds, BoundsFace.NEG_X);
+    const shrink = -startBounds.halfExtents.x * 0.5;
+    const result = computeOneSidedMeshResize(
+      mesh.position.clone(),
+      mesh.scale.clone(),
+      startBounds,
+      BoundsFace.NEG_X,
+      shrink,
+    );
+    mesh.position.copy(result.position);
+    mesh.scale.copy(result.scale);
+    mesh.updateMatrixWorld(true);
+    const afterBounds = builder.buildFromMeshes([mesh])!;
+    const fixedAfter = getFixedFaceWorldCenter(afterBounds, BoundsFace.NEG_X);
+    expect(fixedAfter.distanceTo(fixedBefore)).toBeLessThan(1e-5);
+    expect(afterBounds.halfExtents.x).toBeLessThan(startBounds.halfExtents.x);
+  });
+
+  it('should keep the opposite face fixed for rotated offset geometry', () => {
+    const mesh = createOffsetBoxMesh();
+    mesh.rotation.y = Math.PI / 4;
+    mesh.position.set(2, 1, -1);
+    mesh.updateMatrixWorld(true);
+    const builder = new OrientedBoundsBuilder();
+    const startBounds = builder.buildFromMeshes([mesh])!;
+    const fixedBefore = getFixedFaceWorldCenter(startBounds, BoundsFace.POS_Z);
+    const result = computeOneSidedMeshResize(
+      mesh.position.clone(),
+      mesh.scale.clone(),
+      startBounds,
+      BoundsFace.POS_Z,
+      1.5,
+    );
+    mesh.position.copy(result.position);
+    mesh.scale.copy(result.scale);
+    mesh.updateMatrixWorld(true);
+    const afterBounds = builder.buildFromMeshes([mesh])!;
+    const fixedAfter = getFixedFaceWorldCenter(afterBounds, BoundsFace.POS_Z);
+    expect(fixedAfter.distanceTo(fixedBefore)).toBeLessThan(1e-5);
+  });
+
+  it('should scale multi-mesh positions from the fixed opposite face plane', () => {
+    const left = createCenteredBoxMesh(1);
+    left.position.set(-2, 0, 0);
+    const right = createCenteredBoxMesh(1);
+    right.position.set(2, 0, 0);
+    left.updateMatrixWorld(true);
+    right.updateMatrixWorld(true);
+    const builder = new OrientedBoundsBuilder();
+    const startBounds = builder.buildFromMeshes([left, right])!;
+    const fixedBefore = getFixedFaceWorldCenter(startBounds, BoundsFace.POS_X);
+    const faceTravel = 2;
+    const leftResult = computeOneSidedMultiMeshResize(
+      left.position.clone(),
+      left.scale.clone(),
+      startBounds,
+      BoundsFace.POS_X,
+      faceTravel,
+    );
+    const rightResult = computeOneSidedMultiMeshResize(
+      right.position.clone(),
+      right.scale.clone(),
+      startBounds,
+      BoundsFace.POS_X,
+      faceTravel,
+    );
+    left.position.copy(leftResult.position);
+    left.scale.copy(leftResult.scale);
+    right.position.copy(rightResult.position);
+    right.scale.copy(rightResult.scale);
+    left.updateMatrixWorld(true);
+    right.updateMatrixWorld(true);
+    const afterBounds = builder.buildFromMeshes([left, right])!;
+    const fixedAfter = getFixedFaceWorldCenter(afterBounds, BoundsFace.POS_X);
+    expect(fixedAfter.distanceTo(fixedBefore)).toBeLessThan(1e-5);
+    expect(afterBounds.halfExtents.x).toBeCloseTo(startBounds.halfExtents.x + faceTravel * 0.5, 5);
+  });
 });
 
 /**
@@ -82,4 +187,33 @@ function createUnitBounds(): OrientedBoundsData {
     quaternion: new THREE.Quaternion(),
     halfExtents: new THREE.Vector3(0.5, 0.5, 0.5),
   };
+}
+
+/**
+ * Creates a unit box whose geometry AABB is offset from the mesh origin, as
+ * happens after clipping a solid brush without recentering local vertices.
+ *
+ * @returns Mesh with local AABB roughly [0,2] on X and centered on Y/Z.
+ */
+function createOffsetBoxMesh(): THREE.Mesh {
+  const geometry = new THREE.BoxGeometry(2, 2, 2);
+  geometry.translate(1, 0, 0);
+  geometry.computeBoundingBox();
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
+  mesh.position.set(0, 0, 0);
+  mesh.scale.set(1, 1, 1);
+  mesh.updateMatrixWorld(true);
+  return mesh;
+}
+
+/**
+ * Creates an origin-centered box mesh of the given edge length.
+ *
+ * @param edgeLength Box edge length.
+ * @returns Mesh with updated world matrix.
+ */
+function createCenteredBoxMesh(edgeLength: number): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(edgeLength, edgeLength, edgeLength), new THREE.MeshBasicMaterial());
+  mesh.updateMatrixWorld(true);
+  return mesh;
 }

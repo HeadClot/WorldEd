@@ -1,6 +1,11 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
-import { resolveLayoutGizmoOrientation } from '../../../src/managers/layout/layout_gizmo_helpers.js';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  resolveLayoutGizmoOrientation,
+  updateLayoutGizmoCameraScale,
+  type LayoutGizmoContext,
+} from '../../../src/managers/layout/layout_gizmo_helpers.js';
+import { TransformMode } from '../../../src/types/transform_mode.js';
 import { TransformSpace } from '../../../src/types/transform_space.js';
 
 describe('layout_gizmo_helpers', () => {
@@ -31,5 +36,26 @@ describe('layout_gizmo_helpers', () => {
     second.updateMatrixWorld(true);
     const orientation = resolveLayoutGizmoOrientation({ transformSpace: TransformSpace.Local }, [first, second]);
     expect(orientation.equals(new THREE.Quaternion())).toBe(true);
+  });
+
+  it('does not rebuild bounds gizmos from camera motion on the per-frame scale path', () => {
+    const updateScaleForCamera = vi.fn();
+    const updateBoundsFromMeshes = vi.fn();
+    const context = {
+      selectionManager: {
+        getSelectedObjectCount: () => 1,
+      },
+      transformGizmo: {
+        updateScaleForCamera,
+        updateBoundsFromMeshes,
+        getMode: () => TransformMode.BOUNDS,
+      },
+      viewport3D: {
+        getCamera: () => new THREE.PerspectiveCamera(),
+      },
+    } as unknown as LayoutGizmoContext;
+    updateLayoutGizmoCameraScale(context);
+    expect(updateScaleForCamera).toHaveBeenCalledTimes(1);
+    expect(updateBoundsFromMeshes).not.toHaveBeenCalled();
   });
 });

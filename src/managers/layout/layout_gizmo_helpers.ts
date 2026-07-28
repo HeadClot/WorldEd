@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { SelectionManager } from '../../selection/object/selection_manager.js';
 import { TransformGizmo } from '../../transform/gizmo/transform_gizmo.js';
 import { TransformExecutor } from '../../transform/transform_executor.js';
-import { TransformMode } from '../../types/transform_mode.js';
 import { TransformSpace } from '../../types/transform_space.js';
 import type { Viewport3D } from '../../viewports/viewport_3d.js';
 import type { Toolbar } from '../../ui/toolbar.js';
@@ -80,14 +79,17 @@ export function applyLayoutTransformSpace(
 }
 
 /**
- * Keeps the transform gizmo a readable size relative to the 3D camera.
+ * Keeps translate/rotate/scale gizmo handles a readable size relative to the 3D
+ * camera. Bounds mode must not rebuild here: camera-distance handle sizes are
+ * applied per multi-view pane via
+ * {@link TransformGizmo.prepareBoundsCloneForCamera}. Calling
+ * {@link TransformGizmo.updateBoundsFromMeshes} every frame deep-clones the
+ * entire bounds hierarchy into every viewport group whenever distance changes,
+ * which tanks large maps whenever the selection is near the camera.
  *
  * @param context Gizmo subsystem dependencies.
  */
 export function updateLayoutGizmoCameraScale(context: LayoutGizmoContext): void {
   if (context.selectionManager.getSelectedObjectCount() === 0) return;
   context.transformGizmo.updateScaleForCamera(context.viewport3D.getCamera());
-  if (context.transformGizmo.getMode() !== TransformMode.BOUNDS) return;
-  const selected = context.selectionManager.getAllSelectedObjectsAsArray();
-  context.transformGizmo.updateBoundsFromMeshes(selected, context.viewport3D.getCamera());
 }
