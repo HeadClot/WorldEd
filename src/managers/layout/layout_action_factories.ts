@@ -90,9 +90,9 @@ export function buildOutlinerActions(host: OutlinerActionHost): EditorShellOutli
     onToggleVisibilityFromOutliner: (obj) =>
       applyOutlinerVisibilityToggle(host.commandStack, obj, host.refreshOutliner, () => host.syncViewports()),
     onToggleLockFromOutliner: (obj) => toggleLockFromOutliner(host, obj),
-    reparentFromDrop: (dragged, target) => {
+    reparentFromDrop: (dragged, target, placement) => {
       if (!target) return;
-      host.hierarchyReparentHandler.reparentFromDrop(dragged, target);
+      host.hierarchyReparentHandler.reparentFromDrop(dragged, target, placement);
     },
     syncViewports: () => host.syncViewports(),
     refreshOutliner: () => host.refreshOutliner(),

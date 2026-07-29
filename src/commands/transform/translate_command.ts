@@ -6,7 +6,7 @@ import { UndoCommand } from '../undo_command.js';
  * finalPosition records the post-drag snapped result.
  */
 export interface ObjectTransformSnapshot {
-  object: THREE.Mesh;
+  object: THREE.Object3D;
   position: THREE.Vector3;
   finalPosition?: THREE.Vector3;
 }

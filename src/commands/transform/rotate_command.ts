@@ -6,7 +6,7 @@ import { UndoCommand } from '../undo_command.js';
  * original position and quaternion so undo can restore both.
  */
 export interface ObjectRotationSnapshot {
-  object: THREE.Mesh;
+  object: THREE.Object3D;
   originalPosition: THREE.Vector3;
   originalQuaternion: THREE.Quaternion;
 }

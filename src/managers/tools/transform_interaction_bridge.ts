@@ -258,6 +258,7 @@ export class TransformInteractionBridge {
     gizmoGroup: THREE.Group | null,
     viewport: Viewport3D | Viewport2D,
   ): boolean {
+    const transformTargets = this.resolveDragTargets(selectedObjects);
     const pivot = this.computeCurrentPivot();
     const kind = typeof viewport.getViewportKind === 'function' ? viewport.getViewportKind() : undefined;
     const viewPlane = kind ? getCadViewPlaneForKind(kind) : 'xyz';
@@ -266,7 +267,7 @@ export class TransformInteractionBridge {
       pickElement,
       event,
       handles,
-      selectedObjects,
+      transformTargets,
       pivot,
       gizmoGroup ?? new THREE.Group(),
       viewPlane,
@@ -299,7 +300,7 @@ export class TransformInteractionBridge {
   ): THREE.Mesh[] {
     const current = filterUnlockedObjects(this.deps.selectionManager.getAllSelectedObjectsAsArray());
     if (!event.altKey || !this.deps.onDuplicateSelectedForDrag) return current;
-    this.deps.transformHandler.onPointerUp(this.computeCurrentPivot(), current);
+    this.deps.transformHandler.onPointerUp(this.computeCurrentPivot(), this.resolveDragTargets(current));
     this.deps.onDuplicateSelectedForDrag();
     const duplicates = filterUnlockedObjects(this.deps.selectionManager.getAllSelectedObjectsAsArray());
     if (duplicates.length === 0) return duplicates;
@@ -330,7 +331,7 @@ export class TransformInteractionBridge {
       pickElement,
       event,
       this.deps.transformGizmo.getHandles(),
-      duplicates,
+      this.resolveDragTargets(duplicates),
       this.computeCurrentPivot(),
       viewport.getGizmoGroup() ?? new THREE.Group(),
       viewPlane,
@@ -400,14 +401,14 @@ export class TransformInteractionBridge {
     }
     const pivot = this.computeCurrentPivot();
     const selected = filterUnlockedObjects(Array.from(this.deps.selectionManager.getSelectedObjects()));
+    const transformTargets = this.resolveDragTargets(selected);
     this.updateSnapFromShiftKey(event);
-    this.deps.transformHandler.onPointerMove(camera, pickElement, event, pivot, selected);
+    this.deps.transformHandler.onPointerMove(camera, pickElement, event, pivot, transformTargets);
     this.deps.onTransformsLive?.(selected);
-    const transformTargets = resolveTransformTargets(selected);
     this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(transformTargets);
     this.deps.selectionVisualController.syncDuringTransform();
     this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
-    this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(selected));
+    this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(transformTargets));
     this.deps.transformGizmo.updateBoundsFromMeshes(selected, camera);
     this.deps.onRulerTransformFeedback?.(selected, 'move');
     this.refreshPropertiesPanelTransform();
@@ -485,7 +486,7 @@ export class TransformInteractionBridge {
    * @param selected Selected meshes.
    * @returns World quaternion for transform handles.
    */
-  private resolveGizmoOrientation(selected: THREE.Mesh[]): THREE.Quaternion {
+  private resolveGizmoOrientation(selected: THREE.Object3D[]): THREE.Quaternion {
     if (!this.deps.isTransformSpaceLocal() || selected.length !== 1) {
       return new THREE.Quaternion();
     }
@@ -509,7 +510,8 @@ export class TransformInteractionBridge {
     }
     const pivot = this.computeCurrentPivot();
     const selectedObjects = filterUnlockedObjects(this.deps.selectionManager.getAllSelectedObjectsAsArray());
-    const selectionClick = this.deps.transformHandler.onPointerUp(pivot, selectedObjects);
+    const transformTargets = this.resolveDragTargets(selectedObjects);
+    const selectionClick = this.deps.transformHandler.onPointerUp(pivot, transformTargets);
     const clickEvent = this.pendingSelectionClickEvent;
     const clickViewport = this.pendingSelectionClickViewport;
     this.clearWindowDragCapture();
@@ -520,6 +522,18 @@ export class TransformInteractionBridge {
     }
     this.commitTransformAfterDrag(selectedObjects);
     return true;
+  }
+
+  /**
+   * Maps selection meshes to gizmo drag targets. Solid result meshes resolve to
+   * the solid model root so the whole solid moves without compounding live
+   * result→root bakes.
+   *
+   * @param selected Selected content meshes.
+   * @returns Objects that should receive pose edits.
+   */
+  private resolveDragTargets(selected: readonly THREE.Mesh[]): THREE.Object3D[] {
+    return resolveTransformTargets(selected);
   }
 
   /**
@@ -583,7 +597,7 @@ export class TransformInteractionBridge {
    * @returns The pivot vector for transform operations.
    */
   private computeCurrentPivot(): THREE.Vector3 {
-    const selected = Array.from(this.deps.selectionManager.getSelectedObjects());
-    return this.deps.transformExecutor.computePivot(selected);
+    const selected = filterUnlockedObjects(Array.from(this.deps.selectionManager.getSelectedObjects()));
+    return this.deps.transformExecutor.computePivot(this.resolveDragTargets(selected));
   }
 }

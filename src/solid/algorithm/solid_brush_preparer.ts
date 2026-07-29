@@ -54,12 +54,16 @@ export class SolidBrushPreparer {
 
   /**
    * Prepares one brush, reusing cached model-space data when still valid.
+   * Always pulls the live mesh pose first so inspector or gizmo writes that
+   * only updated Object3D transforms cannot leave CSG on a stale prepared
+   * snapshot.
    *
    * @param instance Source instance.
    * @param dirtySeeds Seed dirty ids, or null to force re-prepare.
    * @returns Prepared brush entry.
    */
   prepareOneBrush(instance: SolidBrushInstance, dirtySeeds: Set<string> | null): PreparedBrush {
+    instance.pullTransformFromMesh();
     const mustRefresh = dirtySeeds === null || dirtySeeds.has(instance.id) || !this.canReusePrepared(instance);
     if (!mustRefresh) {
       return this.preparedFromCache(instance);
@@ -70,6 +74,10 @@ export class SolidBrushPreparer {
 
   /**
    * Returns whether cached prepared geometry still matches the instance.
+   * Compares local TRS and parent-chain pose key (so group moves invalidate
+   * nested brushes without walking matrixWorld for every brush). Also rejects
+   * reuse when the preview mesh pose has drifted ahead of the instance data
+   * (inspector and some gizmo paths write the mesh first).
    *
    * @param instance Brush instance.
    * @returns True when cache is reusable.
@@ -79,9 +87,26 @@ export class SolidBrushPreparer {
     if (!cached) return false;
     if (cached.operation !== instance.operation) return false;
     if (cached.visible !== instance.visible) return false;
+    if (!this.instanceMatchesMeshPose(instance)) return false;
     if (!cached.position.equals(instance.position)) return false;
     if (!this.eulerEquals(cached.rotation, instance.rotation)) return false;
     if (!cached.scale.equals(instance.scale)) return false;
+    if ((cached.parentChainPoseKey ?? '') !== instance.getParentChainPoseKey()) return false;
+    return true;
+  }
+
+  /**
+   * Returns whether instance local TRS still matches its preview mesh.
+   *
+   * @param instance Brush instance.
+   * @returns False when the mesh pose is ahead of the instance data.
+   */
+  private instanceMatchesMeshPose(instance: SolidBrushInstance): boolean {
+    const mesh = instance.mesh;
+    if (!mesh) return true;
+    if (!instance.position.equals(mesh.position)) return false;
+    if (!this.eulerEquals(instance.rotation, mesh.rotation)) return false;
+    if (!instance.scale.equals(mesh.scale)) return false;
     return true;
   }
 
@@ -168,6 +193,7 @@ export class SolidBrushPreparer {
       scale: instance.scale.clone(),
       visible: instance.visible,
       shapeFingerprint: BrushShapeFingerprint.fromBrush(instance.brush),
+      parentChainPoseKey: instance.getParentChainPoseKey(),
     });
   }
 }

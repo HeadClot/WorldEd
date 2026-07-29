@@ -1,21 +1,36 @@
 import * as THREE from 'three';
 import { SurfaceCategory } from '../types/surface_category.js';
 import { BrushMembership } from './brush_membership.js';
-import { CategoryRouter } from './category_router.js';
 import type { PreparedBrush } from './solid_compile_types.js';
-import { forEachSubjectAndPeersInOrder } from './subject_peer_order.js';
+import { SolidCsgTree } from './solid_csg_tree.js';
+import { SolidCsgTreeEvaluator } from './solid_csg_tree_evaluator.js';
+import type { SolidRoutingTable } from './solid_routing_table.js';
+import { SolidRoutingTableCache } from './solid_routing_table_cache.js';
 
 /**
- * Routes fragment surface categories through ordered brush operations using
- * full tree walks or local overlap-only walks.
+ * Routes fragment surface categories through ordered brush operations.
+ *
+ * Flat CSG (no groups) uses Sander-style per-subject routing tables: boolean
+ * operations are baked into compact lookup rows over the subject and its touch
+ * peers (or the full ordered list when sequential ∩ requires it).
+ *
+ * Hierarchical CSG always walks the branch/leaf tree: children of a group
+ * combine among themselves starting from empty, then the branch is applied once
+ * to the parent with the group's operation. Flattening group leaves into a
+ * single linear op chain is incorrect — an ∩ inside a group would then clip
+ * sibling brushes outside that group.
  */
 export class SolidFragmentRouter {
   private hasIntersectingOperations = false;
   private invertedWorld = false;
+  private csgTree: SolidCsgTree | null = null;
+  private readonly routingTables = new SolidRoutingTableCache();
   private readonly scratchCentroid = new THREE.Vector3();
 
   /**
-   * Updates whether intersecting operations force full tree routing.
+   * Updates whether intersecting operations force full-list walks when building
+   * flat routing tables. Hierarchical routing ignores this flag and always uses
+   * the tree evaluator with a peer-local relevant set.
    *
    * @param value True when any brush uses intersecting CSG.
    */
@@ -33,10 +48,33 @@ export class SolidFragmentRouter {
   }
 
   /**
-   * Routes a fragment's categories through brush operations in tree order.
-   * Additive/subtractive-only models use the local touch set. With any
-   * intersecting op, routes against every brush so sequential ∩ clips the
-   * entire previous solid.
+   * Installs the hierarchical CSG tree for the current compile.
+   *
+   * @param tree Hierarchical tree, or null for flat routing.
+   */
+  setCsgTree(tree: SolidCsgTree | null): void {
+    this.csgTree = tree;
+  }
+
+  /** Clears cached routing tables (full rebuild or empty compile). */
+  clearRoutingTables(): void {
+    this.routingTables.clear();
+  }
+
+  /**
+   * Drops one brush's routing table after removal or op change.
+   *
+   * @param brushId Brush instance id.
+   */
+  invalidateRoutingTable(brushId: string): void {
+    this.routingTables.invalidateBrush(brushId);
+  }
+
+  /**
+   * Routes a fragment's categories through brush operations.
+   *
+   * Non-flat trees always use hierarchical evaluation (including when the tree
+   * contains ∩). Flat trees use optimized Sander routing tables.
    *
    * @param fragment Fragment polygon.
    * @param normal Face normal.
@@ -50,101 +88,114 @@ export class SolidFragmentRouter {
     prepared: PreparedBrush[],
     subjectIndex: number,
   ): SurfaceCategory {
-    if (this.hasIntersectingOperations) {
-      return this.routeFragmentCategoryFull(fragment, normal, prepared, subjectIndex);
-    }
-    return this.routeFragmentCategoryLocal(fragment, normal, prepared, subjectIndex);
-  }
-
-  /**
-   * Full tree-order routing: classify against every brush (disjoint AABBs are
-   * Outside via classification). Required for true sequential intersection.
-   *
-   * @param fragment Fragment polygon.
-   * @param normal Face normal.
-   * @param prepared All brushes.
-   * @param subjectIndex Subject brush index.
-   * @returns Final routed category.
-   */
-  routeFragmentCategoryFull(
-    fragment: THREE.Vector3[],
-    normal: THREE.Vector3,
-    prepared: PreparedBrush[],
-    subjectIndex: number,
-  ): SurfaceCategory {
-    let category = this.initialRouteCategory();
     BrushMembership.polygonCentroidInto(fragment, this.scratchCentroid);
-    for (let index = 0; index < prepared.length; index++) {
-      const peer = prepared[index];
-      if (!peer) continue;
-      const relative =
-        index === subjectIndex
-          ? SurfaceCategory.SelfAligned
-          : BrushMembership.classifyPoint(this.scratchCentroid, peer.brush, normal);
-      category = CategoryRouter.route(category, relative, peer.operation);
+    if (this.csgTree && !this.csgTree.isFlat) {
+      return this.routeHierarchicalWithPeers(normal, prepared, subjectIndex);
     }
-    return category;
+    return this.routeWithTable(normal, prepared, subjectIndex);
   }
 
   /**
-   * Local routing through self and overlapping peers only.
+   * Hierarchical routing with peer filtering for compound groups. Group-local
+   * operations (including ∩) only affect the compound solid of that branch.
+   * Leaves outside the relevant set count as Outside, which is safe for convex
+   * brushes whose bounds do not touch the subject.
    *
-   * @param fragment Fragment polygon.
    * @param normal Face normal.
-   * @param prepared All brushes.
-   * @param subjectIndex Subject brush index.
-   * @returns Final routed category.
-   */
-  routeFragmentCategoryLocal(
-    fragment: THREE.Vector3[],
-    normal: THREE.Vector3,
-    prepared: PreparedBrush[],
-    subjectIndex: number,
-  ): SurfaceCategory {
-    let category = this.initialRouteCategory();
-    const subject = prepared[subjectIndex];
-    if (!subject) return category;
-    BrushMembership.polygonCentroidInto(fragment, this.scratchCentroid);
-    forEachSubjectAndPeersInOrder(subject.overlappingPeerIndices, subjectIndex, (index) => {
-      const peer = prepared[index];
-      if (!peer) return;
-      category = this.routeOneLocalPeer(category, this.scratchCentroid, normal, peer, index, subjectIndex);
-    });
-    return category;
-  }
-
-  /**
-   * Routes one local peer into the accumulated category.
-   *
-   * @param category Accumulated category.
-   * @param fragmentCentroid Fragment centroid in model space.
-   * @param normal Face normal.
-   * @param peer Peer prepared brush.
-   * @param peerIndex Peer index.
+   * @param prepared Prepared brushes.
    * @param subjectIndex Subject index.
-   * @returns Updated category.
+   * @returns Final category.
    */
-  private routeOneLocalPeer(
-    category: SurfaceCategory,
-    fragmentCentroid: THREE.Vector3,
+  private routeHierarchicalWithPeers(
     normal: THREE.Vector3,
-    peer: PreparedBrush,
-    peerIndex: number,
+    prepared: PreparedBrush[],
     subjectIndex: number,
   ): SurfaceCategory {
-    const relative =
-      peerIndex === subjectIndex
-        ? SurfaceCategory.SelfAligned
-        : BrushMembership.classifyPoint(fragmentCentroid, peer.brush, normal);
-    return CategoryRouter.route(category, relative, peer.operation);
+    const tree = this.csgTree;
+    if (!tree) {
+      return this.routeWithTable(normal, prepared, subjectIndex);
+    }
+    const relevant = this.collectHierarchicalRelevantSet(prepared, subjectIndex);
+    return SolidCsgTreeEvaluator.routeCategoryFiltered(
+      this.scratchCentroid,
+      normal,
+      prepared,
+      tree,
+      subjectIndex,
+      this.invertedWorld,
+      relevant,
+    );
   }
 
   /**
-   * Starting category for route accumulation.
+   * Routes using a cached Sander-style routing table (flat CSG only).
    *
-   * @returns Inside when inverted world; Outside otherwise.
+   * @param normal Face normal.
+   * @param prepared Prepared brushes.
+   * @param subjectIndex Subject index.
+   * @returns Final category.
    */
-  private initialRouteCategory(): SurfaceCategory {
-    return this.invertedWorld ? SurfaceCategory.Inside : SurfaceCategory.Outside;
+  private routeWithTable(normal: THREE.Vector3, prepared: PreparedBrush[], subjectIndex: number): SurfaceCategory {
+    const table = this.resolveTable(prepared, subjectIndex);
+    return table.route((preparedIndex) => this.classifyForTable(preparedIndex, subjectIndex, prepared, normal));
+  }
+
+  /**
+   * Resolves or builds the routing table for a subject. Intended for flat CSG
+   * only; hierarchical trees yield an empty table from the builder and are
+   * routed through routeHierarchicalWithPeers instead.
+   *
+   * @param prepared Prepared brushes.
+   * @param subjectIndex Subject index.
+   * @returns Routing table.
+   */
+  private resolveTable(prepared: PreparedBrush[], subjectIndex: number): SolidRoutingTable {
+    const tree = this.csgTree ?? SolidCsgTree.fromPreparedFlat(prepared);
+    return this.routingTables.getOrBuild(
+      prepared,
+      subjectIndex,
+      tree,
+      this.invertedWorld,
+      this.hasIntersectingOperations,
+    );
+  }
+
+  /**
+   * Classifies the fragment centroid against one table step brush.
+   *
+   * @param preparedIndex Step brush index.
+   * @param subjectIndex Subject index.
+   * @param prepared Prepared brushes.
+   * @param normal Face normal.
+   * @returns Relative category.
+   */
+  private classifyForTable(
+    preparedIndex: number,
+    subjectIndex: number,
+    prepared: PreparedBrush[],
+    normal: THREE.Vector3,
+  ): SurfaceCategory {
+    if (preparedIndex === subjectIndex) {
+      return SurfaceCategory.SelfAligned;
+    }
+    const peer = prepared[preparedIndex];
+    if (!peer) return SurfaceCategory.Outside;
+    return BrushMembership.classifyPoint(this.scratchCentroid, peer.brush, normal);
+  }
+
+  /**
+   * Relevant prepared indices for hierarchical peer-local evaluation. Hierarchy
+   * isolates operations inside groups, so sequential-∩ full-list walks are not
+   * required — only the subject and brushes whose bounds touch it.
+   *
+   * @param prepared Prepared brushes.
+   * @param subjectIndex Subject index.
+   * @returns Relevant index set.
+   */
+  private collectHierarchicalRelevantSet(prepared: PreparedBrush[], subjectIndex: number): Set<number> {
+    const subject = prepared[subjectIndex];
+    const relevant = new Set<number>(subject?.overlappingPeerIndices ?? []);
+    relevant.add(subjectIndex);
+    return relevant;
   }
 }

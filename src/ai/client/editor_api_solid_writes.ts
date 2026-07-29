@@ -16,7 +16,13 @@ import type {
   SplitBrushArgs,
 } from './editor_api_types.js';
 import { dtoToVec3 } from './editor_api_math.js';
-import { findBrush, findSolidModel, resolveBrushMeshes } from './editor_api_lookup.js';
+import {
+  findBrush,
+  findCsgGroup,
+  findSolidModel,
+  resolveBrushMeshes,
+  resolveSolidHierarchyNodes,
+} from './editor_api_lookup.js';
 import { nameToSolidOperation, parseOperationOrAdditive } from './editor_api_operations.js';
 import {
   isEditorApiSnapActive,
@@ -89,6 +95,10 @@ export class EditorApiSolidWrites {
   addBoxBrush(args: AddBoxBrushArgs): McpToolResult {
     const model = findSolidModel(this.host.worldObject, args.modelId);
     if (!model) return fail(`Solid model not found: ${args.modelId}`);
+    if (args.parentGroupId) {
+      const parent = this.resolveAddBrushParent(model, args.parentGroupId);
+      if (!parent) return fail(`CSG group not found under model: ${args.parentGroupId}`);
+    }
     const brush = this.createBoxBrushOnModel(model, args);
     this.selectBrushMesh(brush?.mesh ?? null);
     this.afterMutation(`Added ${brush?.name ?? 'brush'}`);
@@ -100,6 +110,7 @@ export class EditorApiSolidWrites {
         brushId: brush?.id ?? null,
         name: brush?.name ?? null,
         modelId: model.root.uuid,
+        parentGroupId: args.parentGroupId ?? null,
         transform: brush?.mesh ? meshTransformSummary(brush.mesh) : null,
       },
     };
@@ -150,6 +161,7 @@ export class EditorApiSolidWrites {
       useSnap,
     );
     const scale = resolveSnappedScale(this.host, args.scale, new THREE.Vector3(1, 1, 1), useSnap);
+    const parent = this.resolveAddBrushParent(model, args.parentGroupId);
     const command = new EditorApiAddBoxCommand(
       model,
       resolveBoxSize(args.size),
@@ -157,6 +169,7 @@ export class EditorApiSolidWrites {
       position,
       rotation,
       scale,
+      parent,
     );
     this.host.commandStack.push(command);
     const brush = command.getCreatedBrush();
@@ -164,6 +177,20 @@ export class EditorApiSolidWrites {
       this.host.commandStack.push(new EditorApiRenameBrushCommand(model, brush.id, args.name.trim()));
     }
     return brush;
+  }
+
+  /**
+   * Resolves an optional solid CSG group parent for a new brush.
+   *
+   * @param model Target solid model.
+   * @param parentGroupId Optional group uuid.
+   * @returns Parent group, solid root when omitted, or null when invalid.
+   */
+  private resolveAddBrushParent(model: SolidModel, parentGroupId?: string): THREE.Object3D | null {
+    if (!parentGroupId) return null;
+    const found = findCsgGroup(this.host.worldObject, parentGroupId);
+    if (!found || found.model !== model) return null;
+    return found.group;
   }
 
   /**
@@ -425,32 +452,46 @@ export class EditorApiSolidWrites {
   }
 
   /**
-   * Duplicates brushes with optional local offset and/or mirror across X/Z.
-   * Pass multiple brushIds to copy a whole assembly (pedestal + pole + flag).
+   * Duplicates brushes and/or solid CSG groups with optional local offset and
+   * optional mirror across X/Z. Pass groupIds to clone nested compounds.
    *
    * @param args Duplicate arguments.
-   * @returns Tool result with created brush ids.
+   * @returns Tool result with created brush ids and group ids.
    */
   duplicateBrushes(args: DuplicateBrushesArgs): McpToolResult {
-    const meshes = resolveBrushMeshes(this.host.worldObject, args.brushIds);
-    if (meshes.length === 0) return fail('No matching brushes found');
+    const nodeIds = [...(args.brushIds ?? []), ...(args.groupIds ?? [])];
+    const nodes = resolveSolidHierarchyNodes(this.host.worldObject, nodeIds).map((entry) => entry.node);
+    if (nodes.length === 0) return fail('No matching brushes or CSG groups found');
     const offsetVector = dtoToVec3(args.offset, new THREE.Vector3(1, 0, 0));
-    const command = new DuplicateSolidBrushesCommand(meshes, offsetVector);
+    const command = new DuplicateSolidBrushesCommand(nodes, offsetVector);
     this.host.commandStack.push(command);
     const clones = command.getClonedMeshes();
-    const createdIds = clones
+    const createdBrushIds = clones
       .map((mesh) => SolidModel.fromObject(mesh)?.findBrushByMesh(mesh)?.id)
       .filter((id): id is string => !!id);
+    const createdGroupIds = command
+      .getClonedInspectorRoots()
+      .filter((root) => !(root instanceof THREE.Mesh))
+      .map((root) => root.uuid);
     if (args.mirrorAxis) {
-      this.mirrorBrushIds(createdIds, args.mirrorAxis, args.mirrorPlane ?? 0, shouldApplySnap(args));
+      this.mirrorBrushIds(createdBrushIds, args.mirrorAxis, args.mirrorPlane ?? 0, shouldApplySnap(args));
     }
-    if (clones[0]) this.host.selectionManager.selectObject(clones[0]);
-    this.afterMutation(`Duplicated ${clones.length} brush(es)`);
+    const roots = command.getClonedInspectorRoots();
+    if (roots[0] instanceof THREE.Mesh) this.host.selectionManager.selectObject(roots[0]);
+    else if (clones[0]) this.host.selectionManager.selectObject(clones[0]);
+    this.afterMutation(`Duplicated ${nodes.length} hierarchy node(s)`);
     return {
       ok: true,
-      message: `Duplicated ${clones.length} brush(es)`,
-      createdIds,
-      data: { count: clones.length, brushIds: createdIds },
+      message:
+        `Duplicated ${createdBrushIds.length} brush(es)` +
+        (createdGroupIds.length > 0 ? ` in ${createdGroupIds.length} group(s)` : ''),
+      // Brush ids only so callers (e.g. mirror) can chain without group uuids.
+      createdIds: createdBrushIds,
+      data: {
+        count: createdBrushIds.length,
+        brushIds: createdBrushIds,
+        groupIds: createdGroupIds,
+      },
     };
   }
 
@@ -473,7 +514,8 @@ export class EditorApiSolidWrites {
         snap: false,
       });
       if (!duplicated.ok) return duplicated;
-      targetIds = duplicated.createdIds ?? [];
+      const data = duplicated.data as { brushIds?: string[] } | undefined;
+      targetIds = data?.brushIds ?? duplicated.createdIds ?? [];
     }
     this.mirrorBrushIds(targetIds, args.axis, plane, useSnap);
     this.afterMutation(`Mirrored ${targetIds.length} brush(es)`);
@@ -487,17 +529,22 @@ export class EditorApiSolidWrites {
   }
 
   /**
-   * Moves brushes to first or last CSG evaluation order.
+   * Moves brushes and/or solid CSG groups to first or last among siblings.
    *
    * @param args Reorder arguments.
    * @returns Tool result.
    */
   reorderBrushes(args: ReorderBrushesArgs): McpToolResult {
-    const meshes = resolveBrushMeshes(this.host.worldObject, args.brushIds);
-    if (meshes.length === 0) return fail('No matching brushes found');
-    this.host.commandStack.push(new ReorderSolidBrushesCommand(meshes, args.end));
-    this.afterMutation(`Moved brushes to ${args.end}`);
-    return { ok: true, message: `Moved ${meshes.length} brush(es) to ${args.end}` };
+    const nodeIds = [...(args.brushIds ?? []), ...(args.groupIds ?? [])];
+    const nodes = resolveSolidHierarchyNodes(this.host.worldObject, nodeIds).map((entry) => entry.node);
+    if (nodes.length === 0) return fail('No matching brushes or CSG groups found');
+    this.host.commandStack.push(new ReorderSolidBrushesCommand(nodes, args.end));
+    this.afterMutation(`Moved hierarchy nodes to ${args.end}`);
+    return {
+      ok: true,
+      message: `Moved ${nodes.length} node(s) to ${args.end}`,
+      data: { count: nodes.length, end: args.end },
+    };
   }
 
   /**

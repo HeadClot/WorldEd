@@ -59,7 +59,10 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     const panelElement = container.children[0] as HTMLElement;
     const treeElement = panelElement.children[1] as HTMLElement;
-    expect(treeElement.children.length).toBe(2);
+    const rowCount = Array.from(treeElement.children).filter(
+      (child) => !child.classList.contains('editor-outliner-insert-indicator'),
+    ).length;
+    expect(rowCount).toBe(2);
   });
 
   it('should display object names in tree items', () => {
@@ -122,6 +125,55 @@ describe('OutlinerPanel', () => {
     expect(objects.length).toBe(1);
   });
 
+  it('should highlight only a group row when the group is selected, not its children', () => {
+    const group = new THREE.Group();
+    group.name = 'ParentGroup';
+    const child = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    child.name = 'ChildMesh';
+    group.add(child);
+    root.add(group);
+    panel.refresh();
+    clickOutlinerRowByName(container, 'ParentGroup');
+    expect(findOutlinerRowBackground(container, 'ParentGroup')).toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowBackground(container, 'ChildMesh')).not.toBe(Theme.outlinerSelectedColor);
+    expect(selectionManager.getInspectorObjects()).toEqual([group]);
+  });
+
+  it('should highlight only a nested child group without parent group orange', () => {
+    const outer = new THREE.Group();
+    outer.name = 'OuterGroup';
+    const inner = new THREE.Group();
+    inner.name = 'InnerGroup';
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    leaf.name = 'LeafMesh';
+    inner.add(leaf);
+    outer.add(inner);
+    root.add(outer);
+    panel.refresh();
+    clickOutlinerRowByName(container, 'InnerGroup');
+    expect(findOutlinerRowBackground(container, 'InnerGroup')).toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowBackground(container, 'OuterGroup')).not.toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowBackground(container, 'LeafMesh')).not.toBe(Theme.outlinerSelectedColor);
+    expect(selectionManager.getInspectorObjects()).toEqual([inner]);
+  });
+
+  it('should not orange parent groups when a nested mesh is selected in the viewport', () => {
+    const outer = new THREE.Group();
+    outer.name = 'OuterGroup';
+    const inner = new THREE.Group();
+    inner.name = 'InnerGroup';
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    leaf.name = 'LeafMesh';
+    inner.add(leaf);
+    outer.add(inner);
+    root.add(outer);
+    panel.refresh();
+    selectionManager.selectObject(leaf);
+    expect(findOutlinerRowBackground(container, 'LeafMesh')).toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowBackground(container, 'InnerGroup')).not.toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowBackground(container, 'OuterGroup')).not.toBe(Theme.outlinerSelectedColor);
+  });
+
   it('should auto-refresh when selection changes', () => {
     const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     meshA.name = 'ObjA';
@@ -148,7 +200,68 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     const panelElement = container.children[0] as HTMLElement;
     const treeElement = panelElement.children[1] as HTMLElement;
-    expect(treeElement.children.length).toBe(0);
+    const rowCount = Array.from(treeElement.children).filter(
+      (child) => !child.classList.contains('editor-outliner-insert-indicator'),
+    ).length;
+    expect(rowCount).toBe(0);
+  });
+
+  it('should pass multi-selected hierarchy roots on reparent drop', () => {
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshA.name = 'Brush1';
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshB.name = 'Brush2';
+    const group = new THREE.Group();
+    group.name = 'Group';
+    root.add(meshA);
+    root.add(meshB);
+    root.add(group);
+    panel.refresh();
+    let reparented: THREE.Object3D[] = [];
+    panel.setReparentCallback((objects) => {
+      reparented = [...objects];
+    });
+    clickOutlinerRowByName(container, 'Brush1');
+    const brush2Row = findOutlinerRowByName(container, 'Brush2');
+    brush2Row.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, ctrlKey: true }));
+    const transfer = {
+      data: '',
+      effectAllowed: 'all',
+      dropEffect: 'move',
+      setData(_type: string, value: string) {
+        this.data = value;
+      },
+      getData() {
+        return this.data;
+      },
+    };
+    const brush1Row = findOutlinerRowByName(container, 'Brush1');
+    const groupRow = findOutlinerRowByName(container, 'Group');
+    brush1Row.getBoundingClientRect = () =>
+      ({ top: 0, bottom: 20, left: 0, right: 100, width: 100, height: 20, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    groupRow.getBoundingClientRect = () =>
+      ({
+        top: 40,
+        bottom: 60,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 20,
+        x: 0,
+        y: 40,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const dragStart = new Event('dragstart', { bubbles: true }) as DragEvent;
+    Object.defineProperty(dragStart, 'dataTransfer', { value: transfer });
+    brush1Row.dispatchEvent(dragStart);
+    const drop = new Event('drop', { bubbles: true }) as DragEvent;
+    Object.defineProperty(drop, 'dataTransfer', { value: transfer });
+    Object.defineProperty(drop, 'clientY', { value: 50 });
+    Object.defineProperty(drop, 'clientX', { value: 40 });
+    groupRow.dispatchEvent(drop);
+    expect(reparented).toContain(meshA);
+    expect(reparented).toContain(meshB);
+    expect(reparented.length).toBe(2);
   });
 
   it('should support group callback registration', () => {
@@ -184,3 +297,43 @@ describe('OutlinerPanel', () => {
     expect(container.children.length).toBe(0);
   });
 });
+
+/**
+ * Clicks the outliner row whose name span matches.
+ *
+ * @param host Parent element that contains the outliner panel DOM.
+ * @param name Object display name.
+ */
+function clickOutlinerRowByName(host: HTMLElement, name: string): void {
+  const row = findOutlinerRowByName(host, name);
+  row.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+}
+
+/**
+ * Returns the selection background style of a named outliner row.
+ *
+ * @param host Parent element that contains the outliner panel DOM.
+ * @param name Object display name.
+ * @returns Row background CSS value.
+ */
+function findOutlinerRowBackground(host: HTMLElement, name: string): string {
+  return findOutlinerRowByName(host, name).style.background;
+}
+
+/**
+ * Finds the outliner row element for a display name.
+ *
+ * @param host Parent element that contains the outliner panel DOM.
+ * @param name Object display name.
+ * @returns Row element.
+ */
+function findOutlinerRowByName(host: HTMLElement, name: string): HTMLElement {
+  const spans = host.querySelectorAll('span');
+  for (const span of Array.from(spans)) {
+    if (span.textContent === name) {
+      const row = span.closest('div');
+      if (row instanceof HTMLElement) return row;
+    }
+  }
+  throw new Error(`Outliner row not found: ${name}`);
+}

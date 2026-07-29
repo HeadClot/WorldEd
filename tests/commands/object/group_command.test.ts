@@ -148,4 +148,51 @@ describe('GroupCommand', () => {
     expect(parent.children).toContain(outer);
     expect(parent.children).not.toContain(inner);
   });
+
+  it('should insert the group at the earliest selected sibling index, not at the end', () => {
+    const mesh3 = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
+    mesh3.name = 'Mesh3';
+    parent.add(mesh3);
+    const command = new GroupCommand([mesh1], parent, 'AtClickSite');
+    command.execute();
+    const group = command.getGroup();
+    expect(parent.children[0]).toBe(group);
+    expect(parent.children[1]).toBe(mesh2);
+    expect(parent.children[2]).toBe(mesh3);
+    expect(group.children[0]).toBe(mesh1);
+  });
+
+  it('should insert a multi-member group at the topmost member index', () => {
+    const mesh3 = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
+    mesh3.name = 'Mesh3';
+    const mesh4 = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
+    mesh4.name = 'Mesh4';
+    parent.add(mesh3);
+    parent.add(mesh4);
+    const command = new GroupCommand([mesh2, mesh3], parent, 'MidGroup');
+    command.execute();
+    const group = command.getGroup();
+    expect(parent.children[0]).toBe(mesh1);
+    expect(parent.children[1]).toBe(group);
+    expect(parent.children[2]).toBe(mesh4);
+    expect(group.children).toContain(mesh2);
+    expect(group.children).toContain(mesh3);
+  });
+
+  it('should keep middle insert position across undo and redo', () => {
+    const mesh3 = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
+    mesh3.name = 'Mesh3';
+    parent.add(mesh3);
+    const command = new GroupCommand([mesh2], parent, 'RedoSite');
+    command.execute();
+    expect(parent.children[1]).toBe(command.getGroup());
+    command.undo();
+    expect(parent.children[0]).toBe(mesh1);
+    expect(parent.children[1]).toBe(mesh2);
+    expect(parent.children[2]).toBe(mesh3);
+    command.execute();
+    expect(parent.children[0]).toBe(mesh1);
+    expect(parent.children[1]).toBe(command.getGroup());
+    expect(parent.children[2]).toBe(mesh3);
+  });
 });

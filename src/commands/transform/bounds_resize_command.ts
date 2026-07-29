@@ -6,7 +6,7 @@ import { UndoCommand } from '../undo_command.js';
  * post-drag result so execute stays idempotent.
  */
 export interface BoundsResizeSnapshot {
-  object: THREE.Mesh;
+  object: THREE.Object3D;
   originalPosition: THREE.Vector3;
   originalScale: THREE.Vector3;
   finalPosition: THREE.Vector3;

@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { DeleteSolidBrushesCommand } from '../../src/commands/solid/delete_solid_brushes_command.js';
+import { markAsSolidCsgGroup } from '../../src/solid/model/solid_group.js';
 
 /** Deleting a brush must drop it from the solid model CSG list and rebuild. */
 describe('Delete solid brushes', () => {
@@ -55,5 +57,74 @@ describe('Delete solid brushes', () => {
       SolidOperation.Subtractive,
       SolidOperation.Intersecting,
     ]);
+  });
+
+  it('removes a brush nested under a solid CSG group from the scene hierarchy', () => {
+    const model = new SolidModel('DelNested');
+    const keep = model.addBoxBrush(4, SolidOperation.Additive);
+    const nested = model.addBoxBrush(2, SolidOperation.Subtractive);
+    const group = new THREE.Group();
+    group.name = 'Compound';
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(nested.mesh!);
+    model.rebuild(true);
+    expect(nested.mesh!.parent).toBe(group);
+    const command = new DeleteSolidBrushesCommand([nested.mesh!]);
+    command.execute();
+    expect(model.getBrushCount()).toBe(1);
+    expect(model.findBrush(nested.id)).toBeUndefined();
+    expect(model.findBrush(keep.id)).toBeDefined();
+    expect(nested.mesh!.parent).toBeNull();
+    expect(group.children).not.toContain(nested.mesh!);
+    expect(model.root.children).not.toContain(nested.mesh!);
+  });
+
+  it('undo restores a nested brush under its original solid CSG group', () => {
+    const model = new SolidModel('DelNestedUndo');
+    model.addBoxBrush(4, SolidOperation.Additive);
+    const nested = model.addBoxBrush(2, SolidOperation.Subtractive);
+    const sibling = model.addBoxBrush(2, SolidOperation.Additive);
+    const group = new THREE.Group();
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(nested.mesh!);
+    group.add(sibling.mesh!);
+    model.rebuild(true);
+    const command = new DeleteSolidBrushesCommand([nested.mesh!]);
+    command.execute();
+    expect(nested.mesh!.parent).toBeNull();
+    command.undo();
+    expect(model.findBrush(nested.id)).toBeDefined();
+    expect(nested.mesh!.parent).toBe(group);
+    expect(group.children.indexOf(nested.mesh!)).toBeLessThan(group.children.indexOf(sibling.mesh!));
+  });
+
+  it('undo of nested delete keeps the group sibling order under the solid root', () => {
+    const model = new SolidModel('DelNestedGroupOrder');
+    const before = model.addBoxBrush(4, SolidOperation.Additive);
+    const nested = model.addBoxBrush(2, SolidOperation.Subtractive);
+    const after = model.addBoxBrush(2, SolidOperation.Additive);
+    const group = new THREE.Group();
+    group.name = 'Compound';
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(nested.mesh!);
+    // Layout: result, before, after, group(nested) — then move after after the group.
+    model.root.remove(after.mesh!);
+    model.root.add(after.mesh!);
+    model.rebuild(true);
+    const groupIndexBefore = model.root.children.indexOf(group);
+    const beforeIndex = model.root.children.indexOf(before.mesh!);
+    const afterIndex = model.root.children.indexOf(after.mesh!);
+    expect(beforeIndex).toBeLessThan(groupIndexBefore);
+    expect(groupIndexBefore).toBeLessThan(afterIndex);
+    const command = new DeleteSolidBrushesCommand([nested.mesh!]);
+    command.execute();
+    command.undo();
+    expect(nested.mesh!.parent).toBe(group);
+    const groupIndexAfter = model.root.children.indexOf(group);
+    expect(model.root.children.indexOf(before.mesh!)).toBeLessThan(groupIndexAfter);
+    expect(groupIndexAfter).toBeLessThan(model.root.children.indexOf(after.mesh!));
   });
 });

@@ -21,6 +21,12 @@ export interface CachedPreparedBrush {
   visible: boolean;
   /** Topology fingerprint for shape change detection. */
   shapeFingerprint: string;
+  /**
+   * Fingerprint of intermediate solid-group parent poses (empty when the brush
+   * is a direct child of the solid root). Avoids per-brush matrixWorld walks
+   * during prepare-cache checks on large maps.
+   */
+  parentChainPoseKey: string;
 }
 
 /**

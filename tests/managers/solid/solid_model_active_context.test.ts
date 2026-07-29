@@ -7,6 +7,7 @@ import { SolidModel } from '../../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
 import { DeleteSolidBrushesCommand } from '../../../src/commands/solid/delete_solid_brushes_command.js';
 import { createDefaultStartupSolidModel } from '../../../src/solid/model/default_startup_solid_model.js';
+import { markAsSolidCsgGroup } from '../../../src/solid/model/solid_group.js';
 
 /** Lightweight panel stand-in for active-model resolution tests. */
 class MockSolidPanel {
@@ -72,5 +73,27 @@ describe('Solid model active context', () => {
     expect(panel.getModel()).toBe(startup);
     controller.addBoxBrush();
     expect(startup.getBrushCount()).toBe(2);
+  });
+
+  it('adds a box brush under the group that owns the selected brush', () => {
+    const world = new THREE.Group();
+    const selection = new SelectionManager();
+    const panel = new MockSolidPanel();
+    const controller = new SolidModelController(world, new CommandStack(16), selection, panel as never);
+    const model = new SolidModel('NestedAdd');
+    world.add(model.root);
+    const rootBrush = model.addBoxBrush(4, SolidOperation.Additive);
+    const nested = model.addBoxBrush(2, SolidOperation.Additive);
+    const group = new THREE.Group();
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(nested.mesh!);
+    model.syncBrushOrderFromScene();
+    selection.selectObject(nested.mesh!);
+    controller.addBoxBrush();
+    expect(model.getBrushCount()).toBe(3);
+    const created = model.getBrushes().find((brush) => brush.id !== rootBrush.id && brush.id !== nested.id);
+    expect(created?.mesh?.parent).toBe(group);
+    expect(group.children[group.children.length - 1]).toBe(created!.mesh!);
   });
 });

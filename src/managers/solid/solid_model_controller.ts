@@ -3,12 +3,14 @@ import { CommandStack } from '../../commands/command_stack.js';
 import { CreateSolidModelCommand } from '../../commands/create/create_solid_model_command.js';
 import { AddSolidBoxBrushCommand } from '../../commands/solid/add_solid_box_brush_command.js';
 import { SetSolidBrushOperationCommand } from '../../commands/solid/set_solid_brush_operation_command.js';
+import { SetSolidGroupOperationCommand } from '../../commands/solid/set_solid_group_operation_command.js';
 import { ReorderSolidBrushesCommand, SolidBrushOrderEnd } from '../../commands/solid/reorder_solid_brushes_command.js';
 import { SelectionManager } from '../../selection/object/selection_manager.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
 import { SolidModelPanel } from '../../ui/solid_model_panel.js';
 import { SolidOperation } from '../../solid/types/solid_operation.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
+import { findSolidModelRoot, isSolidCsgGroup, isValidSolidTreeParent } from '../../solid/model/solid_group.js';
 import { DEFAULT_STARTUP_BRUSH_SIZE } from '../../solid/model/default_startup_solid_model.js';
 import { computeOcclusionAwareSpawnPosition, DEFAULT_SPAWN_DISTANCE } from '../../navigation/object_spawn_placement.js';
 import { TextureLockSettings } from '../../texture/lock/texture_lock_settings.js';
@@ -50,6 +52,16 @@ export class SolidModelController {
    * after deleting a brush) so + Box Brush still has a target model.
    */
   private lastActiveModel: SolidModel | null;
+  /**
+   * Last solid hierarchy parent used for new brushes (solid root or CSG group).
+   * Updated from selection so + Box Brush appends under the current context.
+   */
+  private lastBrushInsertParent: THREE.Object3D | null;
+  /**
+   * Pre-drag solid-root matrices used when baking residual result-mesh pose
+   * into the root so repeated live samples do not compound.
+   */
+  private readonly solidRootBakeBaselines = new WeakMap<SolidModel, THREE.Matrix4>();
   private readonly selectionChangedHandler: () => void;
 
   /**
@@ -86,6 +98,7 @@ export class SolidModelController {
     this.liveFlushToken = 0;
     this.onLiveGeometryUpdated = null;
     this.lastActiveModel = null;
+    this.lastBrushInsertParent = null;
     this.selectionChangedHandler = () => this.onSelectionChanged();
     this.selectionManager.onSelectionChanged(this.selectionChangedHandler);
   }
@@ -228,7 +241,8 @@ export class SolidModelController {
 
   /**
    * Adds a box brush under the active solid model and selects it. Spawns
-   * grid-aligned in front of the active camera (model-local space).
+   * grid-aligned in front of the active camera (model-local space). Appends
+   * under the most recently selected solid parent (CSG group or solid root).
    */
   addBoxBrush(): void {
     const model = this.resolveActiveModel();
@@ -236,16 +250,28 @@ export class SolidModelController {
       this.showStatus?.('Select a solid model or brush first');
       return;
     }
+    const parent = this.resolveBrushInsertParent(model);
     const offset = this.computeNewBrushLocalPosition(model);
-    const command = new AddSolidBoxBrushCommand(model, DEFAULT_STARTUP_BRUSH_SIZE, SolidOperation.Additive, offset);
+    const command = new AddSolidBoxBrushCommand(
+      model,
+      DEFAULT_STARTUP_BRUSH_SIZE,
+      SolidOperation.Additive,
+      offset,
+      parent,
+    );
     this.commandStack.push(command);
     const brush = command.getCreatedBrush();
     if (brush?.mesh) {
       this.selectionManager.selectObject(brush.mesh);
+      this.lastBrushInsertParent = brush.mesh.parent;
     }
     this.panel.refresh();
     this.syncViewports?.();
-    this.refreshOutliner?.();
+    // Selection change already reveals/refreshes the outliner for the new brush.
+    // A second full tree pass is unnecessary for large solid models.
+    if (!brush?.mesh) {
+      this.refreshOutliner?.();
+    }
     this.showStatus?.(`Added ${brush?.name ?? 'brush'}`);
   }
 
@@ -282,7 +308,24 @@ export class SolidModelController {
     this.commandStack.push(command);
     this.panel.refresh();
     this.syncViewports?.();
+    this.refreshOutliner?.();
     this.showStatus?.('Updated brush operation');
+  }
+
+  /**
+   * Sets the CSG operation on solid compound groups (undoable, batched).
+   *
+   * @param groups Solid CSG groups.
+   * @param operation New operation for the compound branch.
+   */
+  setGroupOperationForGroups(groups: THREE.Group[], operation: SolidOperation): void {
+    if (groups.length === 0) return;
+    const command = new SetSolidGroupOperationCommand(groups, operation);
+    this.commandStack.push(command);
+    this.panel.refresh();
+    this.syncViewports?.();
+    this.refreshOutliner?.();
+    this.showStatus?.('Updated group operation');
   }
 
   /**
@@ -318,6 +361,7 @@ export class SolidModelController {
       this.finalizeModelAfterTransform(model, selectedSet);
       updatedResults.push(model.getResultMeshForSync());
     }
+    this.clearSolidRootBakeBaselines(models);
     this.panel.refresh();
     this.onLiveGeometryUpdated?.(updatedResults);
     this.refreshOutliner?.();
@@ -325,21 +369,24 @@ export class SolidModelController {
   }
 
   /**
-   * Moves selected solid brushes to first or last CSG evaluation order
-   * (undoable).
+   * Moves selected solid brushes and solid CSG groups to first or last among
+   * siblings under their own parent (undoable). Each parent tree is handled
+   * independently so multi-select does not flatten hierarchy.
    *
-   * @param meshes Brush preview meshes.
-   * @param end Target end of the evaluation list.
+   * @param nodes Brush meshes and/or solid CSG groups.
+   * @param end Target end among siblings under each node's parent.
    */
-  moveBrushesInOrder(meshes: THREE.Mesh[], end: SolidBrushOrderEnd): void {
-    const brushMeshes = meshes.filter((mesh) => SolidBrushVisual.isBrushObject(mesh));
-    if (brushMeshes.length === 0) return;
-    const command = new ReorderSolidBrushesCommand(brushMeshes, end);
+  moveBrushesInOrder(nodes: THREE.Object3D[], end: SolidBrushOrderEnd): void {
+    const reorderNodes = nodes.filter((node) => SolidBrushVisual.isBrushObject(node) || isSolidCsgGroup(node));
+    if (reorderNodes.length === 0) return;
+    const command = new ReorderSolidBrushesCommand(reorderNodes, end);
     this.commandStack.push(command);
     this.panel.refresh();
     this.syncViewports?.();
     this.refreshOutliner?.();
-    this.showStatus?.(end === 'first' ? 'Moved brush to first in CSG order' : 'Moved brush to last in CSG order');
+    this.showStatus?.(
+      end === 'first' ? 'Moved selection to first in hierarchy order' : 'Moved selection to last in hierarchy order',
+    );
   }
 
   /**
@@ -458,6 +505,7 @@ export class SolidModelController {
   /** Reacts to scene selection changes by binding the tools panel. */
   private onSelectionChanged(): void {
     this.bindPanelToSelection();
+    this.updateBrushInsertParentFromSelection();
   }
 
   /**
@@ -474,6 +522,87 @@ export class SolidModelController {
     if (remembered) {
       this.panel.setModel(remembered);
     }
+  }
+
+  /**
+   * Resolves where a new box brush should be parented under the active solid.
+   * Prefers the current selection (brush parent or selected CSG group), then
+   * the last remembered parent still valid for this model.
+   *
+   * @param model Active solid model.
+   * @returns Solid root or solid CSG group.
+   */
+  private resolveBrushInsertParent(model: SolidModel): THREE.Object3D {
+    const fromSelection = this.resolveBrushInsertParentFromSelection(model);
+    if (fromSelection) {
+      this.lastBrushInsertParent = fromSelection;
+      return fromSelection;
+    }
+    if (this.lastBrushInsertParent && this.isValidBrushInsertParent(model, this.lastBrushInsertParent)) {
+      return this.lastBrushInsertParent;
+    }
+    return model.root;
+  }
+
+  /**
+   * Derives an insert parent from the current selection under a solid model.
+   *
+   * @param model Active solid model.
+   * @returns Parent object, or null when selection does not imply one.
+   */
+  private resolveBrushInsertParentFromSelection(model: SolidModel): THREE.Object3D | null {
+    const lastMesh = this.selectionManager.getLastSelectedObject();
+    if (lastMesh) {
+      const fromMesh = this.brushInsertParentFromObject(model, lastMesh);
+      if (fromMesh) return fromMesh;
+    }
+    for (const object of this.selectionManager.getInspectorObjects()) {
+      const fromObject = this.brushInsertParentFromObject(model, object);
+      if (fromObject) return fromObject;
+    }
+    return null;
+  }
+
+  /**
+   * Maps a selected object to a brush insert parent under the given model.
+   * Brushes contribute their parent; solid CSG groups and the solid root are
+   * used directly.
+   *
+   * @param model Active solid model.
+   * @param object Selected hierarchy object.
+   * @returns Insert parent, or null when the object is not under this model.
+   */
+  private brushInsertParentFromObject(model: SolidModel, object: THREE.Object3D): THREE.Object3D | null {
+    if (object === model.root) return model.root;
+    if (isSolidCsgGroup(object) && findSolidModelRoot(object) === model.root) {
+      return object;
+    }
+    if (SolidBrushVisual.isBrushObject(object)) {
+      const brushModel = SolidModel.fromObject(object);
+      if (brushModel !== model) return null;
+      const parent = object.parent;
+      if (parent && this.isValidBrushInsertParent(model, parent)) return parent;
+    }
+    return null;
+  }
+
+  /**
+   * Returns whether a parent may receive new brushes for the model.
+   *
+   * @param model Solid model.
+   * @param parent Candidate parent.
+   * @returns True when parent is the solid root or a CSG group under it.
+   */
+  private isValidBrushInsertParent(model: SolidModel, parent: THREE.Object3D): boolean {
+    return isValidSolidTreeParent(model.root, parent, model.root);
+  }
+
+  /** Updates remembered brush insert parent when selection is under a solid. */
+  private updateBrushInsertParentFromSelection(): void {
+    const model = this.findSelectedSolidModel();
+    if (!model) return;
+    const parent = this.resolveBrushInsertParentFromSelection(model);
+    if (parent) this.lastBrushInsertParent = parent;
   }
 
   /**
@@ -583,8 +712,11 @@ export class SolidModelController {
 
   /**
    * Applies post-transform rules for one solid model and finalizes geometry.
-   * Prefer selected-brush sync + interactive finalize over a forced full
-   * rebuild.
+   * Prefer selected-brush sync plus interactive finalize over a forced full
+   * rebuild. Inspector pose writes often update only Object3D transforms, so
+   * this path pulls mesh poses into brush instances, marks those brushes dirty,
+   * then recompiles — otherwise the wireframe can move while the CSG result
+   * stays at the previous compile.
    *
    * @param model Solid model.
    * @param selectedSet Selected meshes from the edit.
@@ -592,11 +724,12 @@ export class SolidModelController {
   private finalizeModelAfterTransform(model: SolidModel, selectedSet: Set<THREE.Mesh>): void {
     const result = model.getResultMesh();
     const resultSelected = selectedSet.has(result);
-    const selectedBrushMeshes = model
-      .getBrushes()
-      .map((brush) => brush.mesh)
-      .filter((mesh): mesh is THREE.Mesh => !!mesh && selectedSet.has(mesh));
+    const selectedBrushMeshes = this.collectSelectedBrushMeshes(model, selectedSet);
     if (resultSelected && selectedBrushMeshes.length === 0) {
+      // Root was already moved by the gizmo when the result stays at identity.
+      if (this.isLocalIdentityPose(result)) {
+        return;
+      }
       this.bakeResultTransformIntoRoot(model);
       model.markDirty();
       model.rebuild(true);
@@ -612,7 +745,44 @@ export class SolidModelController {
     } else {
       model.syncBrushesFromScene(locks);
     }
+    this.ensureTransformedBrushesDirty(model, selectedBrushMeshes);
     model.finalizeAfterInteractiveEdit();
+  }
+
+  /**
+   * Collects solid brush preview meshes that belong to the model and appear in
+   * the transform selection set.
+   *
+   * @param model Solid model.
+   * @param selectedSet Meshes from the transform commit.
+   * @returns Brush meshes to pull and recompile.
+   */
+  private collectSelectedBrushMeshes(model: SolidModel, selectedSet: Set<THREE.Mesh>): THREE.Mesh[] {
+    const meshes: THREE.Mesh[] = [];
+    for (const mesh of selectedSet) {
+      if (!model.findBrushByMesh(mesh)) continue;
+      meshes.push(mesh);
+    }
+    return meshes;
+  }
+
+  /**
+   * Marks every transformed brush dirty even when prepareLiveBrushEdit was a
+   * no-op (pose already pulled). Guarantees inspector commits recompile CSG.
+   *
+   * @param model Solid model.
+   * @param brushMeshes Transformed brush meshes.
+   */
+  private ensureTransformedBrushesDirty(model: SolidModel, brushMeshes: readonly THREE.Mesh[]): void {
+    if (brushMeshes.length === 0) return;
+    const dirtyIds: string[] = [];
+    for (const mesh of brushMeshes) {
+      const brush = model.findBrushByMesh(mesh);
+      if (brush) dirtyIds.push(brush.id);
+    }
+    if (dirtyIds.length > 0) {
+      model.markBrushesDirty(dirtyIds);
+    }
   }
 
   /**
@@ -678,20 +848,22 @@ export class SolidModelController {
   }
 
   /**
-   * Bakes a lone result-mesh transform into the solid model root.
+   * Bakes a lone result-mesh transform into the solid model root using the
+   * pre-drag root matrix so repeated live samples do not compound.
    *
    * @param model Solid model whose result was moved alone.
    */
   private bakeResultTransformIntoRoot(model: SolidModel): void {
     const root = model.root;
     const result = model.getResultMesh();
+    if (this.isLocalIdentityPose(result)) return;
+    const baseline = this.captureSolidRootBakeBaseline(model);
     const resultMatrix = new THREE.Matrix4().compose(
       result.position.clone(),
-      new THREE.Quaternion().setFromEuler(result.rotation),
+      result.quaternion.clone(),
       result.scale.clone(),
     );
-    root.updateMatrix();
-    const combined = new THREE.Matrix4().copy(root.matrix).multiply(resultMatrix);
+    const combined = baseline.clone().multiply(resultMatrix);
     const position = new THREE.Vector3();
     const quaternion = new THREE.Quaternion();
     const scale = new THREE.Vector3();
@@ -704,6 +876,48 @@ export class SolidModelController {
   }
 
   /**
+   * Captures the solid root matrix once per drag for absolute result→root
+   * bakes.
+   *
+   * @param model Solid model being baked.
+   * @returns Pre-drag root local matrix.
+   */
+  private captureSolidRootBakeBaseline(model: SolidModel): THREE.Matrix4 {
+    const existing = this.solidRootBakeBaselines.get(model);
+    if (existing) return existing;
+    model.root.updateMatrix();
+    const baseline = model.root.matrix.clone();
+    this.solidRootBakeBaselines.set(model, baseline);
+    return baseline;
+  }
+
+  /**
+   * Drops bake baselines after a transform commit finishes.
+   *
+   * @param models Models that participated in the commit.
+   */
+  private clearSolidRootBakeBaselines(models: Iterable<SolidModel>): void {
+    for (const model of models) {
+      this.solidRootBakeBaselines.delete(model);
+    }
+  }
+
+  /**
+   * Returns true when an object has local identity pose (no residual bake).
+   *
+   * @param object Object to inspect.
+   * @returns True when position is zero, scale is unit, rotation is identity.
+   */
+  private isLocalIdentityPose(object: THREE.Object3D): boolean {
+    if (object.position.lengthSq() > 1e-16) return false;
+    if (Math.abs(object.scale.x - 1) > 1e-8) return false;
+    if (Math.abs(object.scale.y - 1) > 1e-8) return false;
+    if (Math.abs(object.scale.z - 1) > 1e-8) return false;
+    const identity = new THREE.Quaternion();
+    return Math.abs(object.quaternion.dot(identity)) > 1 - 1e-8;
+  }
+
+  /**
    * Resets the result mesh to local identity under the solid model root.
    *
    * @param result Result mesh.
@@ -711,6 +925,7 @@ export class SolidModelController {
   private resetResultLocalTransform(result: THREE.Mesh): void {
     result.position.set(0, 0, 0);
     result.rotation.set(0, 0, 0);
+    result.quaternion.identity();
     result.scale.set(1, 1, 1);
   }
 

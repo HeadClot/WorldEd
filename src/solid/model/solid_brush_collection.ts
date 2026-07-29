@@ -95,17 +95,48 @@ export class SolidBrushCollection {
 
   /**
    * Registers a brush at a list index, ensuring preview mesh and sibling order.
+   * When {@code hierarchy} names a non-root parent, the mesh is attached there
+   * and root-level brush reordering is skipped so groups keep their sibling
+   * position under the solid root.
    *
    * @param instance Brush instance to own.
    * @param listIndex Desired index in the evaluation list.
    * @param previewSize Default box preview edge length when mesh is missing.
+   * @param hierarchy Optional nested parent and sibling index for the mesh.
    */
-  registerBrushAt(instance: SolidBrushInstance, listIndex: number, previewSize: number): void {
+  registerBrushAt(
+    instance: SolidBrushInstance,
+    listIndex: number,
+    previewSize: number,
+    hierarchy?: { parent: THREE.Object3D; siblingIndex: number },
+  ): void {
     if (this.findBrush(instance.id)) return;
     this.ensureBrushPreviewMesh(instance, previewSize);
     const clampedIndex = Math.max(0, Math.min(listIndex, this.brushes.length));
     this.brushes.splice(clampedIndex, 0, instance);
+    if (hierarchy && hierarchy.parent !== this.root) {
+      this.attachMeshUnderParent(instance.mesh, hierarchy.parent, hierarchy.siblingIndex);
+      return;
+    }
     this.applyBrushMeshSiblingOrder();
+  }
+
+  /**
+   * Parents a brush mesh under a hierarchy node at a sibling index.
+   *
+   * @param mesh Brush preview mesh, or null when missing.
+   * @param parent Destination parent (solid CSG group).
+   * @param siblingIndex Desired child index under the parent.
+   */
+  private attachMeshUnderParent(mesh: THREE.Mesh | null, parent: THREE.Object3D, siblingIndex: number): void {
+    if (!mesh) return;
+    mesh.removeFromParent();
+    parent.add(mesh);
+    const currentIndex = parent.children.indexOf(mesh);
+    if (currentIndex < 0) return;
+    parent.children.splice(currentIndex, 1);
+    const clamped = Math.max(0, Math.min(siblingIndex, parent.children.length));
+    parent.children.splice(clamped, 0, mesh);
   }
 
   /**
@@ -155,28 +186,84 @@ export class SolidBrushCollection {
   }
 
   /**
-   * Reorders brush preview meshes under the root to match evaluation list
-   * order.
+   * Ensures parentless brush meshes attach under the solid root, then reorders
+   * only root-level brush siblings to match evaluation order. Brushes nested
+   * under solid CSG groups keep their parents so hierarchical compounds stay
+   * intact.
    */
   applyBrushMeshSiblingOrder(): void {
     for (const brush of this.brushes) {
       if (!brush.mesh) continue;
+      if (!brush.mesh.parent) {
+        this.root.add(brush.mesh);
+      }
+    }
+    this.reorderRootLevelBrushSiblings();
+  }
+
+  /**
+   * Re-appends evaluation-ordered root-level brushes so their sibling index
+   * matches CSG order among direct children of the solid root.
+   */
+  private reorderRootLevelBrushSiblings(): void {
+    for (const brush of this.brushes) {
+      if (!brush.mesh) continue;
+      if (brush.mesh.parent !== this.root) continue;
       this.root.add(brush.mesh);
     }
   }
 
   /**
-   * Reorders the internal brush list to match outliner / scene-graph sibling
-   * order.
+   * Reorders the internal brush list to match outliner / scene-graph
+   * depth-first order, including brushes nested under solid CSG groups.
    */
   syncBrushOrderFromScene(): void {
     const ordered: SolidBrushInstance[] = [];
     const remaining = new Map(this.brushes.map((brush) => [brush.id, brush] as const));
-    for (const child of this.root.children) {
-      this.collectBrushChildIfOwned(child, ordered, remaining);
-    }
+    this.collectBrushesDepthFirst(this.root, ordered, remaining);
     remaining.forEach((brush) => ordered.push(brush));
     this.brushes = ordered;
+  }
+
+  /**
+   * Depth-first collection of owned brush meshes under a solid hierarchy node.
+   *
+   * @param parent Solid root or intermediate group.
+   * @param ordered Output ordered list.
+   * @param remaining Remaining brushes keyed by id.
+   */
+  private collectBrushesDepthFirst(
+    parent: THREE.Object3D,
+    ordered: SolidBrushInstance[],
+    remaining: Map<string, SolidBrushInstance>,
+  ): void {
+    for (const child of parent.children) {
+      if (this.tryCollectOwnedBrush(child, ordered, remaining)) continue;
+      if (child instanceof THREE.Group) {
+        this.collectBrushesDepthFirst(child, ordered, remaining);
+      }
+    }
+  }
+
+  /**
+   * Collects a scene child when it is an owned brush mesh.
+   *
+   * @param child Scene child.
+   * @param ordered Output ordered list.
+   * @param remaining Remaining brushes keyed by id.
+   * @returns True when the child was a collected brush.
+   */
+  private tryCollectOwnedBrush(
+    child: THREE.Object3D,
+    ordered: SolidBrushInstance[],
+    remaining: Map<string, SolidBrushInstance>,
+  ): boolean {
+    if (!SolidBrushVisual.isBrushObject(child)) return false;
+    const brush = this.findBrushByMesh(child);
+    if (!brush) return false;
+    ordered.push(brush);
+    remaining.delete(brush.id);
+    return true;
   }
 
   /**
@@ -238,25 +325,6 @@ export class SolidBrushCollection {
     const size = measuredSize > 1e-6 ? measuredSize : previewSize;
     const boxPreview = SolidBrushVisual.createBoxPreview(instance.name, size, instance.operation);
     instance.attachMesh(boxPreview);
-  }
-
-  /**
-   * Collects a scene child into ordered brushes when it is an owned brush mesh.
-   *
-   * @param child Root child.
-   * @param ordered Output ordered list.
-   * @param remaining Remaining brushes keyed by id.
-   */
-  private collectBrushChildIfOwned(
-    child: THREE.Object3D,
-    ordered: SolidBrushInstance[],
-    remaining: Map<string, SolidBrushInstance>,
-  ): void {
-    if (!SolidBrushVisual.isBrushObject(child)) return;
-    const brush = this.findBrushByMesh(child);
-    if (!brush) return;
-    ordered.push(brush);
-    remaining.delete(brush.id);
   }
 
   /**

@@ -18,8 +18,10 @@ export class EditorApiAddBoxCommand implements UndoCommand {
   private readonly position: THREE.Vector3;
   private readonly rotation: THREE.Euler;
   private readonly scale: THREE.Vector3;
+  private readonly parent: THREE.Object3D | null;
   private created: SolidBrushInstance | null;
   private listIndex: number;
+  private hierarchySiblingIndex: number;
   private executed: boolean;
 
   /**
@@ -31,6 +33,7 @@ export class EditorApiAddBoxCommand implements UndoCommand {
    * @param position Local position.
    * @param rotation Local rotation.
    * @param scale Local scale.
+   * @param parent Optional solid CSG group (or solid root) to parent under.
    */
   constructor(
     model: SolidModel,
@@ -39,6 +42,7 @@ export class EditorApiAddBoxCommand implements UndoCommand {
     position: THREE.Vector3,
     rotation: THREE.Euler,
     scale: THREE.Vector3,
+    parent: THREE.Object3D | null = null,
   ) {
     this.model = model;
     this.width = size.x;
@@ -48,8 +52,10 @@ export class EditorApiAddBoxCommand implements UndoCommand {
     this.position = position.clone();
     this.rotation = rotation.clone();
     this.scale = scale.clone();
+    this.parent = parent;
     this.created = null;
     this.listIndex = -1;
+    this.hierarchySiblingIndex = -1;
     this.executed = false;
   }
 
@@ -84,9 +90,13 @@ export class EditorApiAddBoxCommand implements UndoCommand {
     instance.rotation.copy(this.rotation);
     instance.scale.copy(this.scale);
     instance.pushTransformToMesh();
-    this.model.addBrushInstance(instance, Math.max(this.width, this.height, this.depth));
+    const previewSize = Math.max(this.width, this.height, this.depth);
+    const hierarchy = this.buildHierarchyPlacement();
+    const listIndex = this.model.getBrushCount();
+    this.model.insertBrushInstance(instance, listIndex, previewSize, hierarchy);
     this.created = instance;
     this.listIndex = this.model.getBrushes().findIndex((entry) => entry.id === instance.id);
+    if (hierarchy) this.hierarchySiblingIndex = hierarchy.siblingIndex;
   }
 
   /** Re-inserts a previously created brush at its recorded index. */
@@ -94,6 +104,25 @@ export class EditorApiAddBoxCommand implements UndoCommand {
     if (!this.created) return;
     if (this.model.findBrush(this.created.id)) return;
     this.created.pushTransformToMesh();
-    this.model.insertBrushInstance(this.created, this.listIndex, Math.max(this.width, this.height, this.depth));
+    const hierarchy = this.buildHierarchyPlacement(this.hierarchySiblingIndex);
+    this.model.insertBrushInstance(
+      this.created,
+      this.listIndex,
+      Math.max(this.width, this.height, this.depth),
+      hierarchy,
+    );
+  }
+
+  /**
+   * Builds optional nested parent placement under a solid CSG group.
+   *
+   * @param siblingIndex Explicit sibling index, or append when omitted.
+   * @returns Hierarchy placement or undefined for solid root.
+   */
+  private buildHierarchyPlacement(siblingIndex?: number): { parent: THREE.Object3D; siblingIndex: number } | undefined {
+    const parent = this.model.resolveBrushInsertParent(this.parent);
+    if (parent === this.model.root) return undefined;
+    const index = siblingIndex ?? parent.children.length;
+    return { parent, siblingIndex: index };
   }
 }

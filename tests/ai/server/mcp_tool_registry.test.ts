@@ -32,6 +32,14 @@ describe('mcp_tool_registry', () => {
     expect(findMcpTool('cut_opening')).toBeDefined();
     expect(findMcpTool('add_opening')).toBeDefined();
     expect(findMcpTool('reorder_brush_relative')).toBeDefined();
+    expect(findMcpTool('create_csg_group')).toBeDefined();
+    expect(findMcpTool('set_group_operation')).toBeDefined();
+    expect(findMcpTool('ungroup_csg_groups')).toBeDefined();
+    expect(findMcpTool('reparent_solid_nodes')).toBeDefined();
+    expect(findMcpTool('get_csg_group')).toBeDefined();
+    expect(findMcpTool('rename_group')).toBeDefined();
+    expect(findMcpTool('get_scene_hierarchy')?.description.toLowerCase()).toContain('csg_group');
+    expect(findMcpTool('duplicate_brushes')?.description.toLowerCase()).toContain('group');
   });
 
   it('dispatches known tools through the invoker', async () => {

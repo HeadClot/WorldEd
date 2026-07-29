@@ -3,6 +3,7 @@ import { EditorApiAlign } from './editor_api_align.js';
 import { EditorApiBuilders } from './editor_api_builders.js';
 import { EditorApiCsgQuery } from './editor_api_csg_query.js';
 import { EditorApiFind } from './editor_api_find.js';
+import { EditorApiHierarchy } from './editor_api_hierarchy.js';
 import { EditorApiSolidReads } from './editor_api_solid_reads.js';
 import { EditorApiSolidWrites } from './editor_api_solid_writes.js';
 import { EditorApiSpatial } from './editor_api_spatial.js';
@@ -15,6 +16,7 @@ import type {
   AlignBrushArgs,
   BatchSetBrushTransformArgs,
   ClipBrushArgs,
+  CreateCsgGroupArgs,
   CutOpeningArgs,
   DetailArgs,
   DuplicateBrushesArgs,
@@ -30,11 +32,15 @@ import type {
   QueryPointArgs,
   QueryVoidConnectivityArgs,
   RenameBrushArgs,
+  RenameGroupArgs,
   ReorderBrushRelativeArgs,
   ReorderBrushesArgs,
+  ReparentSolidNodesArgs,
   RotateBrushArgs,
   SetBrushTransformArgs,
+  SetGroupOperationArgs,
   SplitBrushArgs,
+  UngroupCsgGroupsArgs,
 } from './editor_api_types.js';
 import { calculateExpression } from '../shared/mcp_calculate.js';
 import type { McpToolResult } from '../shared/mcp_protocol_types.js';
@@ -52,6 +58,7 @@ export class EditorApi {
   private readonly align: EditorApiAlign;
   private readonly builders: EditorApiBuilders;
   private readonly csgQuery: EditorApiCsgQuery;
+  private readonly hierarchy: EditorApiHierarchy;
 
   /**
    * Creates an editor API bound to live editor systems.
@@ -67,6 +74,7 @@ export class EditorApi {
     this.align = new EditorApiAlign(host);
     this.builders = new EditorApiBuilders(host, this.writes);
     this.csgQuery = new EditorApiCsgQuery(host);
+    this.hierarchy = new EditorApiHierarchy(host);
   }
 
   /**
@@ -108,6 +116,18 @@ export class EditorApi {
         return this.reads.getSceneHierarchy();
       case 'get_selection':
         return this.reads.getSelection();
+      case 'get_csg_group':
+        return this.reads.getCsgGroup(stringArg(args, 'groupId'));
+      case 'create_csg_group':
+        return this.hierarchy.createCsgGroup(args as unknown as CreateCsgGroupArgs);
+      case 'set_group_operation':
+        return this.hierarchy.setGroupOperation(args as unknown as SetGroupOperationArgs);
+      case 'ungroup_csg_groups':
+        return this.hierarchy.ungroupCsgGroups(args as unknown as UngroupCsgGroupsArgs);
+      case 'reparent_solid_nodes':
+        return this.hierarchy.reparentSolidNodes(args as unknown as ReparentSolidNodesArgs);
+      case 'rename_group':
+        return this.hierarchy.renameGroup(args as unknown as RenameGroupArgs);
       case 'find_brushes':
         return this.find.findBrushes(args as unknown as FindBrushesArgs);
       case 'describe_brush':
@@ -199,9 +219,12 @@ export class EditorApi {
  * @returns Typed duplicate args.
  */
 function normalizeDuplicateArgs(args: Record<string, unknown>): DuplicateBrushesArgs {
-  const result: DuplicateBrushesArgs = {
-    brushIds: stringArrayArg(args, 'brushIds'),
-  };
+  const result: DuplicateBrushesArgs = {};
+  if (args['brushIds'] !== undefined) result.brushIds = optionalStringArray(args, 'brushIds');
+  if (args['groupIds'] !== undefined) result.groupIds = optionalStringArray(args, 'groupIds');
+  if (!result.brushIds && !result.groupIds) {
+    result.brushIds = stringArrayArg(args, 'brushIds');
+  }
   const offset = args['offset'];
   if (offset && typeof offset === 'object' && !Array.isArray(offset)) {
     result.offset = offset as { x: number; y: number; z: number };
@@ -213,6 +236,20 @@ function normalizeDuplicateArgs(args: Record<string, unknown>): DuplicateBrushes
   if (typeof args['snap'] === 'boolean') result.snap = args['snap'];
   if (typeof args['exact'] === 'boolean') result.exact = args['exact'];
   return result;
+}
+
+/**
+ * Reads an optional string array (empty when missing).
+ *
+ * @param args Argument object.
+ * @param key Argument key.
+ * @returns String array.
+ */
+function optionalStringArray(args: Record<string, unknown>, key: string): string[] {
+  const value = args[key];
+  if (typeof value === 'string' && value.length > 0) return [value];
+  if (Array.isArray(value)) return value.filter((entry): entry is string => typeof entry === 'string');
+  return [];
 }
 
 /**

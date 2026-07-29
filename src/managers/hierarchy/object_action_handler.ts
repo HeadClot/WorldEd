@@ -11,6 +11,8 @@ import { SelectionManager } from '../../selection/object/selection_manager.js';
 import { collapseToHierarchyRoots, findCommonParent } from '../../utils/hierarchy_selection.js';
 import { filterUnlockedObjects, isObjectOrAncestorLocked } from '../../utils/object_lock.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
+import { SolidModel } from '../../solid/model/solid_model.js';
+import { findSolidModelRoot, isSolidCsgGroup, markAsSolidCsgGroup } from '../../solid/model/solid_group.js';
 
 /** Callback invoked to sync scene state to all viewports. */
 export type SyncViewportsCallback = () => void;
@@ -153,35 +155,68 @@ export class ObjectActionHandler {
   }
 
   /**
-   * Handles duplication of selected objects. Solid brushes stay inside their
-   * solid model; regular meshes clone into the world.
+   * Handles duplication of selected objects. Prefers inspector hierarchy roots
+   * (groups and brushes) so solid CSG groups duplicate as whole subtrees.
    */
   onDuplicateSelected(): void {
+    const inspectorObjects = this.selectionManager.getInspectorObjects();
+    if (inspectorObjects.length > 0) {
+      this.duplicateHierarchyObjects(inspectorObjects);
+      return;
+    }
     const selected = this.selectionManager.getSelectedObjects();
     if (selected.size === 0) return;
-    const meshesToDuplicate = filterUnlockedObjects(Array.from(selected));
-    if (meshesToDuplicate.length === 0) {
+    this.duplicateHierarchyObjects(Array.from(selected));
+  }
+
+  /**
+   * Duplicates hierarchy roots: solid CSG groups, solid brushes, and regular
+   * meshes. Nested selection collapses to outermost roots first.
+   *
+   * @param objects Selected hierarchy nodes.
+   */
+  duplicateHierarchyObjects(objects: THREE.Object3D[]): void {
+    const roots = filterUnlockedObjects(
+      collapseToHierarchyRoots(objects).filter((object) => object !== this.worldObject),
+    );
+    if (roots.length === 0) {
       this.showMessage('Cannot duplicate locked object(s)');
       return;
     }
-    const solidBrushes = meshesToDuplicate.filter((mesh) => SolidBrushVisual.isBrushObject(mesh));
-    const regularMeshes = meshesToDuplicate.filter((mesh) => !SolidBrushVisual.isBrushObject(mesh));
+    const solidNodes: THREE.Object3D[] = [];
+    const regularMeshes: THREE.Mesh[] = [];
+    for (const root of roots) {
+      if (isSolidCsgGroup(root)) {
+        solidNodes.push(root);
+        continue;
+      }
+      if (root instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(root)) {
+        solidNodes.push(root);
+        continue;
+      }
+      if (root instanceof THREE.Mesh) {
+        regularMeshes.push(root);
+      }
+    }
     const clonedMeshes: THREE.Mesh[] = [];
-    if (solidBrushes.length > 0) {
-      const solidCommand = new DuplicateSolidBrushesCommand(solidBrushes, new THREE.Vector3(0, 0, 0));
+    const clonedInspector: THREE.Object3D[] = [];
+    if (solidNodes.length > 0) {
+      const solidCommand = new DuplicateSolidBrushesCommand(solidNodes, new THREE.Vector3(0, 0, 0));
       this.commandStack.push(solidCommand);
       clonedMeshes.push(...solidCommand.getClonedMeshes());
+      clonedInspector.push(...solidCommand.getClonedInspectorRoots());
     }
     if (regularMeshes.length > 0) {
       const regularCommand = new DuplicateObjectsCommand(regularMeshes, this.worldObject, new THREE.Vector3(0, 0, 0));
       this.commandStack.push(regularCommand);
       clonedMeshes.push(...regularCommand.getClonedMeshes());
+      clonedInspector.push(...regularCommand.getClonedMeshes());
     }
     this.syncViewportsAndRefresh();
-    if (clonedMeshes.length > 0) {
-      this.selectionManager.setSelection(clonedMeshes);
+    if (clonedMeshes.length > 0 || clonedInspector.length > 0) {
+      this.selectionManager.setSelection(clonedMeshes, clonedInspector);
     }
-    this.showDuplicateFeedback(clonedMeshes.length);
+    this.showDuplicateFeedback(Math.max(clonedInspector.length, clonedMeshes.length));
     this.notifyRefresh();
   }
 
@@ -223,7 +258,8 @@ export class ObjectActionHandler {
 
   /**
    * Ungroups a specific group. Used by the outliner context menu to ungroup a
-   * specific group.
+   * specific group. Rebuilds solid models when the group was under a solid CSG
+   * tree.
    *
    * @param group The group to ungroup.
    */
@@ -234,6 +270,7 @@ export class ObjectActionHandler {
     }
     const command = new UngroupCommand(group);
     this.commandStack.push(command);
+    SolidModel.rebuildAllUnder(this.worldObject);
     this.notifySyncAndRefresh();
   }
 
@@ -275,20 +312,63 @@ export class ObjectActionHandler {
   /**
    * Executes the group command and triggers post-action notifications. New
    * group is parented under the common parent of the members so nesting builds
-   * a tree instead of always dumping into the world root.
+   * a tree instead of always dumping into the world root. Groups created under
+   * a solid model become solid CSG compounds so hierarchical operations work.
    *
    * @param objects The objects to group together.
    */
   private executeGroup(objects: THREE.Object3D[]): void {
     const members = collapseToHierarchyRoots(objects);
     if (members.length === 0) return;
+    if (!this.canGroupSolidMembers(members)) {
+      this.showMessage('Solid brushes must stay under their solid model');
+      return;
+    }
     this.groupCounter++;
     const groupName = this.buildGroupName();
     const parent = findCommonParent(members, this.worldObject);
     const command = new GroupCommand(members, parent, groupName);
     this.commandStack.push(command);
+    this.finalizeSolidGroupIfNeeded(command.getGroup(), members);
+    SolidModel.rebuildAllUnder(this.worldObject);
     this.notifySyncAndRefresh();
     this.showGroupFeedback(groupName);
+  }
+
+  /**
+   * Returns whether solid members share a valid common solid parent for
+   * grouping. Non-solid members always pass.
+   *
+   * @param members Hierarchy roots to group.
+   * @returns False when solid brushes would leave their solid model.
+   */
+  private canGroupSolidMembers(members: THREE.Object3D[]): boolean {
+    const solidRoots = new Set<THREE.Object3D>();
+    for (const member of members) {
+      const solidRoot = findSolidModelRoot(member);
+      if (solidRoot) solidRoots.add(solidRoot);
+      if (SolidBrushVisual.isBrushObject(member) && !solidRoot) return false;
+    }
+    if (solidRoots.size === 0) return true;
+    if (solidRoots.size > 1) return false;
+    const solidRoot = solidRoots.values().next().value as THREE.Object3D;
+    for (const member of members) {
+      if (!findSolidModelRoot(member) && member !== solidRoot) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Marks a newly created group as a solid CSG compound when it lives under a
+   * solid model.
+   *
+   * @param group Group created by GroupCommand.
+   * @param members Grouped members used to detect solid ownership.
+   */
+  private finalizeSolidGroupIfNeeded(group: THREE.Group, members: THREE.Object3D[]): void {
+    const solidRoot = findSolidModelRoot(group) ?? members.map(findSolidModelRoot).find((root) => root !== null);
+    if (!solidRoot) return;
+    markAsSolidCsgGroup(group);
   }
 
   /**

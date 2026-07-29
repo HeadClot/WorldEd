@@ -22,6 +22,12 @@ export interface SolidCompileOptions {
    * from an inverted world.
    */
   invertedWorld?: boolean;
+  /**
+   * Optional solid model root for hierarchical group CSG. When set, the
+   * compiler builds a branch/leaf tree from the scene graph so compound groups
+   * can apply a single operation to multiple child brushes.
+   */
+  solidRoot?: import('three').Object3D;
 }
 
 /** Diagnostics from the most recent compile pass (for tests and profiling). */

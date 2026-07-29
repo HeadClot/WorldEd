@@ -4,6 +4,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
 import { SolidOperation } from '../../src/solid/types/solid_operation.js';
 import { DuplicateSolidBrushesCommand } from '../../src/commands/solid/duplicate_solid_brushes_command.js';
 import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
+import { isSolidCsgGroup, markAsSolidCsgGroup } from '../../src/solid/model/solid_group.js';
 
 /** Tests that solid brush duplication stays inside the solid model hierarchy. */
 describe('Duplicate solid brushes', () => {
@@ -49,14 +50,83 @@ describe('Duplicate solid brushes', () => {
     command.execute();
     const brushes = model.getBrushes();
     expect(brushes).toHaveLength(5);
-    const cloneOperations = brushes.slice(3).map((brush) => brush.operation);
-    expect(cloneOperations).toEqual([SolidOperation.Additive, SolidOperation.Additive]);
-    const cloneNames = brushes.slice(3).map((brush) => brush.name);
-    expect(cloneNames[0]).toContain('FirstBrush');
-    expect(cloneNames[1]).toContain('ThirdBrush');
+    // Clones insert after each source in scene order: first, first_copy, second, third, third_copy.
+    expect(brushes.map((brush) => brush.name)).toEqual([
+      'FirstBrush',
+      'FirstBrush_copy',
+      'SecondBrush',
+      'ThirdBrush',
+      'ThirdBrush_copy',
+    ]);
+    expect(brushes.map((brush) => brush.operation)).toEqual([
+      SolidOperation.Additive,
+      SolidOperation.Additive,
+      SolidOperation.Subtractive,
+      SolidOperation.Additive,
+      SolidOperation.Additive,
+    ]);
     const rootBrushMeshes = model.root.children.filter((child) => SolidBrushVisual.isBrushObject(child));
-    const lastTwoNames = rootBrushMeshes.slice(-2).map((mesh) => mesh.name);
-    expect(lastTwoNames[0]).toContain('FirstBrush');
-    expect(lastTwoNames[1]).toContain('ThirdBrush');
+    expect(rootBrushMeshes.map((mesh) => mesh.name)).toEqual([
+      'FirstBrush',
+      'FirstBrush_copy',
+      'SecondBrush',
+      'ThirdBrush',
+      'ThirdBrush_copy',
+    ]);
+  });
+
+  it('duplicates a nested brush under the same solid CSG group after the source', () => {
+    const model = new SolidModel('DupNested');
+    const outer = model.addBoxBrush(4, SolidOperation.Additive);
+    const nested = model.addBoxBrush(2, SolidOperation.Subtractive);
+    const nestedSibling = model.addBoxBrush(2, SolidOperation.Additive);
+    const group = new THREE.Group();
+    group.name = 'Compound';
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(nested.mesh!);
+    group.add(nestedSibling.mesh!);
+    model.syncBrushOrderFromScene();
+    model.rebuild(true);
+    const clone = model.duplicateBrush(nested.id);
+    expect(clone).toBeTruthy();
+    expect(clone!.mesh?.parent).toBe(group);
+    expect(model.root.children).not.toContain(clone!.mesh!);
+    expect(outer.mesh?.parent).toBe(model.root);
+    const nestedIndex = group.children.indexOf(nested.mesh!);
+    const cloneIndex = group.children.indexOf(clone!.mesh!);
+    expect(cloneIndex).toBe(nestedIndex + 1);
+    expect(group.children.indexOf(nestedSibling.mesh!)).toBeGreaterThan(cloneIndex);
+  });
+
+  it('duplicates a solid CSG group with nested brushes under the solid root', () => {
+    const model = new SolidModel('DupGroup');
+    model.addBoxBrush(4, SolidOperation.Additive);
+    const nestedA = model.addBoxBrush(2, SolidOperation.Subtractive);
+    const nestedB = model.addBoxBrush(2, SolidOperation.Additive);
+    const group = new THREE.Group();
+    group.name = 'Compound';
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(nestedA.mesh!);
+    group.add(nestedB.mesh!);
+    model.syncBrushOrderFromScene();
+    model.rebuild(true);
+    const brushCountBefore = model.getBrushCount();
+    const command = new DuplicateSolidBrushesCommand([group], new THREE.Vector3(0, 0, 0));
+    command.execute();
+    expect(model.getBrushCount()).toBe(brushCountBefore + 2);
+    const clonedRoots = command.getClonedInspectorRoots();
+    expect(clonedRoots).toHaveLength(1);
+    const clonedGroup = clonedRoots[0] as THREE.Group;
+    expect(isSolidCsgGroup(clonedGroup)).toBe(true);
+    expect(clonedGroup.parent).toBe(model.root);
+    expect(model.root.children.indexOf(clonedGroup)).toBe(model.root.children.indexOf(group) + 1);
+    const clonedBrushes = clonedGroup.children.filter((child) => SolidBrushVisual.isBrushObject(child));
+    expect(clonedBrushes).toHaveLength(2);
+    expect(command.getClonedMeshes()).toHaveLength(2);
+    command.undo();
+    expect(model.getBrushCount()).toBe(brushCountBefore);
+    expect(clonedGroup.parent).toBeNull();
   });
 });

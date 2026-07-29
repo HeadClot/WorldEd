@@ -36,8 +36,7 @@ describe('Outliner reveal selection', () => {
     root.add(outer);
     const tree = new OutlinerTree(container, root);
     tree.refresh(new Set());
-    expect(tree.expandAncestorsOf(mesh)).toBe(true);
-    tree.refresh(new Set([mesh]), new Set([mesh]));
+    // Groups default to expanded on first paint; deep mesh is already listed.
     const treeElement = container.children[1] as HTMLElement;
     expect(treeElement.textContent).toContain('DeepCube');
     expect(treeElement.textContent).toContain('Outer');

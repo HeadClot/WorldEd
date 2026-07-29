@@ -88,28 +88,32 @@ function buildLightThemeCss(): string {
   ].join('\n');
 }
 
-/** Builds light-theme surfaces and states for toolbar dropdown menus. */
+/**
+ * Builds light-theme surfaces for dropdown / context menus. Selectors are not
+ * limited to `.editor-toolbar` because root menus reparent to document.body and
+ * outliner context menus use the same MenuPanel chrome.
+ */
 function buildLightThemeDropdownCss(): string {
-  return `html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-menu,
-html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-submenu {
+  return `html[data-aiworlded-theme='light'] .editor-toolbar-dropdown-menu,
+html[data-aiworlded-theme='light'] .editor-toolbar-dropdown-submenu {
   background: #ffffff !important;
   border-color: #767676 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
 }
-html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-item {
+html[data-aiworlded-theme='light'] .editor-toolbar-dropdown-item {
   background: transparent !important;
   color: #0a0a0a !important;
   border-color: transparent !important;
 }
-html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-item:hover {
+html[data-aiworlded-theme='light'] .editor-toolbar-dropdown-item:hover:not(:disabled) {
   background: #e5f3ff !important;
   border-color: #0078d4 !important;
 }
-html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-shortcut,
-html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-submenu-caret {
+html[data-aiworlded-theme='light'] .editor-toolbar-dropdown-shortcut,
+html[data-aiworlded-theme='light'] .editor-toolbar-dropdown-submenu-caret {
   color: #5a5a5a !important;
 }
-html[data-aiworlded-theme='light'] .editor-toolbar .editor-toolbar-dropdown-separator {
+html[data-aiworlded-theme='light'] .editor-toolbar-dropdown-separator {
   background: #d0d0d0 !important;
 }`;
 }

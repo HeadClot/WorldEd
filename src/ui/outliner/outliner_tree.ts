@@ -1,11 +1,18 @@
 import * as THREE from 'three';
 import { OutlinerItem } from './outliner_item.js';
-import { getDescendants, getAllMeshes } from '../../utils/hierarchy_utils.js';
+import { getDescendants } from '../../utils/hierarchy_utils.js';
 import { isEditorHelperObject } from '../../utils/mesh_edge_sync.js';
 import { isObjectLocked } from '../../utils/object_lock.js';
 import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
+import {
+  OUTLINER_TREE_PADDING_PX,
+  resolveOutlinerDropTarget,
+  type OutlinerDropPlacement,
+  type OutlinerResolvedDrop,
+} from './outliner_drop_placement.js';
+import { OutlinerInsertIndicator } from './outliner_insert_indicator.js';
 
 /**
  * Callback type for tree-level selection events.
@@ -20,8 +27,13 @@ export type TreeSelectCallback = (obj: THREE.Object3D, event?: MouseEvent) => vo
  *
  * @param dragged The object being dragged.
  * @param dropTarget The object that received the drop.
+ * @param placement Vertical drop placement relative to the target row.
  */
-export type TreeReparentCallback = (dragged: THREE.Object3D, dropTarget: THREE.Object3D) => void;
+export type TreeReparentCallback = (
+  dragged: THREE.Object3D,
+  dropTarget: THREE.Object3D,
+  placement: OutlinerDropPlacement,
+) => void;
 
 /**
  * Callback type for tree-level visibility toggle events.
@@ -65,6 +77,11 @@ export class OutlinerTree {
   private root: THREE.Object3D;
   private itemMap: Map<THREE.Object3D, OutlinerItem>;
   private expandedSet: Set<string>;
+  /**
+   * UUIDs that already received a default expand/collapse policy (user choice
+   * sticks).
+   */
+  private expandPolicyInitialized: Set<string>;
   private isDisposed: boolean;
   private searchQuery: string;
   private onSelect: TreeSelectCallback | null;
@@ -74,6 +91,9 @@ export class OutlinerTree {
   private contextMenuCallback: TreeContextMenuCallback | null;
   private onReparent: TreeReparentCallback | null;
   private dragSource: THREE.Object3D | null;
+  private lastResolvedDrop: OutlinerResolvedDrop<THREE.Object3D> | null;
+  private readonly insertIndicator: OutlinerInsertIndicator;
+  private readonly onDocumentDragOver: (event: DragEvent) => void;
   private lastSelectedObjects: Set<THREE.Mesh>;
   private lastHierarchySelection: Set<THREE.Object3D>;
 
@@ -89,6 +109,8 @@ export class OutlinerTree {
     this.itemMap = new Map();
     this.expandedSet = new Set();
     this.expandedSet.add(this.root.uuid);
+    this.expandPolicyInitialized = new Set();
+    this.expandPolicyInitialized.add(this.root.uuid);
     this.isDisposed = false;
     this.searchQuery = '';
     this.onSelect = null;
@@ -98,12 +120,16 @@ export class OutlinerTree {
     this.contextMenuCallback = null;
     this.onReparent = null;
     this.dragSource = null;
+    this.lastResolvedDrop = null;
+    this.insertIndicator = new OutlinerInsertIndicator();
+    this.onDocumentDragOver = (event) => this.handleDocumentDragOver(event);
     this.lastSelectedObjects = new Set();
     this.lastHierarchySelection = new Set();
     this.treeElement = document.createElement('div');
     this.searchElement = document.createElement('input');
     this.buildSearchBar();
     this.buildTreeContainer();
+    this.bindTreeHostDropTarget();
     this.container.appendChild(this.searchElement);
     this.container.appendChild(this.treeElement);
   }
@@ -169,6 +195,15 @@ export class OutlinerTree {
    */
   onReparentObject(callback: TreeReparentCallback): void {
     this.onReparent = callback;
+  }
+
+  /**
+   * Returns the insert indicator element for tests.
+   *
+   * @returns Indicator element.
+   */
+  getInsertIndicatorForTests(): HTMLElement {
+    return this.insertIndicator.getElement();
   }
 
   /**
@@ -283,6 +318,7 @@ export class OutlinerTree {
   ): void {
     item.setDepth(depth);
     item.setHasChildren(hasChildren);
+    item.refreshIcon();
     this.applySelectionState(item, object, selectedObjects, hierarchySelection);
     this.applyExpandedState(item, object);
     this.applyVisibilityState(item, object);
@@ -301,6 +337,7 @@ export class OutlinerTree {
     });
     this.itemMap = nextMap;
     this.treeElement.replaceChildren(fragment);
+    this.insertIndicator.attachTo(this.treeElement);
   }
 
   /**
@@ -355,9 +392,25 @@ export class OutlinerTree {
     for (const child of this.getContentChildren(parent)) {
       if (!this.passesSearchFilter(child, query)) continue;
       result.push(child);
-      if (this.getContentChildren(child).length > 0 && this.expandedSet.has(child.uuid)) {
+      if (this.getContentChildren(child).length === 0) continue;
+      this.applyDefaultExpandPolicy(child);
+      if (this.expandedSet.has(child.uuid)) {
         this.collectVisibleContentObjectsUnder(child, result, query);
       }
+    }
+  }
+
+  /**
+   * Expands groups the first time they appear with children (new group create,
+   * first outliner paint). Later user collapse/expand is preserved.
+   *
+   * @param object Hierarchy node that has content children.
+   */
+  private applyDefaultExpandPolicy(object: THREE.Object3D): void {
+    if (this.expandPolicyInitialized.has(object.uuid)) return;
+    this.expandPolicyInitialized.add(object.uuid);
+    if (object instanceof THREE.Group) {
+      this.expandedSet.add(object.uuid);
     }
   }
 
@@ -399,8 +452,23 @@ export class OutlinerTree {
     const beforeElement = this.treeElement.children[insertIndex] ?? null;
     this.treeElement.insertBefore(item.getElement(), beforeElement);
     this.rebuildItemMapOrder(desired, item, objectToInsert);
-    this.syncVisibleItemChrome(desired);
+    this.syncChromeAfterSingleInsert(objectToInsert);
+    this.updateSelectionStates(selectedObjects, hierarchySelection);
     return true;
+  }
+
+  /**
+   * Updates only the inserted row and its parent after a single-row insert so
+   * large scenes do not walk every visible outliner item.
+   *
+   * @param insertedObject Newly visible hierarchy object.
+   */
+  private syncChromeAfterSingleInsert(insertedObject: THREE.Object3D): void {
+    this.syncVisibleItemChrome([insertedObject]);
+    const parent = insertedObject.parent;
+    if (!parent || parent === this.root) return;
+    if (!this.itemMap.has(parent)) return;
+    this.syncVisibleItemChrome([parent]);
   }
 
   /**
@@ -535,7 +603,9 @@ export class OutlinerTree {
   }
 
   /**
-   * Refreshes expand/visibility/lock chrome for visible rows without rebuild.
+   * Refreshes depth, children chevron, expand, visibility, and lock chrome for
+   * visible rows without a full rebuild (e.g. after reparent when the visible
+   * object list is unchanged but a group became empty).
    *
    * @param visibleObjects Currently visible hierarchy objects.
    */
@@ -543,6 +613,10 @@ export class OutlinerTree {
     for (const object of visibleObjects) {
       const item = this.itemMap.get(object);
       if (!item) continue;
+      const depth = this.computeOutlinerDepth(object);
+      if (depth >= 0) item.setDepth(depth);
+      item.setHasChildren(this.getContentChildren(object).length > 0);
+      item.refreshIcon();
       this.applyExpandedState(item, object);
       this.applyVisibilityState(item, object);
       this.applyLockState(item, object);
@@ -634,6 +708,7 @@ export class OutlinerTree {
    */
   toggleExpand(obj: THREE.Object3D): void {
     const key = obj.uuid;
+    this.expandPolicyInitialized.add(key);
     if (this.expandedSet.has(key)) {
       this.expandedSet.delete(key);
     } else {
@@ -654,6 +729,7 @@ export class OutlinerTree {
   /** Disposes the tree and removes all DOM elements. */
   dispose(): void {
     this.isDisposed = true;
+    this.endRowDragSession();
     this.clearItems();
     if (this.searchElement.parentNode) {
       this.searchElement.parentNode.removeChild(this.searchElement);
@@ -696,7 +772,19 @@ export class OutlinerTree {
   private buildTreeContainer(): void {
     this.treeElement.style.flex = '1';
     this.treeElement.style.overflowY = 'auto';
-    this.treeElement.style.padding = '4px';
+    this.treeElement.style.padding = `${OUTLINER_TREE_PADDING_PX}px`;
+    this.treeElement.style.position = 'relative';
+    this.insertIndicator.attachTo(this.treeElement);
+  }
+
+  /**
+   * Accepts drag-over across the tree host so gaps never show the forbidden
+   * cursor, matching the workspace tab strip.
+   */
+  private bindTreeHostDropTarget(): void {
+    this.treeElement.addEventListener('dragover', (event) => this.handleTreeHostDragOver(event));
+    this.treeElement.addEventListener('dragleave', (event) => this.handleTreeHostDragLeave(event));
+    this.treeElement.addEventListener('drop', (event) => this.handleTreeHostDrop(event));
   }
 
   /** Removes all existing items from the DOM and clears state maps. */
@@ -705,7 +793,17 @@ export class OutlinerTree {
       item.dispose();
     });
     this.itemMap.clear();
-    this.treeElement.innerHTML = '';
+    this.treeElement.replaceChildren();
+    this.insertIndicator.attachTo(this.treeElement);
+  }
+
+  /**
+   * Returns the number of visible content rows (excludes the insert indicator).
+   *
+   * @returns Visible row count for tests and layout helpers.
+   */
+  getVisibleRowCountForTests(): number {
+    return this.itemMap.size;
   }
 
   /**
@@ -754,10 +852,11 @@ export class OutlinerTree {
 
   /**
    * Computes whether a hierarchy row should appear selected. Hierarchy
-   * selection always wins. Solid model roots only highlight via hierarchy
-   * (result mesh is a selection proxy, not a row). Empty groups need hierarchy
-   * selection; non-empty groups highlight when any descendant mesh is
-   * selected.
+   * selection always wins. Groups (including nested ones) only highlight when
+   * they themselves are hierarchy-selected — never because a descendant mesh is
+   * selected, so parents stay unselected when a child group or mesh is picked.
+   * Mesh rows hide their highlight when an ancestor group is the hierarchy
+   * selection so selecting a group does not paint its children.
    *
    * @param obj Row object.
    * @param selectedObjects Selected meshes.
@@ -771,24 +870,47 @@ export class OutlinerTree {
   ): boolean {
     if (hierarchySelection.has(obj)) return true;
     if (SolidModel.isSolidModelObject(obj)) return false;
-    if (obj instanceof THREE.Mesh) return selectedObjects.has(obj);
-    if (obj instanceof THREE.Group) {
-      return this.isGroupHighlightedByMeshSelection(obj, selectedObjects);
+    if (obj instanceof THREE.Group) return false;
+    if (obj instanceof THREE.Mesh) {
+      return this.isMeshRowHighlighted(obj, selectedObjects, hierarchySelection);
     }
     return false;
   }
 
   /**
-   * Returns whether a group row should highlight from mesh selection.
+   * Returns whether a mesh row should show selection orange.
    *
-   * @param group Group row object.
+   * @param mesh Mesh row object.
    * @param selectedObjects Selected meshes.
-   * @returns True when any mesh under the group is selected.
+   * @param hierarchySelection Outliner hierarchy selection.
+   * @returns True when the mesh is selected and no ancestor group owns the
+   *   hierarchy selection.
    */
-  private isGroupHighlightedByMeshSelection(group: THREE.Group, selectedObjects: Set<THREE.Mesh>): boolean {
-    const meshes = getAllMeshes(group);
-    if (meshes.length === 0) return false;
-    return meshes.some((mesh) => selectedObjects.has(mesh));
+  private isMeshRowHighlighted(
+    mesh: THREE.Mesh,
+    selectedObjects: Set<THREE.Mesh>,
+    hierarchySelection: Set<THREE.Object3D>,
+  ): boolean {
+    if (!selectedObjects.has(mesh)) return false;
+    if (this.hasHierarchySelectedAncestor(mesh, hierarchySelection)) return false;
+    return true;
+  }
+
+  /**
+   * Returns whether any ancestor of an object is in the hierarchy selection.
+   *
+   * @param obj Object whose ancestors are checked.
+   * @param hierarchySelection Outliner hierarchy selection.
+   * @returns True when a parent (or higher) is hierarchy-selected.
+   */
+  private hasHierarchySelectedAncestor(obj: THREE.Object3D, hierarchySelection: Set<THREE.Object3D>): boolean {
+    if (hierarchySelection.size === 0) return false;
+    let current: THREE.Object3D | null = obj.parent;
+    while (current) {
+      if (hierarchySelection.has(current)) return true;
+      current = current.parent;
+    }
+    return false;
   }
 
   /**
@@ -903,34 +1025,355 @@ export class OutlinerTree {
   }
 
   /**
-   * Binds drag-start and drop reparent callbacks.
+   * Binds drag-start, hover, drop, and drag-end callbacks for insert feedback.
    *
    * @param item Outliner item.
    */
   private bindDragDropCallbacks(item: OutlinerItem): void {
     item.onDragStartRequest((obj) => {
-      this.dragSource = obj;
+      this.beginRowDragSession(obj);
     });
-    item.onDropRequest((target) => {
-      this.handleItemDrop(target);
+    item.onDragHoverRequest((target, event) => {
+      this.handleItemDragHover(target, event);
     });
+    item.onDropRequest((target, event) => {
+      this.handleItemDrop(target, event);
+    });
+    item.onDragEndRequest(() => {
+      this.endRowDragSession();
+    });
+  }
+
+  /**
+   * Starts a row drag session and accepts document-level dragover.
+   *
+   * @param source Object being dragged.
+   */
+  private beginRowDragSession(source: THREE.Object3D): void {
+    this.dragSource = source;
+    this.lastResolvedDrop = null;
+    document.addEventListener('dragover', this.onDocumentDragOver, true);
+    document.addEventListener('dragenter', this.onDocumentDragOver, true);
+  }
+
+  /** Ends a row drag session and hides the insert marker. */
+  private endRowDragSession(): void {
+    this.dragSource = null;
+    this.lastResolvedDrop = null;
+    this.clearAllIntoHighlights();
+    this.insertIndicator.hide();
+    document.removeEventListener('dragover', this.onDocumentDragOver, true);
+    document.removeEventListener('dragenter', this.onDocumentDragOver, true);
+    this.itemMap.forEach((item) => {
+      item.setDragSourceVisual(false);
+    });
+  }
+
+  /**
+   * While a row is dragged, accept drop so the cursor never flickers forbidden.
+   *
+   * @param event Document dragover / dragenter event.
+   */
+  private handleDocumentDragOver(event: DragEvent): void {
+    if (!this.dragSource) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  /**
+   * Updates the insert line while dragging over a row.
+   *
+   * @param target Row object under the pointer.
+   * @param event Native drag event with client coordinates.
+   */
+  private handleItemDragHover(target: THREE.Object3D, event: DragEvent): void {
+    if (!this.dragSource) return;
+    const resolved = this.resolveDropFromPointer(target, event.clientX, event.clientY);
+    if (!resolved || this.dragSource === resolved.target) {
+      this.clearDropFeedback();
+      return;
+    }
+    this.applyDropFeedback(resolved);
   }
 
   /**
    * Completes a drag-and-drop reparent when a valid drop target is hit.
    *
    * @param target The object that received the drop.
+   * @param event Native drop event.
    */
-  private handleItemDrop(target: THREE.Object3D): void {
-    if (!this.dragSource || !this.onReparent) {
-      this.dragSource = null;
+  private handleItemDrop(target: THREE.Object3D, event: DragEvent): void {
+    const source = this.dragSource;
+    const resolved = this.resolveDropFromPointer(target, event.clientX, event.clientY) ?? this.lastResolvedDrop;
+    this.endRowDragSession();
+    if (!source || !this.onReparent || !resolved) return;
+    if (source === resolved.target) return;
+    this.onReparent(source, resolved.target, resolved.placement);
+  }
+
+  /**
+   * Resolves elevated drop target from pointer position (Y placement + X
+   * indent).
+   *
+   * @param hovered Row object under the pointer.
+   * @param clientX Pointer X in viewport coordinates.
+   * @param clientY Pointer Y in viewport coordinates.
+   * @returns Resolved drop, or null when the row is unknown.
+   */
+  private resolveDropFromPointer(
+    hovered: THREE.Object3D,
+    clientX: number,
+    clientY: number,
+  ): OutlinerResolvedDrop<THREE.Object3D> | null {
+    const item = this.itemMap.get(hovered);
+    if (!item) return null;
+    const rect = item.getElement().getBoundingClientRect();
+    const treeLeft = this.treeElement.getBoundingClientRect().left;
+    return resolveOutlinerDropTarget(
+      hovered,
+      item.getDepth(),
+      clientX,
+      clientY,
+      rect.top,
+      rect.height,
+      treeLeft,
+      hovered instanceof THREE.Group,
+      (node) => this.getDropElevationParent(node),
+      (node) => this.isLastContentChildOfParent(node),
+      (node) => this.isExpandedDropContainer(node),
+      (node) => this.getFirstContentChild(node),
+    );
+  }
+
+  /**
+   * Returns whether a row is an expanded container with content children so its
+   * bottom edge sits above open children (not a sibling-after gap).
+   *
+   * @param node Hierarchy node.
+   * @returns True when after-on-this-row should insert as first child instead.
+   */
+  private isExpandedDropContainer(node: THREE.Object3D): boolean {
+    if (!(node instanceof THREE.Group)) return false;
+    if (!this.expandedSet.has(node.uuid)) return false;
+    return this.getContentChildren(node).length > 0;
+  }
+
+  /**
+   * Returns the first content child of a node for expanded-parent after remap.
+   *
+   * @param node Hierarchy node.
+   * @returns First content child, or null when none.
+   */
+  private getFirstContentChild(node: THREE.Object3D): THREE.Object3D | null {
+    const children = this.getContentChildren(node);
+    return children[0] ?? null;
+  }
+
+  /**
+   * Returns the parent used for indent elevation (stops at the tree root).
+   *
+   * @param node Hierarchy node.
+   * @returns Parent object, or null at the outliner root.
+   */
+  private getDropElevationParent(node: THREE.Object3D): THREE.Object3D | null {
+    const parent = node.parent;
+    if (!parent || parent === this.root) return null;
+    return parent;
+  }
+
+  /**
+   * Returns whether a node is the last non-helper child of its parent.
+   *
+   * @param node Hierarchy node.
+   * @returns True when no later content sibling exists.
+   */
+  private isLastContentChildOfParent(node: THREE.Object3D): boolean {
+    const parent = node.parent;
+    if (!parent) return true;
+    const contentChildren = this.getContentChildren(parent);
+    return contentChildren[contentChildren.length - 1] === node;
+  }
+
+  /**
+   * Applies insert-line or into-highlight feedback for the resolved drop.
+   *
+   * @param resolved Elevated drop target and placement.
+   */
+  private applyDropFeedback(resolved: OutlinerResolvedDrop<THREE.Object3D>): void {
+    this.lastResolvedDrop = resolved;
+    this.clearAllIntoHighlights();
+    const visualItem = this.itemMap.get(resolved.visualTarget);
+    if (!visualItem) {
+      this.insertIndicator.hide();
       return;
     }
-    if (this.dragSource === target) {
-      this.dragSource = null;
+    if (resolved.placement === 'into') {
+      this.insertIndicator.hide();
+      const targetItem = this.itemMap.get(resolved.target) ?? visualItem;
+      targetItem.setIntoDropHighlight(true);
       return;
     }
-    this.onReparent(this.dragSource, target);
-    this.dragSource = null;
+    const nameColumnLeftPx = this.measureInsertNameColumnLeft(resolved);
+    this.insertIndicator.showForRow(
+      this.treeElement,
+      visualItem.getElement().getBoundingClientRect(),
+      resolved.placement,
+      resolved.insertDepth,
+      nameColumnLeftPx,
+    );
+  }
+
+  /**
+   * Measures the name-column left edge for the insert line. Uses the elevated
+   * drop target's name when present so elevated sibling drops align with that
+   * depth's text, not a deeper hovered leaf.
+   *
+   * @param resolved Elevated drop target and placement.
+   * @returns Host-local name left in CSS pixels, or null when unmeasurable.
+   */
+  private measureInsertNameColumnLeft(resolved: OutlinerResolvedDrop<THREE.Object3D>): number | null {
+    if (resolved.insertDepth <= 0) return null;
+    const nameItem = this.itemMap.get(resolved.target) ?? this.itemMap.get(resolved.visualTarget);
+    if (!nameItem) return null;
+    const hostRect = this.treeElement.getBoundingClientRect();
+    const nameRect = nameItem.getNameElement().getBoundingClientRect();
+    if (nameRect.width <= 0 && nameRect.height <= 0) return null;
+    return nameRect.left - hostRect.left;
+  }
+
+  /** Clears insert line and into-highlight state. */
+  private clearDropFeedback(): void {
+    this.lastResolvedDrop = null;
+    this.clearAllIntoHighlights();
+    this.insertIndicator.hide();
+  }
+
+  /** Removes into-outline from every visible row. */
+  private clearAllIntoHighlights(): void {
+    this.itemMap.forEach((item) => {
+      item.setIntoDropHighlight(false);
+    });
+  }
+
+  /**
+   * Updates the insert indicator while dragging over empty tree chrome.
+   *
+   * @param event Drag-over event on the tree host.
+   */
+  private handleTreeHostDragOver(event: DragEvent): void {
+    if (!this.dragSource) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    const hit = this.resolveRowDropTargetAtClientY(event.clientY);
+    if (!hit) {
+      this.clearDropFeedback();
+      return;
+    }
+    if (hit.object === this.dragSource) {
+      this.clearDropFeedback();
+      return;
+    }
+    this.handleItemDragHover(hit.object, event);
+  }
+
+  /**
+   * Hides feedback when the pointer leaves the tree host entirely.
+   *
+   * @param event Drag-leave event on the tree host.
+   */
+  private handleTreeHostDragLeave(event: DragEvent): void {
+    const related = event.relatedTarget;
+    if (related instanceof Node && this.treeElement.contains(related)) return;
+    this.clearDropFeedback();
+  }
+
+  /**
+   * Completes a drop on the tree host (including inter-row gaps).
+   *
+   * @param event Drop event on the tree host.
+   */
+  private handleTreeHostDrop(event: DragEvent): void {
+    if (!this.dragSource) return;
+    event.preventDefault();
+    const hit = this.resolveRowDropTargetAtClientY(event.clientY);
+    if (!hit) {
+      this.endRowDragSession();
+      return;
+    }
+    this.handleItemDrop(hit.object, event);
+  }
+
+  /**
+   * Finds the row under or nearest to a client Y (covers padding between rows).
+   *
+   * @param clientY Pointer Y in viewport coordinates.
+   * @returns Hit object and item, or null when the tree is empty.
+   */
+  private resolveRowDropTargetAtClientY(clientY: number): { object: THREE.Object3D; item: OutlinerItem } | null {
+    const entries = this.listVisibleRowEntries();
+    if (entries.length === 0) return null;
+    const direct = this.findRowContainingClientY(entries, clientY);
+    if (direct) return direct;
+    return this.findNearestRowByClientY(entries, clientY);
+  }
+
+  /**
+   * Lists visible outliner rows with their objects.
+   *
+   * @returns Visible object/item pairs in display order.
+   */
+  private listVisibleRowEntries(): { object: THREE.Object3D; item: OutlinerItem }[] {
+    const entries: { object: THREE.Object3D; item: OutlinerItem }[] = [];
+    this.itemMap.forEach((item, object) => {
+      entries.push({ object, item });
+    });
+    return entries;
+  }
+
+  /**
+   * Returns the row whose bounds contain the client Y, if any.
+   *
+   * @param entries Visible rows.
+   * @param clientY Pointer Y in viewport coordinates.
+   * @returns Hit entry or null.
+   */
+  private findRowContainingClientY(
+    entries: readonly { object: THREE.Object3D; item: OutlinerItem }[],
+    clientY: number,
+  ): { object: THREE.Object3D; item: OutlinerItem } | null {
+    if (!Number.isFinite(clientY)) return null;
+    for (const entry of entries) {
+      const rect = entry.item.getElement().getBoundingClientRect();
+      if (clientY >= rect.top && clientY <= rect.bottom) return entry;
+    }
+    return null;
+  }
+
+  /**
+   * Returns the row whose vertical center is nearest to the client Y.
+   *
+   * @param entries Visible rows.
+   * @param clientY Pointer Y in viewport coordinates.
+   * @returns Nearest entry or null.
+   */
+  private findNearestRowByClientY(
+    entries: readonly { object: THREE.Object3D; item: OutlinerItem }[],
+    clientY: number,
+  ): { object: THREE.Object3D; item: OutlinerItem } | null {
+    if (!Number.isFinite(clientY)) return null;
+    let best: { object: THREE.Object3D; item: OutlinerItem } | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const entry of entries) {
+      const rect = entry.item.getElement().getBoundingClientRect();
+      const mid = (rect.top + rect.bottom) / 2;
+      const distance = Math.abs(clientY - mid);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = entry;
+      }
+    }
+    return best;
   }
 }

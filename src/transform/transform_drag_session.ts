@@ -27,9 +27,9 @@ export class TransformDragSession {
   initialRotationDirection: THREE.Vector3 | null;
   initialScreenPosition: THREE.Vector2 | null;
   useScreenSpaceRotation: boolean;
-  initialPositions: Map<THREE.Mesh, THREE.Vector3>;
-  initialQuaternions: Map<THREE.Mesh, THREE.Quaternion>;
-  initialScales: Map<THREE.Mesh, THREE.Vector3>;
+  initialPositions: Map<THREE.Object3D, THREE.Vector3>;
+  initialQuaternions: Map<THREE.Object3D, THREE.Quaternion>;
+  initialScales: Map<THREE.Object3D, THREE.Vector3>;
   /**
    * Texture / UV state at pointer-down so position and stretch lock can undo
    * with the pose.
@@ -90,25 +90,29 @@ export class TransformDragSession {
   }
 
   /**
-   * Captures pre-drag transforms and texture state for every selected mesh.
-   * Heals stale content UV matrices first so stick-mode pose changes (or DIY
+   * Captures pre-drag transforms and texture state for every drag target. Heals
+   * stale content UV matrices first so stick-mode pose changes (or DIY
    * rotations) cannot collapse a UV axis on a later world-density rebake. Solid
-   * brushes are left alone.
+   * brushes are left alone. Texture state is captured only for mesh targets.
    *
-   * @param selectedObjects Meshes included in the drag.
+   * @param selectedObjects Objects included in the drag (meshes or solid
+   *   roots).
    */
-  snapshotPreDragState(selectedObjects: THREE.Mesh[]): void {
+  snapshotPreDragState(selectedObjects: THREE.Object3D[]): void {
     this.initialPositions.clear();
     this.initialQuaternions.clear();
     this.initialScales.clear();
-    selectedObjects.forEach((mesh) => {
-      this.healStaleContentUvMatrices(mesh);
-      this.initialPositions.set(mesh, mesh.position.clone());
-      this.initialQuaternions.set(mesh, mesh.quaternion.clone());
-      this.initialScales.set(mesh, mesh.scale.clone());
+    const textureMeshes: THREE.Mesh[] = [];
+    selectedObjects.forEach((object) => {
+      if (object instanceof THREE.Mesh) {
+        this.healStaleContentUvMatrices(object);
+        textureMeshes.push(object);
+      }
+      this.initialPositions.set(object, object.position.clone());
+      this.initialQuaternions.set(object, object.quaternion.clone());
+      this.initialScales.set(object, object.scale.clone());
     });
-    // Capture UVs/mappings before live texture-lock rewrites them.
-    this.initialTextureState = captureTransformTextureState(selectedObjects);
+    this.initialTextureState = captureTransformTextureState(textureMeshes);
   }
 
   /**

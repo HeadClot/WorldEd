@@ -534,6 +534,16 @@ export class SolidBrushVisual {
    * @returns Stored operation or Additive.
    */
   private static readOperation(mesh: THREE.Mesh): SolidOperation {
+    return this.getOperation(mesh);
+  }
+
+  /**
+   * Returns the CSG operation stamped on a brush preview mesh.
+   *
+   * @param mesh Brush preview mesh.
+   * @returns Stored operation or Additive when unset.
+   */
+  static getOperation(mesh: THREE.Object3D): SolidOperation {
     const value = mesh.userData[SOLID_BRUSH_OPERATION_USERDATA_KEY];
     if (value === SolidOperation.Subtractive) return SolidOperation.Subtractive;
     if (value === SolidOperation.Intersecting) return SolidOperation.Intersecting;

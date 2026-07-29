@@ -40,8 +40,7 @@ describe('OutlinerTree', () => {
     root.add(mesh1);
     root.add(mesh2);
     tree.refresh(new Set());
-    const treeElement = container.children[1] as HTMLElement;
-    expect(treeElement.children.length).toBe(2);
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
   });
 
   it('should hide decorative edges and selection outlines under meshes', () => {
@@ -77,10 +76,9 @@ describe('OutlinerTree', () => {
     mesh.add(decorative);
     root.add(mesh);
     tree.refresh(new Set());
-    const treeElement = container.children[1] as HTMLElement;
-    expect(treeElement.children.length).toBe(1);
+    expect(tree.getVisibleRowCountForTests()).toBe(1);
     tree.toggleExpand(mesh);
-    expect(treeElement.children.length).toBe(1);
+    expect(tree.getVisibleRowCountForTests()).toBe(1);
   });
 
   it('should select object on callback registration', () => {
@@ -144,8 +142,7 @@ describe('OutlinerTree', () => {
     const searchInput = container.children[0] as HTMLInputElement;
     searchInput.value = 'App';
     searchInput.dispatchEvent(new Event('input'));
-    const treeElement = container.children[1] as HTMLElement;
-    expect(treeElement.children.length).toBe(1);
+    expect(tree.getVisibleRowCountForTests()).toBe(1);
   });
 
   it('should show all objects when search is cleared', () => {
@@ -160,8 +157,7 @@ describe('OutlinerTree', () => {
     searchInput.dispatchEvent(new Event('input'));
     searchInput.value = '';
     searchInput.dispatchEvent(new Event('input'));
-    const treeElement = container.children[1] as HTMLElement;
-    expect(treeElement.children.length).toBe(2);
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
   });
 
   it('keeps scene selection highlight after search hides then shows the selected row', () => {
@@ -177,11 +173,11 @@ describe('OutlinerTree', () => {
     searchInput.value = 'App';
     searchInput.dispatchEvent(new Event('input'));
     const treeElement = container.children[1] as HTMLElement;
-    expect(treeElement.children.length).toBe(1);
+    expect(tree.getVisibleRowCountForTests()).toBe(1);
     expect((treeElement.children[0] as HTMLElement).style.background).toBe('transparent');
     searchInput.value = '';
     searchInput.dispatchEvent(new Event('input'));
-    expect(treeElement.children.length).toBe(2);
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
     const bananaRow = Array.from(treeElement.children).find((row) =>
       (row as HTMLElement).textContent?.includes('Banana'),
     ) as HTMLElement;
@@ -219,6 +215,17 @@ describe('OutlinerTree', () => {
     expect(tree.getSearchQuery()).toBe('TestQuery');
   });
 
+  it('should expand groups by default when they first appear with children', () => {
+    const childGroup = new THREE.Group();
+    childGroup.name = 'ChildGroup';
+    const grandchild = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    grandchild.name = 'Grandchild';
+    childGroup.add(grandchild);
+    root.add(childGroup);
+    tree.refresh(new Set());
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
+  });
+
   it('should expand and collapse children', () => {
     const childGroup = new THREE.Group();
     childGroup.name = 'ChildGroup';
@@ -226,13 +233,37 @@ describe('OutlinerTree', () => {
     grandchild.name = 'Grandchild';
     childGroup.add(grandchild);
     root.add(childGroup);
+    tree.refresh(new Set());
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
     tree.toggleExpand(childGroup);
+    expect(tree.getVisibleRowCountForTests()).toBe(1);
+    tree.toggleExpand(childGroup);
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
+  });
+
+  it('should hide expand chevron when last child leaves a group without list length change', () => {
+    const group = new THREE.Group();
+    group.name = 'Emptyable';
+    const child = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    child.name = 'OnlyChild';
+    const sibling = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    sibling.name = 'Sibling';
+    group.add(child);
+    root.add(group);
+    root.add(sibling);
+    tree.refresh(new Set());
     const treeElement = container.children[1] as HTMLElement;
-    expect(treeElement.children.length).toBe(2);
-    tree.toggleExpand(childGroup);
-    expect(treeElement.children.length).toBe(1);
-    tree.toggleExpand(childGroup);
-    expect(treeElement.children.length).toBe(2);
+    const groupRow = treeElement.children[0] as HTMLElement;
+    const groupChevron = groupRow.querySelector('span:nth-child(1)') as HTMLElement;
+    expect(groupChevron.style.visibility).not.toBe('hidden');
+    // Move last child out as sibling after the group: visible order stays Group, Child, Sibling.
+    group.remove(child);
+    const insertIndex = root.children.indexOf(group) + 1;
+    root.children.splice(insertIndex, 0, child);
+    child.parent = root;
+    tree.refresh(new Set());
+    expect(tree.getVisibleRowCountForTests()).toBe(3);
+    expect(groupChevron.style.visibility).toBe('hidden');
   });
 
   it('should remove elements on dispose', () => {
@@ -250,14 +281,14 @@ describe('OutlinerTree', () => {
     tree.refresh(new Set());
     const treeElement = container.children[1] as HTMLElement;
     const firstRow = treeElement.children[0] as HTMLElement;
-    expect(treeElement.children.length).toBe(2);
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
 
     const meshC = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
     meshC.name = 'CubeC';
     root.add(meshC);
     tree.refresh(new Set());
 
-    expect(treeElement.children.length).toBe(3);
+    expect(tree.getVisibleRowCountForTests()).toBe(3);
     expect(treeElement.children[0]).toBe(firstRow);
     expect(treeElement.textContent).toContain('CubeC');
   });
@@ -280,9 +311,141 @@ describe('OutlinerTree', () => {
     root.remove(meshB);
     tree.refresh(new Set());
 
-    expect(treeElement.children.length).toBe(2);
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
     expect(treeElement.children[0]).toBe(firstRow);
     expect(treeElement.children[1]).toBe(thirdRow);
     expect(treeElement.textContent).not.toContain('RemoveMe');
+  });
+
+  it('should show a one-pixel insert line when dragging one row over another', () => {
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshA.name = 'DragSource';
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    meshB.name = 'DropTarget';
+    root.add(meshA);
+    root.add(meshB);
+    tree.refresh(new Set());
+    const treeElement = container.children[1] as HTMLElement;
+    const sourceRow = treeElement.children[0] as HTMLElement;
+    const targetRow = treeElement.children[1] as HTMLElement;
+    targetRow.getBoundingClientRect = () =>
+      ({
+        top: 40,
+        bottom: 60,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 20,
+        x: 0,
+        y: 40,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    treeElement.getBoundingClientRect = () =>
+      ({
+        top: 0,
+        bottom: 200,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    Object.defineProperty(treeElement, 'clientWidth', { value: 100, configurable: true });
+    Object.defineProperty(treeElement, 'scrollTop', { value: 0, configurable: true });
+    const transfer = {
+      data: '',
+      effectAllowed: 'all',
+      dropEffect: 'move',
+      setData(_type: string, value: string) {
+        this.data = value;
+      },
+      getData() {
+        return this.data;
+      },
+    };
+    const dragStart = new Event('dragstart', { bubbles: true }) as DragEvent;
+    Object.defineProperty(dragStart, 'dataTransfer', { value: transfer });
+    sourceRow.dispatchEvent(dragStart);
+    const dragOver = new Event('dragover', { bubbles: true }) as DragEvent;
+    Object.defineProperty(dragOver, 'dataTransfer', { value: transfer });
+    Object.defineProperty(dragOver, 'clientY', { value: 55 });
+    Object.defineProperty(dragOver, 'clientX', { value: 8 });
+    targetRow.dispatchEvent(dragOver);
+    const indicator = tree.getInsertIndicatorForTests();
+    expect(indicator.style.display).toBe('block');
+    expect(indicator.style.height).toBe('1px');
+    expect(indicator.parentElement).toBe(treeElement);
+  });
+
+  it('should elevate drop after an expanded solid when pointer is left of brush indent', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    mesh.name = 'LooseMesh';
+    const solid = new THREE.Group();
+    solid.name = 'SolidModel';
+    const brush = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    brush.name = 'Brush';
+    solid.add(brush);
+    root.add(mesh);
+    root.add(solid);
+    tree.refresh(new Set());
+    let reparentArgs: { target: THREE.Object3D; placement: string } | null = null;
+    tree.onReparentObject((_dragged, target, placement) => {
+      reparentArgs = { target, placement };
+    });
+    const treeElement = container.children[1] as HTMLElement;
+    const meshRow = treeElement.children[0] as HTMLElement;
+    const brushRow = Array.from(treeElement.children).find((row) =>
+      (row as HTMLElement).textContent?.includes('Brush'),
+    ) as HTMLElement;
+    expect(brushRow).toBeTruthy();
+    brushRow.getBoundingClientRect = () =>
+      ({
+        top: 40,
+        bottom: 60,
+        left: 20,
+        right: 120,
+        width: 100,
+        height: 20,
+        x: 20,
+        y: 40,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    treeElement.getBoundingClientRect = () =>
+      ({
+        top: 0,
+        bottom: 200,
+        left: 0,
+        right: 200,
+        width: 200,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const transfer = {
+      data: '',
+      effectAllowed: 'all',
+      dropEffect: 'move',
+      setData(_type: string, value: string) {
+        this.data = value;
+      },
+      getData() {
+        return this.data;
+      },
+    };
+    const dragStart = new Event('dragstart', { bubbles: true }) as DragEvent;
+    Object.defineProperty(dragStart, 'dataTransfer', { value: transfer });
+    meshRow.dispatchEvent(dragStart);
+    const drop = new Event('drop', { bubbles: true }) as DragEvent;
+    Object.defineProperty(drop, 'dataTransfer', { value: transfer });
+    // Bottom half of brush row (after) + shallow X (depth 0) → after solid.
+    Object.defineProperty(drop, 'clientY', { value: 55 });
+    Object.defineProperty(drop, 'clientX', { value: 6 });
+    brushRow.dispatchEvent(drop);
+    expect(reparentArgs).not.toBeNull();
+    expect(reparentArgs!.target).toBe(solid);
+    expect(reparentArgs!.placement).toBe('after');
   });
 });

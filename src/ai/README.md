@@ -38,7 +38,50 @@ Keep the editor open with MCP started while Grok uses the tools.
 - Three.js **right-handed**, **Y-up**
 - Brush transforms are **model-local** unless a field is labeled world
 - CSG operations: `additive` | `subtractive` | `intersecting`
-- Brush **order** is evaluation order (first → last)
+- Brush **order** is evaluation order (first → last), depth-first over the hierarchy
+
+## Solid hierarchy (outliner / CSG groups)
+
+Solid models are trees, not flat brush lists:
+
+```
+solid_model
+├── brush (additive | subtractive | intersecting)
+├── csg_group (operation when the group combines into its parent)
+│   ├── brush
+│   └── csg_group
+│       └── brush
+└── brush
+```
+
+| Concept             | Details                                                                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Solid CSG group** | Outliner folder under a solid. Combines its children as one compound, then applies the **group operation** into the parent.                                              |
+| **Nesting**         | Groups may contain brushes and other groups. `parentGroupId` on brushes / groups is `null` when parented under the solid root.                                           |
+| **Operations**      | Brushes: `set_brush_operation`. Groups: `set_group_operation`. Additive groups look like normal yellow folders; subtractive/intersecting show red/blue badges in the UI. |
+| **CSG order**       | Evaluation walks the scene depth-first. Sibling order under a parent matters (`reorder_brushes` / `reorder_brush_relative` / `insertBeforeId` on reparent).              |
+
+### Hierarchy tools
+
+| Tool                   | Purpose                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_scene_hierarchy`  | Full outliner tree (`solid_model` → `csg_group` → `brush`) with operations                                                                        |
+| `get_solid_model`      | Flat brush list (evaluation order) **plus** nested `hierarchy`                                                                                    |
+| `get_csg_group`        | One group: children, `parentGroupId`, operation                                                                                                   |
+| `create_csg_group`     | Group `brushIds` / `groupIds` into a new compound (`parentGroupId`, `operation`, `name`). `parentGroupId` must not be a member or under a member. |
+| `set_group_operation`  | Branch op on groups                                                                                                                               |
+| `ungroup_csg_groups`   | Dissolve groups; children rise to the former parent                                                                                               |
+| `reparent_solid_nodes` | Move nodes under model root or another group (`parentId`, optional `insertBeforeId`)                                                              |
+| `rename_group`         | Outliner display name (undoable)                                                                                                                  |
+| `add_box_brush`        | Optional `parentGroupId` to spawn under a group                                                                                                   |
+| `duplicate_brushes`    | `brushIds` and/or `groupIds` (group clone keeps nesting). `createdIds` = brush ids; group uuids in `data.groupIds`.                               |
+| `reorder_brushes`      | `brushIds` and/or `groupIds` → first/last among siblings                                                                                          |
+
+**Brush-only tools (no `groupIds`):** `delete_brushes`, `select`, `mirror_brushes`, `find_brushes`. Find groups via `get_scene_hierarchy` / `get_csg_group`.
+
+**Workflow example:** build wall pieces → `create_csg_group` with those `brushIds` and `operation: "subtractive"` → nest a cutter under that group with `add_box_brush` + `parentGroupId` (or `reparent_solid_nodes`) → `duplicate_brushes` with `groupIds` to copy the whole compound.
+
+Same-solid only: reparent/group never moves a brush out of its solid model root.
 
 ## CSG: solid vs brush AABB (critical)
 
@@ -67,34 +110,40 @@ Keep the editor open with MCP started while Grok uses the tools.
 
 ## Core tools
 
-| Tool                                                             | Purpose                                        |
-| ---------------------------------------------------------------- | ---------------------------------------------- |
-| `get_editor_context`                                             | Snap, history, selection, coords               |
-| `calculate`                                                      | Safe arithmetic (`20+(0.5*12)`), no eval       |
-| `list_solid_models` / `get_solid_model` / `get_brush`            | Inventory                                      |
-| `find_brushes` / `describe_brush` / `half_extents`               | Filter; summaries; half-size + face centers    |
-| `query_overlaps` / `query_point` / `query_neighbors` / `measure` | Spatial planning                               |
-| `preview_transform` / `preview_new_box`                          | Dry-run existing or new box bounds             |
-| `explain_csg_at_point` / `query_void_connectivity`               | CSG solid/void; approx cavity path             |
-| `validate_brush` / `validate_solid_model`                        | Topology checks                                |
-| `create_solid_model` / `add_box_brush` / `add_box_brushes`       | Create geometry (batch + names + insert order) |
-| `place_wall` / `add_room_shell` / `cut_opening` / `add_opening`  | Walls, rooms, door/window cuts                 |
-| `set_brush_transform` / `batch_set_brush_transform`              | Pose edits (`snap:false` for exact)            |
-| `align_brush`                                                    | Stack on top / hang under / touch side         |
-| `rotate_brush`                                                   | Rotate in **degrees** (default Y/yaw)          |
-| `rename_brush`                                                   | Stable names (`start_a_flag`, …)               |
-| `clip_brush` / `split_brush`                                     | Plane cut / split into two                     |
-| `delete_brushes` / `duplicate_brushes` / `mirror_brushes`        | Structure + symmetry                           |
-| `reorder_brushes` / `reorder_brush_relative`                     | CSG order (ends or before/after)               |
-| `set_inverted_world` / `select` / `undo` / `redo`                | Session                                        |
+| Tool                                                              | Purpose                                                    |
+| ----------------------------------------------------------------- | ---------------------------------------------------------- |
+| `get_editor_context`                                              | Snap, history, selection, coords                           |
+| `calculate`                                                       | Safe arithmetic (`20+(0.5*12)`), no eval                   |
+| `list_solid_models` / `get_solid_model` / `get_brush`             | Inventory (+ hierarchy on model detail)                    |
+| `get_scene_hierarchy` / `get_csg_group` / `get_selection`         | Tree, group detail, brush+group selection                  |
+| `find_brushes` / `describe_brush` / `half_extents`                | Filter; summaries; half-size + face centers                |
+| `query_overlaps` / `query_point` / `query_neighbors` / `measure`  | Spatial planning                                           |
+| `preview_transform` / `preview_new_box`                           | Dry-run existing or new box bounds                         |
+| `explain_csg_at_point` / `query_void_connectivity`                | CSG solid/void; approx cavity path                         |
+| `validate_brush` / `validate_solid_model`                         | Topology checks                                            |
+| `create_solid_model` / `add_box_brush` / `add_box_brushes`        | Create geometry (`parentGroupId` supported)                |
+| `create_csg_group` / `set_group_operation` / `ungroup_csg_groups` | Hierarchy compounds                                        |
+| `reparent_solid_nodes` / `rename_group`                           | Nest / rename groups and brushes                           |
+| `place_wall` / `add_room_shell` / `cut_opening` / `add_opening`   | Walls, rooms, door/window cuts                             |
+| `set_brush_transform` / `batch_set_brush_transform`               | Pose edits (`snap:false` for exact)                        |
+| `align_brush`                                                     | Stack on top / hang under / touch side                     |
+| `rotate_brush`                                                    | Rotate in **degrees** (default Y/yaw)                      |
+| `rename_brush`                                                    | Stable names (`start_a_flag`, …)                           |
+| `clip_brush` / `split_brush`                                      | Plane cut / split into two                                 |
+| `delete_brushes` / `duplicate_brushes` / `mirror_brushes`         | Delete/mirror: brushes only; duplicate supports `groupIds` |
+| `reorder_brushes` / `reorder_brush_relative`                      | Sibling order (ends or before/after)                       |
+| `set_inverted_world` / `select` / `undo` / `redo`                 | Session                                                    |
 
 ### AI level-building tips
 
-- **Names:** pass `name` on `add_box_brush` / `add_box_brushes`, or `rename_brush`, then `find_brushes` with `nameContains`.
+- **Names (brushes):** pass `name` on `add_box_brush` / `add_box_brushes`, or `rename_brush`, then `find_brushes` with `nameContains`.
+- **Names (groups):** `rename_group` / `create_csg_group` `name`; locate with `get_scene_hierarchy` (not `find_brushes`).
 - **Shapes:** `find_brushes` shape filter accepts `thin`/`pole`, `flat`/`panel`/`flag`, `tall`, `long`, `box`.
 - **Place on pole:** `align_brush` with `mode: "top"`, `gap: 0` (optional `center: true`).
 - **Exact coords:** `set_brush_transform` / `add_box_brush` with `snap: false` or `exact: true` so `-17.125` is not rounded to `-17`.
-- **Assemblies:** `duplicate_brushes` with many `brushIds`, or `mirror_brushes` across `axis: "x"|"z"`.
+- **Assemblies:** `duplicate_brushes` with many `brushIds`, or `groupIds` for whole compounds; use `data.groupIds` after group clone. `mirror_brushes` is brush ids only.
+- **Groups:** prefer `create_csg_group` + `set_group_operation` over flattening; inspect with `get_scene_hierarchy` before reparenting.
+- **Nest under group:** `add_box_brush` with `parentGroupId`, or `reparent_solid_nodes` after create.
 - **Math:** `calculate` with expressions like `"20+(0.5*12)"` — only `+ - * / ( )` and decimals.
 - **Half extents:** `half_extents` for face centers when aligning openings or stacking props.
 - **Preview:** `preview_transform` / `preview_new_box` return predicted world bounds without mutating.
@@ -110,7 +159,7 @@ Keep the editor open with MCP started while Grok uses the tools.
 
 **Transform tips:** use **degrees** (`rotationDegrees`, `rotate_brush.degrees`), not radians. When snap is on, positions and angles snap to the editor grid / rotation step (default 15°) unless you pass `snap: false`.
 
-All mutations are **undoable** through the normal editor history.
+Solid mutations (including hierarchy create/reparent/rename/ungroup) are **undoable** via `undo` / `redo` and the editor history.
 
 ## Not in this build
 

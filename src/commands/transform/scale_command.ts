@@ -7,7 +7,7 @@ import { GizmoAxis } from '../../types/transform_mode.js';
  * position and scale so undo can restore both.
  */
 export interface ObjectScaleSnapshot {
-  object: THREE.Mesh;
+  object: THREE.Object3D;
   originalPosition: THREE.Vector3;
   originalScale: THREE.Vector3;
 }

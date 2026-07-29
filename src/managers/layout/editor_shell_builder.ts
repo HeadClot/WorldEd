@@ -11,6 +11,7 @@ import { CommandStack } from '../../commands/command_stack.js';
 import { GridSnap } from '../../transform/snap/grid_snap.js';
 import { TextureLockSettings } from '../../texture/lock/texture_lock_settings.js';
 import { createAddMenuEntries } from './add_menu_entries.js';
+import type { OutlinerDropPlacement } from '../../ui/outliner/outliner_drop_placement.js';
 
 /**
  * Callbacks the shell builder needs from the layout manager for outliner
@@ -24,7 +25,11 @@ export interface EditorShellOutlinerActions {
   onRenameFromOutliner: (obj: THREE.Object3D, newName: string) => void;
   onToggleVisibilityFromOutliner: (obj: THREE.Object3D) => void;
   onToggleLockFromOutliner: (obj: THREE.Object3D) => void;
-  reparentFromDrop: (dragged: THREE.Object3D, target: THREE.Object3D) => void;
+  reparentFromDrop: (
+    dragged: THREE.Object3D | readonly THREE.Object3D[],
+    target: THREE.Object3D,
+    placement: OutlinerDropPlacement,
+  ) => void;
   syncViewports: () => void;
   refreshOutliner: () => void;
   showStatusMessage: (message: string) => void;
@@ -304,7 +309,9 @@ export class EditorShellBuilder {
     hierarchyReparentHandler.setSyncViewports(() => outlinerActions.syncViewports());
     hierarchyReparentHandler.setRefreshOutliner(() => outlinerActions.refreshOutliner());
     hierarchyReparentHandler.setShowStatus((message) => outlinerActions.showStatusMessage(message));
-    outlinerPanel.setReparentCallback((dragged, target) => outlinerActions.reparentFromDrop(dragged, target));
+    outlinerPanel.setReparentCallback((dragged, target, placement) =>
+      outlinerActions.reparentFromDrop(dragged, target, placement),
+    );
     return outlinerPanel;
   }
 

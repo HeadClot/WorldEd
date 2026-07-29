@@ -91,5 +91,12 @@ export interface ObjectEntry {
       edgeFaceIndices: number[];
       faces: Array<{ firstEdge: number; edgeCount: number; surfaceIndex: number }>;
     }>;
+    /** When true, CSG starts solid so subtractives carve rooms. */
+    invertedWorld?: boolean;
+    /**
+     * Optional hierarchical CSG tree under the solid root (compound groups).
+     * When omitted, brushes are a flat sibling list.
+     */
+    hierarchy?: Array<Record<string, unknown>>;
   };
 }

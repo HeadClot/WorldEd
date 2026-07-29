@@ -44,9 +44,9 @@ export class TransformCommandPusher {
    * Pushes an appropriate undo command based on the current transform mode.
    *
    * @param pivot The transform pivot point.
-   * @param selectedObjects The meshes that were transformed.
+   * @param selectedObjects The objects that were transformed.
    */
-  pushUndoCommand(pivot: THREE.Vector3, selectedObjects: THREE.Mesh[]): void {
+  pushUndoCommand(pivot: THREE.Vector3, selectedObjects: THREE.Object3D[]): void {
     if (!this.commandStack) return;
     const mode = this.transformGizmo.getMode();
     if (mode === TransformMode.TRANSLATE) {
@@ -66,9 +66,9 @@ export class TransformCommandPusher {
   /**
    * Pushes translate or bounds-resize undo depending on the active bounds drag.
    *
-   * @param selectedObjects Meshes that were transformed.
+   * @param selectedObjects Objects that were transformed.
    */
-  private pushBoundsUndoCommand(selectedObjects: THREE.Mesh[]): void {
+  private pushBoundsUndoCommand(selectedObjects: THREE.Object3D[]): void {
     if (this.session.isBoundsFaceMove) {
       this.pushTranslateCommand(selectedObjects);
       return;
@@ -79,11 +79,11 @@ export class TransformCommandPusher {
   }
 
   /**
-   * Creates and pushes a bounds resize command from final mesh state.
+   * Creates and pushes a bounds resize command from final object state.
    *
-   * @param selectedObjects Meshes that were resized.
+   * @param selectedObjects Objects that were resized.
    */
-  private pushBoundsResizeCommand(selectedObjects: THREE.Mesh[]): void {
+  private pushBoundsResizeCommand(selectedObjects: THREE.Object3D[]): void {
     const snapshots = this.buildBoundsResizeSnapshots(selectedObjects);
     const changed = snapshots.some((snapshot) => {
       const posChanged = snapshot.originalPosition.distanceToSquared(snapshot.finalPosition) > 1e-12;
@@ -97,19 +97,19 @@ export class TransformCommandPusher {
   /**
    * Builds bounds resize snapshots with original and final transforms.
    *
-   * @param selectedObjects Meshes to snapshot.
+   * @param selectedObjects Objects to snapshot.
    * @returns Snapshot array for BoundsResizeCommand.
    */
-  private buildBoundsResizeSnapshots(selectedObjects: THREE.Mesh[]): BoundsResizeSnapshot[] {
-    return selectedObjects.map((mesh) => {
-      const originalPos = this.session.initialPositions.get(mesh);
-      const originalScale = this.session.initialScales.get(mesh);
+  private buildBoundsResizeSnapshots(selectedObjects: THREE.Object3D[]): BoundsResizeSnapshot[] {
+    return selectedObjects.map((object) => {
+      const originalPos = this.session.initialPositions.get(object);
+      const originalScale = this.session.initialScales.get(object);
       return {
-        object: mesh,
-        originalPosition: originalPos ? originalPos.clone() : mesh.position.clone(),
-        originalScale: originalScale ? originalScale.clone() : mesh.scale.clone(),
-        finalPosition: mesh.position.clone(),
-        finalScale: mesh.scale.clone(),
+        object,
+        originalPosition: originalPos ? originalPos.clone() : object.position.clone(),
+        originalScale: originalScale ? originalScale.clone() : object.scale.clone(),
+        finalPosition: object.position.clone(),
+        finalScale: object.scale.clone(),
       };
     });
   }
@@ -117,9 +117,9 @@ export class TransformCommandPusher {
   /**
    * Creates and pushes a translate command using actual final positions.
    *
-   * @param selectedObjects The meshes that were translated.
+   * @param selectedObjects The objects that were translated.
    */
-  private pushTranslateCommand(selectedObjects: THREE.Mesh[]): void {
+  private pushTranslateCommand(selectedObjects: THREE.Object3D[]): void {
     const snapshots = this.buildPositionSnapshotsWithFinals(selectedObjects);
     const moved = snapshots.some((snapshot) => {
       if (!snapshot.finalPosition) return false;
@@ -134,9 +134,9 @@ export class TransformCommandPusher {
    * Creates and pushes a rotate command using the final applied angle.
    *
    * @param pivot The rotation pivot point.
-   * @param selectedObjects The meshes that were rotated.
+   * @param selectedObjects The objects that were rotated.
    */
-  private pushRotateCommand(pivot: THREE.Vector3, selectedObjects: THREE.Mesh[]): void {
+  private pushRotateCommand(pivot: THREE.Vector3, selectedObjects: THREE.Object3D[]): void {
     const snappedAngle = this.transformExecutor.getGridSnap().snapAngleRadians(this.session.dragRotationAngle);
     if (Math.abs(snappedAngle) < 1e-8) return;
     const snapshots = this.buildRotationSnapshots(selectedObjects);
@@ -150,9 +150,9 @@ export class TransformCommandPusher {
    * Creates and pushes a scale command using the final applied factor.
    *
    * @param pivot The scale pivot point.
-   * @param selectedObjects The meshes that were scaled.
+   * @param selectedObjects The objects that were scaled.
    */
-  private pushScaleCommand(pivot: THREE.Vector3, selectedObjects: THREE.Mesh[]): void {
+  private pushScaleCommand(pivot: THREE.Vector3, selectedObjects: THREE.Object3D[]): void {
     const snappedFactor = this.transformExecutor.getGridSnap().snapScaleFactor(this.session.dragScaleFactor);
     if (Math.abs(snappedFactor - 1) < 1e-8) return;
     const snapshots = this.buildScaleSnapshots(selectedObjects);
@@ -169,28 +169,38 @@ export class TransformCommandPusher {
    * Pushes a pose command wrapped with before/after texture lock UV state.
    *
    * @param poseCommand Pose-only undo command.
-   * @param selectedObjects Meshes transformed in this drag.
+   * @param selectedObjects Objects transformed in this drag.
    */
-  private pushTextureAwareCommand(poseCommand: UndoCommand, selectedObjects: THREE.Mesh[]): void {
+  private pushTextureAwareCommand(poseCommand: UndoCommand, selectedObjects: THREE.Object3D[]): void {
     const beforeTexture = this.session.initialTextureState;
-    const afterTexture = captureTransformTextureState(selectedObjects);
+    const afterTexture = captureTransformTextureState(this.collectMeshTargets(selectedObjects));
     const command = new TextureLockedTransformCommand(poseCommand, beforeTexture, afterTexture);
     this.commandStack?.push(command);
   }
 
   /**
+   * Filters drag targets down to meshes for texture-lock capture.
+   *
+   * @param objects Drag targets.
+   * @returns Mesh subset.
+   */
+  private collectMeshTargets(objects: readonly THREE.Object3D[]): THREE.Mesh[] {
+    return objects.filter((object): object is THREE.Mesh => object instanceof THREE.Mesh);
+  }
+
+  /**
    * Builds position snapshots including final positions after the drag.
    *
-   * @param selectedObjects The meshes to build snapshots for.
+   * @param selectedObjects The objects to build snapshots for.
    * @returns Snapshots with original and final positions.
    */
-  private buildPositionSnapshotsWithFinals(selectedObjects: THREE.Mesh[]): ObjectTransformSnapshot[] {
-    return selectedObjects.map((mesh) => {
-      const originalPos = this.session.initialPositions.get(mesh);
+  private buildPositionSnapshotsWithFinals(selectedObjects: THREE.Object3D[]): ObjectTransformSnapshot[] {
+    return selectedObjects.map((object) => {
+      const originalPos = this.session.initialPositions.get(object);
       return {
-        object: mesh,
-        position: originalPos ? originalPos.clone() : mesh.position.clone(),
-        finalPosition: mesh.position.clone(),
+        object,
+        position: originalPos ? originalPos.clone() : object.position.clone(),
+        finalPosition: object.position.clone(),
       };
     });
   }
@@ -216,17 +226,17 @@ export class TransformCommandPusher {
   /**
    * Builds rotation snapshots including original quaternions.
    *
-   * @param selectedObjects The meshes to build snapshots for.
+   * @param selectedObjects The objects to build snapshots for.
    * @returns An array of rotation snapshots.
    */
-  private buildRotationSnapshots(selectedObjects: THREE.Mesh[]): ObjectRotationSnapshot[] {
-    return selectedObjects.map((mesh) => {
-      const originalPos = this.session.initialPositions.get(mesh);
-      const originalQuat = this.session.initialQuaternions.get(mesh);
+  private buildRotationSnapshots(selectedObjects: THREE.Object3D[]): ObjectRotationSnapshot[] {
+    return selectedObjects.map((object) => {
+      const originalPos = this.session.initialPositions.get(object);
+      const originalQuat = this.session.initialQuaternions.get(object);
       return {
-        object: mesh,
-        originalPosition: originalPos ? originalPos.clone() : mesh.position.clone(),
-        originalQuaternion: originalQuat ? originalQuat.clone() : mesh.quaternion.clone(),
+        object,
+        originalPosition: originalPos ? originalPos.clone() : object.position.clone(),
+        originalQuaternion: originalQuat ? originalQuat.clone() : object.quaternion.clone(),
       };
     });
   }
@@ -234,17 +244,17 @@ export class TransformCommandPusher {
   /**
    * Builds scale snapshots including original scales.
    *
-   * @param selectedObjects The meshes to build snapshots for.
+   * @param selectedObjects The objects to build snapshots for.
    * @returns An array of scale snapshots.
    */
-  private buildScaleSnapshots(selectedObjects: THREE.Mesh[]): ObjectScaleSnapshot[] {
-    return selectedObjects.map((mesh) => {
-      const originalPos = this.session.initialPositions.get(mesh);
-      const originalScale = this.session.initialScales.get(mesh);
+  private buildScaleSnapshots(selectedObjects: THREE.Object3D[]): ObjectScaleSnapshot[] {
+    return selectedObjects.map((object) => {
+      const originalPos = this.session.initialPositions.get(object);
+      const originalScale = this.session.initialScales.get(object);
       return {
-        object: mesh,
-        originalPosition: originalPos ? originalPos.clone() : mesh.position.clone(),
-        originalScale: originalScale ? originalScale.clone() : mesh.scale.clone(),
+        object,
+        originalPosition: originalPos ? originalPos.clone() : object.position.clone(),
+        originalScale: originalScale ? originalScale.clone() : object.scale.clone(),
       };
     });
   }

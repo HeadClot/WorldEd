@@ -209,6 +209,20 @@ export class SolidResultBuffer {
   }
 
   /**
+   * Full (non-partial) upload of the current buffers. Clears partial-write
+   * state and update ranges so the GPU receives the entire position, normal,
+   * and UV arrays. Used after non-live commits where a partial range can leave
+   * the solid surface visually frozen while CPU buffers already moved.
+   *
+   * @param geometry Target buffer geometry.
+   */
+  uploadToGeometryFull(geometry: THREE.BufferGeometry): void {
+    this.partialWrite = false;
+    this.lastUpdateRanges = [];
+    this.uploadToGeometry(geometry);
+  }
+
+  /**
    * Recomputes bounds; uses a cheap dirty-range expansion after partial
    * patches.
    *

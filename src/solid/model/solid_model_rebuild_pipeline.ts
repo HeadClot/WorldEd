@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
 import { SolidCsgCompiler } from '../algorithm/solid_csg_compiler.js';
+import type { SolidCompileOptions } from '../algorithm/solid_compile_types.js';
 import { SolidSurfaceRegion } from '../algorithm/surface_triangulator.js';
 import { SolidBrushMeshChunkBuilder } from '../mesh/solid_brush_mesh_chunk.js';
 import { SolidMeshChunkCache } from '../mesh/solid_mesh_chunk_cache.js';
@@ -237,16 +238,32 @@ export class SolidModelRebuildPipeline {
   }
 
   /**
-   * Pulls brush transforms, runs CSG, remeshes dirty brush chunks, patches
-   * result.
+   * Pulls brush transforms, runs CSG, remeshes dirty brush chunks, and
+   * assembles the result. Live drag may keep partial GPU update ranges;
+   * non-live commits force a full attribute upload so the solid surface cannot
+   * stay frozen after inspector or other non-drag edits.
    *
-   * @param liveDrag When true, only resyncs dirty brush meshes.
+   * @param liveDrag When true, only resyncs dirty brush meshes and allows
+   *   partial GPU uploads.
    */
   compileResultGeometry(liveDrag: boolean = false): void {
     this.syncBrushesBeforeCompile(liveDrag);
     this.compiler.compile(this.host.getEvaluationList(), this.buildCompileOptions());
     this.rebuildDirtyMeshChunks();
     this.assembleResultFromCompiler();
+    if (!liveDrag) {
+      this.forceFullResultGeometryUpload();
+    }
+  }
+
+  /**
+   * Re-uploads the entire result buffer to the result mesh geometry without
+   * partial update ranges (authoritative non-live path).
+   */
+  private forceFullResultGeometryUpload(): void {
+    const resultMesh = this.host.getResultMesh();
+    this.resultBuffer.uploadToGeometryFull(resultMesh.geometry);
+    resultMesh.geometry.userData['solidMeshUpdateRanges'] = [];
   }
 
   /**
@@ -395,20 +412,32 @@ export class SolidModelRebuildPipeline {
    *
    * @returns Partial or full compile options.
    */
-  private buildCompileOptions(): {
-    forceFull?: boolean;
-    dirtyBrushIds?: Iterable<string>;
-    skipPolygonAssembly?: boolean;
-    invertedWorld?: boolean;
-  } {
-    if (this.fullRebuildRequired) {
-      return { forceFull: true, skipPolygonAssembly: true, invertedWorld: this.invertedWorld };
-    }
-    return {
-      dirtyBrushIds: Array.from(this.dirtyBrushIds),
+  private buildCompileOptions(): SolidCompileOptions {
+    const options: SolidCompileOptions = {
       skipPolygonAssembly: true,
       invertedWorld: this.invertedWorld,
     };
+    if (this.fullRebuildRequired) {
+      options.forceFull = true;
+    } else {
+      options.dirtyBrushIds = Array.from(this.dirtyBrushIds);
+    }
+    const solidRoot = this.resolveSolidRoot();
+    if (solidRoot) {
+      options.solidRoot = solidRoot;
+    }
+    return options;
+  }
+
+  /**
+   * Resolves the solid model root group for hierarchical CSG tree building.
+   *
+   * @returns Solid root object, or undefined when unavailable.
+   */
+  private resolveSolidRoot(): THREE.Object3D | undefined {
+    const resultMesh = this.host.getResultMesh();
+    const parent = resultMesh.parent;
+    return parent ?? undefined;
   }
 
   /**

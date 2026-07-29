@@ -3,6 +3,8 @@ import { removeDecorativeEdges } from '../../utils/mesh_edge_sync.js';
 import { pullChangedBrushTransforms, collectDriftedBrushIds } from './solid_brush_transform_sync.js';
 import { disposeBrushPreviewResources } from './solid_model_mesh_disposal.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
+import { getSolidGroupOperation, isSolidCsgGroup, isValidSolidTreeParent, markAsSolidCsgGroup } from './solid_group.js';
+import { ObjectDuplicator } from '../../managers/hierarchy/object_duplicator.js';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
 import type { SolidBrushCollection } from './solid_brush_collection.js';
 import type { SolidModelRebuildPipeline } from './solid_model_rebuild_pipeline.js';
@@ -37,34 +39,38 @@ export function rebuildChangedHistoryTransforms(host: SolidModelOpsHost): void {
 }
 
 /**
- * Detaches a brush preview mesh from the root and optionally disposes it.
+ * Detaches a brush preview mesh from whatever parent owns it (solid root or a
+ * nested CSG group) and optionally disposes GPU resources. Using the solid root
+ * alone would leave nested brushes orphaned in the outliner with live
+ * wireframes after CSG unregister.
  *
- * @param host Solid model host.
  * @param brush Removed brush instance.
  * @param disposeResources Whether to free GPU resources.
  */
-export function detachAndMaybeDisposeBrushMesh(
-  host: SolidModelOpsHost,
-  brush: SolidBrushInstance,
-  disposeResources: boolean,
-): void {
+export function detachAndMaybeDisposeBrushMesh(brush: SolidBrushInstance, disposeResources: boolean): void {
   if (!brush.mesh) return;
-  host.root.remove(brush.mesh);
+  brush.mesh.removeFromParent();
   if (disposeResources) disposeBrushPreviewResources(brush.mesh);
 }
 
 /**
- * Clones a source brush with offset and attaches a hull preview mesh.
+ * Clones a source brush with offset and attaches a hull preview mesh under the
+ * same hierarchy parent as the source (solid root or solid CSG group), inserted
+ * immediately after the source sibling when possible. When {@code
+ * parentOverride} is set, the clone is parented there without reordering after
+ * the source (used when rebuilding a duplicated group tree).
  *
  * @param host Solid model host.
  * @param source Source brush.
  * @param offset Position offset applied after cloning.
- * @returns Prepared clone with mesh parented under root.
+ * @param parentOverride Optional explicit parent for the clone mesh.
+ * @returns Prepared clone with mesh parented in the source tree.
  */
 export function cloneBrushWithPreview(
   host: SolidModelOpsHost,
   source: SolidBrushInstance,
   offset: THREE.Vector3,
+  parentOverride: THREE.Object3D | null = null,
 ): SolidBrushInstance {
   source.pullTransformFromMesh();
   host.brushes.nextBrushCounter();
@@ -73,8 +79,109 @@ export function cloneBrushWithPreview(
   clone.position.add(offset);
   const preview = SolidBrushVisual.createHullPreview(name, clone.brush, clone.operation);
   clone.attachMesh(preview);
-  host.root.add(preview);
+  const parent = parentOverride ?? resolveBrushCloneParent(host.root, source);
+  parent.add(preview);
+  if (!parentOverride) {
+    insertBrushCloneAfterSource(parent, preview, source.mesh);
+  }
   return clone;
+}
+
+/**
+ * Deep-clones a solid CSG group and all nested brushes/groups. New brush
+ * instances are registered on the host collection. The clone group is not
+ * parented; the caller attaches it in the hierarchy.
+ *
+ * @param host Solid model host.
+ * @param sourceGroup Solid CSG group to clone.
+ * @param offset Local position offset applied only to this group node.
+ * @param createdBrushIds Accumulator for newly created brush ids.
+ * @returns Cloned group with cloned solid children.
+ */
+export function cloneSolidCsgGroupSubtree(
+  host: SolidModelOpsHost,
+  sourceGroup: THREE.Group,
+  offset: THREE.Vector3,
+  createdBrushIds: string[],
+): THREE.Group {
+  const cloneGroup = new THREE.Group();
+  cloneGroup.name = ObjectDuplicator.getNextDuplicateName(sourceGroup.name);
+  cloneGroup.position.copy(sourceGroup.position).add(offset);
+  cloneGroup.quaternion.copy(sourceGroup.quaternion);
+  cloneGroup.scale.copy(sourceGroup.scale);
+  markAsSolidCsgGroup(cloneGroup, getSolidGroupOperation(sourceGroup));
+  const zeroOffset = new THREE.Vector3(0, 0, 0);
+  for (const child of sourceGroup.children.slice()) {
+    cloneSolidGroupChild(host, child, cloneGroup, zeroOffset, createdBrushIds);
+  }
+  return cloneGroup;
+}
+
+/**
+ * Clones one solid hierarchy child into a destination group.
+ *
+ * @param host Solid model host.
+ * @param child Source child under a solid CSG group.
+ * @param destination Parent receiving the clone.
+ * @param offset Offset for nested group nodes (usually zero).
+ * @param createdBrushIds Accumulator for new brush ids.
+ */
+function cloneSolidGroupChild(
+  host: SolidModelOpsHost,
+  child: THREE.Object3D,
+  destination: THREE.Group,
+  offset: THREE.Vector3,
+  createdBrushIds: string[],
+): void {
+  if (SolidBrushVisual.isBrushObject(child) && child instanceof THREE.Mesh) {
+    const sourceBrush = host.brushes.findBrushByMesh(child);
+    if (!sourceBrush) return;
+    const cloned = cloneBrushWithPreview(host, sourceBrush, offset, destination);
+    host.brushes.appendPreparedBrush(cloned);
+    createdBrushIds.push(cloned.id);
+    return;
+  }
+  if (isSolidCsgGroup(child) && child instanceof THREE.Group) {
+    destination.add(cloneSolidCsgGroupSubtree(host, child, offset, createdBrushIds));
+  }
+}
+
+/**
+ * Chooses the hierarchy parent for a duplicated brush mesh.
+ *
+ * @param solidRoot Solid model root.
+ * @param source Source brush being duplicated.
+ * @returns Source mesh parent when valid, otherwise the solid root.
+ */
+function resolveBrushCloneParent(solidRoot: THREE.Object3D, source: SolidBrushInstance): THREE.Object3D {
+  const sourceParent = source.mesh?.parent ?? null;
+  if (sourceParent && isValidSolidTreeParent(solidRoot, sourceParent, solidRoot)) {
+    return sourceParent;
+  }
+  return solidRoot;
+}
+
+/**
+ * Places the clone immediately after the source among siblings when both share
+ * the same parent.
+ *
+ * @param parent Shared parent of source and clone.
+ * @param cloneMesh Newly parented clone preview mesh.
+ * @param sourceMesh Source preview mesh, or null.
+ */
+function insertBrushCloneAfterSource(
+  parent: THREE.Object3D,
+  cloneMesh: THREE.Object3D,
+  sourceMesh: THREE.Object3D | null,
+): void {
+  if (!sourceMesh || sourceMesh.parent !== parent) return;
+  const sourceIndex = parent.children.indexOf(sourceMesh);
+  if (sourceIndex < 0) return;
+  const currentIndex = parent.children.indexOf(cloneMesh);
+  if (currentIndex < 0) return;
+  parent.children.splice(currentIndex, 1);
+  const insertIndex = Math.min(sourceIndex + 1, parent.children.length);
+  parent.children.splice(insertIndex, 0, cloneMesh);
 }
 
 /**

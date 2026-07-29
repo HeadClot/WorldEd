@@ -36,11 +36,31 @@ export interface SolidBrushSummaryDto {
   scale: McpVec3;
   localBounds: McpBounds | null;
   worldBounds: McpBounds | null;
+  /**
+   * Parent solid CSG group uuid when nested under a compound; null when the
+   * brush is a direct child of the solid model root.
+   */
+  parentGroupId: string | null;
 }
 
-/** Full solid model payload with ordered brushes. */
+/** Solid CSG compound group summary. */
+export interface SolidCsgGroupSummaryDto {
+  groupId: string;
+  name: string;
+  operation: McpSolidOperationName;
+  modelId: string;
+  /** Parent group uuid, or null when parented under the solid model root. */
+  parentGroupId: string | null;
+  childBrushIds: string[];
+  childGroupIds: string[];
+}
+
+/** Full solid model payload with ordered brushes and hierarchy tree. */
 export interface SolidModelDetailDto extends SolidModelSummaryDto {
+  /** CSG evaluation order (depth-first scene order of brushes). */
   brushes: SolidBrushSummaryDto[];
+  /** Nested solid hierarchy matching the outliner under this model. */
+  hierarchy: HierarchyNodeDto[];
 }
 
 /** Optional geometry payload for full brush detail. */
@@ -84,15 +104,19 @@ export interface EditorContextDto {
 /** Selection summary for context and get_selection. */
 export interface SelectionSummaryDto {
   brushIds: string[];
+  /** Selected solid CSG group uuids (outliner group selection). */
+  groupIds: string[];
   solidModelIds: string[];
   meshCount: number;
 }
 
-/** Hierarchy node for shallow scene trees. */
+/** Hierarchy node for solid model / CSG group / brush trees. */
 export interface HierarchyNodeDto {
   id: string;
   name: string;
-  kind: 'solid_model' | 'brush' | 'other';
+  kind: 'solid_model' | 'csg_group' | 'brush' | 'other';
+  /** Present on brushes and csg_group nodes. */
+  operation?: McpSolidOperationName;
   children: HierarchyNodeDto[];
 }
 
@@ -109,10 +133,65 @@ export interface AddBoxBrushArgs {
   operation?: McpSolidOperationName;
   /** Display name (e.g. start_a_flag). Prefer stable names over Brush14. */
   name?: string;
+  /**
+   * Optional solid CSG group uuid. When set, the new brush is parented under
+   * that group (same solid model). Omit to parent under the solid root.
+   */
+  parentGroupId?: string;
   /** When false, skip grid snap. Same as exact:true. */
   snap?: boolean;
   /** When true, skip grid snap for precise placement. */
   exact?: boolean;
+}
+
+/** Create a solid CSG compound group from brushes and/or nested groups. */
+export interface CreateCsgGroupArgs {
+  modelId: string;
+  /** Brush ids to move into the new group. */
+  brushIds?: string[];
+  /** Existing solid CSG group uuids to nest under the new group. */
+  groupIds?: string[];
+  /** Parent group uuid, or omit to parent under the solid model root. */
+  parentGroupId?: string;
+  /** Display name for the new group (default GroupN). */
+  name?: string;
+  /** Branch CSG operation when combining into the parent (default additive). */
+  operation?: McpSolidOperationName;
+}
+
+/** Set CSG operation on solid compound groups. */
+export interface SetGroupOperationArgs {
+  groupIds: string[];
+  operation: McpSolidOperationName;
+}
+
+/** Ungroup solid CSG compounds (children reparent to the former group parent). */
+export interface UngroupCsgGroupsArgs {
+  groupIds: string[];
+}
+
+/**
+ * Reparent solid brushes and/or CSG groups under a solid root or another CSG
+ * group in the same solid model.
+ */
+export interface ReparentSolidNodesArgs {
+  /** Brush ids and/or solid CSG group uuids. */
+  nodeIds: string[];
+  /** Destination parent: solid model uuid (root) or solid CSG group uuid. */
+  parentId: string;
+  /** Optional sibling id (brush or group) to insert before; omit to append. */
+  insertBeforeId?: string;
+}
+
+/** Rename a solid CSG group. */
+export interface RenameGroupArgs {
+  groupId: string;
+  name: string;
+}
+
+/** Get one solid CSG group summary. */
+export interface GetCsgGroupArgs {
+  groupId: string;
 }
 
 /** One box entry for add_box_brushes batch create. */
@@ -123,6 +202,8 @@ export interface AddBoxBrushBatchEntry {
   scale?: McpVec3;
   operation?: McpSolidOperationName;
   name?: string;
+  /** Optional solid CSG group uuid to parent under. */
+  parentGroupId?: string;
   /** Insert after a brush with this display name after create. */
   insertAfterName?: string;
   /** Insert before a brush with this display name after create. */
@@ -386,9 +467,11 @@ export interface MirrorBrushesArgs {
   exact?: boolean;
 }
 
-/** Duplicate brushes with optional offset and/or mirror. */
+/** Duplicate brushes and/or solid CSG groups with optional offset and/or mirror. */
 export interface DuplicateBrushesArgs {
-  brushIds: string[];
+  brushIds?: string[];
+  /** Solid CSG group uuids; each group is cloned with nested brushes. */
+  groupIds?: string[];
   offset?: McpVec3;
   /** Optional mirror after duplicate (assembly flip). */
   mirrorAxis?: 'x' | 'z';
@@ -464,8 +547,10 @@ export interface DetailArgs {
   detail?: McpDetailLevel;
 }
 
-/** Reorder brushes to first or last CSG evaluation end. */
+/** Reorder brushes and/or solid CSG groups among siblings (first or last). */
 export interface ReorderBrushesArgs {
-  brushIds: string[];
+  brushIds?: string[];
+  /** Solid CSG group uuids to move among their siblings. */
+  groupIds?: string[];
   end: McpBrushOrderEnd;
 }

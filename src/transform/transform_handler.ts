@@ -93,7 +93,7 @@ export class TransformHandler {
     pickElement: HTMLElement,
     event: MouseEvent,
     handles: GizmoHandle[],
-    selectedObjects: THREE.Mesh[] = [],
+    selectedObjects: THREE.Object3D[] = [],
     pivot: THREE.Vector3 = new THREE.Vector3(),
     gizmoGroup: THREE.Group = new THREE.Group(),
     viewPlane: CadViewPlane = 'xyz',
@@ -187,7 +187,7 @@ export class TransformHandler {
     camera: THREE.Camera,
     pickElement: HTMLElement,
     event: MouseEvent,
-    selectedObjects: THREE.Mesh[],
+    selectedObjects: THREE.Object3D[],
     pivot: THREE.Vector3,
   ): void {
     this.session.snapshotPreDragState(selectedObjects);
@@ -216,7 +216,7 @@ export class TransformHandler {
     pickElement: HTMLElement,
     event: MouseEvent,
     _pivot: THREE.Vector3,
-    selectedObjects: THREE.Mesh[],
+    selectedObjects: THREE.Object3D[],
   ): void {
     if (!this.session.dragActive) return;
     this.session.dragCamera = camera;
@@ -250,7 +250,7 @@ export class TransformHandler {
    * @param selectedObjects The selected meshes that were transformed.
    * @returns True when the press should run object click-through selection.
    */
-  onPointerUp(pivot: THREE.Vector3 = new THREE.Vector3(), selectedObjects: THREE.Mesh[] = []): boolean {
+  onPointerUp(pivot: THREE.Vector3 = new THREE.Vector3(), selectedObjects: THREE.Object3D[] = []): boolean {
     const selectionClick = this.isBoundsFaceClickWithoutDrag();
     if (selectionClick) {
       this.restoreMeshesFromSnapshot(selectedObjects);
@@ -300,14 +300,14 @@ export class TransformHandler {
    *
    * @param selectedObjects Meshes that may have been nudged during the press.
    */
-  private restoreMeshesFromSnapshot(selectedObjects: THREE.Mesh[]): void {
-    selectedObjects.forEach((mesh) => {
-      const position = this.session.initialPositions.get(mesh);
-      const quaternion = this.session.initialQuaternions.get(mesh);
-      const scale = this.session.initialScales.get(mesh);
-      if (position) mesh.position.copy(position);
-      if (quaternion) mesh.quaternion.copy(quaternion);
-      if (scale) mesh.scale.copy(scale);
+  private restoreMeshesFromSnapshot(selectedObjects: THREE.Object3D[]): void {
+    selectedObjects.forEach((object) => {
+      const position = this.session.initialPositions.get(object);
+      const quaternion = this.session.initialQuaternions.get(object);
+      const scale = this.session.initialScales.get(object);
+      if (position) object.position.copy(position);
+      if (quaternion) object.quaternion.copy(quaternion);
+      if (scale) object.scale.copy(scale);
     });
   }
 
@@ -516,7 +516,7 @@ export class TransformHandler {
     camera: THREE.Camera,
     pickElement: HTMLElement,
     event: MouseEvent,
-    objects: THREE.Mesh[],
+    objects: THREE.Object3D[],
   ): void {
     if (!this.session.initialMousePosition || !this.session.activeAxis) return;
     const plane = TransformProjectionMath.buildCameraPlane(camera, this.session.dragPivot);
@@ -561,7 +561,7 @@ export class TransformHandler {
     camera: THREE.Camera,
     pickElement: HTMLElement,
     event: MouseEvent,
-    objects: THREE.Mesh[],
+    objects: THREE.Object3D[],
   ): void {
     if (!this.session.activeAxis) return;
     const axis = TransformProjectionMath.axisToWorldVector(
@@ -638,7 +638,7 @@ export class TransformHandler {
     camera: THREE.Camera,
     pickElement: HTMLElement,
     event: MouseEvent,
-    objects: THREE.Mesh[],
+    objects: THREE.Object3D[],
   ): void {
     if (!this.session.activeAxis) return;
     const plane = TransformProjectionMath.buildCameraPlane(camera, this.session.dragPivot);

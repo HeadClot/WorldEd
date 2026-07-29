@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { ObjectIconFactory } from '../../src/ui/outliner/object_icon_factory.js';
+import { SolidModel } from '../../src/solid/model/solid_model.js';
+import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
+import { markAsSolidCsgGroup, setSolidGroupOperation } from '../../src/solid/model/solid_group.js';
 
 describe('ObjectIconFactory.getIcon', () => {
   it('should return group icon for THREE.Group', () => {
@@ -8,6 +12,68 @@ describe('ObjectIconFactory.getIcon', () => {
     const icon = ObjectIconFactory.getIcon(group);
     expect(icon.character).toBe('📁');
     expect(icon.color).toBe('#e67e22');
+    expect(icon.badgeCharacter).toBeUndefined();
+  });
+
+  it('should return green/red/blue CSS dots for solid brush operations', () => {
+    const additive = SolidBrushVisual.createBoxPreview('Add', 2, SolidOperation.Additive);
+    const subtractive = SolidBrushVisual.createBoxPreview('Sub', 2, SolidOperation.Subtractive);
+    const intersecting = SolidBrushVisual.createBoxPreview('Int', 2, SolidOperation.Intersecting);
+    expect(ObjectIconFactory.getIcon(additive)).toEqual({
+      character: '',
+      color: '#27ae60',
+      cssDot: true,
+      cssDotNudgeYPx: 0,
+    });
+    expect(ObjectIconFactory.getIcon(subtractive)).toEqual({
+      character: '',
+      color: '#c0392b',
+      cssDot: true,
+      cssDotNudgeYPx: 1,
+    });
+    expect(ObjectIconFactory.getIcon(intersecting)).toEqual({
+      character: '',
+      color: '#2980b9',
+      cssDot: true,
+      cssDotNudgeYPx: 0,
+    });
+  });
+
+  it('should keep yellow folder for additive solid CSG groups', () => {
+    const group = new THREE.Group();
+    markAsSolidCsgGroup(group, SolidOperation.Additive);
+    const icon = ObjectIconFactory.getIcon(group);
+    expect(icon.character).toBe('📁');
+    expect(icon.color).toBe('#e67e22');
+    expect(icon.badgeCharacter).toBeUndefined();
+  });
+
+  it('should badge solid CSG folders with red or blue for non-additive ops', () => {
+    const subtractive = new THREE.Group();
+    markAsSolidCsgGroup(subtractive, SolidOperation.Subtractive);
+    const intersecting = new THREE.Group();
+    markAsSolidCsgGroup(intersecting, SolidOperation.Intersecting);
+    expect(ObjectIconFactory.getIcon(subtractive)).toEqual({
+      character: '📁',
+      color: '#e67e22',
+      badgeCssDot: true,
+      badgeColor: '#c0392b',
+    });
+    expect(ObjectIconFactory.getIcon(intersecting)).toEqual({
+      character: '📁',
+      color: '#e67e22',
+      badgeCssDot: true,
+      badgeColor: '#2980b9',
+    });
+    setSolidGroupOperation(subtractive, SolidOperation.Additive);
+    expect(ObjectIconFactory.getIcon(subtractive).badgeCssDot).toBeUndefined();
+  });
+
+  it('should return solid model root icon', () => {
+    const model = new SolidModel('IconSolid');
+    const icon = ObjectIconFactory.getIcon(model.root);
+    expect(icon.character).toBe('▣');
+    expect(icon.color).toBe('#e86a17');
   });
 
   it('should return box icon for BoxGeometry mesh', () => {

@@ -87,9 +87,11 @@ function wireSolidBrushPropertyHandlers(propertiesPanel: PropertiesPanel, contro
   propertiesPanel.setSolidBrushHandlers({
     onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) =>
       controller.setBrushOperationForMeshes(meshes, operation),
+    onSetGroupOperation: (groups: THREE.Group[], operation: SolidOperation) =>
+      controller.setGroupOperationForGroups(groups, operation),
     onAddBoxBrush: () => controller.addBoxBrush(),
-    onMoveToFirst: (meshes: THREE.Mesh[]) => controller.moveBrushesInOrder(meshes, 'first'),
-    onMoveToLast: (meshes: THREE.Mesh[]) => controller.moveBrushesInOrder(meshes, 'last'),
+    onMoveToFirst: (nodes: THREE.Object3D[]) => controller.moveBrushesInOrder(nodes, 'first'),
+    onMoveToLast: (nodes: THREE.Object3D[]) => controller.moveBrushesInOrder(nodes, 'last'),
     onSetInvertedWorld: (inverted: boolean) => controller.setInvertedWorldForSelection(inverted),
   });
 }

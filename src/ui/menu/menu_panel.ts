@@ -92,6 +92,22 @@ export class MenuPanel {
     this.root.style.display = 'block';
   }
 
+  /**
+   * Opens a root menu as a floating context panel at screen coordinates. Mounts
+   * on the owner document body (same stacking path as toolbar menus).
+   *
+   * @param clientX Viewport X in CSS pixels.
+   * @param clientY Viewport Y in CSS pixels.
+   * @param ownerDocument Document that owns the click (main or detached).
+   */
+  openAt(clientX: number, clientY: number, ownerDocument: Document = document): void {
+    if (this.isSubmenu) return;
+    this.refresh();
+    this.mountRootMenuAtPoint(clientX, clientY, ownerDocument);
+    this.root.style.display = 'block';
+    this.clampRootMenuToViewport(ownerDocument);
+  }
+
   /** Hides the panel and any open child flyout. */
   close(): void {
     this.cancelPendingClose();
@@ -102,6 +118,19 @@ export class MenuPanel {
   }
 
   /**
+   * Closes the panel and removes its root from the DOM. Safe to call more than
+   * once.
+   */
+  dispose(): void {
+    this.close();
+    if (this.root.parentNode) {
+      this.root.parentNode.removeChild(this.root);
+    }
+    this.homeParent = null;
+    this.homeNextSibling = null;
+  }
+
+  /**
    * Re-parents a root menu under the anchor document's body and places it under
    * the anchor. Uses ownerDocument so menus opened in detached popup windows
    * mount in that popup instead of the main editor document.
@@ -109,16 +138,62 @@ export class MenuPanel {
    * @param anchor Button or control that opened the menu.
    */
   private mountRootMenuOnBody(anchor: HTMLElement): void {
-    if (!this.homeParent) {
-      this.homeParent = this.root.parentElement;
-      this.homeNextSibling = this.root.nextSibling;
-    }
+    this.rememberRootMenuHome();
     const rect = anchor.getBoundingClientRect();
     this.root.style.position = 'fixed';
     this.root.style.top = `${Math.round(rect.bottom + 4)}px`;
     this.root.style.left = `${Math.round(rect.left)}px`;
     const ownerDocument = anchor.ownerDocument;
     ownerDocument.body.appendChild(this.root);
+  }
+
+  /**
+   * Mounts a root menu on the document body at an absolute viewport point.
+   *
+   * @param clientX Viewport X in CSS pixels.
+   * @param clientY Viewport Y in CSS pixels.
+   * @param ownerDocument Document that should own the menu DOM.
+   */
+  private mountRootMenuAtPoint(clientX: number, clientY: number, ownerDocument: Document): void {
+    this.rememberRootMenuHome();
+    this.root.style.position = 'fixed';
+    this.root.style.top = `${Math.round(clientY)}px`;
+    this.root.style.left = `${Math.round(clientX)}px`;
+    ownerDocument.body.appendChild(this.root);
+  }
+
+  /**
+   * Records the original parent so close can restore toolbar-hosted menus.
+   * Context menus created without a parent leave home null and stay on body.
+   */
+  private rememberRootMenuHome(): void {
+    if (this.homeParent) return;
+    this.homeParent = this.root.parentElement;
+    this.homeNextSibling = this.root.nextSibling;
+  }
+
+  /**
+   * Keeps a floating root menu fully on-screen after it is laid out.
+   *
+   * @param ownerDocument Document whose viewport is used for clamping.
+   */
+  private clampRootMenuToViewport(ownerDocument: Document): void {
+    const view = ownerDocument.defaultView;
+    if (!view) return;
+    const rect = this.root.getBoundingClientRect();
+    const margin = 4;
+    let left = rect.left;
+    let top = rect.top;
+    if (left + rect.width > view.innerWidth - margin) {
+      left = Math.max(margin, view.innerWidth - rect.width - margin);
+    }
+    if (top + rect.height > view.innerHeight - margin) {
+      top = Math.max(margin, view.innerHeight - rect.height - margin);
+    }
+    if (left < margin) left = margin;
+    if (top < margin) top = margin;
+    this.root.style.left = `${Math.round(left)}px`;
+    this.root.style.top = `${Math.round(top)}px`;
   }
 
   /** Returns a root menu to its original parent after close. */

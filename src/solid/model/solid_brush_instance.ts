@@ -3,6 +3,7 @@ import { SolidBrush } from '../brush/solid_brush.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { SolidPlane } from '../brush/solid_plane.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
+import { findSolidModelRoot } from './solid_group.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
 import { FaceTextureMapping, FaceTextureMappingWithTrs } from '../../texture/uv/face_texture_mapping.js';
 import {
@@ -21,6 +22,8 @@ import { SurfaceUvMatrix } from '../../texture/uv_matrix/surface_uv_matrix.js';
 
 const scratchLocalMatrix = new THREE.Matrix4();
 const scratchLocalQuaternion = new THREE.Quaternion();
+const scratchModelMatrix = new THREE.Matrix4();
+const scratchRootInverse = new THREE.Matrix4();
 
 /**
  * Composes a TRS matrix into a shared scratch and returns a clone for callers
@@ -351,13 +354,73 @@ export class SolidBrushInstance {
   }
 
   /**
-   * Builds the local-to-model matrix for this instance.
+   * Builds the local-to-parent matrix for this instance (mesh local pose).
    *
-   * @returns Transform matrix.
+   * @returns Transform matrix relative to the mesh parent.
    */
   getLocalMatrix(): THREE.Matrix4 {
     this.pullTransformFromMesh();
     return composeLocalMatrix(this.position, this.rotation, this.scale);
+  }
+
+  /**
+   * Returns whether this brush is nested under intermediate solid CSG groups
+   * (not a direct child of the solid model root). Nested brushes need full
+   * model-space matrices; direct children only use local TRS.
+   *
+   * @returns True when an intermediate parent group exists.
+   */
+  isNestedUnderSolidGroups(): boolean {
+    if (!this.mesh?.parent) return false;
+    const solidRoot = findSolidModelRoot(this.mesh);
+    if (!solidRoot) return false;
+    return this.mesh.parent !== solidRoot;
+  }
+
+  /**
+   * Builds a cheap fingerprint of intermediate parent local poses between the
+   * brush mesh and the solid root. Used by the prepare cache to detect group
+   * moves without calling updateMatrixWorld on every brush.
+   *
+   * @returns Stable pose key string, or empty when not nested.
+   */
+  getParentChainPoseKey(): string {
+    if (!this.mesh) return '';
+    const solidRoot = findSolidModelRoot(this.mesh);
+    if (!solidRoot) return '';
+    const parts: string[] = [];
+    let current: THREE.Object3D | null = this.mesh.parent;
+    while (current && current !== solidRoot) {
+      parts.push(
+        `${current.uuid}:${current.position.x},${current.position.y},${current.position.z}:` +
+          `${current.rotation.x},${current.rotation.y},${current.rotation.z}:` +
+          `${current.scale.x},${current.scale.y},${current.scale.z}`,
+      );
+      current = current.parent;
+    }
+    return parts.join('|');
+  }
+
+  /**
+   * Builds the matrix that transforms brush-local vertices into solid model
+   * space, including intermediate solid CSG group parents. Direct children of
+   * the solid root use the fast local-TRS path (no matrixWorld walks).
+   *
+   * @returns Model-space transform matrix.
+   */
+  getModelSpaceMatrix(): THREE.Matrix4 {
+    this.pullTransformFromMesh();
+    if (!this.mesh) {
+      return composeLocalMatrix(this.position, this.rotation, this.scale);
+    }
+    const solidRoot = findSolidModelRoot(this.mesh);
+    if (!solidRoot || this.mesh.parent === solidRoot) {
+      return composeLocalMatrix(this.position, this.rotation, this.scale);
+    }
+    this.mesh.updateMatrixWorld(true);
+    solidRoot.updateMatrixWorld(true);
+    scratchRootInverse.copy(solidRoot.matrixWorld).invert();
+    return scratchModelMatrix.multiplyMatrices(scratchRootInverse, this.mesh.matrixWorld).clone();
   }
 
   /**
@@ -367,7 +430,7 @@ export class SolidBrushInstance {
    */
   getModelSpaceBrush(): SolidBrush {
     const modelBrush = this.brush.clone();
-    modelBrush.transformVertices(this.getLocalMatrix());
+    modelBrush.transformVertices(this.getModelSpaceMatrix());
     return modelBrush;
   }
 

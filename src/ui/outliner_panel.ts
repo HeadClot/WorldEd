@@ -4,6 +4,7 @@ import { SelectionManager } from '../selection/object/selection_manager.js';
 import { ContextMenu, ContextMenuItem } from './context_menu.js';
 import { hexToRgb } from '../utils/color_utils.js';
 import { OutlinerTree } from './outliner/outliner_tree.js';
+import type { OutlinerDropPlacement } from './outliner/outliner_drop_placement.js';
 import { collectMeshesUnder } from '../utils/hierarchy_utils.js';
 import { collapseToHierarchyRoots } from '../utils/hierarchy_selection.js';
 import { SolidModel } from '../solid/model/solid_model.js';
@@ -54,10 +55,15 @@ export type OutlinerLockCallback = (obj: THREE.Object3D) => void;
 /**
  * Callback type for hierarchy reparent via drag-and-drop.
  *
- * @param dragged The object being moved.
+ * @param dragged Objects being moved (multi-select expands to the full set).
  * @param dropTarget The object that received the drop.
+ * @param placement Vertical drop placement relative to the target row.
  */
-export type OutlinerReparentCallback = (dragged: THREE.Object3D, dropTarget: THREE.Object3D) => void;
+export type OutlinerReparentCallback = (
+  dragged: readonly THREE.Object3D[],
+  dropTarget: THREE.Object3D,
+  placement: OutlinerDropPlacement,
+) => void;
 
 /**
  * Hierarchical scene object panel with tree rendering. Displays scene objects
@@ -266,7 +272,7 @@ export class OutlinerPanel {
     this.tree.onToggleLock((obj) => this.onToggleLock(obj));
     this.tree.onRenameObject((obj, newName) => this.onRenameFromOutliner(obj, newName));
     this.tree.onContextMenu((obj, x, y) => this.showContextMenu(obj, x, y));
-    this.tree.onReparentObject((dragged, target) => this.onReparentFromTree(dragged, target));
+    this.tree.onReparentObject((dragged, target, placement) => this.onReparentFromTree(dragged, target, placement));
   }
 
   /**
@@ -381,15 +387,35 @@ export class OutlinerPanel {
   }
 
   /**
-   * Forwards hierarchy reparent requests to the registered callback.
+   * Forwards hierarchy reparent requests to the registered callback. When the
+   * drag source is multi-selected, every hierarchy-selected root is moved.
    *
    * @param dragged The object being dragged.
    * @param dropTarget The drop target object.
+   * @param placement Vertical drop placement relative to the target row.
    */
-  private onReparentFromTree(dragged: THREE.Object3D, dropTarget: THREE.Object3D): void {
-    if (this.reparentCallback) {
-      this.reparentCallback(dragged, dropTarget);
+  private onReparentFromTree(
+    dragged: THREE.Object3D,
+    dropTarget: THREE.Object3D,
+    placement: OutlinerDropPlacement,
+  ): void {
+    if (!this.reparentCallback) return;
+    this.reparentCallback(this.collectObjectsForReparent(dragged), dropTarget, placement);
+  }
+
+  /**
+   * Builds the set of objects to reparent for a drop. Dragging a selected row
+   * moves the whole multi-selection (outermost roots only). Dragging an
+   * unselected row moves only that row.
+   *
+   * @param dragged The row that started the drag.
+   * @returns Objects to pass into the reparent handler.
+   */
+  private collectObjectsForReparent(dragged: THREE.Object3D): THREE.Object3D[] {
+    if (!this.hierarchySelection.has(dragged)) {
+      return [dragged];
     }
+    return collapseToHierarchyRoots(Array.from(this.hierarchySelection));
   }
 
   /**
@@ -453,17 +479,24 @@ export class OutlinerPanel {
   }
 
   /**
-   * Builds the array of context menu items for an object.
+   * Builds the array of context menu items for an object. Uses the shared menu
+   * entry model (actions + real separators) so styling matches File/Edit.
    *
    * @param obj The object for which to build menu items.
    * @returns An array of context menu item configurations.
    */
   private buildContextItems(obj: THREE.Object3D): ContextMenuItem[] {
     const items: ContextMenuItem[] = [];
-    items.push(...this.buildEditMenuItems(obj));
-    items.push(this.buildSeparatorItem());
-    items.push(...this.buildGroupMenuItems(obj));
-    items.push(this.buildSeparatorItem());
+    const editItems = this.buildEditMenuItems(obj);
+    const groupItems = this.buildGroupMenuItems(obj);
+    items.push(...editItems);
+    if (editItems.length > 0 && groupItems.length > 0) {
+      items.push(this.buildSeparatorItem());
+    }
+    items.push(...groupItems);
+    if (items.length > 0) {
+      items.push(this.buildSeparatorItem());
+    }
     items.push(this.buildVisibilityMenuItem(obj));
     return items;
   }
@@ -479,6 +512,7 @@ export class OutlinerPanel {
     const duplicateCallback = this.duplicateCallback;
     if (duplicateCallback) {
       items.push({
+        kind: 'action',
         label: 'Duplicate',
         callback: () => duplicateCallback(obj),
       });
@@ -486,6 +520,7 @@ export class OutlinerPanel {
     const deleteCallback = this.deleteCallback;
     if (deleteCallback) {
       items.push({
+        kind: 'action',
         label: 'Delete',
         callback: () => deleteCallback(obj),
       });
@@ -503,6 +538,7 @@ export class OutlinerPanel {
     const items: ContextMenuItem[] = [];
     if (this.groupCallback) {
       items.push({
+        kind: 'action',
         label: 'Group',
         callback: () => this.onGroup(obj),
       });
@@ -510,6 +546,7 @@ export class OutlinerPanel {
     const ungroupCallback = this.ungroupCallback;
     if (ungroupCallback && obj instanceof THREE.Group) {
       items.push({
+        kind: 'action',
         label: 'Ungroup',
         callback: () => ungroupCallback(obj),
       });
@@ -525,21 +562,19 @@ export class OutlinerPanel {
    */
   private buildVisibilityMenuItem(obj: THREE.Object3D): ContextMenuItem {
     return {
+      kind: 'action',
       label: 'Toggle Visibility',
       callback: () => this.onToggleVisibility(obj),
     };
   }
 
   /**
-   * Builds a separator menu item for the context menu.
+   * Builds a styled separator for the shared menu panel.
    *
    * @returns A separator menu item configuration.
    */
   private buildSeparatorItem(): ContextMenuItem {
-    return {
-      label: '---',
-      callback: () => {},
-    };
+    return { kind: 'separator' };
   }
 
   /**

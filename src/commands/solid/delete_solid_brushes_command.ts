@@ -9,6 +9,10 @@ interface SolidBrushDeleteSnapshot {
   model: SolidModel;
   instance: SolidBrushInstance;
   listIndex: number;
+  /** Scene parent of the preview mesh before delete (root or CSG group). */
+  parent: THREE.Object3D | null;
+  /** Sibling index under that parent for order restore. */
+  siblingIndex: number;
 }
 
 /**
@@ -101,7 +105,9 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
     const listIndex = model.getBrushes().findIndex((entry) => entry.id === brush.id);
     if (listIndex < 0) return null;
     brush.pullTransformFromMesh();
-    return { model, instance: brush, listIndex };
+    const parent = mesh.parent;
+    const siblingIndex = parent ? parent.children.indexOf(mesh) : 0;
+    return { model, instance: brush, listIndex, parent, siblingIndex };
   }
 
   /** Removes all captured brushes without disposing mesh resources. */
@@ -112,14 +118,33 @@ export class DeleteSolidBrushesCommand implements UndoCommand {
   }
 
   /**
-   * Re-inserts one deleted brush at its original evaluation index.
+   * Re-inserts one deleted brush at its original evaluation index. Nested
+   * brushes are restored under their solid CSG group without reordering
+   * root-level brush siblings (which would shove the group above other
+   * children).
    *
    * @param snapshot Delete snapshot to restore.
    */
   private restoreSnapshot(snapshot: SolidBrushDeleteSnapshot): void {
     if (snapshot.model.findBrush(snapshot.instance.id)) return;
     snapshot.instance.pushTransformToMesh();
-    snapshot.model.insertBrushInstance(snapshot.instance, snapshot.listIndex);
+    const hierarchy = this.buildNestedHierarchyPlacement(snapshot);
+    snapshot.model.insertBrushInstance(snapshot.instance, snapshot.listIndex, 2, hierarchy, false);
+  }
+
+  /**
+   * Builds nested hierarchy placement for undo when the brush lived under a
+   * solid CSG group. Root-level brushes omit placement so evaluation-list
+   * sibling ordering applies.
+   *
+   * @param snapshot Delete snapshot with parent/sibling capture.
+   * @returns Hierarchy placement, or undefined for root-level brushes.
+   */
+  private buildNestedHierarchyPlacement(
+    snapshot: SolidBrushDeleteSnapshot,
+  ): { parent: THREE.Object3D; siblingIndex: number } | undefined {
+    if (!snapshot.parent || snapshot.parent === snapshot.model.root) return undefined;
+    return { parent: snapshot.parent, siblingIndex: snapshot.siblingIndex };
   }
 
   /** Rebuilds every solid model touched by the current snapshots. */

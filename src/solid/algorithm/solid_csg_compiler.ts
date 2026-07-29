@@ -7,6 +7,7 @@ import { SolidCompileCache } from './solid_compile_cache.js';
 import { SolidCompilePlanner } from './solid_compile_planner.js';
 import type { PreparedBrush, SolidCompileOptions, SolidCompileStats } from './solid_compile_types.js';
 import { SolidCompiledPolygon } from './solid_compiled_polygon.js';
+import { SolidCsgTree } from './solid_csg_tree.js';
 import { SolidFragmentFinalizer } from './solid_fragment_finalizer.js';
 import { SolidFragmentRouter } from './solid_fragment_router.js';
 import { SolidMembershipEvaluator } from './solid_membership_evaluator.js';
@@ -115,11 +116,13 @@ export class SolidCsgCompiler {
    */
   invalidateBrush(brushId: string): void {
     this.cache.removeBrush(brushId);
+    this.router.invalidateRoutingTable(brushId);
   }
 
   /** Clears all compile caches (forces the next compile to rebuild everything). */
   clearCache(): void {
     this.cache.clear();
+    this.router.clearRoutingTables();
     this.lastUpdateBrushIds = [];
   }
 
@@ -176,7 +179,8 @@ export class SolidCsgCompiler {
 
   /**
    * Shared setup: prepare brushes, detect intersecting ops, build overlap
-   * graph.
+   * graph, and install the hierarchical CSG tree when a solid root is
+   * provided.
    *
    * @param instances Source instances.
    * @param options Compile options.
@@ -191,6 +195,7 @@ export class SolidCsgCompiler {
     }
     this.applyIntersectingFlag(prepared);
     this.applyInvertedWorldFlag(options.invertedWorld === true);
+    this.installCsgTree(prepared, options);
     this.planner.buildOverlapGraph(
       prepared,
       options,
@@ -199,6 +204,20 @@ export class SolidCsgCompiler {
     );
     this.membership.setMembershipIndex(new BrushSpatialIndex(prepared, this.boundsPad));
     return prepared;
+  }
+
+  /**
+   * Builds and installs the hierarchical CSG tree for membership and routing.
+   *
+   * @param prepared Prepared brushes in evaluation order.
+   * @param options Compile options (optional solid root).
+   */
+  private installCsgTree(prepared: PreparedBrush[], options: SolidCompileOptions): void {
+    const tree = options.solidRoot
+      ? SolidCsgTree.fromSceneGraph(options.solidRoot, prepared)
+      : SolidCsgTree.fromPreparedFlat(prepared);
+    this.membership.setCsgTree(tree);
+    this.router.setCsgTree(tree);
   }
 
   /**
@@ -417,6 +436,7 @@ export class SolidCsgCompiler {
   /** Records empty-compile stats and clears caches when no brushes are visible. */
   private recordEmptyCompile(): void {
     this.cache.clear();
+    this.router.clearRoutingTables();
     this.lastUpdateBrushIds = [];
     this.lastStats = {
       fullRebuild: true,
@@ -428,6 +448,8 @@ export class SolidCsgCompiler {
 
   /**
    * Detects intersecting operations and propagates the flag to collaborators.
+   * Includes brush operations only; hierarchical group ops are handled by the
+   * CSG tree evaluator regardless of this flag.
    *
    * @param prepared Prepared brushes.
    */

@@ -82,7 +82,7 @@ export class BoundsDragController {
     pickElement: HTMLElement,
     event: MouseEvent,
     handles: GizmoHandle[],
-    selectedObjects: THREE.Mesh[],
+    selectedObjects: THREE.Object3D[],
     pivot: THREE.Vector3,
     gizmoGroup: THREE.Group,
     viewPlane: CadViewPlane = 'xyz',
@@ -191,7 +191,7 @@ export class BoundsDragController {
    * @param event The pointer event.
    * @param objects Selected meshes.
    */
-  handleMove(camera: THREE.Camera, pickElement: HTMLElement, event: MouseEvent, objects: THREE.Mesh[]): void {
+  handleMove(camera: THREE.Camera, pickElement: HTMLElement, event: MouseEvent, objects: THREE.Object3D[]): void {
     if (this.session.isBoundsFaceMove) {
       if (!this.session.boundsPointerMoved) return;
       this.handleFaceTranslate(camera, pickElement, event, objects);
@@ -219,7 +219,7 @@ export class BoundsDragController {
     pickElement: HTMLElement,
     event: MouseEvent,
     handles: GizmoHandle[],
-    selectedObjects: THREE.Mesh[],
+    selectedObjects: THREE.Object3D[],
     pivot: THREE.Vector3,
     gizmoGroup: THREE.Group,
   ): boolean {
@@ -251,7 +251,7 @@ export class BoundsDragController {
     pickElement: HTMLElement,
     event: MouseEvent,
     handles: GizmoHandle[],
-    selectedObjects: THREE.Mesh[],
+    selectedObjects: THREE.Object3D[],
     pivot: THREE.Vector3,
     viewPlane: CadViewPlane,
   ): boolean {
@@ -319,7 +319,7 @@ export class BoundsDragController {
     camera: THREE.Camera,
     pickElement: HTMLElement,
     event: MouseEvent,
-    selectedObjects: THREE.Mesh[],
+    selectedObjects: THREE.Object3D[],
     pivot: THREE.Vector3,
     gizmoGroup: THREE.Group,
   ): boolean {
@@ -363,7 +363,7 @@ export class BoundsDragController {
     camera: THREE.Camera,
     pickElement: HTMLElement,
     event: MouseEvent,
-    selectedObjects: THREE.Mesh[],
+    selectedObjects: THREE.Object3D[],
     pivot: THREE.Vector3,
     bounds: OrientedBoundsData,
     face: BoundsFace,
@@ -401,7 +401,7 @@ export class BoundsDragController {
     camera: THREE.Camera,
     pickElement: HTMLElement,
     event: MouseEvent,
-    objects: THREE.Mesh[],
+    objects: THREE.Object3D[],
   ): void {
     if (!this.session.initialMousePosition) return;
     const current = this.gizmoRaycaster.projectMouseToPlane(camera, pickElement, event, this.session.boundsMovePlane);
@@ -420,7 +420,12 @@ export class BoundsDragController {
    * @param event The pointer event.
    * @param objects Selected meshes.
    */
-  private handleResize(camera: THREE.Camera, pickElement: HTMLElement, event: MouseEvent, objects: THREE.Mesh[]): void {
+  private handleResize(
+    camera: THREE.Camera,
+    pickElement: HTMLElement,
+    event: MouseEvent,
+    objects: THREE.Object3D[],
+  ): void {
     if (!this.session.initialMousePosition || !this.session.activeBoundsFace || !this.session.startBounds) {
       return;
     }
@@ -483,12 +488,12 @@ export class BoundsDragController {
    * @param objects Selected meshes.
    * @param deltaAlongNormal Snapped face displacement.
    */
-  private applyResizeToObjects(objects: THREE.Mesh[], deltaAlongNormal: number): void {
+  private applyResizeToObjects(objects: THREE.Object3D[], deltaAlongNormal: number): void {
     if (!this.session.activeBoundsFace || !this.session.startBounds) return;
     const multi = objects.length > 1;
-    objects.forEach((mesh) => {
-      const startPos = this.session.initialPositions.get(mesh);
-      const startScale = this.session.initialScales.get(mesh);
+    objects.forEach((object) => {
+      const startPos = this.session.initialPositions.get(object);
+      const startScale = this.session.initialScales.get(object);
       if (!startPos || !startScale) return;
       const result = multi
         ? computeOneSidedMultiMeshResize(
@@ -505,8 +510,8 @@ export class BoundsDragController {
             this.session.activeBoundsFace!,
             deltaAlongNormal,
           );
-      mesh.position.copy(result.position);
-      mesh.scale.copy(result.scale);
+      object.position.copy(result.position);
+      object.scale.copy(result.scale);
     });
     this.rebakeLockedTextures(objects, true, true);
   }
@@ -514,13 +519,15 @@ export class BoundsDragController {
   /**
    * Applies content texture-lock policy after a transform.
    *
-   * @param objects Meshes that just transformed.
+   * @param objects Objects that just transformed (non-meshes ignored).
    * @param moved True when translation or rotation changed.
    * @param scaled True when scale changed.
    */
-  rebakeLockedTextures(objects: THREE.Mesh[], moved: boolean = true, scaled: boolean = true): void {
+  rebakeLockedTextures(objects: THREE.Object3D[], moved: boolean = true, scaled: boolean = true): void {
     if (!this.textureLock) return;
-    this.textureLock.applyContentTransformPolicy(objects, moved, scaled);
+    const meshes = objects.filter((object): object is THREE.Mesh => object instanceof THREE.Mesh);
+    if (meshes.length === 0) return;
+    this.textureLock.applyContentTransformPolicy(meshes, moved, scaled);
   }
 
   /**

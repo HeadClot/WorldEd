@@ -3,6 +3,7 @@ import { Theme } from '../../theme.js';
 import { hexToRgb } from '../../utils/color_utils.js';
 import { ObjectIconFactory } from './object_icon_factory.js';
 import { InlineRenameInput } from '../inline_rename_input.js';
+import { OUTLINER_BASE_PADDING_PX, OUTLINER_CHEVRON_WIDTH_PX, OUTLINER_INDENT_PX } from './outliner_drop_placement.js';
 
 /**
  * Callback type for item selection events.
@@ -59,6 +60,14 @@ export type ItemContextMenuCallback = (obj: THREE.Object3D, x: number, y: number
 export type ItemDragStartCallback = (obj: THREE.Object3D, event: DragEvent) => void;
 
 /**
+ * Callback type for drag-hover events on an outliner row (insert line updates).
+ *
+ * @param target The Three.js object under the pointer.
+ * @param event The native drag event.
+ */
+export type ItemDragHoverCallback = (target: THREE.Object3D, event: DragEvent) => void;
+
+/**
  * Callback type for drop events on an outliner row.
  *
  * @param target The Three.js object under the drop.
@@ -67,12 +76,21 @@ export type ItemDragStartCallback = (obj: THREE.Object3D, event: DragEvent) => v
 export type ItemDropCallback = (target: THREE.Object3D, event: DragEvent) => void;
 
 /**
+ * Callback type for drag-end events on an outliner row.
+ *
+ * @param obj The Three.js object that was dragged.
+ */
+export type ItemDragEndCallback = (obj: THREE.Object3D) => void;
+
+/**
  * Single row in the outliner tree representing one Three.js object. Displays
  * icon, name, expand chevron, visibility and lock toggles.
  */
 export class OutlinerItem {
   private rowElement: HTMLElement;
   private iconElement: HTMLElement;
+  private iconGlyphElement: HTMLElement;
+  private iconBadgeElement: HTMLElement;
   private nameElement: HTMLSpanElement;
   private chevronElement: HTMLElement;
   private visibilityElement: HTMLElement;
@@ -92,7 +110,9 @@ export class OutlinerItem {
   private onRename: ItemRenameCallback | null;
   private onContextMenu: ItemContextMenuCallback | null;
   private onDragStartCallback: ItemDragStartCallback | null;
+  private onDragHoverCallback: ItemDragHoverCallback | null;
   private onDropCallback: ItemDropCallback | null;
+  private onDragEndCallback: ItemDragEndCallback | null;
   private hasChildren: boolean;
 
   /**
@@ -119,9 +139,13 @@ export class OutlinerItem {
     this.onRename = null;
     this.onContextMenu = null;
     this.onDragStartCallback = null;
+    this.onDragHoverCallback = null;
     this.onDropCallback = null;
+    this.onDragEndCallback = null;
     this.rowElement = document.createElement('div');
     this.iconElement = document.createElement('span');
+    this.iconGlyphElement = document.createElement('span');
+    this.iconBadgeElement = document.createElement('span');
     this.nameElement = document.createElement('span');
     this.chevronElement = document.createElement('span');
     this.visibilityElement = document.createElement('span');
@@ -148,6 +172,25 @@ export class OutlinerItem {
   }
 
   /**
+   * Returns the hierarchy indent depth of this row.
+   *
+   * @returns Depth starting at 0 for direct root children.
+   */
+  getDepth(): number {
+    return this.depth;
+  }
+
+  /**
+   * Returns the name label element (text column start for insert-line
+   * geometry).
+   *
+   * @returns Name span element.
+   */
+  getNameElement(): HTMLSpanElement {
+    return this.nameElement;
+  }
+
+  /**
    * Sets the selection state and updates visual appearance.
    *
    * @param selected True to highlight the item as selected.
@@ -169,7 +212,7 @@ export class OutlinerItem {
   setDepth(depth: number): void {
     if (this.depth === depth) return;
     this.depth = depth;
-    this.rowElement.style.paddingLeft = `${4 + this.depth * 16}px`;
+    this.rowElement.style.paddingLeft = `${OUTLINER_BASE_PADDING_PX + this.depth * OUTLINER_INDENT_PX}px`;
   }
 
   /**
@@ -211,6 +254,14 @@ export class OutlinerItem {
   setLockState(locked: boolean): void {
     this.isLocked = locked;
     this.updateLockIcon();
+  }
+
+  /**
+   * Re-reads the object type icon (and operation badge) from the live object.
+   * Used when CSG operation or object kind changes without recreating the row.
+   */
+  refreshIcon(): void {
+    this.applyIconFromObject();
   }
 
   /**
@@ -277,12 +328,52 @@ export class OutlinerItem {
   }
 
   /**
+   * Registers the callback for drag-hover events used to place the insert line.
+   *
+   * @param callback The function to call while dragging over this row.
+   */
+  onDragHoverRequest(callback: ItemDragHoverCallback): void {
+    this.onDragHoverCallback = callback;
+  }
+
+  /**
    * Registers the callback for drop events.
    *
    * @param callback The function to call when an item is dropped here.
    */
   onDropRequest(callback: ItemDropCallback): void {
     this.onDropCallback = callback;
+  }
+
+  /**
+   * Registers the callback for drag-end events.
+   *
+   * @param callback The function to call when a drag ends.
+   */
+  onDragEndRequest(callback: ItemDragEndCallback): void {
+    this.onDragEndCallback = callback;
+  }
+
+  /**
+   * Sets a reduced opacity while this row is the active drag source.
+   *
+   * @param isDragging True when this row is being dragged.
+   */
+  setDragSourceVisual(isDragging: boolean): void {
+    this.rowElement.style.opacity = isDragging ? '0.55' : '1';
+  }
+
+  /**
+   * Highlights the row as a nest-into target (middle band on containers).
+   *
+   * @param isIntoTarget True when the pointer is in the into zone.
+   */
+  setIntoDropHighlight(isIntoTarget: boolean): void {
+    if (isIntoTarget) {
+      this.rowElement.style.outline = `1px solid ${hexToRgb(Theme.selectionColor)}`;
+      return;
+    }
+    this.rowElement.style.outline = 'none';
   }
 
   /** Starts inline rename editing for this item. */
@@ -332,24 +423,45 @@ export class OutlinerItem {
   private applyRowStyles(): void {
     this.rowElement.style.display = 'flex';
     this.rowElement.style.alignItems = 'center';
-    this.rowElement.style.padding = '3px 4px';
-    this.rowElement.style.paddingLeft = `${4 + this.depth * 16}px`;
+    this.rowElement.style.boxSizing = 'border-box';
+    this.rowElement.style.padding = '0 4px';
+    this.rowElement.style.paddingLeft = `${OUTLINER_BASE_PADDING_PX + this.depth * OUTLINER_INDENT_PX}px`;
     this.rowElement.style.cursor = 'pointer';
     this.rowElement.style.fontFamily = 'monospace';
     this.rowElement.style.fontSize = '12px';
+    this.rowElement.style.lineHeight = '1';
     this.rowElement.style.color = Theme.buttonTextColor;
     this.rowElement.style.borderRadius = '2px';
     this.rowElement.style.userSelect = 'none';
-    this.rowElement.style.minHeight = '20px';
+    this.rowElement.style.height = '22px';
+    this.rowElement.style.minHeight = '22px';
+  }
+
+  /**
+   * Styles a fixed-height flex slot so chevrons, icons, and toggles share the
+   * same vertical center inside the row.
+   *
+   * @param element Slot element.
+   * @param widthPx Optional fixed width.
+   */
+  private styleCenteredSlot(element: HTMLElement, widthPx?: number): void {
+    element.style.display = 'inline-flex';
+    element.style.alignItems = 'center';
+    element.style.justifyContent = 'center';
+    element.style.flexShrink = '0';
+    element.style.height = '16px';
+    element.style.lineHeight = '1';
+    element.style.boxSizing = 'border-box';
+    if (widthPx !== undefined) {
+      element.style.width = `${widthPx}px`;
+    }
   }
 
   /** Builds the expand/collapse chevron element. */
   private buildChevron(): void {
-    this.chevronElement.style.width = '16px';
-    this.chevronElement.style.textAlign = 'center';
+    this.styleCenteredSlot(this.chevronElement, OUTLINER_CHEVRON_WIDTH_PX);
     this.chevronElement.style.color = '#888888';
     this.chevronElement.style.fontSize = '10px';
-    this.chevronElement.style.flexShrink = '0';
     if (!this.hasChildren) {
       this.chevronElement.style.visibility = 'hidden';
     }
@@ -362,26 +474,188 @@ export class OutlinerItem {
     });
   }
 
-  /** Updates the chevron character based on expanded state. */
+  /** Updates the chevron character and visibility based on children/expanded. */
   private updateChevron(): void {
-    if (!this.hasChildren) return;
+    if (!this.hasChildren) {
+      this.chevronElement.style.visibility = 'hidden';
+      this.chevronElement.textContent = '';
+      return;
+    }
+    this.chevronElement.style.visibility = 'visible';
     this.chevronElement.textContent = this.isExpanded ? '▼' : '▶';
   }
 
-  /** Builds the object type icon element. */
+  /** Builds the object type icon container and fills glyph / badge. */
   private buildIcon(): void {
-    const icon = ObjectIconFactory.getIcon(this.object);
-    this.iconElement.textContent = icon.character;
-    this.iconElement.style.color = icon.color;
+    this.styleCenteredSlot(this.iconElement, 14);
+    this.iconElement.style.position = 'relative';
     this.iconElement.style.marginRight = '4px';
-    this.iconElement.style.flexShrink = '0';
     this.iconElement.style.fontSize = '12px';
+    this.iconElement.style.overflow = 'visible';
+    this.styleCenteredSlot(this.iconGlyphElement, 14);
+    this.iconBadgeElement.style.position = 'absolute';
+    this.iconBadgeElement.style.left = '50%';
+    this.iconBadgeElement.style.top = '58%';
+    this.iconBadgeElement.style.transform = 'translate(-50%, -50%)';
+    this.iconBadgeElement.style.pointerEvents = 'none';
+    this.iconBadgeElement.style.display = 'none';
+    this.iconElement.appendChild(this.iconGlyphElement);
+    this.iconElement.appendChild(this.iconBadgeElement);
+    this.applyIconFromObject();
+  }
+
+  /** Applies type icon character, color, and optional operation badge. */
+  private applyIconFromObject(): void {
+    const icon = ObjectIconFactory.getIcon(this.object);
+    this.applyIconMarker(this.iconGlyphElement, {
+      character: icon.character,
+      color: icon.color,
+      cssDot: icon.cssDot === true,
+      dotSizePx: 8,
+      nudgeYPx: icon.cssDotNudgeYPx ?? 0,
+    });
+    if (icon.badgeCssDot && icon.badgeColor) {
+      this.applyOverlayDot(this.iconBadgeElement, icon.badgeColor, 5);
+      return;
+    }
+    if (icon.badgeCharacter && icon.badgeColor) {
+      this.applyIconMarker(this.iconBadgeElement, {
+        character: icon.badgeCharacter,
+        color: icon.badgeColor,
+        cssDot: false,
+        dotSizePx: 5,
+        nudgeYPx: 0,
+      });
+      this.iconBadgeElement.style.display = 'inline-flex';
+      return;
+    }
+    this.hideIconBadge();
+  }
+
+  /**
+   * Renders either a text glyph or a CSS circle into an icon slot.
+   *
+   * @param element Target glyph or badge element.
+   * @param marker Render options.
+   */
+  private applyIconMarker(
+    element: HTMLElement,
+    marker: {
+      character: string;
+      color: string;
+      cssDot: boolean;
+      dotSizePx: number;
+      nudgeYPx: number;
+    },
+  ): void {
+    if (marker.cssDot) {
+      this.applyCenteredCssDot(element, marker.color, marker.dotSizePx, marker.nudgeYPx);
+      return;
+    }
+    this.clearCssDotStyles(element);
+    element.textContent = marker.character;
+    element.style.color = marker.color;
+    element.style.fontSize = '12px';
+  }
+
+  /**
+   * Paints a pure CSS circle centered in the icon slot. Absolute placement
+   * keeps green / red / blue brush dots on the same box model; optional nudge
+   * counters warm-red chromostereopsis on dark backgrounds.
+   *
+   * @param element Glyph element that becomes the circle.
+   * @param color Dot fill color.
+   * @param sizePx Dot diameter in pixels.
+   * @param nudgeYPx Extra downward offset in pixels (0 = true center).
+   */
+  private applyCenteredCssDot(element: HTMLElement, color: string, sizePx: number, nudgeYPx: number): void {
+    element.textContent = '';
+    element.style.display = 'block';
+    element.style.position = 'absolute';
+    element.style.left = '50%';
+    element.style.top = nudgeYPx === 0 ? '50%' : `calc(50% + ${nudgeYPx}px)`;
+    element.style.transform = 'translate(-50%, -50%)';
+    element.style.margin = '0';
+    element.style.padding = '0';
+    element.style.border = 'none';
+    element.style.color = 'transparent';
+    element.style.backgroundColor = color;
+    element.style.borderRadius = '50%';
+    element.style.width = `${sizePx}px`;
+    element.style.height = `${sizePx}px`;
+    element.style.fontSize = '0';
+    element.style.lineHeight = '0';
+    element.style.boxShadow = '0 0 0 1px rgba(0, 0, 0, 0.35)';
+  }
+
+  /**
+   * Places a small CSS operation dot centered over the folder body.
+   *
+   * @param element Badge element.
+   * @param color Dot fill color.
+   * @param sizePx Dot diameter in pixels.
+   */
+  private applyOverlayDot(element: HTMLElement, color: string, sizePx: number): void {
+    element.textContent = '';
+    element.style.display = 'block';
+    element.style.position = 'absolute';
+    element.style.left = '50%';
+    element.style.top = '58%';
+    element.style.transform = 'translate(-50%, -50%)';
+    element.style.margin = '0';
+    element.style.padding = '0';
+    element.style.border = 'none';
+    element.style.backgroundColor = color;
+    element.style.borderRadius = '50%';
+    element.style.width = `${sizePx}px`;
+    element.style.height = `${sizePx}px`;
+    element.style.boxShadow = '0 0 0 1px rgba(0, 0, 0, 0.35)';
+    element.style.fontSize = '0';
+    element.style.lineHeight = '0';
+    element.style.color = 'transparent';
+  }
+
+  /** Hides and resets the folder operation badge. */
+  private hideIconBadge(): void {
+    this.iconBadgeElement.textContent = '';
+    this.clearCssDotStyles(this.iconBadgeElement);
+    this.iconBadgeElement.style.display = 'none';
+    this.iconBadgeElement.style.boxShadow = 'none';
+  }
+
+  /**
+   * Clears CSS-circle styles so a slot can show a text glyph again.
+   *
+   * @param element Icon slot element.
+   */
+  private clearCssDotStyles(element: HTMLElement): void {
+    element.style.display = 'inline-flex';
+    element.style.position = 'static';
+    element.style.left = '';
+    element.style.top = '';
+    element.style.transform = '';
+    element.style.margin = '';
+    element.style.padding = '';
+    element.style.border = '';
+    element.style.backgroundColor = 'transparent';
+    element.style.borderRadius = '0';
+    element.style.width = '14px';
+    element.style.height = '16px';
+    element.style.fontSize = '12px';
+    element.style.lineHeight = '1';
+    element.style.boxShadow = 'none';
+    element.style.color = '';
   }
 
   /** Builds the name text span element. */
   private buildName(): void {
     this.nameElement.textContent = this.object.name || 'Unnamed';
     this.nameElement.style.flex = '1';
+    this.nameElement.style.minWidth = '0';
+    this.nameElement.style.display = 'flex';
+    this.nameElement.style.alignItems = 'center';
+    this.nameElement.style.height = '16px';
+    this.nameElement.style.lineHeight = '16px';
     this.nameElement.style.overflow = 'hidden';
     this.nameElement.style.textOverflow = 'ellipsis';
     this.nameElement.style.whiteSpace = 'nowrap';
@@ -393,10 +667,10 @@ export class OutlinerItem {
 
   /** Builds the visibility toggle icon element. */
   private buildVisibilityIcon(): void {
+    this.styleCenteredSlot(this.visibilityElement, 16);
     this.visibilityElement.style.cursor = 'pointer';
     this.visibilityElement.style.marginLeft = '4px';
-    this.visibilityElement.style.flexShrink = '0';
-    this.visibilityElement.style.fontSize = '14px';
+    this.visibilityElement.style.fontSize = '12px';
     this.updateVisibilityIcon();
     this.visibilityElement.addEventListener('click', (event: MouseEvent) => {
       event.stopPropagation();
@@ -414,9 +688,9 @@ export class OutlinerItem {
 
   /** Builds the lock toggle icon element. */
   private buildLockIcon(): void {
+    this.styleCenteredSlot(this.lockElement, 16);
     this.lockElement.style.cursor = 'pointer';
     this.lockElement.style.marginLeft = '2px';
-    this.lockElement.style.flexShrink = '0';
     this.lockElement.style.fontSize = '12px';
     this.lockElement.title = 'Lock (prevent edit/delete/transform)';
     this.updateLockIcon();
@@ -466,36 +740,91 @@ export class OutlinerItem {
     });
   }
 
-  /** Binds HTML5 drag-and-drop events used for hierarchy reparenting. */
+  /**
+   * Binds HTML5 drag-and-drop events. Visual insert feedback is owned by the
+   * tree; this row only reports hover/drop coordinates.
+   */
   private bindDragAndDropEvents(): void {
     this.rowElement.addEventListener('dragstart', (event: DragEvent) => {
-      event.stopPropagation();
-      if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', this.object.uuid);
-      }
-      if (this.onDragStartCallback) {
-        this.onDragStartCallback(this.object, event);
-      }
+      this.handleRowDragStart(event);
+    });
+    this.rowElement.addEventListener('dragend', () => {
+      this.handleRowDragEnd();
+    });
+    this.rowElement.addEventListener('dragenter', (event: DragEvent) => {
+      this.handleRowDragHover(event);
     });
     this.rowElement.addEventListener('dragover', (event: DragEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'move';
-      }
-      this.rowElement.style.outline = `1px solid ${hexToRgb(Theme.selectionColor)}`;
+      this.handleRowDragHover(event);
     });
-    this.rowElement.addEventListener('dragleave', () => {
-      this.rowElement.style.outline = 'none';
+    this.rowElement.addEventListener('dragleave', (event: DragEvent) => {
+      this.handleRowDragLeave(event);
     });
     this.rowElement.addEventListener('drop', (event: DragEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      this.rowElement.style.outline = 'none';
-      if (this.onDropCallback) {
-        this.onDropCallback(this.object, event);
-      }
+      this.handleRowDrop(event);
     });
+  }
+
+  /**
+   * Starts a row drag and notifies the tree.
+   *
+   * @param event Native dragstart event.
+   */
+  private handleRowDragStart(event: DragEvent): void {
+    event.stopPropagation();
+    if (this.renameInput) {
+      event.preventDefault();
+      return;
+    }
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', this.object.uuid);
+    }
+    this.setDragSourceVisual(true);
+    this.onDragStartCallback?.(this.object, event);
+  }
+
+  /** Ends a row drag and notifies the tree. */
+  private handleRowDragEnd(): void {
+    this.setDragSourceVisual(false);
+    this.setIntoDropHighlight(false);
+    this.onDragEndCallback?.(this.object);
+  }
+
+  /**
+   * Accepts drag-over and reports hover so the tree can place the insert line.
+   *
+   * @param event Native dragenter/dragover event.
+   */
+  private handleRowDragHover(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    this.onDragHoverCallback?.(this.object, event);
+  }
+
+  /**
+   * Clears into-highlight when the pointer leaves this row for another node.
+   *
+   * @param event Native dragleave event.
+   */
+  private handleRowDragLeave(event: DragEvent): void {
+    const related = event.relatedTarget;
+    if (related instanceof Node && this.rowElement.contains(related)) return;
+    this.setIntoDropHighlight(false);
+  }
+
+  /**
+   * Completes a drop on this row and notifies the tree.
+   *
+   * @param event Native drop event.
+   */
+  private handleRowDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.setIntoDropHighlight(false);
+    this.onDropCallback?.(this.object, event);
   }
 }

@@ -4,11 +4,14 @@ import { boundsContainPointPadded } from './bounds_overlap.js';
 import { BrushMembership } from './brush_membership.js';
 import { BrushSpatialIndex } from './brush_spatial_index.js';
 import type { PreparedBrush } from './solid_compile_types.js';
+import { SolidCsgTree } from './solid_csg_tree.js';
+import { SolidCsgTreeEvaluator } from './solid_csg_tree_evaluator.js';
 import { forEachSubjectAndPeersInOrder } from './subject_peer_order.js';
 
 /**
  * Evaluates solid membership and boundary status for CSG fragments using
- * ordered operations, spatial indexing, and scratch sample points.
+ * hierarchical trees, ordered operations, spatial indexing, and scratch sample
+ * points.
  */
 export class SolidMembershipEvaluator {
   private readonly membershipEpsilon: number;
@@ -20,6 +23,7 @@ export class SolidMembershipEvaluator {
   private hasIntersectingOperations = false;
   private invertedWorld = false;
   private membershipIndex: BrushSpatialIndex | null = null;
+  private csgTree: SolidCsgTree | null = null;
 
   /**
    * Creates a membership evaluator.
@@ -60,6 +64,16 @@ export class SolidMembershipEvaluator {
   }
 
   /**
+   * Installs the hierarchical CSG tree for the current compile. Null falls back
+   * to flat prepared order.
+   *
+   * @param tree Hierarchical tree, or null for flat membership.
+   */
+  setCsgTree(tree: SolidCsgTree | null): void {
+    this.csgTree = tree;
+  }
+
+  /**
    * Double-checks boundary status with solid-membership samples across the
    * face.
    *
@@ -86,9 +100,10 @@ export class SolidMembershipEvaluator {
   }
 
   /**
-   * Evaluates the ordered CSG expression at a point. With intersecting ops,
-   * always uses the full brush list (sequential ∩ of the prior solid). Without
-   * intersecting ops, uses spatial/local peer restriction for speed.
+   * Evaluates the ordered CSG expression at a point. Hierarchical trees always
+   * use full structural evaluation. With intersecting ops, always uses the full
+   * brush list. Without intersecting ops on flat trees, uses spatial/local peer
+   * restriction for speed.
    *
    * @param point Sample point in model space.
    * @param prepared Brush list in tree order.
@@ -96,6 +111,9 @@ export class SolidMembershipEvaluator {
    * @returns True when the point is inside the final solid.
    */
   evaluateSolidMembership(point: THREE.Vector3, prepared: PreparedBrush[], subjectIndex?: number): boolean {
+    if (this.csgTree && !this.csgTree.isFlat) {
+      return this.evaluateSolidMembershipHierarchical(point, prepared, subjectIndex);
+    }
     if (this.hasIntersectingOperations) {
       return this.evaluateSolidMembershipFull(point, prepared);
     }
@@ -106,6 +124,34 @@ export class SolidMembershipEvaluator {
   }
 
   /**
+   * Hierarchical membership through compound branches (group operations). When
+   * subjectIndex is set and no intersecting ops are present, only the subject
+   * and its overlapping peers are tested (non-peers are Outside).
+   *
+   * @param point Sample point.
+   * @param prepared Brush list.
+   * @param subjectIndex Optional subject for peer-local tests.
+   * @returns Solid membership.
+   */
+  evaluateSolidMembershipHierarchical(point: THREE.Vector3, prepared: PreparedBrush[], subjectIndex?: number): boolean {
+    if (!this.csgTree) {
+      return this.evaluateSolidMembershipFull(point, prepared);
+    }
+    const relevant =
+      subjectIndex !== undefined && !this.hasIntersectingOperations
+        ? this.buildPeerRelevantSet(prepared, subjectIndex)
+        : null;
+    return SolidCsgTreeEvaluator.evaluateMembershipFiltered(
+      point,
+      prepared,
+      this.csgTree,
+      this.invertedWorld,
+      (sample, entry) => this.pointInsidePreparedBrush(sample, entry),
+      relevant,
+    );
+  }
+
+  /**
    * Full tree-order membership including non-overlapping intersecting operands.
    *
    * @param point Sample point.
@@ -113,11 +159,41 @@ export class SolidMembershipEvaluator {
    * @returns Solid membership.
    */
   evaluateSolidMembershipFull(point: THREE.Vector3, prepared: PreparedBrush[]): boolean {
+    if (this.csgTree && !this.csgTree.isFlat) {
+      return this.evaluateSolidMembershipHierarchical(point, prepared);
+    }
     let inside = this.invertedWorld;
     for (const entry of prepared) {
       inside = this.evaluateOneBrushMembership(inside, point, entry);
     }
     return inside;
+  }
+
+  /**
+   * Builds subject + peer prepared indices for local hierarchical tests.
+   *
+   * @param prepared Prepared brushes.
+   * @param subjectIndex Subject index.
+   * @returns Relevant index set.
+   */
+  private buildPeerRelevantSet(prepared: PreparedBrush[], subjectIndex: number): Set<number> {
+    const subject = prepared[subjectIndex];
+    const relevant = new Set<number>(subject?.overlappingPeerIndices ?? []);
+    relevant.add(subjectIndex);
+    return relevant;
+  }
+
+  /**
+   * Returns whether a point is inside a prepared brush volume (bounds +
+   * planes).
+   *
+   * @param point Sample point.
+   * @param entry Prepared brush.
+   * @returns True when inside the brush.
+   */
+  private pointInsidePreparedBrush(point: THREE.Vector3, entry: PreparedBrush): boolean {
+    if (!this.boundsContainPoint(entry.bounds, point)) return false;
+    return BrushMembership.isInsidePlanes(point, entry.brush.planes, this.membershipEpsilon);
   }
 
   /**

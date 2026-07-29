@@ -34,6 +34,7 @@ import {
 } from './solid_model_authored_uv.js';
 import * as solidOps from './solid_model_ops.js';
 import type { SolidModelOpsHost } from './solid_model_ops.js';
+import { findSolidModelRoot, isSolidCsgGroup, isValidSolidTreeParent } from './solid_group.js';
 
 export {
   SOLID_MODEL_USERDATA_KEY,
@@ -244,20 +245,47 @@ export class SolidModel {
    *
    * @param size Cube edge length.
    * @param operation CSG operation.
+   * @param parent Optional solid root or solid CSG group to append under.
+   *   Defaults to the solid root when omitted or invalid.
+   * @param rebuildAfter When false, defers CSG so the caller can pose the brush
+   *   first (avoids a wasteful origin compile before spawn offset).
    * @returns Created brush instance.
    */
-  addBoxBrush(size: number = 1, operation: SolidOperation = SolidOperation.Additive): SolidBrushInstance {
+  addBoxBrush(
+    size: number = 1,
+    operation: SolidOperation = SolidOperation.Additive,
+    parent: THREE.Object3D | null = null,
+    rebuildAfter: boolean = true,
+  ): SolidBrushInstance {
     const counter = this.brushes.nextBrushCounter();
     const name = `Brush${padSolidDisplayNumber(counter)}`;
     const brush = SolidBrushFactory.createCenteredBox(size, size, size);
     const instance = new SolidBrushInstance(this.brushes.allocateBrushId(), name, brush, operation);
     const preview = SolidBrushVisual.createBoxPreview(name, size, operation);
     instance.attachMesh(preview);
-    this.root.add(preview);
+    const targetParent = this.resolveBrushInsertParent(parent);
+    targetParent.add(preview);
     this.brushes.appendPreparedBrush(instance);
+    this.syncBrushOrderFromScene();
     this.markBrushesDirty([instance.id]);
-    this.rebuild();
+    if (rebuildAfter) {
+      this.rebuild();
+    }
     return instance;
+  }
+
+  /**
+   * Chooses a valid hierarchy parent for a new brush under this solid.
+   *
+   * @param parent Requested parent, or null for the solid root.
+   * @returns Solid root or solid CSG group under this model.
+   */
+  resolveBrushInsertParent(parent: THREE.Object3D | null): THREE.Object3D {
+    if (!parent) return this.root;
+    if (isValidSolidTreeParent(this.root, parent, this.root)) {
+      return parent;
+    }
+    return this.root;
   }
 
   /**
@@ -325,15 +353,30 @@ export class SolidModel {
    * @param instance Brush instance to own.
    * @param listIndex Index in the brush evaluation list.
    * @param previewSize Size used when creating a default box preview.
+   * @param hierarchy Optional nested parent placement; skips root brush
+   *   reorder.
+   * @param rebuildAfter When false, only registers the brush and marks it dirty
+   *   so callers can batch a single compile.
    */
-  insertBrushInstance(instance: SolidBrushInstance, listIndex: number, previewSize: number = 2): void {
-    this.brushes.registerBrushAt(instance, listIndex, previewSize);
-    this.markDirty();
-    this.rebuild(true);
+  insertBrushInstance(
+    instance: SolidBrushInstance,
+    listIndex: number,
+    previewSize: number = 2,
+    hierarchy?: { parent: THREE.Object3D; siblingIndex: number },
+    rebuildAfter: boolean = true,
+  ): void {
+    this.brushes.registerBrushAt(instance, listIndex, previewSize, hierarchy);
+    this.markBrushesDirty([instance.id]);
+    if (rebuildAfter) {
+      this.rebuild();
+    }
   }
 
   /**
-   * Removes a brush and its preview mesh, then rebuilds.
+   * Removes a brush and its preview mesh, then rebuilds. Invalidates routing
+   * tables for the removed brush. Former touch peers are marked dirty so holes
+   * refill and coplanar faces return; when no peer cache exists, a full rebuild
+   * is forced so neighbors cannot keep stale surfaces.
    *
    * @param id Brush id.
    * @param disposeResources When true, disposes preview GPU resources (default
@@ -348,6 +391,8 @@ export class SolidModel {
     this.pipeline.invalidateBrush(id);
     if (touchPeers.length > 0) {
       this.markBrushesDirty(touchPeers);
+    } else {
+      this.markDirty();
     }
     this.rebuild(true);
     return true;
@@ -421,7 +466,9 @@ export class SolidModel {
   }
 
   /**
-   * Duplicates a brush inside this solid model at the same local transform.
+   * Duplicates a brush inside this solid model at the same local transform. The
+   * clone stays under the same hierarchy parent as the source (including solid
+   * CSG groups) so nested CSG order is preserved.
    *
    * @param id Source brush id.
    * @param offset Optional position offset applied after cloning (default
@@ -433,9 +480,54 @@ export class SolidModel {
     if (!source) return null;
     const clone = this.cloneBrushWithPreview(source, offset);
     this.brushes.appendPreparedBrush(clone);
+    this.syncBrushOrderFromScene();
     this.markBrushesDirty([clone.id]);
     this.rebuild();
     return clone;
+  }
+
+  /**
+   * Duplicates a solid CSG group and all nested brushes/groups under the same
+   * parent, inserted immediately after the source group.
+   *
+   * @param sourceGroup Solid CSG group to duplicate.
+   * @param offset Optional local position offset on the cloned group root.
+   * @returns Cloned group, or null when the source is not a group under this
+   *   solid.
+   */
+  duplicateSolidCsgGroup(
+    sourceGroup: THREE.Group,
+    offset: THREE.Vector3 = new THREE.Vector3(0, 0, 0),
+  ): THREE.Group | null {
+    if (!isSolidCsgGroup(sourceGroup)) return null;
+    if (findSolidModelRoot(sourceGroup) !== this.root) return null;
+    const createdBrushIds: string[] = [];
+    const cloneGroup = solidOps.cloneSolidCsgGroupSubtree(this.getOpsHost(), sourceGroup, offset, createdBrushIds);
+    const parent = sourceGroup.parent ?? this.root;
+    parent.add(cloneGroup);
+    this.insertObjectAfterSibling(parent, cloneGroup, sourceGroup);
+    this.syncBrushOrderFromScene();
+    if (createdBrushIds.length > 0) this.markBrushesDirty(createdBrushIds);
+    else this.markDirty();
+    this.rebuild();
+    return cloneGroup;
+  }
+
+  /**
+   * Moves an object to the slot immediately after a sibling under the same
+   * parent.
+   *
+   * @param parent Shared parent.
+   * @param object Object to place.
+   * @param sibling Sibling that should precede the object.
+   */
+  private insertObjectAfterSibling(parent: THREE.Object3D, object: THREE.Object3D, sibling: THREE.Object3D): void {
+    const siblingIndex = parent.children.indexOf(sibling);
+    const currentIndex = parent.children.indexOf(object);
+    if (siblingIndex < 0 || currentIndex < 0) return;
+    parent.children.splice(currentIndex, 1);
+    const insertIndex = Math.min(siblingIndex + 1, parent.children.length);
+    parent.children.splice(insertIndex, 0, object);
   }
 
   /**
@@ -867,7 +959,7 @@ export class SolidModel {
    * @param disposeResources Whether to free GPU resources.
    */
   private detachAndMaybeDisposeBrushMesh(brush: SolidBrushInstance, disposeResources: boolean): void {
-    solidOps.detachAndMaybeDisposeBrushMesh(this.getOpsHost(), brush, disposeResources);
+    solidOps.detachAndMaybeDisposeBrushMesh(brush, disposeResources);
   }
 
   /**

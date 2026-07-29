@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { SolidBrush } from '../brush/solid_brush.js';
 import { SolidBrushFactory } from '../brush/solid_brush_factory.js';
 import { SolidBrushInstance } from '../model/solid_brush_instance.js';
+import { SolidBrushVisual } from '../model/solid_brush_visual.js';
 import { SolidModel } from '../model/solid_model.js';
+import { getSolidGroupOperation, isSolidCsgGroup, markAsSolidCsgGroup } from '../model/solid_group.js';
 import { SolidOperation } from '../types/solid_operation.js';
 import { createWingEdge, createSolidFace } from '../types/wing_edge.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
@@ -12,6 +14,7 @@ import {
   deserializeFaceTextureMapping,
   serializeFaceTextureMapping,
 } from '../../texture/uv/face_texture_mapping.js';
+import { isResultMesh } from '../model/solid_model_keys.js';
 
 /** Serializable snapshot of a solid brush instance. */
 export interface SerializedSolidBrush {
@@ -48,14 +51,45 @@ export interface SerializedSolidBrush {
   faces: Array<{ firstEdge: number; edgeCount: number; surfaceIndex: number }>;
 }
 
+/** Serializable solid CSG tree brush leaf. */
+export interface SerializedSolidTreeBrushNode {
+  kind: 'brush';
+  /** Brush instance id matching a SerializedSolidBrush.id. */
+  brushId: string;
+}
+
+/** Serializable solid CSG tree group branch. */
+export interface SerializedSolidTreeGroupNode {
+  kind: 'group';
+  /** Stable group id for nesting references. */
+  id: string;
+  /** Display name. */
+  name: string;
+  /** Compound branch CSG operation. */
+  operation: SolidOperation;
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+  scale: { x: number; y: number; z: number };
+  /** Nested brushes and groups in evaluation order. */
+  children: SerializedSolidTreeNode[];
+}
+
+/** Serializable solid CSG tree node. */
+export type SerializedSolidTreeNode = SerializedSolidTreeBrushNode | SerializedSolidTreeGroupNode;
+
 /**
- * Serializable snapshot of a solid model (brushes only; mesh geometry is
- * rebuilt).
+ * Serializable snapshot of a solid model (brushes + optional hierarchy; mesh
+ * geometry is rebuilt).
  */
 export interface SerializedSolidModel {
   brushes: SerializedSolidBrush[];
   /** When true, CSG starts solid so subtractives carve rooms. */
   invertedWorld?: boolean;
+  /**
+   * Optional hierarchical CSG tree under the solid root. When omitted, brushes
+   * are restored as a flat sibling list (legacy).
+   */
+  hierarchy?: SerializedSolidTreeNode[];
 }
 
 /** Encodes and decodes solid models for scene persistence. */
@@ -75,6 +109,10 @@ export class SolidModelCodec {
     if (model.isInvertedWorld()) {
       payload.invertedWorld = true;
     }
+    const hierarchy = this.encodeHierarchy(model.root);
+    if (hierarchy.length > 0 && hierarchy.some((node) => node.kind === 'group')) {
+      payload.hierarchy = hierarchy;
+    }
     return payload;
   }
 
@@ -91,12 +129,179 @@ export class SolidModelCodec {
       const instance = this.decodeBrush(brushData);
       model.addBrushInstance(instance);
     }
+    if (data.hierarchy && data.hierarchy.length > 0) {
+      this.applyHierarchy(model, data.hierarchy);
+    }
     if (data.invertedWorld === true) {
       model.setInvertedWorld(true);
     } else {
       model.rebuild(true);
     }
     return model;
+  }
+
+  /**
+   * Encodes the solid root's hierarchical CSG tree (brushes + solid groups).
+   *
+   * @param solidRoot Solid model root group.
+   * @returns Ordered top-level tree nodes.
+   */
+  private static encodeHierarchy(solidRoot: THREE.Object3D): SerializedSolidTreeNode[] {
+    const nodes: SerializedSolidTreeNode[] = [];
+    for (const child of solidRoot.children) {
+      const node = this.encodeHierarchyChild(child);
+      if (node) nodes.push(node);
+    }
+    return nodes;
+  }
+
+  /**
+   * Encodes one scene child under the solid hierarchy.
+   *
+   * @param child Scene child.
+   * @returns Tree node or null when not a CSG operand.
+   */
+  private static encodeHierarchyChild(child: THREE.Object3D): SerializedSolidTreeNode | null {
+    if (isResultMesh(child)) return null;
+    if (SolidBrushVisual.isBrushObject(child)) {
+      const brushId = SolidBrushVisual.getBrushId(child);
+      if (!brushId) return null;
+      return { kind: 'brush', brushId };
+    }
+    if (child instanceof THREE.Group && (isSolidCsgGroup(child) || this.groupHasBrushDescendant(child))) {
+      return this.encodeHierarchyGroup(child);
+    }
+    return null;
+  }
+
+  /**
+   * Encodes a solid CSG group branch.
+   *
+   * @param group Solid CSG group.
+   * @returns Group tree node or null when empty.
+   */
+  private static encodeHierarchyGroup(group: THREE.Group): SerializedSolidTreeGroupNode | null {
+    const children: SerializedSolidTreeNode[] = [];
+    for (const child of group.children) {
+      const node = this.encodeHierarchyChild(child);
+      if (node) children.push(node);
+    }
+    if (children.length === 0) return null;
+    return {
+      kind: 'group',
+      id: group.uuid,
+      name: group.name,
+      operation: getSolidGroupOperation(group),
+      position: this.encodeVector3(group.position),
+      rotation: this.encodeEuler(group.rotation),
+      scale: this.encodeVector3(group.scale),
+      children,
+    };
+  }
+
+  /**
+   * Returns whether a group has any solid brush descendant.
+   *
+   * @param group Scene group.
+   * @returns True when a brush mesh is nested under the group.
+   */
+  private static groupHasBrushDescendant(group: THREE.Group): boolean {
+    let found = false;
+    group.traverse((object) => {
+      if (found) return;
+      if (SolidBrushVisual.isBrushObject(object)) found = true;
+    });
+    return found;
+  }
+
+  /**
+   * Restores solid CSG group nesting under a model that already owns flat brush
+   * instances with preview meshes.
+   *
+   * @param model Solid model with brushes attached.
+   * @param hierarchy Serialized hierarchy roots.
+   */
+  private static applyHierarchy(model: SolidModel, hierarchy: SerializedSolidTreeNode[]): void {
+    const brushMeshById = this.buildBrushMeshMap(model);
+    for (const node of hierarchy) {
+      this.attachHierarchyNode(model.root, node, brushMeshById);
+    }
+    model.syncBrushOrderFromScene();
+  }
+
+  /**
+   * Maps brush ids to their preview meshes for hierarchy restore.
+   *
+   * @param model Solid model.
+   * @returns Brush id → mesh map.
+   */
+  private static buildBrushMeshMap(model: SolidModel): Map<string, THREE.Mesh> {
+    const map = new Map<string, THREE.Mesh>();
+    for (const brush of model.getBrushes()) {
+      if (brush.mesh) map.set(brush.id, brush.mesh);
+    }
+    return map;
+  }
+
+  /**
+   * Attaches one hierarchy node under a parent (reparents brushes / creates
+   * groups).
+   *
+   * @param parent Solid root or solid CSG group.
+   * @param node Serialized node.
+   * @param brushMeshById Brush meshes by id.
+   */
+  private static attachHierarchyNode(
+    parent: THREE.Object3D,
+    node: SerializedSolidTreeNode,
+    brushMeshById: Map<string, THREE.Mesh>,
+  ): void {
+    if (node.kind === 'brush') {
+      this.attachBrushNode(parent, node.brushId, brushMeshById);
+      return;
+    }
+    this.attachGroupNode(parent, node, brushMeshById);
+  }
+
+  /**
+   * Reparents a brush mesh under a hierarchy parent.
+   *
+   * @param parent Parent object.
+   * @param brushId Brush id.
+   * @param brushMeshById Brush meshes by id.
+   */
+  private static attachBrushNode(
+    parent: THREE.Object3D,
+    brushId: string,
+    brushMeshById: Map<string, THREE.Mesh>,
+  ): void {
+    const mesh = brushMeshById.get(brushId);
+    if (!mesh) return;
+    parent.add(mesh);
+  }
+
+  /**
+   * Creates a solid CSG group, restores transform, and attaches children.
+   *
+   * @param parent Parent object.
+   * @param node Serialized group node.
+   * @param brushMeshById Brush meshes by id.
+   */
+  private static attachGroupNode(
+    parent: THREE.Object3D,
+    node: SerializedSolidTreeGroupNode,
+    brushMeshById: Map<string, THREE.Mesh>,
+  ): void {
+    const group = new THREE.Group();
+    group.name = node.name || 'Group';
+    markAsSolidCsgGroup(group, node.operation);
+    group.position.set(node.position.x, node.position.y, node.position.z);
+    group.rotation.set(node.rotation.x, node.rotation.y, node.rotation.z, 'XYZ');
+    group.scale.set(node.scale.x, node.scale.y, node.scale.z);
+    parent.add(group);
+    for (const child of node.children) {
+      this.attachHierarchyNode(group, child, brushMeshById);
+    }
   }
 
   /**

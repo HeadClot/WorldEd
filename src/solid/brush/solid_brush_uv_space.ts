@@ -6,11 +6,12 @@ const scratchBrushLocal = new THREE.Matrix4();
 const scratchWorldFromLocal = new THREE.Matrix4();
 
 /**
- * Builds solid-root × brush-local so model-space points map to world.
+ * Builds world matrix for a brush, including intermediate solid CSG group
+ * parents: solidRoot.world * modelSpaceMatrix.
  *
  * @param brush Brush instance.
  * @param solidRoot Solid model root group.
- * @param out Matrix filled with rootWorld * brushLocal.
+ * @param out Matrix filled with brush world transform.
  * @param updateWorld Whether to refresh solidRoot.matrixWorld (default true).
  */
 export function composeBrushWorldFromLocal(
@@ -21,7 +22,7 @@ export function composeBrushWorldFromLocal(
 ): void {
   if (updateWorld) solidRoot.updateMatrixWorld(true);
   brush.pullTransformFromMesh();
-  scratchBrushLocal.copy(brush.getLocalMatrix());
+  scratchBrushLocal.copy(brush.getModelSpaceMatrix());
   out.multiplyMatrices(solidRoot.matrixWorld, scratchBrushLocal);
 }
 

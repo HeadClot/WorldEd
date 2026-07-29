@@ -44,15 +44,18 @@ export class GroupCommand implements UndoCommand {
 
   /**
    * Executes the group by adding children to the group and placing it under the
-   * parent.
+   * parent at the earliest original sibling index (so CSG order and outliner
+   * position match the right-clicked / selected nodes instead of appending).
    */
   execute(): void {
     if (this.executed) return;
+    const insertIndex = this.computeGroupInsertIndex();
     this.childSnapshots.forEach((snapshot) => {
       snapshot.child.parent?.remove(snapshot.child);
       this.group.add(snapshot.child);
     });
     this.newParent.add(this.group);
+    this.moveChildToIndex(this.newParent, this.group, insertIndex);
     this.executed = true;
   }
 
@@ -105,5 +108,39 @@ export class GroupCommand implements UndoCommand {
       snapshots.push(snapshot);
     });
     return snapshots;
+  }
+
+  /**
+   * Computes where the new group should sit under {@code newParent}: the
+   * minimum original sibling index among members that already lived there.
+   * Falls back to append when no member was under the target parent.
+   *
+   * @returns Sibling index for the new group under the target parent.
+   */
+  private computeGroupInsertIndex(): number {
+    let minIndex: number | null = null;
+    for (const snapshot of this.childSnapshots) {
+      if (snapshot.originalParent !== this.newParent) continue;
+      if (minIndex === null || snapshot.siblingIndex < minIndex) {
+        minIndex = snapshot.siblingIndex;
+      }
+    }
+    if (minIndex === null) return this.newParent.children.length;
+    return Math.max(0, Math.min(minIndex, this.newParent.children.length));
+  }
+
+  /**
+   * Moves a child to a specific index within a parent.
+   *
+   * @param parent The parent whose children array is reordered.
+   * @param child The child to move.
+   * @param index The destination index.
+   */
+  private moveChildToIndex(parent: THREE.Object3D, child: THREE.Object3D, index: number): void {
+    const currentIndex = parent.children.indexOf(child);
+    if (currentIndex < 0) return;
+    parent.children.splice(currentIndex, 1);
+    const clamped = Math.max(0, Math.min(index, parent.children.length));
+    parent.children.splice(clamped, 0, child);
   }
 }

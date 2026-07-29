@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { OutlinerItem } from '../../src/ui/outliner/outliner_item.js';
+import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
+import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+import { markAsSolidCsgGroup, setSolidGroupOperation } from '../../src/solid/model/solid_group.js';
 
 describe('OutlinerItem', () => {
   let container: HTMLElement;
@@ -65,6 +68,23 @@ describe('OutlinerItem', () => {
     const element = item.getElement();
     const chevron = element.querySelector('span:nth-child(1)') as HTMLElement;
     expect(chevron.style.visibility).toBe('hidden');
+  });
+
+  it('should hide chevron when setHasChildren becomes false after having children', () => {
+    const expandedItem = new OutlinerItem(mesh, 0, true);
+    expandedItem.setExpandedState(true);
+    const element = expandedItem.getElement();
+    const chevron = element.querySelector('span:nth-child(1)') as HTMLElement;
+    expect(chevron.style.visibility).not.toBe('hidden');
+    expect(chevron.textContent).toBe('▼');
+    expandedItem.setHasChildren(false);
+    expect(chevron.style.visibility).toBe('hidden');
+    expect(chevron.textContent).toBe('');
+    expandedItem.setHasChildren(true);
+    expandedItem.setExpandedState(false);
+    expect(chevron.style.visibility).toBe('visible');
+    expect(chevron.textContent).toBe('▶');
+    expandedItem.dispose();
   });
 
   it('should show visible eye icon by default', () => {
@@ -178,5 +198,108 @@ describe('OutlinerItem', () => {
     expect(container.contains(element)).toBe(true);
     item.dispose();
     expect(container.contains(element)).toBe(false);
+  });
+
+  it('should show an operation-colored CSS brush dot with stable geometry', () => {
+    const brush = SolidBrushVisual.createBoxPreview('OpBrush', 2, SolidOperation.Subtractive);
+    const brushItem = new OutlinerItem(brush, 0, false);
+    const row = brushItem.getElement();
+    expect(row.style.alignItems).toBe('center');
+    expect(row.style.height).toBe('22px');
+    const iconRoot = row.children[1] as HTMLElement;
+    const glyph = iconRoot.children[0] as HTMLElement;
+    expect(glyph.textContent).toBe('');
+    expect(glyph.style.backgroundColor).toBe('rgb(192, 57, 43)');
+    expect(glyph.style.borderRadius).toBe('50%');
+    expect(glyph.style.width).toBe('8px');
+    expect(glyph.style.height).toBe('8px');
+    expect(glyph.style.position).toBe('absolute');
+    expect(glyph.style.left).toBe('50%');
+    expect(glyph.style.top).toBe('calc(50% + 1px)');
+    expect(glyph.style.transform).toBe('translate(-50%, -50%)');
+    expect(glyph.style.boxShadow).toBe('0 0 0 1px rgba(0, 0, 0, 0.35)');
+    brushItem.dispose();
+  });
+
+  it('should place green red and blue brush dots on matching geometry', () => {
+    const additive = SolidBrushVisual.createBoxPreview('Add', 2, SolidOperation.Additive);
+    const subtractive = SolidBrushVisual.createBoxPreview('Sub', 2, SolidOperation.Subtractive);
+    const intersecting = SolidBrushVisual.createBoxPreview('Int', 2, SolidOperation.Intersecting);
+    const items = [
+      new OutlinerItem(additive, 0, false),
+      new OutlinerItem(subtractive, 0, false),
+      new OutlinerItem(intersecting, 0, false),
+    ];
+    const glyphs = items.map((item) => {
+      const iconRoot = item.getElement().children[1] as HTMLElement;
+      return iconRoot.children[0] as HTMLElement;
+    });
+    const shared = {
+      position: 'absolute',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: '8px',
+      height: '8px',
+      borderRadius: '50%',
+      margin: '0px',
+      fontSize: '0px',
+      lineHeight: '0',
+      boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.35)',
+    };
+    for (const glyph of glyphs) {
+      expect(glyph.style.position).toBe(shared.position);
+      expect(glyph.style.left).toBe(shared.left);
+      expect(glyph.style.transform).toBe(shared.transform);
+      expect(glyph.style.width).toBe(shared.width);
+      expect(glyph.style.height).toBe(shared.height);
+      expect(glyph.style.borderRadius).toBe(shared.borderRadius);
+      expect(glyph.style.boxShadow).toBe(shared.boxShadow);
+    }
+    expect(glyphs[0]!.style.top).toBe('50%');
+    expect(glyphs[1]!.style.top).toBe('calc(50% + 1px)');
+    expect(glyphs[2]!.style.top).toBe('50%');
+    for (const item of items) {
+      item.dispose();
+    }
+  });
+
+  it('should overlay a CSS operation dot inside CSG folder icons', () => {
+    const group = new THREE.Group();
+    markAsSolidCsgGroup(group, SolidOperation.Intersecting);
+    const groupItem = new OutlinerItem(group, 0, true);
+    const iconRoot = groupItem.getElement().children[1] as HTMLElement;
+    const glyph = iconRoot.children[0] as HTMLElement;
+    const badge = iconRoot.children[1] as HTMLElement;
+    expect(iconRoot.style.position).toBe('relative');
+    expect(glyph.textContent).toBe('📁');
+    expect(glyph.style.color).toBe('rgb(230, 126, 34)');
+    expect(badge.style.position).toBe('absolute');
+    expect(badge.style.backgroundColor).toBe('rgb(41, 128, 185)');
+    expect(badge.style.borderRadius).toBe('50%');
+    expect(badge.style.display).toBe('block');
+    setSolidGroupOperation(group, SolidOperation.Additive);
+    groupItem.refreshIcon();
+    expect(badge.style.display).toBe('none');
+    groupItem.dispose();
+  });
+
+  it('should vertically center chevron, icon, name, and toggle slots', () => {
+    const itemWithChildren = new OutlinerItem(mesh, 0, true);
+    const row = itemWithChildren.getElement();
+    const chevron = row.children[0] as HTMLElement;
+    const icon = row.children[1] as HTMLElement;
+    const name = row.children[2] as HTMLElement;
+    const visibility = row.children[3] as HTMLElement;
+    const lock = row.children[4] as HTMLElement;
+    expect(row.style.alignItems).toBe('center');
+    expect(chevron.style.display).toBe('inline-flex');
+    expect(chevron.style.alignItems).toBe('center');
+    expect(icon.style.display).toBe('inline-flex');
+    expect(icon.style.alignItems).toBe('center');
+    expect(name.style.display).toBe('flex');
+    expect(name.style.alignItems).toBe('center');
+    expect(visibility.style.display).toBe('inline-flex');
+    expect(lock.style.display).toBe('inline-flex');
+    itemWithChildren.dispose();
   });
 });

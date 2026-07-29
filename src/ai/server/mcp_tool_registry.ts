@@ -66,12 +66,16 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
     },
   ),
   tool('list_solid_models', 'List solid models with brush counts and world bounds.', emptySchema()),
-  tool('get_solid_model', 'Full ordered CSG brush list for one solid model.', {
-    type: 'object',
-    properties: { modelId: { type: 'string' } },
-    required: ['modelId'],
-  }),
-  tool('get_brush', 'One brush summary, or full vertices/planes when detail=full.', {
+  tool(
+    'get_solid_model',
+    'Full solid model: ordered CSG brush list (evaluation order) plus nested hierarchy tree (solid root → csg_group → brush). Brushes include parentGroupId when nested under a compound group.',
+    {
+      type: 'object',
+      properties: { modelId: { type: 'string' } },
+      required: ['modelId'],
+    },
+  ),
+  tool('get_brush', 'One brush summary (includes parentGroupId), or full vertices/planes when detail=full.', {
     type: 'object',
     properties: {
       brushId: { type: 'string' },
@@ -79,6 +83,15 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
     },
     required: ['brushId'],
   }),
+  tool(
+    'get_csg_group',
+    'One solid CSG compound group: operation, parentGroupId, childBrushIds, childGroupIds. Groups nest; each group has its own CSG operation when combined into its parent.',
+    {
+      type: 'object',
+      properties: { groupId: { type: 'string', description: 'Solid CSG group uuid from hierarchy.' } },
+      required: ['groupId'],
+    },
+  ),
   tool(
     'find_brushes',
     'Filter brushes without dumping everything. Filters: nameContains, shape (thin|pole|tall|flat|panel|flag|long|box), minHeight/maxHeight, region bounds, limit. Returns shape tags + summary per hit.',
@@ -116,8 +129,12 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       required: ['brushId'],
     },
   ),
-  tool('get_scene_hierarchy', 'Shallow solid model / brush hierarchy tree.', emptySchema()),
-  tool('get_selection', 'Currently selected solid model and brush ids.', emptySchema()),
+  tool(
+    'get_scene_hierarchy',
+    'Solid outliner tree: solid_model → csg_group (with operation) → brush (with operation). Groups may nest. Use this to understand nesting before reparent/group ops.',
+    emptySchema(),
+  ),
+  tool('get_selection', 'Currently selected brushIds, groupIds (solid CSG groups), and solidModelIds.', emptySchema()),
   tool('query_brush_bounds', 'World AABB for one brush or all brushes (optional model filter).', {
     type: 'object',
     properties: {
@@ -246,7 +263,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   }),
   tool(
     'add_box_brush',
-    'Add a convex box brush. Model-local, right-handed Y-up. Use rotationDegrees (not radians). Optional name (e.g. start_a_flag). Snaps when snap is on unless snap:false or exact:true. operation: additive|subtractive|intersecting.',
+    'Add a convex box brush. Model-local, right-handed Y-up. Use rotationDegrees (not radians). Optional name. Optional parentGroupId to nest under a solid CSG group. Snaps unless snap:false or exact:true. operation: additive|subtractive|intersecting.',
     {
       type: 'object',
       properties: {
@@ -259,6 +276,10 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
         scale: vec3Schema,
         operation: { type: 'string', enum: ['additive', 'subtractive', 'intersecting'] },
         name: { type: 'string', description: 'Stable display name, e.g. path_north or def_pad_nw.' },
+        parentGroupId: {
+          type: 'string',
+          description: 'Solid CSG group uuid; omit to parent under the solid model root.',
+        },
         ...snapProps,
       },
       required: ['modelId'],
@@ -266,7 +287,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   ),
   tool(
     'add_box_brushes',
-    'Batch create many box brushes in one call. Per entry: size/position/rotationDegrees/scale/operation/name plus optional insertAfterName|insertBeforeName|insertAfterBrushId|insertBeforeBrushId for CSG order.',
+    'Batch create many box brushes. Per entry: size/position/rotationDegrees/scale/operation/name/parentGroupId plus optional insertAfterName|insertBeforeName|insertAfterBrushId|insertBeforeBrushId for CSG order.',
     {
       type: 'object',
       properties: {
@@ -282,6 +303,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
               scale: vec3Schema,
               operation: { type: 'string', enum: ['additive', 'subtractive', 'intersecting'] },
               name: { type: 'string' },
+              parentGroupId: { type: 'string' },
               insertAfterName: { type: 'string' },
               insertBeforeName: { type: 'string' },
               insertAfterBrushId: { type: 'string' },
@@ -294,6 +316,81 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       required: ['modelId', 'brushes'],
     },
   ),
+  tool(
+    'create_csg_group',
+    'Group solid brushes and/or nested CSG groups into a new solid CSG compound (same as outliner Group). Members stay under the solid model. operation is the branch op when the group combines into its parent (default additive). Optional parentGroupId nests the new group under another group (must not be a member or under a member).',
+    {
+      type: 'object',
+      properties: {
+        modelId: { type: 'string' },
+        brushIds: { type: 'array', items: { type: 'string' } },
+        groupIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Existing solid CSG group uuids to nest under the new group.',
+        },
+        parentGroupId: {
+          type: 'string',
+          description: 'Parent solid CSG group uuid; omit for solid model root.',
+        },
+        name: { type: 'string' },
+        operation: { type: 'string', enum: ['additive', 'subtractive', 'intersecting'] },
+      },
+      required: ['modelId'],
+    },
+  ),
+  tool(
+    'set_group_operation',
+    'Set CSG operation on solid CSG groups (branch ops). Additive keeps yellow folder in outliner; subtractive/intersecting show red/blue badges. Rebuilds solid CSG.',
+    {
+      type: 'object',
+      properties: {
+        groupIds: { type: 'array', items: { type: 'string' } },
+        operation: { type: 'string', enum: ['additive', 'subtractive', 'intersecting'] },
+      },
+      required: ['groupIds', 'operation'],
+    },
+  ),
+  tool(
+    'ungroup_csg_groups',
+    'Dissolve solid CSG groups; children reparent to the former group parent (solid root or outer group). Undoable. Rebuilds CSG.',
+    {
+      type: 'object',
+      properties: { groupIds: { type: 'array', items: { type: 'string' } } },
+      required: ['groupIds'],
+    },
+  ),
+  tool(
+    'reparent_solid_nodes',
+    'Move solid brushes and/or CSG groups under a solid model root or another CSG group in the same solid (outliner drag). parentId = modelId or groupId. Optional insertBeforeId (brush or group) for sibling order. Same solid only; no cycles.',
+    {
+      type: 'object',
+      properties: {
+        nodeIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Brush ids and/or solid CSG group uuids.',
+        },
+        parentId: {
+          type: 'string',
+          description: 'Destination solid model uuid (root) or solid CSG group uuid.',
+        },
+        insertBeforeId: {
+          type: 'string',
+          description: 'Optional sibling brush id or group uuid to insert before.',
+        },
+      },
+      required: ['nodeIds', 'parentId'],
+    },
+  ),
+  tool('rename_group', 'Rename a solid CSG group (outliner display name).', {
+    type: 'object',
+    properties: {
+      groupId: { type: 'string' },
+      name: { type: 'string' },
+    },
+    required: ['groupId', 'name'],
+  }),
   tool(
     'place_wall',
     'Vertical wall from {x,z}→{x,z}. size={thickness,height,length}; yaw aligns local +Z with the segment (atan2(dx,dz)). baseY is bottom (default 0); center Y = baseY+height/2. Axis-aligned openings need add_opening with targetBrushId.',
@@ -529,17 +626,21 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   }),
   tool(
     'duplicate_brushes',
-    'Duplicate one or many brushes (pass all ids in an assembly). Optional local offset (default +1 on X). Optional mirrorAxis x|z + mirrorPlane after copy for flipped assemblies.',
+    'Duplicate brushes and/or solid CSG groups (groupIds clones the whole nested compound). createdIds are brush ids only; data.groupIds has new group uuids. Optional local offset (default +1 on X). Optional mirrorAxis x|z + mirrorPlane after copy.',
     {
       type: 'object',
       properties: {
         brushIds: { type: 'array', items: { type: 'string' } },
+        groupIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Solid CSG group uuids to clone with nested children.',
+        },
         offset: vec3Schema,
         mirrorAxis: { type: 'string', enum: ['x', 'z'] },
         mirrorPlane: { type: 'number' },
         ...snapProps,
       },
-      required: ['brushIds'],
     },
   ),
   tool(
@@ -557,14 +658,19 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       required: ['brushIds', 'axis'],
     },
   ),
-  tool('reorder_brushes', 'Move brushes to first or last CSG evaluation order.', {
-    type: 'object',
-    properties: {
-      brushIds: { type: 'array', items: { type: 'string' } },
-      end: { type: 'string', enum: ['first', 'last'] },
+  tool(
+    'reorder_brushes',
+    'Move brushes and/or solid CSG groups to first or last among siblings under their own parent (outliner To First/Last). Nested groups reorder inside their parent only.',
+    {
+      type: 'object',
+      properties: {
+        brushIds: { type: 'array', items: { type: 'string' } },
+        groupIds: { type: 'array', items: { type: 'string' } },
+        end: { type: 'string', enum: ['first', 'last'] },
+      },
+      required: ['end'],
     },
-    required: ['brushIds', 'end'],
-  }),
+  ),
   tool(
     'reorder_brush_relative',
     'Move one brush before or after another (by relativeToBrushId or relativeToName). placement: before|after. Undoable. Prefer over first/last when inserting a cut after a wall.',

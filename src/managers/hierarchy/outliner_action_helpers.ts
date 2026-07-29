@@ -69,7 +69,9 @@ export function applyOutlinerVisibilityToggle(
 }
 
 /**
- * Handles Duplicate from the outliner context menu.
+ * Handles Duplicate from the outliner context menu. Duplicates the current
+ * hierarchy multi-selection when the right-clicked object is part of it;
+ * otherwise duplicates only the right-clicked node (mesh or group).
  *
  * @param obj Hierarchy object to duplicate.
  * @param selectionManager Selection manager.
@@ -80,8 +82,10 @@ export function handleOutlinerDuplicate(
   selectionManager: SelectionManager,
   objectActionHandler: ObjectActionHandler,
 ): void {
-  if (obj instanceof THREE.Mesh) {
-    selectionManager.selectObject(obj);
-    objectActionHandler.onDuplicateSelected();
+  const inspectorObjects = selectionManager.getInspectorObjects();
+  if (inspectorObjects.includes(obj) && inspectorObjects.length > 0) {
+    objectActionHandler.duplicateHierarchyObjects(inspectorObjects);
+    return;
   }
+  objectActionHandler.duplicateHierarchyObjects([obj]);
 }

@@ -10,6 +10,8 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
   private readonly size: number;
   private readonly operation: SolidOperation;
   private readonly offset: THREE.Vector3;
+  /** Hierarchy parent for the preview mesh (solid root or solid CSG group). */
+  private readonly hierarchyParent: THREE.Object3D;
   private created: SolidBrushInstance | null;
   private listIndex: number;
   private executed: boolean;
@@ -20,13 +22,21 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
    * @param model Solid model that will own the brush.
    * @param size Box edge length.
    * @param operation CSG operation for the new brush.
-   * @param offset Local position applied after creation.
+   * @param offset Model-local position applied after creation.
+   * @param hierarchyParent Optional solid root or CSG group to append under.
    */
-  constructor(model: SolidModel, size: number, operation: SolidOperation, offset: THREE.Vector3) {
+  constructor(
+    model: SolidModel,
+    size: number,
+    operation: SolidOperation,
+    offset: THREE.Vector3,
+    hierarchyParent: THREE.Object3D | null = null,
+  ) {
     this.model = model;
     this.size = size;
     this.operation = operation;
     this.offset = offset.clone();
+    this.hierarchyParent = model.resolveBrushInsertParent(hierarchyParent);
     this.created = null;
     this.listIndex = -1;
     this.executed = false;
@@ -59,21 +69,52 @@ export class AddSolidBoxBrushCommand implements UndoCommand {
     return this.created;
   }
 
-  /** Builds a new box brush, applies offset, and records its list index. */
+  /**
+   * Builds a new box brush under the hierarchy parent, poses it, then runs one
+   * partial CSG rebuild at the final spawn transform.
+   */
   private createBrush(): void {
-    const brush = this.model.addBoxBrush(this.size, this.operation);
-    brush.position.copy(this.offset);
-    brush.pushTransformToMesh();
-    this.model.rebuild(true);
+    const brush = this.model.addBoxBrush(this.size, this.operation, this.hierarchyParent, false);
+    this.applyModelLocalOffset(brush);
+    this.model.markBrushesDirty([brush.id]);
+    this.model.rebuild();
     this.created = brush;
     this.listIndex = this.model.getBrushes().findIndex((entry) => entry.id === brush.id);
   }
 
-  /** Re-inserts a previously created brush at its recorded index. */
+  /** Re-inserts a previously created brush at its recorded index and parent. */
   private reinsertCreatedBrush(): void {
     if (!this.created) return;
     if (this.model.findBrush(this.created.id)) return;
     this.created.pushTransformToMesh();
-    this.model.insertBrushInstance(this.created, this.listIndex, this.size);
+    const hierarchy =
+      this.hierarchyParent === this.model.root
+        ? undefined
+        : { parent: this.hierarchyParent, siblingIndex: this.hierarchyParent.children.length };
+    this.model.insertBrushInstance(this.created, this.listIndex, this.size, hierarchy);
+  }
+
+  /**
+   * Applies the spawn offset in model space, converting into parent-local space
+   * when the brush lives under a nested solid CSG group.
+   *
+   * @param brush Newly created brush instance.
+   */
+  private applyModelLocalOffset(brush: SolidBrushInstance): void {
+    const mesh = brush.mesh;
+    if (!mesh) {
+      brush.position.copy(this.offset);
+      return;
+    }
+    if (this.hierarchyParent === this.model.root) {
+      brush.position.copy(this.offset);
+      brush.pushTransformToMesh();
+      return;
+    }
+    this.model.root.updateWorldMatrix(true, false);
+    this.hierarchyParent.updateWorldMatrix(true, false);
+    const worldPosition = this.offset.clone().applyMatrix4(this.model.root.matrixWorld);
+    mesh.position.copy(this.hierarchyParent.worldToLocal(worldPosition));
+    brush.pullTransformFromMesh();
   }
 }

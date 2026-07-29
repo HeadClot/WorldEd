@@ -2,16 +2,24 @@ import * as THREE from 'three';
 import { Theme } from '../../theme.js';
 import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
 import { SolidModel } from '../../solid/model/solid_model.js';
+import { getSolidGroupOperation, isSolidCsgGroup } from '../../solid/model/solid_group.js';
 import { SolidOperation, solidOperationLabel } from '../../solid/types/solid_operation.js';
 
 /** Handlers for solid-brush context controls in the inspector. */
 export interface SolidBrushPropertyHandlers {
   onSetOperation: (meshes: THREE.Mesh[], operation: SolidOperation) => void;
+  /**
+   * Sets CSG operation on solid compound groups (branch nodes).
+   *
+   * @param groups Solid CSG groups.
+   * @param operation New group operation.
+   */
+  onSetGroupOperation?: (groups: THREE.Group[], operation: SolidOperation) => void;
   onAddBoxBrush: () => void;
-  /** Moves brushes to first CSG evaluation slot. */
-  onMoveToFirst: (meshes: THREE.Mesh[]) => void;
-  /** Moves brushes to last CSG evaluation slot. */
-  onMoveToLast: (meshes: THREE.Mesh[]) => void;
+  /** Moves brushes/groups to first among siblings under their own parent. */
+  onMoveToFirst: (nodes: THREE.Object3D[]) => void;
+  /** Moves brushes/groups to last among siblings under their own parent. */
+  onMoveToLast: (nodes: THREE.Object3D[]) => void;
   /**
    * Sets inverted-world mode on the solid model owning the selection.
    *
@@ -94,29 +102,40 @@ export class PropertiesSolidBrushSection {
   updateFromObjects(objects: THREE.Object3D[]): void {
     this.boundObjects = objects.slice();
     const brushMeshes = this.collectBrushMeshes(objects);
+    const solidGroups = this.collectSolidGroups(objects);
     if (!this.hasSolidContext(objects)) {
       this.section.style.display = 'none';
       return;
     }
     this.section.style.display = 'block';
     this.syncInvertedWorldCheckbox(objects);
-    if (brushMeshes.length === 0) {
+    if (brushMeshes.length === 0 && solidGroups.length === 0) {
       this.dimOperationButtons();
+      return;
+    }
+    if (solidGroups.length > 0 && brushMeshes.length === 0) {
+      this.highlightSharedGroupOperation(solidGroups);
       return;
     }
     this.highlightSharedOperation(brushMeshes);
   }
 
   /**
-   * Applies a CSG operation to the provided brush meshes.
+   * Applies a CSG operation to the provided brush meshes and/or solid groups.
    *
    * @param brushMeshes Editable solid brush meshes.
    * @param operation Selected operation.
    * @param boundObjects Full selection used to refresh button state.
    */
   applyOperation(brushMeshes: THREE.Mesh[], operation: SolidOperation, boundObjects: THREE.Object3D[]): void {
-    if (!this.handlers || brushMeshes.length === 0) return;
-    this.handlers.onSetOperation(brushMeshes, operation);
+    if (!this.handlers) return;
+    const solidGroups = this.collectSolidGroups(boundObjects);
+    if (brushMeshes.length > 0) {
+      this.handlers.onSetOperation(brushMeshes, operation);
+    }
+    if (solidGroups.length > 0 && this.handlers.onSetGroupOperation) {
+      this.handlers.onSetGroupOperation(solidGroups, operation);
+    }
     this.updateFromObjects(boundObjects);
   }
 
@@ -251,16 +270,35 @@ export class PropertiesSolidBrushSection {
   }
 
   /**
-   * Moves selected brushes to first or last evaluation order.
+   * Moves selected brushes and solid CSG groups to first or last among siblings
+   * under each node's own parent.
    *
-   * @param end Target end of the CSG list.
+   * @param end Target end among content siblings.
    */
   private onMoveOrderClicked(end: 'first' | 'last'): void {
     if (!this.handlers) return;
-    const meshes = this.getEditableBrushMeshes?.() ?? this.collectBrushMeshes(this.boundObjects);
-    if (meshes.length === 0) return;
-    if (end === 'first') this.handlers.onMoveToFirst(meshes);
-    else this.handlers.onMoveToLast(meshes);
+    const nodes = this.collectReorderableNodes(this.boundObjects);
+    if (nodes.length === 0) return;
+    if (end === 'first') this.handlers.onMoveToFirst(nodes);
+    else this.handlers.onMoveToLast(nodes);
+  }
+
+  /**
+   * Collects solid brushes and solid CSG groups from the bound selection.
+   *
+   * @param objects Bound inspector objects.
+   * @returns Nodes that support To First / To Last.
+   */
+  private collectReorderableNodes(objects: readonly THREE.Object3D[]): THREE.Object3D[] {
+    const nodes: THREE.Object3D[] = [];
+    for (const object of objects) {
+      if (SolidBrushVisual.isBrushObject(object)) {
+        nodes.push(object);
+        continue;
+      }
+      if (isSolidCsgGroup(object)) nodes.push(object);
+    }
+    return nodes;
   }
 
   /**
@@ -340,13 +378,39 @@ export class PropertiesSolidBrushSection {
   }
 
   /**
-   * Applies a CSG operation to editable selected brush meshes.
+   * Applies a CSG operation to editable selected brush meshes and solid groups.
    *
    * @param operation Selected operation.
    */
   private onOperationClicked(operation: SolidOperation): void {
     const meshes = this.getEditableBrushMeshes?.() ?? this.collectBrushMeshes(this.boundObjects);
     this.applyOperation(meshes, operation, this.boundObjects);
+  }
+
+  /**
+   * Collects solid CSG compound groups from a selection list.
+   *
+   * @param objects Selected objects.
+   * @returns Solid CSG groups.
+   */
+  private collectSolidGroups(objects: THREE.Object3D[]): THREE.Group[] {
+    return objects.filter((object): object is THREE.Group => isSolidCsgGroup(object));
+  }
+
+  /**
+   * Highlights the shared CSG operation across selected solid groups.
+   *
+   * @param groups Selected solid CSG groups.
+   */
+  private highlightSharedGroupOperation(groups: THREE.Group[]): void {
+    const operations = groups.map((group) => getSolidGroupOperation(group));
+    const shared = operations.every((operation) => operation === operations[0]);
+    this.operationButtons.forEach((button, operation) => {
+      const active = shared && operation === operations[0];
+      button.style.outline = active ? `1px solid ${this.hexToRgb(Theme.selectionColor)}` : 'none';
+      button.style.background = active ? this.hexToRgb(Theme.buttonHoverColor) : this.hexToRgb(Theme.buttonBackground);
+      button.style.opacity = '1';
+    });
   }
 
   /**
@@ -401,6 +465,7 @@ export class PropertiesSolidBrushSection {
     return objects.some(
       (object) =>
         SolidBrushVisual.isBrushObject(object) ||
+        isSolidCsgGroup(object) ||
         SolidModel.isSolidModelObject(object) ||
         SolidModel.fromObject(object) !== null,
     );

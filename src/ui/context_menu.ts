@@ -1,44 +1,62 @@
-import { Theme } from '../theme.js';
-import { hexToRgb } from '../utils/color_utils.js';
-import { UiStackLayers } from './ui_stack_layers.js';
-
-/** A single item in a context menu. */
-export interface ContextMenuItem {
-  /** The display label for the menu item. */
-  label: string;
-
-  /** The callback function invoked when the item is clicked. */
-  callback: () => void;
-
-  /** Whether the item should be disabled and non-interactive. */
-  disabled?: boolean;
-}
+import { MenuPanel } from './menu/menu_panel.js';
+import type { ToolbarMenuEntry } from './menu/menu_types.js';
 
 /**
- * Floating context menu component. Displays a list of items at a specified
- * position. Auto-hides after selection, outside click, or Escape key.
+ * A single item in a context menu. Prefer {@link kind} `'separator'` for section
+ * breaks so the shared menu system can render its styled rule.
+ */
+export type ContextMenuItem =
+  | {
+      /** Clickable row (default when kind is omitted). */
+      kind?: 'action';
+      /** The display label for the menu item. */
+      label: string;
+      /** The callback function invoked when the item is clicked. */
+      callback: () => void;
+      /** Whether the item should be disabled and non-interactive. */
+      disabled?: boolean;
+    }
+  | {
+      /** Horizontal separator between sections. */
+      kind: 'separator';
+    };
+
+/**
+ * Floating context menu built on the shared {@link MenuPanel} system used by
+ * File / Edit toolbar menus (same chrome, separators, hover, and stacking).
+ * Auto-hides after selection, outside click, or Escape.
  */
 export class ContextMenu {
-  private menuElement: HTMLElement;
-  private items: ContextMenuItem[];
+  private panel: MenuPanel;
   private isVisible: boolean;
   private outsideClickListener: (event: MouseEvent) => void;
   private keydownListener: (event: KeyboardEvent) => void;
+  private ownerDocument: Document;
 
   /**
    * Creates a new context menu component.
    *
-   * @param container The parent DOM element to attach the menu to.
+   * @param _container Legacy host argument retained for call-site
+   *   compatibility. The panel mounts on document.body when shown (same as
+   *   toolbar menus).
    * @param items The menu items to display.
    */
-  constructor(container: HTMLElement, items: ContextMenuItem[]) {
-    this.items = items;
+  constructor(_container: HTMLElement, items: ContextMenuItem[]) {
+    void _container;
     this.isVisible = false;
-    this.menuElement = this.createMenuElement();
-    this.renderItems();
+    this.ownerDocument = document;
+    this.panel = new MenuPanel(this.toMenuEntries(items), () => this.hide());
     this.outsideClickListener = (event: MouseEvent) => this.onOutsideClick(event);
     this.keydownListener = (event: KeyboardEvent) => this.onKeyDown(event);
-    container.appendChild(this.menuElement);
+  }
+
+  /**
+   * Returns the menu panel root element (for tests and focus management).
+   *
+   * @returns Menu panel DOM node.
+   */
+  getElement(): HTMLElement {
+    return this.panel.getElement();
   }
 
   /**
@@ -50,114 +68,65 @@ export class ContextMenu {
   show(x: number, y: number): void {
     if (this.isVisible) return;
     this.isVisible = true;
-    this.menuElement.style.left = `${x}px`;
-    this.menuElement.style.top = `${y}px`;
-    this.menuElement.style.display = 'block';
-    document.addEventListener('mousedown', this.outsideClickListener);
-    document.addEventListener('keydown', this.keydownListener);
+    this.ownerDocument = document;
+    this.panel.openAt(x, y, this.ownerDocument);
+    this.ownerDocument.addEventListener('mousedown', this.outsideClickListener, true);
+    this.ownerDocument.addEventListener('keydown', this.keydownListener, true);
   }
 
   /** Hides the menu and removes global event listeners. */
   hide(): void {
     if (!this.isVisible) return;
     this.isVisible = false;
-    this.menuElement.style.display = 'none';
-    document.removeEventListener('mousedown', this.outsideClickListener);
-    document.removeEventListener('keydown', this.keydownListener);
+    this.panel.close();
+    this.ownerDocument.removeEventListener('mousedown', this.outsideClickListener, true);
+    this.ownerDocument.removeEventListener('keydown', this.keydownListener, true);
   }
 
   /** Disposes the menu and removes it from the DOM. */
   dispose(): void {
     this.hide();
-    if (this.menuElement.parentNode) {
-      this.menuElement.parentNode.removeChild(this.menuElement);
+    this.panel.dispose();
+  }
+
+  /**
+   * Maps legacy/context item definitions onto toolbar menu entries.
+   *
+   * @param items Context menu items.
+   * @returns Entries for {@link MenuPanel}.
+   */
+  private toMenuEntries(items: ContextMenuItem[]): ToolbarMenuEntry[] {
+    return items.map((item) => this.toMenuEntry(item));
+  }
+
+  /**
+   * Maps one context item to a toolbar menu entry. Legacy separators used a
+   * `'---'` label; prefer `kind: 'separator'`.
+   *
+   * @param item Context menu item.
+   * @returns Toolbar menu entry.
+   */
+  private toMenuEntry(item: ContextMenuItem): ToolbarMenuEntry {
+    if (item.kind === 'separator') {
+      return { kind: 'separator' };
     }
-  }
-
-  /**
-   * Creates the root menu DOM element with styles.
-   *
-   * @returns The styled menu container element.
-   */
-  private createMenuElement(): HTMLElement {
-    const el = document.createElement('div');
-    el.className = 'editor-context-menu';
-    el.style.position = 'fixed';
-    el.style.display = 'none';
-    el.style.zIndex = String(UiStackLayers.contextMenu);
-    el.style.background = hexToRgb(Theme.toolbarBackground);
-    el.style.border = `1px solid ${hexToRgb(Theme.separatorColor)}`;
-    el.style.borderRadius = '4px';
-    el.style.padding = '4px 0';
-    el.style.minWidth = '140px';
-    el.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.5)';
-    el.style.fontFamily = 'monospace';
-    el.style.fontSize = '12px';
-    return el;
-  }
-
-  /** Renders all menu items into the menu element. */
-  private renderItems(): void {
-    this.items.forEach((item) => {
-      const itemElement = this.createItemElement(item);
-      this.menuElement.appendChild(itemElement);
-    });
-  }
-
-  /**
-   * Creates a single clickable menu item element.
-   *
-   * @param item The context menu item data.
-   * @returns The styled and event-bound DOM element.
-   */
-  private createItemElement(item: ContextMenuItem): HTMLElement {
-    const el = document.createElement('div');
-    el.className = 'editor-context-menu-item';
-    if (item.disabled) {
-      el.classList.add('editor-context-menu-item-disabled');
+    if (item.label === '---') {
+      return { kind: 'separator' };
     }
-    el.textContent = item.label;
-    el.style.padding = '6px 16px';
-    el.style.cursor = item.disabled ? 'default' : 'pointer';
-    el.style.color = this.getItemTextColor(item);
-    this.bindItemEvents(item, el);
-    return el;
-  }
-
-  /**
-   * Returns the text color for a menu item based on its state.
-   *
-   * @param item The context menu item.
-   * @returns The CSS color string for the item text.
-   */
-  private getItemTextColor(item: ContextMenuItem): string {
-    if (item.disabled) {
-      return '#555555';
+    const disabled = item.disabled === true;
+    if (disabled) {
+      return {
+        kind: 'action',
+        label: item.label,
+        onClick: item.callback,
+        isEnabled: () => false,
+      };
     }
-    return Theme.buttonTextColor;
-  }
-
-  /**
-   * Binds mouse events to a menu item element.
-   *
-   * @param item The context menu item data.
-   * @param el The DOM element to bind events to.
-   */
-  private bindItemEvents(item: ContextMenuItem, el: HTMLElement): void {
-    el.addEventListener('mouseenter', () => {
-      if (!item.disabled) {
-        el.style.background = hexToRgb(Theme.buttonHoverColor);
-      }
-    });
-    el.addEventListener('mouseleave', () => {
-      el.style.background = 'transparent';
-    });
-    el.addEventListener('click', () => {
-      if (!item.disabled) {
-        item.callback();
-        this.hide();
-      }
-    });
+    return {
+      kind: 'action',
+      label: item.label,
+      onClick: item.callback,
+    };
   }
 
   /**
@@ -166,9 +135,13 @@ export class ContextMenu {
    * @param event The mouse event to inspect.
    */
   private onOutsideClick(event: MouseEvent): void {
-    if (!this.menuElement.contains(event.target as Node)) {
+    const target = event.target;
+    if (!(target instanceof Node)) {
       this.hide();
+      return;
     }
+    if (this.panel.getElement().contains(target)) return;
+    this.hide();
   }
 
   /**
@@ -178,6 +151,7 @@ export class ContextMenu {
    */
   private onKeyDown(event: KeyboardEvent): void {
     if (event.code === 'Escape') {
+      event.preventDefault();
       this.hide();
     }
   }
