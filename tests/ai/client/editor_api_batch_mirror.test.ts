@@ -1,0 +1,195 @@
+import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
+import { EditorApi } from '../../../src/ai/client/editor_api.js';
+import type { EditorApiHost } from '../../../src/ai/client/editor_api_host.js';
+import { CommandStack } from '../../../src/commands/command_stack.js';
+import { SelectionManager } from '../../../src/selection/object/selection_manager.js';
+import { SolidModel } from '../../../src/solid/model/solid_model.js';
+import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
+import { CreateSolidModelCommand } from '../../../src/commands/create/create_solid_model_command.js';
+import { GridSnap } from '../../../src/transform/snap/grid_snap.js';
+import { SnapManager } from '../../../src/transform/snap/snap_manager.js';
+import { SolidModelController } from '../../../src/managers/solid/solid_model_controller.js';
+import { SolidModelPanel } from '../../../src/ui/solid_model_panel.js';
+
+/**
+ * Builds a write-capable EditorApi fixture.
+ *
+ * @returns Api, world, stack.
+ */
+function createWriteFixture(): { api: EditorApi; world: THREE.Group; stack: CommandStack } {
+  const world = new THREE.Group();
+  const stack = new CommandStack(64);
+  const selection = new SelectionManager();
+  const panelHost = document.createElement('div');
+  const panel = new SolidModelPanel(panelHost, { onAddBoxBrush: () => undefined });
+  const solidModelController = new SolidModelController(world, stack, selection, panel);
+  const host: EditorApiHost = {
+    worldObject: world,
+    commandStack: stack,
+    selectionManager: selection,
+    solidModelController,
+    gridSnap: new GridSnap(true, 0.25),
+    snapManager: new SnapManager(0.25),
+    getUserSnapEnabled: () => true,
+    refreshAfterWorldMutation: () => undefined,
+    refreshOutliner: () => undefined,
+    showStatus: () => undefined,
+  };
+  return { api: new EditorApi(host), world, stack };
+}
+
+/** Unit tests for batch create, rename, snap bypass, and mirror. */
+describe('EditorApi batch rename mirror snap', () => {
+  it('adds named boxes in one batch call', () => {
+    const { api, world, stack } = createWriteFixture();
+    const model = new SolidModel('BatchModel');
+    model.addBoxBrush(1, SolidOperation.Additive);
+    stack.push(new CreateSolidModelCommand(model, world));
+    const before = model.getBrushCount();
+    const result = api.invokeTool('add_box_brushes', {
+      modelId: model.root.uuid,
+      snap: false,
+      brushes: [
+        { size: { x: 1, y: 2, z: 1 }, position: { x: 1, y: 0, z: 0 }, name: 'pad_a' },
+        { size: { x: 1, y: 2, z: 1 }, position: { x: 3, y: 0, z: 0 }, name: 'pad_b' },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    expect(model.getBrushCount()).toBe(before + 2);
+    const names = model.getBrushes().map((brush) => brush.name);
+    expect(names).toContain('pad_a');
+    expect(names).toContain('pad_b');
+  });
+
+  it('renames a brush undoably', () => {
+    const { api, world, stack } = createWriteFixture();
+    const model = new SolidModel('RenameModel');
+    const brush = model.addBoxBrush(1, SolidOperation.Additive);
+    stack.push(new CreateSolidModelCommand(model, world));
+    const renamed = api.invokeTool('rename_brush', { brushId: brush.id, name: 'def_pad_nw' });
+    expect(renamed.ok).toBe(true);
+    expect(model.findBrush(brush.id)?.name).toBe('def_pad_nw');
+    api.invokeTool('undo');
+    expect(model.findBrush(brush.id)?.name).not.toBe('def_pad_nw');
+  });
+
+  it('bypasses snap when snap is false', () => {
+    const { api, world, stack } = createWriteFixture();
+    const model = new SolidModel('ExactModel');
+    const brush = model.addBoxBrush(1, SolidOperation.Additive);
+    stack.push(new CreateSolidModelCommand(model, world));
+    const exact = -17.125;
+    const result = api.invokeTool('set_brush_transform', {
+      brushId: brush.id,
+      position: { x: exact, y: 0, z: 0 },
+      snap: false,
+    });
+    expect(result.ok).toBe(true);
+    brush.pullTransformFromMesh();
+    expect(brush.position.x).toBeCloseTo(exact, 5);
+  });
+
+  it('batch sets several transforms', () => {
+    const { api, world, stack } = createWriteFixture();
+    const model = new SolidModel('BatchXform');
+    const a = model.addBoxBrush(1, SolidOperation.Additive);
+    const b = model.addBoxBrush(1, SolidOperation.Additive);
+    stack.push(new CreateSolidModelCommand(model, world));
+    const result = api.invokeTool('batch_set_brush_transform', {
+      snap: false,
+      transforms: [
+        { brushId: a.id, position: { x: 2, y: 0, z: 0 } },
+        { brushId: b.id, position: { x: 4, y: 0, z: 0 } },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    a.pullTransformFromMesh();
+    b.pullTransformFromMesh();
+    expect(a.position.x).toBeCloseTo(2);
+    expect(b.position.x).toBeCloseTo(4);
+  });
+
+  it('mirrors a brush across X as a copy and negates yaw', () => {
+    const { api, world, stack } = createWriteFixture();
+    const model = new SolidModel('MirrorModel');
+    const brush = model.addBoxBrush(1, SolidOperation.Additive);
+    brush.position.set(5, 0, 0);
+    brush.rotation.y = THREE.MathUtils.degToRad(30);
+    brush.pushTransformToMesh();
+    model.rebuild(true);
+    stack.push(new CreateSolidModelCommand(model, world));
+    const before = model.getBrushCount();
+    const result = api.invokeTool('mirror_brushes', {
+      brushIds: [brush.id],
+      axis: 'x',
+      plane: 0,
+      copy: true,
+      snap: false,
+    });
+    expect(result.ok).toBe(true);
+    expect(model.getBrushCount()).toBe(before + 1);
+    const createdId = (result.createdIds ?? [])[0];
+    expect(createdId).toBeTruthy();
+    const clone = model.findBrush(createdId!)!;
+    clone.pullTransformFromMesh();
+    expect(clone.position.x).toBeCloseTo(-5, 3);
+    expect(THREE.MathUtils.radToDeg(clone.rotation.y)).toBeCloseTo(-30, 2);
+  });
+
+  it('mirrors yaw as pi minus yaw across Z', () => {
+    const { api, world, stack } = createWriteFixture();
+    const model = new SolidModel('MirrorZModel');
+    const brush = model.addBoxBrush(1, SolidOperation.Additive);
+    brush.position.set(0, 0, 4);
+    brush.rotation.y = THREE.MathUtils.degToRad(45);
+    brush.pushTransformToMesh();
+    model.rebuild(true);
+    stack.push(new CreateSolidModelCommand(model, world));
+    const result = api.invokeTool('mirror_brushes', {
+      brushIds: [brush.id],
+      axis: 'z',
+      plane: 0,
+      copy: true,
+      snap: false,
+    });
+    expect(result.ok).toBe(true);
+    const createdId = (result.createdIds ?? [])[0]!;
+    const clone = model.findBrush(createdId)!;
+    clone.pullTransformFromMesh();
+    expect(clone.position.z).toBeCloseTo(-4, 3);
+    expect(THREE.MathUtils.radToDeg(clone.rotation.y)).toBeCloseTo(135, 2);
+  });
+
+  it('calculates expressions through the tool facade', () => {
+    const { api } = createWriteFixture();
+    const result = api.invokeTool('calculate', { expression: '20+(0.5*12)' });
+    expect(result.ok).toBe(true);
+    expect((result.data as { value: number }).value).toBe(26);
+  });
+
+  it('returns ranked neighbors with shape tags', () => {
+    const { api, world, stack } = createWriteFixture();
+    const model = new SolidModel('NeighborModel');
+    const pole = model.addBoxBrush(1, SolidOperation.Additive);
+    pole.scale.set(0.4, 8, 0.4);
+    pole.position.set(0, 4, 0);
+    pole.pushTransformToMesh();
+    const flag = model.addBoxBrush(1, SolidOperation.Additive);
+    flag.scale.set(2, 0.15, 1);
+    flag.position.set(0.5, 8, 0);
+    flag.pushTransformToMesh();
+    model.rebuild(true);
+    stack.push(new CreateSolidModelCommand(model, world));
+    const result = api.invokeTool('query_neighbors', {
+      brushId: pole.id,
+      radius: 20,
+      limit: 1,
+    });
+    expect(result.ok).toBe(true);
+    const neighbors = (result.data as { neighbors: Array<{ rank: number; shape: string; name: string }> }).neighbors;
+    expect(neighbors).toHaveLength(1);
+    expect(neighbors[0]!.rank).toBe(1);
+    expect(neighbors[0]!.shape).toBeTruthy();
+  });
+});

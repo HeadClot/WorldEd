@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { buildMtlDocument } from '../../src/io/obj_mtl_writer.js';
-import type { ObjMaterialSlot } from '../../src/io/obj_material_collector.js';
+import { buildMtlDocument } from '../../../src/io/obj/obj_mtl_writer.js';
+import type { ObjMaterialSlot } from '../../../src/io/obj/obj_material_collector.js';
 
 describe('buildMtlDocument', () => {
   it('writes standard Wavefront newmtl blocks with Kd colors', () => {

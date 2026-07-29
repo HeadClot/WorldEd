@@ -40,6 +40,8 @@ export type ElectrobunWindowOptions = {
 
 /** Configuration for defineRPC on the Bun side. */
 export type DefineRpcConfig = {
+  /** Optional request timeout in milliseconds. */
+  maxRequestTime?: number;
   handlers: {
     requests?: Record<string, (...args: never[]) => unknown>;
     messages?: Record<string, unknown>;

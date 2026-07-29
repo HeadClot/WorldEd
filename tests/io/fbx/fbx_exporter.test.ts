@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { FbxExporter } from '../../src/io/fbx_exporter.js';
-import { buildExportScene } from '../../src/io/export_scene_builder.js';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
-import { createDefaultGameProfile } from '../../src/settings/settings_defaults.js';
-import { getBuiltInCoordinateSpace } from '../../src/settings/coordinate_space_presets.js';
-import type { GameProfile } from '../../src/settings/settings_types.js';
+import { FbxExporter } from '../../../src/io/fbx/fbx_exporter.js';
+import { buildExportScene } from '../../../src/io/export_scene_builder.js';
+import { SolidModel } from '../../../src/solid/model/solid_model.js';
+import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
+import { SolidBrushVisual } from '../../../src/solid/model/solid_brush_visual.js';
+import { createDefaultGameProfile } from '../../../src/settings/settings_defaults.js';
+import { getBuiltInCoordinateSpace } from '../../../src/settings/coordinate_space_presets.js';
+import type { GameProfile } from '../../../src/settings/settings_types.js';
 
 describe('FbxExporter', () => {
   let worldGroup: THREE.Group;

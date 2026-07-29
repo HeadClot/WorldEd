@@ -47,6 +47,7 @@ export interface EditorToolbarActions {
   onToggleSettingsDialog: () => void;
   onOpenDocumentation: () => void;
   onOpenAboutDialog: () => void;
+  onOpenMcpDialog: () => void;
   onOpenDetachedViewport: () => void;
   onDeleteSelected: () => void;
   onDuplicateSelected: () => void;
@@ -573,7 +574,8 @@ export class EditorShellBuilder {
   }
 
   /**
-   * Adds floating panel toggle icons (UV, textures, tools) and About.
+   * Adds floating panel toggle icons (UV, textures, tools), About, and MCP as
+   * the trailing rightmost control.
    *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
@@ -589,5 +591,9 @@ export class EditorShellBuilder {
     toolbar.addIconButton('Documentation', ToolbarIcons.documentation(), () => actions.onOpenDocumentation());
     toolbar.addIconButton('About', ToolbarIcons.about(), () => actions.onOpenAboutDialog());
     toolbar.addIconButton('Detached Viewport', ToolbarIcons.detachedViewport(), () => actions.onOpenDetachedViewport());
+    toolbar.addTrailingSpacer();
+    toolbar.addIconButton('MCP', ToolbarIcons.mcp(), () => actions.onOpenMcpDialog()).title =
+      'MCP server (orange when running)';
+    toolbar.setButtonActiveByLabel('MCP', false);
   }
 }

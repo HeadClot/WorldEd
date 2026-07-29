@@ -3,8 +3,8 @@
  * handles browsers without File System Access API support.
  */
 
-import type { ObjExportPackage } from './obj_export_types.js';
-import type { FbxExportPackage } from './fbx_export_types.js';
+import type { ObjExportPackage } from './obj/obj_export_types.js';
+import type { FbxExportPackage } from './fbx/fbx_export_types.js';
 
 /**
  * Checks whether the File System Access API is available.

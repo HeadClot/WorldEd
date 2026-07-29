@@ -114,6 +114,7 @@ export class ViewportLayoutManager extends ViewportLayoutCore {
         onToggleSettingsDialog: () => layout.onToggleSettingsDialog(),
         onOpenDocumentation: () => layout.onOpenDocumentation(),
         onOpenAboutDialog: () => layout.onOpenAboutDialog(),
+        onOpenMcpDialog: () => layout.onOpenMcpDialog(),
         onOpenDetachedViewport: () => layout.onOpenDetachedViewport(),
         onAddTerrain: () => layout.onAddTerrain(),
         onAddSolidModel: () => layout.onAddSolidModel(),

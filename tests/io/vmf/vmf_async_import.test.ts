@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { VmfSolidImporter } from '../../src/io/vmf/vmf_solid_importer.js';
-import { yieldToBrowser } from '../../src/utils/async_yield.js';
-import { buildAxisAlignedWorldSolidVmf } from './vmf/vmf_test_solids.js';
+import { VmfSolidImporter } from '../../../src/io/vmf/vmf_solid_importer.js';
+import { yieldToBrowser } from '../../../src/utils/async_yield.js';
+import { buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 
 /** Unit tests for async VMF import progress and yield behavior. */
 describe('VmfSolidImporter async', () => {

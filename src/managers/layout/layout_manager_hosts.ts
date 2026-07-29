@@ -37,6 +37,7 @@ export interface LayoutShellHostCallbacks {
   onToggleSettingsDialog(): void;
   onOpenDocumentation(): void;
   onOpenAboutDialog(): void;
+  onOpenMcpDialog(): void;
   onOpenDetachedViewport(): void;
   onAddTerrain(): void;
   onAddSolidModel(): void;
@@ -139,6 +140,7 @@ export function createShellSourceHostFromLayout(
     onToggleSettingsDialog: () => actions.onToggleSettingsDialog(),
     onOpenDocumentation: () => actions.onOpenDocumentation(),
     onOpenAboutDialog: () => actions.onOpenAboutDialog(),
+    onOpenMcpDialog: () => actions.onOpenMcpDialog(),
     onOpenDetachedViewport: () => actions.onOpenDetachedViewport(),
     onAddTerrain: () => actions.onAddTerrain(),
     onAddSolidModel: () => actions.onAddSolidModel(),

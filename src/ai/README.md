@@ -1,0 +1,126 @@
+# AI World Editor — MCP (desktop)
+
+The Electrobun desktop build can host a **local Model Context Protocol (MCP)** endpoint so external AI clients (Grok Build, Claude Desktop, Cursor, etc.) can inspect and edit **convex solid-model brushes** in the live map.
+
+This is **not** available in the GitHub Pages / browser build.
+
+## Start the server
+
+1. Run the **desktop** app (`bun run desktop:dev` or a packaged Electrobun build).
+2. Click the **MCP** icon on the **main toolbar** (rightmost control).
+3. Click **Start server**.
+4. Copy the **URL** (for example `http://127.0.0.1:18765/mcp`).
+
+No token or password is required. The server only listens on this computer (`127.0.0.1`).
+
+## Connect Grok Build
+
+In `~/.grok/config.toml` (or via `grok mcp add`):
+
+```toml
+[mcp_servers.aiworlded]
+url = "http://127.0.0.1:18765/mcp"
+enabled = true
+```
+
+Use the exact URL from the dialog if the port is not `18765`.
+
+CLI equivalent:
+
+```bash
+grok mcp add --transport http aiworlded http://127.0.0.1:18765/mcp
+```
+
+Keep the editor open with MCP started while Grok uses the tools.
+
+## Coordinate system
+
+- Three.js **right-handed**, **Y-up**
+- Brush transforms are **model-local** unless a field is labeled world
+- CSG operations: `additive` | `subtractive` | `intersecting`
+- Brush **order** is evaluation order (first → last)
+
+## CSG: solid vs brush AABB (critical)
+
+| Tool                                                 | What it measures                                                        |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `query_point` / `query_overlaps` / `query_neighbors` | **Brush volume AABBs** — includes subtractive cutters as hits           |
+| `explain_csg_at_point`                               | **Final solid or void** after ordered CSG (use this for doors/cavities) |
+| `query_void_connectivity`                            | Approximate path between two voids (coarse grid; not navmesh)           |
+
+**Default workflow (leave `invertedWorld` false):** space starts empty → additive brushes create solid → subtractive brushes carve holes **only where they overlap prior solid**. A floating subtractive that does not overlap an additive does nothing.
+
+**Do not enable `set_inverted_world` for normal room shells / door cuts.** Inverted mode starts the universe solid so subtractives dig space (advanced).
+
+**Doors:** use `add_opening` / `cut_opening` (subtractive boxes through walls), not `clip_brush`. Clip/split change **one brush’s topology** along a world plane (ramps, bevels, permanent cuts).
+
+## Walls, rooms, openings (math)
+
+| Piece            | Placement rule                                                                                                                                                                                                                                                                                                          |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `place_wall`     | Centerline `from`→`to` on XZ. Box size `{thickness, height, length}`. Yaw = `atan2(dx, dz)` so local **+Z** follows the segment. Bottom = `baseY` (default 0).                                                                                                                                                          |
+| `add_room_shell` | Exterior AABB `size`; `position` is center (default floor on y=0). Front wall at **+Z**, back **−Z**, left **−X**, right **+X**. Side walls are shortened so corners do not double-stack.                                                                                                                               |
+| `cut_opening`    | Subtractive box; **position is the hole center**, `size` is full extents. No auto wall align.                                                                                                                                                                                                                           |
+| `add_opening`    | Prefer **`targetBrushId`** = wall brush. Snaps cut to wall **midplane**, uses wall thickness as depth (+ small overcut), reorders cut **after** that wall. `sillHeight` = bottom of hole → center Y = sill + height/2. Doors skip bottom frame strip. **Axis-aligned walls only** (not diagonal `place_wall` segments). |
+
+**Door example:** build room → `find_brushes` nameContains `wall_front` → `add_opening` with `kind: "door"`, `targetBrushId`, `sillHeight` = floor top, `size: { width, height }`, `position` along the wall (x/z of doorway center; y ignored when sillHeight set), `snap: false`.
+
+## Core tools
+
+| Tool                                                             | Purpose                                        |
+| ---------------------------------------------------------------- | ---------------------------------------------- |
+| `get_editor_context`                                             | Snap, history, selection, coords               |
+| `calculate`                                                      | Safe arithmetic (`20+(0.5*12)`), no eval       |
+| `list_solid_models` / `get_solid_model` / `get_brush`            | Inventory                                      |
+| `find_brushes` / `describe_brush` / `half_extents`               | Filter; summaries; half-size + face centers    |
+| `query_overlaps` / `query_point` / `query_neighbors` / `measure` | Spatial planning                               |
+| `preview_transform` / `preview_new_box`                          | Dry-run existing or new box bounds             |
+| `explain_csg_at_point` / `query_void_connectivity`               | CSG solid/void; approx cavity path             |
+| `validate_brush` / `validate_solid_model`                        | Topology checks                                |
+| `create_solid_model` / `add_box_brush` / `add_box_brushes`       | Create geometry (batch + names + insert order) |
+| `place_wall` / `add_room_shell` / `cut_opening` / `add_opening`  | Walls, rooms, door/window cuts                 |
+| `set_brush_transform` / `batch_set_brush_transform`              | Pose edits (`snap:false` for exact)            |
+| `align_brush`                                                    | Stack on top / hang under / touch side         |
+| `rotate_brush`                                                   | Rotate in **degrees** (default Y/yaw)          |
+| `rename_brush`                                                   | Stable names (`start_a_flag`, …)               |
+| `clip_brush` / `split_brush`                                     | Plane cut / split into two                     |
+| `delete_brushes` / `duplicate_brushes` / `mirror_brushes`        | Structure + symmetry                           |
+| `reorder_brushes` / `reorder_brush_relative`                     | CSG order (ends or before/after)               |
+| `set_inverted_world` / `select` / `undo` / `redo`                | Session                                        |
+
+### AI level-building tips
+
+- **Names:** pass `name` on `add_box_brush` / `add_box_brushes`, or `rename_brush`, then `find_brushes` with `nameContains`.
+- **Shapes:** `find_brushes` shape filter accepts `thin`/`pole`, `flat`/`panel`/`flag`, `tall`, `long`, `box`.
+- **Place on pole:** `align_brush` with `mode: "top"`, `gap: 0` (optional `center: true`).
+- **Exact coords:** `set_brush_transform` / `add_box_brush` with `snap: false` or `exact: true` so `-17.125` is not rounded to `-17`.
+- **Assemblies:** `duplicate_brushes` with many `brushIds`, or `mirror_brushes` across `axis: "x"|"z"`.
+- **Math:** `calculate` with expressions like `"20+(0.5*12)"` — only `+ - * / ( )` and decimals.
+- **Half extents:** `half_extents` for face centers when aligning openings or stacking props.
+- **Preview:** `preview_transform` / `preview_new_box` return predicted world bounds without mutating.
+- **Rooms:** `add_room_shell` then `add_opening` with **`targetBrushId`** on a wall brush (not bare `cut_opening` unless you compute midplane yourself).
+- **Doors:** set `sillHeight` to the floor top; omit bottom frame automatically; do not enable mullions.
+- **CSG order:** `add_opening` + `targetBrushId` reorders the cut after the wall; otherwise use `reorder_brush_relative` / `insertAfterName`.
+- **Mirror:** X-mirror flips yaw to −yaw; Z-mirror uses π − yaw.
+- **Solid/void:** always `explain_csg_at_point` before trusting space is empty or solid; AABB queries list cutter volumes too.
+- **Subtractives:** must overlap additive solid (and evaluate after it) or they are wasted; `validate_solid_model` warns when they do not.
+- **Clip/split:** world plane on one brush for bevels/splits — not a substitute for doorway CSG.
+
+**Clip plane tips:** prefer `axis` + `distance` (e.g. cut at `y=0` with `axis: "y", distance: 0`). `keepFront: true` (default) keeps the **+axis** side.
+
+**Transform tips:** use **degrees** (`rotationDegrees`, `rotate_brush.degrees`), not radians. When snap is on, positions and angles snap to the editor grid / rotation step (default 15°) unless you pass `snap: false`.
+
+All mutations are **undoable** through the normal editor history.
+
+## Not in this build
+
+- **`capture_viewport` / `capture_section`** — need WebGL readback + image transport outside the AI folder.
+- **Separate tag system** — use stable `name` strings instead of a second metadata channel.
+- **Exact navmesh void paths** — connectivity uses a capped grid / line sample only.
+
+## Architecture
+
+- **Bun process** (`src/ai/server/`): hand-rolled Streamable HTTP + JSON-RPC
+- **Webview** (`src/ai/client/`): `EditorApi` facade over existing solid commands
+- Bridge: Electrobun RPC (`startMcpServer` / `invokeEditorTool`)
+- UI: main toolbar **MCP** button → simple dialog with Start / URL / Copy

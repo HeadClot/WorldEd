@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { buildExportScene } from './export_scene_builder.js';
-import type { GameProfile } from '../settings/settings_types.js';
-import { buildExportRootTransform, resolveFbxUnitScaleFactor } from './coordinate_space_transform.js';
+import { buildExportScene } from '../export_scene_builder.js';
+import type { GameProfile } from '../../settings/settings_types.js';
+import { buildExportRootTransform, resolveFbxUnitScaleFactor } from '../coordinate_space_transform.js';
 import type { FbxExportPackage } from './fbx_export_types.js';
 import { buildFbxExportPlan } from './fbx_export_graph.js';
 import { FbxAsciiSerializer } from './fbx_ascii_serializer.js';

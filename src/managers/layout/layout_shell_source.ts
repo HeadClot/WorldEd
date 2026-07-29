@@ -37,6 +37,7 @@ export interface LayoutShellSourceHost {
   onToggleSettingsDialog(): void;
   onOpenDocumentation(): void;
   onOpenAboutDialog(): void;
+  onOpenMcpDialog(): void;
   onOpenDetachedViewport(): void;
   onAddTerrain(): void;
   onAddSolidModel(): void;
@@ -165,6 +166,7 @@ function buildShellPanelCallbacks(
   | 'onToggleSettingsDialog'
   | 'onOpenDocumentation'
   | 'onOpenAboutDialog'
+  | 'onOpenMcpDialog'
   | 'onOpenDetachedViewport'
 > {
   return {
@@ -179,6 +181,7 @@ function buildShellPanelCallbacks(
     onToggleSettingsDialog: () => host.onToggleSettingsDialog(),
     onOpenDocumentation: () => host.onOpenDocumentation(),
     onOpenAboutDialog: () => host.onOpenAboutDialog(),
+    onOpenMcpDialog: () => host.onOpenMcpDialog(),
     onOpenDetachedViewport: () => host.onOpenDetachedViewport(),
   };
 }

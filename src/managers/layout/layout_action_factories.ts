@@ -56,6 +56,7 @@ export interface ToolbarActionHost {
   onToggleSettingsDialog: () => void;
   onOpenDocumentation: () => void;
   onOpenAboutDialog: () => void;
+  onOpenMcpDialog: () => void;
   onOpenDetachedViewport: () => void;
   onDeleteSelected: () => void;
   onGroupSelected: () => void;
@@ -164,6 +165,7 @@ function buildPrimitiveToolbarActions(
   | 'onToggleSettingsDialog'
   | 'onOpenDocumentation'
   | 'onOpenAboutDialog'
+  | 'onOpenMcpDialog'
   | 'onOpenDetachedViewport'
 > {
   return {
@@ -180,6 +182,7 @@ function buildPrimitiveToolbarActions(
     onToggleSettingsDialog: () => host.onToggleSettingsDialog(),
     onOpenDocumentation: () => host.onOpenDocumentation(),
     onOpenAboutDialog: () => host.onOpenAboutDialog(),
+    onOpenMcpDialog: () => host.onOpenMcpDialog(),
     onOpenDetachedViewport: () => host.onOpenDetachedViewport(),
   };
 }

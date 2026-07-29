@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { buildExportScene } from './export_scene_builder.js';
-import type { GameProfile } from '../settings/settings_types.js';
-import { buildExportRootTransform } from './coordinate_space_transform.js';
+import { buildExportScene } from '../export_scene_builder.js';
+import type { GameProfile } from '../../settings/settings_types.js';
+import { buildExportRootTransform } from '../coordinate_space_transform.js';
 
 /**
  * Exports a Three.js scene group to binary GLB format. Filters out solid brush

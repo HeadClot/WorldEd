@@ -192,6 +192,19 @@ export class Toolbar {
   }
 
   /**
+   * Adds a flexible spacer that pushes following controls to the trailing edge
+   * of the toolbar row.
+   */
+  addTrailingSpacer(): void {
+    const spacer = document.createElement('div');
+    spacer.dataset['toolbarTrailingSpacer'] = 'true';
+    spacer.style.flex = '1 1 auto';
+    spacer.style.minWidth = '12px';
+    spacer.style.height = '1px';
+    this.container.appendChild(spacer);
+  }
+
+  /**
    * Sets whether a specific button should appear active (selected).
    *
    * @param index The button index in the toolbar.

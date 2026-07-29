@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { buildExportScene } from './export_scene_builder.js';
-import type { GameProfile } from '../settings/settings_types.js';
-import { buildExportRootTransform } from './coordinate_space_transform.js';
+import { buildExportScene } from '../export_scene_builder.js';
+import type { GameProfile } from '../../settings/settings_types.js';
+import { buildExportRootTransform } from '../coordinate_space_transform.js';
 import type { ObjExportPackage } from './obj_export_types.js';
 import { ObjMaterialCollector } from './obj_material_collector.js';
 import { ObjGeometryWriter } from './obj_geometry_writer.js';

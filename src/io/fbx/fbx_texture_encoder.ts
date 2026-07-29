@@ -1,6 +1,6 @@
 import type { FbxExportTextureFile } from './fbx_export_types.js';
 import type { FbxMapRecord } from './fbx_surface_records.js';
-import { encodeTextureMapToPngBlob } from './obj_texture_encoder.js';
+import { encodeTextureMapToPngBlob } from '../obj/obj_texture_encoder.js';
 
 /**
  * Encodes FBX map records into PNG blobs for sidecar export.

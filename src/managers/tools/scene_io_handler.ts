@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { SceneSerializer } from '../../io/scene_serializer.js';
 import { SceneDeserializer } from '../../io/scene_deserializer.js';
-import { GlbExporter } from '../../io/glb_exporter.js';
-import { ObjExporter } from '../../io/obj_exporter.js';
-import { FbxExporter } from '../../io/fbx_exporter.js';
+import { GlbExporter } from '../../io/glb/glb_exporter.js';
+import { ObjExporter } from '../../io/obj/obj_exporter.js';
+import { FbxExporter } from '../../io/fbx/fbx_exporter.js';
 import { FileDialogManager } from '../../io/file_dialog_manager.js';
 import { StatusBar } from '../../ui/status_bar.js';
 import type { GameProfile } from '../../settings/settings_types.js';

@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { GlbExporter } from '../../src/io/glb_exporter.js';
-import { buildExportScene } from '../../src/io/export_scene_builder.js';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
+import { GlbExporter } from '../../../src/io/glb/glb_exporter.js';
+import { buildExportScene } from '../../../src/io/export_scene_builder.js';
+import { SolidModel } from '../../../src/solid/model/solid_model.js';
+import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
+import { SolidBrushVisual } from '../../../src/solid/model/solid_brush_visual.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { createDefaultGameProfile } from '../../src/settings/settings_defaults.js';
-import { getBuiltInCoordinateSpace } from '../../src/settings/coordinate_space_presets.js';
-import { buildExportRootTransform } from '../../src/io/coordinate_space_transform.js';
-import type { GameProfile } from '../../src/settings/settings_types.js';
+import { createDefaultGameProfile } from '../../../src/settings/settings_defaults.js';
+import { getBuiltInCoordinateSpace } from '../../../src/settings/coordinate_space_presets.js';
+import { buildExportRootTransform } from '../../../src/io/coordinate_space_transform.js';
+import type { GameProfile } from '../../../src/settings/settings_types.js';
 
 /** GLB file format magic number (little-endian 'glTF'). */
 const GLB_MAGIC_NUMBER = 0x46546c67;

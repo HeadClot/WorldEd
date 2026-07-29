@@ -69,6 +69,9 @@ import { createWiredActionHandlers } from './layout_action_handler_factory.js';
 import { SolidModelPanel } from '../../ui/solid_model_panel.js';
 import { SolidModelController } from '../solid/solid_model_controller.js';
 import { setupSolidModelLayout } from './layout_solid_model_setup.js';
+import { setupLayoutAi } from './layout_ai_setup.js';
+import { getMcpDesktopBridge } from '../../ai/client/mcp_desktop_bridge.js';
+import { showMcpDialog } from '../../ai/client/mcp_dialog.js';
 import {
   setupCameraAndShadingCoordinators as createCameraAndShadingCoordinators,
   setupFaceModeCoordinator as createFaceModeCoordinator,
@@ -271,6 +274,7 @@ export abstract class ViewportLayoutCore {
     this.bindWorkspaceSystem();
     this.syncPrimitivesToViewports();
     this.updateTransformButtons();
+    void this.refreshMcpToolbarButton();
   }
 
   /**
@@ -543,6 +547,7 @@ export abstract class ViewportLayoutCore {
     this.setupTextureBrowser();
     this.setupToolsPaletteAndClip();
     this.setupSolidModelPanel();
+    this.setupAiBridge();
     this.setupSnapSettingsController();
   }
 
@@ -797,6 +802,60 @@ export abstract class ViewportLayoutCore {
     this.solidModelController.setTransformModeProvider(() => this.transformHandler.getMode());
     this.solidModelController.setActiveCameraProvider(() => this.getActiveSpawnCamera());
     this.solidModelController.adoptFirstSolidModelInWorld();
+  }
+
+  /** Binds the EditorApi facade used by the desktop MCP host. */
+  protected setupAiBridge(): void {
+    setupLayoutAi({
+      worldObject: this.worldObject,
+      commandStack: this.commandStack,
+      selectionManager: this.selectionManager,
+      solidModelController: this.solidModelController,
+      gridSnap: this.gridSnap,
+      snapManager: this.snapManager,
+      getUserSnapEnabled: () => this.userSnapEnabled,
+      refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
+      refreshOutliner: () => this.refreshOutliner(),
+      showStatusMessage: (message) => this.showStatusMessage(message),
+    });
+  }
+
+  /** Opens the MCP connection dialog from the main toolbar. */
+  protected onOpenMcpDialog(): void {
+    void showMcpDialog({
+      host: this.container,
+      bridge: getMcpDesktopBridge(),
+      showStatus: (message) => this.showStatusMessage(message),
+      onRunningChanged: (running) => this.setMcpToolbarButtonActive(running),
+    });
+    this.statusBar?.setLastAction('MCP dialog opened');
+  }
+
+  /**
+   * Queries desktop MCP host status and glows the toolbar MCP button when the
+   * server is running.
+   */
+  protected async refreshMcpToolbarButton(): Promise<void> {
+    const bridge = getMcpDesktopBridge();
+    if (!bridge) {
+      this.setMcpToolbarButtonActive(false);
+      return;
+    }
+    try {
+      const status = await bridge.getMcpStatus();
+      this.setMcpToolbarButtonActive(status.running);
+    } catch {
+      this.setMcpToolbarButtonActive(false);
+    }
+  }
+
+  /**
+   * Highlights the main toolbar MCP control when the host is running.
+   *
+   * @param running Whether the MCP server is active.
+   */
+  protected setMcpToolbarButtonActive(running: boolean): void {
+    this.toolbar?.setButtonActiveByLabel('MCP', running);
   }
 
   /** Toggles the solid model floating panel. */

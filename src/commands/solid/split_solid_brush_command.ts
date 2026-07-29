@@ -201,14 +201,18 @@ export class SplitSolidBrushCommand implements UndoCommand {
   }
 
   /**
-   * Transforms a world plane into brush local space.
+   * Transforms a world plane into brush local space (includes model root).
    *
    * @param instance Brush instance.
    * @param worldPlane World plane.
    * @returns Local Three.js plane.
    */
   private worldPlaneToLocal(instance: SolidBrushInstance, worldPlane: THREE.Plane): THREE.Plane {
-    const matrix = instance.getLocalMatrix();
-    return worldPlane.clone().applyMatrix4(matrix.clone().invert());
+    instance.pullTransformFromMesh();
+    if (instance.mesh) {
+      instance.mesh.updateMatrixWorld(true);
+      return worldPlane.clone().applyMatrix4(instance.mesh.matrixWorld.clone().invert());
+    }
+    return worldPlane.clone().applyMatrix4(instance.getLocalMatrix().invert());
   }
 }
