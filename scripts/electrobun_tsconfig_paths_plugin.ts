@@ -36,8 +36,8 @@ function resolveAtImport(importPath: string): string | null {
 }
 
 /**
- * Bun plugin so Electrobun's Bun.build() resolves tsconfig paths aliases
- * (Bun CLI already does; the programmatic API often does not).
+ * Bun plugin so Electrobun's Bun.build() resolves tsconfig paths aliases (Bun
+ * CLI already does; the programmatic API often does not).
  *
  * @returns Configured Bun plugin.
  */
