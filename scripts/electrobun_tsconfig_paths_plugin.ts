@@ -1,8 +1,24 @@
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import type { BunPlugin } from 'bun';
 
-const workspaceRoot = resolve(import.meta.dir, '..');
+/**
+ * Resolves the repository root for Bun (import.meta.dir) and Node/vitest
+ * (import.meta.url).
+ *
+ * @returns Absolute workspace root path.
+ */
+function resolveWorkspaceRoot(): string {
+  const metaWithDir = import.meta as ImportMeta & { dir?: string };
+  const scriptDirectory =
+    typeof metaWithDir.dir === 'string' && metaWithDir.dir.length > 0
+      ? metaWithDir.dir
+      : dirname(fileURLToPath(import.meta.url));
+  return resolve(scriptDirectory, '..');
+}
+
+const workspaceRoot = resolveWorkspaceRoot();
 const srcRoot = join(workspaceRoot, 'src');
 
 /**
