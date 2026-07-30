@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['./tests/setup/canvas_context.ts'],
     include: ['tests/**/*.test.ts'],
   },
 });
