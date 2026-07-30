@@ -90,7 +90,7 @@ export class OrientedBoundsBuilder {
    * @returns Oriented bounds for the mesh.
    */
   private buildFromSingleMesh(mesh: THREE.Mesh): OrientedBoundsData {
-    mesh.updateMatrixWorld(true);
+    this.ensureWorldMatrixIncludesParents(mesh);
     const localBox = this.computeGeometryLocalBox(mesh);
     localBox.getCenter(this.temporaryCenter);
     localBox.getSize(this.temporarySize);
@@ -115,7 +115,7 @@ export class OrientedBoundsBuilder {
   private buildWorldAxisAlignedUnion(meshes: THREE.Mesh[]): OrientedBoundsData {
     this.temporaryBox.makeEmpty();
     meshes.forEach((mesh) => {
-      mesh.updateMatrixWorld(true);
+      this.ensureWorldMatrixIncludesParents(mesh);
       this.temporaryBox.expandByObject(mesh);
     });
     this.temporaryBox.getCenter(this.temporaryCenter);
@@ -125,6 +125,19 @@ export class OrientedBoundsBuilder {
       quaternion: new THREE.Quaternion(),
       halfExtents: this.temporarySize.clone().multiplyScalar(0.5),
     };
+  }
+
+  /**
+   * Refreshes world matrices for a mesh and every ancestor. Required after undo
+   * of a parent pose (e.g. solid model root):
+   * {@link THREE.Object3D.updateMatrixWorld} alone reuses a stale parent {@code
+   * matrixWorld}, so CAD rulers and bounds handles would measure the pre-undo
+   * pose.
+   *
+   * @param mesh Mesh whose world transform will be read.
+   */
+  private ensureWorldMatrixIncludesParents(mesh: THREE.Mesh): void {
+    mesh.updateWorldMatrix(true, false);
   }
 
   /**

@@ -14,6 +14,13 @@ export interface SceneMutationVisualHost {
   refreshOutliner: () => void;
   /** Refreshes face-selection highlight targets after mesh graph changes. */
   updateFaceSelectionMeshes: () => void;
+  /**
+   * Forces world matrices current after history/pose writes. Undo restores
+   * local transforms without refreshing ancestor {@code matrixWorld}; overlays
+   * that measure nested meshes (solid roots) need this before ruler/gizmo
+   * rebuild.
+   */
+  ensureWorldMatricesCurrent: () => void;
   /** Clears any in-progress CAD drag ghost/delta state. */
   endCadRulerDrag: () => void;
   /** Rebuilds selection size rulers from the current selection. */
@@ -38,6 +45,11 @@ export interface SceneTransformCommitVisualHost {
   syncSelectionVisualsDuringTransform: () => void;
   /** Full reclone path when a light transform copy is not enough. */
   syncPrimitivesToViewports: () => void;
+  /**
+   * Forces world matrices current before CAD rulers and gizmo measure selection
+   * poses (same contract as {@link SceneMutationVisualHost}).
+   */
+  ensureWorldMatricesCurrent: () => void;
   /** Clears CAD drag state before selection rulers are rebuilt. */
   endCadRulerDrag: () => void;
   /** Rebuilds CAD size dimensions for the current selection. */
@@ -104,9 +116,14 @@ export function refreshSceneVisualsAfterTransformCommit(
 function refreshOverlayPoseVisuals(
   host: Pick<
     SceneMutationVisualHost,
-    'endCadRulerDrag' | 'refreshCadRulersFromSelection' | 'updateGizmoVisibility' | 'updateGizmoPivot'
+    | 'ensureWorldMatricesCurrent'
+    | 'endCadRulerDrag'
+    | 'refreshCadRulersFromSelection'
+    | 'updateGizmoVisibility'
+    | 'updateGizmoPivot'
   >,
 ): void {
+  host.ensureWorldMatricesCurrent();
   host.endCadRulerDrag();
   host.refreshCadRulersFromSelection();
   host.updateGizmoVisibility();

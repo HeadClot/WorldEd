@@ -16,6 +16,7 @@ describe('scene_visual_refresh', () => {
       'syncPrimitivesToViewports',
       'refreshOutliner',
       'updateFaceSelectionMeshes',
+      'ensureWorldMatricesCurrent',
       'endCadRulerDrag',
       'refreshCadRulersFromSelection',
       'updateGizmoVisibility',
@@ -33,6 +34,7 @@ describe('scene_visual_refresh', () => {
       'finalizeSolidTransforms',
       'syncCloneTransformsForWorldObjects',
       'syncSelectionVisualsDuringTransform',
+      'ensureWorldMatricesCurrent',
       'endCadRulerDrag',
       'refreshCadRulersFromSelection',
       'updateGizmoVisibility',
@@ -49,6 +51,7 @@ describe('scene_visual_refresh', () => {
     expect(order).toEqual([
       'finalizeSolidTransforms',
       'syncPrimitivesToViewports',
+      'ensureWorldMatricesCurrent',
       'endCadRulerDrag',
       'refreshCadRulersFromSelection',
       'updateGizmoVisibility',
@@ -62,11 +65,37 @@ describe('scene_visual_refresh', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     const host = createTransformCommitHost(order, undefined);
     refreshSceneVisualsAfterTransformCommit(host, [mesh]);
+    expect(order).toContain('ensureWorldMatricesCurrent');
     expect(order).toContain('endCadRulerDrag');
     expect(order).toContain('refreshCadRulersFromSelection');
     expect(order).toContain('updateGizmoPivot');
     expect(order).toContain('syncPrimitivesToViewports');
     expect(order).not.toContain('finalizeSolidTransforms');
+  });
+
+  it('refreshes nested solid selection bounds after parent pose undo', () => {
+    const scene = new THREE.Scene();
+    const solidRoot = new THREE.Group();
+    const resultMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
+    solidRoot.add(resultMesh);
+    scene.add(solidRoot);
+    scene.updateMatrixWorld(true);
+
+    solidRoot.position.set(12, 0, 0);
+    scene.updateMatrixWorld(true);
+
+    const measured: number[] = [];
+    const host = createMutationHost([]);
+    host.ensureWorldMatricesCurrent = () => scene.updateMatrixWorld(true);
+    host.refreshCadRulersFromSelection = () => {
+      resultMesh.updateWorldMatrix(true, false);
+      measured.push(resultMesh.matrixWorld.elements[12]!);
+    };
+
+    solidRoot.position.set(0, 0, 0);
+    expect(solidRoot.matrixWorld.elements[12]).toBeCloseTo(12, 5);
+    refreshSceneVisualsAfterMutation(host);
+    expect(measured[measured.length - 1]).toBeCloseTo(0, 5);
   });
 
   it('includes non-mesh transform roots in light clone sync targets', () => {
@@ -95,6 +124,7 @@ function createMutationHost(order: string[]): SceneMutationVisualHost {
     syncPrimitivesToViewports: () => order.push('syncPrimitivesToViewports'),
     refreshOutliner: () => order.push('refreshOutliner'),
     updateFaceSelectionMeshes: () => order.push('updateFaceSelectionMeshes'),
+    ensureWorldMatricesCurrent: () => order.push('ensureWorldMatricesCurrent'),
     endCadRulerDrag: () => order.push('endCadRulerDrag'),
     refreshCadRulersFromSelection: () => order.push('refreshCadRulersFromSelection'),
     updateGizmoVisibility: () => order.push('updateGizmoVisibility'),
@@ -115,6 +145,7 @@ function createTransformCommitHost(order: string[], solidOnly: boolean | undefin
     syncCloneTransformsForWorldObjects: () => order.push('syncCloneTransformsForWorldObjects'),
     syncSelectionVisualsDuringTransform: () => order.push('syncSelectionVisualsDuringTransform'),
     syncPrimitivesToViewports: () => order.push('syncPrimitivesToViewports'),
+    ensureWorldMatricesCurrent: () => order.push('ensureWorldMatricesCurrent'),
     endCadRulerDrag: () => order.push('endCadRulerDrag'),
     refreshCadRulersFromSelection: () => order.push('refreshCadRulersFromSelection'),
     updateGizmoVisibility: () => order.push('updateGizmoVisibility'),

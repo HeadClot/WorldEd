@@ -83,6 +83,54 @@ describe('OrientedBoundsBuilder', () => {
     expect(bounds).not.toBeNull();
     expect(bounds!.center.y).toBeCloseTo(0.5, 5);
   });
+
+  it('should remeasure nested selection after parent pose undo without a scene update', () => {
+    const scene = new THREE.Scene();
+    const solidRoot = new THREE.Group();
+    const resultMesh = createBoxMesh(2, 2, 2);
+    solidRoot.add(resultMesh);
+    scene.add(solidRoot);
+    scene.updateMatrixWorld(true);
+
+    solidRoot.position.set(10, 0, 0);
+    scene.updateMatrixWorld(true);
+    const builder = new OrientedBoundsBuilder();
+    expect(builder.buildFromMeshes([resultMesh])!.center.x).toBeCloseTo(10, 5);
+
+    // TranslateCommand.undo only restores local position; matrixWorld stays stale
+    // until the next full scene walk. Overlay refresh measures immediately.
+    solidRoot.position.set(0, 0, 0);
+    expect(solidRoot.matrixWorld.elements[12]).toBeCloseTo(10, 5);
+
+    const boundsAfterUndo = builder.buildFromMeshes([resultMesh]);
+    expect(boundsAfterUndo).not.toBeNull();
+    expect(boundsAfterUndo!.center.x).toBeCloseTo(0, 5);
+    expect(boundsAfterUndo!.center.y).toBeCloseTo(0, 5);
+    expect(boundsAfterUndo!.center.z).toBeCloseTo(0, 5);
+  });
+
+  it('should remeasure multi-mesh union after shared parent undo', () => {
+    const scene = new THREE.Scene();
+    const solidRoot = new THREE.Group();
+    const left = createBoxMesh(1, 1, 1);
+    left.position.set(-1, 0, 0);
+    const right = createBoxMesh(1, 1, 1);
+    right.position.set(1, 0, 0);
+    solidRoot.add(left);
+    solidRoot.add(right);
+    scene.add(solidRoot);
+    scene.updateMatrixWorld(true);
+
+    solidRoot.position.set(8, 0, 0);
+    scene.updateMatrixWorld(true);
+    const builder = new OrientedBoundsBuilder();
+    expect(builder.buildFromMeshes([left, right])!.center.x).toBeCloseTo(8, 5);
+
+    solidRoot.position.set(0, 0, 0);
+    const boundsAfterUndo = builder.buildFromMeshes([left, right]);
+    expect(boundsAfterUndo).not.toBeNull();
+    expect(boundsAfterUndo!.center.x).toBeCloseTo(0, 5);
+  });
 });
 
 describe('bounds face helpers', () => {
