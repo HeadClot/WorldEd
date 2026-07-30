@@ -1,18 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidCsgCompiler } from '../../src/solid/algorithm/solid_csg_compiler.js';
-import { SolidCsgTree } from '../../src/solid/algorithm/solid_csg_tree.js';
-import { SolidCsgTreeEvaluator } from '../../src/solid/algorithm/solid_csg_tree_evaluator.js';
-import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
-import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.js';
-import { BrushMembership } from '../../src/solid/algorithm/brush_membership.js';
-import { markAsSolidCsgGroup, getSolidGroupOperation, isSolidCsgGroup } from '../../src/solid/model/solid_group.js';
-import { SolidModelCodec } from '../../src/solid/io/solid_model_codec.js';
-import { GroupCommand } from '../../src/commands/object/group_command.js';
-import { SurfaceTriangulator } from '../../src/solid/algorithm/surface_triangulator.js';
-import type { PreparedBrush } from '../../src/solid/algorithm/solid_compile_types.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
+import { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
+import { SolidCsgTreeEvaluator } from '@/solid/algorithm/compile/solid_csg_tree_evaluator.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
+import { markAsSolidCsgGroup, getSolidGroupOperation, isSolidCsgGroup } from '@/solid/model/solid_group.js';
+import { SolidModelCodec } from '@/solid/io/solid_model_codec.js';
+import { CommandObjectGroup } from '@/outliner/commands/command_object_group.js';
+import { SurfaceTriangulator } from '@/solid/algorithm/surface/surface_triangulator.js';
+import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 
 /**
  * Builds a box brush instance for compiler-level tests.
@@ -29,7 +29,7 @@ function makeBoxBrush(
   operation: SolidOperation,
   position?: THREE.Vector3,
 ): SolidBrushInstance {
-  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
+  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
   if (position) instance.position.copy(position);
   return instance;
@@ -179,11 +179,11 @@ describe('Solid CSG groups', () => {
     expect(bounds.max.x).toBeCloseTo(6, 5);
   });
 
-  it('GroupCommand under a solid can host a solid CSG compound', () => {
+  it('CommandObjectGroup under a solid can host a solid CSG compound', () => {
     const model = new SolidModel('GroupCmd');
     const a = model.addBoxBrush(2, SolidOperation.Additive);
     const b = model.addBoxBrush(2, SolidOperation.Additive);
-    const command = new GroupCommand([a.mesh!, b.mesh!], model.root, 'Compound001');
+    const command = new CommandObjectGroup([a.mesh!, b.mesh!], model.root, 'Compound001');
     command.execute();
     const group = command.getGroup();
     markAsSolidCsgGroup(group, SolidOperation.Subtractive);

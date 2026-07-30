@@ -5,14 +5,14 @@ import {
   DEFAULT_GRID_SNAP_INTERVAL,
   DEFAULT_ORTHO_HALF_EXTENT,
   DEFAULT_PERSPECTIVE_CAMERA_OFFSET,
-} from '../../src/types/editor_config.js';
-import { SNAP_PRESETS } from '../../src/types/snap_presets.js';
-import { CameraFramer } from '../../src/navigation/camera_framer.js';
-import { BoundingVolumeComputer } from '../../src/navigation/bounding_volume_computer.js';
+} from '@/types/editor_config.js';
+import { SNAP_PRESETS } from '@/types/snap_presets.js';
+import { CameraFramer } from '@/navigation/camera/camera_framer.js';
+import { BoundingVolumeComputer } from '@/navigation/placement/bounding_volume_computer.js';
 import {
   getDefaultPerspectiveCameraPosition,
   getDefaultSceneFocus,
-} from '../../src/navigation/default_camera_placement.js';
+} from '@/navigation/placement/default_camera_placement.js';
 
 /**
  * Builds a unit box matching the editor default brush placement at origin.

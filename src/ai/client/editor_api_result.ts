@@ -1,4 +1,4 @@
-import type { McpToolResult } from '../shared/mcp_protocol_types.js';
+import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 /**
  * Builds a successful tool result.

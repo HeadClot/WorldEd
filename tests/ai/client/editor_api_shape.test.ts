@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyBrushShape, pickShapeTag, shapeMatchesFilter } from '../../../src/ai/client/editor_api_shape.js';
+import { classifyBrushShape, pickShapeTag, shapeMatchesFilter } from '@/ai/client/editor_api_shape.js';
 
 /** Unit tests for brush shape classification used by find/describe tools. */
 describe('editor_api_shape', () => {

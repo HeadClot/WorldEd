@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidModelCodec } from '../../src/solid/io/solid_model_codec.js';
-import { SceneSerializer } from '../../src/io/scene_serializer.js';
-import { SceneDeserializer } from '../../src/io/scene_deserializer.js';
-import { ApplyFaceTextureCommand } from '../../src/commands/texture/apply_face_texture_command.js';
-import { getFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
-import { createDefaultFaceTextureMapping } from '../../src/texture/uv/face_texture_mapping.js';
-import { countTriangles } from '../../src/texture/uv/planar_uv_projector.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidModelCodec } from '@/solid/io/solid_model_codec.js';
+import { SceneSerializer } from '@/io/scene/scene_serializer.js';
+import { SceneDeserializer } from '@/io/scene/scene_deserializer.js';
+import { CommandTextureApplyFace } from '@/texture/commands/command_texture_apply_face.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { countTriangles } from '@/texture/uv/planar_uv_projector.js';
 
 /** Unit tests for solid model persistence with hierarchical brushes. */
 describe('SolidModelCodec', () => {
@@ -76,7 +76,7 @@ describe('SolidModelCodec', () => {
     mapping.offsetV = -0.1;
     mapping.rotationDeg = 45;
     mapping.align = 'wall';
-    const command = new ApplyFaceTextureCommand(
+    const command = new CommandTextureApplyFace(
       [{ mesh: result, triangleIndices: indices, previousMapping: null }],
       mapping,
     );
@@ -114,7 +114,7 @@ describe('SolidModelCodec', () => {
     mapping.scaleU = 3;
     mapping.offsetU = 0.5;
     mapping.align = 'floor';
-    new ApplyFaceTextureCommand(
+    new CommandTextureApplyFace(
       [
         {
           mesh: result,

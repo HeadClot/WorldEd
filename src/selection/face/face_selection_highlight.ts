@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { Theme } from '../../theme.js';
-import { FaceSelection } from './face_selection_manager.js';
+import { Theme } from '@/theme.js';
+import { FaceSelection } from './manager_face_selection.js';
 import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
 import { buildFacePickRegionKey } from './solid_triangle_source_index.js';
-import { getTriangleVertexIndices } from '../pick/triangle_geometry_utils.js';
-import { GizmoVisualStyle } from '../../transform/gizmo/gizmo_visual_style.js';
-import { isResultMesh, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../solid/model/solid_model_keys.js';
+import { getTriangleVertexIndices } from '@/selection/pick/utils_triangle_geometry.js';
+import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
+import { isResultMesh, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '@/solid/model/solid_model_keys.js';
 
 /**
  * Face-fill opacities for ordinary content meshes (light underlays like default

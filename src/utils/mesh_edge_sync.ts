@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { Theme } from '../theme.js';
-import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../selection/object/selection_highlight.js';
+import { Theme } from '@/theme.js';
+import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '@/selection/object/selection_highlight.js';
 import {
   BRUSH_EDGE_SHARED_MATERIAL_KEY,
   SOLID_BRUSH_EDGE_USERDATA_KEY,
-} from '../solid/model/solid_brush_edge_materials.js';
+} from '@/solid/model/solid_brush_edge_materials.js';
 
 /**
  * UserData flag marking content decorative edge wireframes (white outlines).

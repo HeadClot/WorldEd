@@ -1,21 +1,21 @@
 import * as THREE from 'three';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
-import type { SolidSurfaceRegion } from '../algorithm/surface_triangulator.js';
+import type { SolidSurfaceRegion } from '@/solid/algorithm/surface/surface_triangulator.js';
 import {
   FaceTextureMapping,
   createDefaultFaceTextureMapping,
   withTrsAccessors,
-} from '../../texture/uv/face_texture_mapping.js';
-import { setFaceTextureMapsShared } from '../../texture/uv/face_texture_storage.js';
-import { rebuildSolidResultMaterials } from '../../texture/material/surface_material_builder.js';
-import { createContentMaterial } from '../../materials/content_material_factory.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
-import { Theme } from '../../theme.js';
+} from '@/texture/uv/face_texture_mapping.js';
+import { setFaceTextureMapsShared } from '@/texture/uv/face_texture_storage.js';
+import { rebuildSolidResultMaterials } from '@/texture/material/builder_surface_material.js';
+import { createContentMaterial } from '@/materials/factory_content_material.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { Theme } from '@/theme.js';
 import { SOLID_MODEL_RESULT_USERDATA_KEY } from './solid_model_keys.js';
 import {
   composeBrushWorldFromLocal,
   convertBrushLocalFaceMappingToWorldWithMatrix,
-} from '../brush/solid_brush_uv_space.js';
+} from '@/solid/brush/solid_brush_uv_space.js';
 
 /** Snapshot of one brush UV/default and per-face mappings. */
 export type BrushUvSnapshot = {

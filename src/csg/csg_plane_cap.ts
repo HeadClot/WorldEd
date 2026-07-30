@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { CsgPolygon } from './csg_polygon.js';
-import { orderConvexPolygon } from '../transform/extrusion/convex_face_prism.js';
-import { createDefaultFaceTextureMapping } from '../texture/uv/face_texture_mapping.js';
-import { getTexturePaintState } from '../texture/paint/texture_paint_state.js';
+import { orderConvexPolygon } from '@/transform/extrusion/convex_face_prism.js';
+import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { getStateTexturePaint } from '@/texture/paint/state_texture_paint.js';
 
 /** Distance treated as on the cutting plane when collecting cap vertices. */
 const CAP_PLANE_EPSILON = 1e-5;
@@ -103,7 +103,7 @@ function createCappedPolygonWithOutwardNormal(
   orderedVertices: THREE.Vector3[],
   outwardNormal: THREE.Vector3,
 ): CsgPolygon | null {
-  const fillMapping = createDefaultFaceTextureMapping(getTexturePaintState().getLastTextureId());
+  const fillMapping = createDefaultFaceTextureMapping(getStateTexturePaint().getLastTextureId());
   const cap = new CsgPolygon(orderedVertices, fillMapping);
   if (cap.getPlaneNormal().lengthSq() < 1e-12) return null;
   ensureCapOutwardWinding(cap, outwardNormal);

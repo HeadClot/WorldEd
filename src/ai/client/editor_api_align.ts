@@ -10,11 +10,11 @@ import {
   shouldApplySnap,
   snapEulerWhenRequested,
 } from './editor_api_snap.js';
-import { SetPositionCommand } from '../../commands/transform/set_position_command.js';
+import { CommandTransformSetPosition } from '@/transform/commands/command_transform_set_position.js';
 import { failResult, okResult } from './editor_api_result.js';
-import type { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import type { SolidModel } from '../../solid/model/solid_model.js';
-import type { McpToolResult } from '../shared/mcp_protocol_types.js';
+import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import type { SolidModel } from '@/solid/model/solid_model.js';
+import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 /** Align and dry-run transform helpers for snap-aware placement. */
 export class EditorApiAlign {
@@ -202,7 +202,7 @@ export class EditorApiAlign {
     const worldDelta = nextWorldCenter.clone().sub(currentCenter);
     const nextLocal = mesh.position.clone().add(this.worldDeltaToLocal(mesh, worldDelta));
     if (useSnap) this.host.gridSnap.snapVector3(nextLocal);
-    this.host.commandStack.push(new SetPositionCommand([mesh], [nextLocal]));
+    this.host.commandStack.push(new CommandTransformSetPosition([mesh], [nextLocal]));
     found.brush.pullTransformFromMesh();
     this.host.solidModelController.onTransformsCommitted([mesh]);
     this.host.refreshAfterWorldMutation();

@@ -4,9 +4,9 @@ import {
   normalizeTextureLockFlags,
   shouldRebakeContentAfterTransform,
   shouldUpdateMappingsForLocks,
-} from '../../../src/texture/lock/texture_lock_transform.js';
-import { SurfaceUvMatrix } from '../../../src/texture/uv_matrix/surface_uv_matrix.js';
-import { transformBrushLocalUvForPoseChange } from '../../../src/texture/uv_matrix/surface_uv_matrix_transform.js';
+} from '@/texture/lock/texture_lock_transform.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
+import { transformBrushLocalUvForPoseChange } from '@/texture/uv_matrix/surface_uv_matrix_transform.js';
 
 describe('texture_lock_transform', () => {
   it('normalizes boolean true to both locks on', () => {

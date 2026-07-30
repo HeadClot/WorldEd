@@ -20,8 +20,8 @@ import { failResult, okResult } from './editor_api_result.js';
 import { assignSnapExact } from './editor_api_optional.js';
 import type { EditorApiSolidWrites } from './editor_api_solid_writes.js';
 import type { AddBoxBrushArgs, AddBoxBrushBatchEntry, AddBoxBrushesArgs } from './editor_api_types.js';
-import { SolidBrushFactory } from '../../solid/brush/solid_brush_factory.js';
-import type { McpToolResult, McpVec3 } from '../shared/mcp_protocol_types.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import type { McpToolResult, McpVec3 } from '@/ai/shared/mcp_protocol_types.js';
 
 /** Extra depth so a cut fully clears a wall face (avoids paper-thin remnants). */
 const OPENING_OVERCUT = 0.05;
@@ -56,7 +56,7 @@ export class EditorApiBuilders {
     const position = resolveSnappedPosition(this.host, args.position, new THREE.Vector3(), useSnap);
     const rotation = snapEulerWhenRequested(this.host, resolveEulerFromArgs(args.rotationDegrees, undefined), useSnap);
     const scale = resolveSnappedScale(this.host, args.scale, new THREE.Vector3(1, 1, 1), useSnap);
-    const topology = SolidBrushFactory.createCenteredBox(size.x, size.y, size.z);
+    const topology = FactorySolidBrush.createCenteredBox(size.x, size.y, size.z);
     const localBounds = topology.computeLocalBounds();
     const quaternion = new THREE.Quaternion().setFromEuler(rotation);
     const localMatrix = new THREE.Matrix4().compose(position, quaternion, scale);

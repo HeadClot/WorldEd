@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { FaceTextureMapping, withTrsAccessors } from '../../texture/uv/face_texture_mapping.js';
-import { SurfaceUvMatrix } from '../../texture/uv_matrix/surface_uv_matrix.js';
+import { FaceTextureMapping, withTrsAccessors } from '@/texture/uv/face_texture_mapping.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 import { VMF_INCHES_TO_METERS, swizzleSourceComponentsToThree } from './vmf_coordinates.js';
 import { VmfTextureAxis } from './vmf_types.js';
-import { materialNameToTextureId } from './vmf_material_policy.js';
+import { materialNameToTextureId } from './policy_vmf_material.js';
 
 /**
  * Default texture size used when VMT/VTF dimensions are unknown. Half-Life 2

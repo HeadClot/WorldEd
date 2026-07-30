@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { collapseToHierarchyRoots, findCommonParent } from '../../src/utils/hierarchy_selection.js';
+import { collapseToHierarchyRoots, findCommonParent } from '@/utils/hierarchy_selection.js';
 
 describe('collapseToHierarchyRoots', () => {
   it('should drop children when their parent is also selected', () => {

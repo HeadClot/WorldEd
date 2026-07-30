@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidCsgCompiler } from '../../src/solid/algorithm/solid_csg_compiler.js';
-import { SolidCsgTree } from '../../src/solid/algorithm/solid_csg_tree.js';
-import { SolidCsgTreeEvaluator } from '../../src/solid/algorithm/solid_csg_tree_evaluator.js';
-import { SolidRoutingTableBuilder } from '../../src/solid/algorithm/solid_routing_table_builder.js';
-import { BrushMembership } from '../../src/solid/algorithm/brush_membership.js';
-import { markAsSolidCsgGroup } from '../../src/solid/model/solid_group.js';
-import { SurfaceCategory } from '../../src/solid/types/surface_category.js';
-import { SurfaceTriangulator } from '../../src/solid/algorithm/surface_triangulator.js';
-import type { PreparedBrush } from '../../src/solid/algorithm/solid_compile_types.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
+import { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
+import { SolidCsgTreeEvaluator } from '@/solid/algorithm/compile/solid_csg_tree_evaluator.js';
+import { BuilderSolidAlgorithmRoutingTable } from '@/solid/algorithm/routing/builder_solid_algorithm_routing_table.js';
+import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
+import { markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
+import { SurfaceCategory } from '@/solid/types/surface_category.js';
+import { SurfaceTriangulator } from '@/solid/algorithm/surface/surface_triangulator.js';
+import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 
 /**
  * Prepares visible brushes in scene evaluation order.
@@ -87,7 +87,7 @@ function routeFlatLinearized(
 ): SurfaceCategory {
   const tree = SolidCsgTree.fromPreparedFlat(prepared);
   const peers = prepared.map((_, index) => index).filter((index) => index !== subjectIndex);
-  const table = SolidRoutingTableBuilder.buildForSubject(prepared, subjectIndex, peers, tree, false, true);
+  const table = BuilderSolidAlgorithmRoutingTable.buildForSubject(prepared, subjectIndex, peers, tree, false, true);
   return table.route((preparedIndex) => {
     if (preparedIndex === subjectIndex) return SurfaceCategory.SelfAligned;
     const peer = prepared[preparedIndex];
@@ -206,7 +206,7 @@ describe('Solid CSG group intersect isolation', () => {
     const prepared = prepareVisibleBrushes(model);
     const tree = SolidCsgTree.fromSceneGraph(model.root, prepared);
     expect(tree.isFlat).toBe(false);
-    const table = SolidRoutingTableBuilder.buildForSubject(prepared, 0, [1], tree, false, true);
+    const table = BuilderSolidAlgorithmRoutingTable.buildForSubject(prepared, 0, [1], tree, false, true);
     expect(table.steps.length).toBe(0);
   });
 

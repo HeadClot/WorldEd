@@ -1,9 +1,9 @@
-import { Theme } from '../../theme.js';
-import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
-import { GITHUB_RELEASES_PAGE_URL } from '../../updater/github_release_client.js';
-import { StandaloneUpdateService } from '../../updater/standalone_update_service.js';
-import type { UpdateCheckResult } from '../../updater/update_types.js';
-import { hexToRgb } from '../../utils/color_utils.js';
+import { Theme } from '@/theme.js';
+import type { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
+import { GITHUB_RELEASES_PAGE_URL } from '@/updater/github_release_client.js';
+import { StandaloneUpdateService } from '@/updater/standalone_update_service.js';
+import type { UpdateCheckResult } from '@/updater/update_types.js';
+import { hexToRgb } from '@/utils/utils_color.js';
 import {
   createSettingsButton,
   createSettingsCategory,

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { SolidPlane } from '../../solid/brush/solid_plane.js';
-import { SOLID_FAT_PLANE_EPSILON } from '../../solid/algorithm/solid_math_constants.js';
+import { SolidPlane } from '@/solid/brush/solid_plane.js';
+import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 
 /** Face loop produced by half-space hull construction. */
 export interface HalfSpaceFaceLoop {

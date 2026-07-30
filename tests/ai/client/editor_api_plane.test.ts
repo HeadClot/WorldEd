@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { buildWorldClipPlane, planeArgsHelpMessage } from '../../../src/ai/client/editor_api_plane.js';
+import { buildWorldClipPlane, planeArgsHelpMessage } from '@/ai/client/editor_api_plane.js';
 
 /** Unit tests for MCP plane argument parsing. */
 describe('buildWorldClipPlane', () => {

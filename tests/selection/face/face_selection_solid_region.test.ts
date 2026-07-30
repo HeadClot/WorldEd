@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { FaceSelectionManager } from '../../../src/selection/face/face_selection_manager.js';
-import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../../src/solid/model/solid_model_keys.js';
-import { groupSelectionsIntoFaceRegions } from '../../../src/selection/face/face_region_grouper.js';
+import { ManagerFaceSelection } from '@/selection/face/manager_face_selection.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '@/solid/model/solid_model_keys.js';
+import { groupSelectionsIntoFaceRegions } from '@/selection/face/face_region_grouper.js';
 
 describe('solid face region selection', () => {
   it('stores one selection entry per brush face, not every triangle', () => {
@@ -13,7 +13,7 @@ describe('solid face region selection', () => {
       { brushId: 'floor', surfaceIndex: 1 },
       { brushId: 'floor', surfaceIndex: 1 },
     ]);
-    const manager = new FaceSelectionManager();
+    const manager = new ManagerFaceSelection();
     manager.selectFace(mesh, 0, false);
     expect(manager.getSelectedFaceCount()).toBe(1);
     expect(manager.isFaceSelected(mesh, 2)).toBe(true);
@@ -29,7 +29,7 @@ describe('solid face region selection', () => {
       { brushId: 'wall', surfaceIndex: 0 },
       { brushId: 'wall', surfaceIndex: 0 },
     ]);
-    const manager = new FaceSelectionManager();
+    const manager = new ManagerFaceSelection();
     manager.selectFace(mesh, 1, false);
     const regions = groupSelectionsIntoFaceRegions(manager.getSelectedFaces());
     expect(regions).toHaveLength(1);

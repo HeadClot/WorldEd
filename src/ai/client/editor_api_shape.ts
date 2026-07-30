@@ -1,4 +1,4 @@
-import type { McpVec3 } from '../shared/mcp_protocol_types.js';
+import type { McpVec3 } from '@/ai/shared/mcp_protocol_types.js';
 
 /** Coarse shape tags derived from world AABB size ratios. */
 export type BrushShapeTag = 'thin_pole' | 'flat_panel' | 'tall' | 'long' | 'box';

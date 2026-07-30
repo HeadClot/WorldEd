@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
-import { UvSmearController } from '../../../src/managers/texture/uv_smear_controller.js';
-import { CommandStack } from '../../../src/commands/command_stack.js';
-import { setFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
-import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../../src/solid/model/solid_model.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { ControllerUvSmear } from '@/texture/controller/controller_uv_smear.js';
+import { CommandStack } from '@/commands/command_stack.js';
+import { setFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '@/solid/model/solid_model.js';
 
 /** Unit tests for UV smear preserving solid-brush authored scale/phase. */
 describe('UV smear solid mapping', () => {
@@ -28,7 +28,7 @@ describe('UV smear solid mapping', () => {
     const seedTriangle = sources!.findIndex((source) => source.brushId === brush.id && source.surfaceIndex === 0);
     expect(seedTriangle).toBeGreaterThanOrEqual(0);
 
-    const controller = new UvSmearController(new CommandStack(8));
+    const controller = new ControllerUvSmear(new CommandStack(8));
     controller.beginStroke(result, seedTriangle);
     controller.endStroke();
 
@@ -58,7 +58,7 @@ describe('UV smear solid mapping', () => {
     const sources = result.userData[SOLID_TRIANGLE_SOURCES_USERDATA_KEY] as
       Array<{ brushId: string; surfaceIndex: number }> | undefined;
     const seedTriangle = sources!.findIndex((s) => s.brushId === brush.id);
-    const controller = new UvSmearController(new CommandStack(8));
+    const controller = new ControllerUvSmear(new CommandStack(8));
     controller.beginStroke(result, seedTriangle);
     controller.endStroke();
     brush.position.x += 0.4;
@@ -84,7 +84,7 @@ describe('UV smear solid mapping', () => {
         mapping: authored,
       },
     ]);
-    const controller = new UvSmearController(new CommandStack(8));
+    const controller = new ControllerUvSmear(new CommandStack(8));
     controller.beginStroke(result, 0);
     controller.endStroke();
     const maps = result.userData['faceTextureMaps'] as Array<{ mapping: { scaleU: number } }> | undefined;

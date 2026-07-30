@@ -4,7 +4,7 @@ import type {
   McpDetailLevel,
   McpSolidOperationName,
   McpVec3,
-} from '../shared/mcp_protocol_types.js';
+} from '@/ai/shared/mcp_protocol_types.js';
 
 export type {
   McpBounds,
@@ -12,7 +12,7 @@ export type {
   McpDetailLevel,
   McpSolidOperationName,
   McpVec3,
-} from '../shared/mcp_protocol_types.js';
+} from '@/ai/shared/mcp_protocol_types.js';
 
 /** Compact solid model row for list tools. */
 export interface SolidModelSummaryDto {

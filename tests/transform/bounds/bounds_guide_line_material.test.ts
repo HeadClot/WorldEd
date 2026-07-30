@@ -8,8 +8,8 @@ import {
   createScreenPixelDashedLineMaterial,
   isBoundsGuideDashPixelDrawn,
   measureScreenPixelDistanceAlongSegment,
-} from '../../../src/transform/bounds/bounds_guide_line_material.js';
-import { GizmoVisualStyle } from '../../../src/transform/gizmo/gizmo_visual_style.js';
+} from '@/transform/bounds/bounds_guide_line_material.js';
+import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
 
 describe('bounds_guide_line_material', () => {
   it('should create a front dashed shader with depth-tested opacity', () => {

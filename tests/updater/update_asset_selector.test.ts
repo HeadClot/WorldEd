@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { selectStandaloneUpdateAsset } from '../../src/updater/update_asset_selector.js';
-import type { GitHubReleaseAsset } from '../../src/updater/update_types.js';
+import { selectStandaloneUpdateAsset } from '@/updater/update_asset_selector.js';
+import type { GitHubReleaseAsset } from '@/updater/update_types.js';
 
 describe('standalone update asset selection', () => {
   it('selects the Windows installer and ignores checksums and source archives', () => {

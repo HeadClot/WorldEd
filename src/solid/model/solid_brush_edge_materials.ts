@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SolidOperation } from '../types/solid_operation.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /**
  * UserData flag marking a shared brush edge material (must not be disposed per

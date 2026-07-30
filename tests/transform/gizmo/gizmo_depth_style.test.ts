@@ -4,11 +4,11 @@ import {
   applyGizmoCloneDepthStyle,
   GIZMO_DEPTH_ROLE_USERDATA,
   tagGizmoDepthRole,
-} from '../../../src/transform/gizmo/gizmo_depth_style.js';
-import { createGizmoFrontMaterial, createGizmoOccludedMesh } from '../../../src/transform/gizmo/gizmo_visual_style.js';
-import { TransformGizmo } from '../../../src/transform/gizmo/transform_gizmo.js';
-import { TransformMode } from '../../../src/types/transform_mode.js';
-import { Theme } from '../../../src/theme.js';
+} from '@/transform/gizmo/gizmo_depth_style.js';
+import { createGizmoFrontMaterial, createGizmoOccludedMesh } from '@/transform/gizmo/gizmo_visual_style.js';
+import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
+import { TransformMode } from '@/types/transform_mode.js';
+import { Theme } from '@/theme.js';
 
 describe('applyGizmoCloneDepthStyle', () => {
   it('disables depth testing and hides ghosts for orthographic always-on-top', () => {
@@ -56,7 +56,7 @@ describe('applyGizmoCloneDepthStyle', () => {
   });
 
   it('applies always-on-top when preparing an orthographic translate clone', () => {
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.TRANSLATE);
     gizmo.setVisible(true);
     const clone = gizmo.getHandleGroupClone('xz');

@@ -1,4 +1,4 @@
-import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
+import type { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
 import {
   ANISOTROPY_PREFERENCE_LABELS,
   ANISOTROPY_PREFERENCE_OPTIONS,
@@ -13,7 +13,7 @@ import {
   type AnisotropyPreference,
   type TextureFilterMode,
   type UiThemePreference,
-} from '../../settings/settings_types.js';
+} from '@/settings/store/settings_types.js';
 import {
   createSettingsCategory,
   createSettingsControlRow,

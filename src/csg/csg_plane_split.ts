@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { CsgPolygon } from './csg_polygon.js';
-import { CsgMeshBuilder } from './csg_mesh_builder.js';
+import { BuilderCsgMesh } from './builder_csg_mesh.js';
 import { CsgClipper } from './csg_clipper.js';
 import { buildPlaneCapPolygon } from './csg_plane_cap.js';
 import { planeToCsgForm } from './csg_plane_from_points.js';
-import { rebuildDecorativeEdges } from '../utils/mesh_edge_sync.js';
+import { rebuildDecorativeEdges } from '@/utils/mesh_edge_sync.js';
 
 /** Result of splitting a mesh by a plane into two capped solids. */
 export interface PlaneSplitResult {
@@ -17,13 +17,13 @@ export interface PlaneSplitResult {
  * cut so results stay closed solids.
  */
 export class CsgPlaneSplit {
-  private meshBuilder: CsgMeshBuilder;
+  private meshBuilder: BuilderCsgMesh;
   private clipper: CsgClipper;
   private resultCounter: number;
 
   /** Creates a plane-split operator. */
   constructor() {
-    this.meshBuilder = new CsgMeshBuilder();
+    this.meshBuilder = new BuilderCsgMesh();
     this.clipper = new CsgClipper();
     this.resultCounter = 0;
   }

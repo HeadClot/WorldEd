@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { VmfSolidImporter } from '../../../src/io/vmf/vmf_solid_importer.js';
-import { SolidCsgCompiler } from '../../../src/solid/algorithm/solid_csg_compiler.js';
-import { BrushMembership } from '../../../src/solid/algorithm/brush_membership.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
-import { SolidBrushValidator } from '../../../src/solid/brush/solid_brush_validator.js';
+import { VmfSolidImporter } from '@/io/vmf/vmf_solid_importer.js';
+import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
+import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidBrushValidator } from '@/solid/brush/solid_brush_validator.js';
 import { buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 import { buildAxisAlignedSideBlocks } from './vmf_test_solids.js';
 
@@ -44,7 +44,7 @@ ${inner}
  */
 function isInsideSolid(
   point: THREE.Vector3,
-  brushes: ReturnType<import('../../../src/solid/model/solid_model.js').SolidModel['getBrushes']>,
+  brushes: ReturnType<import('@/solid/model/solid_model.js').SolidModel['getBrushes']>,
 ): boolean {
   let inside = false;
   for (const instance of brushes) {

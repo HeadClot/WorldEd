@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import electrobunConfig from '../../electrobun.config.js';
 import packageMetadata from '../../package.json';
-import { APPLICATION_DISPLAY_NAME, buildDesktopWindowTitle } from '../../src/application_identity.js';
+import { APPLICATION_DISPLAY_NAME, buildDesktopWindowTitle } from '@/application_identity.js';
 
 /** Typed view of electrobun.config for package assertions. */
 interface ElectrobunPackageConfig {

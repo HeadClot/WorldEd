@@ -1,5 +1,5 @@
-import type { StandaloneUpdaterBridge } from './standalone_updater_bridge.js';
-import { detectStandalonePlatform } from './standalone_updater_bridge.js';
+import type { StandaloneUpdaterBridge } from './bridge_standalone_updater.js';
+import { detectStandalonePlatform } from './bridge_standalone_updater.js';
 import type { StandaloneHostUpdateCheck } from './update_types.js';
 
 /** Request and response contract shared by the Electrobun Bun and webview sides. */

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 describe('SolidModel intersecting op regression', () => {
   it('keeps result geometry when last brush becomes intersecting over an additive', () => {

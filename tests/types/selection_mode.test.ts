@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SelectionMode } from '../../src/types/selection_mode.js';
+import { SelectionMode } from '@/types/selection_mode.js';
 
 describe('SelectionMode enum', () => {
   it('should have exactly 2 values', () => {

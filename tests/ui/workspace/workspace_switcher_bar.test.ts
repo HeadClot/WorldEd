@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { WorkspaceSwitcherBar } from '../../../src/ui/workspace/workspace_switcher_bar.js';
-import { createDefaultWorkspaces, WORKSPACE_IDS } from '../../../src/managers/layout/workspace/workspace_definition.js';
+import { WorkspaceSwitcherBar } from '@/ui/workspace/workspace_switcher_bar.js';
+import { createDefaultWorkspaces, WORKSPACE_IDS } from '@/layout/workspace/workspace_definition.js';
 
 /**
  * Builds a switcher with vitest action spies.

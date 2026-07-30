@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { DuplicateSolidBrushesCommand } from '../../src/commands/solid/duplicate_solid_brushes_command.js';
-import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
-import { isSolidCsgGroup, markAsSolidCsgGroup } from '../../src/solid/model/solid_group.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { CommandSolidDuplicateBrushes } from '@/solid/commands/command_solid_duplicate_brushes.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { isSolidCsgGroup, markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
 
 /** Tests that solid brush duplication stays inside the solid model hierarchy. */
 describe('Duplicate solid brushes', () => {
@@ -28,7 +28,7 @@ describe('Duplicate solid brushes', () => {
   it('undoes solid brush duplication via command', () => {
     const model = new SolidModel('CmdSolid');
     const source = model.addBoxBrush(2, SolidOperation.Subtractive);
-    const command = new DuplicateSolidBrushesCommand([source.mesh!], new THREE.Vector3(0, 0, 0));
+    const command = new CommandSolidDuplicateBrushes([source.mesh!], new THREE.Vector3(0, 0, 0));
     command.execute();
     expect(model.getBrushCount()).toBe(2);
     expect(command.getClonedMeshes().length).toBe(1);
@@ -46,7 +46,7 @@ describe('Duplicate solid brushes', () => {
     second.mesh!.name = 'SecondBrush';
     third.mesh!.name = 'ThirdBrush';
     const selectionClickOrder = [third.mesh!, first.mesh!];
-    const command = new DuplicateSolidBrushesCommand(selectionClickOrder, new THREE.Vector3(0, 0, 0));
+    const command = new CommandSolidDuplicateBrushes(selectionClickOrder, new THREE.Vector3(0, 0, 0));
     command.execute();
     const brushes = model.getBrushes();
     expect(brushes).toHaveLength(5);
@@ -113,7 +113,7 @@ describe('Duplicate solid brushes', () => {
     model.syncBrushOrderFromScene();
     model.rebuild(true);
     const brushCountBefore = model.getBrushCount();
-    const command = new DuplicateSolidBrushesCommand([group], new THREE.Vector3(0, 0, 0));
+    const command = new CommandSolidDuplicateBrushes([group], new THREE.Vector3(0, 0, 0));
     command.execute();
     expect(model.getBrushCount()).toBe(brushCountBefore + 2);
     const clonedRoots = command.getClonedInspectorRoots();

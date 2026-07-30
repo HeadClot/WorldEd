@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createElectrobunUpdaterBridge } from '../../src/updater/electrobun_updater_rpc.js';
+import { createElectrobunUpdaterBridge } from '@/updater/electrobun_updater_rpc.js';
 
 describe('createElectrobunUpdaterBridge', () => {
   it('forwards native checks and installs through the typed RPC client', async () => {

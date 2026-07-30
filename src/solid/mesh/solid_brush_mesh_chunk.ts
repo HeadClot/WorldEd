@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
-import { FaceSurfaceDescription, createDefaultFaceSurface } from '../../texture/uv_matrix/face_surface_description.js';
-import { SolidCompiledPolygon } from '../algorithm/solid_compiled_polygon.js';
-import { SurfaceTriangulator } from '../algorithm/surface_triangulator.js';
-import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { FaceSurfaceDescription, createDefaultFaceSurface } from '@/texture/uv_matrix/face_surface_description.js';
+import { SolidCompiledPolygon } from '@/solid/algorithm/compile/solid_compiled_polygon.js';
+import { SurfaceTriangulator } from '@/solid/algorithm/surface/surface_triangulator.js';
+import { SolidSurfaceRegion, SolidTriangleSource } from '@/solid/algorithm/surface/surface_triangulator.js';
 
 /**
  * Pre-triangulated, UV-baked output for one brush. Reused across partial

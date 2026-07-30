@@ -4,7 +4,7 @@ import {
   computeBrushSpawnPosition,
   computeBrushSpawnPositionInScene,
   snapPositionToGrid,
-} from '../../src/solid/model/brush_spawn_placement.js';
+} from '@/solid/model/brush_spawn_placement.js';
 
 /** Unit tests for camera-front, grid-aligned brush spawn placement. */
 describe('brush_spawn_placement', () => {

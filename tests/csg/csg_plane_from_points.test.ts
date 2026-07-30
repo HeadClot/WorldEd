@@ -7,7 +7,7 @@ import {
   buildPlaneFromPlacementPoints,
   flipPlane,
   planeToCsgForm,
-} from '../../src/csg/csg_plane_from_points.js';
+} from '@/csg/csg_plane_from_points.js';
 
 describe('csg_plane_from_points', () => {
   it('should build a vertical plane containing two points', () => {

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { getDebugCheckerTexture } from '../texture/library/debug_texture_factory.js';
-import { initializeMeshTextureUVs } from '../texture/uv/face_texture_applier.js';
+import { getDebugCheckerTexture } from '@/texture/library/factory_debug_texture.js';
+import { initializeMeshTextureUVs } from '@/texture/uv/face_texture_applier.js';
 
 /** Generates simple procedural heightmap terrain meshes for blocking levels. */
 export class TerrainGenerator {

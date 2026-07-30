@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { FaceSelection } from '../../selection/face/face_selection_manager.js';
-import { groupSelectionsIntoFaceRegions } from '../../selection/face/face_region_grouper.js';
+import { FaceSelection } from '@/selection/face/manager_face_selection.js';
+import { groupSelectionsIntoFaceRegions } from '@/selection/face/face_region_grouper.js';
 import {
   FaceTextureAlign,
   FaceTextureMapping,
@@ -15,7 +15,7 @@ import {
   getFaceTextureMapsLive,
   setFaceTextureMaps,
 } from './face_texture_storage.js';
-import { isResultMesh, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../solid/model/solid_model_keys.js';
+import { isResultMesh, SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '@/solid/model/solid_model_keys.js';
 import {
   bakeFaceUVs,
   bakeAllFacesDefaultUVs,
@@ -24,12 +24,12 @@ import {
   rebakeStoredFaceTextureMaps,
   resolveProjectionNormal,
 } from './planar_uv_projector.js';
-import { SurfaceUvMatrix } from '../uv_matrix/surface_uv_matrix.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 import { applyCylinderSideUnwrapOffsets } from './cylinder_side_unwrap.js';
 import { captureGeometrySourceIfNeeded } from './geometry_source.js';
-import { rebuildSurfaceMaterials } from '../material/surface_material_builder.js';
-import { getTexturePaintState } from '../paint/texture_paint_state.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../library/texture_id.js';
+import { rebuildSurfaceMaterials } from '@/texture/material/builder_surface_material.js';
+import { getStateTexturePaint } from '@/texture/paint/state_texture_paint.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
 import {
   applyPartialFieldsToTrs,
   applyRelativeOpToTrs,
@@ -501,7 +501,7 @@ export function resetTargetsToDefault(targets: TextureApplyTarget[]): void {
  */
 export function initializeMeshTextureUVs(mesh: THREE.Mesh, textureId?: string, align?: FaceTextureAlign): void {
   captureGeometrySourceIfNeeded(mesh);
-  const paintId = textureId ?? getTexturePaintState().getLastTextureId();
+  const paintId = textureId ?? getStateTexturePaint().getLastTextureId();
   const triangleCount = countTriangles(mesh.geometry);
   const allIndices: number[] = [];
   for (let i = 0; i < triangleCount; i++) allIndices.push(i);

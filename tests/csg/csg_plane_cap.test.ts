@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { CsgMeshBuilder } from '../../src/csg/csg_mesh_builder.js';
-import { collectPlaneIntersectionPoints, buildPlaneCapPolygon } from '../../src/csg/csg_plane_cap.js';
-import { planeToCsgForm } from '../../src/csg/csg_plane_from_points.js';
+import { BuilderCsgMesh } from '@/csg/builder_csg_mesh.js';
+import { collectPlaneIntersectionPoints, buildPlaneCapPolygon } from '@/csg/csg_plane_cap.js';
+import { planeToCsgForm } from '@/csg/csg_plane_from_points.js';
 
 describe('csg_plane_cap', () => {
   it('should collect four mid-plane hits for an axis-aligned box', () => {
     const mesh = createUnitBoxMesh();
-    const polygons = new CsgMeshBuilder().meshToPolygons(mesh);
+    const polygons = new BuilderCsgMesh().meshToPolygons(mesh);
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
       new THREE.Vector3(1, 0, 0),
       new THREE.Vector3(0, 0, 0),
@@ -22,7 +22,7 @@ describe('csg_plane_cap', () => {
 
   it('should build a cap polygon with outward normal', () => {
     const mesh = createUnitBoxMesh();
-    const polygons = new CsgMeshBuilder().meshToPolygons(mesh);
+    const polygons = new BuilderCsgMesh().meshToPolygons(mesh);
     const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
       new THREE.Vector3(1, 0, 0),
       new THREE.Vector3(0, 0, 0),

@@ -7,9 +7,9 @@ import {
   removeDecorativeEdges,
   enableFlatShadingOnMesh,
   usesContentDecorativeEdges,
-} from '../../src/utils/mesh_edge_sync.js';
-import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '../../src/selection/object/selection_highlight.js';
-import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_edge_materials.js';
+} from '@/utils/mesh_edge_sync.js';
+import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '@/selection/object/selection_highlight.js';
+import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '@/solid/model/solid_brush_edge_materials.js';
 
 describe('mesh_edge_sync', () => {
   let mesh: THREE.Mesh;

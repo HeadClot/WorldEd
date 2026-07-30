@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
-import { AssignSolidBrushTextureCommand } from '../../src/commands/texture/assign_solid_brush_texture_command.js';
-import { getFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../src/texture/library/texture_id.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { CommandTextureAssignSolidBrush } from '@/texture/commands/command_texture_assign_solid_brush.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
 
 /** Per-brush surface textures bake into the CSG result, never helper previews. */
 describe('Solid brush surface textures', () => {
@@ -15,7 +15,7 @@ describe('Solid brush surface textures', () => {
     const subtractive = model.addBoxBrush(1, SolidOperation.Subtractive);
     expect(additive.mesh && subtractive.mesh).toBeTruthy();
     const textureId = 'folder/test_wall.png';
-    const command = new AssignSolidBrushTextureCommand([additive.mesh!], textureId);
+    const command = new CommandTextureAssignSolidBrush([additive.mesh!], textureId);
     command.execute();
     expect(additive.surfaceTextureId).toBe(textureId);
     expect(subtractive.surfaceTextureId).toBe(DEFAULT_CHECKER_TEXTURE_ID);
@@ -37,7 +37,7 @@ describe('Solid brush surface textures', () => {
   it('undo restores prior brush texture ids', () => {
     const model = new SolidModel('UndoTex');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const command = new AssignSolidBrushTextureCommand([brush.mesh!], 'folder/custom.png');
+    const command = new CommandTextureAssignSolidBrush([brush.mesh!], 'folder/custom.png');
     command.execute();
     expect(brush.surfaceTextureId).toBe('folder/custom.png');
     command.undo();
@@ -49,7 +49,7 @@ describe('Solid brush surface textures', () => {
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
     brush.setFaceTextureId(0, 'folder/face0.png');
     brush.setFaceTextureId(2, 'folder/face2.png');
-    const command = new AssignSolidBrushTextureCommand([brush.mesh!], 'folder/whole.png');
+    const command = new CommandTextureAssignSolidBrush([brush.mesh!], 'folder/whole.png');
     command.execute();
     expect(brush.surfaceTextureId).toBe('folder/whole.png');
     expect(brush.serializeFaceTextureIds().filter(Boolean).length).toBe(0);

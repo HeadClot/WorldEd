@@ -4,7 +4,7 @@ import {
   collectFilesFromDirectoryHandle,
   FileSystemAccessDirectoryAccess,
   WebkitDirectoryInputAccess,
-} from '../../../src/texture/library/local_directory_access.js';
+} from '@/texture/library/local_directory_access.js';
 
 describe('local_directory_access', () => {
   afterEach(() => {

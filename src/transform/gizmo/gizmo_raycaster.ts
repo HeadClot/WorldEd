@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GizmoHandle } from './gizmo_handle.js';
-import { pointerEventToNdc } from '../../utils/pointer_ndc.js';
+import { pointerEventToNdc } from '@/utils/pointer_ndc.js';
 import { isGizmoWantedVisible } from './gizmo_viewport_visibility.js';
-import { GizmoAxis } from '../../types/transform_mode.js';
+import { GizmoAxis } from '@/types/transform_mode.js';
 
 /**
  * Picks which gizmo handle was clicked using raycasting. Converts mouse events

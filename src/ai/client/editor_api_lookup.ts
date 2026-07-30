@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { SolidModel } from '../../solid/model/solid_model.js';
-import { SolidModelRegistry } from '../../solid/model/solid_model_registry.js';
-import type { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import { isSolidCsgGroup } from '../../solid/model/solid_group.js';
-import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { RegistrySolidModel } from '@/solid/model/registry_solid_model.js';
+import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { isSolidCsgGroup } from '@/solid/model/solid_group.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 
 /** Lookup result for a brush and its owning solid model. */
 export interface BrushLookup {
@@ -31,7 +31,7 @@ export interface SolidHierarchyNodeLookup {
  * @returns Solid models in traversal discovery order.
  */
 export function listSolidModels(worldObject: THREE.Object3D): SolidModel[] {
-  return Array.from(SolidModelRegistry.collectUnder(worldObject));
+  return Array.from(RegistrySolidModel.collectUnder(worldObject));
 }
 
 /**

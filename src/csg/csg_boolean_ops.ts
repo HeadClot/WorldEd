@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CsgPolygon } from './csg_polygon.js';
-import { CsgMeshBuilder } from './csg_mesh_builder.js';
+import { BuilderCsgMesh } from './builder_csg_mesh.js';
 import { CsgBspNode } from './csg_bsp_node.js';
 
 /** Supported CSG boolean operation kinds. */
@@ -15,11 +15,11 @@ export enum CsgOperation {
  * brush-style level design solids.
  */
 export class CsgBooleanOps {
-  private meshBuilder: CsgMeshBuilder;
+  private meshBuilder: BuilderCsgMesh;
 
   /** Creates a new CSG boolean operator. */
   constructor() {
-    this.meshBuilder = new CsgMeshBuilder();
+    this.meshBuilder = new BuilderCsgMesh();
   }
 
   /**

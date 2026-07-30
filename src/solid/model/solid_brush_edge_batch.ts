@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { isSolidModelObject } from './solid_model_keys.js';
 import { SolidBrushVisual, SOLID_BRUSH_OPERATION_USERDATA_KEY } from './solid_brush_visual.js';
 import { SolidBrushEdgeMaterials, SOLID_BRUSH_EDGE_USERDATA_KEY } from './solid_brush_edge_materials.js';
-import { SolidOperation } from '../types/solid_operation.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /** UserData flag on merged static brush-edge LineSegments under a solid root. */
 export const SOLID_BRUSH_EDGE_BATCH_USERDATA_KEY = 'isSolidBrushEdgeBatch';

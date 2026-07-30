@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { rebuildSolidResultMaterials } from '../../../src/texture/material/surface_material_builder.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../../src/texture/library/texture_id.js';
-import { setTextureMapCacheForTests, TextureMapCache } from '../../../src/texture/library/texture_map_cache.js';
-import { applySharedShadingPass, disposeSharedShadingPass } from '../../../src/viewports/shared_shading_pass.js';
+import { rebuildSolidResultMaterials } from '@/texture/material/builder_surface_material.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '@/texture/library/texture_map_cache.js';
+import { applySharedShadingPass, disposeSharedShadingPass } from '@/viewports/shared/shared_shading_pass.js';
 import {
   clearSharedContentMaterialStoreForTests,
   getSharedContentMaterials,
-} from '../../../src/viewports/shared_content_material_store.js';
-import { ShadingMode } from '../../../src/types/shading_mode.js';
+} from '@/viewports/shared/shared_content_material_store.js';
+import { ShadingMode } from '@/types/shading_mode.js';
 
 /**
  * Regression: after multi-view leaves the shared scene in wireframe (black

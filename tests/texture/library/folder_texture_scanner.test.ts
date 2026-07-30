@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { FolderTextureScanner } from '../../../src/texture/library/folder_texture_scanner.js';
-import { PickedDirectoryListing } from '../../../src/texture/library/local_directory_access.js';
-import { ensureObjectUrlApis } from './object_url_test_utils.js';
+import { FolderTextureScanner } from '@/texture/library/folder_texture_scanner.js';
+import { PickedDirectoryListing } from '@/texture/library/local_directory_access.js';
+import { ensureObjectUrlApis } from './utils_object_url_test.js';
 
 describe('FolderTextureScanner', () => {
   let scanner: FolderTextureScanner;

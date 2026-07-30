@@ -3,14 +3,14 @@ import * as THREE from 'three';
 import {
   createDefaultStartupSolidModel,
   DEFAULT_STARTUP_BRUSH_SIZE,
-} from '../../src/solid/model/default_startup_solid_model.js';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+} from '@/solid/model/default_startup_solid_model.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import {
   getDefaultFrontCameraPosition,
   getDefaultSceneFocus,
   getDefaultSideCameraPosition,
-} from '../../src/navigation/default_camera_placement.js';
+} from '@/navigation/placement/default_camera_placement.js';
 
 /** Startup solid model must sit at the world origin with a unit brush!. */
 describe('createDefaultStartupSolidModel', () => {

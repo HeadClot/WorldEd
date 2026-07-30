@@ -1,13 +1,13 @@
-import { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
-import { SolidModel } from '../../solid/model/solid_model.js';
-import { SolidOperation } from '../../solid/types/solid_operation.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { VMF_INCHES_TO_METERS } from './vmf_coordinates.js';
 import { VmfBrushFromSides, VmfBuiltBrush } from './vmf_brush_from_sides.js';
-import { isSkippedVolumeMaterial } from './vmf_material_policy.js';
+import { isSkippedVolumeMaterial } from './policy_vmf_material.js';
 import { VmfParser } from './vmf_parser.js';
 import { VmfEntity, VmfSolid, VmfWorld } from './vmf_types.js';
-import { forBatchesAsync, yieldToBrowser } from '../../utils/async_yield.js';
+import { forBatchesAsync, yieldToBrowser } from '@/utils/async_yield.js';
 
 /** Options controlling VMF → solid model import. */
 export interface VmfImportOptions {

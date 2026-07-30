@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { StandaloneUpdateService } from '../../src/updater/standalone_update_service.js';
-import type { GitHubRelease, StandaloneUpdateInstallRequest } from '../../src/updater/update_types.js';
+import { StandaloneUpdateService } from '@/updater/standalone_update_service.js';
+import type { GitHubRelease, StandaloneUpdateInstallRequest } from '@/updater/update_types.js';
 
 describe('StandaloneUpdateService', () => {
   it('finds and installs a newer compatible executable through the host bridge', async () => {

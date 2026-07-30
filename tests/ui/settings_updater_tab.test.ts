@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EditorSettingsStore } from '../../src/settings/editor_settings_store.js';
-import { GITHUB_RELEASES_PAGE_URL } from '../../src/updater/github_release_client.js';
-import { StandaloneUpdateService } from '../../src/updater/standalone_update_service.js';
-import { MemorySettingsStorage } from '../../src/settings/settings_storage.js';
-import { SettingsUpdaterTab } from '../../src/ui/settings/settings_updater_tab.js';
+import { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
+import { GITHUB_RELEASES_PAGE_URL } from '@/updater/github_release_client.js';
+import { StandaloneUpdateService } from '@/updater/standalone_update_service.js';
+import { MemorySettingsStorage } from '@/settings/storage/settings_storage.js';
+import { SettingsUpdaterTab } from '@/ui/settings/settings_updater_tab.js';
 
 describe('SettingsUpdaterTab', () => {
   it('explains browser limitations, shows the embedded app version, and links to releases', () => {

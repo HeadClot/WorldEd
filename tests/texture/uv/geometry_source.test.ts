@@ -5,8 +5,8 @@ import {
   getGeometrySource,
   resolveGeometrySourceParams,
   resolveGeometrySourceType,
-} from '../../../src/texture/uv/geometry_source.js';
-import { ensureUniqueTriangleVertices } from '../../../src/texture/uv/planar_uv_projector.js';
+} from '@/texture/uv/geometry_source.js';
+import { ensureUniqueTriangleVertices } from '@/texture/uv/planar_uv_projector.js';
 
 describe('geometry_source', () => {
   it('should detect typed box geometry parameters', () => {

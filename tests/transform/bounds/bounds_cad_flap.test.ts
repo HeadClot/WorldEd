@@ -5,12 +5,12 @@ import {
   createCadResizeCubeGeometry,
   createCadResizeFlapGeometry,
   quaternionForViewPlaneEar,
-} from '../../../src/transform/bounds/bounds_cad_flap.js';
-import { BOUNDS_FACE_AXIS_USERDATA_KEY } from '../../../src/transform/bounds/bounds_gizmo.js';
-import { Theme } from '../../../src/theme.js';
-import { TransformGizmo } from '../../../src/transform/gizmo/transform_gizmo.js';
-import { TransformMode } from '../../../src/types/transform_mode.js';
-import { BoundsFace } from '../../../src/types/bounds_face.js';
+} from '@/transform/bounds/bounds_cad_flap.js';
+import { BOUNDS_FACE_AXIS_USERDATA_KEY } from '@/transform/bounds/gizmo_bounds.js';
+import { Theme } from '@/theme.js';
+import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
+import { TransformMode } from '@/types/transform_mode.js';
+import { BoundsFace } from '@/types/bounds_face.js';
 
 describe('CAD resize ear geometry', () => {
   it('builds a centered stadium (line handle with rounded ends)', () => {
@@ -73,7 +73,7 @@ describe('orthographic ears and perspective cubes', () => {
   it('hides Y resize grips in top (xz) but keeps Y face picks for body drag', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     mesh.updateMatrixWorld(true);
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     gizmo.updateBoundsFromMeshes([mesh]);
@@ -92,7 +92,7 @@ describe('orthographic ears and perspective cubes', () => {
   it('hides Z grips in front (xy) clones and styles X/Y as ears', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     mesh.updateMatrixWorld(true);
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     gizmo.updateBoundsFromMeshes([mesh]);
@@ -109,7 +109,7 @@ describe('orthographic ears and perspective cubes', () => {
   it('hides X grips in side (yz) clones and styles Y/Z as ears', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     mesh.updateMatrixWorld(true);
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     gizmo.updateBoundsFromMeshes([mesh]);
@@ -126,7 +126,7 @@ describe('orthographic ears and perspective cubes', () => {
   it('keeps six 3D arrow grips in perspective clones (no ears)', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     mesh.updateMatrixWorld(true);
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     gizmo.updateBoundsFromMeshes([mesh]);
@@ -159,7 +159,7 @@ describe('orthographic ears and perspective cubes', () => {
   it('does not mutate shared pick materials when styling 2D ears', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     mesh.updateMatrixWorld(true);
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     gizmo.updateBoundsFromMeshes([mesh]);
@@ -177,7 +177,7 @@ describe('orthographic ears and perspective cubes', () => {
   it('offsets ears slightly past the face half-extent', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     mesh.updateMatrixWorld(true);
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     gizmo.updateBoundsFromMeshes([mesh]);

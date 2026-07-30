@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { createDefaultFaceTextureMapping } from '../../src/texture/uv/face_texture_mapping.js';
-import { setFaceTextureMaps } from '../../src/texture/uv/face_texture_storage.js';
-import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../src/solid/model/solid_model.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { setFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '@/solid/model/solid_model.js';
 
 /**
  * Regression: UV smear used to drop mesh chunks for every mapped brush; the

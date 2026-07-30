@@ -15,12 +15,12 @@ import { boxToDto, computeBrushWorldBounds, computeModelWorldBounds, vec3ToDto }
 import { eulerToDegreesDto } from './editor_api_snap.js';
 import { findBrush, findCsgGroup, findSolidModel, listSolidModels } from './editor_api_lookup.js';
 import { solidOperationToName } from './editor_api_operations.js';
-import { APPLICATION_DISPLAY_NAME, APPLICATION_VERSION } from '../../application_identity.js';
-import { SolidModel } from '../../solid/model/solid_model.js';
-import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
-import { getSolidGroupOperation, isSolidCsgGroup } from '../../solid/model/solid_group.js';
-import type { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import type { McpDetailLevel, McpToolResult } from '../shared/mcp_protocol_types.js';
+import { APPLICATION_DISPLAY_NAME, APPLICATION_VERSION } from '@/application_identity.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { getSolidGroupOperation, isSolidCsgGroup } from '@/solid/model/solid_group.js';
+import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import type { McpDetailLevel, McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 /** Read-only solid model queries for EditorApi. */
 export class EditorApiSolidReads {

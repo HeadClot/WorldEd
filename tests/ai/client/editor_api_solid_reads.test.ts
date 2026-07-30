@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { EditorApi } from '../../../src/ai/client/editor_api.js';
-import type { EditorApiHost } from '../../../src/ai/client/editor_api_host.js';
-import { CommandStack } from '../../../src/commands/command_stack.js';
-import { SelectionManager } from '../../../src/selection/object/selection_manager.js';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
-import { CreateSolidModelCommand } from '../../../src/commands/create/create_solid_model_command.js';
-import { GridSnap } from '../../../src/transform/snap/grid_snap.js';
-import { SnapManager } from '../../../src/transform/snap/snap_manager.js';
-import { SolidModelController } from '../../../src/managers/solid/solid_model_controller.js';
-import { SolidModelPanel } from '../../../src/ui/solid_model_panel.js';
+import { EditorApi } from '@/ai/client/editor_api.js';
+import type { EditorApiHost } from '@/ai/client/editor_api_host.js';
+import { CommandStack } from '@/commands/command_stack.js';
+import { ManagerSelection } from '@/selection/object/manager_selection.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { CommandCreateSolidModel } from '@/solid/commands/command_create_solid_model.js';
+import { GridSnap } from '@/transform/snap/grid_snap.js';
+import { ManagerSnap } from '@/transform/snap/manager_snap.js';
+import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import { PanelSolidModel } from '@/solid/ui/panel/panel_solid_model.js';
 
 /**
  * Builds a minimal EditorApiHost for unit tests.
@@ -23,13 +23,13 @@ import { SolidModelPanel } from '../../../src/ui/solid_model_panel.js';
 function createTestHost(
   worldObject: THREE.Group,
   commandStack: CommandStack,
-  selectionManager: SelectionManager,
+  selectionManager: ManagerSelection,
 ): EditorApiHost {
   const panelHost = document.createElement('div');
-  const panel = new SolidModelPanel(panelHost, { onAddBoxBrush: () => undefined });
-  const solidModelController = new SolidModelController(worldObject, commandStack, selectionManager, panel);
+  const panel = new PanelSolidModel(panelHost, { onAddBoxBrush: () => undefined });
+  const solidModelController = new ControllerSolidModel(worldObject, commandStack, selectionManager, panel);
   const gridSnap = new GridSnap(true, 0.25);
-  const snapManager = new SnapManager(0.25);
+  const snapManager = new ManagerSnap(0.25);
   return {
     worldObject,
     commandStack,
@@ -49,12 +49,12 @@ describe('EditorApi solid reads', () => {
   it('lists solid models created in the world', () => {
     const world = new THREE.Group();
     const stack = new CommandStack(64);
-    const selection = new SelectionManager();
+    const selection = new ManagerSelection();
     const api = new EditorApi(createTestHost(world, stack, selection));
     const model = new SolidModel('ReadModel');
     const size = 2;
     model.addBoxBrush(size, SolidOperation.Additive);
-    stack.push(new CreateSolidModelCommand(model, world));
+    stack.push(new CommandCreateSolidModel(model, world));
     const listed = api.invokeTool('list_solid_models');
     expect(listed.ok).toBe(true);
     const models = (listed.data as { models: Array<{ name: string; brushCount: number }> }).models;
@@ -64,12 +64,12 @@ describe('EditorApi solid reads', () => {
   it('returns ordered brushes for get_solid_model', () => {
     const world = new THREE.Group();
     const stack = new CommandStack(64);
-    const selection = new SelectionManager();
+    const selection = new ManagerSelection();
     const api = new EditorApi(createTestHost(world, stack, selection));
     const model = new SolidModel('DetailModel');
     model.addBoxBrush(1, SolidOperation.Additive);
     model.addBoxBrush(1, SolidOperation.Subtractive);
-    stack.push(new CreateSolidModelCommand(model, world));
+    stack.push(new CommandCreateSolidModel(model, world));
     const result = api.invokeTool('get_solid_model', { modelId: model.root.uuid });
     expect(result.ok).toBe(true);
     const detail = result.data as { brushes: Array<{ operation: string; orderIndex: number }> };
@@ -82,7 +82,7 @@ describe('EditorApi solid reads', () => {
   it('returns editor context with right-handed Y-up coordinates', () => {
     const world = new THREE.Group();
     const stack = new CommandStack(64);
-    const selection = new SelectionManager();
+    const selection = new ManagerSelection();
     const api = new EditorApi(createTestHost(world, stack, selection));
     const context = api.invokeTool('get_editor_context');
     expect(context.ok).toBe(true);

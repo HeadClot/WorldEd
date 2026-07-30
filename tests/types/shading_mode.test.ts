@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ShadingMode } from '../../src/types/shading_mode.js';
+import { ShadingMode } from '@/types/shading_mode.js';
 
 describe('ShadingMode enum', () => {
   it('should have exactly 4 values', () => {

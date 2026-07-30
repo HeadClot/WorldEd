@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createConvexPrismBrushFromFace } from '../../../src/transform/extrusion/convex_face_prism_brush.js';
-import { findCoplanarFaceIndices } from '../../../src/selection/pick/triangle_geometry_utils.js';
-import { SolidBrushValidator } from '../../../src/solid/brush/solid_brush_validator.js';
+import { createConvexPrismBrushFromFace } from '@/transform/extrusion/convex_face_prism_brush.js';
+import { findCoplanarFaceIndices } from '@/selection/pick/utils_triangle_geometry.js';
+import { SolidBrushValidator } from '@/solid/brush/solid_brush_validator.js';
 
 describe('createConvexPrismBrushFromFace', () => {
   it('should build a valid convex prism brush from a box face', () => {

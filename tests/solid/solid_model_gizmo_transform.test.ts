@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidModelController } from '../../src/managers/solid/solid_model_controller.js';
-import { CommandStack } from '../../src/commands/command_stack.js';
-import { SelectionManager } from '../../src/selection/object/selection_manager.js';
-import { resolveTransformTargets } from '../../src/selection/object/resolve_transform_targets.js';
-import { TransformExecutor } from '../../src/transform/transform_executor.js';
-import { GridSnap } from '../../src/transform/snap/grid_snap.js';
-import { TranslateCommand } from '../../src/commands/transform/translate_command.js';
-import { ScaleCommand } from '../../src/commands/transform/scale_command.js';
-import { GizmoAxis } from '../../src/types/transform_mode.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import { CommandStack } from '@/commands/command_stack.js';
+import { ManagerSelection } from '@/selection/object/manager_selection.js';
+import { resolveTransformTargets } from '@/selection/object/resolve_transform_targets.js';
+import { TransformExecutor } from '@/transform/core/transform_executor.js';
+import { GridSnap } from '@/transform/snap/grid_snap.js';
+import { CommandTransformTranslate } from '@/transform/commands/command_transform_translate.js';
+import { CommandTransformScale } from '@/transform/commands/command_transform_scale.js';
+import { GizmoAxis } from '@/types/transform_mode.js';
 
 /** Lightweight mock of the solid tools panel used by the controller. */
 class MockSolidPanel {
@@ -45,8 +45,8 @@ function createSolidWithBrush(): SolidModel {
  * @param world World root group.
  * @returns Controller under test.
  */
-function createController(world: THREE.Group): SolidModelController {
-  return new SolidModelController(world, new CommandStack(16), new SelectionManager(), new MockSolidPanel() as never);
+function createController(world: THREE.Group): ControllerSolidModel {
+  return new ControllerSolidModel(world, new CommandStack(16), new ManagerSelection(), new MockSolidPanel() as never);
 }
 
 describe('Solid model gizmo transform targets', () => {
@@ -73,7 +73,7 @@ describe('Solid model gizmo transform targets', () => {
     const model = createSolidWithBrush();
     const original = model.root.position.clone();
     const finalPosition = original.clone().add(new THREE.Vector3(3, 1, -2));
-    const command = new TranslateCommand(
+    const command = new CommandTransformTranslate(
       [{ object: model.root, position: original.clone(), finalPosition }],
       finalPosition.clone().sub(original),
     );
@@ -87,7 +87,7 @@ describe('Solid model gizmo transform targets', () => {
     const model = createSolidWithBrush();
     const originalPosition = model.root.position.clone();
     const originalScale = model.root.scale.clone();
-    const command = new ScaleCommand(
+    const command = new CommandTransformScale(
       [{ object: model.root, originalPosition, originalScale }],
       model.root.position.clone(),
       new THREE.Vector3(1, 0, 0),

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { easeOutCubic } from '../../src/utils/easing.js';
+import { easeOutCubic } from '@/utils/easing.js';
 
 describe('easeOutCubic', () => {
   it('should return 0 when input is 0', () => {

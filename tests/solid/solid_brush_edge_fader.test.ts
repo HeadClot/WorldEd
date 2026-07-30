@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
-import { SolidBrushEdgeFader } from '../../src/solid/model/solid_brush_edge_fader.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { SolidBrushEdgeFader } from '@/solid/model/solid_brush_edge_fader.js';
 import {
   BRUSH_EDGE_FADE_FAR,
   SOLID_BRUSH_EDGE_USERDATA_KEY,
   SolidBrushEdgeMaterials,
-} from '../../src/solid/model/solid_brush_edge_materials.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+} from '@/solid/model/solid_brush_edge_materials.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /** Unit tests for perspective brush edge distance culling. */
 describe('SolidBrushEdgeFader', () => {

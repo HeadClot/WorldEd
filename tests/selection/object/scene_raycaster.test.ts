@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { SceneRaycaster } from '../../../src/selection/object/scene_raycaster.js';
+import { SceneRaycaster } from '@/selection/object/scene_raycaster.js';
 
 describe('SceneRaycaster', () => {
   let raycaster: SceneRaycaster;

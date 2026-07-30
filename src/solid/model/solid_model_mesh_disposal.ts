@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SolidBrushEdgeMaterials } from './solid_brush_edge_materials.js';
-import { DECORATIVE_EDGE_USERDATA_KEY } from '../../utils/mesh_edge_sync.js';
+import { DECORATIVE_EDGE_USERDATA_KEY } from '@/utils/mesh_edge_sync.js';
 
 /**
  * Disposes geometry and materials for a removed brush mesh. Shared brush edge

@@ -1,13 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { createTextureFilterPolicy } from '../../../src/texture/library/texture_filter_policy.js';
-import { TextureMapCache, setTextureMapCacheForTests } from '../../../src/texture/library/texture_map_cache.js';
-import { TextureLibrary } from '../../../src/texture/library/texture_library.js';
-import {
-  createTextureBrowserEntry,
-  type TextureBrowserEntry,
-} from '../../../src/texture/library/texture_browser_entry.js';
-import { mockObjectUrlApis } from './object_url_test_utils.js';
+import { createTextureFilterPolicy } from '@/texture/library/policy_texture_filter.js';
+import { TextureMapCache, setTextureMapCacheForTests } from '@/texture/library/texture_map_cache.js';
+import { TextureLibrary } from '@/texture/library/texture_library.js';
+import { createTextureBrowserEntry, type TextureBrowserEntry } from '@/texture/library/texture_browser_entry.js';
+import { mockObjectUrlApis } from './utils_object_url_test.js';
 
 describe('TextureMapCache filter policy', () => {
   afterEach(() => {

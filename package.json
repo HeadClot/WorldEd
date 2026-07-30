@@ -15,6 +15,8 @@
     "format:check": "prettier --check .",
     "ci": "bun run format:check && bun run testrun && bun run build",
     "typecheck:strict": "tsc --project tsconfig.strict.json --noEmit",
+    "audit:agents": "bun scripts/audit_agents_compliance.ts",
+    "codemod:at-imports": "bun scripts/codemod_at_imports.ts",
     "desktop:dev": "electrobun dev",
     "desktop:build": "electrobun build --env=stable",
     "desktop:run": "electrobun run"

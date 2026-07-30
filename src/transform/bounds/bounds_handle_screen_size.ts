@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { OrientedBoundsData } from './oriented_bounds.js';
+import type { DataOrientedBounds } from './builder_oriented_bounds.js';
 
 /**
  * On-screen pick size up close (approx CSS pixels). Stays at/above the visual
@@ -66,7 +66,7 @@ export const BOUNDS_SILHOUETTE_EXTERIOR_PIXELS = 10;
  * @param bounds Current OBB, or null.
  * @returns World-space base size for CAD ear layout.
  */
-export function computeBoundsEarWorldSize(bounds: OrientedBoundsData | null): number {
+export function computeBoundsEarWorldSize(bounds: DataOrientedBounds | null): number {
   const minHalf = bounds ? Math.min(bounds.halfExtents.x, bounds.halfExtents.y, bounds.halfExtents.z) : 0.5;
   const size = Math.max(0.12, minHalf * 0.16);
   return Math.min(size, 0.34);
@@ -164,7 +164,7 @@ export function computeSilhouetteExteriorBandWorld(camera: THREE.Camera, viewpor
  * @param camera Active camera, ideally the perspective pane camera.
  * @returns World-space pick volume edge length.
  */
-export function computeBoundsCubeWorldSize(bounds: OrientedBoundsData | null, camera: THREE.Camera | null): number {
+export function computeBoundsCubeWorldSize(bounds: DataOrientedBounds | null, camera: THREE.Camera | null): number {
   if (camera instanceof THREE.PerspectiveCamera && bounds) {
     return perspectiveCubeWorldSize(camera, bounds.center, computeBoundsCubePickPixels);
   }
@@ -180,7 +180,7 @@ export function computeBoundsCubeWorldSize(bounds: OrientedBoundsData | null, ca
  * @returns World-space visual arrow length.
  */
 export function computeBoundsCubeVisualWorldSize(
-  bounds: OrientedBoundsData | null,
+  bounds: DataOrientedBounds | null,
   camera: THREE.Camera | null,
 ): number {
   if (camera instanceof THREE.PerspectiveCamera && bounds) {

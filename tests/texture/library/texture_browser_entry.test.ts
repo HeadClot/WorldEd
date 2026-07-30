@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import {
-  createTextureBrowserEntry,
-  revokeTextureBrowserEntry,
-} from '../../../src/texture/library/texture_browser_entry.js';
-import { ensureObjectUrlApis } from './object_url_test_utils.js';
+import { createTextureBrowserEntry, revokeTextureBrowserEntry } from '@/texture/library/texture_browser_entry.js';
+import { ensureObjectUrlApis } from './utils_object_url_test.js';
 
 describe('texture_browser_entry', () => {
   afterEach(() => {

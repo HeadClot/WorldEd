@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { ConvexPolygonClipper } from '../../src/solid/algorithm/convex_polygon_clipper.js';
-import { SolidPlane } from '../../src/solid/brush/solid_plane.js';
+import { ConvexPolygonClipper } from '@/solid/algorithm/surface/convex_polygon_clipper.js';
+import { SolidPlane } from '@/solid/brush/solid_plane.js';
 
 /** Unit tests for convex polygon plane clipping used by solid CSG. */
 describe('ConvexPolygonClipper', () => {

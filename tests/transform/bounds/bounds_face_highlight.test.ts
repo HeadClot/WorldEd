@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { Theme } from '../../../src/theme.js';
-import { BoundsFace } from '../../../src/types/bounds_face.js';
+import { Theme } from '@/theme.js';
+import { BoundsFace } from '@/types/bounds_face.js';
 import {
   applyBoundsFaceEdgeHighlight,
   BOUNDS_FACE_EDGE_HIGHLIGHT_KEY,
   BOUNDS_MOVE_HIGHLIGHT_COLOR,
   createUnitFaceEdgeHighlightGeometry,
-} from '../../../src/transform/bounds/bounds_face_highlight.js';
+} from '@/transform/bounds/bounds_face_highlight.js';
 
 describe('bounds face edge highlight', () => {
   it('builds a unit square perimeter geometry with eight endpoints', () => {

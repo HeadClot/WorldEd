@@ -6,7 +6,7 @@ import {
   GIZMO_ORTHOGRAPHIC_MIN_SCALE,
   GIZMO_PERSPECTIVE_DISTANCE_SCALE,
   GIZMO_PERSPECTIVE_MIN_SCALE,
-} from '../../../src/transform/gizmo/gizmo_camera_scale.js';
+} from '@/transform/gizmo/gizmo_camera_scale.js';
 
 describe('computeGizmoCameraScale', () => {
   it('uses distance for perspective cameras with a minimum floor', () => {

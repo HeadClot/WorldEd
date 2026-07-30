@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { SolidBrush } from '../../solid/brush/solid_brush.js';
-import { SolidBrushFactory } from '../../solid/brush/solid_brush_factory.js';
-import { SolidBrushValidator } from '../../solid/brush/solid_brush_validator.js';
+import { SolidBrush } from '@/solid/brush/solid_brush.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushValidator } from '@/solid/brush/solid_brush_validator.js';
 import { resolveOrderedWorldFacePolygon } from './convex_face_prism.js';
 
 /** Convex prism brush ready to place under a solid model. */
@@ -35,7 +35,7 @@ export function createConvexPrismBrushFromFace(
   const faceLoops = buildPrismFaceLoops(localFace.polygon, localFace.normal, distance);
   if (!faceLoops) return null;
   const centered = centerFaceLoops(faceLoops);
-  const brush = SolidBrushFactory.createFromFaceLoops(centered.loops);
+  const brush = FactorySolidBrush.createFromFaceLoops(centered.loops);
   if (!brush) return null;
   if (!SolidBrushValidator.validate(brush).valid) return null;
   return { brush, localPosition: centered.center };

@@ -1,5 +1,5 @@
-import { ViewportLayoutManager } from './managers/layout/viewport_layout_manager.js';
-import { showEditorStartupError } from './ui/editor_startup_error.js';
+import { ManagerViewportLayout } from '@/layout/viewport/manager_viewport_layout.js';
+import { showErrorEditorStartup } from '@/ui/error/error_editor_startup.js';
 
 const editorContainer = document.getElementById('editor-container') as HTMLElement;
 
@@ -10,12 +10,12 @@ const editorContainer = document.getElementById('editor-container') as HTMLEleme
  */
 function startEditor(container: HTMLElement): void {
   try {
-    const layoutManager = new ViewportLayoutManager(container);
+    const layoutManager = new ManagerViewportLayout(container);
     layoutManager.start();
     console.log('AiWorldEd started');
   } catch (error) {
     console.error('[AiWorldEd] Editor startup failed.', error);
-    showEditorStartupError(container, error);
+    showErrorEditorStartup(container, error);
   }
 }
 

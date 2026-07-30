@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { APPLICATION_DISPLAY_NAME } from '../application_identity.js';
+import { APPLICATION_DISPLAY_NAME } from '@/application_identity.js';
 
 /** Minimal bun:ffi surface used for Win32 title-bar icon APIs. */
 interface BunFfiModule {

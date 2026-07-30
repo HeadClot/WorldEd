@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { Theme } from '../src/theme.js';
-import { ViewportType } from '../src/types.js';
+import { Theme } from '@/theme.js';
+import { ViewportType } from '@/types.js';
 
 describe('Theme', () => {
   it('should have all required theme properties', () => {

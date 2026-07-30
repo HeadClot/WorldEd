@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { TextureLibrary } from './texture_library.js';
 import { TextureBrowserEntry } from './texture_browser_entry.js';
-import { getDebugCheckerTexture } from './debug_texture_factory.js';
+import { getDebugCheckerTexture } from './factory_debug_texture.js';
 import { DEFAULT_CHECKER_TEXTURE_ID, isDefaultCheckerTextureId } from './texture_id.js';
 import {
   applyTextureFilterPolicy,
   createTextureFilterPolicy,
-  type TextureFilterPolicy,
-} from './texture_filter_policy.js';
+  type PolicyTextureFilter,
+} from './policy_texture_filter.js';
 
 /**
  * Loads and caches THREE.Texture instances for surface assignment. The built-in
@@ -16,7 +16,7 @@ import {
 export class TextureMapCache {
   private textures: Map<string, THREE.Texture>;
   private library: TextureLibrary | null;
-  private filterPolicy: TextureFilterPolicy;
+  private filterPolicy: PolicyTextureFilter;
 
   /** Creates an empty texture map cache with best-quality default filters. */
   constructor() {
@@ -39,7 +39,7 @@ export class TextureMapCache {
    *
    * @param policy Runtime filter policy including GPU max anisotropy.
    */
-  setFilterPolicy(policy: TextureFilterPolicy): void {
+  setFilterPolicy(policy: PolicyTextureFilter): void {
     this.filterPolicy = policy;
     this.textures.forEach((texture) => applyTextureFilterPolicy(texture, policy));
   }
@@ -49,7 +49,7 @@ export class TextureMapCache {
    *
    * @returns Current filter policy.
    */
-  getFilterPolicy(): TextureFilterPolicy {
+  getFilterPolicy(): PolicyTextureFilter {
     return { ...this.filterPolicy };
   }
 
@@ -138,7 +138,7 @@ export function setTextureMapCacheForTests(cache: TextureMapCache | null): void 
  * @param filterPolicy Filter policy applied at creation time.
  * @returns Configured THREE.Texture (updates when the image loads).
  */
-function createTextureFromBrowserEntry(entry: TextureBrowserEntry, filterPolicy: TextureFilterPolicy): THREE.Texture {
+function createTextureFromBrowserEntry(entry: TextureBrowserEntry, filterPolicy: PolicyTextureFilter): THREE.Texture {
   if (entry.id === DEFAULT_CHECKER_TEXTURE_ID) {
     return getDebugCheckerTexture();
   }
@@ -158,7 +158,7 @@ function createTextureFromBrowserEntry(entry: TextureBrowserEntry, filterPolicy:
  * @param texture Texture to configure.
  * @param filterPolicy Active filter policy.
  */
-function configureUserTexture(texture: THREE.Texture, filterPolicy: TextureFilterPolicy): void {
+function configureUserTexture(texture: THREE.Texture, filterPolicy: PolicyTextureFilter): void {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;

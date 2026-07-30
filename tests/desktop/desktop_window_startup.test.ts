@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { showMaximizedWhenReady } from '../../src/desktop/desktop_window_startup.js';
+import { showMaximizedWhenReady } from '@/desktop/desktop_window_startup.js';
 
 describe('desktop window startup', () => {
   it('waits for the webview before maximizing and showing the window', () => {

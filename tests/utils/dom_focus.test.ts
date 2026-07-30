@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { blurActiveFormField } from '../../src/utils/dom_focus.js';
+import { blurActiveFormField } from '@/utils/dom_focus.js';
 
 describe('blurActiveFormField', () => {
   afterEach(() => {

@@ -1,6 +1,6 @@
-import { Theme } from '../../theme.js';
-import { hexToRgb } from '../../utils/color_utils.js';
-import { getMenuPanelZIndex } from '../ui_stack_layers.js';
+import { Theme } from '@/theme.js';
+import { hexToRgb } from '@/utils/utils_color.js';
+import { getMenuPanelZIndex } from '@/ui/stack/ui_stack_layers.js';
 
 /**
  * Applies layout styles to a dropdown or submenu panel. Root menus are

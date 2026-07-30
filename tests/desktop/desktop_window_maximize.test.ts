@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildDesktopWindowFrame, maximizeDesktopWindow } from '../../src/desktop/desktop_window_maximize.js';
+import { buildDesktopWindowFrame, maximizeDesktopWindow } from '@/desktop/desktop_window_maximize.js';
 
 describe('desktop window maximized startup', () => {
   it('initializes the hosted webview at the native desktop work area size', () => {

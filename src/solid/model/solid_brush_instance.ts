@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { SolidBrush } from '../brush/solid_brush.js';
-import { SolidOperation } from '../types/solid_operation.js';
-import { SolidPlane } from '../brush/solid_plane.js';
+import { SolidBrush } from '@/solid/brush/solid_brush.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
 import { findSolidModelRoot } from './solid_group.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
-import { FaceTextureMapping, FaceTextureMappingWithTrs } from '../../texture/uv/face_texture_mapping.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { FaceTextureMapping, FaceTextureMappingWithTrs } from '@/texture/uv/face_texture_mapping.js';
 import {
   FaceSurfaceDescription,
   FaceSurfaceDescriptionSerialized,
@@ -13,12 +13,12 @@ import {
   createDefaultFaceSurface,
   deserializeFaceSurface,
   serializeFaceSurface,
-} from '../../texture/uv_matrix/face_surface_description.js';
+} from '@/texture/uv_matrix/face_surface_description.js';
 import {
   faceTextureMappingToSurface,
   surfaceToFaceTextureMapping,
-} from '../../texture/uv_matrix/legacy_mapping_migrate.js';
-import { SurfaceUvMatrix } from '../../texture/uv_matrix/surface_uv_matrix.js';
+} from '@/texture/uv_matrix/legacy_mapping_migrate.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 
 const scratchLocalMatrix = new THREE.Matrix4();
 const scratchLocalQuaternion = new THREE.Quaternion();

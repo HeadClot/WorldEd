@@ -1,28 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { ApplyFaceTextureCommand } from '../../../src/commands/texture/apply_face_texture_command.js';
+import { CommandTextureApplyFace } from '@/texture/commands/command_texture_apply_face.js';
 import {
   applyTextureIdToTargets,
   buildTargetsFromMeshes,
   initializeMeshTextureUVs,
   resetUvParamsOnTargets,
-} from '../../../src/texture/uv/face_texture_applier.js';
-import { getFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
-import { computeRegionWorldNormal } from '../../../src/texture/uv/planar_uv_projector.js';
-import { createContentMaterial } from '../../../src/materials/content_material_factory.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../../src/texture/library/texture_id.js';
-import { setTexturePaintStateForTests, TexturePaintState } from '../../../src/texture/paint/texture_paint_state.js';
-import { setTextureMapCacheForTests, TextureMapCache } from '../../../src/texture/library/texture_map_cache.js';
+} from '@/texture/uv/face_texture_applier.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { computeRegionWorldNormal } from '@/texture/uv/planar_uv_projector.js';
+import { createContentMaterial } from '@/materials/factory_content_material.js';
+import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { setStateTexturePaintForTests, StateTexturePaint } from '@/texture/paint/state_texture_paint.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '@/texture/library/texture_map_cache.js';
 
 describe('reset UV preserves texture assignment', () => {
   beforeEach(() => {
-    setTexturePaintStateForTests(new TexturePaintState());
+    setStateTexturePaintForTests(new StateTexturePaint());
     setTextureMapCacheForTests(new TextureMapCache());
   });
 
   afterEach(() => {
-    setTexturePaintStateForTests(null);
+    setStateTexturePaintForTests(null);
     setTextureMapCacheForTests(null);
   });
 
@@ -35,7 +35,7 @@ describe('reset UV preserves texture assignment', () => {
     const scaled = createDefaultFaceTextureMapping('walls/brick.png');
     scaled.scaleU = 4;
     scaled.offsetV = 0.5;
-    new ApplyFaceTextureCommand(targets, scaled).execute();
+    new CommandTextureApplyFace(targets, scaled).execute();
     expect(getFaceTextureMaps(mesh)[0]!.mapping.scaleU).toBe(4);
     resetUvParamsOnTargets(targets);
     const maps = getFaceTextureMaps(mesh);
@@ -55,8 +55,8 @@ describe('reset UV preserves texture assignment', () => {
     applyTextureIdToTargets(targets, 'floor.png');
     const scaled = createDefaultFaceTextureMapping('floor.png');
     scaled.scaleU = 3;
-    new ApplyFaceTextureCommand(targets, scaled).execute();
-    const reset = new ApplyFaceTextureCommand(targets, createDefaultFaceTextureMapping(), {
+    new CommandTextureApplyFace(targets, scaled).execute();
+    const reset = new CommandTextureApplyFace(targets, createDefaultFaceTextureMapping(), {
       resetUvOnly: true,
     });
     reset.execute();
@@ -79,7 +79,7 @@ describe('reset UV preserves texture assignment', () => {
       const mapping = createDefaultFaceTextureMapping('brick.png');
       mapping.scaleU = 4;
       mapping.offsetU = 0;
-      new ApplyFaceTextureCommand([target], mapping).execute();
+      new CommandTextureApplyFace([target], mapping).execute();
     });
     resetUvParamsOnTargets(targets);
     const maps = getFaceTextureMaps(mesh);

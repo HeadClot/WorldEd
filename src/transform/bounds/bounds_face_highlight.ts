@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '../../types/bounds_face.js';
-import { Theme } from '../../theme.js';
+import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '@/types/bounds_face.js';
+import { Theme } from '@/theme.js';
 
 /** UserData key for the bounds face edge-outline highlight object. */
 export const BOUNDS_FACE_EDGE_HIGHLIGHT_KEY = 'isBoundsFaceEdgeHighlight';

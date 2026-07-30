@@ -1,11 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { BoundsFace } from '../../../src/types/bounds_face.js';
-import {
-  cursorFromScreenDelta,
-  resolveBoundsResizeCursor,
-} from '../../../src/transform/bounds/bounds_resize_cursor.js';
-import type { OrientedBoundsData } from '../../../src/transform/bounds/oriented_bounds.js';
+import { BoundsFace } from '@/types/bounds_face.js';
+import { cursorFromScreenDelta, resolveBoundsResizeCursor } from '@/transform/bounds/bounds_resize_cursor.js';
+import type { DataOrientedBounds } from '@/transform/bounds/builder_oriented_bounds.js';
 
 describe('bounds resize cursor', () => {
   it('maps axis-aligned screen deltas to dual-arrow CSS cursors', () => {
@@ -32,7 +29,7 @@ describe('bounds resize cursor', () => {
 
   it('uses diagonal cursors in top view when the OBB is rotated 45 degrees', () => {
     // Yaw 45°: local +X faces toward world +X/+Z (up-right on a top map with Z up).
-    const bounds: OrientedBoundsData = {
+    const bounds: DataOrientedBounds = {
       center: new THREE.Vector3(0, 0, 0),
       quaternion: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4),
       halfExtents: new THREE.Vector3(1, 1, 1),
@@ -62,7 +59,7 @@ describe('bounds resize cursor', () => {
  *
  * @returns Oriented bounds data.
  */
-function unitBounds(): OrientedBoundsData {
+function unitBounds(): DataOrientedBounds {
   return {
     center: new THREE.Vector3(0, 0, 0),
     quaternion: new THREE.Quaternion(),

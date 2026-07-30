@@ -7,8 +7,8 @@ import {
   BRUSH_EDGE_FRONT_OPACITY,
   BRUSH_EDGE_SHARED_MATERIAL_KEY,
   BRUSH_EDGE_DISTANCE_FADE_KEY,
-} from '../../src/solid/model/solid_brush_edge_materials.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+} from '@/solid/model/solid_brush_edge_materials.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /** Unit tests for shared distance-faded brush edge materials. */
 describe('SolidBrushEdgeMaterials', () => {

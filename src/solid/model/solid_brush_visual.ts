@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { SolidBrush } from '../brush/solid_brush.js';
-import { SolidOperation } from '../types/solid_operation.js';
+import { SolidBrush } from '@/solid/brush/solid_brush.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidBrushEdgeMaterials, SOLID_BRUSH_EDGE_USERDATA_KEY } from './solid_brush_edge_materials.js';
 
 /** UserData key marking a mesh as a solid brush volume helper. */

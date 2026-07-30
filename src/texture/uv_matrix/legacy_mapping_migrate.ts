@@ -7,7 +7,7 @@ import {
   createFaceTextureMappingFromTrs,
   deserializeFaceTextureMapping,
   withTrsAccessors,
-} from '../uv/face_texture_mapping.js';
+} from '@/texture/uv/face_texture_mapping.js';
 import { SurfaceUvMatrix } from './surface_uv_matrix.js';
 import { FaceSurfaceDescription, cloneFaceSurface, createDefaultFaceSurface } from './face_surface_description.js';
 

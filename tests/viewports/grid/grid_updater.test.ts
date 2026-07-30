@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { computeOptimalDivisions, updateGridDivisions } from '../../../src/viewports/grid/grid_updater.js';
-import { Grids } from '../../../src/viewports/grid/grids.js';
+import { computeOptimalDivisions, updateGridDivisions } from '@/viewports/grid/grid_updater.js';
+import { Grids } from '@/viewports/grid/grids.js';
 
 describe('computeOptimalDivisions', () => {
   it('should return 50 for a snap interval of 1.0', () => {

@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { VmfUvConverter, VMF_DEFAULT_TEXTURE_SIZE } from '../../../src/io/vmf/vmf_uv_converter.js';
-import { VMF_INCHES_TO_METERS } from '../../../src/io/vmf/vmf_coordinates.js';
-import { projectWorldPositionToUv, resolveProjectionBasis } from '../../../src/texture/uv/planar_uv_projector.js';
-import { VmfParser } from '../../../src/io/vmf/vmf_parser.js';
-import { VmfBrushFromSides } from '../../../src/io/vmf/vmf_brush_from_sides.js';
+import { VmfUvConverter, VMF_DEFAULT_TEXTURE_SIZE } from '@/io/vmf/vmf_uv_converter.js';
+import { VMF_INCHES_TO_METERS } from '@/io/vmf/vmf_coordinates.js';
+import { projectWorldPositionToUv, resolveProjectionBasis } from '@/texture/uv/planar_uv_projector.js';
+import { VmfParser } from '@/io/vmf/vmf_parser.js';
+import { VmfBrushFromSides } from '@/io/vmf/vmf_brush_from_sides.js';
 import { buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /** VMF UV conversion must match Source axis phase for world-projected faces. */
 describe('VmfUvConverter', () => {

@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
-import { SolidBrushVisual, SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '../../src/solid/model/solid_brush_visual.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushVisual, SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '@/solid/model/solid_brush_visual.js';
 import {
   SolidBrushEdgeMaterials,
   BRUSH_EDGE_FADE_NEAR,
   BRUSH_EDGE_FADE_FAR,
   SOLID_BRUSH_EDGE_USERDATA_KEY,
-} from '../../src/solid/model/solid_brush_edge_materials.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { rebuildDecorativeEdges, usesContentDecorativeEdges } from '../../src/utils/mesh_edge_sync.js';
+} from '@/solid/model/solid_brush_edge_materials.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { rebuildDecorativeEdges, usesContentDecorativeEdges } from '@/utils/mesh_edge_sync.js';
 
 /** Unit tests for solid brush preview visuals (outline-only vs selected fill). */
 describe('SolidBrushVisual', () => {
@@ -29,7 +29,7 @@ describe('SolidBrushVisual', () => {
   });
 
   it('uses a single shared depth-tested distance-faded edge line', () => {
-    const brush = SolidBrushFactory.createCenteredBox(2, 2, 2);
+    const brush = FactorySolidBrush.createCenteredBox(2, 2, 2);
     const mesh = SolidBrushVisual.createHullPreview('Hull', brush, SolidOperation.Subtractive);
     const edges = collectDecorativeEdges(mesh);
     expect(edges).toHaveLength(1);

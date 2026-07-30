@@ -3,17 +3,17 @@ import * as THREE from 'three';
 import {
   TextureLockSettings,
   isContentMeshEligibleForTextureLockRebake,
-} from '../../../src/texture/lock/texture_lock_settings.js';
+} from '@/texture/lock/texture_lock_settings.js';
 import {
   contentMeshMappingsMatchCurrentUvs,
   syncContentMeshFaceMappingsToCurrentUvs,
-} from '../../../src/texture/lock/content_mesh_texture_lock.js';
-import { initializeMeshTextureUVs } from '../../../src/texture/uv/face_texture_applier.js';
-import { rebakeStoredFaceTextureMaps } from '../../../src/texture/uv/planar_uv_projector.js';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
-import { getFaceTextureMaps, setFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
+} from '@/texture/lock/content_mesh_texture_lock.js';
+import { initializeMeshTextureUVs } from '@/texture/uv/face_texture_applier.js';
+import { rebakeStoredFaceTextureMaps } from '@/texture/uv/planar_uv_projector.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { getFaceTextureMaps, setFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
 
 describe('TextureLockSettings', () => {
   let settings: TextureLockSettings;

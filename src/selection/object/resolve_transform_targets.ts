@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SolidModel } from '../../solid/model/solid_model.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
 
 /**
  * Maps selected meshes to the objects that should receive transform edits.

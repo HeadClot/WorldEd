@@ -4,7 +4,7 @@ import {
   computeOcclusionAwareSpawnPosition,
   DEFAULT_SPAWN_DISTANCE,
   snapPositionToGrid,
-} from '../../navigation/object_spawn_placement.js';
+} from '@/navigation/placement/object_spawn_placement.js';
 
 export { snapPositionToGrid, DEFAULT_SPAWN_DISTANCE };
 

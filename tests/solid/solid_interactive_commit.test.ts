@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidModelController } from '../../src/managers/solid/solid_model_controller.js';
-import { CommandStack } from '../../src/commands/command_stack.js';
-import { SelectionManager } from '../../src/selection/object/selection_manager.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import { CommandStack } from '@/commands/command_stack.js';
+import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import * as THREE from 'three';
 
 /** Lightweight mock of the solid tools panel used by the controller. */
@@ -50,10 +50,10 @@ describe('Solid interactive transform commit', () => {
     const model = new SolidModel('CommitCtrl');
     world.add(model.root);
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const controller = new SolidModelController(
+    const controller = new ControllerSolidModel(
       world,
       new CommandStack(8),
-      new SelectionManager(),
+      new ManagerSelection(),
       new MockSolidPanel() as never,
     );
     brush.mesh!.position.x += 0.1;
@@ -87,10 +87,10 @@ describe('Solid interactive transform commit', () => {
     other.pushTransformToMesh();
     model.syncBrushesFromScene();
     model.rebuild(true);
-    const controller = new SolidModelController(
+    const controller = new ControllerSolidModel(
       world,
       new CommandStack(8),
-      new SelectionManager(),
+      new ManagerSelection(),
       new MockSolidPanel() as never,
     );
     brush.mesh!.position.x = 0.2;

@@ -3,15 +3,11 @@ import {
   computeTriangleNormal,
   getTriangleVertexIndices,
   getVertexPosition,
-} from '../../selection/pick/triangle_geometry_utils.js';
-import { Theme } from '../../theme.js';
-import {
-  enableFlatShadingOnMesh,
-  prepareFlatShadedGeometry,
-  rebuildDecorativeEdges,
-} from '../../utils/mesh_edge_sync.js';
-import { createContentMaterial } from '../../materials/content_material_factory.js';
-import { initializeMeshTextureUVs } from '../../texture/uv/face_texture_applier.js';
+} from '@/selection/pick/utils_triangle_geometry.js';
+import { Theme } from '@/theme.js';
+import { enableFlatShadingOnMesh, prepareFlatShadedGeometry, rebuildDecorativeEdges } from '@/utils/mesh_edge_sync.js';
+import { createContentMaterial } from '@/materials/factory_content_material.js';
+import { initializeMeshTextureUVs } from '@/texture/uv/face_texture_applier.js';
 
 /**
  * Builds a new convex prism mesh by extruding a coplanar face polygon. The

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { Theme } from '../../theme.js';
-import { GizmoVisualStyle } from '../gizmo/gizmo_visual_style.js';
+import { Theme } from '@/theme.js';
+import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
 import {
   createBoundsGuideFrontLineMaterial,
   createBoundsGuideOccludedLineMaterial,

@@ -3,7 +3,7 @@ import {
   SOLID_FAT_PLANE_EPSILON,
   SOLID_NORMAL_ALIGN_EPSILON,
   SOLID_PLANE_D_ALIGN_EPSILON,
-} from '../algorithm/solid_math_constants.js';
+} from '@/solid/algorithm/math/solid_math_constants.js';
 
 const scratchNormalMatrix = new THREE.Matrix3();
 const scratchTransformedNormal = new THREE.Vector3();

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { BoundsFace } from '../../types/bounds_face.js';
-import { getBoundsFaceLocalNormal } from './oriented_bounds.js';
-import type { CadViewPlane } from '../../rulers/cad_view_plane.js';
-import { getCadViewPlaneAxes } from '../../rulers/cad_view_plane.js';
+import { BoundsFace } from '@/types/bounds_face.js';
+import { getBoundsFaceLocalNormal } from './builder_oriented_bounds.js';
+import type { CadViewPlane } from '@/rulers/view/cad_view_plane.js';
+import { getCadViewPlaneAxes } from '@/rulers/view/cad_view_plane.js';
 
 /** UserData flag: handle mesh was restyled as a 2D CAD ear. */
 export const BOUNDS_HANDLE_IS_EAR_KEY = 'boundsHandleIsEar';

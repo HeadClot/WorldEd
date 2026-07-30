@@ -1,11 +1,11 @@
-import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
+import type { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
 import {
   MOUSE_SENSITIVITY_MAX,
   MOUSE_SENSITIVITY_MIN,
   MOUSE_MOVE_SPEED_MAX,
   MOUSE_MOVE_SPEED_MIN,
   type MouseSettings,
-} from '../../settings/settings_types.js';
+} from '@/settings/store/settings_types.js';
 import { createSettingsCategory, createSettingsControlRow, createSettingsSlider } from './settings_form_controls.js';
 
 /** Mouse navigation preferences for look, pan, and movement. */

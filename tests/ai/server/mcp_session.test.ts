@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { createMcpSessionState, listMcpPortCandidates } from '../../../src/ai/server/mcp_session.js';
-import { MCP_DEFAULT_PORT } from '../../../src/ai/shared/mcp_constants.js';
-import { McpHost } from '../../../src/ai/server/mcp_host.js';
-import type { McpHttpServer } from '../../../src/ai/server/mcp_host.js';
+import { createMcpSessionState, listMcpPortCandidates } from '@/ai/server/session_mcp.js';
+import { MCP_DEFAULT_PORT } from '@/ai/shared/mcp_constants.js';
+import { McpHost } from '@/ai/server/mcp_host.js';
+import type { McpHttpServer } from '@/ai/server/mcp_host.js';
 
 /** Unit tests for MCP session ports and host lifecycle with a fake server. */
 describe('mcp_session', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { ApplyFaceTextureCommand } from '../../../src/commands/texture/apply_face_texture_command.js';
+import { CommandTextureApplyFace } from '@/texture/commands/command_texture_apply_face.js';
 import {
   applyMappingToTargets,
   applyTextureIdToTargets,
@@ -9,19 +9,16 @@ import {
   initializeMeshTextureUVs,
   resetUvParamsOnTargets,
   applyAlignToTargets,
-} from '../../../src/texture/uv/face_texture_applier.js';
-import {
-  createFaceTextureMappingFromTrs,
-  getFaceTextureMappingTrs,
-} from '../../../src/texture/uv/face_texture_mapping.js';
-import { getFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
-import { computeRegionWorldNormal } from '../../../src/texture/uv/planar_uv_projector.js';
-import { createContentMaterial } from '../../../src/materials/content_material_factory.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../../src/texture/library/texture_id.js';
-import { setTexturePaintStateForTests, TexturePaintState } from '../../../src/texture/paint/texture_paint_state.js';
-import { setTextureMapCacheForTests, TextureMapCache } from '../../../src/texture/library/texture_map_cache.js';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
+} from '@/texture/uv/face_texture_applier.js';
+import { createFaceTextureMappingFromTrs, getFaceTextureMappingTrs } from '@/texture/uv/face_texture_mapping.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { computeRegionWorldNormal } from '@/texture/uv/planar_uv_projector.js';
+import { createContentMaterial } from '@/materials/factory_content_material.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { setStateTexturePaintForTests, StateTexturePaint } from '@/texture/paint/state_texture_paint.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '@/texture/library/texture_map_cache.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /**
  * UV editor scale/offset/rotation must never clobber assigned textures, and
@@ -29,12 +26,12 @@ import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
  */
 describe('UV editor texture preserve and UVMatrix reset/align', () => {
   beforeEach(() => {
-    setTexturePaintStateForTests(new TexturePaintState());
+    setStateTexturePaintForTests(new StateTexturePaint());
     setTextureMapCacheForTests(new TextureMapCache());
   });
 
   afterEach(() => {
-    setTexturePaintStateForTests(null);
+    setStateTexturePaintForTests(null);
     setTextureMapCacheForTests(null);
   });
 
@@ -136,7 +133,7 @@ describe('UV editor texture preserve and UVMatrix reset/align', () => {
       { scaleU: 2, scaleV: 2, offsetU: 0.1, offsetV: 0, rotationDeg: 10 },
       'auto',
     );
-    new ApplyFaceTextureCommand(targets, editorMapping).execute();
+    new CommandTextureApplyFace(targets, editorMapping).execute();
     const afterMaps = getFaceTextureMaps(result);
     const afterZ = afterMaps.find((entry) => {
       const normal = computeRegionWorldNormal(result, entry.triangleIndices);
@@ -197,8 +194,8 @@ describe('UV editor texture preserve and UVMatrix reset/align', () => {
       { scaleU: 5, scaleV: 5, offsetU: 0.5, offsetV: 0.5, rotationDeg: 30 },
       'auto',
     );
-    new ApplyFaceTextureCommand(targets, distorted).execute();
-    new ApplyFaceTextureCommand(
+    new CommandTextureApplyFace(targets, distorted).execute();
+    new CommandTextureApplyFace(
       targets,
       createFaceTextureMappingFromTrs('', new THREE.Vector3(0, 1, 0), {
         scaleU: 1,

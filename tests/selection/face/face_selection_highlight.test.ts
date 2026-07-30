@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { Theme } from '../../../src/theme.js';
-import { FaceSelectionHighlight } from '../../../src/selection/face/face_selection_highlight.js';
-import { FaceSelection } from '../../../src/selection/face/face_selection_manager.js';
-import { GizmoVisualStyle } from '../../../src/transform/gizmo/gizmo_visual_style.js';
+import { Theme } from '@/theme.js';
+import { FaceSelectionHighlight } from '@/selection/face/face_selection_highlight.js';
+import { FaceSelection } from '@/selection/face/manager_face_selection.js';
+import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
 
 describe('FaceSelectionHighlight', () => {
   let scene: THREE.Scene;

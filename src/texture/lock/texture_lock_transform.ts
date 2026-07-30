@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import { FaceSurfaceDescription, cloneFaceSurface } from '../uv_matrix/face_surface_description.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { FaceSurfaceDescription, cloneFaceSurface } from '@/texture/uv_matrix/face_surface_description.js';
 import { lockFaceSurfaceForBrushTransform } from './solid_brush_texture_lock.js';
-import type { SurfaceUvLockFlags } from '../uv_matrix/surface_uv_matrix_transform.js';
+import type { SurfaceUvLockFlags } from '@/texture/uv_matrix/surface_uv_matrix_transform.js';
 
 /** Position and stretch texture lock flags. */
 export type TextureLockFlags = SurfaceUvLockFlags;

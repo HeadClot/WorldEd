@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { pointerEventToNdc } from '../../src/utils/pointer_ndc.js';
+import { pointerEventToNdc } from '@/utils/pointer_ndc.js';
 
 describe('pointerEventToNdc', () => {
   it('should map canvas center to origin NDC', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { Grids } from '../../../src/viewports/grid/grids.js';
+import { Grids } from '@/viewports/grid/grids.js';
 
 describe('Grids facade', () => {
   it('should create a root group for orthographic grids', () => {

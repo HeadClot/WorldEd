@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '../../src/types/bounds_face.js';
-import { TransformMode } from '../../src/types/transform_mode.js';
+import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '@/types/bounds_face.js';
+import { TransformMode } from '@/types/transform_mode.js';
 
 describe('BoundsFace enum', () => {
   it('should define six face values', () => {

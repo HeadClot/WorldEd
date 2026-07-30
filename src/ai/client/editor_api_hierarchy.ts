@@ -14,17 +14,17 @@ import {
   resolveSolidTreeParent,
 } from './editor_api_lookup.js';
 import { nameToSolidOperation, solidOperationToName } from './editor_api_operations.js';
-import { GroupCommand } from '../../commands/object/group_command.js';
-import { RenameCommand } from '../../commands/object/rename_command.js';
-import { UngroupCommand } from '../../commands/object/ungroup_command.js';
-import { ReparentObjectsCommand } from '../../commands/object/reparent_objects_command.js';
-import { SetSolidGroupOperationCommand } from '../../commands/solid/set_solid_group_operation_command.js';
-import { isSolidCsgGroup, isValidSolidTreeParent, markAsSolidCsgGroup } from '../../solid/model/solid_group.js';
-import { SolidModel } from '../../solid/model/solid_model.js';
-import { SolidBrushVisual } from '../../solid/model/solid_brush_visual.js';
-import { SolidOperation } from '../../solid/types/solid_operation.js';
-import { collapseToHierarchyRoots, findCommonParent } from '../../utils/hierarchy_selection.js';
-import type { McpSolidOperationName, McpToolResult } from '../shared/mcp_protocol_types.js';
+import { CommandObjectGroup } from '@/outliner/commands/command_object_group.js';
+import { CommandObjectRename } from '@/outliner/commands/command_object_rename.js';
+import { CommandObjectUngroup } from '@/outliner/commands/command_object_ungroup.js';
+import { CommandObjectReparentObjects } from '@/outliner/commands/command_object_reparent_objects.js';
+import { CommandSolidSetGroupOperation } from '@/solid/commands/command_solid_set_group_operation.js';
+import { isSolidCsgGroup, isValidSolidTreeParent, markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { collapseToHierarchyRoots, findCommonParent } from '@/utils/hierarchy_selection.js';
+import type { McpSolidOperationName, McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 /** Solid CSG group hierarchy mutations for EditorApi / MCP. */
 export class EditorApiHierarchy {
@@ -73,7 +73,7 @@ export class EditorApiHierarchy {
     if (operation === null) return fail(`Invalid operation: ${args.operation}`);
     const groups = this.resolveGroups(args.groupIds);
     if (groups.length === 0) return fail('No matching solid CSG groups found');
-    this.host.commandStack.push(new SetSolidGroupOperationCommand(groups, operation));
+    this.host.commandStack.push(new CommandSolidSetGroupOperation(groups, operation));
     this.afterMutation(`Set group operation to ${args.operation}`);
     return {
       ok: true,
@@ -95,7 +95,7 @@ export class EditorApiHierarchy {
     for (const group of groups) {
       const model = SolidModel.fromObject(group);
       if (model) models.add(model);
-      this.host.commandStack.push(new UngroupCommand(group));
+      this.host.commandStack.push(new CommandObjectUngroup(group));
     }
     for (const model of models) {
       this.rebuildModel(model);
@@ -125,7 +125,7 @@ export class EditorApiHierarchy {
     const insertBefore = this.resolveInsertBefore(destination.model, args.insertBeforeId);
     const moves = this.buildReparentMoves(nodes, destination, insertBefore);
     if (moves.length === 0) return fail('No valid reparent moves (same solid model required)');
-    this.host.commandStack.push(new ReparentObjectsCommand(moves));
+    this.host.commandStack.push(new CommandObjectReparentObjects(moves));
     this.rebuildModel(destination.model);
     this.afterMutation(`Reparented ${moves.length} node(s)`);
     return {
@@ -150,7 +150,7 @@ export class EditorApiHierarchy {
     if (!name) return fail('name must be a non-empty string');
     const found = findCsgGroup(this.host.worldObject, args.groupId);
     if (!found) return fail(`CSG group not found: ${args.groupId}`);
-    this.host.commandStack.push(new RenameCommand(found.group, name));
+    this.host.commandStack.push(new CommandObjectRename(found.group, name));
     this.afterMutation(`Renamed group to ${name}`);
     return {
       ok: true,
@@ -190,7 +190,7 @@ export class EditorApiHierarchy {
   }
 
   /**
-   * Runs GroupCommand, marks the solid CSG group, and rebuilds the model.
+   * Runs CommandObjectGroup, marks the solid CSG group, and rebuilds the model.
    *
    * @param model Owning solid model.
    * @param roots Hierarchy roots to group.
@@ -207,7 +207,7 @@ export class EditorApiHierarchy {
     operation: SolidOperation,
   ): McpToolResult {
     const name = nameArg?.trim() || this.nextGroupName();
-    const command = new GroupCommand(roots, parent, name);
+    const command = new CommandObjectGroup(roots, parent, name);
     this.host.commandStack.push(command);
     const group = command.getGroup();
     markAsSolidCsgGroup(group, operation);
@@ -351,7 +351,7 @@ export class EditorApiHierarchy {
    * @param nodes Resolved source nodes.
    * @param destination Target parent and model.
    * @param insertBefore Optional sibling.
-   * @returns Moves accepted by ReparentObjectsCommand.
+   * @returns Moves accepted by CommandObjectReparentObjects.
    */
   private buildReparentMoves(
     nodes: Array<{ model: SolidModel; node: THREE.Object3D }>,

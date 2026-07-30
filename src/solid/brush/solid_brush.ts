@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SolidFace, WingEdge, createSolidFace, createWingEdge } from '../types/wing_edge.js';
+import { SolidFace, WingEdge, createSolidFace, createWingEdge } from '@/solid/types/wing_edge.js';
 import { SolidPlane } from './solid_plane.js';
 
 /**

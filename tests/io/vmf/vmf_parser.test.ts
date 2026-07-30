@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { VmfParser } from '../../../src/io/vmf/vmf_parser.js';
+import { VmfParser } from '@/io/vmf/vmf_parser.js';
 import { buildAxisAlignedSideBlocks, buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 
 /** Unit tests for the VMF text parser. */

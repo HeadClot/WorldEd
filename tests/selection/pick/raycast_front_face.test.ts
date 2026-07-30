@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { isIntersectionFrontFacing } from '../../../src/selection/pick/raycast_front_face.js';
+import { isIntersectionFrontFacing } from '@/selection/pick/raycast_front_face.js';
 
 describe('isIntersectionFrontFacing', () => {
   it('accepts a triangle whose normal faces the camera ray', () => {

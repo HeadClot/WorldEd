@@ -11,7 +11,7 @@ import {
   projectWorldPositionToUv,
   resolveProjectionNormal,
 } from './planar_uv_projector.js';
-import { getTriangleVertexIndices, getVertexPosition } from '../../selection/pick/triangle_geometry_utils.js';
+import { getTriangleVertexIndices, getVertexPosition } from '@/selection/pick/utils_triangle_geometry.js';
 
 /** Edge coincidence tolerance in world units. */
 const EDGE_MATCH_TOLERANCE = 1e-3;

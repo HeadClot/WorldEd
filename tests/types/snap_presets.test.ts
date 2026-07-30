@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SNAP_PRESETS, cycleSnapInterval } from '../../src/types/snap_presets.js';
+import { SNAP_PRESETS, cycleSnapInterval } from '@/types/snap_presets.js';
 
 describe('SNAP_PRESETS', () => {
   it('should contain exactly 12 presets', () => {

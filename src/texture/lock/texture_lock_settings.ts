@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { rebakeStoredFaceTextureMaps } from '../uv/planar_uv_projector.js';
-import { isResultMesh, isSolidModelObject } from '../../solid/model/solid_model_keys.js';
-import { SOLID_BRUSH_USERDATA_KEY } from '../../solid/model/solid_brush_visual.js';
+import { rebakeStoredFaceTextureMaps } from '@/texture/uv/planar_uv_projector.js';
+import { isResultMesh, isSolidModelObject } from '@/solid/model/solid_model_keys.js';
+import { SOLID_BRUSH_USERDATA_KEY } from '@/solid/model/solid_brush_visual.js';
 import {
   contentMeshMappingsMatchCurrentUvs,
   syncContentMeshFaceMappingsToCurrentUvs,

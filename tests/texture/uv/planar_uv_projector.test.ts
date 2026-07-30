@@ -8,10 +8,10 @@ import {
   resolveProjectionNormal,
   ensureUvAttribute,
   ensureUniqueTriangleVertices,
-} from '../../../src/texture/uv/planar_uv_projector.js';
-import { createFaceTextureMappingFromTrs } from '../../../src/texture/uv/face_texture_mapping.js';
-import { initializeMeshTextureUVs } from '../../../src/texture/uv/face_texture_applier.js';
-import { TerrainGenerator } from '../../../src/terrain/terrain_generator.js';
+} from '@/texture/uv/planar_uv_projector.js';
+import { createFaceTextureMappingFromTrs } from '@/texture/uv/face_texture_mapping.js';
+import { initializeMeshTextureUVs } from '@/texture/uv/face_texture_applier.js';
+import { TerrainGenerator } from '@/terrain/terrain_generator.js';
 
 describe('planar_uv_projector', () => {
   it('should resolve floor projection to world +Y', () => {

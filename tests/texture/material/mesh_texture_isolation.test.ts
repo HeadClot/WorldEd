@@ -4,24 +4,24 @@ import {
   applyTextureIdToTargets,
   buildTargetsFromMeshes,
   initializeMeshTextureUVs,
-} from '../../../src/texture/uv/face_texture_applier.js';
-import { getFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
-import { createContentMaterial } from '../../../src/materials/content_material_factory.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../../src/texture/library/texture_id.js';
-import { setTexturePaintStateForTests, TexturePaintState } from '../../../src/texture/paint/texture_paint_state.js';
-import { setTextureMapCacheForTests, TextureMapCache } from '../../../src/texture/library/texture_map_cache.js';
-import { ShadingModeManager } from '../../../src/viewports/shading_mode_manager.js';
-import { ShadingMode } from '../../../src/types/shading_mode.js';
-import { ObjectDuplicator } from '../../../src/managers/hierarchy/object_duplicator.js';
+} from '@/texture/uv/face_texture_applier.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { createContentMaterial } from '@/materials/factory_content_material.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { setStateTexturePaintForTests, StateTexturePaint } from '@/texture/paint/state_texture_paint.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '@/texture/library/texture_map_cache.js';
+import { ManagerShadingMode } from '@/viewports/shading/manager_shading_mode.js';
+import { ShadingMode } from '@/types/shading_mode.js';
+import { ObjectDuplicator } from '@/outliner/hierarchy/object_duplicator.js';
 
 describe('mesh texture isolation', () => {
   beforeEach(() => {
-    setTexturePaintStateForTests(new TexturePaintState());
+    setStateTexturePaintForTests(new StateTexturePaint());
     setTextureMapCacheForTests(new TextureMapCache());
   });
 
   afterEach(() => {
-    setTexturePaintStateForTests(null);
+    setStateTexturePaintForTests(null);
     setTextureMapCacheForTests(null);
   });
 
@@ -47,7 +47,7 @@ describe('mesh texture isolation', () => {
     scene.add(cubeB);
     initializeMeshTextureUVs(cubeA, DEFAULT_CHECKER_TEXTURE_ID);
     initializeMeshTextureUVs(cubeB, DEFAULT_CHECKER_TEXTURE_ID);
-    const manager = new ShadingModeManager(scene);
+    const manager = new ManagerShadingMode(scene);
     manager.snapshotMaterials();
     applyTextureIdToTargets(buildTargetsFromMeshes([cubeA]), 'metal.png');
     manager.snapshotMaterials();
@@ -69,7 +69,7 @@ describe('mesh texture isolation', () => {
     const cubeB = createCube();
     scene.add(cubeA);
     scene.add(cubeB);
-    const manager = new ShadingModeManager(scene);
+    const manager = new ManagerShadingMode(scene);
     manager.snapshotMaterials();
     manager.setMode(ShadingMode.FLAT);
     expect(cubeA.material).not.toBe(cubeB.material);

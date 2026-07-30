@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createConvexPrismFromFace, orderConvexPolygon } from '../../../src/transform/extrusion/convex_face_prism.js';
-import { findCoplanarFaceIndices, getTriangleCount } from '../../../src/selection/pick/triangle_geometry_utils.js';
+import { createConvexPrismFromFace, orderConvexPolygon } from '@/transform/extrusion/convex_face_prism.js';
+import { findCoplanarFaceIndices, getTriangleCount } from '@/selection/pick/utils_triangle_geometry.js';
 
 describe('createConvexPrismFromFace', () => {
   it('should create a new mesh without modifying the source', () => {

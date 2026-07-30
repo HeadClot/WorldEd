@@ -1,18 +1,18 @@
 import * as THREE from 'three';
-import { SolidBrush } from '../brush/solid_brush.js';
+import { SolidBrush } from '@/solid/brush/solid_brush.js';
 import { SolidBrushInstance } from './solid_brush_instance.js';
-import { SolidBrushFactory } from '../brush/solid_brush_factory.js';
-import { SolidOperation } from '../types/solid_operation.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
-import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
-import { getFaceTextureMaps } from '../../texture/uv/face_texture_storage.js';
+import { FaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
 import {
   SOLID_MODEL_USERDATA_KEY,
   SOLID_TRIANGLE_SOURCES_USERDATA_KEY,
   isSolidModelObject as isSolidModelObjectKey,
   isResultMesh as isResultMeshKey,
 } from './solid_model_keys.js';
-import { SolidModelRegistry } from './solid_model_registry.js';
+import { RegistrySolidModel } from './registry_solid_model.js';
 import { SolidBrushCollection } from './solid_brush_collection.js';
 import { padSolidDisplayNumber, SolidModelPresentation, type BrushUvSnapshot } from './solid_model_presentation.js';
 import { SolidModelRebuildPipeline } from './solid_model_rebuild_pipeline.js';
@@ -25,8 +25,8 @@ import {
   pullTransformIfChanged,
   sameBrushOrder,
 } from './solid_brush_transform_sync.js';
-import type { SolidBrushTextureLockBaseline } from '../../texture/lock/solid_brush_texture_lock.js';
-import { normalizeTextureLockFlags, type TextureLockFlags } from '../../texture/lock/texture_lock_transform.js';
+import type { SolidBrushTextureLockBaseline } from '@/texture/lock/solid_brush_texture_lock.js';
+import { normalizeTextureLockFlags, type TextureLockFlags } from '@/texture/lock/texture_lock_transform.js';
 import {
   collectBrushIdsForTriangles,
   writeMapEntryToBrushFaces,
@@ -66,7 +66,7 @@ export class SolidModel {
     this.root = new THREE.Group();
     this.root.name = name ?? `SolidModel${padSolidDisplayNumber(SolidModel.modelCounter)}`;
     this.root.userData[SOLID_MODEL_USERDATA_KEY] = true;
-    SolidModelRegistry.register(this.root, this);
+    RegistrySolidModel.register(this.root, this);
     this.brushes = new SolidBrushCollection(this.root);
     this.pipeline = new SolidModelRebuildPipeline({
       getResultMesh: () => this.resultMesh,
@@ -147,7 +147,7 @@ export class SolidModel {
    * @returns SolidModel or null.
    */
   static fromObject(object: THREE.Object3D): SolidModel | null {
-    return SolidModelRegistry.fromObject(object);
+    return RegistrySolidModel.fromObject(object);
   }
 
   /**
@@ -158,7 +158,7 @@ export class SolidModel {
    * @param root Scene or world root to scan.
    */
   static rebuildAllUnder(root: THREE.Object3D): void {
-    for (const model of SolidModelRegistry.collectUnder(root)) {
+    for (const model of RegistrySolidModel.collectUnder(root)) {
       model.syncBrushOrderFromScene();
       model.markDirty();
       model.rebuild(true);
@@ -173,7 +173,7 @@ export class SolidModel {
    * @param root Scene or world root to scan.
    */
   static refreshAfterHistoryChange(root: THREE.Object3D): void {
-    for (const model of SolidModelRegistry.collectUnder(root)) {
+    for (const model of RegistrySolidModel.collectUnder(root)) {
       model.refreshAfterHistoryChange();
     }
   }
@@ -190,7 +190,7 @@ export class SolidModel {
       this.rebuild(true);
       return;
     }
-    this.rebuildChangedHistoryTransforms();
+    solidOps.rebuildChangedHistoryTransforms(this.getOpsHost());
   }
 
   /**
@@ -259,7 +259,7 @@ export class SolidModel {
   ): SolidBrushInstance {
     const counter = this.brushes.nextBrushCounter();
     const name = `Brush${padSolidDisplayNumber(counter)}`;
-    const brush = SolidBrushFactory.createCenteredBox(size, size, size);
+    const brush = FactorySolidBrush.createCenteredBox(size, size, size);
     const instance = new SolidBrushInstance(this.brushes.allocateBrushId(), name, brush, operation);
     const preview = SolidBrushVisual.createBoxPreview(name, size, operation);
     instance.attachMesh(preview);
@@ -387,7 +387,7 @@ export class SolidModel {
     const touchPeers = this.pipeline.getCachedTouchPeerIds(id);
     const brush = this.brushes.removeBrushFromList(id);
     if (!brush) return false;
-    this.detachAndMaybeDisposeBrushMesh(brush, disposeResources);
+    solidOps.detachAndMaybeDisposeBrushMesh(brush, disposeResources);
     this.pipeline.invalidateBrush(id);
     if (touchPeers.length > 0) {
       this.markBrushesDirty(touchPeers);
@@ -478,7 +478,7 @@ export class SolidModel {
   duplicateBrush(id: string, offset: THREE.Vector3 = new THREE.Vector3(0, 0, 0)): SolidBrushInstance | null {
     const source = this.findBrush(id);
     if (!source) return null;
-    const clone = this.cloneBrushWithPreview(source, offset);
+    const clone = solidOps.cloneBrushWithPreview(this.getOpsHost(), source, offset);
     this.brushes.appendPreparedBrush(clone);
     this.syncBrushOrderFromScene();
     this.markBrushesDirty([clone.id]);
@@ -622,7 +622,7 @@ export class SolidModel {
     const wasVisible = brush.visible;
     brush.pullTransformFromMesh();
     if (brush.visible === wasVisible) return false;
-    this.markVisibilityDirtyAndRebuild(brush);
+    solidOps.markVisibilityDirtyAndRebuild(this.getOpsHost(), brush);
     return true;
   }
 
@@ -659,7 +659,7 @@ export class SolidModel {
   rebuild(force: boolean = false): void {
     if (!this.pipeline.isDirty() && !force) return;
     this.pipeline.compileResultGeometry();
-    this.applyPresentationIfGeometryExists(true);
+    solidOps.applyPresentationIfGeometryExists(this.getOpsHost(), true);
     this.pipeline.resetResultLocalTransform();
     this.pipeline.clearDirtyFlag();
     this.pipeline.setInteractiveGeometryCurrent(true);
@@ -684,7 +684,7 @@ export class SolidModel {
     }
     this.pipeline.resetResultLocalTransform();
     this.pipeline.clearDirtyFlag();
-    this.schedulePresentationRefresh();
+    solidOps.schedulePresentationRefresh(this.getOpsHost());
     this.refreshStaticBrushEdgeBatches();
   }
 
@@ -695,11 +695,12 @@ export class SolidModel {
    * @param onProgress Optional progress (0..1) and status label.
    */
   async rebuildAsync(onProgress?: (ratio: number, label: string) => void): Promise<void> {
-    this.prepareFullAsyncRebuild();
+    solidOps.prepareFullAsyncRebuild(this.getOpsHost());
     onProgress?.(0.05, 'Compiling solid CSG…');
     await this.pipeline.compileFullAsync((ratio) => onProgress?.(0.05 + ratio * 0.55, 'Compiling solid CSG…'));
     await this.pipeline.finishAsyncAfterCompile((ratio) => onProgress?.(0.6 + ratio * 0.3, 'Building result mesh…'));
-    this.finishAsyncRebuildPresentation(onProgress);
+    solidOps.finishAsyncRebuildPresentation(this.getOpsHost(), onProgress);
+    this.refreshStaticBrushEdgeBatches();
   }
 
   /**
@@ -709,12 +710,12 @@ export class SolidModel {
    */
   rebuildLive(): void {
     if (this.pipeline.getDirtyBrushIdCount() === 0 && !this.pipeline.isFullRebuildRequired()) {
-      this.markMeshesThatDriftedDirty();
+      solidOps.markMeshesThatDriftedDirty(this.getOpsHost());
     }
     this.pipeline.compileResultGeometry(true);
     this.pipeline.resetResultLocalTransform();
     if (this.pipeline.hasResultGeometry()) {
-      this.applySurfaceLayoutToResult(false);
+      solidOps.applySurfaceLayoutToResult(this.getOpsHost(), false);
     }
     this.pipeline.setDirtyFlag(true);
     this.pipeline.setInteractiveGeometryCurrent(true);
@@ -729,7 +730,7 @@ export class SolidModel {
    * @returns True when the evaluation order changed.
    */
   moveBrushesToFirst(brushIds: readonly string[]): boolean {
-    return this.reorderBrushesAndRebuild(brushIds, 'first');
+    return solidOps.reorderBrushesAndRebuild(this.getOpsHost(), brushIds, 'first');
   }
 
   /**
@@ -740,7 +741,7 @@ export class SolidModel {
    * @returns True when the evaluation order changed.
    */
   moveBrushesToLast(brushIds: readonly string[]): boolean {
-    return this.reorderBrushesAndRebuild(brushIds, 'last');
+    return solidOps.reorderBrushesAndRebuild(this.getOpsHost(), brushIds, 'last');
   }
 
   /**
@@ -810,9 +811,9 @@ export class SolidModel {
       this.pipeline.updateBrushPolygonTextures(brushId),
     );
     if (remeshed.length === 0) {
-      return this.fallbackFullPresentationRebuild(uniqueIds);
+      return solidOps.fallbackFullPresentationRebuild(this.getOpsHost(), uniqueIds);
     }
-    return this.finishPresentationRemesh(remeshed);
+    return solidOps.finishPresentationRemesh(this.getOpsHost(), remeshed);
   }
 
   /**
@@ -879,7 +880,7 @@ export class SolidModel {
       writeMapEntryToBrushFaces(triangleIndices, mapping, sourceList, (id) => this.findBrush(id), this.root);
     });
     if (this.pipeline.hasResultGeometry()) {
-      this.applySurfaceLayoutToResult(true);
+      solidOps.applySurfaceLayoutToResult(this.getOpsHost(), true);
     }
   }
 
@@ -914,7 +915,7 @@ export class SolidModel {
     }
     this.pipeline.rebakeMeshChunksForBrushes(brushIds);
     if (this.pipeline.hasResultGeometry()) {
-      this.applySurfaceLayoutToResult(true);
+      solidOps.applySurfaceLayoutToResult(this.getOpsHost(), true);
     }
   }
 
@@ -947,96 +948,6 @@ export class SolidModel {
     };
   }
 
-  /** Rebuilds partial CSG after history when only brush transforms drifted. */
-  private rebuildChangedHistoryTransforms(): void {
-    solidOps.rebuildChangedHistoryTransforms(this.getOpsHost());
-  }
-
-  /**
-   * Detaches a brush preview mesh from the root and optionally disposes it.
-   *
-   * @param brush Removed brush instance.
-   * @param disposeResources Whether to free GPU resources.
-   */
-  private detachAndMaybeDisposeBrushMesh(brush: SolidBrushInstance, disposeResources: boolean): void {
-    solidOps.detachAndMaybeDisposeBrushMesh(brush, disposeResources);
-  }
-
-  /**
-   * Clones a source brush with offset and attaches a hull preview mesh.
-   *
-   * @param source Source brush.
-   * @param offset Position offset applied after cloning.
-   * @returns Prepared clone with mesh parented under root.
-   */
-  private cloneBrushWithPreview(source: SolidBrushInstance, offset: THREE.Vector3): SolidBrushInstance {
-    return solidOps.cloneBrushWithPreview(this.getOpsHost(), source, offset);
-  }
-
-  /**
-   * Marks visibility-related seeds dirty and rebuilds CSG.
-   *
-   * @param brush Brush whose visibility changed.
-   */
-  private markVisibilityDirtyAndRebuild(brush: SolidBrushInstance): void {
-    solidOps.markVisibilityDirtyAndRebuild(this.getOpsHost(), brush);
-  }
-
-  /**
-   * Marks brushes dirty when their preview mesh pose no longer matches
-   * instance.
-   */
-  private markMeshesThatDriftedDirty(): void {
-    solidOps.markMeshesThatDriftedDirty(this.getOpsHost());
-  }
-
-  /**
-   * Moves listed brushes to first/last evaluation slots and rebuilds.
-   *
-   * @param brushIds Brushes to move.
-   * @param end Which end of the evaluation list.
-   * @returns True when order changed.
-   */
-  private reorderBrushesAndRebuild(brushIds: readonly string[], end: 'first' | 'last'): boolean {
-    return solidOps.reorderBrushesAndRebuild(this.getOpsHost(), brushIds, end);
-  }
-
-  /**
-   * Falls back to full CSG rebuild when polygon caches are missing for texture
-   * remesh.
-   *
-   * @param brushIds Brushes that need refresh.
-   * @returns Always true after rebuild.
-   */
-  private fallbackFullPresentationRebuild(brushIds: readonly string[]): boolean {
-    return solidOps.fallbackFullPresentationRebuild(this.getOpsHost(), brushIds);
-  }
-
-  /**
-   * Completes presentation remesh after polygon textures updated.
-   *
-   * @param remeshed Brush ids with updated polygon caches.
-   * @returns True when presentation was refreshed.
-   */
-  private finishPresentationRemesh(remeshed: readonly string[]): boolean {
-    return solidOps.finishPresentationRemesh(this.getOpsHost(), remeshed);
-  }
-
-  /** Prepares state and pulls transforms for a full async rebuild. */
-  private prepareFullAsyncRebuild(): void {
-    solidOps.prepareFullAsyncRebuild(this.getOpsHost());
-  }
-
-  /**
-   * Applies materials and clears edges after async CSG completion.
-   *
-   * @param onProgress Optional progress callback.
-   */
-  private finishAsyncRebuildPresentation(onProgress?: (ratio: number, label: string) => void): void {
-    solidOps.finishAsyncRebuildPresentation(this.getOpsHost(), onProgress);
-    this.refreshStaticBrushEdgeBatches();
-  }
-
   /**
    * Rebakes static brush edge batches under this solid root after structural or
    * transform commits. Selection membership is preserved via
@@ -1044,28 +955,5 @@ export class SolidModel {
    */
   private refreshStaticBrushEdgeBatches(): void {
     SolidBrushEdgeBatch.rebuildForSolidRoot(this.root);
-  }
-
-  /**
-   * Applies surface layout when result geometry exists.
-   *
-   * @param forceMaterials Material rebuild flag.
-   */
-  private applyPresentationIfGeometryExists(forceMaterials: boolean): void {
-    solidOps.applyPresentationIfGeometryExists(this.getOpsHost(), forceMaterials);
-  }
-
-  /**
-   * Writes face maps and materials onto the result mesh.
-   *
-   * @param forceMaterials Reserved; solid results always preserve order.
-   */
-  private applySurfaceLayoutToResult(forceMaterials: boolean): void {
-    solidOps.applySurfaceLayoutToResult(this.getOpsHost(), forceMaterials);
-  }
-
-  /** Applies surface materials on the next frame after interactive commit. */
-  private schedulePresentationRefresh(): void {
-    solidOps.schedulePresentationRefresh(this.getOpsHost());
   }
 }

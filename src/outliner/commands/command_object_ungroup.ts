@@ -1,0 +1,97 @@
+import * as THREE from 'three';
+import { UndoCommand } from '@/commands/command_undo.js';
+
+/**
+ * Snapshot capturing a child of a group before ungrouping. Children are
+ * restored in snapshot order on undo.
+ */
+export interface UngroupChildSnapshot {
+  /** The child object that was in the group. */
+  child: THREE.Object3D;
+}
+
+/**
+ * Undoable command for ungrouping a group object. Execute reparents children to
+ * the group's parent; undo restores the group.
+ */
+export class CommandObjectUngroup implements UndoCommand {
+  private group: THREE.Group;
+  private originalParent: THREE.Object3D | null;
+  private groupSiblingIndex: number;
+  private childSnapshots: UngroupChildSnapshot[];
+  private executed: boolean;
+
+  /**
+   * Creates a new ungroup command for the specified group.
+   *
+   * @param group The group object to ungroup.
+   */
+  constructor(group: THREE.Group) {
+    this.group = group;
+    this.originalParent = group.parent;
+    this.groupSiblingIndex = this.originalParent ? this.originalParent.children.indexOf(group) : 0;
+    this.childSnapshots = this.buildSnapshots(group);
+    this.executed = false;
+  }
+
+  /** Executes the ungroup by moving children to the group's original parent. */
+  execute(): void {
+    if (this.executed) return;
+    const childrenToRemove: THREE.Object3D[] = [];
+    this.group.children.forEach((child) => {
+      childrenToRemove.push(child);
+    });
+    childrenToRemove.forEach((child) => {
+      this.group.remove(child);
+      if (this.originalParent) {
+        this.originalParent.add(child);
+      }
+    });
+    if (this.group.parent) {
+      this.group.parent.remove(this.group);
+    }
+    this.executed = true;
+  }
+
+  /** Undoes the ungroup by restoring children to the group and re-adding it. */
+  undo(): void {
+    if (!this.executed) return;
+    this.childSnapshots.forEach((snapshot) => {
+      if (snapshot.child.parent) {
+        snapshot.child.parent.remove(snapshot.child);
+      }
+      this.group.add(snapshot.child);
+    });
+    if (this.originalParent) {
+      if (this.groupSiblingIndex < this.originalParent.children.length) {
+        this.originalParent.children.splice(this.groupSiblingIndex, 0, this.group);
+      } else {
+        this.originalParent.add(this.group);
+      }
+    }
+    this.executed = false;
+  }
+
+  /**
+   * Returns the group object associated with this command.
+   *
+   * @returns The Three.js Group being ungrouped.
+   */
+  getGroup(): THREE.Group {
+    return this.group;
+  }
+
+  /**
+   * Builds snapshots for each child of the group.
+   *
+   * @param group The group whose children should be snapshotted.
+   * @returns An array of child state snapshots.
+   */
+  private buildSnapshots(group: THREE.Group): UngroupChildSnapshot[] {
+    const snapshots: UngroupChildSnapshot[] = [];
+    group.children.forEach((child) => {
+      snapshots.push({ child: child });
+    });
+    return snapshots;
+  }
+}

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { GridLineBuffer } from '../../../src/viewports/grid/grid_line_buffer.js';
+import { GridLineBuffer } from '@/viewports/grid/grid_line_buffer.js';
 
 /**
  * Reads a line segment's six position floats from the buffer geometry.

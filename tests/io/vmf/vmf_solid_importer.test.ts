@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { VmfSolidImporter } from '../../../src/io/vmf/vmf_solid_importer.js';
-import { VmfParser } from '../../../src/io/vmf/vmf_parser.js';
-import { SolidBrushValidator } from '../../../src/solid/brush/solid_brush_validator.js';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
+import { VmfSolidImporter } from '@/io/vmf/vmf_solid_importer.js';
+import { VmfParser } from '@/io/vmf/vmf_parser.js';
+import { SolidBrushValidator } from '@/solid/brush/solid_brush_validator.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
 import { buildAxisAlignedSideBlocks, buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 
 /** Unit tests for full VMF → solid model import. */

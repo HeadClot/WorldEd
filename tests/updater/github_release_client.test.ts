@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GITHUB_LATEST_RELEASE_URL, GitHubReleaseClient } from '../../src/updater/github_release_client.js';
+import { GITHUB_LATEST_RELEASE_URL, GitHubReleaseClient } from '@/updater/github_release_client.js';
 
 describe('GitHubReleaseClient', () => {
   it('requests the latest release endpoint and normalizes release assets', async () => {

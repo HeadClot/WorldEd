@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getTriangleCount, getTriangleVertexIndices } from './triangle_geometry_utils.js';
+import { getTriangleCount, getTriangleVertexIndices } from './utils_triangle_geometry.js';
 
 /** Closest triangle hit from a local-space ray against a triangle BVH. */
 export interface TriangleBvhHit {

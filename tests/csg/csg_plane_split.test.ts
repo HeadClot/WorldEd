@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { CsgPlaneSplit } from '../../src/csg/csg_plane_split.js';
+import { CsgPlaneSplit } from '@/csg/csg_plane_split.js';
 
 describe('CsgPlaneSplit', () => {
   let splitter: CsgPlaneSplit;

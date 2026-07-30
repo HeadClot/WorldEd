@@ -1,9 +1,10 @@
-import { Theme } from '../../theme.js';
-import type { WorkspaceDefinition } from '../../managers/layout/workspace/workspace_definition.js';
-import { createDefaultWorkspaces } from '../../managers/layout/workspace/workspace_definition.js';
-import { InlineRenameInput } from '../inline_rename_input.js';
-import { MenuPanel } from '../menu/menu_panel.js';
-import type { ToolbarMenuEntry } from '../menu/menu_types.js';
+import { Theme } from '@/theme.js';
+import type { WorkspaceDefinition } from '@/layout/workspace/workspace_definition.js';
+import { createDefaultWorkspaces } from '@/layout/workspace/workspace_definition.js';
+import { InputInlineRename } from '@/ui/input/input_inline_rename.js';
+import { PanelMenu } from '@/ui/menu/panel_menu.js';
+import type { ToolbarMenuEntry } from '@/ui/menu/menu_types.js';
+import { workspaceSwitcherResolveTabDropTargetAtClientX } from './workspace_switcher_bar_tabs.js';
 
 /** Callbacks for workspace switcher actions. */
 export interface WorkspaceSwitcherBarActions {
@@ -58,13 +59,13 @@ export class WorkspaceSwitcherBar {
   private readonly addButton: HTMLButtonElement;
   private readonly insertIndicator: HTMLElement;
   private readonly actions: WorkspaceSwitcherBarActions;
-  private readonly addMenuPanel: MenuPanel;
+  private readonly addMenuPanel: PanelMenu;
   private readonly onDocumentPointerDown: (event: PointerEvent) => void;
   private readonly onDocumentDragOver: (event: DragEvent) => void;
   private workspaces: readonly WorkspaceDefinition[];
   private activeId: string;
   private isAddMenuOpen: boolean;
-  private activeRename: InlineRenameInput | null;
+  private activeRename: InputInlineRename | null;
   private dragWorkspaceId: string | null;
 
   /**
@@ -84,7 +85,7 @@ export class WorkspaceSwitcherBar {
     this.tabsHost = this.createTabsHost();
     this.insertIndicator = this.createInsertIndicator();
     this.addButton = this.createAddButton();
-    this.addMenuPanel = new MenuPanel(this.buildAddMenuEntries(), () => this.closeAddMenu());
+    this.addMenuPanel = new PanelMenu(this.buildAddMenuEntries(), () => this.closeAddMenu());
     this.root.appendChild(this.tabsHost);
     this.root.appendChild(this.addButton);
     this.root.appendChild(this.insertIndicator);
@@ -139,7 +140,7 @@ export class WorkspaceSwitcherBar {
    *
    * @returns Menu panel instance.
    */
-  getAddMenuPanel(): MenuPanel {
+  getAddMenuPanel(): PanelMenu {
     return this.addMenuPanel;
   }
 
@@ -291,73 +292,7 @@ export class WorkspaceSwitcherBar {
    * @returns Hit tab and id, or null when the strip is empty.
    */
   private resolveTabDropTargetAtClientX(clientX: number): { tab: HTMLButtonElement; workspaceId: string } | null {
-    const tabs = this.listWorkspaceTabButtons();
-    if (tabs.length === 0) return null;
-    const direct = this.findTabContainingClientX(tabs, clientX);
-    if (direct) return direct;
-    return this.findNearestTabByClientX(tabs, clientX);
-  }
-
-  /**
-   * Lists workspace tab buttons currently in the strip.
-   *
-   * @returns Tab buttons with data-workspace-id.
-   */
-  private listWorkspaceTabButtons(): HTMLButtonElement[] {
-    return Array.from(this.tabsHost.querySelectorAll('button[data-workspace-id]')).filter(
-      (element): element is HTMLButtonElement => element instanceof HTMLButtonElement,
-    );
-  }
-
-  /**
-   * Returns the tab whose bounds contain the client X, if any.
-   *
-   * @param tabs Tab buttons to search.
-   * @param clientX Pointer X in viewport coordinates.
-   * @returns Hit tab and id, or null.
-   */
-  private findTabContainingClientX(
-    tabs: readonly HTMLButtonElement[],
-    clientX: number,
-  ): { tab: HTMLButtonElement; workspaceId: string } | null {
-    if (!Number.isFinite(clientX)) return null;
-    for (const tab of tabs) {
-      const rect = tab.getBoundingClientRect();
-      if (clientX < rect.left || clientX > rect.right) continue;
-      const workspaceId = tab.dataset['workspaceId'];
-      if (!workspaceId) continue;
-      return { tab, workspaceId };
-    }
-    return null;
-  }
-
-  /**
-   * Returns the tab whose horizontal center is nearest to the client X.
-   *
-   * @param tabs Tab buttons to search.
-   * @param clientX Pointer X in viewport coordinates.
-   * @returns Nearest tab and id, or null.
-   */
-  private findNearestTabByClientX(
-    tabs: readonly HTMLButtonElement[],
-    clientX: number,
-  ): { tab: HTMLButtonElement; workspaceId: string } | null {
-    if (!Number.isFinite(clientX)) return null;
-    let best: HTMLButtonElement | null = null;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (const tab of tabs) {
-      const rect = tab.getBoundingClientRect();
-      const mid = (rect.left + rect.right) / 2;
-      const distance = Math.abs(clientX - mid);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = tab;
-      }
-    }
-    if (!best) return null;
-    const workspaceId = best.dataset['workspaceId'];
-    if (!workspaceId) return null;
-    return { tab: best, workspaceId };
+    return workspaceSwitcherResolveTabDropTargetAtClientX(this.tabsHost, clientX);
   }
 
   /**
@@ -804,7 +739,7 @@ export class WorkspaceSwitcherBar {
     if (!workspace) return;
     this.disposeActiveRename();
     const originalName = workspace.name;
-    const renameInput = new InlineRenameInput(tab, nameSpan, originalName);
+    const renameInput = new InputInlineRename(tab, nameSpan, originalName);
     this.activeRename = renameInput;
     renameInput.setConfirmCallback((newName) => {
       this.activeRename = null;

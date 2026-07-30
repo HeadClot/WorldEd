@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  isJsonRpcNotification,
-  jsonRpcError,
-  jsonRpcSuccess,
-  parseJsonRpcRequest,
-} from '../../../src/ai/server/mcp_jsonrpc.js';
+import { isJsonRpcNotification, jsonRpcError, jsonRpcSuccess, parseJsonRpcRequest } from '@/ai/server/mcp_jsonrpc.js';
 
 /** Unit tests for MCP JSON-RPC helpers. */
 describe('mcp_jsonrpc', () => {

@@ -1,5 +1,5 @@
-import { getHiddenBoundsAxesForViewPlane, type CadViewPlane } from '../../rulers/cad_view_plane.js';
-import { GizmoAxis } from '../../types/transform_mode.js';
+import { getHiddenBoundsAxesForViewPlane, type CadViewPlane } from '@/rulers/view/cad_view_plane.js';
+import { GizmoAxis } from '@/types/transform_mode.js';
 
 /**
  * Returns whether a translate/scale axis handle should be hidden for a view

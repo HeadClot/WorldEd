@@ -13,9 +13,9 @@ import {
 import { findBrush, findSolidModel, listSolidModels } from './editor_api_lookup.js';
 import { solidOperationToName } from './editor_api_operations.js';
 import { classifyBrushShape } from './editor_api_shape.js';
-import type { SolidModel } from '../../solid/model/solid_model.js';
-import type { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import type { McpBounds, McpToolResult } from '../shared/mcp_protocol_types.js';
+import type { SolidModel } from '@/solid/model/solid_model.js';
+import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import type { McpBounds, McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 /**
  * Note returned with AABB-only spatial tools so AIs do not treat cutters as

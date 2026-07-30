@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import {
   applyMappingToTargets,
   buildTargetsFromFaceSelection,
   initializeMeshTextureUVs,
-} from '../../../src/texture/uv/face_texture_applier.js';
-import { createFaceTextureMappingFromTrs } from '../../../src/texture/uv/face_texture_mapping.js';
-import { computeRegionWorldNormal } from '../../../src/texture/uv/planar_uv_projector.js';
-import { getFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
+} from '@/texture/uv/face_texture_applier.js';
+import { createFaceTextureMappingFromTrs } from '@/texture/uv/face_texture_mapping.js';
+import { computeRegionWorldNormal } from '@/texture/uv/planar_uv_projector.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
 
 /**
  * UV editor used to rebuild matrices with a Y-up normal. On a Z face that

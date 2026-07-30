@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { CsgBooleanOps, CsgOperation } from '../../src/csg/csg_boolean_ops.js';
-import { CsgMeshBuilder } from '../../src/csg/csg_mesh_builder.js';
-import { TerrainGenerator } from '../../src/terrain/terrain_generator.js';
+import { CsgBooleanOps, CsgOperation } from '@/csg/csg_boolean_ops.js';
+import { BuilderCsgMesh } from '@/csg/builder_csg_mesh.js';
+import { TerrainGenerator } from '@/terrain/terrain_generator.js';
 
 describe('CsgMeshBuilder', () => {
   it('should extract polygons from a box mesh', () => {
-    const builder = new CsgMeshBuilder();
+    const builder = new BuilderCsgMesh();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.updateMatrixWorld(true);
     const polygons = builder.meshToPolygons(mesh);
@@ -14,7 +14,7 @@ describe('CsgMeshBuilder', () => {
   });
 
   it('should rebuild a mesh from polygons', () => {
-    const builder = new CsgMeshBuilder();
+    const builder = new BuilderCsgMesh();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.updateMatrixWorld(true);
     const polygons = builder.meshToPolygons(mesh);

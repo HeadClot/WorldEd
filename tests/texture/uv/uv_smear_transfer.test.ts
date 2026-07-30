@@ -7,14 +7,11 @@ import {
   projectWorldPositionToUv,
   splitMeshIntoCoplanarRegions,
   computeRegionWorldNormal,
-} from '../../../src/texture/uv/planar_uv_projector.js';
-import {
-  createDefaultFaceTextureMapping,
-  createFaceTextureMappingFromTrs,
-} from '../../../src/texture/uv/face_texture_mapping.js';
-import { transferUvMappingAcrossFaces } from '../../../src/texture/uv/uv_smear_transfer.js';
-import { initializeMeshTextureUVs } from '../../../src/texture/uv/face_texture_applier.js';
-import { createContentMaterial } from '../../../src/materials/content_material_factory.js';
+} from '@/texture/uv/planar_uv_projector.js';
+import { createDefaultFaceTextureMapping, createFaceTextureMappingFromTrs } from '@/texture/uv/face_texture_mapping.js';
+import { transferUvMappingAcrossFaces } from '@/texture/uv/uv_smear_transfer.js';
+import { initializeMeshTextureUVs } from '@/texture/uv/face_texture_applier.js';
+import { createContentMaterial } from '@/materials/factory_content_material.js';
 
 describe('uv_smear_transfer', () => {
   it('should match UVs on a shared edge after transfer between box sides', () => {
@@ -88,7 +85,7 @@ describe('uv_smear_transfer', () => {
         return Math.atan2(na.x, na.z) - Math.atan2(nb.x, nb.z);
       });
     expect(sides.length).toBe(segments);
-    let mapping: import('../../../src/texture/uv/face_texture_mapping.js').FaceTextureMapping =
+    let mapping: import('@/texture/uv/face_texture_mapping.js').FaceTextureMapping =
       createDefaultFaceTextureMapping('shell.png');
     mapping.align = 'face';
     bakeFaceUVs(mesh, sides[0]!, mapping);

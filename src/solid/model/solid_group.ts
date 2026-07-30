@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SolidOperation } from '../types/solid_operation.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { isSolidModelObject } from './solid_model_keys.js';
 
 /** UserData key marking a group that participates in solid hierarchical CSG. */

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { Theme } from '../../theme.js';
-import { hasEdgeBuildableGeometry } from '../../utils/mesh_edge_sync.js';
-import { GizmoVisualStyle } from '../../transform/gizmo/gizmo_visual_style.js';
+import { Theme } from '@/theme.js';
+import { hasEdgeBuildableGeometry } from '@/utils/mesh_edge_sync.js';
+import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
 
 /**
  * UserData flag marking a LineSegments object as a selection outline. Used to

@@ -6,9 +6,9 @@ import {
   getFixedFaceWorldCenter,
   snapBoundsFaceDelta,
   MIN_BOUNDS_HALF_EXTENT,
-} from '../../../src/transform/bounds/bounds_resize_math.js';
-import { OrientedBoundsBuilder, OrientedBoundsData } from '../../../src/transform/bounds/oriented_bounds.js';
-import { BoundsFace } from '../../../src/types/bounds_face.js';
+} from '@/transform/bounds/bounds_resize_math.js';
+import { BuilderOrientedBounds, DataOrientedBounds } from '@/transform/bounds/builder_oriented_bounds.js';
+import { BoundsFace } from '@/types/bounds_face.js';
 
 describe('bounds_resize_math', () => {
   it('should keep the opposite face fixed when expanding +X', () => {
@@ -17,7 +17,7 @@ describe('bounds_resize_math', () => {
     const startScale = new THREE.Vector3(1, 1, 1);
     const fixedBefore = getFixedFaceWorldCenter(bounds, BoundsFace.POS_X);
     const result = computeOneSidedMeshResize(startPos, startScale, bounds, BoundsFace.POS_X, 2);
-    const newBounds: OrientedBoundsData = {
+    const newBounds: DataOrientedBounds = {
       center: result.position.clone(),
       quaternion: bounds.quaternion.clone(),
       halfExtents: new THREE.Vector3(
@@ -73,7 +73,7 @@ describe('bounds_resize_math', () => {
 
   it('should keep the opposite face fixed when geometry is offset from the mesh origin', () => {
     const mesh = createOffsetBoxMesh();
-    const builder = new OrientedBoundsBuilder();
+    const builder = new BuilderOrientedBounds();
     const startBounds = builder.buildFromMeshes([mesh])!;
     const fixedBefore = getFixedFaceWorldCenter(startBounds, BoundsFace.POS_X);
     const faceTravel = startBounds.halfExtents.x;
@@ -95,7 +95,7 @@ describe('bounds_resize_math', () => {
 
   it('should keep the opposite face fixed when shrinking offset geometry on -X', () => {
     const mesh = createOffsetBoxMesh();
-    const builder = new OrientedBoundsBuilder();
+    const builder = new BuilderOrientedBounds();
     const startBounds = builder.buildFromMeshes([mesh])!;
     const fixedBefore = getFixedFaceWorldCenter(startBounds, BoundsFace.NEG_X);
     const shrink = -startBounds.halfExtents.x * 0.5;
@@ -120,7 +120,7 @@ describe('bounds_resize_math', () => {
     mesh.rotation.y = Math.PI / 4;
     mesh.position.set(2, 1, -1);
     mesh.updateMatrixWorld(true);
-    const builder = new OrientedBoundsBuilder();
+    const builder = new BuilderOrientedBounds();
     const startBounds = builder.buildFromMeshes([mesh])!;
     const fixedBefore = getFixedFaceWorldCenter(startBounds, BoundsFace.POS_Z);
     const result = computeOneSidedMeshResize(
@@ -145,7 +145,7 @@ describe('bounds_resize_math', () => {
     right.position.set(2, 0, 0);
     left.updateMatrixWorld(true);
     right.updateMatrixWorld(true);
-    const builder = new OrientedBoundsBuilder();
+    const builder = new BuilderOrientedBounds();
     const startBounds = builder.buildFromMeshes([left, right])!;
     const fixedBefore = getFixedFaceWorldCenter(startBounds, BoundsFace.POS_X);
     const faceTravel = 2;
@@ -181,7 +181,7 @@ describe('bounds_resize_math', () => {
  *
  * @returns Oriented bounds with halfExtents of 0.5 on each axis.
  */
-function createUnitBounds(): OrientedBoundsData {
+function createUnitBounds(): DataOrientedBounds {
   return {
     center: new THREE.Vector3(0, 0, 0),
     quaternion: new THREE.Quaternion(),

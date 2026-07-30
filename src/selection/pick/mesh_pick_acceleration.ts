@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TriangleBvh } from './triangle_bvh.js';
-import { getTriangleCount } from './triangle_geometry_utils.js';
+import { getTriangleCount } from './utils_triangle_geometry.js';
 
 /** UserData key storing a cached triangle BVH for face picking. */
 const FACE_PICK_BVH_USERDATA_KEY = 'facePickTriangleBvh';

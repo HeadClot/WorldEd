@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { GizmoRaycaster } from '../../../src/transform/gizmo/gizmo_raycaster.js';
-import { GizmoHandle } from '../../../src/transform/gizmo/gizmo_handle.js';
-import { GizmoAxis } from '../../../src/types/transform_mode.js';
+import { GizmoRaycaster } from '@/transform/gizmo/gizmo_raycaster.js';
+import { GizmoHandle } from '@/transform/gizmo/gizmo_handle.js';
+import { GizmoAxis } from '@/types/transform_mode.js';
 
 describe('GizmoRaycaster', () => {
   let raycaster: GizmoRaycaster;

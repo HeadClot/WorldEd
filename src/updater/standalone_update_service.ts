@@ -1,10 +1,10 @@
-import { APPLICATION_DISPLAY_NAME, APPLICATION_VERSION } from '../application_identity.js';
+import { APPLICATION_DISPLAY_NAME, APPLICATION_VERSION } from '@/application_identity.js';
 import { GITHUB_RELEASES_PAGE_URL, GitHubReleaseClient } from './github_release_client.js';
 import {
   detectStandalonePlatform,
   getStandaloneUpdaterBridge,
   type StandaloneUpdaterBridge,
-} from './standalone_updater_bridge.js';
+} from './bridge_standalone_updater.js';
 import { selectStandaloneUpdateAsset } from './update_asset_selector.js';
 import { isNewerUpdateVersion } from './update_version.js';
 import type {

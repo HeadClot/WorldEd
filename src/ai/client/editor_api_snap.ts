@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { EditorApiHost } from './editor_api_host.js';
-import type { McpVec3 } from '../shared/mcp_protocol_types.js';
+import type { McpVec3 } from '@/ai/shared/mcp_protocol_types.js';
 import { dtoToVec3, vec3ToDto } from './editor_api_math.js';
 
 /**

@@ -4,7 +4,7 @@ import {
   extractFileExtension,
   getTextureDisplayName,
   getAcceptedImageExtensions,
-} from '../../../src/texture/library/image_file_filter.js';
+} from '@/texture/library/image_file_filter.js';
 
 describe('image_file_filter', () => {
   it('should accept common image extensions case-insensitively', () => {

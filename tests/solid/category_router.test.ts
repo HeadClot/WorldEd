@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { CategoryRouter } from '../../src/solid/algorithm/category_router.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SurfaceCategory, shouldKeepSurfaceCategory } from '../../src/solid/types/surface_category.js';
+import { CategoryRouter } from '@/solid/algorithm/category/category_router.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SurfaceCategory, shouldKeepSurfaceCategory } from '@/solid/types/surface_category.js';
 
 /** Unit tests for solid CSG category routing tables. */
 describe('CategoryRouter', () => {

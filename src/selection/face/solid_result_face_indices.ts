@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { findConnectedCoplanarFaceIndices } from '../pick/triangle_geometry_utils.js';
+import { findConnectedCoplanarFaceIndices } from '@/selection/pick/utils_triangle_geometry.js';
 import { findSameSolidBrushSurfaceIndicesFast } from './solid_triangle_source_index.js';
 
 /** Per-triangle solid CSG source identity stored on result meshes. */

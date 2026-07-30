@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { BoundsFace } from '../../../src/types/bounds_face.js';
+import { BoundsFace } from '@/types/bounds_face.js';
 import {
   isBoundsFaceHitNearEdge,
   pickOrthographicSilhouetteEdgeFace,
   resolveBoundsFaceInteractionMode,
-} from '../../../src/transform/bounds/bounds_face_interaction.js';
-import type { OrientedBoundsData } from '../../../src/transform/bounds/oriented_bounds.js';
+} from '@/transform/bounds/bounds_face_interaction.js';
+import type { DataOrientedBounds } from '@/transform/bounds/builder_oriented_bounds.js';
 
 describe('bounds face interaction mode', () => {
   const bounds = createUnitBounds();
@@ -29,7 +29,7 @@ describe('bounds face interaction mode', () => {
   });
 
   it('works for rotated bounds using world-space face points', () => {
-    const rotated: OrientedBoundsData = {
+    const rotated: DataOrientedBounds = {
       center: new THREE.Vector3(0, 0, 0),
       quaternion: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2),
       halfExtents: new THREE.Vector3(1, 1, 1),
@@ -83,7 +83,7 @@ describe('orthographic silhouette edge pick', () => {
   });
 
   it('leaves the entire interior of a thin brush free for body drag', () => {
-    const thin: OrientedBoundsData = {
+    const thin: DataOrientedBounds = {
       center: new THREE.Vector3(0, 0, 0),
       quaternion: new THREE.Quaternion(),
       // Half extent 0.1 along X → 0.2 thick brush in top view.
@@ -104,7 +104,7 @@ describe('orthographic silhouette edge pick', () => {
  *
  * @returns Oriented bounds with half-extents of 1.
  */
-function createUnitBounds(): OrientedBoundsData {
+function createUnitBounds(): DataOrientedBounds {
   return {
     center: new THREE.Vector3(0, 0, 0),
     quaternion: new THREE.Quaternion(),

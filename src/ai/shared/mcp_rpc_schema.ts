@@ -1,4 +1,4 @@
-import type { StandaloneHostUpdateCheck } from '../../updater/update_types.js';
+import type { StandaloneHostUpdateCheck } from '@/updater/update_types.js';
 import type {
   McpHostStartResult,
   McpHostStatus,

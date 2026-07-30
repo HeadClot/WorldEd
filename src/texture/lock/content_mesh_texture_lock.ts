@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { FaceTextureMapping, cloneFaceTextureMapping } from '../uv/face_texture_mapping.js';
-import { getFaceTextureMaps, setFaceTextureMaps } from '../uv/face_texture_storage.js';
-import { computeRegionWorldNormal } from '../uv/planar_uv_projector.js';
-import { SurfaceUvMatrix } from '../uv_matrix/surface_uv_matrix.js';
+import { FaceTextureMapping, cloneFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { getFaceTextureMaps, setFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { computeRegionWorldNormal } from '@/texture/uv/planar_uv_projector.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 
 const scratchLocal = new THREE.Vector3();
 const scratchWorld = new THREE.Vector3();

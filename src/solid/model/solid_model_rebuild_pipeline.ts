@@ -1,18 +1,15 @@
 import * as THREE from 'three';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
-import { SolidCsgCompiler } from '../algorithm/solid_csg_compiler.js';
-import type { SolidCompileOptions } from '../algorithm/solid_compile_types.js';
-import { SolidSurfaceRegion } from '../algorithm/surface_triangulator.js';
-import { SolidBrushMeshChunkBuilder } from '../mesh/solid_brush_mesh_chunk.js';
-import { SolidMeshChunkCache } from '../mesh/solid_mesh_chunk_cache.js';
-import { SolidResultBuffer } from '../mesh/solid_result_buffer.js';
-import {
-  createDefaultFaceSurface,
-  type FaceSurfaceDescription,
-} from '../../texture/uv_matrix/face_surface_description.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
-import type { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
-import { forBatchesAsync } from '../../utils/async_yield.js';
+import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
+import type { SolidCompileOptions } from '@/solid/algorithm/compile/solid_compile_types.js';
+import { SolidSurfaceRegion } from '@/solid/algorithm/surface/surface_triangulator.js';
+import { SolidBrushMeshChunkBuilder } from '@/solid/mesh/solid_brush_mesh_chunk.js';
+import { SolidMeshChunkCache } from '@/solid/mesh/solid_mesh_chunk_cache.js';
+import { SolidResultBuffer } from '@/solid/mesh/solid_result_buffer.js';
+import { createDefaultFaceSurface, type FaceSurfaceDescription } from '@/texture/uv_matrix/face_surface_description.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import type { FaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { forBatchesAsync } from '@/utils/async_yield.js';
 import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from './solid_model_keys.js';
 import { stripStaleDecorativeEdges } from './solid_model_mesh_disposal.js';
 

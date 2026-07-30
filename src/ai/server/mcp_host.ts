@@ -1,7 +1,7 @@
-import { MCP_BIND_HOST, MCP_HTTP_PATH } from '../shared/mcp_constants.js';
-import type { McpHostStartResult, McpHostStatus } from '../shared/mcp_protocol_types.js';
-import { handleMcpHttpRequest } from './mcp_http_handler.js';
-import { createMcpSessionState, listMcpPortCandidates, type McpSessionState } from './mcp_session.js';
+import { MCP_BIND_HOST, MCP_HTTP_PATH } from '@/ai/shared/mcp_constants.js';
+import type { McpHostStartResult, McpHostStatus } from '@/ai/shared/mcp_protocol_types.js';
+import { handleMcpHttpRequest } from './handler_mcp_http.js';
+import { createMcpSessionState, listMcpPortCandidates, type SessionMcpState } from './session_mcp.js';
 import type { EditorToolInvoker } from './mcp_tool_dispatch.js';
 
 /** Minimal server surface used so tests can mock without Bun.serve types. */
@@ -20,7 +20,7 @@ export type McpServerFactory = (port: number, fetchHandler: (request: Request) =
  */
 export class McpHost {
   private server: McpHttpServer | null;
-  private session: McpSessionState | null;
+  private session: SessionMcpState | null;
   private invoker: EditorToolInvoker | null;
   private readonly serverFactory: McpServerFactory;
 

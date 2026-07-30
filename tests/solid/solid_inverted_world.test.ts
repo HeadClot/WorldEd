@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
-import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.js';
-import { SolidCsgCompiler } from '../../src/solid/algorithm/solid_csg_compiler.js';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidModelCodec } from '../../src/solid/io/solid_model_codec.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidModelCodec } from '@/solid/io/solid_model_codec.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /**
  * Builds a box brush instance at a world position.
@@ -17,7 +17,7 @@ import { SolidOperation } from '../../src/solid/types/solid_operation.js';
  * @returns Brush instance.
  */
 function makeBox(id: string, size: number, operation: SolidOperation, position?: THREE.Vector3): SolidBrushInstance {
-  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
+  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
   if (position) {
     instance.position.copy(position);

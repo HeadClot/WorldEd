@@ -9,7 +9,7 @@ import {
   createGizmoFrontLineMaterial,
   createGizmoOccludedLineMaterial,
   createGizmoPickMesh,
-} from '../../../src/transform/gizmo/gizmo_visual_style.js';
+} from '@/transform/gizmo/gizmo_visual_style.js';
 
 describe('GizmoVisualStyle', () => {
   it('should use one stem radius for all axis tools', () => {

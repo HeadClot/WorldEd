@@ -6,7 +6,7 @@ import {
   isObjectOrAncestorLocked,
   setObjectLocked,
   toggleObjectLocked,
-} from '../../src/utils/object_lock.js';
+} from '@/utils/object_lock.js';
 
 describe('object_lock', () => {
   it('should default objects to unlocked', () => {

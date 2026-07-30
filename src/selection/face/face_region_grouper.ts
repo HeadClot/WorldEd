@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FaceSelection } from './face_selection_manager.js';
+import { FaceSelection } from './manager_face_selection.js';
 import { expandFaceSelectionIndices } from './solid_result_face_indices.js';
 import { buildFacePickRegionKey } from './solid_triangle_source_index.js';
 

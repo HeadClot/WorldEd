@@ -1,17 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { SurfaceUvMatrix } from '../../../src/texture/uv_matrix/surface_uv_matrix.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 import {
   faceTextureMappingToSurface,
   surfaceToFaceTextureMapping,
-} from '../../../src/texture/uv_matrix/legacy_mapping_migrate.js';
-import {
-  createDefaultFaceTextureMapping,
-  createFaceTextureMappingFromTrs,
-} from '../../../src/texture/uv/face_texture_mapping.js';
-import { projectWorldPositionToUv, resolveProjectionBasis } from '../../../src/texture/uv/planar_uv_projector.js';
-import { transformBrushLocalUvForPoseChange } from '../../../src/texture/uv_matrix/surface_uv_matrix_transform.js';
-import { buildLocalToPlaneMatrix } from '../../../src/texture/uv_matrix/plane_space_matrix.js';
+} from '@/texture/uv_matrix/legacy_mapping_migrate.js';
+import { createDefaultFaceTextureMapping, createFaceTextureMappingFromTrs } from '@/texture/uv/face_texture_mapping.js';
+import { projectWorldPositionToUv, resolveProjectionBasis } from '@/texture/uv/planar_uv_projector.js';
+import { transformBrushLocalUvForPoseChange } from '@/texture/uv_matrix/surface_uv_matrix_transform.js';
+import { buildLocalToPlaneMatrix } from '@/texture/uv_matrix/plane_space_matrix.js';
 
 describe('SurfaceUvMatrix', () => {
   it('identity projects world X to U and Y to V', () => {

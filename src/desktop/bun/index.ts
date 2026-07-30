@@ -1,11 +1,11 @@
-import { buildDesktopWindowTitle } from '../../application_identity.js';
-import type { ElectrobunDesktopRpcSchema, ElectrobunDesktopWebviewCaller } from '../../ai/shared/mcp_rpc_schema.js';
-import { McpHost } from '../../ai/server/mcp_host.js';
-import type { StandaloneHostUpdateCheck } from '../../updater/update_types.js';
-import { buildDesktopWindowFrame } from '../desktop_window_maximize.js';
-import { showMaximizedWhenReady } from '../desktop_window_startup.js';
-import { enableWindowsPerMonitorDpiAwareness } from '../windows_dpi_awareness.js';
-import { applyWindowsWindowIcon } from '../windows_window_icon.js';
+import { buildDesktopWindowTitle } from '@/application_identity.js';
+import type { ElectrobunDesktopRpcSchema, ElectrobunDesktopWebviewCaller } from '@/ai/shared/mcp_rpc_schema.js';
+import { McpHost } from '@/ai/server/mcp_host.js';
+import type { StandaloneHostUpdateCheck } from '@/updater/update_types.js';
+import { buildDesktopWindowFrame } from '@/desktop/desktop_window_maximize.js';
+import { showMaximizedWhenReady } from '@/desktop/desktop_window_startup.js';
+import { enableWindowsPerMonitorDpiAwareness } from '@/desktop/windows_dpi_awareness.js';
+import { applyWindowsWindowIcon } from '@/desktop/windows_window_icon.js';
 
 await enableWindowsPerMonitorDpiAwareness();
 

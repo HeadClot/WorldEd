@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../library/texture_id.js';
-import { SurfaceUvMatrix, type SurfaceUvMatrixSerialized } from '../uv_matrix/surface_uv_matrix.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { SurfaceUvMatrix, type SurfaceUvMatrixSerialized } from '@/texture/uv_matrix/surface_uv_matrix.js';
 
 /**
  * World-axis alignment presets for building a default UV matrix. Stored as a UI

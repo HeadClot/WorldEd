@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { GRID_3D_RENDER_ORDER, InfiniteGrid3D } from '../../../src/viewports/grid/infinite_grid_3d.js';
+import { GRID_3D_RENDER_ORDER, InfiniteGrid3D } from '@/viewports/grid/infinite_grid_3d.js';
 
 describe('InfiniteGrid3D', () => {
   let grid: InfiniteGrid3D;

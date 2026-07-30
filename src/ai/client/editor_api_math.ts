@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import type { McpBounds, McpVec3 } from '../shared/mcp_protocol_types.js';
-import type { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import type { SolidModel } from '../../solid/model/solid_model.js';
+import type { McpBounds, McpVec3 } from '@/ai/shared/mcp_protocol_types.js';
+import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import type { SolidModel } from '@/solid/model/solid_model.js';
 
 const scratchQuaternion = new THREE.Quaternion();
 const scratchMatrix = new THREE.Matrix4();

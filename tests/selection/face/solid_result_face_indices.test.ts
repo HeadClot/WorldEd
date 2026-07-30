@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
-import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../../src/solid/model/solid_model.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '@/solid/model/solid_model.js';
 import {
   expandFaceSelectionIndices,
   findSameSolidBrushSurfaceIndices,
-} from '../../../src/selection/face/solid_result_face_indices.js';
-import { findConnectedCoplanarFaceIndices } from '../../../src/selection/pick/triangle_geometry_utils.js';
-import { FaceSelectionManager } from '../../../src/selection/face/face_selection_manager.js';
-import { groupSelectionsIntoFaceRegions } from '../../../src/selection/face/face_region_grouper.js';
+} from '@/selection/face/solid_result_face_indices.js';
+import { findConnectedCoplanarFaceIndices } from '@/selection/pick/utils_triangle_geometry.js';
+import { ManagerFaceSelection } from '@/selection/face/manager_face_selection.js';
+import { groupSelectionsIntoFaceRegions } from '@/selection/face/face_region_grouper.js';
 
 /** Per-triangle solid source row used in tests. */
 interface SourceRow {
@@ -68,7 +68,7 @@ describe('solid result face indices', () => {
     const { result, leftId, rightId } = buildAdjacentWallBrushes();
     const sources = readSources(result);
     const leftSeed = findSeedForBrush(sources, leftId);
-    const manager = new FaceSelectionManager();
+    const manager = new ManagerFaceSelection();
     manager.selectFace(result, leftSeed, false);
     const selected = manager.getSelectedFaces().map((entry) => entry.faceIndex);
     const selectedIds = uniqueBrushIds(sources, selected);

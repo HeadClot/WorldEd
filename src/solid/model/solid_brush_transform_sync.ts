@@ -5,8 +5,8 @@ import {
   captureSolidBrushTextureLockBaseline,
   lockFaceSurfaceForBrushTransform,
   type SolidBrushTextureLockBaseline,
-} from '../../texture/lock/solid_brush_texture_lock.js';
-import { shouldUpdateMappingsForLocks, type TextureLockFlags } from '../../texture/lock/texture_lock_transform.js';
+} from '@/texture/lock/solid_brush_texture_lock.js';
+import { shouldUpdateMappingsForLocks, type TextureLockFlags } from '@/texture/lock/texture_lock_transform.js';
 
 const scratchLocalMatrix = new THREE.Matrix4();
 const scratchWorldMatrix = new THREE.Matrix4();

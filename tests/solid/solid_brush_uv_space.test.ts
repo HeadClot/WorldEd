@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import {
   convertBrushLocalFaceMappingToWorld,
   convertWorldFaceMappingForCenteredBrush,
   convertWorldFaceMappingToBrushLocal,
-} from '../../src/solid/brush/solid_brush_uv_space.js';
-import { createFaceTextureMappingFromTrs } from '../../src/texture/uv/face_texture_mapping.js';
-import { SurfaceUvMatrix } from '../../src/texture/uv_matrix/surface_uv_matrix.js';
+} from '@/solid/brush/solid_brush_uv_space.js';
+import { createFaceTextureMappingFromTrs } from '@/texture/uv/face_texture_mapping.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 
 /** World ↔ brush-local UV matrix conversion for solid storage and result maps. */
 describe('solid brush UV space conversion', () => {

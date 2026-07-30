@@ -4,21 +4,21 @@ import {
   applyTextureIdToTargets,
   buildTargetsFromMeshes,
   initializeMeshTextureUVs,
-} from '../../../src/texture/uv/face_texture_applier.js';
-import { getFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
-import { computeRegionWorldNormal } from '../../../src/texture/uv/planar_uv_projector.js';
-import { createContentMaterial } from '../../../src/materials/content_material_factory.js';
-import { setTexturePaintStateForTests, TexturePaintState } from '../../../src/texture/paint/texture_paint_state.js';
-import { setTextureMapCacheForTests, TextureMapCache } from '../../../src/texture/library/texture_map_cache.js';
+} from '@/texture/uv/face_texture_applier.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { computeRegionWorldNormal } from '@/texture/uv/planar_uv_projector.js';
+import { createContentMaterial } from '@/materials/factory_content_material.js';
+import { setStateTexturePaintForTests, StateTexturePaint } from '@/texture/paint/state_texture_paint.js';
+import { setTextureMapCacheForTests, TextureMapCache } from '@/texture/library/texture_map_cache.js';
 
 describe('texture assign preserves cylinder UVs', () => {
   beforeEach(() => {
-    setTexturePaintStateForTests(new TexturePaintState());
+    setStateTexturePaintForTests(new StateTexturePaint());
     setTextureMapCacheForTests(new TextureMapCache());
   });
 
   afterEach(() => {
-    setTexturePaintStateForTests(null);
+    setStateTexturePaintForTests(null);
     setTextureMapCacheForTests(null);
   });
 

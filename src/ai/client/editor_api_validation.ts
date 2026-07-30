@@ -1,11 +1,11 @@
 import type { EditorApiHost } from './editor_api_host.js';
 import { findBrush, findSolidModel } from './editor_api_lookup.js';
 import { computeBrushWorldBounds } from './editor_api_math.js';
-import { SolidBrushValidator } from '../../solid/brush/solid_brush_validator.js';
-import type { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import type { SolidModel } from '../../solid/model/solid_model.js';
-import { SolidOperation } from '../../solid/types/solid_operation.js';
-import type { McpToolResult } from '../shared/mcp_protocol_types.js';
+import { SolidBrushValidator } from '@/solid/brush/solid_brush_validator.js';
+import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import type { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 /** Validation helpers wrapping SolidBrushValidator and simple CSG warnings. */
 export class EditorApiValidation {

@@ -5,11 +5,11 @@ import { dtoToVec3, vec3ToDto } from './editor_api_math.js';
 import { findSolidModel, listSolidModels } from './editor_api_lookup.js';
 import { solidOperationToName } from './editor_api_operations.js';
 import { failResult, okResult } from './editor_api_result.js';
-import { BrushMembership } from '../../solid/algorithm/brush_membership.js';
-import type { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import type { SolidModel } from '../../solid/model/solid_model.js';
-import { SolidOperation } from '../../solid/types/solid_operation.js';
-import type { McpToolResult } from '../shared/mcp_protocol_types.js';
+import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
+import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import type { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 const MAX_VOID_GRID = 18;
 const VOID_LINE_SAMPLES = 48;

@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { Theme } from '../../../src/theme.js';
-import { TransformGizmo } from '../../../src/transform/gizmo/transform_gizmo.js';
-import { TransformMode } from '../../../src/types/transform_mode.js';
+import { Theme } from '@/theme.js';
+import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
+import { TransformMode } from '@/types/transform_mode.js';
 import {
   GIZMO_WANTED_VISIBLE_KEY,
   hideGizmoAfterRenderPass,
   isGizmoWantedVisible,
   setGizmoWantedVisible,
   showGizmoForRenderPass,
-} from '../../../src/transform/gizmo/gizmo_viewport_visibility.js';
+} from '@/transform/gizmo/gizmo_viewport_visibility.js';
 
 describe('gizmo viewport multi-view visibility', () => {
   it('keeps clones hidden until a render pass when the tool enables them', () => {
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     const top = gizmo.getHandleGroupClone('xz');
@@ -34,7 +34,7 @@ describe('gizmo viewport multi-view visibility', () => {
   });
 
   it('does not enable clones when the tool gizmo is off', () => {
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(false);
     const clone = gizmo.getHandleGroupClone('xy');

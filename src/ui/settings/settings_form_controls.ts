@@ -1,5 +1,5 @@
-import { Theme } from '../../theme.js';
-import { hexToRgb } from '../../utils/color_utils.js';
+import { Theme } from '@/theme.js';
+import { hexToRgb } from '@/utils/utils_color.js';
 
 /**
  * Shared form control factories for the settings dialog. Uses the same Theme

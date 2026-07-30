@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Theme } from '../../theme.js';
+import { Theme } from '@/theme.js';
 import { GridLineBuffer } from './grid_line_buffer.js';
 
 /** Fixed half-extent of the 3D grid patch in world units. */

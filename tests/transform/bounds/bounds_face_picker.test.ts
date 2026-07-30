@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { BoundsFacePicker } from '../../../src/transform/bounds/bounds_face_picker.js';
-import { BoundsGizmo } from '../../../src/transform/bounds/bounds_gizmo.js';
-import { Theme } from '../../../src/theme.js';
-import { OrientedBoundsData } from '../../../src/transform/bounds/oriented_bounds.js';
+import { BoundsFacePicker } from '@/transform/bounds/bounds_face_picker.js';
+import { GizmoBounds } from '@/transform/bounds/gizmo_bounds.js';
+import { Theme } from '@/theme.js';
+import { DataOrientedBounds } from '@/transform/bounds/builder_oriented_bounds.js';
 
 describe('BoundsFacePicker', () => {
   it('should return null when the gizmo group is hidden', () => {
@@ -54,16 +54,16 @@ function createPickerSetup(): {
   pickElement: HTMLElement;
   gizmoGroup: THREE.Group;
 } {
-  const boundsGizmo = new BoundsGizmo(Theme);
-  boundsGizmo.createHandles();
-  const bounds: OrientedBoundsData = {
+  const gizmoBounds = new GizmoBounds(Theme);
+  gizmoBounds.createHandles();
+  const bounds: DataOrientedBounds = {
     center: new THREE.Vector3(0, 0, 0),
     quaternion: new THREE.Quaternion(),
     halfExtents: new THREE.Vector3(1, 1, 1),
   };
-  boundsGizmo.updateFromBounds(bounds, 0.2);
+  gizmoBounds.updateFromBounds(bounds, 0.2);
   const gizmoGroup = new THREE.Group();
-  boundsGizmo.getAllSceneObjects().forEach((obj) => gizmoGroup.add(obj));
+  gizmoBounds.getAllSceneObjects().forEach((obj) => gizmoGroup.add(obj));
   gizmoGroup.updateMatrixWorld(true);
   const camera = new THREE.PerspectiveCamera(60, 800 / 600, 0.1, 1000);
   camera.position.set(0, 0, 5);

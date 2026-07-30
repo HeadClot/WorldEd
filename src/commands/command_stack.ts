@@ -1,4 +1,4 @@
-import { UndoCommand } from './undo_command.js';
+import { UndoCommand } from './command_undo.js';
 
 /**
  * Callback invoked when the command stack state changes.

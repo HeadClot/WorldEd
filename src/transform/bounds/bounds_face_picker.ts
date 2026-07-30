@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '../../types/bounds_face.js';
-import { pointerEventToNdc } from '../../utils/pointer_ndc.js';
-import { isGizmoWantedVisible } from '../gizmo/gizmo_viewport_visibility.js';
+import { BoundsFace, BOUNDS_FACE_USERDATA_KEY } from '@/types/bounds_face.js';
+import { pointerEventToNdc } from '@/utils/pointer_ndc.js';
+import { isGizmoWantedVisible } from '@/transform/gizmo/gizmo_viewport_visibility.js';
 
 /** Result of picking a bounds face for plane-constrained translation or resize. */
 export interface BoundsFacePickResult {

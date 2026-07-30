@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { TransformGizmo } from '../../../src/transform/gizmo/transform_gizmo.js';
-import { TransformMode } from '../../../src/types/transform_mode.js';
-import { Theme } from '../../../src/theme.js';
+import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
+import { TransformMode } from '@/types/transform_mode.js';
+import { Theme } from '@/theme.js';
 import {
   BOUNDS_CUBE_MAX_WORLD_SIZE,
   BOUNDS_CUBE_MIN_PIXELS,
@@ -19,9 +19,9 @@ import {
   computeBoundsEarWorldSize,
   computeSilhouetteExteriorBandWorld,
   worldUnitsPerPixel,
-} from '../../../src/transform/bounds/bounds_handle_screen_size.js';
-import type { OrientedBoundsData } from '../../../src/transform/bounds/oriented_bounds.js';
-import { BOUNDS_CUBE_VISUAL_KEY } from '../../../src/transform/bounds/bounds_gizmo.js';
+} from '@/transform/bounds/bounds_handle_screen_size.js';
+import type { DataOrientedBounds } from '@/transform/bounds/builder_oriented_bounds.js';
+import { BOUNDS_CUBE_VISUAL_KEY } from '@/transform/bounds/gizmo_bounds.js';
 
 describe('bounds handle size vs camera distance', () => {
   it('keeps pick size manageable and visual smaller than pick when far', () => {
@@ -33,13 +33,13 @@ describe('bounds handle size vs camera distance', () => {
     mesh.position.set(0, 1, 0);
     mesh.updateMatrixWorld(true);
 
-    const gizmoNear = new TransformGizmo(Theme);
+    const gizmoNear = new GizmoTransform(Theme);
     gizmoNear.setMode(TransformMode.BOUNDS);
     gizmoNear.updateBoundsFromMeshes([mesh], nearCamera);
     const nearPick = readFirstHandleScale(gizmoNear);
     const nearVisual = readFirstVisualScale(gizmoNear);
 
-    const gizmoMid = new TransformGizmo(Theme);
+    const gizmoMid = new GizmoTransform(Theme);
     gizmoMid.setMode(TransformMode.BOUNDS);
     gizmoMid.updateBoundsFromMeshes([mesh], midCamera);
     const midPick = readFirstHandleScale(gizmoMid);
@@ -113,7 +113,7 @@ describe('bounds handle size vs camera distance', () => {
   it('hides 2D ears when along-edge length would be under 8px', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2, 0.2));
     mesh.updateMatrixWorld(true);
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     gizmo.updateBoundsFromMeshes([mesh]);
@@ -134,7 +134,7 @@ describe('bounds handle size vs camera distance', () => {
   it('applies screen-space ear sizing on orthographic clones', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2));
     mesh.updateMatrixWorld(true);
-    const gizmo = new TransformGizmo(Theme);
+    const gizmo = new GizmoTransform(Theme);
     gizmo.setMode(TransformMode.BOUNDS);
     gizmo.setVisible(true);
     gizmo.updateBoundsFromMeshes([mesh]);
@@ -160,7 +160,7 @@ describe('bounds handle size vs camera distance', () => {
  * @param gizmo Transform gizmo after bounds update.
  * @returns Uniform pick scale, or 0.
  */
-function readFirstHandleScale(gizmo: TransformGizmo): number {
+function readFirstHandleScale(gizmo: GizmoTransform): number {
   const handles = gizmo.getHandles();
   if (handles.length === 0) return 0;
   return handles[0]!.getVisualMesh().scale.x;
@@ -172,7 +172,7 @@ function readFirstHandleScale(gizmo: TransformGizmo): number {
  * @param gizmo Transform gizmo after bounds update.
  * @returns Visual edge length in world units, or 0.
  */
-function readFirstVisualScale(gizmo: TransformGizmo): number {
+function readFirstVisualScale(gizmo: GizmoTransform): number {
   const handles = gizmo.getHandles();
   if (handles.length === 0) return 0;
   const pick = handles[0]!.getVisualMesh();
@@ -204,7 +204,7 @@ function screenPixelsForSize(worldSize: number, camera: THREE.PerspectiveCamera,
  *
  * @returns Oriented bounds data.
  */
-function unitBounds(): OrientedBoundsData {
+function unitBounds(): DataOrientedBounds {
   return {
     center: new THREE.Vector3(0, 0, 0),
     quaternion: new THREE.Quaternion(),

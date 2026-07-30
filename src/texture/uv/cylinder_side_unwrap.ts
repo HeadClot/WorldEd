@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { FaceTextureMapEntry } from './face_texture_mapping.js';
 import { getGeometrySource } from './geometry_source.js';
 import { computeRegionWorldNormal } from './planar_uv_projector.js';
-import { SurfaceUvMatrix } from '../uv_matrix/surface_uv_matrix.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 
 /** Wall-like sides: normals nearly horizontal. */
 const SIDE_NORMAL_Y_MAX = 0.35;

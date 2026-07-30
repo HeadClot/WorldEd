@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ContributorRoll } from '../../../src/ui/about/about_contributor_roll.js';
-import * as fetcher from '../../../src/ui/about/about_contributor_fetcher.js';
+import { ContributorRoll } from '@/ui/about/about_contributor_roll.js';
+import * as fetcher from '@/ui/about/about_contributor_fetcher.js';
 
 describe('ContributorRoll', () => {
   let roll: ContributorRoll;

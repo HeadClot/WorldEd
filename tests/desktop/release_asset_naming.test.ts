@@ -7,7 +7,7 @@ import {
   isElectrobunUpdaterArtifactKind,
   parseElectrobunArtifactFileName,
   toPublicReleasePlatform,
-} from '../../src/desktop/release_asset_naming.js';
+} from '@/desktop/release_asset_naming.js';
 
 describe('desktop release asset naming', () => {
   it('builds versioned public Setup names for human downloads', () => {

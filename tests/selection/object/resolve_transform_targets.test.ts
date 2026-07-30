@@ -1,11 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../../src/solid/types/solid_operation.js';
-import {
-  resolveInspectorObjects,
-  resolveTransformTargets,
-} from '../../../src/selection/object/resolve_transform_targets.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { resolveInspectorObjects, resolveTransformTargets } from '@/selection/object/resolve_transform_targets.js';
 
 describe('resolveTransformTargets', () => {
   it('maps solid result meshes to the solid model root', () => {

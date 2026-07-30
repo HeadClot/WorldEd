@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareUpdateVersions, isNewerUpdateVersion } from '../../src/updater/update_version.js';
+import { compareUpdateVersions, isNewerUpdateVersion } from '@/updater/update_version.js';
 
 describe('update version comparison', () => {
   it('compares tagged releases without treating the leading v as significant', () => {

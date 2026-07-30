@@ -1,4 +1,4 @@
-import { SolidSurfaceRegion, SolidTriangleSource } from '../algorithm/surface_triangulator.js';
+import { SolidSurfaceRegion, SolidTriangleSource } from '@/solid/algorithm/surface/surface_triangulator.js';
 import { SolidBrushMeshChunk } from './solid_brush_mesh_chunk.js';
 import { SolidMeshChunkCache } from './solid_mesh_chunk_cache.js';
 

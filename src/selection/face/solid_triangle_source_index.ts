@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../solid/model/solid_model_keys.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '@/solid/model/solid_model_keys.js';
 import type { SolidTriangleSourceRef } from './solid_result_face_indices.js';
 
 /** UserData key for the cached brush-face → triangle index map. */

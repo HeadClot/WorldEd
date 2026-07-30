@@ -1,6 +1,6 @@
-import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
-import type { GameProfile } from '../../settings/settings_types.js';
-import { FileDialogManager } from '../../io/file_dialog_manager.js';
+import type { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
+import type { GameProfile } from '@/settings/store/settings_types.js';
+import { ManagerFileDialog } from '@/io/dialog/manager_file_dialog.js';
 import {
   getUnitLabel,
   getUnitOptionsForSystem,
@@ -10,9 +10,9 @@ import {
   type ImperialUnit,
   type MetricUnit,
   type UnitSystem,
-} from '../../settings/unit_presets.js';
-import { Theme } from '../../theme.js';
-import { hexToRgb } from '../../utils/color_utils.js';
+} from '@/settings/units/unit_presets.js';
+import { Theme } from '@/theme.js';
+import { hexToRgb } from '@/utils/utils_color.js';
 import {
   createSettingsButton,
   createSettingsCategory,
@@ -26,7 +26,7 @@ import { SettingsCoordinateSpaceSection } from './settings_coordinate_space_sect
 /** Games tab content: game profiles list and unit preset editors. */
 export class SettingsGamesTab {
   private readonly store: EditorSettingsStore;
-  private readonly fileDialogs: FileDialogManager;
+  private readonly fileDialogs: ManagerFileDialog;
   private readonly coordinateSpaceSection: SettingsCoordinateSpaceSection;
   private readonly root: HTMLElement;
   private readonly listHost: HTMLElement;
@@ -39,7 +39,7 @@ export class SettingsGamesTab {
    */
   constructor(store: EditorSettingsStore) {
     this.store = store;
-    this.fileDialogs = new FileDialogManager();
+    this.fileDialogs = new ManagerFileDialog();
     this.coordinateSpaceSection = new SettingsCoordinateSpaceSection(store);
     this.root = document.createElement('div');
     this.listHost = document.createElement('div');

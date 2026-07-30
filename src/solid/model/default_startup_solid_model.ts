@@ -1,4 +1,4 @@
-import { SolidOperation } from '../types/solid_operation.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidModel } from './solid_model.js';
 
 /** Edge length of the single brush seeded into a new editor session. */

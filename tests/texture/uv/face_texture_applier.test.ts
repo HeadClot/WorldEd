@@ -5,10 +5,10 @@ import {
   buildTargetsFromMeshes,
   initializeMeshTextureUVs,
   getCommonMapping,
-} from '../../../src/texture/uv/face_texture_applier.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
-import { getFaceTextureMaps } from '../../../src/texture/uv/face_texture_storage.js';
-import { createContentMaterial } from '../../../src/materials/content_material_factory.js';
+} from '@/texture/uv/face_texture_applier.js';
+import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
+import { createContentMaterial } from '@/materials/factory_content_material.js';
 
 describe('face_texture_applier', () => {
   it('should initialize UVs on a content mesh', () => {

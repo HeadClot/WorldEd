@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GizmoAxis } from '../../types/transform_mode.js';
+import { GizmoAxis } from '@/types/transform_mode.js';
 
 /**
  * Represents a single interactive handle on a transform gizmo. Stores axis,

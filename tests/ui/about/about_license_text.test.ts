@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  HENRYS_TOOLS_DISCORD_URL,
-  PROJECT_DISPLAY_NAME,
-  getAboutLicenseText,
-} from '../../../src/ui/about/about_license_text.js';
+import { HENRYS_TOOLS_DISCORD_URL, PROJECT_DISPLAY_NAME, getAboutLicenseText } from '@/ui/about/about_license_text.js';
 
 describe('about_license_text', () => {
   it('should expose the project display name', () => {

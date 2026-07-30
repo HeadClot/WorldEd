@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { BrushMembership } from '../../src/solid/algorithm/brush_membership.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
 
 /** Outliner / scene-graph brush order must drive CSG evaluation order. */
 describe('Solid brush CSG order', () => {

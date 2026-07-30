@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { findMcpTool, listMcpTools } from '../../../src/ai/server/mcp_tool_registry.js';
-import { dispatchMcpToolCall } from '../../../src/ai/server/mcp_tool_dispatch.js';
+import { findMcpTool, listMcpTools } from '@/ai/server/registry_mcp_tool.js';
+import { dispatchMcpToolCall } from '@/ai/server/mcp_tool_dispatch.js';
 
 /** Unit tests for MCP tool catalog and dispatch. */
 describe('mcp_tool_registry', () => {

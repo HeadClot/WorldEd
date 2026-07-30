@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { WindowPointerDragSession } from '../../src/utils/window_pointer_drag_session.js';
+import { WindowPointerDragSession } from '@/utils/session_window_pointer_drag.js';
 
 describe('WindowPointerDragSession', () => {
   let session: WindowPointerDragSession;

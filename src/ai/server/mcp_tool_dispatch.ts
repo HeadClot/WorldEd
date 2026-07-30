@@ -1,5 +1,5 @@
-import type { McpToolResult } from '../shared/mcp_protocol_types.js';
-import { findMcpTool } from './mcp_tool_registry.js';
+import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
+import { findMcpTool } from './registry_mcp_tool.js';
 
 /** Function that runs a named editor tool in the webview. */
 export type EditorToolInvoker = (name: string, args: Record<string, unknown>) => Promise<McpToolResult>;

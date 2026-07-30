@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { APPLICATION_DISPLAY_NAME, buildDesktopWindowTitle } from '../../src/application_identity.js';
+import { APPLICATION_DISPLAY_NAME, buildDesktopWindowTitle } from '@/application_identity.js';
 
 describe('desktop window title', () => {
   it('uses AI World Editor in the desktop shell HTML title without changing the web index title path', () => {

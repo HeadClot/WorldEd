@@ -7,7 +7,7 @@ import {
   extrudeVertexPositions,
   splitSharedVertices,
   mergeCoincidentVertices,
-} from '../../../src/transform/extrusion/face_extrusion_geometry.js';
+} from '@/transform/extrusion/face_extrusion_geometry.js';
 
 describe('computeFaceNormal', () => {
   let geometry: THREE.BufferGeometry;

@@ -1,7 +1,7 @@
 import type { FaceTextureAlign, FaceTextureMapping, FaceTextureMappingTrs } from './face_texture_mapping.js';
 import { createFaceTextureMappingFromTrs, getFaceTextureMappingTrs } from './face_texture_mapping.js';
 import { resolveProjectionNormal } from './planar_uv_projector.js';
-import { SurfaceUvMatrix } from '../uv_matrix/surface_uv_matrix.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 import * as THREE from 'three';
 
 /** Absolute UV editor field names (meters-per-tile TRS). */

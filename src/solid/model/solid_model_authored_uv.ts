@@ -1,6 +1,6 @@
 import type { Object3D } from 'three';
-import type { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
-import { convertWorldFaceMappingToBrushLocal } from '../brush/solid_brush_uv_space.js';
+import type { FaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { convertWorldFaceMappingToBrushLocal } from '@/solid/brush/solid_brush_uv_space.js';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
 
 /** Per-triangle source linking a result triangle to a brush face. */

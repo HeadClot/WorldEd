@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { DeleteSolidBrushesCommand } from '../../src/commands/solid/delete_solid_brushes_command.js';
-import { markAsSolidCsgGroup } from '../../src/solid/model/solid_group.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { CommandSolidDeleteBrushes } from '@/solid/commands/command_solid_delete_brushes.js';
+import { markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
 
 /** Deleting a brush must drop it from the solid model CSG list and rebuild. */
 describe('Delete solid brushes', () => {
@@ -16,7 +16,7 @@ describe('Delete solid brushes', () => {
     model.rebuild(true);
     const beforeCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(model.getBrushCount()).toBe(2);
-    const command = new DeleteSolidBrushesCommand([remove.mesh!]);
+    const command = new CommandSolidDeleteBrushes([remove.mesh!]);
     command.execute();
     expect(model.getBrushCount()).toBe(1);
     expect(model.findBrush(remove.id)).toBeUndefined();
@@ -31,7 +31,7 @@ describe('Delete solid brushes', () => {
     const model = new SolidModel('DelUndo');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
     const second = model.addBoxBrush(2, SolidOperation.Subtractive);
-    const command = new DeleteSolidBrushesCommand([second.mesh!]);
+    const command = new CommandSolidDeleteBrushes([second.mesh!]);
     command.execute();
     expect(model.getBrushCount()).toBe(1);
     command.undo();
@@ -47,7 +47,7 @@ describe('Delete solid brushes', () => {
     const middle = model.addBoxBrush(2, SolidOperation.Subtractive);
     const last = model.addBoxBrush(2, SolidOperation.Intersecting);
     expect(model.getBrushes().map((brush) => brush.id)).toEqual([first.id, middle.id, last.id]);
-    const command = new DeleteSolidBrushesCommand([middle.mesh!]);
+    const command = new CommandSolidDeleteBrushes([middle.mesh!]);
     command.execute();
     expect(model.getBrushes().map((brush) => brush.id)).toEqual([first.id, last.id]);
     command.undo();
@@ -70,7 +70,7 @@ describe('Delete solid brushes', () => {
     group.add(nested.mesh!);
     model.rebuild(true);
     expect(nested.mesh!.parent).toBe(group);
-    const command = new DeleteSolidBrushesCommand([nested.mesh!]);
+    const command = new CommandSolidDeleteBrushes([nested.mesh!]);
     command.execute();
     expect(model.getBrushCount()).toBe(1);
     expect(model.findBrush(nested.id)).toBeUndefined();
@@ -91,7 +91,7 @@ describe('Delete solid brushes', () => {
     group.add(nested.mesh!);
     group.add(sibling.mesh!);
     model.rebuild(true);
-    const command = new DeleteSolidBrushesCommand([nested.mesh!]);
+    const command = new CommandSolidDeleteBrushes([nested.mesh!]);
     command.execute();
     expect(nested.mesh!.parent).toBeNull();
     command.undo();
@@ -119,7 +119,7 @@ describe('Delete solid brushes', () => {
     const afterIndex = model.root.children.indexOf(after.mesh!);
     expect(beforeIndex).toBeLessThan(groupIndexBefore);
     expect(groupIndexBefore).toBeLessThan(afterIndex);
-    const command = new DeleteSolidBrushesCommand([nested.mesh!]);
+    const command = new CommandSolidDeleteBrushes([nested.mesh!]);
     command.execute();
     command.undo();
     expect(nested.mesh!.parent).toBe(group);

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { ToggleVisibilityCommand } from '../../src/commands/object/toggle_visibility_command.js';
-import { SolidUpdateSetBuilder } from '../../src/solid/algorithm/solid_update_set.js';
-import { BrushMembership } from '../../src/solid/algorithm/brush_membership.js';
-import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { CommandObjectToggleVisibility } from '@/outliner/commands/command_object_toggle_visibility.js';
+import { SolidUpdateSetBuilder } from '@/solid/algorithm/compile/solid_update_set.js';
+import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 
 /**
  * Samples whether a model-space point is inside the solid via brush ops.
@@ -72,7 +72,7 @@ describe('Solid brush visibility CSG', () => {
     model.addBoxBrush(4, SolidOperation.Additive);
     const cutter = model.addBoxBrush(2, SolidOperation.Subtractive);
     expect(cutter.mesh).toBeTruthy();
-    const command = new ToggleVisibilityCommand(cutter.mesh!);
+    const command = new CommandObjectToggleVisibility(cutter.mesh!);
     command.execute();
     expect(cutter.mesh!.visible).toBe(false);
     expect(cutter.visible).toBe(false);

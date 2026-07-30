@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SelectionManager } from './selection_manager.js';
+import { ManagerSelection } from './manager_selection.js';
 
 /**
  * Resolves object picks along a ray so nested meshes can be selected by
@@ -15,7 +15,7 @@ export class SelectionClickThrough {
    * @param selectionManager Current selection state.
    * @returns Mesh to select, or null when the stack is empty.
    */
-  static pickFromStack(depthSortedMeshes: THREE.Mesh[], selectionManager: SelectionManager): THREE.Mesh | null {
+  static pickFromStack(depthSortedMeshes: THREE.Mesh[], selectionManager: ManagerSelection): THREE.Mesh | null {
     if (depthSortedMeshes.length === 0) return null;
     if (depthSortedMeshes.length === 1) return depthSortedMeshes[0]!;
     const currentIndex = this.findSelectedIndex(depthSortedMeshes, selectionManager);
@@ -52,7 +52,7 @@ export class SelectionClickThrough {
    * @param selectionManager Current selection state.
    * @returns Index in the stack, or -1 when none of the hits are selected.
    */
-  private static findSelectedIndex(depthSortedMeshes: THREE.Mesh[], selectionManager: SelectionManager): number {
+  private static findSelectedIndex(depthSortedMeshes: THREE.Mesh[], selectionManager: ManagerSelection): number {
     const lastSelected = selectionManager.getLastSelectedObject();
     if (lastSelected) {
       const lastIndex = depthSortedMeshes.indexOf(lastSelected);

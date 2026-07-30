@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
-import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.js';
-import { SolidCsgCompiler } from '../../src/solid/algorithm/solid_csg_compiler.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidBrushMeshChunkBuilder } from '../../src/solid/mesh/solid_brush_mesh_chunk.js';
-import { SolidMeshChunkCache } from '../../src/solid/mesh/solid_mesh_chunk_cache.js';
-import { SolidResultBuffer } from '../../src/solid/mesh/solid_result_buffer.js';
-import { createDefaultFaceSurface } from '../../src/texture/uv_matrix/face_surface_description.js';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidBrushMeshChunkBuilder } from '@/solid/mesh/solid_brush_mesh_chunk.js';
+import { SolidMeshChunkCache } from '@/solid/mesh/solid_mesh_chunk_cache.js';
+import { SolidResultBuffer } from '@/solid/mesh/solid_result_buffer.js';
+import { createDefaultFaceSurface } from '@/texture/uv_matrix/face_surface_description.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
 
 /**
  * Builds a positioned additive box brush.
@@ -19,7 +19,7 @@ import { SolidModel } from '../../src/solid/model/solid_model.js';
  * @returns Brush instance.
  */
 function makeBox(id: string, size: number, position: THREE.Vector3): SolidBrushInstance {
-  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
+  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, SolidOperation.Additive);
   instance.position.copy(position);
   return instance;

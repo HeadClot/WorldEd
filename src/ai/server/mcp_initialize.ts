@@ -1,5 +1,5 @@
-import { APPLICATION_VERSION } from '../../application_identity.js';
-import { MCP_PROTOCOL_VERSION, MCP_SERVER_NAME } from '../shared/mcp_constants.js';
+import { APPLICATION_VERSION } from '@/application_identity.js';
+import { MCP_PROTOCOL_VERSION, MCP_SERVER_NAME } from '@/ai/shared/mcp_constants.js';
 
 /** MCP initialize result payload. */
 export interface McpInitializeResult {

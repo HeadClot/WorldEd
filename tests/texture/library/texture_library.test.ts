@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TextureLibrary } from '../../../src/texture/library/texture_library.js';
-import { TextureBrowserEntry, createTextureBrowserEntry } from '../../../src/texture/library/texture_browser_entry.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../../src/texture/library/texture_id.js';
-import { mockObjectUrlApis } from './object_url_test_utils.js';
+import { TextureLibrary } from '@/texture/library/texture_library.js';
+import { TextureBrowserEntry, createTextureBrowserEntry } from '@/texture/library/texture_browser_entry.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { mockObjectUrlApis } from './utils_object_url_test.js';
 
 describe('TextureLibrary', () => {
   let library: TextureLibrary;

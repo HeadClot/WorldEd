@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { removeDecorativeEdges } from '../../utils/mesh_edge_sync.js';
+import { removeDecorativeEdges } from '@/utils/mesh_edge_sync.js';
 import { pullChangedBrushTransforms, collectDriftedBrushIds } from './solid_brush_transform_sync.js';
 import { disposeBrushPreviewResources } from './solid_model_mesh_disposal.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
 import { getSolidGroupOperation, isSolidCsgGroup, isValidSolidTreeParent, markAsSolidCsgGroup } from './solid_group.js';
-import { ObjectDuplicator } from '../../managers/hierarchy/object_duplicator.js';
+import { ObjectDuplicator } from '@/outliner/hierarchy/object_duplicator.js';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
 import type { SolidBrushCollection } from './solid_brush_collection.js';
 import type { SolidModelRebuildPipeline } from './solid_model_rebuild_pipeline.js';

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { pointerEventToNdc } from '../../utils/pointer_ndc.js';
+import { pointerEventToNdc } from '@/utils/pointer_ndc.js';
 
 /**
  * Shared raycasting utility for click-to-select across all viewports. Keeps

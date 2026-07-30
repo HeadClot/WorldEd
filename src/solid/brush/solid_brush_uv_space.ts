@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { SolidBrushInstance } from '../model/solid_brush_instance.js';
-import { FaceTextureMapping, cloneFaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { FaceTextureMapping, cloneFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
 
 const scratchBrushLocal = new THREE.Matrix4();
 const scratchWorldFromLocal = new THREE.Matrix4();

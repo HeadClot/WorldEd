@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { GizmoVisualStyle } from '../gizmo/gizmo_visual_style.js';
-import { tagGizmoDepthRole } from '../gizmo/gizmo_depth_style.js';
+import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
+import { tagGizmoDepthRole } from '@/transform/gizmo/gizmo_depth_style.js';
 
 /** Drawn dash length in framebuffer pixels along the projected line. */
 export const BOUNDS_GUIDE_DASH_PIXELS = 6;

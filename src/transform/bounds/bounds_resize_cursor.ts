@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { BoundsFace } from '../../types/bounds_face.js';
-import { getBoundsFaceLocalNormal, type OrientedBoundsData } from './oriented_bounds.js';
-import { getHiddenBoundsAxesForViewPlane, type CadViewPlane } from '../../rulers/cad_view_plane.js';
+import { BoundsFace } from '@/types/bounds_face.js';
+import { getBoundsFaceLocalNormal, type DataOrientedBounds } from './builder_oriented_bounds.js';
+import { getHiddenBoundsAxesForViewPlane, type CadViewPlane } from '@/rulers/view/cad_view_plane.js';
 
 /**
  * CSS cursor when hovering the bounds body for move. Regular pointer — not the
@@ -29,7 +29,7 @@ export const BOUNDS_DEFAULT_CURSOR = 'default';
  */
 export function resolveBoundsResizeCursor(
   face: BoundsFace,
-  bounds: OrientedBoundsData,
+  bounds: DataOrientedBounds,
   camera: THREE.Camera,
   viewPlane: CadViewPlane = 'xyz',
 ): string {
@@ -54,7 +54,7 @@ export function resolveBoundsResizeCursor(
  */
 function resolveScreenProjectedResizeCursor(
   face: BoundsFace,
-  bounds: OrientedBoundsData,
+  bounds: DataOrientedBounds,
   camera: THREE.Camera,
 ): string {
   camera.updateMatrixWorld(true);

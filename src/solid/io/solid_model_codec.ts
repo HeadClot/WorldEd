@@ -1,20 +1,20 @@
 import * as THREE from 'three';
-import { SolidBrush } from '../brush/solid_brush.js';
-import { SolidBrushFactory } from '../brush/solid_brush_factory.js';
-import { SolidBrushInstance } from '../model/solid_brush_instance.js';
-import { SolidBrushVisual } from '../model/solid_brush_visual.js';
-import { SolidModel } from '../model/solid_model.js';
-import { getSolidGroupOperation, isSolidCsgGroup, markAsSolidCsgGroup } from '../model/solid_group.js';
-import { SolidOperation } from '../types/solid_operation.js';
-import { createWingEdge, createSolidFace } from '../types/wing_edge.js';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../../texture/library/texture_id.js';
+import { SolidBrush } from '@/solid/brush/solid_brush.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { getSolidGroupOperation, isSolidCsgGroup, markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { createWingEdge, createSolidFace } from '@/solid/types/wing_edge.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
 import {
   FaceTextureMapping,
   createDefaultFaceTextureMapping,
   deserializeFaceTextureMapping,
   serializeFaceTextureMapping,
-} from '../../texture/uv/face_texture_mapping.js';
-import { isResultMesh } from '../model/solid_model_keys.js';
+} from '@/texture/uv/face_texture_mapping.js';
+import { isResultMesh } from '@/solid/model/solid_model_keys.js';
 
 /** Serializable snapshot of a solid brush instance. */
 export interface SerializedSolidBrush {
@@ -458,7 +458,7 @@ export class SolidModelCodec {
    */
   private static decodeBrushGeometry(data: SerializedSolidBrush): SolidBrush {
     if (!data.vertices || data.vertices.length < 12 || !data.wingEdges?.length) {
-      return SolidBrushFactory.createCenteredBox(2, 2, 2);
+      return FactorySolidBrush.createCenteredBox(2, 2, 2);
     }
     const brush = new SolidBrush();
     brush.vertices = this.inflateVertices(data.vertices);

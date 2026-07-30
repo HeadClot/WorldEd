@@ -42,8 +42,8 @@ import type {
   SplitBrushArgs,
   UngroupCsgGroupsArgs,
 } from './editor_api_types.js';
-import { calculateExpression } from '../shared/mcp_calculate.js';
-import type { McpToolResult } from '../shared/mcp_protocol_types.js';
+import { calculateExpression } from '@/ai/shared/mcp_calculate.js';
+import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 /**
  * Facade that external AI tooling uses to inspect and edit solid models. All

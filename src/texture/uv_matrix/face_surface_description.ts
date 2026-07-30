@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DEFAULT_CHECKER_TEXTURE_ID } from '../library/texture_id.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
 import { SurfaceUvMatrix, type SurfaceUvMatrixSerialized } from './surface_uv_matrix.js';
 
 /**

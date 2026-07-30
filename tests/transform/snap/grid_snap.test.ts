@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { GridSnap } from '../../../src/transform/snap/grid_snap.js';
+import { GridSnap } from '@/transform/snap/grid_snap.js';
 
 describe('GridSnap.snapValue', () => {
   let snap: GridSnap;

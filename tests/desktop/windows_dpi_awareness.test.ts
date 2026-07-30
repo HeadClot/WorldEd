@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { enableWindowsPerMonitorDpiAwareness } from '../../src/desktop/windows_dpi_awareness.js';
+import { enableWindowsPerMonitorDpiAwareness } from '@/desktop/windows_dpi_awareness.js';
 
 describe('Windows DPI awareness bootstrap', () => {
   it('exports a no-op-safe enable function for non-Windows hosts', async () => {

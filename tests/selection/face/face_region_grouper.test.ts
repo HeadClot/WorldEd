@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { groupSelectionsIntoFaceRegions } from '../../../src/selection/face/face_region_grouper.js';
-import { findCoplanarFaceIndices } from '../../../src/selection/pick/triangle_geometry_utils.js';
-import { FaceSelection } from '../../../src/selection/face/face_selection_manager.js';
+import { groupSelectionsIntoFaceRegions } from '@/selection/face/face_region_grouper.js';
+import { findCoplanarFaceIndices } from '@/selection/pick/utils_triangle_geometry.js';
+import { FaceSelection } from '@/selection/face/manager_face_selection.js';
 
 describe('groupSelectionsIntoFaceRegions', () => {
   it('should return one region for a single coplanar box face', () => {

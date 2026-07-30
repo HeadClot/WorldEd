@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { BoundsGuideLines } from '../../../src/transform/bounds/bounds_guide_lines.js';
-import { Theme } from '../../../src/theme.js';
-import { GizmoVisualStyle } from '../../../src/transform/gizmo/gizmo_visual_style.js';
+import { BoundsGuideLines } from '@/transform/bounds/bounds_guide_lines.js';
+import { Theme } from '@/theme.js';
+import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
 
 describe('BoundsGuideLines', () => {
   let guides: BoundsGuideLines;

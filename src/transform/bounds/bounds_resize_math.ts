@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { BoundsFace } from '../../types/bounds_face.js';
-import { getBoundsFaceHalfExtent, getBoundsFaceLocalNormal, OrientedBoundsData } from './oriented_bounds.js';
+import { BoundsFace } from '@/types/bounds_face.js';
+import { getBoundsFaceHalfExtent, getBoundsFaceLocalNormal, DataOrientedBounds } from './builder_oriented_bounds.js';
 
 /** Minimum half-extent allowed when resizing a bounds face. */
 export const MIN_BOUNDS_HALF_EXTENT = 0.05;
@@ -18,7 +18,7 @@ export interface MeshBoundsResizeResult {
  * @param face The face being dragged.
  * @returns World position of the fixed opposite face center.
  */
-export function getFixedFaceWorldCenter(bounds: OrientedBoundsData, face: BoundsFace): THREE.Vector3 {
+export function getFixedFaceWorldCenter(bounds: DataOrientedBounds, face: BoundsFace): THREE.Vector3 {
   const outward = getBoundsFaceLocalNormal(face).applyQuaternion(bounds.quaternion).normalize();
   const half = getBoundsFaceHalfExtent(bounds.halfExtents, face);
   return bounds.center.clone().addScaledVector(outward, -half);
@@ -63,7 +63,7 @@ export function snapBoundsFaceDelta(
 export function computeOneSidedMeshResize(
   startPosition: THREE.Vector3,
   startScale: THREE.Vector3,
-  startBounds: OrientedBoundsData,
+  startBounds: DataOrientedBounds,
   face: BoundsFace,
   deltaAlongNormal: number,
 ): MeshBoundsResizeResult {
@@ -148,7 +148,7 @@ export function multiplyScaleAlongWorldAxis(
 export function computeOneSidedMultiMeshResize(
   startPosition: THREE.Vector3,
   startScale: THREE.Vector3,
-  startBounds: OrientedBoundsData,
+  startBounds: DataOrientedBounds,
   face: BoundsFace,
   deltaAlongNormal: number,
 ): MeshBoundsResizeResult {
@@ -177,7 +177,7 @@ interface ResolvedResizeExtents {
  * @returns Factor, applied delta, and outward normal.
  */
 function resolveResizeExtents(
-  startBounds: OrientedBoundsData,
+  startBounds: DataOrientedBounds,
   face: BoundsFace,
   deltaAlongNormal: number,
 ): ResolvedResizeExtents {
@@ -204,7 +204,7 @@ function resolveResizeExtents(
  */
 function computeScaledGeometryWorldOffset(
   startPosition: THREE.Vector3,
-  startBounds: OrientedBoundsData,
+  startBounds: DataOrientedBounds,
   face: BoundsFace,
   factor: number,
 ): THREE.Vector3 {

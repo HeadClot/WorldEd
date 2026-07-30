@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { FaceSelectionRaycaster } from '../../../src/selection/face/face_selection_raycaster.js';
-import { FaceSelectionManager } from '../../../src/selection/face/face_selection_manager.js';
-import { upsertFaceTextureMap } from '../../../src/texture/uv/face_texture_storage.js';
-import { createDefaultFaceTextureMapping } from '../../../src/texture/uv/face_texture_mapping.js';
-import { rebuildSurfaceMaterials } from '../../../src/texture/material/surface_material_builder.js';
-import { getOrBuildFacePickBvh, buildGeometryPickStamp } from '../../../src/selection/pick/mesh_pick_acceleration.js';
-import { computeTriangleNormal } from '../../../src/selection/pick/triangle_geometry_utils.js';
+import { RaycasterFaceSelection } from '@/selection/face/raycaster_face_selection.js';
+import { ManagerFaceSelection } from '@/selection/face/manager_face_selection.js';
+import { upsertFaceTextureMap } from '@/texture/uv/face_texture_storage.js';
+import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { rebuildSurfaceMaterials } from '@/texture/material/builder_surface_material.js';
+import { getOrBuildFacePickBvh, buildGeometryPickStamp } from '@/selection/pick/mesh_pick_acceleration.js';
+import { computeTriangleNormal } from '@/selection/pick/utils_triangle_geometry.js';
 
 /**
  * Multi-texture paint reorders triangles for draw-call grouping. Face picking
@@ -39,7 +39,7 @@ describe('face pick after multi-texture reorder', () => {
 
     const pick = pickCubeFaceFromDirection(mesh, new THREE.Vector3(1, 0, 0));
     expect(pick).not.toBeNull();
-    const manager = new FaceSelectionManager();
+    const manager = new ManagerFaceSelection();
     manager.selectFace(mesh, pick!.faceIndex, false);
     const selected = manager.getSelectedFaces();
     expect(selected.length).toBeGreaterThan(0);
@@ -72,7 +72,7 @@ function pickCubeFaceFromDirection(
   });
   const renderer = { domElement: canvas } as unknown as THREE.WebGLRenderer;
   const event = new MouseEvent('click', { clientX: 100, clientY: 100 });
-  const raycaster = new FaceSelectionRaycaster();
+  const raycaster = new RaycasterFaceSelection();
   const result = raycaster.pickFace(event, camera, renderer.domElement, [mesh]);
   if (!result) return null;
   return { mesh: result.mesh, faceIndex: result.faceIndex };

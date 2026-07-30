@@ -1,5 +1,5 @@
 import { SolidBrush } from './solid_brush.js';
-import { SOLID_FAT_PLANE_EPSILON } from '../algorithm/solid_math_constants.js';
+import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 
 /** Validation result for a solid brush manifold. */
 export interface SolidBrushValidation {

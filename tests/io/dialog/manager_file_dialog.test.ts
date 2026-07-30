@@ -1,0 +1,149 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { ManagerFileDialog } from '@/io/dialog/manager_file_dialog.js';
+
+describe('FileDialogManager', () => {
+  let manager: ManagerFileDialog;
+  let savedCreateElement: typeof document.createElement;
+  let savedAppendChild: typeof document.body.appendChild;
+  let savedRemoveChild: typeof document.body.removeChild;
+
+  beforeEach(() => {
+    manager = new ManagerFileDialog();
+    savedCreateElement = document.createElement.bind(document);
+    savedAppendChild = document.body.appendChild.bind(document.body);
+    savedRemoveChild = document.body.removeChild.bind(document.body);
+    vi.stubGlobal(
+      'URL',
+      new Proxy(window.URL, {
+        get(target, prop) {
+          if (prop === 'createObjectURL') return vi.fn(() => 'blob://mock-url');
+          if (prop === 'revokeObjectURL') return vi.fn();
+          return Reflect.get(target, prop);
+        },
+      }),
+    );
+  });
+
+  afterEach(() => {
+    document.createElement = savedCreateElement;
+    document.body.appendChild = savedAppendChild;
+    document.body.removeChild = savedRemoveChild;
+    vi.unstubAllGlobals();
+  });
+
+  it('should create JSON blob with correct MIME type', async () => {
+    const jsonData = JSON.stringify({ test: true });
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    expect(blob.type).toBe('application/json');
+    const text = await blob.text();
+    expect(text).toBe(jsonData);
+  });
+
+  it('should create binary blob with correct MIME type', async () => {
+    const buffer = new ArrayBuffer(16);
+    const blob = new Blob([buffer], { type: 'model/gltf-binary' });
+    expect(blob.type).toBe('model/gltf-binary');
+    expect(blob.size).toBe(16);
+  });
+
+  it('should saveJSON with fallback return suggested filename', async () => {
+    const mockAnchor = {
+      href: '',
+      download: '',
+      style: { display: '' },
+      click: vi.fn(),
+    };
+    document.createElement = vi.fn((tagName: string) => {
+      if (tagName === 'a') return mockAnchor as unknown as HTMLElement;
+      return savedCreateElement(tagName);
+    });
+    document.body.appendChild = vi.fn() as typeof document.body.appendChild;
+    document.body.removeChild = vi.fn() as typeof document.body.removeChild;
+    const result = await manager.saveJSON('{}', 'test.json');
+    expect(result).toBe('test.json');
+  });
+
+  it('should saveBinary with fallback return suggested filename', async () => {
+    const mockAnchor = {
+      href: '',
+      download: '',
+      style: { display: '' },
+      click: vi.fn(),
+    };
+    document.createElement = vi.fn((tagName: string) => {
+      if (tagName === 'a') return mockAnchor as unknown as HTMLElement;
+      return savedCreateElement(tagName);
+    });
+    document.body.appendChild = vi.fn() as typeof document.body.appendChild;
+    document.body.removeChild = vi.fn() as typeof document.body.removeChild;
+    const buffer = new ArrayBuffer(32);
+    const result = await manager.saveBinary(buffer, 'scene.glb');
+    expect(result).toBe('scene.glb');
+  });
+
+  it('should return null when fallback download mechanism throws', async () => {
+    document.createElement = vi.fn(() => {
+      throw new Error('DOM blocked');
+    });
+    const result = await manager.saveJSON('{}', 'test.json');
+    expect(result).toBeNull();
+  });
+
+  it('loads a text file through the fallback file input', async () => {
+    const mockInput = {
+      type: '',
+      accept: '',
+      files: [new File(['solid\n{\n}\n'], 'map.vmf', { type: 'text/plain' })],
+      click: vi.fn(),
+      onchange: null as null | (() => void),
+    };
+    document.createElement = vi.fn((tagName: string) => {
+      if (tagName === 'input') {
+        return mockInput as unknown as HTMLElement;
+      }
+      return savedCreateElement(tagName);
+    });
+    const loadPromise = manager.loadTextFile('.vmf', 'Valve Map Format', ['.vmf']);
+    mockInput.onchange?.();
+    const result = await loadPromise;
+    expect(mockInput.accept).toBe('.vmf');
+    expect(result).not.toBeNull();
+    expect(result!.filename).toBe('map.vmf');
+    expect(result!.text).toContain('solid');
+  });
+
+  it('does not download Wavefront files when the folder picker is cancelled', async () => {
+    const abortError = new DOMException('The user aborted a request.', 'AbortError');
+    vi.stubGlobal(
+      'showDirectoryPicker',
+      vi.fn(async () => {
+        throw abortError;
+      }),
+    );
+    const click = vi.fn();
+    document.createElement = vi.fn((tagName: string) => {
+      if (tagName === 'a') {
+        return {
+          href: '',
+          download: '',
+          style: { display: '' },
+          click,
+        } as unknown as HTMLElement;
+      }
+      return savedCreateElement(tagName);
+    });
+    document.body.appendChild = vi.fn() as typeof document.body.appendChild;
+    document.body.removeChild = vi.fn() as typeof document.body.removeChild;
+
+    const result = await manager.saveWavefrontPackage({
+      objFileName: 'scene.obj',
+      objText: 'mtllib scene.mtl\n',
+      mtlFileName: 'scene.mtl',
+      mtlText: 'newmtl Default\n',
+      textures: [],
+    });
+
+    expect(result).toBeNull();
+    expect(click).not.toHaveBeenCalled();
+  });
+});

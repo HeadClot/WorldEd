@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateExpression } from '../../../src/ai/shared/mcp_calculate.js';
+import { calculateExpression } from '@/ai/shared/mcp_calculate.js';
 
 /** Unit tests for the safe MCP arithmetic helper. */
 describe('calculateExpression', () => {

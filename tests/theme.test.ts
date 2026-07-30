@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Theme } from '../src/theme.js';
+import { Theme } from '@/theme.js';
 
 describe('Theme', () => {
   it('should freeze theme tokens against mutation', () => {

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '../../../src/solid/model/solid_model_keys.js';
+import { SOLID_TRIANGLE_SOURCES_USERDATA_KEY } from '@/solid/model/solid_model_keys.js';
 import {
   buildFacePickRegionKey,
   findSameSolidBrushSurfaceIndicesFast,
-} from '../../../src/selection/face/solid_triangle_source_index.js';
+} from '@/selection/face/solid_triangle_source_index.js';
 
 describe('solid_triangle_source_index', () => {
   it('returns every triangle that shares the seed brush face', () => {

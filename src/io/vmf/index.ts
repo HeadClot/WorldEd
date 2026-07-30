@@ -16,4 +16,4 @@ export type {
   VmfVector3,
   VmfPlanePoints,
 } from './vmf_types.js';
-export { isSkippedVolumeMaterial, materialNameToTextureId } from './vmf_material_policy.js';
+export { isSkippedVolumeMaterial, materialNameToTextureId } from './policy_vmf_material.js';

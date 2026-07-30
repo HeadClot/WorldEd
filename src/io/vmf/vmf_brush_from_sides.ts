@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { SolidBrush } from '../../solid/brush/solid_brush.js';
-import { SolidBrushFactory } from '../../solid/brush/solid_brush_factory.js';
-import { SolidPlane } from '../../solid/brush/solid_plane.js';
-import { FaceTextureMapping } from '../../texture/uv/face_texture_mapping.js';
-import { convertWorldFaceMappingForCenteredBrush } from '../../solid/brush/solid_brush_uv_space.js';
+import { SolidBrush } from '@/solid/brush/solid_brush.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidPlane } from '@/solid/brush/solid_plane.js';
+import { FaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
+import { convertWorldFaceMappingForCenteredBrush } from '@/solid/brush/solid_brush_uv_space.js';
 import { VMF_INCHES_TO_METERS, sourcePointToEditorMeters } from './vmf_coordinates.js';
 import { VmfHalfSpaceHullBuilder } from './vmf_half_space_hull.js';
 import { VmfSolid, VmfSolidSide } from './vmf_types.js';
@@ -40,7 +40,7 @@ export class VmfBrushFromSides {
     const planes = solid.sides.map((side) => this.sideToOutwardPlane(side, unitScale));
     const hull = this.hullBuilder.build(planes);
     if (!hull) return null;
-    const brush = SolidBrushFactory.createFromFaceLoops(hull.faceLoops.map((loop) => loop.vertices));
+    const brush = FactorySolidBrush.createFromFaceLoops(hull.faceLoops.map((loop) => loop.vertices));
     if (!brush) return null;
     return this.packageBuiltBrush(solid, brush, planes, hull.faceLoops, unitScale);
   }

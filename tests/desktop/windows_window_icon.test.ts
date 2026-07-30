@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { encodeWideNullTerminated, resolvePackagedWindowsIconPath } from '../../src/desktop/windows_window_icon.js';
+import { encodeWideNullTerminated, resolvePackagedWindowsIconPath } from '@/desktop/windows_window_icon.js';
 
 describe('Windows window title-bar icon', () => {
   it('resolves the packaged Resources app.ico next to the Electrobun bin folder', () => {

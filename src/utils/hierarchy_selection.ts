@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { isDescendantOf } from './hierarchy_utils.js';
+import { isDescendantOf } from './utils_hierarchy.js';
 
 /**
  * Removes objects that are descendants of other selected objects. Keeps the

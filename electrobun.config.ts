@@ -1,5 +1,8 @@
 import type { ElectrobunConfig } from 'electrobun/bun';
 import packageMetadata from './package.json';
+import { createElectrobunBuildPlugins } from './scripts/electrobun_tsconfig_paths_plugin.ts';
+
+const electrobunBuildPlugins = createElectrobunBuildPlugins();
 
 const electrobunConfig: ElectrobunConfig = {
   app: {
@@ -11,10 +14,12 @@ const electrobunConfig: ElectrobunConfig = {
   build: {
     bun: {
       entrypoint: 'src/desktop/bun/index.ts',
+      plugins: electrobunBuildPlugins,
     },
     views: {
       main_ui: {
         entrypoint: 'src/desktop/main_ui/index.ts',
+        plugins: electrobunBuildPlugins,
       },
     },
     copy: {

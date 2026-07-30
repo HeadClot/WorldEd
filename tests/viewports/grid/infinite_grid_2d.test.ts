@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { InfiniteGrid2D } from '../../../src/viewports/grid/infinite_grid_2d.js';
-import { OrthoDepthRanger } from '../../../src/viewports/ortho_depth_ranger.js';
+import { InfiniteGrid2D } from '@/viewports/grid/infinite_grid_2d.js';
+import { OrthoDepthRanger } from '@/viewports/core/ortho_depth_ranger.js';
 
 /**
  * Reads the depth-axis component from a grid line buffer for assertions.

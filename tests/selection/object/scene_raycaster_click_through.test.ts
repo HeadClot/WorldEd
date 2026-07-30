@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { SceneRaycaster } from '../../../src/selection/object/scene_raycaster.js';
-import { SelectionClickThrough } from '../../../src/selection/object/selection_click_through.js';
-import { SelectionManager } from '../../../src/selection/object/selection_manager.js';
+import { SceneRaycaster } from '@/selection/object/scene_raycaster.js';
+import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
+import { ManagerSelection } from '@/selection/object/manager_selection.js';
 
 /** Integration-style tests for multi-hit raycasting and click-through picks. */
 describe('SceneRaycaster click-through', () => {
@@ -34,7 +34,7 @@ describe('SceneRaycaster click-through', () => {
     const event = createMockMouseEvent(400, 300);
     const intersections = raycaster.castIntersections(camera, renderer.domElement, event, [outer, inner]);
     const stack = SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) => mesh);
-    const selectionManager = new SelectionManager();
+    const selectionManager = new ManagerSelection();
     const first = SelectionClickThrough.pickFromStack(stack, selectionManager);
     expect(first).toBe(outer);
     selectionManager.selectObject(first!);

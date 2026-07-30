@@ -1,12 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { SolidModel } from '../../src/solid/model/solid_model.js';
-import { SolidBrushVisual } from '../../src/solid/model/solid_brush_visual.js';
-import {
-  SolidBrushEdgeBatch,
-  SOLID_BRUSH_EDGE_BATCH_USERDATA_KEY,
-} from '../../src/solid/model/solid_brush_edge_batch.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { SolidBrushEdgeBatch, SOLID_BRUSH_EDGE_BATCH_USERDATA_KEY } from '@/solid/model/solid_brush_edge_batch.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /** Unit tests for static solid-brush edge batching. */
 describe('SolidBrushEdgeBatch', () => {

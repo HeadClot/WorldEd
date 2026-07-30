@@ -4,7 +4,7 @@ import {
   getTriangleVertexIndices,
   getUniqueVertexIndicesForFaces as collectUniqueVertices,
   getVertexPosition,
-} from '../../selection/pick/triangle_geometry_utils.js';
+} from '@/selection/pick/utils_triangle_geometry.js';
 
 /**
  * Helper geometry utilities retained for tests and average-normal math. Real

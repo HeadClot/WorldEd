@@ -1,7 +1,11 @@
 import * as THREE from 'three';
-import { BoundsFace } from '../../types/bounds_face.js';
-import { getBoundsFaceHalfExtent, getBoundsFaceLocalNormal, type OrientedBoundsData } from './oriented_bounds.js';
-import { getCadViewPlaneAxes, type CadLocalAxis, type CadViewPlane } from '../../rulers/cad_view_plane.js';
+import { BoundsFace } from '@/types/bounds_face.js';
+import {
+  getBoundsFaceHalfExtent,
+  getBoundsFaceLocalNormal,
+  type DataOrientedBounds,
+} from './builder_oriented_bounds.js';
+import { getCadViewPlaneAxes, type CadLocalAxis, type CadViewPlane } from '@/rulers/view/cad_view_plane.js';
 
 /**
  * Fraction of each face half-extent treated as the resize rim. Hits inside the
@@ -37,7 +41,7 @@ export type BoundsFaceInteractionMode = 'move' | 'resize';
  */
 export function resolveBoundsFaceInteractionMode(
   hitPoint: THREE.Vector3,
-  bounds: OrientedBoundsData,
+  bounds: DataOrientedBounds,
   face: BoundsFace,
   edgeBandRatio: number = BOUNDS_FACE_RESIZE_EDGE_BAND_RATIO,
 ): BoundsFaceInteractionMode {
@@ -62,7 +66,7 @@ export function resolveBoundsFaceInteractionMode(
  */
 export function pickOrthographicSilhouetteEdgeFace(
   worldPoint: THREE.Vector3,
-  bounds: OrientedBoundsData,
+  bounds: DataOrientedBounds,
   viewPlane: CadViewPlane,
   exteriorBandWorld?: number,
 ): BoundsFace | null {
@@ -99,7 +103,7 @@ function computeSilhouetteExteriorBandFallback(halfU: number, halfV: number): nu
  * @param bounds Oriented bounds.
  * @returns Local coordinates relative to the OBB center.
  */
-function worldPointToBoundsLocal(worldPoint: THREE.Vector3, bounds: OrientedBoundsData): THREE.Vector3 {
+function worldPointToBoundsLocal(worldPoint: THREE.Vector3, bounds: DataOrientedBounds): THREE.Vector3 {
   return worldPoint.clone().sub(bounds.center).applyQuaternion(bounds.quaternion.clone().invert());
 }
 
@@ -211,7 +215,7 @@ function negativeFaceForAxis(axis: CadLocalAxis): BoundsFace {
  */
 export function isBoundsFaceHitNearEdge(
   hitPoint: THREE.Vector3,
-  bounds: OrientedBoundsData,
+  bounds: DataOrientedBounds,
   face: BoundsFace,
   edgeBandRatio: number = BOUNDS_FACE_RESIZE_EDGE_BAND_RATIO,
 ): boolean {

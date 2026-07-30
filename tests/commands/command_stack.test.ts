@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { UndoCommand } from '../../src/commands/undo_command.js';
-import { CommandStack } from '../../src/commands/command_stack.js';
+import { UndoCommand } from '@/commands/command_undo.js';
+import { CommandStack } from '@/commands/command_stack.js';
 
 /** A test command that tracks whether execute/undo was called. */
 class TestCommand implements UndoCommand {

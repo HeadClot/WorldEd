@@ -1,6 +1,6 @@
-import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
-import { formatKeyboardShortcut } from '../../settings/keyboard_shortcut_format.js';
-import type { KeyboardShortcutAction, KeyboardShortcutSettings } from '../../settings/settings_types.js';
+import type { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
+import { formatKeyboardShortcut } from '@/settings/keyboard/keyboard_shortcut_format.js';
+import type { KeyboardShortcutAction, KeyboardShortcutSettings } from '@/settings/store/settings_types.js';
 import { createSettingsCategory, createSettingsControlRow, createSettingsTextInput } from './settings_form_controls.js';
 
 /** Keyboard settings rows shown in their editor order. */

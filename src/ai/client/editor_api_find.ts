@@ -6,9 +6,9 @@ import { findBrush, findSolidModel, listSolidModels } from './editor_api_lookup.
 import { classifyBrushShape, shapeMatchesFilter, type BrushShapeTag } from './editor_api_shape.js';
 import { solidOperationToName } from './editor_api_operations.js';
 import { failResult, okResult } from './editor_api_result.js';
-import type { SolidModel } from '../../solid/model/solid_model.js';
-import type { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import type { McpToolResult } from '../shared/mcp_protocol_types.js';
+import type { SolidModel } from '@/solid/model/solid_model.js';
+import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
 /** One row returned by find_brushes / describe_brush. */
 export interface FindBrushRow {

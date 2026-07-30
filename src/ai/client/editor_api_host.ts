@@ -1,9 +1,9 @@
 import type * as THREE from 'three';
-import type { CommandStack } from '../../commands/command_stack.js';
-import type { SelectionManager } from '../../selection/object/selection_manager.js';
-import type { SolidModelController } from '../../managers/solid/solid_model_controller.js';
-import type { GridSnap } from '../../transform/snap/grid_snap.js';
-import type { SnapManager } from '../../transform/snap/snap_manager.js';
+import type { CommandStack } from '@/commands/command_stack.js';
+import type { ManagerSelection } from '@/selection/object/manager_selection.js';
+import type { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import type { GridSnap } from '@/transform/snap/grid_snap.js';
+import type { ManagerSnap } from '@/transform/snap/manager_snap.js';
 
 /**
  * Dependencies injected into EditorApi once at layout bootstrap. Keeps AI code
@@ -12,10 +12,10 @@ import type { SnapManager } from '../../transform/snap/snap_manager.js';
 export interface EditorApiHost {
   worldObject: THREE.Group;
   commandStack: CommandStack;
-  selectionManager: SelectionManager;
-  solidModelController: SolidModelController;
+  selectionManager: ManagerSelection;
+  solidModelController: ControllerSolidModel;
   gridSnap: GridSnap;
-  snapManager: SnapManager;
+  snapManager: ManagerSnap;
   getUserSnapEnabled: () => boolean;
   refreshAfterWorldMutation: () => void;
   refreshOutliner: () => void;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchGitHubContributors, getRepositoryIdentifier } from '../../../src/ui/about/about_contributor_fetcher.js';
+import { fetchGitHubContributors, getRepositoryIdentifier } from '@/ui/about/about_contributor_fetcher.js';
 
 describe('about_contributor_fetcher', () => {
   beforeEach(() => {

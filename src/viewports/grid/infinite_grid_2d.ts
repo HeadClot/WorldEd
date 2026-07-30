@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Theme } from '../../theme.js';
+import { Theme } from '@/theme.js';
 import { GridPlane } from './grid_plane.js';
 import { GridLineBuffer } from './grid_line_buffer.js';
 

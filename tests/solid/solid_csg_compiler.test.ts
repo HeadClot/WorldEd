@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
-import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.js';
-import { SolidCsgCompiler } from '../../src/solid/algorithm/solid_csg_compiler.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { BrushMembership } from '../../src/solid/algorithm/brush_membership.js';
-import { SurfaceTriangulator } from '../../src/solid/algorithm/surface_triangulator.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
+import { SurfaceTriangulator } from '@/solid/algorithm/surface/surface_triangulator.js';
 
 /**
  * Builds a solid brush instance from a box with optional transform and
@@ -23,7 +23,7 @@ function makeBoxBrush(
   operation: SolidOperation,
   position?: THREE.Vector3,
 ): SolidBrushInstance {
-  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
+  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
   if (position) instance.position.copy(position);
   return instance;

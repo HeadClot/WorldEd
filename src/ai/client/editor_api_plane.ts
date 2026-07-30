@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { McpVec3 } from '../shared/mcp_protocol_types.js';
+import type { McpVec3 } from '@/ai/shared/mcp_protocol_types.js';
 import { dtoToVec3 } from './editor_api_math.js';
 
 /** Plane arguments shared by clip and split tools. */

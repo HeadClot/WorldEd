@@ -1,5 +1,5 @@
-import { SolidOperation } from '../../solid/types/solid_operation.js';
-import type { McpSolidOperationName } from '../shared/mcp_protocol_types.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import type { McpSolidOperationName } from '@/ai/shared/mcp_protocol_types.js';
 
 /**
  * Maps a solid operation enum to an MCP string name.

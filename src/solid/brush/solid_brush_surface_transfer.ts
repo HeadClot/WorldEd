@@ -1,12 +1,12 @@
 import { SolidBrush } from './solid_brush.js';
 import { SolidPlane } from './solid_plane.js';
-import { SolidBrushInstance } from '../model/solid_brush_instance.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import {
   FaceSurfaceDescription,
   cloneFaceSurface,
   createDefaultFaceSurface,
   createFaceSurfaceFromTileSize,
-} from '../../texture/uv_matrix/face_surface_description.js';
+} from '@/texture/uv_matrix/face_surface_description.js';
 
 /**
  * Transfers per-face UV surfaces from a source brush onto a destination brush

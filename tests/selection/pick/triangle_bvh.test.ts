@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { TriangleBvh } from '../../../src/selection/pick/triangle_bvh.js';
+import { TriangleBvh } from '@/selection/pick/triangle_bvh.js';
 
 describe('TriangleBvh', () => {
   it('hits the front of a unit plane from positive Z', () => {

@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { SelectionManager } from '../../../src/selection/object/selection_manager.js';
-import { SelectionClickThrough } from '../../../src/selection/object/selection_click_through.js';
+import { ManagerSelection } from '@/selection/object/manager_selection.js';
+import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
 
 /** Unit tests for nested object click-through selection cycling. */
 describe('SelectionClickThrough', () => {
-  let selectionManager: SelectionManager;
+  let selectionManager: ManagerSelection;
   let outer: THREE.Mesh;
   let middle: THREE.Mesh;
   let inner: THREE.Mesh;
 
   beforeEach(() => {
-    selectionManager = new SelectionManager();
+    selectionManager = new ManagerSelection();
     outer = createNamedMesh('outer');
     middle = createNamedMesh('middle');
     inner = createNamedMesh('inner');

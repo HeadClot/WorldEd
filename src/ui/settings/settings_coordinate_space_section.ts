@@ -1,9 +1,9 @@
-import type { EditorSettingsStore } from '../../settings/editor_settings_store.js';
-import { formatCoordinateSpaceSummary } from '../../settings/coordinate_space_presets.js';
-import type { AxisDirection, CoordinateSpaceDefinition } from '../../settings/coordinate_space_types.js';
-import { AXIS_DIRECTION_LABELS, AXIS_DIRECTION_OPTIONS } from '../../settings/coordinate_space_types.js';
-import type { GameProfile } from '../../settings/settings_types.js';
-import { Theme } from '../../theme.js';
+import type { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
+import { formatCoordinateSpaceSummary } from '@/settings/coordinate/coordinate_space_presets.js';
+import type { AxisDirection, CoordinateSpaceDefinition } from '@/settings/coordinate/coordinate_space_types.js';
+import { AXIS_DIRECTION_LABELS, AXIS_DIRECTION_OPTIONS } from '@/settings/coordinate/coordinate_space_types.js';
+import type { GameProfile } from '@/settings/store/settings_types.js';
+import { Theme } from '@/theme.js';
 import {
   createSettingsCategory,
   createSettingsControlRow,

@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { SolidBrushInstance } from '../../solid/model/solid_brush_instance.js';
-import { FaceSurfaceDescription, cloneFaceSurface } from '../uv_matrix/face_surface_description.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { FaceSurfaceDescription, cloneFaceSurface } from '@/texture/uv_matrix/face_surface_description.js';
 import {
   transformBrushLocalUvForPoseChange,
   type SurfaceUvLockFlags,
-} from '../uv_matrix/surface_uv_matrix_transform.js';
+} from '@/texture/uv_matrix/surface_uv_matrix_transform.js';
 
 const scratchPrevLocal = new THREE.Matrix4();
 const scratchNextLocal = new THREE.Matrix4();

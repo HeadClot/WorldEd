@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isGizmoAxisHiddenInViewPlane } from '../../../src/transform/gizmo/gizmo_view_plane_axes.js';
-import { GizmoAxis } from '../../../src/types/transform_mode.js';
+import { isGizmoAxisHiddenInViewPlane } from '@/transform/gizmo/gizmo_view_plane_axes.js';
+import { GizmoAxis } from '@/types/transform_mode.js';
 
 describe('isGizmoAxisHiddenInViewPlane', () => {
   it('hides the Global depth axis in each orthographic view', () => {

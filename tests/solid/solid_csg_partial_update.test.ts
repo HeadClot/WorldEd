@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SolidBrushFactory } from '../../src/solid/brush/solid_brush_factory.js';
-import { SolidBrushInstance } from '../../src/solid/model/solid_brush_instance.js';
-import { SolidCsgCompiler } from '../../src/solid/algorithm/solid_csg_compiler.js';
-import { SolidCompiledPolygon } from '../../src/solid/algorithm/solid_compiled_polygon.js';
-import { SolidOperation } from '../../src/solid/types/solid_operation.js';
-import { SolidUpdateSetBuilder } from '../../src/solid/algorithm/solid_update_set.js';
-import { BrushOverlapGraph } from '../../src/solid/algorithm/brush_overlap_graph.js';
+import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
+import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
+import { SolidCompiledPolygon } from '@/solid/algorithm/compile/solid_compiled_polygon.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidUpdateSetBuilder } from '@/solid/algorithm/compile/solid_update_set.js';
+import { BrushOverlapGraph } from '@/solid/algorithm/spatial/brush_overlap_graph.js';
 
 /**
  * Builds a solid brush instance from a box with optional transform and
@@ -24,7 +24,7 @@ function makeBoxBrush(
   operation: SolidOperation,
   position?: THREE.Vector3,
 ): SolidBrushInstance {
-  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
+  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
   if (position) instance.position.copy(position);
   return instance;
