@@ -36,7 +36,8 @@ export interface HandlerKeyboardShortcutActionHost {
   onGroupSelected: ActionCallback | null;
   onUngroupSelected: ActionCallback | null;
   onAlignToOrigin: ActionCallback | null;
-  onAxisCycle: ActionCallback | null;
+  onSolidOperationAdditive: ActionCallback | null;
+  onSolidOperationSubtractive: ActionCallback | null;
   onSaveScene: ActionCallback | null;
   onLoadScene: ActionCallback | null;
   onExportGlb: ActionCallback | null;
@@ -321,21 +322,23 @@ export function handlerKeyboardShortcutHandleAlignKeys(
 }
 
 /**
- * Handles the axis cycle keyboard shortcut.
+ * Handles solid brush/group CSG operation shortcuts (additive / subtractive).
  *
  * @param host Action host.
  * @param event Keyboard event.
  */
-export function handlerKeyboardShortcutHandleAxisCycleKey(
+export function handlerKeyboardShortcutHandleSolidOperationKeys(
   host: HandlerKeyboardShortcutActionHost,
   event: KeyboardEvent,
 ): void {
-  if (!host.onAxisCycle) {
+  if (host.onSolidOperationAdditive && host.matchesShortcut(event, 'solid_operation_additive')) {
+    event.preventDefault();
+    host.onSolidOperationAdditive();
     return;
   }
-  if (host.matchesShortcut(event, 'axis_cycle')) {
+  if (host.onSolidOperationSubtractive && host.matchesShortcut(event, 'solid_operation_subtractive')) {
     event.preventDefault();
-    host.onAxisCycle();
+    host.onSolidOperationSubtractive();
   }
 }
 
@@ -456,7 +459,7 @@ export function handlerKeyboardShortcutDispatchToolKeys(
   handlerKeyboardShortcutHandleEditKeys(host, event);
   handlerKeyboardShortcutHandleGroupKeys(host, event);
   handlerKeyboardShortcutHandleAlignKeys(host, event);
-  handlerKeyboardShortcutHandleAxisCycleKey(host, event);
+  handlerKeyboardShortcutHandleSolidOperationKeys(host, event);
   handlerKeyboardShortcutHandleFitKeys(host, event);
   handlerKeyboardShortcutHandleShadingModeKeys(host, event);
   handlerKeyboardShortcutHandleSelectionModeToggleKey(host, event);

@@ -6,6 +6,9 @@ import { boundsOverlapPadded } from '@/solid/algorithm/spatial/bounds_overlap.js
 import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 import { SolidCompiledPolygon } from '@/solid/algorithm/compile/solid_compiled_polygon.js';
 import { SolidFragmentFinalizer } from '@/solid/algorithm/compile/solid_fragment_finalizer.js';
+import { SolidAlgorithmRoutingPeers } from '@/solid/algorithm/routing/solid_algorithm_routing_peers.js';
+import { SolidAlgorithmBrushIntersection } from '@/solid/algorithm/routing/solid_algorithm_brush_intersection.js';
+import { SolidAlgorithmIntersectionType } from '@/solid/algorithm/routing/solid_algorithm_intersection_type.js';
 import { SurfaceFragmentSplitter } from './surface_fragment_splitter.js';
 
 /**
@@ -15,8 +18,8 @@ import { SurfaceFragmentSplitter } from './surface_fragment_splitter.js';
 export class SolidSurfaceEmitter {
   private readonly finalizer: SolidFragmentFinalizer;
   private readonly membershipEpsilon: number;
-  private hasIntersectingOperations = false;
   private invertedWorld = false;
+  private hierarchicalCsg = false;
   private readonly scratchFaceBounds = new THREE.Box3();
 
   /**
@@ -31,13 +34,14 @@ export class SolidSurfaceEmitter {
   }
 
   /**
-   * Updates whether sequential intersecting ops are present (forces membership
-   * on isolated additives so they can be clipped by a distant ∩).
+   * Kept for call-site compatibility. Distant ∩ never affects non-touching
+   * isolated brushes (Chisel peer tables), so this flag is unused for
+   * emission.
    *
-   * @param value True when any brush uses intersecting CSG.
+   * @param _value Unused.
    */
-  setHasIntersectingOperations(value: boolean): void {
-    this.hasIntersectingOperations = value;
+  setHasIntersectingOperations(_value: boolean): void {
+    void _value;
   }
 
   /**
@@ -47,6 +51,17 @@ export class SolidSurfaceEmitter {
    */
   setInvertedWorld(value: boolean): void {
     this.invertedWorld = value;
+  }
+
+  /**
+   * Sets whether hierarchical branch/leaf CSG is active (any solid CSG group).
+   * Isolated additive direct emission is disabled in hierarchical mode so group
+   * operations still affect single-child compounds (Chisel branch model).
+   *
+   * @param value True when the CSG tree is not flat.
+   */
+  setHierarchicalCsg(value: boolean): void {
+    this.hierarchicalCsg = value;
   }
 
   /**
@@ -107,15 +122,18 @@ export class SolidSurfaceEmitter {
     brushIndex: number,
     output: SolidCompiledPolygon[],
   ): void {
-    if (subject.operation === SolidOperation.Intersecting) return;
-    if (subject.operation === SolidOperation.Subtractive && !this.invertedWorld) return;
-    if (!this.hasIntersectingOperations && !this.invertedWorld) {
+    if (subject.operation === SolidOperation.Intersecting && !this.invertedWorld && !this.hierarchicalCsg) {
+      return;
+    }
+    if (subject.operation === SolidOperation.Subtractive && !this.invertedWorld && !this.hierarchicalCsg) {
+      return;
+    }
+    if (!this.invertedWorld && !this.hierarchicalCsg) {
       if (subject.operation === SolidOperation.Additive) {
         this.emitIsolatedAdditiveSurfacesDirect(subject, output);
       }
       return;
     }
-    // Inverted world and/or sequential ∩ need membership on isolated brushes.
     this.emitIsolatedSurfacesWithMembership(subject, prepared, brushIndex, output);
   }
 
@@ -164,7 +182,9 @@ export class SolidSurfaceEmitter {
 
   /**
    * Collects planes from overlapping peer brushes that may cut the subject
-   * face.
+   * face. Peers with AInsideB / BInsideA (Chisel non-Intersection) do not
+   * contribute cut planes; CreateIntersectionLoops only builds loops for
+   * Intersection pairs.
    *
    * @param prepared All brushes.
    * @param subjectIndex Subject brush index.
@@ -180,16 +200,52 @@ export class SolidSurfaceEmitter {
   ): SolidPlane[] {
     const planes: SolidPlane[] = [];
     const subject = prepared[subjectIndex];
-    if (!subject) return planes;
+    if (!subject) {
+      return planes;
+    }
     this.fillFaceBounds(faceVertices);
     const pad = this.membershipEpsilon * 2;
     for (const peerIndex of subject.overlappingPeerIndices) {
+      if (!SolidAlgorithmRoutingPeers.peerBelongsInSubjectTable(prepared, subjectIndex, peerIndex)) {
+        continue;
+      }
+      if (!this.peerContributesIntersectionLoops(prepared, subjectIndex, peerIndex, pad)) {
+        continue;
+      }
       const peer = prepared[peerIndex];
-      if (!peer) continue;
-      if (!boundsOverlapPadded(this.scratchFaceBounds, peer.bounds, pad)) continue;
+      if (!peer) {
+        continue;
+      }
+      if (!boundsOverlapPadded(this.scratchFaceBounds, peer.bounds, pad)) {
+        continue;
+      }
       this.collectPeerCutPlanes(peer, facePlane, faceVertices, planes);
     }
     return planes;
+  }
+
+  /**
+   * Returns whether a peer has true Intersection type vs the subject (not full
+   * containment shortcuts).
+   *
+   * @param prepared Prepared brushes.
+   * @param subjectIndex Subject index.
+   * @param peerIndex Peer index.
+   * @param pad Bounds pad.
+   * @returns True when cut planes from this peer may be needed.
+   */
+  private peerContributesIntersectionLoops(
+    prepared: PreparedBrush[],
+    subjectIndex: number,
+    peerIndex: number,
+    pad: number,
+  ): boolean {
+    const subject = prepared[subjectIndex];
+    if (!subject) {
+      return false;
+    }
+    const type = SolidAlgorithmBrushIntersection.classify(subject, peerIndex, prepared, pad, this.membershipEpsilon);
+    return type === SolidAlgorithmIntersectionType.Intersection;
   }
 
   /**

@@ -44,7 +44,8 @@ export class HandlerKeyboardShortcut {
   private onGroupSelected: ActionCallback | null;
   private onUngroupSelected: ActionCallback | null;
   private onAlignToOrigin: ActionCallback | null;
-  private onAxisCycle: ActionCallback | null;
+  private onSolidOperationAdditive: ActionCallback | null;
+  private onSolidOperationSubtractive: ActionCallback | null;
   private onSaveScene: ActionCallback | null;
   private onLoadScene: ActionCallback | null;
   private onExportGlb: ActionCallback | null;
@@ -94,7 +95,8 @@ export class HandlerKeyboardShortcut {
     this.onGroupSelected = null;
     this.onUngroupSelected = null;
     this.onAlignToOrigin = null;
-    this.onAxisCycle = null;
+    this.onSolidOperationAdditive = null;
+    this.onSolidOperationSubtractive = null;
     this.onSaveScene = null;
     this.onLoadScene = null;
     this.onExportGlb = null;
@@ -208,13 +210,22 @@ export class HandlerKeyboardShortcut {
   }
 
   /**
-   * Registers the callback for axis cycling.
+   * Registers the callback for setting selected solid brushes/groups additive.
    *
-   * @param callback The function to call when the axis cycle shortcut is
-   *   pressed.
+   * @param callback Function to call for the additive operation shortcut.
    */
-  setOnAxisCycle(callback: ActionCallback): void {
-    this.onAxisCycle = callback;
+  setOnSolidOperationAdditive(callback: ActionCallback): void {
+    this.onSolidOperationAdditive = callback;
+  }
+
+  /**
+   * Registers the callback for setting selected solid brushes/groups
+   * subtractive.
+   *
+   * @param callback Function to call for the subtractive operation shortcut.
+   */
+  setOnSolidOperationSubtractive(callback: ActionCallback): void {
+    this.onSolidOperationSubtractive = callback;
   }
 
   /**
@@ -416,7 +427,8 @@ export class HandlerKeyboardShortcut {
       onGroupSelected: this.onGroupSelected,
       onUngroupSelected: this.onUngroupSelected,
       onAlignToOrigin: this.onAlignToOrigin,
-      onAxisCycle: this.onAxisCycle,
+      onSolidOperationAdditive: this.onSolidOperationAdditive,
+      onSolidOperationSubtractive: this.onSolidOperationSubtractive,
       onSaveScene: this.onSaveScene,
       onLoadScene: this.onLoadScene,
       onExportGlb: this.onExportGlb,

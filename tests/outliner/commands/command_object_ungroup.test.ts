@@ -32,6 +32,20 @@ describe('CommandObjectUngroup', () => {
     expect(group.parent).toBeNull();
   });
 
+  it('should insert children where the group was, not at the end', () => {
+    const before = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    before.name = 'Before';
+    const after = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    after.name = 'After';
+    parent.clear();
+    parent.add(before);
+    parent.add(group);
+    parent.add(after);
+    const command = new CommandObjectUngroup(group);
+    command.execute();
+    expect(parent.children.map((child) => child.name)).toEqual(['Before', 'Mesh1', 'Mesh2', 'After']);
+  });
+
   it('should undo and restore group structure', () => {
     const command = new CommandObjectUngroup(group);
     command.execute();

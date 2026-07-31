@@ -85,6 +85,17 @@ export class HandlerAlignment {
     this.onAxisRestriction = callback;
   }
 
+  /**
+   * Cycles the alignment axis restriction and notifies listeners.
+   *
+   * @returns The new axis restriction.
+   */
+  cycleAxisRestriction(): AlignmentAxis {
+    const axis = this.alignmentController.cycleAxisRestriction();
+    this.notifyAxisRestriction(axis);
+    return axis;
+  }
+
   /** Aligns selected objects to world origin on the current axis restriction. */
   onAlignToOrigin(): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
@@ -116,12 +127,6 @@ export class HandlerAlignment {
     const axis = this.alignmentController.getAxisRestriction();
     this.alignmentController.alignToObject(sources, target, axis, this.commandStack);
     this.commitAlignedPosesAndShowFeedback(sources, 'object', sources.length);
-  }
-
-  /** Cycles the axis restriction and notifies registered callbacks. */
-  onAxisCycle(): void {
-    const axis = this.alignmentController.cycleAxisRestriction();
-    this.notifyAxisRestriction(axis);
   }
 
   /**

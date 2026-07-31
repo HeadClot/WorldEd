@@ -172,6 +172,21 @@ describe('solid brush texture lock', () => {
     expect(uvEdgeAngle(after)).toBeCloseTo(uvEdgeAngle(before), 1);
   });
 
+  it('keeps brush-local UV stuck on face-pivot scale with only stretch lock', () => {
+    const model = new SolidModel('StretchOnlyFacePivot');
+    const brush = model.addBoxBrush(2, SolidOperation.Additive);
+    const normal = brush.faceNormalLocal(0);
+    const surface = createFaceSurfaceFromTileSize(normal, 'stretch-only.png', 1, 1);
+    brush.setFaceSurface(0, surface);
+    const before = brush.getFaceSurface(0).uv.clone();
+    const mesh = brush.mesh!;
+    mesh.scale.set(2, 1, 1);
+    mesh.position.x = 0.5;
+    mesh.updateMatrixWorld(true);
+    model.prepareLiveBrushEdit([mesh], { positionLock: false, stretchLock: true });
+    expect(brush.getFaceSurface(0).uv.equals(before, 1e-6)).toBe(true);
+  });
+
   it('restores original UV matrices when live scale snaps back to start size', () => {
     const model = new SolidModel('ScaleSnapBack');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);

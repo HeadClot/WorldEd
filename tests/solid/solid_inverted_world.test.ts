@@ -60,4 +60,25 @@ describe('Solid inverted world CSG', () => {
     expect(positions).toBeTruthy();
     expect(positions!.count).toBeGreaterThan(0);
   });
+
+  it('does not solidify a non-touching additive after a distant intersecting brush', () => {
+    const a = makeBox('a', 2, SolidOperation.Additive, new THREE.Vector3(-10, 0, 0));
+    const b = makeBox('b', 2, SolidOperation.Additive, new THREE.Vector3(0, 0, 0));
+    const c = makeBox('c', 2, SolidOperation.Additive, new THREE.Vector3(10, 0, 0));
+    const compiler = new SolidCsgCompiler();
+    compiler.compile([a, b, c], { forceFull: true, invertedWorld: true });
+    expect(compiler.getCachedPolygons('a')?.length ?? 0).toBe(0);
+    expect(compiler.getCachedPolygons('b')?.length ?? 0).toBe(0);
+    expect(compiler.getCachedPolygons('c')?.length ?? 0).toBe(0);
+
+    b.operation = SolidOperation.Intersecting;
+    compiler.compile([a, b, c], { forceFull: true, invertedWorld: true });
+    expect(compiler.getCachedPolygons('b')?.length ?? 0).toBeGreaterThan(0);
+    expect(compiler.getCachedPolygons('a')?.length ?? 0).toBe(0);
+    expect(compiler.getCachedPolygons('c')?.length ?? 0).toBe(0);
+
+    c.position.x += 0.25;
+    compiler.compile([a, b, c], { dirtyBrushIds: ['c'], invertedWorld: true });
+    expect(compiler.getCachedPolygons('c')?.length ?? 0).toBe(0);
+  });
 });

@@ -153,11 +153,12 @@ describe('SolidCsgCompiler partial updates', () => {
     const brushes = [far, a, b];
     const compiler = new SolidCsgCompiler();
     compiler.compile(brushes, { forceFull: true });
-    expect(compiler.getCachedPolygons('far')?.length ?? 0).toBe(0);
+    expect(compiler.getCachedPolygons('far')?.length ?? 0, 'non-touching far keeps solid').toBeGreaterThan(0);
     a.position.x -= 0.1;
     const partial = compiler.compile(brushes, { dirtyBrushIds: ['a'] });
     const stats = compiler.getLastCompileStats();
     expect(stats.fullRebuild).toBe(false);
+    expect(compiler.getCachedPolygons('far')?.length ?? 0).toBeGreaterThan(0);
     const full = new SolidCsgCompiler().compile(brushes, { forceFull: true });
     expect(polygonSignature(partial)).toEqual(polygonSignature(full));
   });
@@ -173,7 +174,7 @@ describe('SolidCsgCompiler partial updates', () => {
     const partial = compiler.compile(brushes, { dirtyBrushIds: ['b'] });
     const stats = compiler.getLastCompileStats();
     expect(stats.fullRebuild).toBe(false);
-    expect(compiler.getCachedPolygons('far')?.length ?? 0).toBe(0);
+    expect(compiler.getCachedPolygons('far')?.length ?? 0, 'non-touching far keeps solid').toBeGreaterThan(0);
     const full = new SolidCsgCompiler().compile(brushes, { forceFull: true });
     expect(polygonSignature(partial)).toEqual(polygonSignature(full));
   });

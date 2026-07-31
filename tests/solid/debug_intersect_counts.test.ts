@@ -21,18 +21,18 @@ function makeBox(id: string, size: number, operation: SolidOperation, position?:
   return instance;
 }
 
-describe('Sequential intersection CSG semantics', () => {
-  it('clips far additives out of the solid when inter is at the end', () => {
+describe('Peer-local intersection CSG (Chisel routing tables)', () => {
+  it('keeps far non-touching additives when inter is at the end', () => {
     const a = makeBox('a', 2, SolidOperation.Additive, new THREE.Vector3(0, 0, 0));
     const b = makeBox('b', 2, SolidOperation.Additive, new THREE.Vector3(10, 0, 0));
     const c = makeBox('c', 2, SolidOperation.Intersecting, new THREE.Vector3(0, 0, 0));
     const polygons = new SolidCsgCompiler().compile([a, b, c], { forceFull: true });
     const bCount = polygons.filter((p) => p.brushId === 'b').length;
-    expect(bCount, 'far additive must not survive sequential ∩').toBe(0);
+    expect(bCount, 'far additive stays solid when it does not touch ∩').toBeGreaterThan(0);
     expect(polygons.length).toBeGreaterThan(0);
   });
 
-  it('partial introduce of inter clears far stale surfaces', () => {
+  it('partial introduce of inter does not clear far non-touching surfaces', () => {
     const a = makeBox('a', 2, SolidOperation.Additive, new THREE.Vector3(0, 0, 0));
     const b = makeBox('b', 2, SolidOperation.Additive, new THREE.Vector3(10, 0, 0));
     const c = makeBox('c', 2, SolidOperation.Additive, new THREE.Vector3(0.3, 0, 0));
@@ -44,19 +44,19 @@ describe('Sequential intersection CSG semantics', () => {
     const full = new SolidCsgCompiler().compile([a, b, c], { forceFull: true });
     const bPartial = compiler.getCachedPolygons('b')?.length ?? 0;
     const bFull = full.filter((p) => p.brushId === 'b').length;
-    expect(bPartial).toBe(0);
-    expect(bFull).toBe(0);
+    expect(bPartial).toBeGreaterThan(0);
+    expect(bFull).toBeGreaterThan(0);
     expect(partial.length).toBeGreaterThan(0);
     expect(full.length).toBeGreaterThan(0);
   });
 
-  it('restores far additives when the last intersecting op is cleared', () => {
+  it('keeps far additives when an intersecting op is cleared', () => {
     const a = makeBox('a', 2, SolidOperation.Additive, new THREE.Vector3(0, 0, 0));
     const b = makeBox('b', 2, SolidOperation.Additive, new THREE.Vector3(10, 0, 0));
     const c = makeBox('c', 2, SolidOperation.Intersecting, new THREE.Vector3(0, 0, 0));
     const compiler = new SolidCsgCompiler();
     compiler.compile([a, b, c], { forceFull: true });
-    expect(compiler.getCachedPolygons('b')?.length ?? 0).toBe(0);
+    expect(compiler.getCachedPolygons('b')?.length ?? 0).toBeGreaterThan(0);
     c.operation = SolidOperation.Additive;
     compiler.compile([a, b, c], { dirtyBrushIds: ['c'] });
     expect(compiler.getCachedPolygons('b')?.length ?? 0).toBeGreaterThan(0);

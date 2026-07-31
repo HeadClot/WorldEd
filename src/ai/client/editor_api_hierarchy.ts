@@ -22,6 +22,7 @@ import { CommandSolidGroupOperationSet } from '@/solid/commands/group/command_so
 import { isSolidCsgGroup, isValidSolidTreeParent, markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { hierarchySeedBrushIdsCollectUnderRoots } from '@/solid/model/hierarchy/solid_hierarchy_mutation_refresh.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { collapseToHierarchyRoots, findCommonParent } from '@/utils/hierarchy_selection.js';
 import type { McpSolidOperationName, McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
@@ -91,14 +92,18 @@ export class EditorApiHierarchy {
   ungroupCsgGroups(args: UngroupCsgGroupsArgs): McpToolResult {
     const groups = this.resolveGroups(args.groupIds);
     if (groups.length === 0) return fail('No matching solid CSG groups found');
-    const models = new Set<SolidModel>();
+    const seedsByModel = new Map<SolidModel, THREE.Object3D[]>();
     for (const group of groups) {
       const model = SolidModel.fromObject(group);
-      if (model) models.add(model);
+      if (model) {
+        const seeds = seedsByModel.get(model) ?? [];
+        seeds.push(...group.children);
+        seedsByModel.set(model, seeds);
+      }
       this.host.commandStack.push(new CommandObjectUngroup(group));
     }
-    for (const model of models) {
-      this.rebuildModel(model);
+    for (const [model, seeds] of seedsByModel) {
+      this.rebuildModel(model, seeds);
     }
     this.afterMutation(`Ungrouped ${groups.length} group(s)`);
     return {
@@ -126,7 +131,10 @@ export class EditorApiHierarchy {
     const moves = this.buildReparentMoves(nodes, destination, insertBefore);
     if (moves.length === 0) return fail('No valid reparent moves (same solid model required)');
     this.host.commandStack.push(new CommandObjectObjectsReparent(moves));
-    this.rebuildModel(destination.model);
+    this.rebuildModel(
+      destination.model,
+      moves.map((move) => move.object),
+    );
     this.afterMutation(`Reparented ${moves.length} node(s)`);
     return {
       ok: true,
@@ -211,7 +219,7 @@ export class EditorApiHierarchy {
     this.host.commandStack.push(command);
     const group = command.getGroup();
     markAsSolidCsgGroup(group, operation);
-    this.rebuildModel(model);
+    this.rebuildModel(model, [group]);
     this.afterMutation(`Created CSG group ${name}`);
     return this.buildCreateCsgGroupResult(model, group, operation, roots.length);
   }
@@ -401,11 +409,18 @@ export class EditorApiHierarchy {
   }
 
   /**
-   * Syncs evaluation order and rebuilds a solid after hierarchy edits.
+   * Syncs evaluation order and partially rebuilds a solid after hierarchy
+   * edits. Prefer seed brushes when available so only the branch and its
+   * neighbors recompile.
    *
    * @param model Solid model.
+   * @param seedRoots Optional hierarchy roots whose brushes seed partial CSG.
    */
-  private rebuildModel(model: SolidModel): void {
+  private rebuildModel(model: SolidModel, seedRoots: readonly THREE.Object3D[] = []): void {
+    if (seedRoots.length > 0) {
+      model.hierarchyMutationRefresh(hierarchySeedBrushIdsCollectUnderRoots(model, seedRoots));
+      return;
+    }
     model.syncBrushOrderFromScene();
     model.markDirty();
     model.rebuild(true);

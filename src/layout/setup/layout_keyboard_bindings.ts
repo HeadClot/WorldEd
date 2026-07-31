@@ -3,6 +3,8 @@ import { HandlerKeyboardShortcut } from '@/input/handler_keyboard_shortcut.js';
 import { TransformMode } from '@/types/transform_mode.js';
 import { HandlerObjectAction } from '@/outliner/hierarchy/handler_object_action.js';
 import { HandlerAlignment } from '@/outliner/alignment/handler_alignment.js';
+import type { SolidModelController } from '@/solid/controller/solid_model_controller.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 import type { KeyboardShortcutSettings } from '@/settings/store/settings_types.js';
 
 /** Callbacks required when registering layout keyboard shortcuts. */
@@ -19,6 +21,7 @@ export interface LayoutKeyboardBindingHost {
   onExportGlb: () => void;
   getObjectActionHandler: () => HandlerObjectAction;
   getAlignmentHandler: () => HandlerAlignment;
+  getSolidModelController: () => SolidModelController | null;
 }
 
 /**
@@ -57,7 +60,12 @@ function bindPrimaryKeyboardShortcuts(handler: HandlerKeyboardShortcut, host: La
   handler.setOnGroupSelected(() => host.onGroupSelected());
   handler.setOnUngroupSelected(() => host.getObjectActionHandler().onUngroupSelected());
   handler.setOnAlignToOrigin(() => host.getAlignmentHandler().onAlignToOrigin());
-  handler.setOnAxisCycle(() => host.getAlignmentHandler().onAxisCycle());
+  handler.setOnSolidOperationAdditive(() =>
+    host.getSolidModelController()?.setOperationOnSelection(SolidOperation.Additive),
+  );
+  handler.setOnSolidOperationSubtractive(() =>
+    host.getSolidModelController()?.setOperationOnSelection(SolidOperation.Subtractive),
+  );
 }
 
 /**

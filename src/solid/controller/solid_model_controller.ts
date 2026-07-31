@@ -325,6 +325,123 @@ export class SolidModelController {
   }
 
   /**
+   * Applies a CSG operation to currently selected solid brushes and solid CSG
+   * groups (keyboard A/S). Group selection updates the group branch op only;
+   * descendant brush meshes are not also rewritten.
+   *
+   * @param operation Additive or subtractive operation to apply.
+   */
+  setOperationOnSelection(operation: SolidOperation): void {
+    const groups = this.selectedSolidCsgGroupsCollect();
+    const brushes = this.selectedSolidBrushMeshesOutsideGroupsCollect(groups);
+    if (brushes.length === 0 && groups.length === 0) {
+      return;
+    }
+    if (brushes.length > 0) {
+      this.setBrushOperationForMeshes(brushes, operation);
+    }
+    if (groups.length > 0) {
+      this.setGroupOperationForGroups(groups, operation);
+    }
+  }
+
+  /**
+   * Collects selected solid brush meshes that are not under any of the given
+   * solid CSG groups.
+   *
+   * @param groups Selected solid CSG groups.
+   * @returns Brush meshes outside those groups.
+   */
+  private selectedSolidBrushMeshesOutsideGroupsCollect(groups: readonly THREE.Group[]): THREE.Mesh[] {
+    const underGroup = (mesh: THREE.Mesh): boolean => {
+      for (const group of groups) {
+        if (this.objectIsDescendantOf(mesh, group)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    return this.selectedSolidBrushMeshesCollect().filter((mesh) => !underGroup(mesh));
+  }
+
+  /**
+   * Returns whether an object lives under a hierarchy ancestor.
+   *
+   * @param object Candidate descendant.
+   * @param ancestor Ancestor to search toward.
+   * @returns True when ancestor is above object.
+   */
+  private objectIsDescendantOf(object: THREE.Object3D, ancestor: THREE.Object3D): boolean {
+    let current: THREE.Object3D | null = object.parent;
+    while (current) {
+      if (current === ancestor) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+
+  /**
+   * Collects selected solid brush preview meshes from viewport and inspector
+   * selection.
+   *
+   * @returns Unique solid brush meshes.
+   */
+  private selectedSolidBrushMeshesCollect(): THREE.Mesh[] {
+    const brushes: THREE.Mesh[] = [];
+    const seen = new Set<THREE.Mesh>();
+    for (const mesh of this.selectionManager.getSelectedObjects()) {
+      this.solidBrushMeshAppendIfNew(mesh, brushes, seen);
+    }
+    for (const object of this.selectionManager.getInspectorObjects()) {
+      if (object instanceof THREE.Mesh) {
+        this.solidBrushMeshAppendIfNew(object, brushes, seen);
+      }
+    }
+    return brushes;
+  }
+
+  /**
+   * Collects selected solid CSG groups from hierarchy inspector selection.
+   *
+   * @returns Unique solid CSG groups.
+   */
+  private selectedSolidCsgGroupsCollect(): THREE.Group[] {
+    const groups: THREE.Group[] = [];
+    const seen = new Set<THREE.Group>();
+    for (const object of this.selectionManager.getInspectorObjects()) {
+      if (!(object instanceof THREE.Group) || !isSolidCsgGroup(object)) {
+        continue;
+      }
+      if (seen.has(object)) {
+        continue;
+      }
+      seen.add(object);
+      groups.push(object);
+    }
+    return groups;
+  }
+
+  /**
+   * Appends a mesh when it is a solid brush preview not already collected.
+   *
+   * @param mesh Candidate mesh.
+   * @param brushes Accumulator list.
+   * @param seen Deduping set.
+   */
+  private solidBrushMeshAppendIfNew(mesh: THREE.Mesh, brushes: THREE.Mesh[], seen: Set<THREE.Mesh>): void {
+    if (!SolidBrushVisual.isBrushObject(mesh)) {
+      return;
+    }
+    if (seen.has(mesh)) {
+      return;
+    }
+    seen.add(mesh);
+    brushes.push(mesh);
+  }
+
+  /**
    * Sets the CSG operation on solid compound groups (undoable, batched).
    *
    * @param groups Solid CSG groups.

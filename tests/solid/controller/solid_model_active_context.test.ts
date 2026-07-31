@@ -96,4 +96,19 @@ describe('Solid model active context', () => {
     expect(created?.mesh?.parent).toBe(group);
     expect(group.children[group.children.length - 1]).toBe(created!.mesh!);
   });
+
+  it('sets selected brush operation additive and subtractive from keyboard path', () => {
+    const world = new THREE.Group();
+    const selection = new ManagerSelection();
+    const panel = new MockSolidPanel();
+    const controller = new SolidModelController(world, new CommandStack(16), selection, panel as never);
+    const model = new SolidModel('OpKeys');
+    world.add(model.root);
+    const brush = model.addBoxBrush(2, SolidOperation.Additive);
+    selection.selectObject(brush.mesh!);
+    controller.setOperationOnSelection(SolidOperation.Subtractive);
+    expect(brush.operation).toBe(SolidOperation.Subtractive);
+    controller.setOperationOnSelection(SolidOperation.Additive);
+    expect(brush.operation).toBe(SolidOperation.Additive);
+  });
 });

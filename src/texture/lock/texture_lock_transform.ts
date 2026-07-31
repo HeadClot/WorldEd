@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { FaceSurfaceDescription, cloneFaceSurface } from '@/texture/uv_matrix/face_surface_description.js';
 import { lockFaceSurfaceForBrushTransform } from './solid_brush_texture_lock.js';
-import type { SurfaceUvLockFlags } from '@/texture/uv_matrix/surface_uv_matrix_transform.js';
+import { shouldApplyWorldFixedUv, type SurfaceUvLockFlags } from '@/texture/uv_matrix/surface_uv_matrix_transform.js';
 
 /** Position and stretch texture lock flags. */
 export type TextureLockFlags = SurfaceUvLockFlags;
@@ -47,10 +47,7 @@ export function shouldUpdateMappingsForLocks(
   nextWorldMatrix.decompose(scratchNextPos, scratchNextQuat, scratchNextScale);
   const moved = poseMoved(scratchPrevPos, scratchNextPos, scratchPrevQuat, scratchNextQuat);
   const scaled = !scratchPrevScale.equals(scratchNextScale);
-  if (flags.positionLock && flags.stretchLock) return false;
-  if (moved && !flags.positionLock) return true;
-  if (scaled && !flags.stretchLock) return true;
-  return false;
+  return shouldApplyWorldFixedUv(flags, moved, scaled);
 }
 
 /**
@@ -80,6 +77,8 @@ export function applyTextureLocksToBrushFaceSurface(
 
 /**
  * Returns whether content meshes should rebake world UVs after a transform.
+ * Scale (including face-pivot scale+translate) is governed only by stretch
+ * lock; pure move/rotate is governed only by position lock.
  *
  * @param flags Lock flags.
  * @param moved True when translation/rotation changed.
@@ -87,12 +86,7 @@ export function applyTextureLocksToBrushFaceSurface(
  * @returns True when world rebake should run.
  */
 export function shouldRebakeContentAfterTransform(flags: TextureLockFlags, moved: boolean, scaled: boolean): boolean {
-  if (moved && !flags.positionLock) return true;
-  if (scaled && !flags.stretchLock) return true;
-  if (moved && scaled) {
-    return !flags.positionLock || !flags.stretchLock;
-  }
-  return false;
+  return shouldApplyWorldFixedUv(flags, moved, scaled);
 }
 
 /**

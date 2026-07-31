@@ -19,7 +19,7 @@ import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_type
  * @returns Prepared brush list.
  */
 function prepareVisibleBrushes(model: SolidModel): PreparedBrush[] {
-  return model
+  const prepared = model
     .getBrushes()
     .filter((instance) => instance.visible)
     .map((instance) => {
@@ -32,6 +32,17 @@ function prepareVisibleBrushes(model: SolidModel): PreparedBrush[] {
         operation: instance.operation,
       };
     });
+  for (let index = 0; index < prepared.length; index++) {
+    for (let peer = 0; peer < prepared.length; peer++) {
+      if (index === peer) {
+        continue;
+      }
+      if (prepared[index]!.bounds.intersectsBox(prepared[peer]!.bounds)) {
+        prepared[index]!.overlappingPeerIndices.push(peer);
+      }
+    }
+  }
+  return prepared;
 }
 
 /**
@@ -85,12 +96,22 @@ function routeFlatLinearized(
   centroid: THREE.Vector3,
   normal: THREE.Vector3,
 ): SurfaceCategory {
-  const tree = SolidCsgTree.fromPreparedFlat(prepared);
-  const peers = prepared.map((_, index) => index).filter((index) => index !== subjectIndex);
-  const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(prepared, subjectIndex, peers, tree, false, true);
+  const flatPrepared = prepared.map((entry, index) => ({
+    ...entry,
+    overlappingPeerIndices: prepared.map((_, peer) => peer).filter((peer) => peer !== index),
+  }));
+  const tree = SolidCsgTree.fromPreparedFlat(flatPrepared);
+  const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(
+    flatPrepared,
+    subjectIndex,
+    flatPrepared[subjectIndex]!.overlappingPeerIndices,
+    tree,
+    false,
+    true,
+  );
   return table.route((preparedIndex) => {
     if (preparedIndex === subjectIndex) return SurfaceCategory.SelfAligned;
-    const peer = prepared[preparedIndex];
+    const peer = flatPrepared[preparedIndex];
     if (!peer) return SurfaceCategory.Outside;
     return BrushMembership.classifyPoint(centroid, peer.brush, normal);
   });
@@ -207,7 +228,7 @@ describe('Solid CSG group intersect isolation', () => {
     const tree = SolidCsgTree.fromSceneGraph(model.root, prepared);
     expect(tree.isFlat).toBe(false);
     const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(prepared, 0, [1], tree, false, true);
-    expect(table.steps.length).toBe(0);
+    expect(table.steps.length).toBeGreaterThan(0);
   });
 
   it('still intersects sequential flat brushes when no groups exist', () => {

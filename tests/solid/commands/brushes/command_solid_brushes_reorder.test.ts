@@ -37,6 +37,29 @@ describe('CommandSolidBrushesReorder', () => {
     expect(model.getBrushes().map((brush) => brush.id)).toEqual([a.id, b.id, c.id, d.id]);
   });
 
+  it('reorders with partial CSG when only one brush moves among many', () => {
+    const model = new SolidModel('OrderPartial');
+    const brushes = [];
+    for (let index = 0; index < 12; index++) {
+      const brush = model.addBoxBrush(1.5, SolidOperation.Additive, null, false);
+      brush.position.set(index * 3, 0, 0);
+      brush.pushTransformToMesh();
+      brushes.push(brush);
+    }
+    model.markDirty();
+    model.rebuild(true);
+    const mover = brushes[3]!;
+    const stack = new CommandStack(8);
+    stack.push(new CommandSolidBrushesReorder([mover.mesh!], 'last'));
+    const order = model.getBrushes().map((brush) => brush.id);
+    expect(order[order.length - 1]).toBe(mover.id);
+    expect(order).not.toContainEqual(undefined);
+    const stats = model.getCompilerStatsForTesting();
+    expect(stats.fullRebuild).toBe(false);
+    expect(stats.recompiledBrushCount).toBeLessThan(brushes.length);
+    expect(model['pipeline'].wasLastResultWritePartialForTesting()).toBe(true);
+  });
+
   it('moves a nested brush to last inside its group without moving the group', () => {
     const model = new SolidModel('NestedLast');
     const before = model.addBoxBrush(4, SolidOperation.Additive);

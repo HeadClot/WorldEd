@@ -39,6 +39,16 @@ describe('texture_lock_transform', () => {
     expect(shouldUpdateMappingsForLocks(prev, next, { positionLock: true, stretchLock: true })).toBe(false);
   });
 
+  it('keeps face-pivot scale under stretch lock even when position lock is off', () => {
+    const prev = new THREE.Matrix4().identity();
+    const next = new THREE.Matrix4().makeScale(2, 1, 1);
+    next.setPosition(0.5, 0, 0);
+    expect(shouldUpdateMappingsForLocks(prev, next, { positionLock: false, stretchLock: true })).toBe(false);
+    expect(shouldUpdateMappingsForLocks(prev, next, { positionLock: false, stretchLock: false })).toBe(true);
+    expect(shouldRebakeContentAfterTransform({ positionLock: false, stretchLock: true }, true, true)).toBe(false);
+    expect(shouldRebakeContentAfterTransform({ positionLock: false, stretchLock: false }, true, true)).toBe(true);
+  });
+
   it('rebakes content when the unlocked transform component changed', () => {
     expect(shouldRebakeContentAfterTransform({ positionLock: true, stretchLock: true }, true, false)).toBe(false);
     expect(shouldRebakeContentAfterTransform({ positionLock: false, stretchLock: true }, true, false)).toBe(true);
@@ -73,5 +83,18 @@ describe('texture_lock_transform', () => {
     const fixedLocalPrev = fixedWorld.clone();
     const fixedLocalNext = fixedWorld.clone().applyMatrix4(next.clone().invert());
     expect(result.project(fixedLocalNext).u).toBeCloseTo(uv.project(fixedLocalPrev).u, 4);
+  });
+
+  it('leaves UV matrix stuck on face-pivot scale when only stretch lock is on', () => {
+    const normal = new THREE.Vector3(0, 1, 0);
+    const uv = SurfaceUvMatrix.fromTrs(new THREE.Vector2(0, 0), normal, 0, 1, 1);
+    const prev = new THREE.Matrix4().identity();
+    const next = new THREE.Matrix4().makeScale(2, 1, 1);
+    next.setPosition(0.5, 0, 0);
+    const result = transformBrushLocalUvForPoseChange(uv, normal, 0, prev, next, {
+      positionLock: false,
+      stretchLock: true,
+    });
+    expect(result.equals(uv, 1e-6)).toBe(true);
   });
 });

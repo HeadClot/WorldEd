@@ -130,11 +130,13 @@ export class PanelPropertiesSolidBrushSection {
   applyOperation(brushMeshes: THREE.Mesh[], operation: SolidOperation, boundObjects: THREE.Object3D[]): void {
     if (!this.handlers) return;
     const solidGroups = this.collectSolidGroups(boundObjects);
-    if (brushMeshes.length > 0) {
-      this.handlers.onSetOperation(brushMeshes, operation);
-    }
     if (solidGroups.length > 0 && this.handlers.onSetGroupOperation) {
       this.handlers.onSetGroupOperation(solidGroups, operation);
+      this.updateFromObjects(boundObjects);
+      return;
+    }
+    if (brushMeshes.length > 0) {
+      this.handlers.onSetOperation(brushMeshes, operation);
     }
     this.updateFromObjects(boundObjects);
   }

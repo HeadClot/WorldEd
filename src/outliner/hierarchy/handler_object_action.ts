@@ -7,6 +7,8 @@ import { CommandSolidBrushesDelete } from '@/solid/commands/brushes/command_soli
 import { CommandObjectGroup } from '@/outliner/commands/command_object_group.js';
 import { CommandObjectUngroup } from '@/outliner/commands/command_object_ungroup.js';
 import { CommandStack } from '@/commands/command_stack.js';
+import type { UndoCommand } from '@/commands/command_undo.js';
+import { CommandUndoBatch } from '@/commands/command_undo_batch.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { collapseToHierarchyRoots, findCommonParent } from '@/utils/hierarchy_selection.js';
 import { filterUnlockedObjects, isObjectOrAncestorLocked } from '@/utils/object_lock.js';
@@ -102,8 +104,8 @@ export class HandlerObjectAction {
 
   /**
    * Deletes hierarchy roots (meshes, groups, empty groups) from the scene.
-   * Solid brushes are removed from their solid model CSG tree, not only the
-   * scene.
+   * Solid brushes under those roots are unregistered from their solid models so
+   * CSG and geometry stay in sync with the outliner.
    *
    * @param objects Hierarchy nodes to remove.
    */
@@ -115,24 +117,103 @@ export class HandlerObjectAction {
       this.showMessage('Cannot delete locked object(s)');
       return;
     }
+    const solidBrushes = this.solidBrushMeshesCollectFromRoots(roots);
+    const otherRoots = this.hierarchyRootsExcludeBrushMeshes(roots);
+    this.commandStackPushDeleteSteps(this.hierarchyDeleteStepsBuild(solidBrushes, otherRoots));
+    this.selectionManager.clearSelection();
+    this.notifySyncAndRefresh();
+    this.showMessage(`Deleted ${roots.length} object(s)`);
+  }
+
+  /**
+   * Builds ordered delete steps: solid brushes first, then hierarchy roots.
+   *
+   * @param solidBrushes Solid brush meshes to unregister.
+   * @param otherRoots Non-brush hierarchy roots to remove.
+   * @returns Ordered undoable steps for one history entry.
+   */
+  private hierarchyDeleteStepsBuild(
+    solidBrushes: readonly THREE.Mesh[],
+    otherRoots: readonly THREE.Object3D[],
+  ): UndoCommand[] {
+    const steps: UndoCommand[] = [];
+    if (solidBrushes.length > 0) {
+      steps.push(new CommandSolidBrushesDelete([...solidBrushes]));
+    }
+    if (otherRoots.length > 0) {
+      steps.push(new CommandObjectHierarchyDelete([...otherRoots]));
+    }
+    return steps;
+  }
+
+  /**
+   * Pushes one history entry for delete steps (single command or atomic batch).
+   *
+   * @param steps Ordered delete sub-commands.
+   */
+  private commandStackPushDeleteSteps(steps: readonly UndoCommand[]): void {
+    if (steps.length === 0) {
+      return;
+    }
+    if (steps.length === 1) {
+      this.commandStack.push(steps[0]!);
+      return;
+    }
+    this.commandStack.push(new CommandUndoBatch(steps));
+  }
+
+  /**
+   * Collects unique solid brush preview meshes under hierarchy roots (including
+   * the roots themselves when they are brush meshes).
+   *
+   * @param roots Hierarchy roots being deleted.
+   * @returns Solid brush meshes for CSG unregistration.
+   */
+  private solidBrushMeshesCollectFromRoots(roots: readonly THREE.Object3D[]): THREE.Mesh[] {
     const solidBrushes: THREE.Mesh[] = [];
+    const seen = new Set<THREE.Mesh>();
+    for (const root of roots) {
+      this.solidBrushMeshesAppendUnder(root, solidBrushes, seen);
+    }
+    return solidBrushes;
+  }
+
+  /**
+   * Appends solid brush meshes found at or under one hierarchy root.
+   *
+   * @param root Hierarchy root to scan.
+   * @param solidBrushes Accumulator list.
+   * @param seen Deduping set of mesh identities.
+   */
+  private solidBrushMeshesAppendUnder(root: THREE.Object3D, solidBrushes: THREE.Mesh[], seen: Set<THREE.Mesh>): void {
+    for (const mesh of collectMeshesUnder(root)) {
+      if (!SolidBrushVisual.isBrushObject(mesh)) {
+        continue;
+      }
+      if (seen.has(mesh)) {
+        continue;
+      }
+      seen.add(mesh);
+      solidBrushes.push(mesh);
+    }
+  }
+
+  /**
+   * Filters hierarchy roots to non-brush nodes (groups, solid models, regular
+   * meshes) so solid brush meshes are only handled by solid delete.
+   *
+   * @param roots Hierarchy roots being deleted.
+   * @returns Roots to remove via hierarchy delete.
+   */
+  private hierarchyRootsExcludeBrushMeshes(roots: readonly THREE.Object3D[]): THREE.Object3D[] {
     const otherRoots: THREE.Object3D[] = [];
     for (const root of roots) {
       if (root instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(root)) {
-        solidBrushes.push(root);
         continue;
       }
       otherRoots.push(root);
     }
-    if (solidBrushes.length > 0) {
-      this.commandStack.push(new CommandSolidBrushesDelete(solidBrushes));
-    }
-    if (otherRoots.length > 0) {
-      this.commandStack.push(new CommandObjectHierarchyDelete(otherRoots));
-    }
-    this.selectionManager.clearSelection();
-    this.notifySyncAndRefresh();
-    this.showMessage(`Deleted ${roots.length} object(s)`);
+    return otherRoots;
   }
 
   /**
@@ -143,13 +224,14 @@ export class HandlerObjectAction {
   private deleteMeshesWithSolidSupport(meshes: THREE.Mesh[]): void {
     const solidBrushes = CommandSolidBrushesDelete.filterBrushMeshes(meshes);
     const regularMeshes = meshes.filter((mesh) => !SolidBrushVisual.isBrushObject(mesh));
+    const steps: UndoCommand[] = [];
     if (solidBrushes.length > 0) {
-      this.commandStack.push(new CommandSolidBrushesDelete(solidBrushes));
+      steps.push(new CommandSolidBrushesDelete(solidBrushes));
     }
     if (regularMeshes.length > 0) {
-      const snapshots = this.buildDeleteSnapshots(regularMeshes);
-      this.commandStack.push(new CommandObjectDelete(snapshots));
+      steps.push(new CommandObjectDelete(this.buildDeleteSnapshots(regularMeshes)));
     }
+    this.commandStackPushDeleteSteps(steps);
     this.selectionManager.clearSelection();
     this.notifySyncAndRefresh();
   }
@@ -273,9 +355,10 @@ export class HandlerObjectAction {
       this.showMessage('Cannot ungroup locked group');
       return;
     }
+    const hierarchySeeds = group.children.slice();
     const command = new CommandObjectUngroup(group);
     this.commandStack.push(command);
-    SolidModel.rebuildAllUnder(this.worldObject);
+    SolidModel.hierarchyMutationRefreshFromRoots(hierarchySeeds);
     this.notifySyncAndRefresh();
   }
 
@@ -336,7 +419,7 @@ export class HandlerObjectAction {
     this.commandStack.push(command);
     const createdGroup = command.getGroup();
     this.finalizeSolidGroupIfNeeded(createdGroup, members);
-    SolidModel.rebuildAllUnder(this.worldObject);
+    SolidModel.hierarchyMutationRefreshFromRoots([createdGroup]);
     this.selectCreatedGroup(createdGroup);
     this.notifySyncAndRefresh();
     this.showGroupFeedback(groupName);

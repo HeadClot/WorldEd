@@ -21,7 +21,7 @@ function makeBox(id: string, size: number, operation: SolidOperation, position?:
   return instance;
 }
 
-describe('Intersecting brush must not wipe touched additives', () => {
+describe('Intersecting brush peer-local regression (Chisel routing tables)', () => {
   it('keeps shared volume when intersect is added after many additives (full)', () => {
     const brushes: SolidBrushInstance[] = [];
     for (let i = 0; i < 8; i++) {
@@ -36,7 +36,7 @@ describe('Intersecting brush must not wipe touched additives', () => {
     const far = polygons.filter((p) => p.brushId === brushes[7]!.id);
     expect(polygons.length, 'solid should have surfaces').toBeGreaterThan(0);
     expect(fromTarget.length + fromInter.length, 'touched volume must emit surfaces').toBeGreaterThan(0);
-    expect(far.length, 'far additive must be clipped out by sequential ∩').toBe(0);
+    expect(far.length, 'far non-touching additive keeps solid surfaces').toBeGreaterThan(0);
   });
 
   it('keeps shared volume when intersect is added via partial dirty of new brush only', () => {
@@ -59,7 +59,7 @@ describe('Intersecting brush must not wipe touched additives', () => {
     const far = compiler.getCachedPolygons(brushes[7]!.id) ?? [];
 
     expect(afterTarget.length + afterInter.length, 'partial add of intersect wiped touched solid').toBeGreaterThan(0);
-    expect(far.length, 'far additive must clear under sequential ∩').toBe(0);
+    expect(far.length, 'far non-touching additive keeps solid surfaces').toBeGreaterThan(0);
 
     const full = new SolidCsgCompiler().compile(brushes, { forceFull: true });
     const fullTouched =

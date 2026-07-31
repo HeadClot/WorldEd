@@ -110,10 +110,13 @@ export class CommandSolidBrushesDelete implements UndoCommand {
     return { model, instance: brush, listIndex, parent, siblingIndex };
   }
 
-  /** Removes all captured brushes without disposing mesh resources. */
+  /**
+   * Removes all captured brushes without disposing mesh resources and without
+   * rebuilding between removals so one partial CSG pass covers the batch.
+   */
   private removeCapturedBrushes(): void {
     for (const snapshot of this.snapshots) {
-      snapshot.model.removeBrush(snapshot.instance.id, false);
+      snapshot.model.removeBrush(snapshot.instance.id, false, false);
     }
   }
 
@@ -147,11 +150,13 @@ export class CommandSolidBrushesDelete implements UndoCommand {
     return { parent: snapshot.parent, siblingIndex: snapshot.siblingIndex };
   }
 
-  /** Rebuilds every solid model touched by the current snapshots. */
+  /**
+   * Rebuilds every solid model touched by the current snapshots using whatever
+   * partial dirty seeds remove/insert already marked (never force-full).
+   */
   private rebuildAffectedModels(): void {
     const models = new Set(this.snapshots.map((entry) => entry.model));
     for (const model of models) {
-      model.markDirty();
       model.rebuild(true);
     }
   }

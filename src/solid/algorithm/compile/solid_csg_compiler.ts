@@ -1,7 +1,6 @@
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { BrushSpatialIndex } from '@/solid/algorithm/spatial/brush_spatial_index.js';
-import { boundsOverlapPadded } from '@/solid/algorithm/spatial/bounds_overlap.js';
 import { SolidBrushPreparer } from './solid_brush_preparer.js';
 import { SolidCompileCache } from './solid_compile_cache.js';
 import { SolidCompilePlanner } from './solid_compile_planner.js';
@@ -34,11 +33,6 @@ export class SolidCsgCompiler {
   private readonly finalizer: SolidFragmentFinalizer;
   private readonly emitter: SolidSurfaceEmitter;
   private hasIntersectingOperations = false;
-  /**
-   * Previous compile had intersecting ops — dropping them forces a full
-   * restore.
-   */
-  private previousHadIntersectingOperations = false;
   private lastUpdateBrushIds: string[] = [];
   private lastStats: SolidCompileStats = {
     fullRebuild: true,
@@ -139,6 +133,15 @@ export class SolidCsgCompiler {
   }
 
   /**
+   * Drops routing tables only (prepared polygon caches stay). Used when
+   * evaluation order changes so prepared indices inside tables are rebuilt on
+   * the next subject compile without wiping the whole map.
+   */
+  clearRoutingTables(): void {
+    this.router.clearRoutingTables();
+  }
+
+  /**
    * Updates texture ids on cached polygons for a brush without recompiling CSG.
    *
    * @param brushId Brush instance id.
@@ -230,6 +233,7 @@ export class SolidCsgCompiler {
       : SolidCsgTree.fromPreparedFlat(prepared);
     this.membership.setCsgTree(tree);
     this.router.setCsgTree(tree);
+    this.emitter.setHierarchicalCsg(!tree.isFlat);
   }
 
   /**
@@ -265,6 +269,9 @@ export class SolidCsgCompiler {
       this.hasIntersectingOperations,
       this.preparer.getRefreshedBrushIds(),
     );
+    if (forceFull) {
+      this.router.clearRoutingTables();
+    }
     const updateSet = this.resolveUpdateSet(prepared, options, forceFull);
     if (asyncRecompile) {
       return this.finishCompileAsync(prepared, options, forceFull, updateSet, brushIds, onProgress);
@@ -318,7 +325,6 @@ export class SolidCsgCompiler {
     this.cache.pruneToIds(new Set(brushIds));
     this.cache.setLastBrushOrder(brushIds);
     this.lastUpdateBrushIds = Array.from(updateSet);
-    this.previousHadIntersectingOperations = this.hasIntersectingOperations;
     this.recordCompileStats(forceFull, updateSet.size, prepared.length);
   }
 
@@ -473,10 +479,9 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Resolves the set of brush ids that must be recompiled this pass. With
-   * sequential ∩ present, expands the touch set so far brushes with stale
-   * non-empty caches are cleared, and restores everything when the last
-   * intersecting brush is removed.
+   * Resolves the set of brush ids that must be recompiled this pass. Uses
+   * Chisel-style touch expansion only (seed + previous/current peers). Distant
+   * ∩ never forces a map-wide recompile of non-touching brushes.
    *
    * @param prepared Prepared brushes.
    * @param options Compile options.
@@ -487,48 +492,6 @@ export class SolidCsgCompiler {
     if (forceFull) {
       return new Set(prepared.map((entry) => entry.instance.id));
     }
-    if (this.previousHadIntersectingOperations && !this.hasIntersectingOperations) {
-      return new Set(prepared.map((entry) => entry.instance.id));
-    }
-    const updateSet = this.planner.buildPartialUpdateSet(prepared, options, this.preparer.getRefreshedBrushIds());
-    if (this.hasIntersectingOperations) {
-      this.expandUpdateSetForSequentialIntersection(prepared, updateSet);
-    }
-    return updateSet;
-  }
-
-  /**
-   * Ensures brushes outside every intersecting volume recompile when they still
-   * hold surfaces (must become empty under sequential ∩).
-   *
-   * @param prepared Prepared brushes.
-   * @param updateSet Mutable recompile set.
-   */
-  private expandUpdateSetForSequentialIntersection(prepared: PreparedBrush[], updateSet: Set<string>): void {
-    const intersecting = prepared.filter((entry) => entry.operation === SolidOperation.Intersecting);
-    if (intersecting.length === 0) return;
-    for (const entry of prepared) {
-      if (updateSet.has(entry.instance.id)) continue;
-      if (entry.operation === SolidOperation.Intersecting) continue;
-      const cached = this.cache.getPolygons(entry.instance.id);
-      if (!cached || cached.length === 0) continue;
-      if (this.overlapsAnyIntersecting(entry, intersecting)) continue;
-      updateSet.add(entry.instance.id);
-    }
-  }
-
-  /**
-   * Returns whether a brush AABB overlaps any intersecting brush (with pad).
-   *
-   * @param entry Candidate brush.
-   * @param intersecting Intersecting prepared brushes.
-   * @returns True when they may share volume.
-   */
-  private overlapsAnyIntersecting(entry: PreparedBrush, intersecting: PreparedBrush[]): boolean {
-    const pad = this.boundsPad;
-    for (const inter of intersecting) {
-      if (boundsOverlapPadded(entry.bounds, inter.bounds, pad)) return true;
-    }
-    return false;
+    return this.planner.buildPartialUpdateSet(prepared, options, this.preparer.getRefreshedBrushIds());
   }
 }
