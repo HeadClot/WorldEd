@@ -109,7 +109,9 @@ export class SolidSurfaceEmitter {
   }
 
   /**
-   * Fast path for a brush that does not overlap any peer volume.
+   * Fast path for a brush that does not overlap any peer volume. Non-inverted
+   * subtractive and intersecting brushes contribute no solid when isolated,
+   * even under hierarchical CSG trees.
    *
    * @param subject Isolated brush.
    * @param prepared All brushes (for membership tests when needed).
@@ -122,10 +124,7 @@ export class SolidSurfaceEmitter {
     brushIndex: number,
     output: SolidCompiledPolygon[],
   ): void {
-    if (subject.operation === SolidOperation.Intersecting && !this.invertedWorld && !this.hierarchicalCsg) {
-      return;
-    }
-    if (subject.operation === SolidOperation.Subtractive && !this.invertedWorld && !this.hierarchicalCsg) {
+    if (!this.invertedWorld && this.operationContributesNoIsolatedSolid(subject.operation)) {
       return;
     }
     if (!this.invertedWorld && !this.hierarchicalCsg) {
@@ -135,6 +134,17 @@ export class SolidSurfaceEmitter {
       return;
     }
     this.emitIsolatedSurfacesWithMembership(subject, prepared, brushIndex, output);
+  }
+
+  /**
+   * Returns whether an operation emits no solid surface when the brush has no
+   * overlapping peers and the world is not inverted.
+   *
+   * @param operation Brush CSG operation.
+   * @returns True for subtractive and intersecting operations.
+   */
+  private operationContributesNoIsolatedSolid(operation: SolidOperation): boolean {
+    return operation === SolidOperation.Subtractive || operation === SolidOperation.Intersecting;
   }
 
   /**

@@ -87,7 +87,17 @@ export class SolidCompileCache {
    * @returns Peer ids (empty when unknown).
    */
   getTouchPeerIds(brushId: string): string[] {
-    return this.touchIdsByBrushId.get(brushId)?.slice() ?? [];
+    return this.getTouchPeerIdsReadonly(brushId).slice();
+  }
+
+  /**
+   * Returns previously overlapping peer brush ids without copying.
+   *
+   * @param brushId Brush instance id.
+   * @returns Peer ids (empty when unknown).
+   */
+  getTouchPeerIdsReadonly(brushId: string): readonly string[] {
+    return this.touchIdsByBrushId.get(brushId) ?? [];
   }
 
   /**

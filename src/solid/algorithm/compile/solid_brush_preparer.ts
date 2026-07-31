@@ -44,12 +44,99 @@ export class SolidBrushPreparer {
    */
   prepareBrushes(instances: SolidBrushInstance[], options: SolidCompileOptions): PreparedBrush[] {
     const dirtySeeds = this.resolveDirtySeeds(options);
+    if (dirtySeeds) {
+      return this.prepareBrushesPartial(instances, dirtySeeds);
+    }
+    return this.prepareBrushesFull(instances);
+  }
+
+  /**
+   * Prepares every visible brush, validating cache reuse for each instance.
+   *
+   * @param instances Source instances.
+   * @returns Prepared brush list.
+   */
+  private prepareBrushesFull(instances: SolidBrushInstance[]): PreparedBrush[] {
     const prepared: PreparedBrush[] = [];
     for (const instance of instances) {
-      if (!instance.visible) continue;
-      prepared.push(this.prepareOneBrush(instance, dirtySeeds));
+      if (!instance.visible) {
+        continue;
+      }
+      prepared.push(this.prepareOneBrush(instance, null));
     }
     return prepared;
+  }
+
+  /**
+   * Prepares only dirty seeds with mesh pulls; reuses cache for other brushes
+   * without per-brush pose scans when the evaluation list is partial.
+   *
+   * @param instances Source instances.
+   * @param dirtySeeds Seed dirty ids.
+   * @returns Prepared brush list.
+   */
+  private prepareBrushesPartial(instances: SolidBrushInstance[], dirtySeeds: Set<string>): PreparedBrush[] {
+    const prepared: PreparedBrush[] = [];
+    for (const instance of instances) {
+      if (!instance.visible) {
+        continue;
+      }
+      prepared.push(this.prepareOneBrushPartial(instance, dirtySeeds));
+    }
+    return prepared;
+  }
+
+  /**
+   * Prepares one brush on the partial path: dirty seeds always refresh; other
+   * brushes reuse cache when local TRS and operation still match the snapshot
+   * (cheap, no parent-chain walks).
+   *
+   * @param instance Source instance.
+   * @param dirtySeeds Seed dirty ids.
+   * @returns Prepared brush entry.
+   */
+  private prepareOneBrushPartial(instance: SolidBrushInstance, dirtySeeds: Set<string>): PreparedBrush {
+    if (dirtySeeds.has(instance.id)) {
+      return this.prepareOneBrush(instance, dirtySeeds);
+    }
+    if (this.canReusePreparedTransformOnly(instance)) {
+      return this.preparedFromCache(instance);
+    }
+    this.refreshedBrushIds.add(instance.id);
+    return this.prepareAndCacheBrush(instance);
+  }
+
+  /**
+   * Returns whether cached prepared geometry matches the instance local pose
+   * and operation without mesh or parent-chain scans.
+   *
+   * @param instance Brush instance.
+   * @returns True when the prepare cache snapshot is still valid.
+   */
+  private canReusePreparedTransformOnly(instance: SolidBrushInstance): boolean {
+    const cached = this.cache.getPrepared(instance.id);
+    if (!cached) {
+      return false;
+    }
+    if (cached.operation !== instance.operation) {
+      return false;
+    }
+    if (cached.visible !== instance.visible) {
+      return false;
+    }
+    if (!cached.position.equals(instance.position)) {
+      return false;
+    }
+    if (!this.eulerEquals(cached.rotation, instance.rotation)) {
+      return false;
+    }
+    if (!cached.scale.equals(instance.scale)) {
+      return false;
+    }
+    if ((cached.parentChainPoseKey ?? '') !== instance.getParentChainPoseKey()) {
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -167,8 +254,12 @@ export class SolidBrushPreparer {
    * @returns Dirty seed set, or null when every brush must refresh.
    */
   private resolveDirtySeeds(options: SolidCompileOptions): Set<string> | null {
-    if (options.forceFull) return null;
-    if (!options.dirtyBrushIds) return null;
+    if (options.forceFull) {
+      return null;
+    }
+    if (!options.dirtyBrushIds) {
+      return null;
+    }
     return new Set(options.dirtyBrushIds);
   }
 

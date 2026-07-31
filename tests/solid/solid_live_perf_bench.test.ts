@@ -45,6 +45,28 @@ describe('Solid live rebuild performance', () => {
     expect(worst).toBeLessThan(120);
   });
 
+  it('moves a free-floating brush among 2000 additives near interactive rates', () => {
+    const model = buildGridModel(2000, 8, 2);
+    const mover = model.getBrushes()[0]!;
+    mover.position.set(5000, 5000, 5000);
+    mover.pushTransformToMesh();
+    model.markBrushesDirty([mover.id]);
+    model.rebuildLive();
+    let worst = 0;
+    for (let step = 0; step < 10; step++) {
+      mover.position.x += 0.25;
+      mover.pushTransformToMesh();
+      model.markBrushesDirty([mover.id]);
+      const start = performance.now();
+      model.rebuildLive();
+      worst = Math.max(worst, performance.now() - start);
+    }
+    const stats = model.getCompilerStatsForTesting();
+    expect(stats.fullRebuild).toBe(false);
+    expect(stats.recompiledBrushCount).toBe(1);
+    expect(worst).toBeLessThan(40);
+  }, 30000);
+
   it('matches full rebuild after live moves that change contact topology', () => {
     const model = buildGridModel(64, 3, 2);
     const mover = model.getBrushes()[0]!;

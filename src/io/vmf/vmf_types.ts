@@ -46,6 +46,12 @@ export interface VmfSolidSide {
   lightmapScale: number;
   smoothingGroups: number;
   displacement: VmfDisplacementInfo | null;
+  /**
+   * Optional Hammer face polygon in Source inches (Z-up). When present and
+   * valid, brush construction prefers these vertices over triple-plane
+   * intersections so authored corners match the map.
+   */
+  verticesPlus: VmfVector3[];
 }
 
 /** Convex solid defined by bounding planes (sides). */

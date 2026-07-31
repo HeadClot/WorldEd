@@ -258,6 +258,15 @@ export class SolidModelRebuildPipeline {
    * @returns True after a successful dirty-range patch.
    */
   wasLastResultWritePartialForTesting(): boolean {
+    return this.wasLastResultWritePartial();
+  }
+
+  /**
+   * Returns whether the last result mesh write was an in-place partial patch.
+   *
+   * @returns True after a successful dirty-range patch.
+   */
+  wasLastResultWritePartial(): boolean {
     return this.resultBuffer.wasLastWritePartial();
   }
 

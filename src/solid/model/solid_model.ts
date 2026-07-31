@@ -711,7 +711,9 @@ export class SolidModel {
    *   batches untouched (safe for CSG-order-only edits such as To First/Last).
    */
   rebuild(force: boolean = false, options: { skipEdgeBatchRefresh?: boolean } = {}): void {
-    if (!this.pipeline.isDirty() && !force) return;
+    if (!this.pipeline.isDirty() && !force) {
+      return;
+    }
     this.pipeline.compileResultGeometry();
     solidOps.applyPresentationIfGeometryExists(this.getOpsHost(), true);
     this.pipeline.resetResultLocalTransform();
@@ -770,11 +772,23 @@ export class SolidModel {
     }
     this.pipeline.compileResultGeometry(true);
     this.pipeline.resetResultLocalTransform();
-    if (this.pipeline.hasResultGeometry()) {
-      solidOps.applySurfaceLayoutToResult(this.getOpsHost(), false);
-    }
+    this.applyLiveSurfaceLayoutIfNeeded();
     this.pipeline.setDirtyFlag(true);
     this.pipeline.setInteractiveGeometryCurrent(true);
+  }
+
+  /**
+   * Applies surface materials after a live rebuild only when the result layout
+   * may have changed. In-place partial patches keep material ranges valid.
+   */
+  private applyLiveSurfaceLayoutIfNeeded(): void {
+    if (!this.pipeline.hasResultGeometry()) {
+      return;
+    }
+    if (this.pipeline.wasLastResultWritePartial()) {
+      return;
+    }
+    solidOps.applySurfaceLayoutToResult(this.getOpsHost(), false);
   }
 
   /**

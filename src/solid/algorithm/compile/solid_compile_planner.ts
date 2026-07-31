@@ -1,4 +1,5 @@
 import { BrushOverlapGraph } from '@/solid/algorithm/spatial/brush_overlap_graph.js';
+import type { BrushSpatialIndex } from '@/solid/algorithm/spatial/brush_spatial_index.js';
 import { SolidCompileCache } from './solid_compile_cache.js';
 import type { PreparedBrush, SolidCompileOptions } from './solid_compile_types.js';
 import { SolidUpdateSetBuilder } from './solid_update_set.js';
@@ -29,19 +30,21 @@ export class SolidCompilePlanner {
    * @param options Compile options with optional dirty seeds.
    * @param hasIntersectingOperations Whether intersecting ops force full work.
    * @param refreshedBrushIds Brushes refreshed during prepare.
+   * @param spatialIndex Optional persistent index for neighbor queries.
    */
   buildOverlapGraph(
     prepared: PreparedBrush[],
     options: SolidCompileOptions,
     hasIntersectingOperations: boolean,
     refreshedBrushIds: ReadonlySet<string>,
+    spatialIndex?: BrushSpatialIndex,
   ): void {
     const brushIds = prepared.map((entry) => entry.instance.id);
     if (this.shouldForceFullRebuild(brushIds, options, hasIntersectingOperations, refreshedBrushIds)) {
-      BrushOverlapGraph.build(prepared, this.boundsPad);
+      BrushOverlapGraph.build(prepared, this.boundsPad, spatialIndex);
       return;
     }
-    this.buildPartialOrFullOverlapGraph(prepared, options, refreshedBrushIds);
+    this.buildPartialOrFullOverlapGraph(prepared, options, refreshedBrushIds, spatialIndex);
   }
 
   /**
@@ -97,8 +100,12 @@ export class SolidCompilePlanner {
     refreshedBrushIds: ReadonlySet<string>,
   ): boolean {
     void hasIntersectingOperations;
-    if (options.forceFull) return true;
-    if (!options.dirtyBrushIds) return true;
+    if (options.forceFull) {
+      return true;
+    }
+    if (!options.dirtyBrushIds) {
+      return true;
+    }
     const seed = this.collectSeedDirtyIds(options, refreshedBrushIds);
     return !this.canReuseCachedBrushes(brushIds, seed);
   }
@@ -126,9 +133,33 @@ export class SolidCompilePlanner {
    * @returns True when partial reuse is safe.
    */
   canReuseCachedBrushes(brushIds: string[], seedDirtyIds: ReadonlySet<string>): boolean {
+    if (!this.allNonSeedHavePolygons(brushIds, seedDirtyIds)) {
+      return false;
+    }
+    if (this.cache.orderMatches(brushIds)) {
+      return true;
+    }
     const reusableIds = brushIds.filter((id) => !seedDirtyIds.has(id));
-    if (!this.allReusableHavePolygons(reusableIds)) return false;
     return this.reusableOrderMatchesCache(reusableIds);
+  }
+
+  /**
+   * Returns whether every non-seed brush has cached polygons.
+   *
+   * @param brushIds Current visible brush ids.
+   * @param seedDirtyIds Brushes that will recompile.
+   * @returns True when all non-seed brushes have polygon cache entries.
+   */
+  private allNonSeedHavePolygons(brushIds: readonly string[], seedDirtyIds: ReadonlySet<string>): boolean {
+    for (const brushId of brushIds) {
+      if (seedDirtyIds.has(brushId)) {
+        continue;
+      }
+      if (!this.cache.getPolygons(brushId)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -146,37 +177,37 @@ export class SolidCompilePlanner {
   ): Set<string> {
     const seed = this.collectSeedDirtyIds(options, refreshedBrushIds);
     const brushIds = prepared.map((entry) => entry.instance.id);
-    const currentTouches = this.buildCurrentTouchMap(prepared);
-    const previousTouches = this.buildPreviousTouchMap(brushIds);
+    const currentTouches = this.buildCurrentTouchMapForSeeds(prepared, seed);
+    const previousTouches = this.buildPreviousTouchMapForSeeds(seed);
     return SolidUpdateSetBuilder.build(seed, brushIds, currentTouches, previousTouches);
   }
 
   /**
-   * Builds current overlap adjacency keyed by brush id.
+   * Builds current overlap adjacency for seed brushes and their current peers.
    *
    * @param prepared Prepared brushes with overlap indices.
-   * @returns Map of brush id to peer ids.
+   * @param seedIds Seed dirty brush ids.
+   * @returns Map of brush id to peer ids for seeds and neighbors.
    */
-  buildCurrentTouchMap(prepared: PreparedBrush[]): Map<string, string[]> {
+  buildCurrentTouchMapForSeeds(prepared: PreparedBrush[], seedIds: ReadonlySet<string>): Map<string, string[]> {
     const map = new Map<string, string[]>();
-    for (let index = 0; index < prepared.length; index++) {
-      const entry = prepared[index]!;
-      const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex]!.instance.id);
-      map.set(entry.instance.id, peerIds);
+    const idToIndex = this.buildIdToIndexMap(prepared);
+    for (const seedId of seedIds) {
+      this.addCurrentTouchEntry(prepared, idToIndex, seedId, map);
     }
     return map;
   }
 
   /**
-   * Loads previous touch peers for the given brush ids from cache.
+   * Loads previous touch peers for seed brushes from cache.
    *
-   * @param brushIds Brush ids to look up.
+   * @param seedIds Seed dirty brush ids.
    * @returns Map of brush id to previous peer ids.
    */
-  buildPreviousTouchMap(brushIds: string[]): Map<string, string[]> {
+  buildPreviousTouchMapForSeeds(seedIds: ReadonlySet<string>): Map<string, string[]> {
     const map = new Map<string, string[]>();
-    for (const brushId of brushIds) {
-      map.set(brushId, this.cache.getTouchPeerIds(brushId));
+    for (const brushId of seedIds) {
+      map.set(brushId, this.cache.getTouchPeerIdsReadonly(brushId).slice());
     }
     return map;
   }
@@ -187,19 +218,58 @@ export class SolidCompilePlanner {
    * @param prepared Prepared brushes.
    * @param options Compile options.
    * @param refreshedBrushIds Brushes refreshed during prepare.
+   * @param spatialIndex Optional persistent index.
    */
   private buildPartialOrFullOverlapGraph(
     prepared: PreparedBrush[],
     options: SolidCompileOptions,
     refreshedBrushIds: ReadonlySet<string>,
+    spatialIndex?: BrushSpatialIndex,
   ): void {
     const seedIndices = this.resolveSeedIndices(prepared, options, refreshedBrushIds);
     if (seedIndices.size === 0 || seedIndices.size >= prepared.length) {
-      BrushOverlapGraph.build(prepared, this.boundsPad);
+      BrushOverlapGraph.build(prepared, this.boundsPad, spatialIndex);
       return;
     }
     const previousPeers = this.loadPreviousPeerIndices(prepared);
-    BrushOverlapGraph.buildPartial(prepared, this.boundsPad, seedIndices, previousPeers);
+    BrushOverlapGraph.buildPartial(prepared, this.boundsPad, seedIndices, previousPeers, spatialIndex);
+  }
+
+  /**
+   * Records current peers for one brush id into a touch map.
+   *
+   * @param prepared Prepared brushes.
+   * @param idToIndex Id-to-index map.
+   * @param brushId Brush id to record.
+   * @param map Touch map accumulator.
+   */
+  private addCurrentTouchEntry(
+    prepared: PreparedBrush[],
+    idToIndex: Map<string, number>,
+    brushId: string,
+    map: Map<string, string[]>,
+  ): void {
+    const index = idToIndex.get(brushId);
+    if (index === undefined) {
+      return;
+    }
+    const entry = prepared[index]!;
+    const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex]!.instance.id);
+    map.set(brushId, peerIds);
+    for (const peerId of peerIds) {
+      if (map.has(peerId)) {
+        continue;
+      }
+      const peerIndex = idToIndex.get(peerId);
+      if (peerIndex === undefined) {
+        continue;
+      }
+      const peerEntry = prepared[peerIndex]!;
+      map.set(
+        peerId,
+        peerEntry.overlappingPeerIndices.map((otherIndex) => prepared[otherIndex]!.instance.id),
+      );
+    }
   }
 
   /**
@@ -224,27 +294,22 @@ export class SolidCompilePlanner {
    * @returns Peer indices present in the prepared list.
    */
   private mapPeerIdsToIndices(brushId: string, idToIndex: Map<string, number>): number[] {
-    const peerIds = this.cache.getTouchPeerIds(brushId);
+    const peerIds = this.cache.getTouchPeerIdsReadonly(brushId);
+    if (peerIds.length === 0) {
+      return SolidCompilePlanner.emptyPeerIndices;
+    }
     const peerIndices: number[] = [];
     for (const peerId of peerIds) {
       const peerIndex = idToIndex.get(peerId);
-      if (peerIndex !== undefined) peerIndices.push(peerIndex);
+      if (peerIndex !== undefined) {
+        peerIndices.push(peerIndex);
+      }
     }
     return peerIndices;
   }
 
-  /**
-   * Returns whether every reusable brush has cached polygons.
-   *
-   * @param reusableIds Brush ids that would reuse cache.
-   * @returns True when all have polygon entries.
-   */
-  private allReusableHavePolygons(reusableIds: string[]): boolean {
-    for (const brushId of reusableIds) {
-      if (!this.cache.getPolygons(brushId)) return false;
-    }
-    return true;
-  }
+  /** Shared empty peer index list for brushes with no previous overlaps. */
+  private static readonly emptyPeerIndices: number[] = [];
 
   /**
    * Returns whether reusable brush order matches the previous compile order.

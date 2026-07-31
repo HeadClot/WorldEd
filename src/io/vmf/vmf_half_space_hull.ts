@@ -18,7 +18,7 @@ export interface HalfSpaceHull {
   faceLoops: HalfSpaceFaceLoop[];
 }
 
-const VERTEX_WELD_EPSILON = 1e-4;
+const DEFAULT_VERTEX_WELD_EPSILON = 1e-4;
 const PARALLEL_DENOM_EPSILON = 1e-10;
 
 /**
@@ -27,6 +27,21 @@ const PARALLEL_DENOM_EPSILON = 1e-10;
  * successive carving of a temporary oversized cube.
  */
 export class VmfHalfSpaceHullBuilder {
+  private readonly planeEpsilon: number;
+  private readonly vertexWeldEpsilon: number;
+
+  /**
+   * Creates a half-space hull builder.
+   *
+   * @param planeEpsilon On-plane / inside tolerance in the same units as the
+   *   planes (editor meters for VMF import).
+   * @param vertexWeldEpsilon Distance under which intersection points weld.
+   */
+  constructor(planeEpsilon: number = SOLID_FAT_PLANE_EPSILON, vertexWeldEpsilon: number = DEFAULT_VERTEX_WELD_EPSILON) {
+    this.planeEpsilon = planeEpsilon;
+    this.vertexWeldEpsilon = Math.max(vertexWeldEpsilon, planeEpsilon * 0.5);
+  }
+
   /**
    * Constructs a bounded convex polyhedron from outward SolidPlanes.
    *
@@ -35,13 +50,21 @@ export class VmfHalfSpaceHullBuilder {
    *   unbounded/empty.
    */
   build(planes: SolidPlane[]): HalfSpaceHull | null {
-    if (planes.length < 4) return null;
+    if (planes.length < 4) {
+      return null;
+    }
     const rawVertices = this.collectValidIntersections(planes);
-    if (rawVertices.length < 4) return null;
+    if (rawVertices.length < 4) {
+      return null;
+    }
     const welded = this.weldVertices(rawVertices);
-    if (welded.length < 4) return null;
+    if (welded.length < 4) {
+      return null;
+    }
     const faceLoops = this.buildFaceLoops(planes, welded);
-    if (faceLoops.length < 4) return null;
+    if (faceLoops.length < 4) {
+      return null;
+    }
     return { vertices: welded, faceLoops };
   }
 
@@ -106,7 +129,7 @@ export class VmfHalfSpaceHullBuilder {
    */
   private isInsideAllPlanes(point: THREE.Vector3, planes: SolidPlane[]): boolean {
     for (const plane of planes) {
-      if (plane.signedDistance(point) > SOLID_FAT_PLANE_EPSILON) {
+      if (plane.signedDistance(point) > this.planeEpsilon) {
         return false;
       }
     }
@@ -138,7 +161,7 @@ export class VmfHalfSpaceHullBuilder {
    */
   private findNearVertex(welded: THREE.Vector3[], point: THREE.Vector3): THREE.Vector3 | null {
     for (const existing of welded) {
-      if (existing.distanceTo(point) <= VERTEX_WELD_EPSILON) {
+      if (existing.distanceTo(point) <= this.vertexWeldEpsilon) {
         return existing;
       }
     }
@@ -158,7 +181,7 @@ export class VmfHalfSpaceHullBuilder {
     for (let planeIndex = 0; planeIndex < planes.length; planeIndex++) {
       const plane = planes[planeIndex];
       if (!plane) continue;
-      const onPlane = vertices.filter((vertex) => Math.abs(plane.signedDistance(vertex)) <= SOLID_FAT_PLANE_EPSILON);
+      const onPlane = vertices.filter((vertex) => Math.abs(plane.signedDistance(vertex)) <= this.planeEpsilon);
       if (onPlane.length < 3) continue;
       const ordered = this.orderPolygonOnPlane(onPlane, plane);
       if (ordered.length < 3) continue;

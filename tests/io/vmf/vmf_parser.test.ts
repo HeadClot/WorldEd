@@ -64,6 +64,63 @@ ${entitySolid}
     expect(world.entities[0]!.solids[0]!.sides).toHaveLength(6);
   });
 
+  it('parses vertices_plus rings under solid sides', () => {
+    const source = `
+world
+{
+	"id" "1"
+	"classname" "worldspawn"
+	solid
+	{
+		"id" "42"
+		side
+		{
+			"id" "1"
+			"plane" "(0 0 0) (1 0 0) (1 1 0)"
+			vertices_plus
+			{
+				"v" "0 0 0"
+				"v" "1 0 0"
+				"v" "1 1 0"
+				"v" "0 1 0"
+			}
+			"material" "DEV/DEV_MEASUREGENERIC01"
+			"uaxis" "[1 0 0 0] 0.25"
+			"vaxis" "[0 -1 0 0] 0.25"
+			"rotation" "0"
+			"lightmapscale" "16"
+			"smoothing_groups" "0"
+		}
+		side
+		{
+			"id" "2"
+			"plane" "(0 0 1) (0 1 1) (1 1 1)"
+			vertices_plus
+			{
+				"v" "0 0 1"
+				"v" "0 1 1"
+				"v" "1 1 1"
+			}
+			"material" "DEV/DEV_MEASUREGENERIC01"
+			"uaxis" "[1 0 0 0] 0.25"
+			"vaxis" "[0 -1 0 0] 0.25"
+			"rotation" "0"
+			"lightmapscale" "16"
+			"smoothing_groups" "0"
+		}
+	}
+}
+`;
+    const world = new VmfParser().parse(source);
+    expect(world.solids[0]!.sides[0]!.verticesPlus).toEqual([
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 1, y: 1, z: 0 },
+      { x: 0, y: 1, z: 0 },
+    ]);
+    expect(world.solids[0]!.sides[1]!.verticesPlus).toHaveLength(3);
+  });
+
   it('parses plane points and UV axes from the first side', () => {
     const world = new VmfParser().parse(
       buildAxisAlignedWorldSolidVmf({ x: -32, y: -32, z: -32 }, { x: 32, y: 32, z: 32 }),
