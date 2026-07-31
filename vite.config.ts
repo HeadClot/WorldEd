@@ -1,9 +1,12 @@
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [],
   resolve: {
-    tsconfigPaths: true,
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
   },
   // Relative base so GitHub Pages project sites resolve index.js next to index.html.
   base: './',
