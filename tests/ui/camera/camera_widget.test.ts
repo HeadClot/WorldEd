@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '@/theme.js';
-import { CameraWidget } from '@/ui/camera/camera_widget.js';
+import {
+  CAMERA_WIDGET_LABEL_CANVAS_HEIGHT_PX,
+  CAMERA_WIDGET_LABEL_CANVAS_WIDTH_PX,
+  CAMERA_WIDGET_LABEL_FONT_SIZE_PX,
+  CAMERA_WIDGET_LABEL_WORLD_HEIGHT,
+  CAMERA_WIDGET_LABEL_WORLD_WIDTH,
+  CameraWidget,
+} from '@/ui/camera/camera_widget.js';
 import {
   CAMERA_WIDGET_DEFAULT_SIZE_PX,
   CAMERA_WIDGET_MARGIN_PX,
@@ -33,6 +40,43 @@ function getArrowColor(arrow: THREE.ArrowHelper): number {
   if (!(material instanceof THREE.LineBasicMaterial))
     throw new Error('Orientation arrow line has an unexpected material');
   return material.color.getHex();
+}
+
+/**
+ * Returns the direction represented by an arrow helper before parent
+ * transforms.
+ */
+function getArrowDirection(arrow: THREE.ArrowHelper): THREE.Vector3 {
+  return new THREE.Vector3(0, 1, 0).applyQuaternion(arrow.quaternion).normalize();
+}
+
+/**
+ * Asserts that two vectors represent the same direction within floating-point
+ * tolerance.
+ */
+function expectVectorCloseTo(actual: THREE.Vector3, expected: THREE.Vector3): void {
+  expect(actual.x).toBeCloseTo(expected.x);
+  expect(actual.y).toBeCloseTo(expected.y);
+  expect(actual.z).toBeCloseTo(expected.z);
+}
+
+/** Returns all label sprites currently owned by a camera widget. */
+function getLabelSprites(widget: CameraWidget): THREE.Sprite[] {
+  const labelGroup = widget.getScene().children.find((child) => child !== widget.getArrowGroup());
+  if (!(labelGroup instanceof THREE.Group)) throw new Error('Camera widget label group is missing');
+  return labelGroup.children.filter((child): child is THREE.Sprite => child instanceof THREE.Sprite);
+}
+
+/** Creates the minimal canvas context required by camera-widget label drawing. */
+function createCanvasContextStub(fillText: ReturnType<typeof vi.fn>): CanvasRenderingContext2D {
+  return {
+    clearRect: vi.fn(),
+    fillText,
+    font: '',
+    textAlign: 'center',
+    textBaseline: 'middle',
+    fillStyle: '#000000',
+  } as unknown as CanvasRenderingContext2D;
 }
 
 describe('CameraWidget theme colors', () => {
@@ -170,6 +214,56 @@ describe('CameraWidget semantic axis colors', () => {
       ]).toEqual(meterColors);
     } finally {
       widget.dispose();
+    }
+  });
+});
+
+describe('CameraWidget profile directions', () => {
+  it('maps left-handed Unity and Unreal forward axes into editor space', () => {
+    const expectedEditorBasis = {
+      right: new THREE.Vector3(1, 0, 0),
+      up: new THREE.Vector3(0, 1, 0),
+      forward: new THREE.Vector3(0, 0, -1),
+    };
+
+    ['unity', 'unreal'].forEach((presetId) => {
+      const widget = new CameraWidget();
+      try {
+        widget.setPresentationContext(new ViewportPresentationContext(buildProfile(presetId)));
+
+        expectVectorCloseTo(getArrowDirection(widget.getArrowX()), expectedEditorBasis.right);
+        expectVectorCloseTo(getArrowDirection(widget.getArrowY()), expectedEditorBasis.up);
+        expectVectorCloseTo(getArrowDirection(widget.getArrowZ()), expectedEditorBasis.forward);
+      } finally {
+        widget.dispose();
+      }
+    });
+  });
+});
+
+describe('CameraWidget labels', () => {
+  it('draws high-resolution labels with a readable widget-relative footprint', () => {
+    const fillText = vi.fn();
+    const context = createCanvasContextStub(fillText);
+    const contextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context);
+    const widget = new CameraWidget();
+
+    try {
+      const sprites = getLabelSprites(widget);
+      expect(sprites).toHaveLength(3);
+      expect(fillText).toHaveBeenCalledTimes(3);
+      expect(context.font).toBe(`bold ${CAMERA_WIDGET_LABEL_FONT_SIZE_PX}px sans-serif`);
+
+      const texture = (sprites[0]?.material as THREE.SpriteMaterial).map;
+      const textureImage = texture?.image;
+      if (!(textureImage instanceof HTMLCanvasElement)) throw new Error('Camera widget label texture is not a canvas');
+      expect(textureImage.width).toBe(CAMERA_WIDGET_LABEL_CANVAS_WIDTH_PX);
+      expect(textureImage.height).toBe(CAMERA_WIDGET_LABEL_CANVAS_HEIGHT_PX);
+      expect(sprites[0]?.scale.x).toBe(CAMERA_WIDGET_LABEL_WORLD_WIDTH);
+      expect(sprites[0]?.scale.y).toBe(CAMERA_WIDGET_LABEL_WORLD_HEIGHT);
+    } finally {
+      widget.dispose();
+      contextSpy.mockRestore();
     }
   });
 });

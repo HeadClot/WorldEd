@@ -9,6 +9,21 @@ import {
 } from './camera_widget_layout.js';
 import { ViewportPresentationContext } from '@/viewports/presentation/viewport_presentation_context.js';
 
+/** Width of each orientation label canvas in physical pixels. */
+export const CAMERA_WIDGET_LABEL_CANVAS_WIDTH_PX = 256;
+
+/** Height of each orientation label canvas in physical pixels. */
+export const CAMERA_WIDGET_LABEL_CANVAS_HEIGHT_PX = 128;
+
+/** Font size used to draw each orientation label in physical pixels. */
+export const CAMERA_WIDGET_LABEL_FONT_SIZE_PX = 96;
+
+/** World-space width of each orientation label sprite. */
+export const CAMERA_WIDGET_LABEL_WORLD_WIDTH = 0.8;
+
+/** World-space height of each orientation label sprite. */
+export const CAMERA_WIDGET_LABEL_WORLD_HEIGHT = 0.4;
+
 /**
  * Camera orientation gizmo (X=red, Y=green, Z=blue) drawn through the shared
  * multi-view WebGL renderer. Owns only a tiny private scene and orthographic
@@ -187,12 +202,12 @@ export class CameraWidget {
     const ownerDocument = typeof document === 'undefined' ? null : document;
     if (!ownerDocument) return null;
     const canvas = ownerDocument.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 64;
+    canvas.width = CAMERA_WIDGET_LABEL_CANVAS_WIDTH_PX;
+    canvas.height = CAMERA_WIDGET_LABEL_CANVAS_HEIGHT_PX;
     const context = canvas.getContext('2d');
     if (!context) return null;
     context.clearRect(0, 0, canvas.width, canvas.height);
-    context.font = 'bold 32px sans-serif';
+    context.font = `bold ${CAMERA_WIDGET_LABEL_FONT_SIZE_PX}px sans-serif`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
@@ -200,7 +215,7 @@ export class CameraWidget {
     const texture = new THREE.CanvasTexture(canvas);
     const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
     const sprite = new THREE.Sprite(material);
-    sprite.scale.set(0.55, 0.275, 1);
+    sprite.scale.set(CAMERA_WIDGET_LABEL_WORLD_WIDTH, CAMERA_WIDGET_LABEL_WORLD_HEIGHT, 1);
     return sprite;
   }
 

@@ -130,7 +130,7 @@ export class ViewportPresentationContext {
   private resolveEditorFromProfileRotation(): THREE.Matrix3 {
     const target = this.profile?.coordinateSpace;
     if (!target) {
-      return new THREE.Matrix3();
+      return new THREE.Matrix3().identity();
     }
     return buildCoordinateRotation(target).invert();
   }

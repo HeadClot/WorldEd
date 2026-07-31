@@ -19,6 +19,14 @@ function buildProfile(presetId: string, metricUnit: GameProfile['metricUnit'] = 
 }
 
 describe('ViewportPresentationContext', () => {
+  it('uses the editor basis when no game profile is active', () => {
+    const context = new ViewportPresentationContext();
+
+    expect(context.getEditorRight()).toEqual(new THREE.Vector3(1, 0, 0));
+    expect(context.getEditorUp()).toEqual(new THREE.Vector3(0, 1, 0));
+    expect(context.getEditorForward()).toEqual(new THREE.Vector3(0, 0, -1));
+  });
+
   it('exposes semantic labels and unit scales for common engine profiles', () => {
     const expectations = [
       ['godot', '+X', '+Y', '-Z', 1, 'm'],
