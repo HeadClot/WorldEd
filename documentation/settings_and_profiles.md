@@ -58,7 +58,7 @@ A game profile defines how authored editor space is converted for export. It inc
 - A coordinate-space basis.
 - Target-style right, up, and forward axes.
 
-AiWorldEd's authored scene remains in its normal editor coordinate system. Switching profiles changes export conversion; it does not rotate or rescale the live scene.
+AiWorldEd's authored scene remains in its normal editor coordinate system and meters. The active profile also drives viewport presentation: Top, Front, Side, and Perspective cameras, grids, flying navigation, rulers, and the perspective orientation widget use the profile's semantic axes and unit display. The scene is not permanently rotated or rescaled, and export conversion remains responsible for the final target transform.
 
 Built-in or common profile intentions include Godot, Blender, Unity, and Unreal Engine. A custom profile is useful for an engine or pipeline with different axis and unit requirements.
 
@@ -69,6 +69,8 @@ Choose the unit that matches the destination pipeline:
 - Meter-scale workflows suit Godot, Unity, Blender, and many general 3D pipelines.
 - Centimeters are customary for Unreal Engine.
 - Imperial units may suit a project authored around feet or inches.
+
+Viewport measurements preserve physical size while changing their displayed unit. For example, one editor meter appears as 100 cm in a centimeter profile and 1000 mm in a millimeter profile. The orientation widget keeps red, green, and blue semantic colors for right, up, and forward while displaying the profile's signed axis labels.
 
 Do not use unit conversion to compensate for an object that was modeled at the wrong relative size. First make the scene internally consistent, then choose the correct export unit.
 

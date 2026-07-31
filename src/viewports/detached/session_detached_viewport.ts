@@ -341,6 +341,7 @@ export class DetachedViewportSession {
       inputManager: this.popupInputManager,
       sharedScene: this.renderSource.getScene(),
       surface: this.surface,
+      presentationContext: this.renderSource.getViewportPresentationContext?.(),
     });
     const world = this.renderSource.getWorldObject?.() ?? null;
     if (world) {

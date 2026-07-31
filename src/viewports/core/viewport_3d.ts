@@ -14,13 +14,11 @@ import { ShadingMode } from '@/types/shading_mode.js';
 import { CameraHeadlight } from './camera_headlight.js';
 import { blurActiveFormField } from '@/utils/dom_focus.js';
 import { isEditorHelperObject } from '@/utils/mesh_edge_sync.js';
-import {
-  getDefaultPerspectiveCameraPosition,
-  getDefaultSceneFocus,
-} from '@/navigation/placement/default_camera_placement.js';
+import { getDefaultSceneFocus } from '@/navigation/placement/default_camera_placement.js';
 import { SolidBrushEdgeFader } from '@/solid/model/solid_brush_edge_fader.js';
 import { measurePaneLogicalRectAgainst } from '@/viewports/pane/pane_content_rect.js';
 import { hideGizmoAfterRenderPass, showGizmoForRenderPass } from '@/transform/gizmo/gizmo_viewport_visibility.js';
+import { ViewportPresentationContext } from '@/viewports/presentation/viewport_presentation_context.js';
 
 /** Ambient fill intensity for the 3D viewport. */
 export const VIEWPORT_3D_AMBIENT_INTENSITY = 0.7;
@@ -75,7 +73,7 @@ export class Viewport3D extends BaseViewport {
    */
   constructor(options: Viewport3DOptions) {
     super({ ...options, name: options.name || 'Perspective' });
-    this.grids = new Grids(50, 50, 'xz', 'perspective');
+    this.grids = new Grids(50, 50, 'xz', 'perspective', this.presentationContext);
     this.gridRoot = this.grids.getScene();
     this.gridRoot.visible = false;
     this.initializeCamera();
@@ -85,6 +83,7 @@ export class Viewport3D extends BaseViewport {
     this.setupFlyingCamera(options.inputManager);
     this.scene.add(this.gridRoot);
     this.cameraWidget = new CameraWidget();
+    this.cameraWidget.setPresentationContext(this.presentationContext);
     this.shadingController = new ControllerViewportShading(this);
   }
 
@@ -94,8 +93,9 @@ export class Viewport3D extends BaseViewport {
    */
   private initializeCamera(): void {
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-    this.camera.position.copy(getDefaultPerspectiveCameraPosition());
+    this.camera.position.copy(this.presentationContext.getPerspectiveCameraPosition());
     const focus = getDefaultSceneFocus();
+    this.camera.up.copy(this.presentationContext.getEditorUp());
     this.camera.lookAt(focus.x, focus.y, focus.z);
   }
 
@@ -125,6 +125,31 @@ export class Viewport3D extends BaseViewport {
       (-3 * Math.PI) / 4,
       -Math.asin(1 / Math.sqrt(3)),
     );
+    this.applyNavigationBasis();
+  }
+
+  /** Rebinds flying navigation vectors to the active profile basis. */
+  private applyNavigationBasis(): void {
+    this.flyingCamera.setNavigationBasis(
+      this.presentationContext.getEditorRight(),
+      this.presentationContext.getEditorUp(),
+      this.presentationContext.getEditorForward(),
+    );
+  }
+
+  /** Reorients the perspective viewport when the active profile changes. */
+  override setPresentationContext(context: ViewportPresentationContext): void {
+    const focusDirection = new THREE.Vector3();
+    this.camera.getWorldDirection(focusDirection);
+    const focus = this.camera.position.clone().add(focusDirection.multiplyScalar(10));
+    const cameraPosition = this.camera.position.clone();
+    super.setPresentationContext(context);
+    this.grids.setPresentationContext(context);
+    this.camera.position.copy(cameraPosition);
+    this.camera.up.copy(context.getEditorUp());
+    this.camera.lookAt(focus.x, focus.y, focus.z);
+    this.cameraWidget.setPresentationContext(context);
+    this.applyNavigationBasis();
   }
 
   /**
@@ -133,7 +158,7 @@ export class Viewport3D extends BaseViewport {
    * @param speed World units moved per second before Shift boost.
    */
   setFlyingCameraMoveSpeed(speed: number): void {
-    this.flyingCamera.setMoveSpeed(speed);
+    this.flyingCamera.setMoveSpeed(this.presentationContext.fromProfileUnits(speed));
   }
 
   /**
