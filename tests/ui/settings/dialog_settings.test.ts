@@ -81,6 +81,31 @@ describe('SettingsDialog', () => {
     expect(store.getSnapshot().gameProfiles.length).toBe(before + 1);
   });
 
+  it('should confirm and reset the game profile collection', async () => {
+    store.addGameProfile('Custom Profile');
+    dialog.show();
+    const reset = dialog
+      .getPanelElement()
+      .querySelector('[data-settings-action="reset-game-profiles"]') as HTMLButtonElement;
+
+    expect(reset).toBeTruthy();
+    reset.click();
+    await Promise.resolve();
+
+    const yes = host.querySelector('[data-message-box-accept="true"]') as HTMLButtonElement;
+    expect(yes).toBeTruthy();
+    yes.click();
+    await Promise.resolve();
+
+    expect(store.getSnapshot().gameProfiles.map((profile) => profile.name)).toEqual([
+      'Default',
+      'Blender',
+      'Unity',
+      'Godot',
+      'Unreal',
+    ]);
+  });
+
   it('should place Load Game Profile immediately after Add Game Profile', () => {
     dialog.show();
     const actions = Array.from(dialog.getContentElement().querySelectorAll('[data-settings-action]')).map((element) =>

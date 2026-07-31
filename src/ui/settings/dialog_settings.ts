@@ -73,7 +73,7 @@ export class DialogSettings {
     this.panel = document.createElement('div');
     this.tabBar = document.createElement('div');
     this.contentHost = document.createElement('div');
-    this.gamesTab = new SettingsGamesTab(store);
+    this.gamesTab = new SettingsGamesTab(host, store);
     this.viewTab = new SettingsViewTab(store);
     this.keyboardTab = new SettingsKeyboardTab(store);
     this.mouseTab = new SettingsMouseTab(store);

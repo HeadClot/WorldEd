@@ -1,6 +1,7 @@
 import type { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
 import type { GameProfile } from '@/settings/store/settings_types.js';
 import { ManagerFileDialog } from '@/io/dialog/manager_file_dialog.js';
+import { showMessageBox } from '@/ui/dialog/dialog_message_box.js';
 import {
   getUnitLabel,
   getUnitOptionsForSystem,
@@ -25,6 +26,7 @@ import { SettingsCoordinateSpaceSection } from './settings_coordinate_space_sect
 
 /** Games tab content: game profiles list and unit preset editors. */
 export class SettingsGamesTab {
+  private readonly host: HTMLElement;
   private readonly store: EditorSettingsStore;
   private readonly fileDialogs: ManagerFileDialog;
   private readonly coordinateSpaceSection: SettingsCoordinateSpaceSection;
@@ -35,9 +37,11 @@ export class SettingsGamesTab {
   /**
    * Creates the Games tab panel.
    *
+   * @param host Parent element used for confirmation dialogs.
    * @param store Settings store driving profile data.
    */
-  constructor(store: EditorSettingsStore) {
+  constructor(host: HTMLElement, store: EditorSettingsStore) {
+    this.host = host;
     this.store = store;
     this.fileDialogs = new ManagerFileDialog();
     this.coordinateSpaceSection = new SettingsCoordinateSpaceSection(store);
@@ -102,7 +106,27 @@ export class SettingsGamesTab {
     });
     saveButton.dataset['settingsAction'] = 'save-game-profile';
     row.appendChild(saveButton);
+    const resetButton = createSettingsSecondaryButton('Reset Profiles', () => {
+      void this.resetGameProfiles();
+    });
+    resetButton.dataset['settingsAction'] = 'reset-game-profiles';
+    row.appendChild(resetButton);
     return row;
+  }
+
+  /** Confirms and restores the default game-profile collection. */
+  private async resetGameProfiles(): Promise<void> {
+    const confirmed = await showMessageBox({
+      host: this.host,
+      title: 'Reset Game Profiles',
+      message: 'Reset profiles to Default, Blender, Unity, Godot, and Unreal? Custom game profiles will be removed.',
+      confirmLabel: 'Reset',
+      cancelLabel: 'Cancel',
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.store.resetGameProfilesToDefaults();
   }
 
   /** Saves the active profile as a portable JSON file. */

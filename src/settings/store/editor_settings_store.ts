@@ -9,6 +9,7 @@ import {
 import type { AxisDirection, CoordinateSpaceDefinition } from '@/settings/coordinate/coordinate_space_types.js';
 import { CustomCoordinateSpaceRepository } from '@/settings/coordinate/custom_coordinate_space_repository.js';
 import { cloneProfile } from '@/settings/profiles/game_profile_clone.js';
+import { createSeededGameProfiles } from '@/settings/profiles/game_profile_defaults.js';
 import { createDefaultGameProfile } from './settings_defaults.js';
 import { createProfileId, GameProfileRepository } from '@/settings/profiles/game_profile_repository.js';
 import { areShortcutsEqual, isValidKeyboardShortcut } from '@/settings/keyboard/helpers_settings_keyboard.js';
@@ -283,6 +284,15 @@ export class EditorSettingsStore {
     this.persistProfiles();
     this.notifyListeners();
     return true;
+  }
+
+  /** Restores the Default profile and all bundled game profiles. */
+  resetGameProfilesToDefaults(): void {
+    this.profiles = createSeededGameProfiles(createProfileId());
+    this.activeGameProfileId = this.profiles[0]?.id ?? null;
+    this.repository.saveAll(this.profiles, this.activeGameProfileId);
+    this.repository.markBundledDefaultsInitialized();
+    this.notifyListeners();
   }
 
   /**
