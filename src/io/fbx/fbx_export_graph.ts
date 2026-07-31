@@ -3,7 +3,7 @@ import { FbxNodeIdPool } from './fbx_node_id_pool.js';
 import { buildFbxMeshPayload, type FbxMeshPayload } from './fbx_mesh_payload.js';
 import { FbxSurfaceRegistry, type FbxSurfaceRecord } from './fbx_surface_records.js';
 import { buildFbxCoordinateSettings, type FbxCoordinateSettings } from './fbx_coordinate_settings.js';
-import { EDITOR_COORDINATE_SPACE } from '@/io/coordinates/coordinate_space_transform.js';
+import { EDITOR_COORDINATE_SPACE, isReflectionMatrix } from '@/io/coordinates/coordinate_space_transform.js';
 
 /**
  * Intermediate plan describing the static FBX scene graph for one export. Built
@@ -167,7 +167,7 @@ function createMeshModelPlan(
   surfaces: FbxSurfaceRegistry,
 ): FbxModelPlan | null {
   const surfaceList = surfaces.registerMeshSurfaces(mesh);
-  const payload = buildFbxMeshPayload(mesh.geometry, surfaceList.length);
+  const payload = buildFbxMeshPayload(mesh.geometry, surfaceList.length, isReflectionMatrix(mesh.matrixWorld));
   if (!payload) return null;
   const geometryId = idPool.takeId();
   return {

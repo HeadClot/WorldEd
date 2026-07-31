@@ -89,6 +89,18 @@ describe('FbxExporter', () => {
     expect(mesh.matrixWorld.elements).toEqual(originalMatrix.elements);
   });
 
+  it('should reverse polygon winding for reflective Unreal export', () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3));
+    geometry.setIndex([0, 1, 2]);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial());
+    worldGroup.add(mesh);
+
+    const text = exporter.export(worldGroup, createProfile('unreal', 'centimeter'));
+
+    expect(text).toMatch(/PolygonVertexIndex: \*3 \{\s*\ta: 0,2,-2/);
+  });
+
   it('should include hierarchy names for groups and meshes', () => {
     const group = new THREE.Group();
     group.name = 'Room';
