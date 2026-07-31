@@ -73,7 +73,7 @@ export class DialogSettings {
     this.panel = document.createElement('div');
     this.tabBar = document.createElement('div');
     this.contentHost = document.createElement('div');
-    this.gamesTab = new SettingsGamesTab(host, store);
+    this.gamesTab = new SettingsGamesTab(store);
     this.viewTab = new SettingsViewTab(store);
     this.keyboardTab = new SettingsKeyboardTab(store);
     this.mouseTab = new SettingsMouseTab(store);
@@ -243,14 +243,15 @@ export class DialogSettings {
   }
 
   /**
-   * Creates the Reset... button that clears all editor storage after confirm.
+   * Creates the Factory Reset button that clears all editor storage after
+   * confirm.
    *
    * @returns Reset button element.
    */
   private createResetButton(): HTMLButtonElement {
     const button = document.createElement('button');
     styleSettingsResetButton(button);
-    button.textContent = 'Reset...';
+    button.textContent = 'Factory Reset';
     button.title = 'Reset all settings to defaults';
     button.dataset['settingsAction'] = 'reset-all-settings';
     button.addEventListener('click', () => {

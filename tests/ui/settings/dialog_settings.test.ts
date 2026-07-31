@@ -39,12 +39,12 @@ describe('SettingsDialog', () => {
     expect(panel.querySelector('[data-settings-tab="themes"]')).toBeNull();
   });
 
-  it('should place a Reset... control on the right of the tab bar', () => {
+  it('should place a Factory Reset control on the right of the tab bar', () => {
     dialog.show();
     const panel = dialog.getPanelElement();
     const reset = panel.querySelector('[data-settings-action="reset-all-settings"]') as HTMLButtonElement;
     expect(reset).toBeTruthy();
-    expect(reset.textContent).toBe('Reset...');
+    expect(reset.textContent).toBe('Factory Reset');
     expect(reset.style.marginLeft).toBe('auto');
   });
 
@@ -79,31 +79,6 @@ describe('SettingsDialog', () => {
     expect(addButton).toBeTruthy();
     addButton.click();
     expect(store.getSnapshot().gameProfiles.length).toBe(before + 1);
-  });
-
-  it('should confirm and reset the game profile collection', async () => {
-    store.addGameProfile('Custom Profile');
-    dialog.show();
-    const reset = dialog
-      .getPanelElement()
-      .querySelector('[data-settings-action="reset-game-profiles"]') as HTMLButtonElement;
-
-    expect(reset).toBeTruthy();
-    reset.click();
-    await Promise.resolve();
-
-    const yes = host.querySelector('[data-message-box-accept="true"]') as HTMLButtonElement;
-    expect(yes).toBeTruthy();
-    yes.click();
-    await Promise.resolve();
-
-    expect(store.getSnapshot().gameProfiles.map((profile) => profile.name)).toEqual([
-      'Default',
-      'Blender',
-      'Unity',
-      'Godot',
-      'Unreal',
-    ]);
   });
 
   it('should place Load Game Profile immediately after Add Game Profile', () => {

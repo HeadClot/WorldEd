@@ -240,27 +240,6 @@ describe('EditorSettingsStore', () => {
     expect(reloaded.getSnapshot().gameProfiles.some((profile) => profile.name === 'Blender')).toBe(false);
   });
 
-  it('should reset profiles without changing unrelated settings', () => {
-    store.addGameProfile('Custom Profile');
-    store.setTheme('light');
-    const customSpace = store.addCustomCoordinateSpace(store.getActiveGameProfile()?.id ?? '', 'Custom Space');
-
-    store.resetGameProfilesToDefaults();
-
-    const snapshot = store.getSnapshot();
-    expect(snapshot.gameProfiles.map((profile) => profile.name)).toEqual([
-      'Default',
-      'Blender',
-      'Unity',
-      'Godot',
-      'Unreal',
-    ]);
-    expect(snapshot.activeGameProfileId).toBe(snapshot.gameProfiles[0]!.id);
-    expect(snapshot.view.theme).toBe('light');
-    expect(snapshot.customCoordinateSpaces).toHaveLength(1);
-    expect(customSpace?.name).toBe('Custom Space');
-  });
-
   it('should notify subscribers when settings change', () => {
     const events: string[] = [];
     store.subscribe((snapshot) => {
