@@ -25,4 +25,17 @@ describe('ToolbarIcons', () => {
     expect(icon).toContain('stroke="currentColor"');
     expect(icon).toContain('M18 84.8528');
   });
+
+  it('renders the settings gear with the original outline and a right-nudged hub', () => {
+    const icon = ToolbarIcons.settings();
+    const host = document.createElement('div');
+    host.innerHTML = icon;
+    const svg = host.querySelector('svg');
+    const circle = svg?.querySelector('circle');
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(icon).toContain('M19.4 13.5v-3');
+    expect(circle?.getAttribute('cx')).toBe('13.5');
+    expect(circle?.getAttribute('cy')).toBe('12');
+    expect(circle?.getAttribute('r')).toBe('3.8');
+  });
 });

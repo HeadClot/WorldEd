@@ -25,6 +25,15 @@ export type SyncViewportsCallback = () => void;
 export type RefreshOutlinerCallback = () => void;
 
 /**
+ * Callback that copies outliner expand/collapse state from a source hierarchy
+ * root onto a clone after duplicate.
+ *
+ * @param sourceRoot Source hierarchy root.
+ * @param cloneRoot Clone hierarchy root.
+ */
+export type MirrorExpandStateCallback = (sourceRoot: THREE.Object3D, cloneRoot: THREE.Object3D) => void;
+
+/**
  * Callback invoked to show a status message.
  *
  * @param message The status message to display.
@@ -42,6 +51,7 @@ export class HandlerObjectAction {
   private selectionManager: ManagerSelection;
   private syncViewports: SyncViewportsCallback | null;
   private refreshOutliner: RefreshOutlinerCallback | null;
+  private mirrorExpandState: MirrorExpandStateCallback | null;
   private showStatusMessage: StatusMessageCallback | null;
 
   /**
@@ -57,6 +67,7 @@ export class HandlerObjectAction {
     this.selectionManager = selectionManager;
     this.syncViewports = null;
     this.refreshOutliner = null;
+    this.mirrorExpandState = null;
     this.showStatusMessage = null;
   }
 
@@ -76,6 +87,16 @@ export class HandlerObjectAction {
    */
   setRefreshOutliner(callback: RefreshOutlinerCallback): void {
     this.refreshOutliner = callback;
+  }
+
+  /**
+   * Sets the callback that mirrors outliner expand state after hierarchy
+   * duplicate.
+   *
+   * @param callback Source-to-clone expand copy function.
+   */
+  setMirrorExpandState(callback: MirrorExpandStateCallback): void {
+    this.mirrorExpandState = callback;
   }
 
   /**
@@ -287,11 +308,17 @@ export class HandlerObjectAction {
     }
     const clonedMeshes: THREE.Mesh[] = [];
     const clonedInspector: THREE.Object3D[] = [];
+    const solidExpandSources: THREE.Object3D[] = [];
+    const solidExpandClones: THREE.Object3D[] = [];
     if (solidNodes.length > 0) {
       const solidCommand = new CommandSolidBrushesDuplicate(solidNodes, new THREE.Vector3(0, 0, 0));
       this.commandStack.push(solidCommand);
       clonedMeshes.push(...solidCommand.getClonedMeshes());
-      clonedInspector.push(...solidCommand.getClonedInspectorRoots());
+      const solidClones = solidCommand.getClonedInspectorRoots();
+      clonedInspector.push(...solidClones);
+      solidExpandSources.push(...solidNodes);
+      solidExpandClones.push(...solidClones);
+      this.mirrorExpandStateForPairs(solidExpandSources, solidExpandClones);
     }
     if (regularMeshes.length > 0) {
       const regularCommand = new CommandObjectDuplicate(regularMeshes, this.worldObject, new THREE.Vector3(0, 0, 0));
@@ -303,6 +330,9 @@ export class HandlerObjectAction {
     if (clonedMeshes.length > 0 || clonedInspector.length > 0) {
       this.selectionManager.setSelection(clonedMeshes, clonedInspector);
     }
+    // Selection reveal expands ancestors of focused rows; re-apply so a closed
+    // source group does not leave its clone open after child brushes are selected.
+    this.mirrorExpandStateForPairs(solidExpandSources, solidExpandClones);
     this.showDuplicateFeedback(Math.max(clonedInspector.length, clonedMeshes.length));
     this.notifyRefresh();
   }
@@ -502,6 +532,27 @@ export class HandlerObjectAction {
       return parent;
     }
     return null;
+  }
+
+  /**
+   * Mirrors outliner expand/collapse state for each source/clone pair.
+   *
+   * @param sources Source hierarchy roots that were duplicated.
+   * @param clones Clone roots in the same order as sources.
+   */
+  private mirrorExpandStateForPairs(sources: readonly THREE.Object3D[], clones: readonly THREE.Object3D[]): void {
+    if (!this.mirrorExpandState) {
+      return;
+    }
+    const pairCount = Math.min(sources.length, clones.length);
+    for (let index = 0; index < pairCount; index++) {
+      const source = sources[index];
+      const clone = clones[index];
+      if (!source || !clone) {
+        continue;
+      }
+      this.mirrorExpandState(source, clone);
+    }
   }
 
   /**

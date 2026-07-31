@@ -25,6 +25,13 @@ export interface SolidModelLayoutHost {
   textureLock: TextureLockSettings;
   refreshAfterWorldMutation: () => void;
   refreshOutliner: () => void;
+  /**
+   * Expands outliner ancestors and scrolls so the given hierarchy object is
+   * visible (used after To First / To Last).
+   *
+   * @param object Mesh or hierarchy node to reveal.
+   */
+  revealOutlinerObject: (object: THREE.Object3D) => void;
   showStatusMessage: (message: string) => void;
 }
 
@@ -68,6 +75,7 @@ export function setupSolidModelLayout(host: SolidModelLayoutHost): SolidModelLay
 function wireSolidModelController(host: SolidModelLayoutHost, controller: SolidModelController): void {
   controller.setSyncViewports(() => host.refreshAfterWorldMutation());
   controller.setRefreshOutliner(() => host.refreshOutliner());
+  controller.setRevealOutlinerObject((object) => host.revealOutlinerObject(object));
   controller.setShowStatus((message) => host.showStatusMessage(message));
   controller.setTextureLockSettings(host.textureLock);
   controller.setActiveCameraProvider(() => host.viewport3D?.getCamera() ?? null);

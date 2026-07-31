@@ -39,6 +39,7 @@ export class SolidModelController {
   private getTransformMode: (() => TransformMode) | null;
   private syncViewports: (() => void) | null;
   private refreshOutliner: (() => void) | null;
+  private revealOutlinerObject: ((object: THREE.Object3D) => void) | null;
   private showStatus: ((message: string) => void) | null;
   private getActiveCamera: (() => THREE.Camera | null) | null;
   private getGridInterval: (() => number) | null;
@@ -98,6 +99,7 @@ export class SolidModelController {
     this.getTransformMode = null;
     this.syncViewports = null;
     this.refreshOutliner = null;
+    this.revealOutlinerObject = null;
     this.showStatus = null;
     this.getActiveCamera = null;
     this.getGridInterval = null;
@@ -140,6 +142,15 @@ export class SolidModelController {
    */
   setRefreshOutliner(callback: () => void): void {
     this.refreshOutliner = callback;
+  }
+
+  /**
+   * Sets callback that expands ancestors and scrolls the outliner to an object.
+   *
+   * @param callback Reveal function.
+   */
+  setRevealOutlinerObject(callback: ((object: THREE.Object3D) => void) | null): void {
+    this.revealOutlinerObject = callback;
   }
 
   /**
@@ -513,9 +524,77 @@ export class SolidModelController {
     this.panel.refresh();
     this.syncViewports?.();
     this.refreshOutliner?.();
+    this.revealOutlinerAfterReorder(reorderNodes);
     this.showStatus?.(
       end === 'first' ? 'Moved selection to first in hierarchy order' : 'Moved selection to last in hierarchy order',
     );
+  }
+
+  /**
+   * Scrolls the outliner to the most recently interacted reorder target after
+   * To First / To Last so the row stays in view at its new sibling position.
+   *
+   * @param reorderNodes Nodes that were moved.
+   */
+  private revealOutlinerAfterReorder(reorderNodes: readonly THREE.Object3D[]): void {
+    const focus = this.resolveOutlinerRevealFocusAfterReorder(reorderNodes);
+    if (!focus) {
+      return;
+    }
+    this.revealOutlinerObject?.(focus);
+  }
+
+  /**
+   * Picks which hierarchy node to follow after a sibling reorder. Prefers a
+   * node that was itself moved (last selected mesh, then inspector root), then
+   * a descendant under a moved group, then the last moved node.
+   *
+   * @param reorderNodes Nodes that were moved.
+   * @returns Focus object, or null when none is available.
+   */
+  private resolveOutlinerRevealFocusAfterReorder(reorderNodes: readonly THREE.Object3D[]): THREE.Object3D | null {
+    const reorderSet = new Set(reorderNodes);
+    const lastSelected = this.selectionManager.getLastSelectedObject();
+    if (lastSelected && reorderSet.has(lastSelected)) {
+      return lastSelected;
+    }
+    const inspectorObjects = this.selectionManager.getInspectorObjects();
+    for (let index = inspectorObjects.length - 1; index >= 0; index--) {
+      const inspectorObject = inspectorObjects[index];
+      if (inspectorObject && reorderSet.has(inspectorObject)) {
+        return inspectorObject;
+      }
+    }
+    if (lastSelected && this.reorderNodesContainFocus(reorderNodes, lastSelected)) {
+      return lastSelected;
+    }
+    for (let index = inspectorObjects.length - 1; index >= 0; index--) {
+      const inspectorObject = inspectorObjects[index];
+      if (inspectorObject && this.reorderNodesContainFocus(reorderNodes, inspectorObject)) {
+        return inspectorObject;
+      }
+    }
+    return reorderNodes[reorderNodes.length - 1] ?? null;
+  }
+
+  /**
+   * Returns whether a focus object is one of the reordered nodes or a brush
+   * under a reordered solid CSG group.
+   *
+   * @param reorderNodes Moved hierarchy nodes.
+   * @param focus Candidate focus object.
+   * @returns True when the focus belongs to the reorder set.
+   */
+  private reorderNodesContainFocus(reorderNodes: readonly THREE.Object3D[], focus: THREE.Object3D): boolean {
+    for (const node of reorderNodes) {
+      if (node === focus) {
+        return true;
+      }
+      if (isSolidCsgGroup(node) && this.objectIsDescendantOf(focus, node)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

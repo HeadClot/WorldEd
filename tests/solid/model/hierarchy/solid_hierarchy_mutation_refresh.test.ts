@@ -96,4 +96,27 @@ describe('solid hierarchy mutation refresh', () => {
     expect(stats.fullRebuild).toBe(false);
     expect(stats.recompiledBrushCount).toBe(0);
   });
+
+  it('reorders a group among many non-touching brushes with partial CSG', () => {
+    const { model, meshes } = makeLargeSolid(40);
+    const members = [meshes[5]!, meshes[6]!];
+    const group = new THREE.Group();
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(members[0]!);
+    group.add(members[1]!);
+    model.syncBrushOrderFromScene();
+    model.markDirty();
+    model.rebuild(true);
+    const groupIndexBefore = model.root.children.indexOf(group);
+    expect(groupIndexBefore).toBeGreaterThanOrEqual(0);
+    // Move group to last content sibling under the solid root.
+    model.root.remove(group);
+    model.root.add(group);
+    SolidModel.hierarchyMutationRefreshFromRoots([group]);
+    const stats = model.getCompilerStatsForTesting();
+    expect(stats.fullRebuild).toBe(false);
+    expect(stats.recompiledBrushCount).toBeLessThan(12);
+    expect(stats.reusedBrushCount).toBeGreaterThan(25);
+  });
 });

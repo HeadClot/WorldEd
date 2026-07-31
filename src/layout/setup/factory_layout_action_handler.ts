@@ -18,6 +18,14 @@ export interface ActionHandlerSharedCallbacks {
    */
   afterTransformCommit: (objects: readonly THREE.Object3D[]) => void;
   refreshOutliner: () => void;
+  /**
+   * Copies outliner expand/collapse from a duplicated source root onto its
+   * clone so closed groups stay closed.
+   *
+   * @param sourceRoot Source hierarchy root.
+   * @param cloneRoot Clone hierarchy root.
+   */
+  mirrorExpandState: (sourceRoot: THREE.Object3D, cloneRoot: THREE.Object3D) => void;
   showStatusMessage: (message: string) => void;
   onAxisRestrictionChanged: (axis: AlignmentAxis) => void;
   statusBar: StatusBar | null;
@@ -62,6 +70,7 @@ export function createWiredActionHandlers(
 function bindObjectActionCallbacks(handler: HandlerObjectAction, callbacks: ActionHandlerSharedCallbacks): void {
   handler.setSyncViewports(callbacks.syncViewports);
   handler.setRefreshOutliner(callbacks.refreshOutliner);
+  handler.setMirrorExpandState(callbacks.mirrorExpandState);
   handler.setShowStatusMessage(callbacks.showStatusMessage);
 }
 

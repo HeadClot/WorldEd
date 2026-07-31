@@ -41,6 +41,29 @@ describe('OutlinerItem', () => {
     expect(nameSpan.textContent).toBe('TestCube');
   });
 
+  it('should select only the base name when renaming an auto hex id row', () => {
+    mesh.name = 'Brush.00A';
+    item.rebindObject(mesh, 0, false);
+    container.appendChild(item.getElement());
+    item.startRename();
+    const input = item.getElement().querySelector('input') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    expect(input.value).toBe('Brush.00A');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe('Brush'.length);
+  });
+
+  it('should select the full name when renaming a row without auto hex id', () => {
+    mesh.name = 'Custom.Name';
+    item.rebindObject(mesh, 0, false);
+    container.appendChild(item.getElement());
+    item.startRename();
+    const input = item.getElement().querySelector('input') as HTMLInputElement;
+    expect(input.value).toBe('Custom.Name');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe('Custom.Name'.length);
+  });
+
   it('should dim the hex id suffix of auto hierarchy names', () => {
     mesh.name = 'Brush.00A';
     item.rebindObject(mesh, 0, false);
@@ -81,9 +104,11 @@ describe('OutlinerItem', () => {
     expandedItem.setExpandedState(true);
     const element = expandedItem.getElement();
     const chevron = element.querySelector('span:nth-child(1)') as HTMLElement;
-    expect(chevron.textContent).toBe('▼');
+    expect(chevron.textContent).toBe('▶');
+    expect(chevron.style.transform).toBe('rotate(90deg)');
     expandedItem.setExpandedState(false);
     expect(chevron.textContent).toBe('▶');
+    expect(chevron.style.transform).toBe('rotate(0deg)');
     expandedItem.dispose();
   });
 
@@ -99,7 +124,8 @@ describe('OutlinerItem', () => {
     const element = expandedItem.getElement();
     const chevron = element.querySelector('span:nth-child(1)') as HTMLElement;
     expect(chevron.style.visibility).not.toBe('hidden');
-    expect(chevron.textContent).toBe('▼');
+    expect(chevron.textContent).toBe('▶');
+    expect(chevron.style.transform).toBe('rotate(90deg)');
     expandedItem.setHasChildren(false);
     expect(chevron.style.visibility).toBe('hidden');
     expect(chevron.textContent).toBe('');
@@ -107,6 +133,7 @@ describe('OutlinerItem', () => {
     expandedItem.setExpandedState(false);
     expect(chevron.style.visibility).toBe('visible');
     expect(chevron.textContent).toBe('▶');
+    expect(chevron.style.transform).toBe('rotate(0deg)');
     expandedItem.dispose();
   });
 

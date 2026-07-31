@@ -291,6 +291,28 @@ export class OutlinerTree {
   }
 
   /**
+   * Copies expand/collapse state from a source hierarchy root onto a clone with
+   * matching content structure. Used after duplicate so a closed group stays
+   * closed on the clone (default policy would otherwise open new groups).
+   *
+   * @param sourceRoot Source hierarchy root that was duplicated.
+   * @param cloneRoot Clone hierarchy root with the same content child shape.
+   */
+  copyExpandStateFromSource(sourceRoot: THREE.Object3D, cloneRoot: THREE.Object3D): void {
+    this.copyExpandStateNodePair(sourceRoot, cloneRoot);
+  }
+
+  /**
+   * Returns whether a node uuid is currently expanded.
+   *
+   * @param uuid Object uuid.
+   * @returns True when the node is in the expanded set.
+   */
+  isExpandedUuid(uuid: string): boolean {
+    return this.expandedSet.has(uuid);
+  }
+
+  /**
    * Returns the currently active search query string.
    *
    * @returns The search query.
@@ -397,6 +419,55 @@ export class OutlinerTree {
     if (object instanceof THREE.Group) {
       this.expandedSet.add(object.uuid);
     }
+  }
+
+  /**
+   * Copies expand policy for one source/clone pair, then walks content children
+   * in order.
+   *
+   * @param source Source node.
+   * @param clone Clone node at the same relative path.
+   */
+  private copyExpandStateNodePair(source: THREE.Object3D, clone: THREE.Object3D): void {
+    const sourceChildren = getOutlinerContentChildren(source);
+    const cloneChildren = getOutlinerContentChildren(clone);
+    if (cloneChildren.length > 0) {
+      this.applyCopiedExpandStateToClone(source, clone);
+    }
+    const pairCount = Math.min(sourceChildren.length, cloneChildren.length);
+    for (let index = 0; index < pairCount; index++) {
+      this.copyExpandStateNodePair(sourceChildren[index]!, cloneChildren[index]!);
+    }
+  }
+
+  /**
+   * Marks a clone container as policy-initialized and open or closed to match
+   * the source.
+   *
+   * @param source Source container node.
+   * @param clone Clone container node.
+   */
+  private applyCopiedExpandStateToClone(source: THREE.Object3D, clone: THREE.Object3D): void {
+    this.expandPolicyInitialized.add(clone.uuid);
+    if (this.resolveSourceExpandedForCopy(source)) {
+      this.expandedSet.add(clone.uuid);
+      return;
+    }
+    this.expandedSet.delete(clone.uuid);
+  }
+
+  /**
+   * Resolves whether a source node should be treated as expanded when copying
+   * to a clone.
+   *
+   * @param source Source hierarchy node.
+   * @returns True when the clone should start expanded.
+   */
+  private resolveSourceExpandedForCopy(source: THREE.Object3D): boolean {
+    if (this.expandPolicyInitialized.has(source.uuid)) {
+      return this.expandedSet.has(source.uuid);
+    }
+    return source instanceof THREE.Group && getOutlinerContentChildren(source).length > 0;
   }
 
   /** Builds and styles the search input element. */

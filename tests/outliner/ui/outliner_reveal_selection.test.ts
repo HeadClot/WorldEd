@@ -69,4 +69,24 @@ describe('Outliner reveal selection', () => {
     selectionManager.toggleSelection(b);
     expect(selectionManager.getLastSelectedObject()).toBe(a);
   });
+
+  it('does not expand a closed group when selection uses the group as inspector root', () => {
+    const selectionManager = new ManagerSelection();
+    const panel = new PanelOutliner(container, selectionManager, root);
+    const group = new THREE.Group();
+    group.name = 'ClosedGroup';
+    const child = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    child.name = 'ChildBrush';
+    group.add(child);
+    root.add(group);
+    panel.refresh();
+    const tree = (panel as unknown as { tree: OutlinerTree | null }).tree;
+    expect(tree).toBeTruthy();
+    tree!.toggleExpand(group);
+    expect(tree!.isExpandedUuid(group.uuid)).toBe(false);
+    // Duplicate-style selection: child meshes + group as inspector focus.
+    selectionManager.setSelection([child], [group]);
+    expect(tree!.isExpandedUuid(group.uuid)).toBe(false);
+    panel.dispose();
+  });
 });

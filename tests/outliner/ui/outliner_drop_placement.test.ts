@@ -18,6 +18,8 @@ import {
   OUTLINER_ROW_HEIGHT_PX,
   OUTLINER_TREE_PADDING_PX,
   outlinerDragEdgeScrollHoldFactorResolve,
+  outlinerInsertLineLeftPx,
+  outlinerInsertLineNameDepthForTargetDepth,
 } from '@/outliner/ui/outliner_drop_placement.js';
 
 describe('resolveOutlinerDropPlacement', () => {
@@ -48,22 +50,26 @@ describe('resolveOutlinerDropPlacement', () => {
 });
 
 describe('resolveOutlinerIndentDepth', () => {
-  it('should treat chevron and icon lead-in as a shallow drop zone', () => {
+  it('should keep nested depth over the row chevron and icon', () => {
     const treeLeft = 100;
     const claimDepth1 = outlinerIndentDepthClaimMinX(1);
-    // Over depth-1 padding + chevron/icon, still before the name column → depth 0.
-    const overChromeX = treeLeft + claimDepth1 - 2;
-    const overNameX = treeLeft + claimDepth1 + 2;
-    expect(resolveOutlinerIndentDepth(overChromeX, treeLeft, 1)).toBe(0);
+    // Just left of the depth-1 indent → root. On the indent (chevron/icon) → depth 1.
+    const overGutterX = treeLeft + claimDepth1 - 2;
+    const overChromeX = treeLeft + claimDepth1 + 2;
+    const overNameX = treeLeft + claimDepth1 + OUTLINER_LEADING_CHROME_PX + 2;
+    expect(resolveOutlinerIndentDepth(overGutterX, treeLeft, 1)).toBe(0);
+    expect(resolveOutlinerIndentDepth(overChromeX, treeLeft, 1)).toBe(1);
     expect(resolveOutlinerIndentDepth(overNameX, treeLeft, 1)).toBe(1);
   });
 
-  it('should not require aiming at the far-left gutter for parent depth', () => {
+  it('should only elevate when the pointer is left of the nested row indent', () => {
     const treeLeft = 0;
-    // Mid-row over a depth-1 item, left of name: still elevates to depth 0.
+    // Mid-row over a depth-1 item (chevron/icon) keeps depth 1.
     const midChromeX = outlinerRowDepthOffsetPx(1) + OUTLINER_LEADING_CHROME_PX / 2;
     expect(midChromeX).toBeGreaterThan(OUTLINER_TREE_PADDING_PX + OUTLINER_BASE_PADDING_PX);
-    expect(resolveOutlinerIndentDepth(midChromeX, treeLeft, 1)).toBe(0);
+    expect(resolveOutlinerIndentDepth(midChromeX, treeLeft, 1)).toBe(1);
+    // True gutter left of the depth-1 indent elevates to root.
+    expect(resolveOutlinerIndentDepth(outlinerIndentDepthClaimMinX(1) - 1, treeLeft, 1)).toBe(0);
   });
 
   it('should clamp depth to the hovered row max', () => {
@@ -79,6 +85,17 @@ describe('resolveOutlinerIndentDepth', () => {
   });
 });
 
+describe('outlinerInsertLineNameDepthForTargetDepth', () => {
+  it('should map nested target depth to the parent name depth', () => {
+    expect(outlinerInsertLineNameDepthForTargetDepth(2)).toBe(1);
+    expect(outlinerInsertLineNameDepthForTargetDepth(1)).toBe(0);
+  });
+
+  it('should use full-width root lines for root-level targets', () => {
+    expect(outlinerInsertLineNameDepthForTargetDepth(0)).toBe(-1);
+  });
+});
+
 describe('resolveOutlinerInsertLineGeometry', () => {
   it('should span the full outliner width for root depth with no left margin', () => {
     const geometry = resolveOutlinerInsertLineGeometry(200, 0);
@@ -86,10 +103,10 @@ describe('resolveOutlinerInsertLineGeometry', () => {
     expect(geometry.width).toBe(200);
   });
 
-  it('should ignore measured name left for root depth full-width lines', () => {
+  it('should honor measured name left even at depth zero parent names', () => {
     const geometry = resolveOutlinerInsertLineGeometry(200, 0, 48);
-    expect(geometry.left).toBe(0);
-    expect(geometry.width).toBe(200);
+    expect(geometry.left).toBe(48);
+    expect(geometry.width).toBe(152);
   });
 
   it('should start at the measured name column for nested inserts', () => {
@@ -102,10 +119,20 @@ describe('resolveOutlinerInsertLineGeometry', () => {
     const root = resolveOutlinerInsertLineGeometry(200, 0);
     const child = resolveOutlinerInsertLineGeometry(200, 1);
     const grand = resolveOutlinerInsertLineGeometry(200, 2);
-    expect(child.left).toBe(outlinerRowDepthOffsetPx(1) + OUTLINER_LEADING_CHROME_PX);
-    expect(grand.left).toBe(outlinerRowDepthOffsetPx(2) + OUTLINER_LEADING_CHROME_PX);
+    expect(child.left).toBe(outlinerInsertLineLeftPx(1));
+    expect(grand.left).toBe(outlinerInsertLineLeftPx(2));
     expect(child.width).toBeLessThan(root.width);
     expect(grand.width).toBeLessThan(child.width);
+  });
+
+  it('should estimate parent name left for a nested after-child insert', () => {
+    // After Brush1 (depth 1 under Group depth 0) → line at Group name (depth 0).
+    const nameDepth = outlinerInsertLineNameDepthForTargetDepth(1);
+    expect(nameDepth).toBe(0);
+    const geometry = resolveOutlinerInsertLineGeometry(200, 1, outlinerInsertLineLeftPx(nameDepth));
+    expect(geometry.left).toBe(outlinerInsertLineLeftPx(0));
+    expect(geometry.left).toBe(outlinerRowDepthOffsetPx(0) + OUTLINER_LEADING_CHROME_PX);
+    expect(geometry.left).toBeLessThan(outlinerInsertLineLeftPx(1));
   });
 
   it('should keep left plus width within host width for half-pixel name edges', () => {
@@ -308,17 +335,42 @@ describe('elevateOutlinerDropTarget', () => {
 });
 
 describe('resolveOutlinerDropTarget', () => {
-  it('should resolve after an expanded solid via last brush and shallow X over chrome', () => {
+  it('should keep after last nested child when X is over that row chevron or icon', () => {
     const parents = new Map<string, string | null>([
       ['solid', null],
       ['brush', 'solid'],
     ]);
-    // Over depth-1 chevron/icon, not the far gutter.
-    const shallowOverChromeX = outlinerIndentDepthClaimMinX(1) - 4;
+    // Over depth-1 chevron/icon of the last child — stays nested under solid.
+    const nestedChromeX = outlinerIndentDepthClaimMinX(1) + 4;
     const resolved = resolveOutlinerDropTarget(
       'brush',
       1,
-      shallowOverChromeX,
+      nestedChromeX,
+      15,
+      0,
+      20,
+      0,
+      false,
+      (node) => parents.get(node) ?? null,
+      () => true,
+    );
+    expect(resolved.target).toBe('brush');
+    expect(resolved.placement).toBe('after');
+    expect(resolved.visualTarget).toBe('brush');
+    expect(resolved.insertDepth).toBe(1);
+  });
+
+  it('should elevate after last open child only when X is left of that row indent', () => {
+    const parents = new Map<string, string | null>([
+      ['solid', null],
+      ['brush', 'solid'],
+    ]);
+    // True gutter left of the nested row indent elevates to parent after.
+    const shallowGutterX = outlinerIndentDepthClaimMinX(1) - 4;
+    const resolved = resolveOutlinerDropTarget(
+      'brush',
+      1,
+      shallowGutterX,
       15,
       0,
       20,

@@ -409,7 +409,7 @@ export class SolidModel {
    * @param seedBrushIds Brushes whose hierarchy role changed.
    */
   hierarchyMutationRefresh(seedBrushIds: readonly string[]): void {
-    hierarchyMutationRefreshOnHost(this.getOpsHost(), seedBrushIds, () => this.pipeline.getLastBrushOrder());
+    hierarchyMutationRefreshOnHost(this.getOpsHost(), seedBrushIds);
   }
 
   /**

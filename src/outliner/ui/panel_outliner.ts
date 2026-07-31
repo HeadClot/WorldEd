@@ -226,6 +226,40 @@ export class PanelOutliner {
     }
   }
 
+  /**
+   * Copies expand/collapse state from a duplicated source root onto its clone.
+   *
+   * @param sourceRoot Source hierarchy root.
+   * @param cloneRoot Clone hierarchy root with matching content structure.
+   */
+  copyExpandStateFromSource(sourceRoot: THREE.Object3D, cloneRoot: THREE.Object3D): void {
+    if (this.isDisposed || !this.tree) {
+      return;
+    }
+    this.tree.copyExpandStateFromSource(sourceRoot, cloneRoot);
+  }
+
+  /**
+   * Expands ancestors and scrolls the outliner so a hierarchy object is visible
+   * after structural edits such as To First / To Last.
+   *
+   * @param object Mesh or hierarchy node to reveal.
+   */
+  revealObject(object: THREE.Object3D): void {
+    if (this.isDisposed || !this.tree) {
+      return;
+    }
+    this.tree.revealObject(object, this.selectionManager.getSelectedObjects(), this.hierarchySelection);
+  }
+
+  /**
+   * Scrolls to the most recently interacted selection (inspector root
+   * preferred).
+   */
+  revealLastSelection(): void {
+    this.revealLastSelectionInTree();
+  }
+
   /** Updates row highlight state without rebuilding the tree. */
   private refreshSelectionOnly(): void {
     if (this.isDisposed || !this.tree) return;
@@ -373,17 +407,32 @@ export class PanelOutliner {
   }
 
   /**
-   * Expands ancestors of the last selected mesh and scrolls its outliner row
-   * into view.
+   * Expands ancestors of the focus object and scrolls its outliner row into
+   * view. Prefers the last inspector object so selecting a closed group (or a
+   * group just duplicated) does not expand that group via child brush reveal.
    */
   private revealLastSelectionInTree(): void {
     if (!this.tree) return;
-    const focus = this.selectionManager.getLastSelectedObject();
+    const focus = this.resolveOutlinerRevealFocusObject();
     if (!focus) {
       this.refreshSelectionOnly();
       return;
     }
     this.tree.revealObject(focus, this.selectionManager.getSelectedObjects(), this.hierarchySelection);
+  }
+
+  /**
+   * Picks the hierarchy node used for expand-and-scroll after selection
+   * changes.
+   *
+   * @returns Inspector root when present, otherwise the last selected mesh.
+   */
+  private resolveOutlinerRevealFocusObject(): THREE.Object3D | null {
+    const inspectorObjects = this.selectionManager.getInspectorObjects();
+    if (inspectorObjects.length > 0) {
+      return inspectorObjects[inspectorObjects.length - 1] ?? null;
+    }
+    return this.selectionManager.getLastSelectedObject();
   }
 
   /**

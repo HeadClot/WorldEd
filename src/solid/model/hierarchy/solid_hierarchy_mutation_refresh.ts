@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { sameBrushOrder } from '@/solid/model/solid_brush_transform_sync.js';
 import type { SolidModelOpsHost } from '@/solid/model/solid_model_ops.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import {
@@ -9,30 +8,39 @@ import {
 
 /**
  * After group/ungroup/reparent on one solid: resync evaluation order and
- * recompile only seed brushes plus automatic touch peers. Full rebuild when
- * evaluation order changed.
+ * recompile only seed brushes plus cached touch peers. Evaluation-order changes
+ * no longer force a full-map rebuild (same partial strategy as To First/Last).
  *
  * @param host Solid model host.
  * @param seedBrushIds Brushes whose hierarchy placement changed.
- * @param compileOrderLastRead Previous compile evaluation order reader.
  */
-export function hierarchyMutationRefreshOnHost(
-  host: SolidModelOpsHost,
-  seedBrushIds: readonly string[],
-  compileOrderLastRead: () => string[],
-): void {
-  const previousOrder = compileOrderLastRead();
+export function hierarchyMutationRefreshOnHost(host: SolidModelOpsHost, seedBrushIds: readonly string[]): void {
   host.brushes.syncBrushOrderFromScene();
-  const evaluationList = host.brushes.getEvaluationList();
-  if (!sameBrushOrder(previousOrder, evaluationList)) {
+  const dirtyBrushIds = expandHierarchySeedsWithTouchPeers(host, seedBrushIds);
+  host.pipeline.clearRoutingTables();
+  if (dirtyBrushIds.size === 0) {
     host.markDirty();
-    host.rebuild(true);
-    return;
-  }
-  if (seedBrushIds.length > 0) {
-    host.markBrushesDirty(seedBrushIds);
+  } else {
+    host.markBrushesDirty(dirtyBrushIds);
   }
   host.rebuild(true);
+}
+
+/**
+ * Expands hierarchy seeds with one-hop cached touch peers for partial CSG.
+ *
+ * @param host Solid model host.
+ * @param seedBrushIds Moved or regrouped brush ids.
+ * @returns Dirty set for markBrushesDirty.
+ */
+function expandHierarchySeedsWithTouchPeers(host: SolidModelOpsHost, seedBrushIds: readonly string[]): Set<string> {
+  const dirtyBrushIds = new Set<string>(seedBrushIds);
+  for (const brushId of seedBrushIds) {
+    for (const peerId of host.pipeline.getCachedTouchPeerIds(brushId)) {
+      dirtyBrushIds.add(peerId);
+    }
+  }
+  return dirtyBrushIds;
 }
 
 /**
