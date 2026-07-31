@@ -22,7 +22,7 @@ describe('ToolsPaletteController', () => {
   let clipTool: ToolClipPlane;
   let selectionManager: ManagerSelection;
   let controller: ControllerToolsPalette;
-  let showStatus: ReturnType<typeof vi.fn>;
+  let showStatus: ReturnType<typeof vi.fn<(message: string) => void>>;
   let overlayPolicy: PolicyEditorOverlay;
   let modalRegistry: RegistryModalToolSession;
 
@@ -43,7 +43,7 @@ describe('ToolsPaletteController', () => {
     faceController = new ControllerFaceExtrusion(scene, new CommandStack(8), new GridSnap(false, 1), world);
     clipTool = new ToolClipPlane();
     selectionManager = new ManagerSelection();
-    showStatus = vi.fn();
+    showStatus = vi.fn<(message: string) => void>();
     overlayPolicy = new PolicyEditorOverlay();
     modalRegistry = new RegistryModalToolSession();
     const clipHandler = {

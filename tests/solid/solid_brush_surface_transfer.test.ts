@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushPlaneClip } from '@/solid/brush/solid_brush_plane_clip.js';
 import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { transferSurfacesByPlaneMatch } from '@/solid/brush/solid_brush_surface_transfer.js';
@@ -9,7 +9,7 @@ import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 
 describe('solid_brush_surface_transfer', () => {
   it('matches coplanar faces and leaves cap faces with new defaults', () => {
-    const source = FactorySolidBrush.createCenteredBox(2, 2, 2);
+    const source = SolidBrushFactory.createCenteredBox(2, 2, 2);
     const sideIndex = source.planes.findIndex((plane) => plane.normal.z > 0.9);
     const custom = createFaceSurfaceFromTileSize(source.planes[sideIndex!]!.normal, 'side.png', 2, 1);
     custom.uv = SurfaceUvMatrix.fromTrs(new THREE.Vector2(0.1, 0), source.planes[sideIndex!]!.normal, 0, 0.5, 1);

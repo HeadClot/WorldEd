@@ -46,13 +46,14 @@ export interface DependenciesBridgeTransformInteraction {
    * same contract as inspector edits and undo/redo
    * ({@link refreshSceneVisualsAfterTransformCommit}).
    *
-   * @param meshes Meshes that were transformed.
+   * @param objects Objects that received pose edits (meshes and/or groups).
    */
-  onAfterTransformCommit: (meshes: THREE.Mesh[]) => void;
+  onAfterTransformCommit: (objects: THREE.Object3D[]) => void;
   /**
    * Optional hook during transform drag for live solid CSG preview.
    *
-   * @param meshes Meshes currently being transformed.
+   * @param meshes Meshes currently being transformed (selection meshes; solid
+   *   live rebuild keys off brush/result meshes under the selection).
    */
   onTransformsLive?: (meshes: THREE.Mesh[]) => void;
   /**
@@ -520,30 +521,31 @@ export class BridgeTransformInteraction {
       this.applyBoundsFaceSelectionClick(clickEvent, clickViewport);
       return true;
     }
-    this.commitTransformAfterDrag(selectedObjects);
+    this.commitTransformAfterDrag(transformTargets);
     return true;
   }
 
   /**
    * Maps selection meshes to gizmo drag targets. Solid result meshes resolve to
-   * the solid model root so the whole solid moves without compounding live
-   * result→root bakes.
+   * the solid model root. Outliner hierarchy groups (including solid CSG
+   * groups) transform as units so group local pose updates instead of
+   * scattering child mesh poses.
    *
    * @param selected Selected content meshes.
    * @returns Objects that should receive pose edits.
    */
   private resolveDragTargets(selected: readonly THREE.Mesh[]): THREE.Object3D[] {
-    return resolveTransformTargets(selected);
+    return resolveTransformTargets(selected, this.deps.selectionManager.getInspectorObjects());
   }
 
   /**
    * Commits a completed transform drag through the shared layout visual refresh
    * (clones, selection, rulers, gizmo, solid finalize).
    *
-   * @param selectedObjects Meshes that were transformed.
+   * @param transformTargets Objects that received pose edits.
    */
-  private commitTransformAfterDrag(selectedObjects: THREE.Mesh[]): void {
-    this.deps.onAfterTransformCommit(selectedObjects);
+  private commitTransformAfterDrag(transformTargets: THREE.Object3D[]): void {
+    this.deps.onAfterTransformCommit(transformTargets);
   }
 
   /**

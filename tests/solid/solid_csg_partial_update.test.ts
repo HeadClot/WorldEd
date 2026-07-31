@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
 import { SolidCompiledPolygon } from '@/solid/algorithm/compile/solid_compiled_polygon.js';
@@ -24,7 +24,7 @@ function makeBoxBrush(
   operation: SolidOperation,
   position?: THREE.Vector3,
 ): SolidBrushInstance {
-  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
+  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
   if (position) instance.position.copy(position);
   return instance;

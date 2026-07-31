@@ -3,10 +3,12 @@ import * as THREE from 'three';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { formatHierarchyHexIndex, hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 
 /** Unit tests for hierarchical solid models with brush children. */
 describe('SolidModel', () => {
   it('creates a group root with result mesh and registry lookup', () => {
+    hierarchyNameAllocator.reset();
     const model = new SolidModel('TestSolid');
     expect(model.root).toBeInstanceOf(THREE.Group);
     expect(model.root.name).toBe('TestSolid');
@@ -26,6 +28,19 @@ describe('SolidModel', () => {
     expect(second.mesh?.parent).toBe(model.root);
     expect(SolidBrushVisual.isBrushObject(first.mesh!)).toBe(true);
     expect(SolidModel.fromObject(first.mesh!)).toBe(model);
+  });
+
+  it('names brushes with a shared global scrambled hex suffix stream', () => {
+    hierarchyNameAllocator.reset();
+    const model = new SolidModel('NameSolid');
+    const first = model.addBoxBrush(1, SolidOperation.Additive);
+    const second = model.addBoxBrush(1, SolidOperation.Additive);
+    expect(model.root.name).toBe('NameSolid');
+    expect(first.name).toBe(`Brush.${formatHierarchyHexIndex(1)}`);
+    expect(first.mesh!.name).toBe(first.name);
+    expect(second.name).toBe(`Brush.${formatHierarchyHexIndex(2)}`);
+    expect(second.mesh!.name).toBe(second.name);
+    expect(first.name).not.toBe(second.name);
   });
 
   it('rebuilds textured result geometry after brush transforms', () => {

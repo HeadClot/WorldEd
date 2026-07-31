@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import * as THREE from 'three';
@@ -50,7 +50,7 @@ describe('Solid interactive transform commit', () => {
     const model = new SolidModel('CommitCtrl');
     world.add(model.root);
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const controller = new ControllerSolidModel(
+    const controller = new SolidModelController(
       world,
       new CommandStack(8),
       new ManagerSelection(),
@@ -87,7 +87,7 @@ describe('Solid interactive transform commit', () => {
     other.pushTransformToMesh();
     model.syncBrushesFromScene();
     model.rebuild(true);
-    const controller = new ControllerSolidModel(
+    const controller = new SolidModelController(
       world,
       new CommandStack(8),
       new ManagerSelection(),

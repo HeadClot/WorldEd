@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SolidBrush } from '@/solid/brush/solid_brush.js';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { FaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
 import { convertWorldFaceMappingForCenteredBrush } from '@/solid/brush/solid_brush_uv_space.js';
@@ -40,7 +40,7 @@ export class VmfBrushFromSides {
     const planes = solid.sides.map((side) => this.sideToOutwardPlane(side, unitScale));
     const hull = this.hullBuilder.build(planes);
     if (!hull) return null;
-    const brush = FactorySolidBrush.createFromFaceLoops(hull.faceLoops.map((loop) => loop.vertices));
+    const brush = SolidBrushFactory.createFromFaceLoops(hull.faceLoops.map((loop) => loop.vertices));
     if (!brush) return null;
     return this.packageBuiltBrush(solid, brush, planes, hull.faceLoops, unitScale);
   }

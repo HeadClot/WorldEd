@@ -23,7 +23,8 @@ describe('CommandObjectDuplicate', () => {
     command.execute();
     expect(parent.children.length).toBe(3);
     const clone = parent.children[2]!;
-    expect(clone.name).toBe('Cube001_copy');
+    expect(clone.name.startsWith('Cube001.') || clone.name.startsWith('Cube.')).toBe(true);
+    expect(clone.name).not.toBe('Cube001');
     expect(clone.position.x).toBeCloseTo(1);
   });
 
@@ -61,8 +62,9 @@ describe('CommandObjectDuplicate', () => {
     const command = new CommandObjectDuplicate([mesh1, mesh2], parent, offset);
     command.execute();
     expect(parent.children.length).toBe(4);
-    expect(parent.children[2]!.name).toBe('Cube001_copy');
-    expect(parent.children[3]!.name).toBe('Sphere001_copy');
+    expect(parent.children[2]!.name).not.toBe('Cube001');
+    expect(parent.children[3]!.name).not.toBe('Sphere001');
+    expect(parent.children[2]!.name).not.toBe(parent.children[3]!.name);
   });
 
   it('should dispose resources on undo', () => {
@@ -129,7 +131,7 @@ describe('CommandObjectDuplicate', () => {
     sources.pop();
     command.execute();
     expect(parent.children.length).toBe(3);
-    expect(parent.children[2]!.name).toBe('Cube001_copy');
+    expect(parent.children[2]!.name).not.toBe('Cube001');
   });
 
   it('should return a defensive copy from getClonedMeshes', () => {

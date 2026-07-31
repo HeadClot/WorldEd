@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import { markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
+import { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { resolveTransformTargets } from '@/selection/object/resolve_transform_targets.js';
@@ -45,8 +46,8 @@ function createSolidWithBrush(): SolidModel {
  * @param world World root group.
  * @returns Controller under test.
  */
-function createController(world: THREE.Group): ControllerSolidModel {
-  return new ControllerSolidModel(world, new CommandStack(16), new ManagerSelection(), new MockSolidPanel() as never);
+function createController(world: THREE.Group): SolidModelController {
+  return new SolidModelController(world, new CommandStack(16), new ManagerSelection(), new MockSolidPanel() as never);
 }
 
 describe('Solid model gizmo transform targets', () => {
@@ -131,4 +132,39 @@ describe('Solid model gizmo transform targets', () => {
     expect(model.root.position.x).toBeCloseTo(5, 5);
     expect(model.getResultMesh().position.lengthSq()).toBeCloseTo(0, 8);
   });
+
+  it('recompiles solid result when a nested solid CSG group is moved as a unit', () => {
+    const world = new THREE.Group();
+    const model = new SolidModel('GroupMoveSolid');
+    world.add(model.root);
+    const brush = model.addBoxBrush(2, SolidOperation.Additive);
+    const group = new THREE.Group();
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(brush.mesh!);
+    model.rebuild(true);
+    const resultBefore = sampleResultWorldCenter(model);
+    group.position.set(8, 0, 0);
+    group.updateMatrixWorld(true);
+    const controller = createController(world);
+    controller.onTransformsCommitted([brush.mesh!]);
+    const resultAfter = sampleResultWorldCenter(model);
+    expect(group.position.x).toBeCloseTo(8, 5);
+    expect(brush.mesh!.position.lengthSq()).toBeCloseTo(0, 8);
+    expect(resultAfter.x).toBeCloseTo(resultBefore.x + 8, 4);
+  });
 });
+
+/**
+ * Samples the solid result mesh world-space bounding sphere center.
+ *
+ * @param model Solid model with compiled result geometry.
+ * @returns World center of the result mesh bounds.
+ */
+function sampleResultWorldCenter(model: SolidModel): THREE.Vector3 {
+  const result = model.getResultMesh();
+  result.updateMatrixWorld(true);
+  result.geometry.computeBoundingSphere();
+  const center = result.geometry.boundingSphere!.center.clone();
+  return center.applyMatrix4(result.matrixWorld);
+}

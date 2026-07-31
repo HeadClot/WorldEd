@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushVisual, SOLID_BRUSH_OCCLUDED_EDGE_USERDATA_KEY } from '@/solid/model/solid_brush_visual.js';
 import {
   SolidBrushEdgeMaterials,
@@ -29,7 +29,7 @@ describe('SolidBrushVisual', () => {
   });
 
   it('uses a single shared depth-tested distance-faded edge line', () => {
-    const brush = FactorySolidBrush.createCenteredBox(2, 2, 2);
+    const brush = SolidBrushFactory.createCenteredBox(2, 2, 2);
     const mesh = SolidBrushVisual.createHullPreview('Hull', brush, SolidOperation.Subtractive);
     const edges = collectDecorativeEdges(mesh);
     expect(edges).toHaveLength(1);

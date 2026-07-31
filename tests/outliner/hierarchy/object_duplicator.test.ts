@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { ObjectDuplicator } from '@/outliner/hierarchy/object_duplicator.js';
+import {
+  formatHierarchyHexIndex,
+  hierarchyNameAllocator,
+  sequentialIndexFromHierarchyName,
+} from '@/utils/utils_hierarchy_name_allocator.js';
 
 describe('ObjectDuplicator', () => {
   let originalMesh: THREE.Mesh;
@@ -82,32 +87,33 @@ describe('ObjectDuplicator', () => {
     expect(clone.position.z).toBeCloseTo(4);
   });
 
-  it('should generate first copy name correctly', () => {
-    const name = ObjectDuplicator.getNextDuplicateName('Cube001');
-    expect(name).toBe('Cube001_copy');
+  it('should allocate a unique hex name when duplicating a mesh', () => {
+    hierarchyNameAllocator.reset();
+    originalMesh.name = `Cube.${formatHierarchyHexIndex(1)}`;
+    hierarchyNameAllocator.noteExistingName(originalMesh.name);
+    const offset = new THREE.Vector3(1, 0, 0);
+    const clones = ObjectDuplicator.duplicate([originalMesh], offset);
+    expect(clones[0]!.name).toBe(`Cube.${formatHierarchyHexIndex(2)}`);
   });
 
-  it('should generate subsequent copy names correctly', () => {
-    const firstCopy = ObjectDuplicator.getNextDuplicateName('Cube001');
-    expect(firstCopy).toBe('Cube001_copy');
-    const secondCopy = ObjectDuplicator.getNextDuplicateName(firstCopy);
-    expect(secondCopy).toBe('Cube001_copy2');
-    const thirdCopy = ObjectDuplicator.getNextDuplicateName(secondCopy);
-    expect(thirdCopy).toBe('Cube001_copy3');
-  });
-
-  it('should duplicate multiple objects', () => {
+  it('should duplicate multiple objects with unique names', () => {
+    hierarchyNameAllocator.reset();
+    originalMesh.name = `Cube.${formatHierarchyHexIndex(1)}`;
+    hierarchyNameAllocator.noteExistingName(originalMesh.name);
     const mesh2 = new THREE.Mesh(
       new THREE.SphereGeometry(0.5, 16, 16),
       new THREE.MeshStandardMaterial({ color: 0x999999 }),
     );
     mesh2.position.set(5, 6, 7);
-    mesh2.name = 'Sphere001';
+    mesh2.name = `Sphere.${formatHierarchyHexIndex(2)}`;
+    hierarchyNameAllocator.noteExistingName(mesh2.name);
     const offset = new THREE.Vector3(1, 0, 0);
     const clones = ObjectDuplicator.duplicate([originalMesh, mesh2], offset);
     expect(clones.length).toBe(2);
-    expect(clones[0]!.name).toBe('Cube001_copy');
-    expect(clones[1]!.name).toBe('Sphere001_copy');
+    expect(clones[0]!.name).toBe(`Cube.${formatHierarchyHexIndex(3)}`);
+    expect(clones[1]!.name).toBe(`Sphere.${formatHierarchyHexIndex(4)}`);
+    expect(sequentialIndexFromHierarchyName(clones[0]!.name)).toBe(3);
+    expect(sequentialIndexFromHierarchyName(clones[1]!.name)).toBe(4);
     expect(clones[0]!.position.x).toBeCloseTo(3);
     expect(clones[1]!.position.x).toBeCloseTo(6);
   });

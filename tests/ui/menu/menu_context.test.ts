@@ -5,14 +5,14 @@ describe('MenuContext', () => {
   let container: HTMLElement;
   let menu: MenuContext;
   let items: MenuContextItem[];
-  let callback1: ReturnType<typeof vi.fn>;
-  let callback2: ReturnType<typeof vi.fn>;
+  let callback1: ReturnType<typeof vi.fn<() => void>>;
+  let callback2: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
     container = document.createElement('div');
     document.body.appendChild(container);
-    callback1 = vi.fn();
-    callback2 = vi.fn();
+    callback1 = vi.fn<() => void>();
+    callback2 = vi.fn<() => void>();
     items = [
       { label: 'Duplicate', callback: callback1 },
       { label: 'Delete', callback: callback2 },

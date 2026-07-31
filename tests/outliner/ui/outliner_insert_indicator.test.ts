@@ -44,7 +44,8 @@ describe('OutlinerInsertIndicator', () => {
     expect(indicator.getElement().style.display).toBe('block');
     expect(indicator.getElement().style.top).toBe('40px');
     expect(indicator.getElement().style.left).toBe('0px');
-    expect(indicator.getElement().style.width).toBe('180px');
+    expect(indicator.getElement().style.right).toBe('0px');
+    expect(indicator.getElement().style.width).toBe('auto');
     expect(indicator.getElement().parentElement).toBe(host);
     host.remove();
   });
@@ -82,7 +83,46 @@ describe('OutlinerInsertIndicator', () => {
     const nameLeft = 54;
     indicator.showForRow(host, rowRect, 'after', 2, nameLeft);
     expect(indicator.getElement().style.left).toBe(`${nameLeft}px`);
-    expect(indicator.getElement().style.width).toBe(`${200 - nameLeft}px`);
+    expect(indicator.getElement().style.right).toBe('0px');
+    expect(indicator.getElement().style.width).toBe('auto');
+    host.remove();
+  });
+
+  it('should pin the right edge when name-column left is a half pixel', () => {
+    const host = document.createElement('div');
+    host.style.position = 'relative';
+    document.body.appendChild(host);
+    host.getBoundingClientRect = () =>
+      ({
+        top: 0,
+        left: 0,
+        bottom: 200,
+        right: 200,
+        width: 200,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    Object.defineProperty(host, 'clientWidth', { value: 200, configurable: true });
+    Object.defineProperty(host, 'scrollTop', { value: 0, configurable: true });
+    const indicator = new OutlinerInsertIndicator();
+    const rowRect = {
+      top: 40,
+      bottom: 60,
+      left: 0,
+      right: 200,
+      width: 200,
+      height: 20,
+      x: 0,
+      y: 40,
+      toJSON: () => ({}),
+    } as DOMRect;
+    indicator.showForRow(host, rowRect, 'after', 1, 42.5);
+    const element = indicator.getElement();
+    expect(element.style.left).toBe('43px');
+    expect(element.style.right).toBe('0px');
+    expect(element.style.width).toBe('auto');
     host.remove();
   });
 
@@ -90,7 +130,7 @@ describe('OutlinerInsertIndicator', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const indicator = new OutlinerInsertIndicator();
-    indicator.positionAt(12, 0, 100);
+    indicator.positionAt(12, 0);
     expect(indicator.getElement().style.display).toBe('block');
     const rowRect = {
       top: 0,

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { CommandTextureApplyFace } from '@/texture/commands/command_texture_apply_face.js';
+import { CommandTextureFaceApply } from '@/texture/commands/command_texture_face_apply.js';
 import {
   applyMappingToTargets,
   applyTextureIdToTargets,
@@ -133,7 +133,7 @@ describe('UV editor texture preserve and UVMatrix reset/align', () => {
       { scaleU: 2, scaleV: 2, offsetU: 0.1, offsetV: 0, rotationDeg: 10 },
       'auto',
     );
-    new CommandTextureApplyFace(targets, editorMapping).execute();
+    new CommandTextureFaceApply(targets, editorMapping).execute();
     const afterMaps = getFaceTextureMaps(result);
     const afterZ = afterMaps.find((entry) => {
       const normal = computeRegionWorldNormal(result, entry.triangleIndices);
@@ -194,8 +194,8 @@ describe('UV editor texture preserve and UVMatrix reset/align', () => {
       { scaleU: 5, scaleV: 5, offsetU: 0.5, offsetV: 0.5, rotationDeg: 30 },
       'auto',
     );
-    new CommandTextureApplyFace(targets, distorted).execute();
-    new CommandTextureApplyFace(
+    new CommandTextureFaceApply(targets, distorted).execute();
+    new CommandTextureFaceApply(
       targets,
       createFaceTextureMappingFromTrs('', new THREE.Vector3(0, 1, 0), {
         scaleU: 1,

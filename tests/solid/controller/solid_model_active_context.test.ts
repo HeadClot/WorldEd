@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { CommandSolidDeleteBrushes } from '@/solid/commands/command_solid_delete_brushes.js';
-import { createDefaultStartupSolidModel } from '@/solid/model/default_startup_solid_model.js';
+import { CommandSolidBrushesDelete } from '@/solid/commands/brushes/command_solid_brushes_delete.js';
+import { createSolidModelStartupDefault } from '@/solid/model/solid_model_startup_default.js';
 import { markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
 
 /** Lightweight panel stand-in for active-model resolution tests. */
@@ -40,7 +40,7 @@ describe('Solid model active context', () => {
     const world = new THREE.Group();
     const selection = new ManagerSelection();
     const panel = new MockSolidPanel();
-    const controller = new ControllerSolidModel(world, new CommandStack(16), selection, panel as never);
+    const controller = new SolidModelController(world, new CommandStack(16), selection, panel as never);
     const model = new SolidModel('ActiveCtx');
     world.add(model.root);
     const first = model.addBoxBrush(2, SolidOperation.Additive);
@@ -50,7 +50,7 @@ describe('Solid model active context', () => {
     expect(panel.getModel()).toBe(model);
     expect(model.getBrushCount()).toBe(2);
 
-    new CommandSolidDeleteBrushes([second.mesh!]).execute();
+    new CommandSolidBrushesDelete([second.mesh!]).execute();
     selection.clearSelection();
     expect(selection.getSelectedObjects().size).toBe(0);
     expect(model.getBrushCount()).toBe(1);
@@ -65,8 +65,8 @@ describe('Solid model active context', () => {
     const world = new THREE.Group();
     const selection = new ManagerSelection();
     const panel = new MockSolidPanel();
-    const controller = new ControllerSolidModel(world, new CommandStack(16), selection, panel as never);
-    const startup = createDefaultStartupSolidModel();
+    const controller = new SolidModelController(world, new CommandStack(16), selection, panel as never);
+    const startup = createSolidModelStartupDefault();
     world.add(startup.root);
     expect(panel.getModel()).toBeNull();
     expect(controller.adoptFirstSolidModelInWorld()).toBe(true);
@@ -79,7 +79,7 @@ describe('Solid model active context', () => {
     const world = new THREE.Group();
     const selection = new ManagerSelection();
     const panel = new MockSolidPanel();
-    const controller = new ControllerSolidModel(world, new CommandStack(16), selection, panel as never);
+    const controller = new SolidModelController(world, new CommandStack(16), selection, panel as never);
     const model = new SolidModel('NestedAdd');
     world.add(model.root);
     const rootBrush = model.addBoxBrush(4, SolidOperation.Additive);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
@@ -7,7 +7,7 @@ import { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
 import { SolidAlgorithmRoutingTableCache } from '@/solid/algorithm/routing/solid_algorithm_routing_table_cache.js';
 import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 import { SurfaceCategory } from '@/solid/types/surface_category.js';
-import { CommandSolidDeleteBrushes } from '@/solid/commands/command_solid_delete_brushes.js';
+import { CommandSolidBrushesDelete } from '@/solid/commands/brushes/command_solid_brushes_delete.js';
 
 /**
  * Builds a prepared brush at a local position.
@@ -19,7 +19,7 @@ import { CommandSolidDeleteBrushes } from '@/solid/commands/command_solid_delete
  * @returns Prepared brush.
  */
 function makePrepared(id: string, size: number, operation: SolidOperation, x: number): PreparedBrush {
-  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
+  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
   instance.position.set(x, 0, 0);
   const modelBrush = instance.getModelSpaceBrush();
@@ -113,7 +113,7 @@ describe('Solid routing table cache regression', () => {
     const beforeTotal = resultVertexCount(model);
     expect(beforeTotal).toBeGreaterThan(0);
     const remove = brushes[2]!;
-    const command = new CommandSolidDeleteBrushes([remove.mesh!]);
+    const command = new CommandSolidBrushesDelete([remove.mesh!]);
     command.execute();
     expect(model.getBrushCount()).toBe(7);
     for (const brush of brushes) {
@@ -139,7 +139,7 @@ describe('Solid routing table cache regression', () => {
     const cutter = model.addBoxBrush(2, SolidOperation.Subtractive);
     model.rebuild(true);
     const withHole = resultVertexCount(model);
-    const command = new CommandSolidDeleteBrushes([cutter.mesh!]);
+    const command = new CommandSolidBrushesDelete([cutter.mesh!]);
     command.execute();
     expect(model.findBrush(outer.id)).toBeDefined();
     const outerPolys = model['pipeline']['compiler'].getCachedPolygons(outer.id);

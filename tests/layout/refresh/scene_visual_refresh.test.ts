@@ -111,6 +111,35 @@ describe('scene_visual_refresh', () => {
     expect(synced).toContain(group);
     expect(synced).toContain(mesh);
   });
+
+  it('expands intermediate groups into nested meshes for solid finalize', () => {
+    const group = new THREE.Group();
+    const nested = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    group.add(nested);
+    let finalizeMeshes: THREE.Mesh[] = [];
+    const host = createTransformCommitHost([], true);
+    host.finalizeSolidTransforms = (meshes) => {
+      finalizeMeshes = meshes.slice();
+      return true;
+    };
+    refreshSceneVisualsAfterTransformCommit(host, [group]);
+    expect(finalizeMeshes).toEqual([nested]);
+  });
+
+  it('passes only the solid result mesh when a solid root group is transformed', async () => {
+    const { SolidModel } = await import('@/solid/model/solid_model.js');
+    const { SolidOperation } = await import('@/solid/types/solid_operation.js');
+    const model = new SolidModel('RootFinalize');
+    model.addBoxBrush(2, SolidOperation.Additive);
+    let finalizeMeshes: THREE.Mesh[] = [];
+    const host = createTransformCommitHost([], true);
+    host.finalizeSolidTransforms = (meshes) => {
+      finalizeMeshes = meshes.slice();
+      return true;
+    };
+    refreshSceneVisualsAfterTransformCommit(host, [model.root]);
+    expect(finalizeMeshes).toEqual([model.getResultMesh()]);
+  });
 });
 
 /**

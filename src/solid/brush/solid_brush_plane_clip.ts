@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ConvexPolygonClipper } from '@/solid/algorithm/surface/convex_polygon_clipper.js';
-import { FactorySolidBrush } from './factory_solid_brush.js';
+import { SolidBrushFactory } from './solid_brush_factory.js';
 import { SolidBrush } from './solid_brush.js';
 import { SolidPlane } from './solid_plane.js';
 import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
@@ -35,7 +35,7 @@ export class SolidBrushPlaneClip {
       faceLoops.push(capLoop);
     }
     if (faceLoops.length < 4) return null;
-    return FactorySolidBrush.createFromFaceLoops(faceLoops);
+    return SolidBrushFactory.createFromFaceLoops(faceLoops);
   }
 
   /**

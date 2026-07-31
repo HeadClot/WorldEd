@@ -4,6 +4,7 @@ import { SelectionMode } from '@/types/selection_mode.js';
 import type { KeyboardShortcutSettings } from '@/settings/store/settings_types.js';
 import type {
   ActionCallback,
+  KeyboardActionCallback,
   SelectionModeCallback,
   ShadingModeCallback,
   TransformModeCallback,
@@ -39,7 +40,7 @@ export interface HandlerKeyboardShortcutActionHost {
   onSaveScene: ActionCallback | null;
   onLoadScene: ActionCallback | null;
   onExportGlb: ActionCallback | null;
-  onFitToSelection: ActionCallback | null;
+  onFitToSelection: KeyboardActionCallback | null;
   onFitAllViewports: ActionCallback | null;
   onShadingMode: ShadingModeCallback | null;
   onSelectionModeToggle: SelectionModeCallback | null;
@@ -350,7 +351,7 @@ export function handlerKeyboardShortcutHandleFitKeys(
 ): void {
   if (host.onFitToSelection && host.matchesShortcut(event, 'fit_selection')) {
     event.preventDefault();
-    host.onFitToSelection();
+    host.onFitToSelection(event);
   }
   if (host.onFitAllViewports && host.matchesShortcut(event, 'fit_all')) {
     event.preventDefault();

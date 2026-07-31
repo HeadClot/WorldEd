@@ -37,8 +37,31 @@ describe('OutlinerItem', () => {
   it('should display the object name', () => {
     const element = item.getElement();
     container.appendChild(element);
-    const nameSpan = element.querySelector('span:nth-child(3)') as HTMLSpanElement;
+    const nameSpan = item.getNameElement();
     expect(nameSpan.textContent).toBe('TestCube');
+  });
+
+  it('should dim the hex id suffix of auto hierarchy names', () => {
+    mesh.name = 'Brush.00A';
+    item.rebindObject(mesh, 0, false);
+    const nameSpan = item.getNameElement();
+    const base = nameSpan.children[0] as HTMLSpanElement;
+    const id = nameSpan.children[1] as HTMLSpanElement;
+    expect(base.textContent).toBe('Brush');
+    expect(id.textContent).toBe('.00A');
+    expect(id.style.color).toBe('rgb(106, 106, 106)');
+    expect(nameSpan.textContent).toBe('Brush.00A');
+  });
+
+  it('should ellipsize long names with overflow styles', () => {
+    const element = item.getElement();
+    const nameSpan = item.getNameElement();
+    expect(nameSpan.style.overflow).toBe('hidden');
+    expect(nameSpan.style.textOverflow).toBe('ellipsis');
+    expect(nameSpan.style.whiteSpace).toBe('nowrap');
+    expect(nameSpan.style.minWidth === '0' || nameSpan.style.minWidth === '0px').toBe(true);
+    expect(element.style.overflow).toBe('hidden');
+    expect(element.style.minWidth === '0' || element.style.minWidth === '0px').toBe(true);
   });
 
   it('should apply selection highlight', () => {
@@ -87,17 +110,24 @@ describe('OutlinerItem', () => {
     expandedItem.dispose();
   });
 
-  it('should show visible eye icon by default', () => {
+  it('should show visible open-eye SVG by default', () => {
     const element = item.getElement();
     const visSpan = element.querySelector('span:nth-child(4)') as HTMLElement;
-    expect(visSpan.textContent).toBe('👁');
+    const svg = visSpan.querySelector('svg');
+    expect(svg).not.toBeNull();
+    expect(visSpan.innerHTML).toContain('stroke="currentColor"');
+    expect(visSpan.innerHTML).not.toContain('#e74c3c');
+    expect(visSpan.title).toBe('Hide');
   });
 
-  it('should update visibility icon when toggled', () => {
+  it('should update visibility icon to eye with red slash when hidden', () => {
     item.setVisibilityState(false);
     const element = item.getElement();
     const visSpan = element.querySelector('span:nth-child(4)') as HTMLElement;
-    expect(visSpan.textContent).toBe('👁‍🗨');
+    expect(visSpan.querySelector('svg')).not.toBeNull();
+    expect(visSpan.innerHTML).toContain('#e74c3c');
+    expect(visSpan.innerHTML).toContain('M4 4l16 16');
+    expect(visSpan.title).toBe('Show');
   });
 
   it('should show unlocked lock icon by default', () => {
@@ -296,8 +326,9 @@ describe('OutlinerItem', () => {
     expect(chevron.style.alignItems).toBe('center');
     expect(icon.style.display).toBe('inline-flex');
     expect(icon.style.alignItems).toBe('center');
-    expect(name.style.display).toBe('flex');
-    expect(name.style.alignItems).toBe('center');
+    expect(name.style.display).toBe('block');
+    expect(name.style.lineHeight).toBe('16px');
+    expect(name.style.textOverflow).toBe('ellipsis');
     expect(visibility.style.display).toBe('inline-flex');
     expect(lock.style.display).toBe('inline-flex');
     itemWithChildren.dispose();

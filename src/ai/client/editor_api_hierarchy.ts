@@ -17,8 +17,8 @@ import { nameToSolidOperation, solidOperationToName } from './editor_api_operati
 import { CommandObjectGroup } from '@/outliner/commands/command_object_group.js';
 import { CommandObjectRename } from '@/outliner/commands/command_object_rename.js';
 import { CommandObjectUngroup } from '@/outliner/commands/command_object_ungroup.js';
-import { CommandObjectReparentObjects } from '@/outliner/commands/command_object_reparent_objects.js';
-import { CommandSolidSetGroupOperation } from '@/solid/commands/command_solid_set_group_operation.js';
+import { CommandObjectObjectsReparent } from '@/outliner/commands/command_object_objects_reparent.js';
+import { CommandSolidGroupOperationSet } from '@/solid/commands/group/command_solid_group_operation_set.js';
 import { isSolidCsgGroup, isValidSolidTreeParent, markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
@@ -73,7 +73,7 @@ export class EditorApiHierarchy {
     if (operation === null) return fail(`Invalid operation: ${args.operation}`);
     const groups = this.resolveGroups(args.groupIds);
     if (groups.length === 0) return fail('No matching solid CSG groups found');
-    this.host.commandStack.push(new CommandSolidSetGroupOperation(groups, operation));
+    this.host.commandStack.push(new CommandSolidGroupOperationSet(groups, operation));
     this.afterMutation(`Set group operation to ${args.operation}`);
     return {
       ok: true,
@@ -125,7 +125,7 @@ export class EditorApiHierarchy {
     const insertBefore = this.resolveInsertBefore(destination.model, args.insertBeforeId);
     const moves = this.buildReparentMoves(nodes, destination, insertBefore);
     if (moves.length === 0) return fail('No valid reparent moves (same solid model required)');
-    this.host.commandStack.push(new CommandObjectReparentObjects(moves));
+    this.host.commandStack.push(new CommandObjectObjectsReparent(moves));
     this.rebuildModel(destination.model);
     this.afterMutation(`Reparented ${moves.length} node(s)`);
     return {

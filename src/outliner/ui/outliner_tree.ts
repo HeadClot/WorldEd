@@ -3,19 +3,14 @@ import { OutlinerItem } from './outliner_item.js';
 import { isObjectLocked } from '@/utils/object_lock.js';
 import { Theme } from '@/theme.js';
 import { hexToRgb } from '@/utils/utils_color.js';
-import { OUTLINER_TREE_PADDING_PX } from './outliner_drop_placement.js';
-import { OutlinerTreeDragSession } from './session_outliner_tree_drag.js';
+import { OutlinerTreeDragSession } from './outliner_tree_drag_session.js';
 import {
   computeOutlinerDepth,
   getOutlinerContentChildren,
   outlinerPassesSearchFilter,
 } from './outliner_tree_hierarchy.js';
-import {
-  areOutlinerObjectListsEqual,
-  findOutlinerSingleInsertionIndex,
-  findOutlinerSingleRemovalIndex,
-} from './outliner_tree_list_diff.js';
 import { computeOutlinerRowSelected } from './outliner_tree_selection.js';
+import { OutlinerVirtualList } from './outliner_virtual_list.js';
 import type {
   TreeContextMenuCallback,
   TreeLockCallback,
@@ -36,14 +31,13 @@ export type {
 
 /**
  * Tree view component that renders a hierarchical outliner. Manages
- * expand/collapse state, search filtering, and item synchronization.
+ * expand/collapse state, search filtering, and virtualized item rows.
  */
 export class OutlinerTree {
   private container: HTMLElement;
   private treeElement: HTMLElement;
   private searchElement: HTMLInputElement;
   private root: THREE.Object3D;
-  private itemMap: Map<THREE.Object3D, OutlinerItem>;
   private expandedSet: Set<string>;
   /**
    * UUIDs that already received a default expand/collapse policy (user choice
@@ -59,8 +53,10 @@ export class OutlinerTree {
   private contextMenuCallback: TreeContextMenuCallback | null;
   private onReparent: TreeReparentCallback | null;
   private readonly dragSession: OutlinerTreeDragSession;
+  private readonly virtualList: OutlinerVirtualList;
   private lastSelectedObjects: Set<THREE.Mesh>;
   private lastHierarchySelection: Set<THREE.Object3D>;
+  private lastLogicalObjects: THREE.Object3D[];
 
   /**
    * Creates a new outliner tree bound to a root Three.js object.
@@ -71,7 +67,6 @@ export class OutlinerTree {
   constructor(container: HTMLElement, root: THREE.Object3D) {
     this.container = container;
     this.root = root;
-    this.itemMap = new Map();
     this.expandedSet = new Set();
     this.expandedSet.add(this.root.uuid);
     this.expandPolicyInitialized = new Set();
@@ -86,19 +81,30 @@ export class OutlinerTree {
     this.onReparent = null;
     this.lastSelectedObjects = new Set();
     this.lastHierarchySelection = new Set();
+    this.lastLogicalObjects = [];
     this.treeElement = document.createElement('div');
     this.searchElement = document.createElement('input');
+    this.buildSearchBar();
+    this.buildTreeContainer();
     this.dragSession = new OutlinerTreeDragSession({
       getRoot: () => this.root,
       getTreeElement: () => this.treeElement,
-      getItemMap: () => this.itemMap,
+      getItemMap: () => this.virtualList.itemMapGet(),
+      getLogicalObjects: () => this.virtualList.logicalObjectsGet(),
+      getScrollOffsetPx: () => this.virtualList.scrollOffsetPxGet(),
+      scrollByDeltaPx: (deltaY) => this.virtualList.scrollByDeltaPx(deltaY),
+      getObjectDepth: (object) => computeOutlinerDepth(object, this.root),
       isExpanded: (uuid) => this.expandedSet.has(uuid),
       getContentChildren: (parent) => getOutlinerContentChildren(parent),
       getOnReparent: () => this.onReparent,
     });
-    this.buildSearchBar();
-    this.buildTreeContainer();
-    this.dragSession.bindTreeHostDropTarget(this.treeElement);
+    this.virtualList = new OutlinerVirtualList(
+      this.treeElement,
+      () => this.poolSlotCreate(),
+      (item, object) => this.poolSlotChromeApply(item, object),
+    );
+    this.dragSession.treeHostDropTargetBind(this.treeElement);
+    this.dragSession.insertIndicatorAttach(this.treeElement);
     this.container.appendChild(this.searchElement);
     this.container.appendChild(this.treeElement);
   }
@@ -172,7 +178,7 @@ export class OutlinerTree {
    * @returns Indicator element.
    */
   getInsertIndicatorForTests(): HTMLElement {
-    return this.dragSession.getInsertIndicatorElement();
+    return this.dragSession.insertIndicatorElementGet();
   }
 
   /**
@@ -188,157 +194,159 @@ export class OutlinerTree {
     }
     this.lastSelectedObjects = selectedObjects;
     this.lastHierarchySelection = hierarchySelection;
-    if (this.tryIncrementalStructureRefresh(selectedObjects, hierarchySelection)) {
+    const desired = this.collectVisibleContentObjects();
+    this.lastLogicalObjects = desired;
+    this.virtualList.logicalObjectsSet(desired);
+  }
+
+  /**
+   * Updates selection highlighting without rebuilding the logical list.
+   *
+   * @param selectedObjects Currently selected meshes.
+   * @param hierarchySelection Hierarchy nodes selected in the outliner.
+   */
+  updateSelectionStates(selectedObjects: Set<THREE.Mesh>, hierarchySelection: Set<THREE.Object3D>): void {
+    if (this.isDisposed) {
       return;
     }
-    this.reconcileVisibleTree(selectedObjects, hierarchySelection);
+    this.lastSelectedObjects = selectedObjects;
+    this.lastHierarchySelection = hierarchySelection;
+    this.virtualList.visibleChromeRefresh();
   }
 
   /**
-   * Reconciles visible rows with the desired hierarchy (and search filter).
+   * Expands ancestor groups, refreshes if needed, and scrolls to the object
+   * row.
    *
+   * @param focusObject Mesh or hierarchy node to reveal.
    * @param selectedObjects Currently selected meshes.
    * @param hierarchySelection Hierarchy nodes selected in the outliner.
    */
-  private reconcileVisibleTree(selectedObjects: Set<THREE.Mesh>, hierarchySelection: Set<THREE.Object3D>): void {
-    const desired = this.collectVisibleContentObjects();
-    this.disposeItemsNotInDesiredSet(new Set(desired));
-    const nextMap = this.buildReconciledItemMap(desired, selectedObjects, hierarchySelection);
-    this.replaceTreeDomFromItemMap(nextMap);
-  }
-
-  /**
-   * Disposes outliner rows whose objects are no longer in the visible list.
-   *
-   * @param desiredSet Objects that should remain listed.
-   */
-  private disposeItemsNotInDesiredSet(desiredSet: Set<THREE.Object3D>): void {
-    this.itemMap.forEach((item, object) => {
-      if (desiredSet.has(object)) {
-        return;
-      }
-      item.dispose();
-      this.itemMap.delete(object);
-    });
-  }
-
-  /**
-   * Builds an ordered item map for the desired visible objects, reusing rows.
-   *
-   * @param desired Ordered visible hierarchy objects.
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   * @returns Map from object to outliner item in display order.
-   */
-  private buildReconciledItemMap(
-    desired: readonly THREE.Object3D[],
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): Map<THREE.Object3D, OutlinerItem> {
-    const nextMap = new Map<THREE.Object3D, OutlinerItem>();
-    for (const object of desired) {
-      const item = this.reuseOrCreateVisibleItem(object, selectedObjects, hierarchySelection);
-      if (item) {
-        nextMap.set(object, item);
-      }
-    }
-    return nextMap;
-  }
-
-  /**
-   * Reuses an existing row or creates a configured item for a visible object.
-   *
-   * @param object Hierarchy object for the row.
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   * @returns Configured item, or null when the object is not under the root.
-   */
-  private reuseOrCreateVisibleItem(
-    object: THREE.Object3D,
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): OutlinerItem | null {
-    const depth = computeOutlinerDepth(object, this.root);
-    if (depth < 0) {
-      return null;
-    }
-    const hasChildren = getOutlinerContentChildren(object).length > 0;
-    const existing = this.itemMap.get(object);
-    if (!existing) {
-      return this.createConfiguredItem(object, depth, hasChildren, selectedObjects, hierarchySelection);
-    }
-    this.refreshExistingItemChrome(existing, object, depth, hasChildren, selectedObjects, hierarchySelection);
-    return existing;
-  }
-
-  /**
-   * Updates depth, expand, visibility, lock, and selection on a reused row.
-   *
-   * @param item Existing outliner item.
-   * @param object Hierarchy object for the row.
-   * @param depth Indentation depth.
-   * @param hasChildren Whether the object has content children.
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   */
-  private refreshExistingItemChrome(
-    item: OutlinerItem,
-    object: THREE.Object3D,
-    depth: number,
-    hasChildren: boolean,
+  revealObject(
+    focusObject: THREE.Object3D,
     selectedObjects: Set<THREE.Mesh>,
     hierarchySelection: Set<THREE.Object3D>,
   ): void {
-    item.setDepth(depth);
-    item.setHasChildren(hasChildren);
-    item.refreshIcon();
-    this.applySelectionState(item, object, selectedObjects, hierarchySelection);
-    this.applyExpandedState(item, object);
-    this.applyVisibilityState(item, object);
-    this.applyLockState(item, object);
-  }
-
-  /**
-   * Replaces tree DOM children from an ordered item map.
-   *
-   * @param nextMap Ordered map of visible items.
-   */
-  private replaceTreeDomFromItemMap(nextMap: Map<THREE.Object3D, OutlinerItem>): void {
-    const fragment = document.createDocumentFragment();
-    nextMap.forEach((item) => {
-      fragment.appendChild(item.getElement());
-    });
-    this.itemMap = nextMap;
-    this.treeElement.replaceChildren(fragment);
-    this.dragSession.attachIndicator(this.treeElement);
-  }
-
-  /**
-   * Attempts a single-row add/remove or selection-only update when the visible
-   * hierarchy barely changed.
-   *
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   * @returns True when the tree was updated without a full rebuild.
-   */
-  private tryIncrementalStructureRefresh(
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): boolean {
-    const desired = this.collectVisibleContentObjects();
-    const current = Array.from(this.itemMap.keys());
-    if (desired.length === current.length && areOutlinerObjectListsEqual(desired, current)) {
+    if (this.isDisposed) {
+      return;
+    }
+    const expanded = this.expandAncestorsOf(focusObject);
+    if (expanded || !this.logicalObjectContains(focusObject)) {
+      this.refresh(selectedObjects, hierarchySelection);
+    } else {
       this.updateSelectionStates(selectedObjects, hierarchySelection);
-      this.syncVisibleItemChrome(desired);
-      return true;
     }
-    if (desired.length === current.length + 1) {
-      return this.tryInsertSingleVisibleObject(desired, current, selectedObjects, hierarchySelection);
+    this.scrollToObject(focusObject);
+  }
+
+  /**
+   * Expands every ancestor of an object up to (and including) the tree root.
+   *
+   * @param obj Object whose ancestors should be expanded.
+   * @returns True when the expanded set changed.
+   */
+  expandAncestorsOf(obj: THREE.Object3D): boolean {
+    let changed = false;
+    if (!this.expandedSet.has(this.root.uuid)) {
+      this.expandedSet.add(this.root.uuid);
+      changed = true;
     }
-    if (desired.length === current.length - 1) {
-      return this.tryRemoveSingleVisibleObject(desired, current, selectedObjects, hierarchySelection);
+    let current: THREE.Object3D | null = obj.parent;
+    while (current) {
+      if (!this.expandedSet.has(current.uuid)) {
+        this.expandedSet.add(current.uuid);
+        changed = true;
+      }
+      if (current === this.root) {
+        break;
+      }
+      current = current.parent;
     }
-    return false;
+    return changed;
+  }
+
+  /**
+   * Scrolls the tree so the row for an object is visible.
+   *
+   * @param obj Object whose outliner row should scroll into view.
+   */
+  scrollToObject(obj: THREE.Object3D): void {
+    this.virtualList.scrollToObject(obj);
+  }
+
+  /**
+   * Toggles the expanded state of an object in the tree.
+   *
+   * @param obj The Three.js object to toggle.
+   */
+  toggleExpand(obj: THREE.Object3D): void {
+    const key = obj.uuid;
+    this.expandPolicyInitialized.add(key);
+    if (this.expandedSet.has(key)) {
+      this.expandedSet.delete(key);
+    } else {
+      this.expandedSet.add(key);
+    }
+    this.refresh(this.lastSelectedObjects, this.lastHierarchySelection);
+  }
+
+  /**
+   * Returns the currently active search query string.
+   *
+   * @returns The search query.
+   */
+  getSearchQuery(): string {
+    return this.searchQuery;
+  }
+
+  /** Disposes the tree and removes all DOM elements. */
+  dispose(): void {
+    this.isDisposed = true;
+    this.dragSession.dragSessionEnd();
+    this.virtualList.dispose();
+    if (this.searchElement.parentNode) {
+      this.searchElement.parentNode.removeChild(this.searchElement);
+    }
+    if (this.treeElement.parentNode) {
+      this.treeElement.parentNode.removeChild(this.treeElement);
+    }
+  }
+
+  /**
+   * Returns the number of logical content rows (not DOM pool size).
+   *
+   * @returns Logical row count for tests and layout helpers.
+   */
+  getVisibleRowCountForTests(): number {
+    return this.virtualList.logicalRowCountGet();
+  }
+
+  /**
+   * Returns the virtual row pool size for tests.
+   *
+   * @returns Number of recycled DOM row widgets.
+   */
+  getPoolSizeForTests(): number {
+    return this.virtualList.poolSizeGetForTests();
+  }
+
+  /**
+   * Returns outliner row elements currently in the DOM (pool slots).
+   *
+   * @returns Row HTML elements in pool order.
+   */
+  getRowElementsForTests(): HTMLElement[] {
+    return Array.from(this.treeElement.querySelectorAll('.editor-outliner-row')) as HTMLElement[];
+  }
+
+  /**
+   * Returns whether a logical object is present in the last collected list.
+   *
+   * @param object Hierarchy object to look up.
+   * @returns True when the object is in the logical list.
+   */
+  private logicalObjectContains(object: THREE.Object3D): boolean {
+    return this.lastLogicalObjects.includes(object);
   }
 
   /**
@@ -391,292 +399,6 @@ export class OutlinerTree {
     }
   }
 
-  /**
-   * Inserts one newly visible object when the rest of the list is unchanged.
-   *
-   * @param desired Desired visible object list.
-   * @param current Current itemMap key order.
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   * @returns True when the insert succeeded.
-   */
-  private tryInsertSingleVisibleObject(
-    desired: readonly THREE.Object3D[],
-    current: readonly THREE.Object3D[],
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): boolean {
-    const insertIndex = findOutlinerSingleInsertionIndex(desired, current);
-    if (insertIndex < 0) {
-      return false;
-    }
-    const objectToInsert = desired[insertIndex];
-    if (!objectToInsert) {
-      return false;
-    }
-    const depth = computeOutlinerDepth(objectToInsert, this.root);
-    if (depth < 0) {
-      return false;
-    }
-    const hasChildren = getOutlinerContentChildren(objectToInsert).length > 0;
-    const item = this.createConfiguredItem(objectToInsert, depth, hasChildren, selectedObjects, hierarchySelection);
-    const beforeElement = this.treeElement.children[insertIndex] ?? null;
-    this.treeElement.insertBefore(item.getElement(), beforeElement);
-    this.rebuildItemMapOrder(desired, item, objectToInsert);
-    this.syncChromeAfterSingleInsert(objectToInsert);
-    this.updateSelectionStates(selectedObjects, hierarchySelection);
-    return true;
-  }
-
-  /**
-   * Updates only the inserted row and its parent after a single-row insert.
-   *
-   * @param insertedObject Newly visible hierarchy object.
-   */
-  private syncChromeAfterSingleInsert(insertedObject: THREE.Object3D): void {
-    this.syncVisibleItemChrome([insertedObject]);
-    const parent = insertedObject.parent;
-    if (!parent || parent === this.root) {
-      return;
-    }
-    if (!this.itemMap.has(parent)) {
-      return;
-    }
-    this.syncVisibleItemChrome([parent]);
-  }
-
-  /**
-   * Removes one object that left the visible list when the rest is unchanged.
-   *
-   * @param desired Desired visible object list.
-   * @param current Current itemMap key order.
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   * @returns True when the remove succeeded.
-   */
-  private tryRemoveSingleVisibleObject(
-    desired: readonly THREE.Object3D[],
-    current: readonly THREE.Object3D[],
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): boolean {
-    const removeIndex = findOutlinerSingleRemovalIndex(desired, current);
-    if (removeIndex < 0) {
-      return false;
-    }
-    const objectToRemove = current[removeIndex];
-    if (!objectToRemove) {
-      return false;
-    }
-    const item = this.itemMap.get(objectToRemove);
-    if (!item) {
-      return false;
-    }
-    item.dispose();
-    this.itemMap.delete(objectToRemove);
-    this.rebuildItemMapOrder(desired, null, null);
-    this.updateSelectionStates(selectedObjects, hierarchySelection);
-    this.syncVisibleItemChrome(desired);
-    return true;
-  }
-
-  /**
-   * Creates an outliner row with selection, expand, visibility, and lock state.
-   *
-   * @param object Hierarchy object for the row.
-   * @param depth Indentation depth.
-   * @param hasChildren Whether the object has content children.
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   * @returns Configured outliner item.
-   */
-  private createConfiguredItem(
-    object: THREE.Object3D,
-    depth: number,
-    hasChildren: boolean,
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): OutlinerItem {
-    const item = new OutlinerItem(object, depth, hasChildren);
-    this.applySelectionState(item, object, selectedObjects, hierarchySelection);
-    this.applyExpandedState(item, object);
-    this.applyVisibilityState(item, object);
-    this.applyLockState(item, object);
-    this.bindItemCallbacks(item);
-    return item;
-  }
-
-  /**
-   * Rebuilds itemMap insertion order to match the desired visible list.
-   *
-   * @param desired Desired visible objects.
-   * @param insertedItem Optional newly created item.
-   * @param insertedObject Optional object for the inserted item.
-   */
-  private rebuildItemMapOrder(
-    desired: readonly THREE.Object3D[],
-    insertedItem: OutlinerItem | null,
-    insertedObject: THREE.Object3D | null,
-  ): void {
-    const nextMap = new Map<THREE.Object3D, OutlinerItem>();
-    for (const object of desired) {
-      if (insertedObject && object === insertedObject && insertedItem) {
-        nextMap.set(object, insertedItem);
-        continue;
-      }
-      const existing = this.itemMap.get(object);
-      if (existing) {
-        nextMap.set(object, existing);
-      }
-    }
-    this.itemMap = nextMap;
-  }
-
-  /**
-   * Refreshes depth, children chevron, expand, visibility, and lock chrome.
-   *
-   * @param visibleObjects Currently visible hierarchy objects.
-   */
-  private syncVisibleItemChrome(visibleObjects: readonly THREE.Object3D[]): void {
-    for (const object of visibleObjects) {
-      const item = this.itemMap.get(object);
-      if (!item) {
-        continue;
-      }
-      const depth = computeOutlinerDepth(object, this.root);
-      if (depth >= 0) {
-        item.setDepth(depth);
-      }
-      item.setHasChildren(getOutlinerContentChildren(object).length > 0);
-      item.refreshIcon();
-      this.applyExpandedState(item, object);
-      this.applyVisibilityState(item, object);
-      this.applyLockState(item, object);
-    }
-  }
-
-  /**
-   * Updates selection highlighting without rebuilding the tree.
-   *
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   */
-  updateSelectionStates(selectedObjects: Set<THREE.Mesh>, hierarchySelection: Set<THREE.Object3D>): void {
-    if (this.isDisposed) {
-      return;
-    }
-    this.lastSelectedObjects = selectedObjects;
-    this.lastHierarchySelection = hierarchySelection;
-    this.itemMap.forEach((item, obj) => {
-      item.setSelectionState(computeOutlinerRowSelected(obj, selectedObjects, hierarchySelection));
-    });
-  }
-
-  /**
-   * Expands ancestor groups, refreshes if needed, and scrolls to the object
-   * row.
-   *
-   * @param focusObject Mesh or hierarchy node to reveal.
-   * @param selectedObjects Currently selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
-   */
-  revealObject(
-    focusObject: THREE.Object3D,
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): void {
-    if (this.isDisposed) {
-      return;
-    }
-    const expanded = this.expandAncestorsOf(focusObject);
-    if (expanded || !this.itemMap.has(focusObject)) {
-      this.refresh(selectedObjects, hierarchySelection);
-    } else {
-      this.updateSelectionStates(selectedObjects, hierarchySelection);
-    }
-    this.scrollToObject(focusObject);
-  }
-
-  /**
-   * Expands every ancestor of an object up to (and including) the tree root.
-   *
-   * @param obj Object whose ancestors should be expanded.
-   * @returns True when the expanded set changed.
-   */
-  expandAncestorsOf(obj: THREE.Object3D): boolean {
-    let changed = false;
-    if (!this.expandedSet.has(this.root.uuid)) {
-      this.expandedSet.add(this.root.uuid);
-      changed = true;
-    }
-    let current: THREE.Object3D | null = obj.parent;
-    while (current) {
-      if (!this.expandedSet.has(current.uuid)) {
-        this.expandedSet.add(current.uuid);
-        changed = true;
-      }
-      if (current === this.root) {
-        break;
-      }
-      current = current.parent;
-    }
-    return changed;
-  }
-
-  /**
-   * Scrolls the tree so the row for an object is visible.
-   *
-   * @param obj Object whose outliner row should scroll into view.
-   */
-  scrollToObject(obj: THREE.Object3D): void {
-    const item = this.itemMap.get(obj);
-    if (!item) {
-      return;
-    }
-    const row = item.getElement();
-    if (typeof row.scrollIntoView === 'function') {
-      row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-  }
-
-  /**
-   * Toggles the expanded state of an object in the tree.
-   *
-   * @param obj The Three.js object to toggle.
-   */
-  toggleExpand(obj: THREE.Object3D): void {
-    const key = obj.uuid;
-    this.expandPolicyInitialized.add(key);
-    if (this.expandedSet.has(key)) {
-      this.expandedSet.delete(key);
-    } else {
-      this.expandedSet.add(key);
-    }
-    this.refresh(this.lastSelectedObjects, this.lastHierarchySelection);
-  }
-
-  /**
-   * Returns the currently active search query string.
-   *
-   * @returns The search query.
-   */
-  getSearchQuery(): string {
-    return this.searchQuery;
-  }
-
-  /** Disposes the tree and removes all DOM elements. */
-  dispose(): void {
-    this.isDisposed = true;
-    this.dragSession.endRowDragSession();
-    this.clearItems();
-    if (this.searchElement.parentNode) {
-      this.searchElement.parentNode.removeChild(this.searchElement);
-    }
-    if (this.treeElement.parentNode) {
-      this.treeElement.parentNode.removeChild(this.treeElement);
-    }
-  }
-
   /** Builds and styles the search input element. */
   private buildSearchBar(): void {
     this.searchElement.type = 'text';
@@ -706,29 +428,43 @@ export class OutlinerTree {
   /** Builds and styles the tree container element. */
   private buildTreeContainer(): void {
     this.treeElement.style.flex = '1';
-    this.treeElement.style.overflowY = 'auto';
-    this.treeElement.style.padding = `${OUTLINER_TREE_PADDING_PX}px`;
+    this.treeElement.style.minHeight = '0';
+    this.treeElement.style.minWidth = '0';
+    this.treeElement.style.width = '100%';
+    this.treeElement.style.overflow = 'hidden';
     this.treeElement.style.position = 'relative';
-    this.dragSession.attachIndicator(this.treeElement);
-  }
-
-  /** Removes all existing items from the DOM and clears state maps. */
-  private clearItems(): void {
-    this.itemMap.forEach((item) => {
-      item.dispose();
-    });
-    this.itemMap.clear();
-    this.treeElement.replaceChildren();
-    this.dragSession.attachIndicator(this.treeElement);
   }
 
   /**
-   * Returns the number of visible content rows (excludes the insert indicator).
+   * Creates a pool row bound to the hierarchy root as a temporary placeholder.
    *
-   * @returns Visible row count for tests and layout helpers.
+   * @returns Configured outliner item with callbacks bound.
    */
-  getVisibleRowCountForTests(): number {
-    return this.itemMap.size;
+  private poolSlotCreate(): OutlinerItem {
+    const item = new OutlinerItem(this.root, 0, false);
+    this.bindItemCallbacks(item);
+    item.poolVisibilitySet(false);
+    return item;
+  }
+
+  /**
+   * Applies depth, selection, expand, visibility, and lock chrome for a slot.
+   *
+   * @param item Recycled outliner row.
+   * @param object Hierarchy object bound to the slot.
+   */
+  private poolSlotChromeApply(item: OutlinerItem, object: THREE.Object3D): void {
+    const depth = computeOutlinerDepth(object, this.root);
+    if (depth < 0) {
+      item.poolVisibilitySet(false);
+      return;
+    }
+    const hasChildren = getOutlinerContentChildren(object).length > 0;
+    item.rebindObject(object, depth, hasChildren);
+    this.applySelectionState(item, object);
+    this.applyExpandedState(item, object);
+    this.applyVisibilityState(item, object);
+    this.applyLockState(item, object);
   }
 
   /**
@@ -737,16 +473,9 @@ export class OutlinerTree {
    *
    * @param item The outliner item to update.
    * @param obj The Three.js object associated with the item.
-   * @param selectedObjects The set of selected meshes.
-   * @param hierarchySelection Hierarchy nodes selected in the outliner.
    */
-  private applySelectionState(
-    item: OutlinerItem,
-    obj: THREE.Object3D,
-    selectedObjects: Set<THREE.Mesh>,
-    hierarchySelection: Set<THREE.Object3D>,
-  ): void {
-    item.setSelectionState(computeOutlinerRowSelected(obj, selectedObjects, hierarchySelection));
+  private applySelectionState(item: OutlinerItem, obj: THREE.Object3D): void {
+    item.setSelectionState(computeOutlinerRowSelected(obj, this.lastSelectedObjects, this.lastHierarchySelection));
   }
 
   /**
@@ -791,7 +520,7 @@ export class OutlinerTree {
     this.bindExpandCallback(item);
     this.bindRenameCallback(item);
     this.bindContextMenuCallback(item);
-    this.dragSession.bindItemDragDropCallbacks(item);
+    this.dragSession.itemDragDropCallbacksBind(item);
   }
 
   /**

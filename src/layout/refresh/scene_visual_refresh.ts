@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { resolveTransformTargets } from '@/selection/object/resolve_transform_targets.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { collectMeshesUnder } from '@/utils/utils_hierarchy.js';
 
 /**
  * Host callbacks for a full world-mutation visual refresh.
@@ -104,7 +106,7 @@ export function refreshSceneVisualsAfterTransformCommit(
   host: SceneTransformCommitVisualHost,
   transformedObjects: readonly THREE.Object3D[],
 ): void {
-  const meshes = collectMeshObjects(transformedObjects);
+  const meshes = collectMeshesForSolidFinalize(transformedObjects);
   const solidOnlyHandled = host.finalizeSolidTransforms?.(meshes) === true;
   if (solidOnlyHandled) {
     applyLightTransformCloneSync(host, meshes, transformedObjects);
@@ -179,18 +181,87 @@ function collectTransformSyncTargets(
 }
 
 /**
- * Collects mesh instances from a mixed object list (including groups with mesh
- * children only when the object itself is a mesh).
+ * Collects meshes that solid CSG finalize must see after a pose write. Direct
+ * meshes pass through. Solid model roots contribute only their result mesh so
+ * root moves keep the bake path. Intermediate groups expand to nested brushes
+ * so wireframes and result geometry stay locked when a group moves.
  *
- * @param objects Transformed objects.
- * @returns Mesh subset.
+ * @param objects Transformed objects (meshes and/or groups).
+ * @returns Meshes for
+ *   {@link SceneTransformCommitVisualHost.finalizeSolidTransforms}.
  */
-function collectMeshObjects(objects: readonly THREE.Object3D[]): THREE.Mesh[] {
+function collectMeshesForSolidFinalize(objects: readonly THREE.Object3D[]): THREE.Mesh[] {
   const meshes: THREE.Mesh[] = [];
+  const seen = new Set<THREE.Mesh>();
   for (const object of objects) {
-    if (object instanceof THREE.Mesh) {
-      meshes.push(object);
-    }
+    appendSolidFinalizeMeshesFromObject(object, meshes, seen);
   }
   return meshes;
+}
+
+/**
+ * Appends solid-finalize meshes contributed by one transformed object.
+ *
+ * @param object Transformed mesh, solid root, or intermediate group.
+ * @param meshes Accumulator list.
+ * @param seen Deduplication set.
+ */
+function appendSolidFinalizeMeshesFromObject(
+  object: THREE.Object3D,
+  meshes: THREE.Mesh[],
+  seen: Set<THREE.Mesh>,
+): void {
+  if (object instanceof THREE.Mesh) {
+    appendUniqueMesh(object, meshes, seen);
+    return;
+  }
+  if (SolidModel.isSolidModelObject(object)) {
+    appendSolidRootResultMesh(object, meshes, seen);
+    return;
+  }
+  appendNestedMeshesUnderGroup(object, meshes, seen);
+}
+
+/**
+ * Adds the solid result mesh when a solid model root was transformed as a unit.
+ *
+ * @param solidRoot Solid model root group.
+ * @param meshes Accumulator list.
+ * @param seen Deduplication set.
+ */
+function appendSolidRootResultMesh(solidRoot: THREE.Object3D, meshes: THREE.Mesh[], seen: Set<THREE.Mesh>): void {
+  const model = SolidModel.fromObject(solidRoot);
+  const result = model?.getResultMesh();
+  if (!result) {
+    return;
+  }
+  appendUniqueMesh(result, meshes, seen);
+}
+
+/**
+ * Expands an intermediate group into nested meshes for solid brush recompile.
+ *
+ * @param group Transformed group (ordinary or solid CSG).
+ * @param meshes Accumulator list.
+ * @param seen Deduplication set.
+ */
+function appendNestedMeshesUnderGroup(group: THREE.Object3D, meshes: THREE.Mesh[], seen: Set<THREE.Mesh>): void {
+  for (const mesh of collectMeshesUnder(group)) {
+    appendUniqueMesh(mesh, meshes, seen);
+  }
+}
+
+/**
+ * Appends a mesh when it has not been collected yet.
+ *
+ * @param mesh Candidate mesh.
+ * @param meshes Accumulator list.
+ * @param seen Deduplication set.
+ */
+function appendUniqueMesh(mesh: THREE.Mesh, meshes: THREE.Mesh[], seen: Set<THREE.Mesh>): void {
+  if (seen.has(mesh)) {
+    return;
+  }
+  seen.add(mesh);
+  meshes.push(mesh);
 }

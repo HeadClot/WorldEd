@@ -13,6 +13,14 @@ export type TransformModeCallback = (mode: TransformMode) => void;
 export type ActionCallback = () => void;
 
 /**
+ * Callback for a keyboard shortcut that needs the originating key event (for
+ * example fit, which targets the window that received the key).
+ *
+ * @param event The keyboard event that matched the shortcut.
+ */
+export type KeyboardActionCallback = (event: KeyboardEvent) => void;
+
+/**
  * Callback for shading mode changes.
  *
  * @param mode The new shading mode to apply.

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { CommandTextureApplyFace } from '@/texture/commands/command_texture_apply_face.js';
+import { CommandTextureFaceApply } from '@/texture/commands/command_texture_face_apply.js';
 import {
   applyTextureIdToTargets,
   buildTargetsFromMeshes,
@@ -35,7 +35,7 @@ describe('reset UV preserves texture assignment', () => {
     const scaled = createDefaultFaceTextureMapping('walls/brick.png');
     scaled.scaleU = 4;
     scaled.offsetV = 0.5;
-    new CommandTextureApplyFace(targets, scaled).execute();
+    new CommandTextureFaceApply(targets, scaled).execute();
     expect(getFaceTextureMaps(mesh)[0]!.mapping.scaleU).toBe(4);
     resetUvParamsOnTargets(targets);
     const maps = getFaceTextureMaps(mesh);
@@ -55,8 +55,8 @@ describe('reset UV preserves texture assignment', () => {
     applyTextureIdToTargets(targets, 'floor.png');
     const scaled = createDefaultFaceTextureMapping('floor.png');
     scaled.scaleU = 3;
-    new CommandTextureApplyFace(targets, scaled).execute();
-    const reset = new CommandTextureApplyFace(targets, createDefaultFaceTextureMapping(), {
+    new CommandTextureFaceApply(targets, scaled).execute();
+    const reset = new CommandTextureFaceApply(targets, createDefaultFaceTextureMapping(), {
       resetUvOnly: true,
     });
     reset.execute();
@@ -79,7 +79,7 @@ describe('reset UV preserves texture assignment', () => {
       const mapping = createDefaultFaceTextureMapping('brick.png');
       mapping.scaleU = 4;
       mapping.offsetU = 0;
-      new CommandTextureApplyFace([target], mapping).execute();
+      new CommandTextureFaceApply([target], mapping).execute();
     });
     resetUvParamsOnTargets(targets);
     const maps = getFaceTextureMaps(mesh);

@@ -1,6 +1,6 @@
 import type { CommandStack } from '@/commands/command_stack.js';
 import type { GameProfile } from '@/settings/store/settings_types.js';
-import type { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import type { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 import type { HandlerClipPlane } from '@/tools/clip_plane/handler_clip_plane.js';
 import type { CoordinatorFaceMode } from '@/tools/face/coordinator_face_mode.js';
 import type { HandlerSceneIo } from '@/tools/io/handler_scene_io.js';
@@ -10,7 +10,8 @@ import type { PanelProperties } from '@/ui/properties/panel_properties.js';
 import type { StatusBar } from '@/ui/status/status_bar.js';
 import { showMessageBox } from '@/ui/dialog/dialog_message_box.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
-import { createDefaultStartupSolidModel } from '@/solid/model/default_startup_solid_model.js';
+import { createSolidModelStartupDefault } from '@/solid/model/solid_model_startup_default.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 import type * as THREE from 'three';
 
 /** Dependencies for scene load / history refresh side effects. */
@@ -39,6 +40,7 @@ export function handleLayoutSceneLoaded(context: LayoutSceneRefreshContext): voi
   context.faceModeCoordinator.getFaceExtrusionController().clearFaceSelection();
   context.commandStack.clear();
   context.clipPlaneHandler?.reattachPreviewToWorld();
+  hierarchyNameAllocator.rebuildFromWorld(context.worldObject);
   context.refreshAfterWorldMutation();
 }
 
@@ -69,7 +71,7 @@ export function applyLayoutHistoryChange(context: LayoutSceneRefreshContext, dir
 export async function runLayoutVmfImport(
   sceneIOHandler: HandlerSceneIo,
   statusBar: StatusBar | null,
-  solidModelController: ControllerSolidModel | null,
+  solidModelController: SolidModelController | null,
   refreshAfterWorldMutation: () => void,
 ): Promise<void> {
   const result = await sceneIOHandler.importVmf(statusBar);
@@ -154,7 +156,7 @@ export async function runLayoutNewScene(
   worldObject: THREE.Group,
   commandStack: CommandStack,
   statusBar: StatusBar | null,
-  solidModelController: ControllerSolidModel | null,
+  solidModelController: SolidModelController | null,
   onSceneCleared: () => void,
 ): Promise<void> {
   const shouldPrompt = sceneIOHandler.hasSceneContent(worldObject) || commandStack.canUndo() || commandStack.canRedo();
@@ -186,7 +188,8 @@ function seedDefaultStartupScene(
   statusBar: StatusBar | null,
 ): void {
   sceneIOHandler.clearScene(worldObject, statusBar);
-  worldObject.add(createDefaultStartupSolidModel().root);
+  hierarchyNameAllocator.reset();
+  worldObject.add(createSolidModelStartupDefault().root);
   if (statusBar) {
     statusBar.setLastAction('Created new scene');
     statusBar.setLastSavedInfo('untitled');

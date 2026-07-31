@@ -181,6 +181,17 @@ export class SolidModelRebuildPipeline {
   }
 
   /**
+   * Returns the parent-chain pose fingerprint cached at the last prepare for a
+   * brush. History refresh uses this to recompile after solid CSG group undos.
+   *
+   * @param brushId Brush instance id.
+   * @returns Cached parent-chain key, or undefined when missing.
+   */
+  getPreparedParentChainPoseKey(brushId: string): string | undefined {
+    return this.compiler.getPreparedParentChainPoseKey(brushId);
+  }
+
+  /**
    * Returns touch peer ids cached for a brush.
    *
    * @param brushId Brush id.

@@ -63,22 +63,42 @@ export class OutlinerInsertIndicator {
       placement === 'before'
         ? rowRect.top - hostRect.top + host.scrollTop
         : rowRect.bottom - hostRect.top + host.scrollTop;
-    const geometry = resolveOutlinerInsertLineGeometry(host.clientWidth, insertDepth, nameColumnLeftPx);
-    this.positionAt(y, geometry.left, geometry.width);
+    this.showAtHostLocalY(host, y, insertDepth, nameColumnLeftPx);
   }
 
   /**
-   * Positions and reveals the marker at a host-local Y with depth-based length.
+   * Shows the marker at a precomputed host-local Y without measuring row rects.
+   *
+   * @param host Tree host that positions the marker.
+   * @param hostLocalY Y relative to the host content box (includes scroll).
+   * @param insertDepth Hierarchy depth of the insertion (0 = full-width root).
+   * @param nameColumnLeftPx Measured or estimated name-column left, or null.
+   */
+  showAtHostLocalY(
+    host: HTMLElement,
+    hostLocalY: number,
+    insertDepth: number,
+    nameColumnLeftPx: number | null = null,
+  ): void {
+    this.attachTo(host);
+    const geometry = resolveOutlinerInsertLineGeometry(host.clientWidth, insertDepth, nameColumnLeftPx);
+    this.positionAt(hostLocalY, geometry.left);
+  }
+
+  /**
+   * Positions and reveals the marker at a host-local Y. The right edge is
+   * pinned to the host padding box so the line cannot widen scrollWidth by a
+   * pixel when a vertical scrollbar is present.
    *
    * @param hostLocalY Y relative to the host content box (includes scroll).
    * @param left Left inset in CSS pixels.
-   * @param width Marker width in CSS pixels.
    */
-  positionAt(hostLocalY: number, left: number, width: number): void {
+  positionAt(hostLocalY: number, left: number): void {
     this.element.style.display = 'block';
     this.element.style.top = `${Math.round(hostLocalY)}px`;
-    this.element.style.left = `${Math.round(left)}px`;
-    this.element.style.width = `${Math.max(0, Math.round(width))}px`;
+    this.element.style.left = `${Math.max(0, Math.round(left))}px`;
+    this.element.style.right = '0px';
+    this.element.style.width = 'auto';
   }
 
   /** Hides the insert marker. */
@@ -95,9 +115,10 @@ export class OutlinerInsertIndicator {
     const indicator = document.createElement('div');
     indicator.classList.add('editor-outliner-insert-indicator');
     indicator.style.position = 'absolute';
-    indicator.style.left = '0';
+    indicator.style.left = '0px';
+    indicator.style.right = '0px';
     indicator.style.height = '1px';
-    indicator.style.width = '100%';
+    indicator.style.width = 'auto';
     indicator.style.background = hexToRgb(Theme.selectionColor);
     indicator.style.pointerEvents = 'none';
     indicator.style.zIndex = '20';

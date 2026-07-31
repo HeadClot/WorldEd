@@ -5,7 +5,7 @@ import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
 import { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
 import { SolidCsgTreeEvaluator } from '@/solid/algorithm/compile/solid_csg_tree_evaluator.js';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
 import { markAsSolidCsgGroup, getSolidGroupOperation, isSolidCsgGroup } from '@/solid/model/solid_group.js';
@@ -29,7 +29,7 @@ function makeBoxBrush(
   operation: SolidOperation,
   position?: THREE.Vector3,
 ): SolidBrushInstance {
-  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
+  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
   if (position) instance.position.copy(position);
   return instance;

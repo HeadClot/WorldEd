@@ -4,6 +4,7 @@ import type { KeyboardShortcutSettings } from '@/settings/store/settings_types.j
 import {
   handlerKeyboardShortcutIsTypingInFormField,
   type ActionCallback,
+  type KeyboardActionCallback,
   type NavigationActiveCallback,
   type SelectionModeCallback,
   type ShadingModeCallback,
@@ -21,6 +22,7 @@ import {
 
 export type {
   ActionCallback,
+  KeyboardActionCallback,
   NavigationActiveCallback,
   SelectionModeCallback,
   ShadingModeCallback,
@@ -46,7 +48,7 @@ export class HandlerKeyboardShortcut {
   private onSaveScene: ActionCallback | null;
   private onLoadScene: ActionCallback | null;
   private onExportGlb: ActionCallback | null;
-  private onFitToSelection: ActionCallback | null;
+  private onFitToSelection: KeyboardActionCallback | null;
   private onFitAllViewports: ActionCallback | null;
   private onShadingMode: ShadingModeCallback | null;
   private onSelectionModeToggle: SelectionModeCallback | null;
@@ -245,9 +247,10 @@ export class HandlerKeyboardShortcut {
   /**
    * Registers the callback for the fit-to-selection action.
    *
-   * @param callback The function to call when F is pressed.
+   * @param callback The function to call when F is pressed. Receives the key
+   *   event so fit can target the window that owned the shortcut.
    */
-  setOnFitToSelection(callback: ActionCallback): void {
+  setOnFitToSelection(callback: KeyboardActionCallback): void {
     this.onFitToSelection = callback;
   }
 

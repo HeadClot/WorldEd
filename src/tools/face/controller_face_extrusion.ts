@@ -4,7 +4,7 @@ import { FaceSelection, ManagerFaceSelection } from '@/selection/face/manager_fa
 import { RaycasterFaceSelection, FacePickResult } from '@/selection/face/raycaster_face_selection.js';
 import { FaceSelectionHighlight } from '@/selection/face/face_selection_highlight.js';
 import { CommandStack } from '@/commands/command_stack.js';
-import { ExtrudeCreation, CommandMeshExtrudeFaces } from '@/tools/face/commands/command_mesh_extrude_faces.js';
+import { ExtrudeCreation, CommandMeshFacesExtrude } from '@/tools/face/commands/command_mesh_faces_extrude.js';
 import { createConvexPrismFromFace } from '@/transform/extrusion/convex_face_prism.js';
 import { createConvexPrismBrushFromFace } from '@/transform/extrusion/convex_face_prism_brush.js';
 import { groupSelectionsIntoFaceRegions, FaceRegion } from '@/selection/face/face_region_grouper.js';
@@ -335,7 +335,7 @@ export class ControllerFaceExtrusion {
     const safeDistance = this.resolveSafeDistance(displacement);
     const creations = this.buildExtrudeCreations(regions, safeDistance);
     if (creations.length === 0) return [];
-    const command = new CommandMeshExtrudeFaces(creations);
+    const command = new CommandMeshFacesExtrude(creations);
     this.commandStack.push(command);
     this.lastCreatedMeshes = command.getCreatedMeshes();
     this.selectionManager.deselectAll();

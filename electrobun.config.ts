@@ -1,6 +1,6 @@
 import type { ElectrobunConfig } from 'electrobun/bun';
 import packageMetadata from './package.json';
-import { createElectrobunBuildPlugins } from './scripts/electrobun_tsconfig_paths_plugin.ts';
+import { createElectrobunBuildPlugins } from './scripts/electrobun_tsconfig_paths_plugin.js';
 
 const electrobunBuildPlugins = createElectrobunBuildPlugins();
 

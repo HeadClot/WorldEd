@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CommandStack } from '@/commands/command_stack.js';
 import { CommandObjectReparent } from '@/outliner/commands/command_object_reparent.js';
-import { ReparentMove, CommandObjectReparentObjects } from '@/outliner/commands/command_object_reparent_objects.js';
+import { ReparentMove, CommandObjectObjectsReparent } from '@/outliner/commands/command_object_objects_reparent.js';
 import { isDescendantOf, sortObjectsBySceneOrder } from '@/utils/utils_hierarchy.js';
 import { isEditorHelperObject } from '@/utils/mesh_edge_sync.js';
 import { isObjectOrAncestorLocked } from '@/utils/object_lock.js';
@@ -178,7 +178,7 @@ export class HandlerHierarchyReparent {
       const only = moves[0]!;
       this.commandStack.push(new CommandObjectReparent(only.object, only.newParent, only.insertBefore));
     } else {
-      this.commandStack.push(new CommandObjectReparentObjects(moves));
+      this.commandStack.push(new CommandObjectObjectsReparent(moves));
     }
     this.ensureSolidGroupMarker(moves[0]!.newParent);
     SolidModel.rebuildAllUnder(this.worldObject);

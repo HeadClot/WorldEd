@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SurfaceCategory } from '@/solid/types/surface_category.js';
 import { CategoryRouter } from '@/solid/algorithm/category/category_router.js';
 import { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
-import { BuilderSolidAlgorithmRoutingTable } from '@/solid/algorithm/routing/builder_solid_algorithm_routing_table.js';
+import { SolidAlgorithmRoutingTableBuilder } from '@/solid/algorithm/routing/solid_algorithm_routing_table_builder.js';
 import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 import { SolidFragmentRouter } from '@/solid/algorithm/compile/solid_fragment_router.js';
 import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
@@ -21,7 +21,7 @@ import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
  * @returns Prepared brush entry.
  */
 function makePrepared(id: string, size: number, operation: SolidOperation, position?: THREE.Vector3): PreparedBrush {
-  const brush = FactorySolidBrush.createCenteredBox(size, size, size);
+  const brush = SolidBrushFactory.createCenteredBox(size, size, size);
   const instance = new SolidBrushInstance(id, id, brush, operation);
   if (position) instance.position.copy(position);
   const modelBrush = instance.getModelSpaceBrush();
@@ -66,7 +66,7 @@ describe('SolidAlgorithmRoutingTable', () => {
     prepared[0]!.overlappingPeerIndices = [1];
     prepared[1]!.overlappingPeerIndices = [0];
     const tree = SolidCsgTree.fromPreparedFlat(prepared);
-    const table = BuilderSolidAlgorithmRoutingTable.buildForSubject(prepared, 0, [1], tree, false, false);
+    const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(prepared, 0, [1], tree, false, false);
     const classifications = [SurfaceCategory.SelfAligned, SurfaceCategory.Inside];
     const fromTable = table.route((index) =>
       index === 0 ? SurfaceCategory.SelfAligned : (classifications[index] ?? SurfaceCategory.Outside),
@@ -83,7 +83,7 @@ describe('SolidAlgorithmRoutingTable', () => {
     ];
     prepared[0]!.overlappingPeerIndices = [];
     const tree = SolidCsgTree.fromPreparedFlat(prepared);
-    const table = BuilderSolidAlgorithmRoutingTable.buildForSubject(prepared, 0, [], tree, false, false);
+    const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(prepared, 0, [], tree, false, false);
     const result = table.route((index) => (index === 0 ? SurfaceCategory.SelfAligned : SurfaceCategory.Outside));
     expect(result).toBe(SurfaceCategory.SelfAligned);
   });
@@ -108,7 +108,7 @@ describe('SolidAlgorithmRoutingTable', () => {
       prepared[index]!.overlappingPeerIndices = peers;
     }
     const tree = SolidCsgTree.fromPreparedFlat(prepared);
-    const table = BuilderSolidAlgorithmRoutingTable.buildForSubject(
+    const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(
       prepared,
       0,
       prepared[0]!.overlappingPeerIndices,

@@ -20,6 +20,7 @@ export class InputInlineRename {
   private textSpan: HTMLSpanElement;
   private isDisposed: boolean;
   private isFinishing: boolean;
+  private parentWasDraggable: boolean;
   private confirmCallback: InputInlineRenameConfirmCallback | null;
   private cancelCallback: InputInlineRenameCancelCallback | null;
 
@@ -36,6 +37,7 @@ export class InputInlineRename {
     this.originalText = originalText;
     this.isDisposed = false;
     this.isFinishing = false;
+    this.parentWasDraggable = false;
     this.confirmCallback = null;
     this.cancelCallback = null;
     this.inputElement = this.createInputElement();
@@ -65,13 +67,15 @@ export class InputInlineRename {
    * from the span first so tabs and outliner rows keep their height.
    */
   activate(): void {
-    if (this.isDisposed) return;
+    if (this.isDisposed) {
+      return;
+    }
     this.isFinishing = false;
+    this.parentDragDisableForRename();
     this.matchInputLayoutToTextSpan();
-    this.textSpan.style.display = 'none';
-    this.parentElement.insertBefore(this.inputElement, this.textSpan.nextSibling);
-    this.inputElement.focus();
-    this.inputElement.select();
+    this.textSpanHide();
+    this.inputElementInsertBesideTextSpan();
+    this.inputElementFocusAndSelect();
   }
 
   /**
@@ -80,10 +84,26 @@ export class InputInlineRename {
    * @param newText The text to restore (either the confirmed or original name).
    */
   deactivate(newText: string): void {
-    if (this.isDisposed) return;
+    if (this.isDisposed) {
+      return;
+    }
+    this.parentDragRestoreAfterRename();
     this.textSpan.style.display = '';
-    this.textSpan.textContent = newText;
+    this.restoreHostTextContentIfPlain(newText);
     this.detachInputElement();
+  }
+
+  /**
+   * Restores plain host text when the span has no child elements. Structured
+   * hosts (outliner dual-tone labels) keep their children and repaint after.
+   *
+   * @param newText Fallback plain text for simple hosts.
+   */
+  private restoreHostTextContentIfPlain(newText: string): void {
+    if (this.textSpan.childElementCount > 0) {
+      return;
+    }
+    this.textSpan.textContent = newText;
   }
 
   /**
@@ -91,7 +111,9 @@ export class InputInlineRename {
    * both fire for the same commit.
    */
   confirmRename(): void {
-    if (this.isDisposed || this.isFinishing) return;
+    if (this.isDisposed || this.isFinishing) {
+      return;
+    }
     this.isFinishing = true;
     const newName = this.inputElement.value.trim() || this.originalText;
     this.deactivate(newName);
@@ -105,7 +127,9 @@ export class InputInlineRename {
    * and blur both fire for the same cancel.
    */
   cancelRename(): void {
-    if (this.isDisposed || this.isFinishing) return;
+    if (this.isDisposed || this.isFinishing) {
+      return;
+    }
     this.isFinishing = true;
     this.deactivate(this.originalText);
     if (this.cancelCallback) {
@@ -117,6 +141,7 @@ export class InputInlineRename {
   dispose(): void {
     this.isDisposed = true;
     this.isFinishing = true;
+    this.parentDragRestoreAfterRename();
     this.detachInputElement();
     this.confirmCallback = null;
     this.cancelCallback = null;
@@ -147,6 +172,19 @@ export class InputInlineRename {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = this.originalText;
+    input.draggable = false;
+    this.applyInputChromeStyles(input);
+    this.bindInputElementEvents(input);
+    return input;
+  }
+
+  /**
+   * Applies shared chrome styles so the input can take caret clicks and text
+   * selection even when a host sets user-select none on the parent.
+   *
+   * @param input Input element to style.
+   */
+  private applyInputChromeStyles(input: HTMLInputElement): void {
     input.style.border = '1px solid #e67e22';
     input.style.borderRadius = '2px';
     input.style.padding = '0 4px';
@@ -161,8 +199,7 @@ export class InputInlineRename {
     input.style.minWidth = '0';
     input.style.boxSizing = 'border-box';
     input.style.verticalAlign = 'middle';
-    this.bindInputElementEvents(input);
-    return input;
+    input.style.userSelect = 'text';
   }
 
   /**
@@ -187,12 +224,59 @@ export class InputInlineRename {
     }
   }
 
+  /** Hides the original text span so the input becomes the visible name. */
+  private textSpanHide(): void {
+    this.textSpan.style.display = 'none';
+  }
+
   /**
-   * Binds keyboard and blur events for rename commit/cancel.
+   * Inserts the input into the parent at the text span position, before any
+   * trailing row controls such as visibility or lock buttons.
+   */
+  private inputElementInsertBesideTextSpan(): void {
+    this.parentElement.insertBefore(this.inputElement, this.textSpan.nextSibling);
+  }
+
+  /** Moves keyboard focus to the input and selects its entire content. */
+  private inputElementFocusAndSelect(): void {
+    this.inputElement.focus();
+    this.inputElement.select();
+  }
+
+  /**
+   * Disables HTML5 drag on the host while renaming so caret clicks do not start
+   * a drag and blur the input.
+   */
+  private parentDragDisableForRename(): void {
+    this.parentWasDraggable = this.parentElement.draggable;
+    this.parentElement.draggable = false;
+  }
+
+  /** Restores the host draggable flag saved when rename began. */
+  private parentDragRestoreAfterRename(): void {
+    this.parentElement.draggable = this.parentWasDraggable;
+  }
+
+  /**
+   * Binds keyboard, blur, and pointer events for rename commit/cancel and so
+   * host click/drag handlers do not steal the caret click.
    *
    * @param input The input element to bind events to.
    */
   private bindInputElementEvents(input: HTMLInputElement): void {
+    this.bindInputKeyboardEvents(input);
+    this.bindInputPointerIsolationEvents(input);
+    input.addEventListener('blur', () => {
+      this.confirmRename();
+    });
+  }
+
+  /**
+   * Binds Enter confirm and Escape cancel on the rename input.
+   *
+   * @param input The input element to bind events to.
+   */
+  private bindInputKeyboardEvents(input: HTMLInputElement): void {
     input.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.code === 'Enter') {
         event.preventDefault();
@@ -205,8 +289,21 @@ export class InputInlineRename {
         this.cancelRename();
       }
     });
-    input.addEventListener('blur', () => {
-      this.confirmRename();
-    });
+  }
+
+  /**
+   * Stops pointer and click events from bubbling to draggable hosts or row
+   * selection handlers so caret placement does not end the rename session.
+   *
+   * @param input The input element to isolate.
+   */
+  private bindInputPointerIsolationEvents(input: HTMLInputElement): void {
+    const stopBubble = (event: Event): void => {
+      event.stopPropagation();
+    };
+    input.addEventListener('pointerdown', stopBubble);
+    input.addEventListener('mousedown', stopBubble);
+    input.addEventListener('click', stopBubble);
+    input.addEventListener('dblclick', stopBubble);
   }
 }

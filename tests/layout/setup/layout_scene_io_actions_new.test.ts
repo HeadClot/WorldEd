@@ -5,7 +5,7 @@ import { HandlerSceneIo } from '@/tools/io/handler_scene_io.js';
 import { runLayoutNewScene } from '@/layout/setup/layout_scene_io_actions.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import type { StatusBar } from '@/ui/status/status_bar.js';
-import type { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import type { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 
 describe('runLayoutNewScene', () => {
   let host: HTMLElement;
@@ -13,7 +13,7 @@ describe('runLayoutNewScene', () => {
   let commandStack: CommandStack;
   let sceneIOHandler: HandlerSceneIo;
   let statusBar: StatusBar;
-  let solidModelController: ControllerSolidModel;
+  let solidModelController: SolidModelController;
 
   beforeEach(() => {
     host = document.createElement('div');
@@ -23,7 +23,7 @@ describe('runLayoutNewScene', () => {
     sceneIOHandler = new HandlerSceneIo();
     solidModelController = {
       adoptFirstSolidModelInWorld: vi.fn(() => true),
-    } as unknown as ControllerSolidModel;
+    } as unknown as SolidModelController;
     statusBar = {
       setLastAction: vi.fn(),
       setLastSavedInfo: vi.fn(),
@@ -85,7 +85,7 @@ describe('runLayoutNewScene', () => {
     expect(onCleared).toHaveBeenCalledTimes(1);
     expect(world.children.length).toBe(1);
     expect(SolidModel.isSolidModelObject(world.children[0]!)).toBe(true);
-    expect(world.children[0]!.name).toBe('DefaultModel');
+    expect(world.children[0]!.name.startsWith('DefaultModel.')).toBe(true);
     expect(solidModelController.adoptFirstSolidModelInWorld).toHaveBeenCalledTimes(1);
   });
 });

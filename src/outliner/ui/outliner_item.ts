@@ -2,8 +2,16 @@ import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { hexToRgb } from '@/utils/utils_color.js';
 import { InputInlineRename } from '@/ui/input/input_inline_rename.js';
-import { OUTLINER_BASE_PADDING_PX, OUTLINER_CHEVRON_WIDTH_PX, OUTLINER_INDENT_PX } from './outliner_drop_placement.js';
+import {
+  OUTLINER_BASE_PADDING_PX,
+  OUTLINER_CHEVRON_WIDTH_PX,
+  OUTLINER_INDENT_PX,
+  OUTLINER_ROW_HEIGHT_PX,
+} from './outliner_drop_placement.js';
+import { OUTLINER_ROW_ELEMENT_CLASS } from './outliner_tree_drag_row_hit.js';
+import { IconOutlinerVisibility } from './icon_outliner_visibility.js';
 import { outlinerItemApplyIconFromObject } from './outliner_item_icon.js';
+import { extractHierarchyNameBase, parseHierarchyHexSuffix } from '@/utils/utils_hierarchy_name_allocator.js';
 import type {
   ItemContextMenuCallback,
   ItemDragEndCallback,
@@ -40,6 +48,8 @@ export class OutlinerItem {
   private iconGlyphElement: HTMLElement;
   private iconBadgeElement: HTMLElement;
   private nameElement: HTMLSpanElement;
+  private nameBaseElement: HTMLSpanElement;
+  private nameIdElement: HTMLSpanElement;
   private chevronElement: HTMLElement;
   private visibilityElement: HTMLElement;
   private lockElement: HTMLElement;
@@ -62,6 +72,8 @@ export class OutlinerItem {
   private onDropCallback: ItemDropCallback | null;
   private onDragEndCallback: ItemDragEndCallback | null;
   private hasChildren: boolean;
+  private isIntoDropHighlighted: boolean;
+  private isDragSourceVisual: boolean;
 
   /**
    * Creates a new outliner item for a Three.js object.
@@ -90,11 +102,15 @@ export class OutlinerItem {
     this.onDragHoverCallback = null;
     this.onDropCallback = null;
     this.onDragEndCallback = null;
+    this.isIntoDropHighlighted = false;
+    this.isDragSourceVisual = false;
     this.rowElement = document.createElement('div');
     this.iconElement = document.createElement('span');
     this.iconGlyphElement = document.createElement('span');
     this.iconBadgeElement = document.createElement('span');
     this.nameElement = document.createElement('span');
+    this.nameBaseElement = document.createElement('span');
+    this.nameIdElement = document.createElement('span');
     this.chevronElement = document.createElement('span');
     this.visibilityElement = document.createElement('span');
     this.lockElement = document.createElement('span');
@@ -117,6 +133,53 @@ export class OutlinerItem {
    */
   getObject(): THREE.Object3D {
     return this.object;
+  }
+
+  /**
+   * Rebinds this recycled row to a different hierarchy object without
+   * recreating the DOM.
+   *
+   * @param object The Three.js object this row should represent.
+   * @param depth The indentation depth level in the hierarchy.
+   * @param hasChildren Whether the object has child objects.
+   */
+  rebindObject(object: THREE.Object3D, depth: number, hasChildren: boolean): void {
+    if (this.isDisposed) {
+      return;
+    }
+    const objectChanged = this.object !== object;
+    if (objectChanged) {
+      this.renameSessionDisposeIfActive();
+      this.setDragSourceVisual(false);
+      this.setIntoDropHighlight(false);
+    }
+    this.object = object;
+    this.rowElement.dataset['outlinerObjectUuid'] = object.uuid;
+    this.applyNameLabelText(object.name);
+    this.setDepth(depth);
+    this.setHasChildren(hasChildren);
+    this.applyIconFromObject();
+  }
+
+  /**
+   * Shows or hides this row in the virtual pool without disposing it.
+   *
+   * @param isVisible True to display the row as a flex item.
+   */
+  poolVisibilitySet(isVisible: boolean): void {
+    if (this.isDisposed) {
+      return;
+    }
+    this.rowElement.style.display = isVisible ? 'flex' : 'none';
+  }
+
+  /**
+   * Returns whether this row is currently disposed.
+   *
+   * @returns True when dispose has been called.
+   */
+  disposedIs(): boolean {
+    return this.isDisposed;
   }
 
   /**
@@ -308,6 +371,10 @@ export class OutlinerItem {
    * @param isDragging True when this row is being dragged.
    */
   setDragSourceVisual(isDragging: boolean): void {
+    if (this.isDragSourceVisual === isDragging) {
+      return;
+    }
+    this.isDragSourceVisual = isDragging;
     this.rowElement.style.opacity = isDragging ? '0.55' : '1';
   }
 
@@ -317,24 +384,30 @@ export class OutlinerItem {
    * @param isIntoTarget True when the pointer is in the into zone.
    */
   setIntoDropHighlight(isIntoTarget: boolean): void {
-    if (isIntoTarget) {
-      this.rowElement.style.outline = `1px solid ${hexToRgb(Theme.selectionColor)}`;
+    if (this.isIntoDropHighlighted === isIntoTarget) {
       return;
     }
-    this.rowElement.style.outline = 'none';
+    this.isIntoDropHighlighted = isIntoTarget;
+    this.rowElement.style.outline = isIntoTarget ? `1px solid ${hexToRgb(Theme.selectionColor)}` : 'none';
   }
 
   /** Starts inline rename editing for this item. */
   startRename(): void {
-    if (this.isDisposed) return;
+    if (this.isDisposed) {
+      return;
+    }
+    this.renameSessionDisposeIfActive();
     this.renameInput = new InputInlineRename(this.rowElement, this.nameElement, this.object.name);
     this.renameInput.setConfirmCallback((newName) => {
+      this.renameInput = null;
+      this.applyNameLabelText(newName);
       if (this.onRename) {
         this.onRename(this.object, newName);
       }
     });
     this.renameInput.setCancelCallback(() => {
       this.renameInput = null;
+      this.applyNameLabelText(this.object.name);
     });
     this.renameInput.activate();
   }
@@ -342,13 +415,19 @@ export class OutlinerItem {
   /** Disposes this item and removes it from the DOM. */
   dispose(): void {
     this.isDisposed = true;
-    if (this.renameInput) {
-      this.renameInput.dispose();
-      this.renameInput = null;
-    }
+    this.renameSessionDisposeIfActive();
     if (this.rowElement.parentNode) {
       this.rowElement.parentNode.removeChild(this.rowElement);
     }
+  }
+
+  /** Cancels and clears an active inline rename session if one exists. */
+  private renameSessionDisposeIfActive(): void {
+    if (!this.renameInput) {
+      return;
+    }
+    this.renameInput.dispose();
+    this.renameInput = null;
   }
 
   /** Builds the complete row DOM structure. */
@@ -369,9 +448,15 @@ export class OutlinerItem {
 
   /** Applies base styles to the row element. */
   private applyRowStyles(): void {
+    this.rowElement.classList.add(OUTLINER_ROW_ELEMENT_CLASS);
+    this.rowElement.dataset['outlinerObjectUuid'] = this.object.uuid;
     this.rowElement.style.display = 'flex';
     this.rowElement.style.alignItems = 'center';
     this.rowElement.style.boxSizing = 'border-box';
+    this.rowElement.style.width = '100%';
+    this.rowElement.style.minWidth = '0';
+    this.rowElement.style.maxWidth = '100%';
+    this.rowElement.style.overflow = 'hidden';
     this.rowElement.style.padding = '0 4px';
     this.rowElement.style.paddingLeft = `${OUTLINER_BASE_PADDING_PX + this.depth * OUTLINER_INDENT_PX}px`;
     this.rowElement.style.cursor = 'pointer';
@@ -381,8 +466,8 @@ export class OutlinerItem {
     this.rowElement.style.color = Theme.buttonTextColor;
     this.rowElement.style.borderRadius = '2px';
     this.rowElement.style.userSelect = 'none';
-    this.rowElement.style.height = '22px';
-    this.rowElement.style.minHeight = '22px';
+    this.rowElement.style.height = `${OUTLINER_ROW_HEIGHT_PX}px`;
+    this.rowElement.style.minHeight = `${OUTLINER_ROW_HEIGHT_PX}px`;
   }
 
   /**
@@ -457,22 +542,60 @@ export class OutlinerItem {
     outlinerItemApplyIconFromObject(this.object, this.iconGlyphElement, this.iconBadgeElement);
   }
 
-  /** Builds the name text span element. */
+  /** Builds the name text span element with dual-tone base and id suffix. */
   private buildName(): void {
-    this.nameElement.textContent = this.object.name || 'Unnamed';
-    this.nameElement.style.flex = '1';
+    this.styleNameElementHost();
+    this.styleNameBaseElement();
+    this.styleNameIdElement();
+    this.nameElement.appendChild(this.nameBaseElement);
+    this.nameElement.appendChild(this.nameIdElement);
+    this.applyNameLabelText(this.object.name);
+    this.nameElement.addEventListener('dblclick', (event: MouseEvent) => {
+      event.stopPropagation();
+      this.startRename();
+    });
+  }
+
+  /**
+   * Paints the display name with a bright base and dimmer auto hex id suffix.
+   *
+   * @param name Object hierarchy name to show.
+   */
+  private applyNameLabelText(name: string): void {
+    const fullName = name || 'Unnamed';
+    if (parseHierarchyHexSuffix(fullName) === null) {
+      this.nameBaseElement.textContent = fullName;
+      this.nameIdElement.textContent = '';
+      this.nameIdElement.style.display = 'none';
+      return;
+    }
+    const baseName = extractHierarchyNameBase(fullName);
+    this.nameBaseElement.textContent = baseName;
+    this.nameIdElement.textContent = fullName.slice(baseName.length);
+    this.nameIdElement.style.display = '';
+  }
+
+  /** Styles the outer name host used for ellipsis and flex growth. */
+  private styleNameElementHost(): void {
+    this.nameElement.style.flex = '1 1 0';
     this.nameElement.style.minWidth = '0';
-    this.nameElement.style.display = 'flex';
-    this.nameElement.style.alignItems = 'center';
+    this.nameElement.style.maxWidth = '100%';
+    this.nameElement.style.display = 'block';
     this.nameElement.style.height = '16px';
     this.nameElement.style.lineHeight = '16px';
     this.nameElement.style.overflow = 'hidden';
     this.nameElement.style.textOverflow = 'ellipsis';
     this.nameElement.style.whiteSpace = 'nowrap';
-    this.nameElement.addEventListener('dblclick', (event: MouseEvent) => {
-      event.stopPropagation();
-      this.startRename();
-    });
+  }
+
+  /** Styles the bright base portion of the hierarchy name. */
+  private styleNameBaseElement(): void {
+    this.nameBaseElement.style.color = Theme.buttonTextColor;
+  }
+
+  /** Styles the darker auto-id suffix of the hierarchy name. */
+  private styleNameIdElement(): void {
+    this.nameIdElement.style.color = Theme.outlinerNameIdColor;
   }
 
   /** Builds the visibility toggle icon element. */
@@ -480,7 +603,7 @@ export class OutlinerItem {
     this.styleCenteredSlot(this.visibilityElement, 16);
     this.visibilityElement.style.cursor = 'pointer';
     this.visibilityElement.style.marginLeft = '4px';
-    this.visibilityElement.style.fontSize = '12px';
+    this.visibilityElement.style.lineHeight = '0';
     this.updateVisibilityIcon();
     this.visibilityElement.addEventListener('click', (event: MouseEvent) => {
       event.stopPropagation();
@@ -490,10 +613,13 @@ export class OutlinerItem {
     });
   }
 
-  /** Updates the visibility icon character and color. */
+  /** Updates the visibility SVG icon and color for the current state. */
   private updateVisibilityIcon(): void {
-    this.visibilityElement.textContent = this.isVisible ? '👁' : '👁‍🗨';
-    this.visibilityElement.style.color = this.isVisible ? '#ffffff' : '#555555';
+    this.visibilityElement.innerHTML = this.isVisible
+      ? IconOutlinerVisibility.openEye()
+      : IconOutlinerVisibility.hiddenEye();
+    this.visibilityElement.style.color = this.isVisible ? '#ffffff' : '#666666';
+    this.visibilityElement.title = this.isVisible ? 'Hide' : 'Show';
   }
 
   /** Builds the lock toggle icon element. */

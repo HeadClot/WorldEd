@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
-import { CommandTransformSetPosition } from '@/transform/commands/command_transform_set_position.js';
+import { CommandTransformPositionSet } from '@/transform/commands/command_transform_position_set.js';
 
 /** Mock solid tools panel. */
 class MockSolidPanel {
@@ -43,7 +43,7 @@ function resultYRange(model: SolidModel): { minY: number; maxY: number } {
  * preview wireframe.
  */
 describe('Solid inspector position edit', () => {
-  it('moves CSG result when inspector CommandTransformSetPosition commits via controller', () => {
+  it('moves CSG result when inspector CommandTransformPositionSet commits via controller', () => {
     const world = new THREE.Group();
     const model = new SolidModel('InspectorPos');
     world.add(model.root);
@@ -54,10 +54,10 @@ describe('Solid inspector position edit', () => {
     expect(before.maxY).toBeCloseTo(1, 4);
 
     const mesh = brush.mesh!;
-    new CommandTransformSetPosition([mesh], [new THREE.Vector3(0, 5, 0)]).execute();
+    new CommandTransformPositionSet([mesh], [new THREE.Vector3(0, 5, 0)]).execute();
     expect(mesh.position.y).toBeCloseTo(5, 5);
 
-    const controller = new ControllerSolidModel(
+    const controller = new SolidModelController(
       world,
       new CommandStack(8),
       new ManagerSelection(),
@@ -88,7 +88,7 @@ describe('Solid inspector position edit', () => {
     const model = new SolidModel('MeshOnlyWrite');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
     model.rebuild(true);
-    // Inspector path: CommandTransformSetPosition writes mesh only.
+    // Inspector path: CommandTransformPositionSet writes mesh only.
     brush.mesh!.position.set(0, 4, 0);
     expect(brush.position.y).toBe(0);
     model.prepareLiveBrushEdit([brush.mesh!]);

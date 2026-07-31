@@ -46,6 +46,8 @@ export const Theme = Object.freeze({
   buttonBackground: 0x2d2d2d,
   buttonHoverColor: 0x3a3a3a,
   buttonTextColor: '#e0e0e0',
+  /** Dim suffix for auto hex ids in the outliner (e.g. ".001" after Brush). */
+  outlinerNameIdColor: '#6a6a6a',
   outlinerSelectedColor: 'rgba(232, 106, 23, 0.3)',
   gizmoXAxisColor: 0xff3333,
   gizmoYAxisColor: 0x33ff33,

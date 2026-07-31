@@ -4,7 +4,7 @@ import { VmfParser } from '@/io/vmf/vmf_parser.js';
 import { VmfBrushFromSides } from '@/io/vmf/vmf_brush_from_sides.js';
 import { VmfHalfSpaceHullBuilder } from '@/io/vmf/vmf_half_space_hull.js';
 import { SolidBrushValidator } from '@/solid/brush/solid_brush_validator.js';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { VMF_INCHES_TO_METERS } from '@/io/vmf/vmf_coordinates.js';
 import { buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
@@ -26,7 +26,7 @@ describe('VmfBrushFromSides / half-space hull', () => {
     expect(hull).not.toBeNull();
     expect(hull!.vertices.length).toBe(8);
     expect(hull!.faceLoops.length).toBe(6);
-    const brush = FactorySolidBrush.createFromFaceLoops(hull!.faceLoops.map((loop) => loop.vertices));
+    const brush = SolidBrushFactory.createFromFaceLoops(hull!.faceLoops.map((loop) => loop.vertices));
     expect(brush).not.toBeNull();
     const validation = SolidBrushValidator.validate(brush!);
     expect(validation.valid).toBe(true);

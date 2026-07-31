@@ -25,16 +25,6 @@ export type BrushUvSnapshot = {
 };
 
 /**
- * Pads a solid/brush display counter to two digits.
- *
- * @param value Number to pad.
- * @returns Zero-padded string.
- */
-export function padSolidDisplayNumber(value: number): string {
-  return value < 10 ? `0${value}` : String(value);
-}
-
-/**
  * Presentation helpers for solid result meshes: materials, UV snapshots, and
  * result mesh creation. Public SolidModel methods remain the facade.
  */

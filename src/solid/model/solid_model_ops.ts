@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import { removeDecorativeEdges } from '@/utils/mesh_edge_sync.js';
-import { pullChangedBrushTransforms, collectDriftedBrushIds } from './solid_brush_transform_sync.js';
+import {
+  pullChangedBrushTransforms,
+  collectDriftedBrushIds,
+  collectParentChainDriftedBrushIds,
+} from './solid_brush_transform_sync.js';
 import { disposeBrushPreviewResources } from './solid_model_mesh_disposal.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
 import { getSolidGroupOperation, isSolidCsgGroup, isValidSolidTreeParent, markAsSolidCsgGroup } from './solid_group.js';
-import { ObjectDuplicator } from '@/outliner/hierarchy/object_duplicator.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 import type { SolidBrushInstance } from './solid_brush_instance.js';
 import type { SolidBrushCollection } from './solid_brush_collection.js';
 import type { SolidModelRebuildPipeline } from './solid_model_rebuild_pipeline.js';
@@ -24,18 +28,53 @@ export interface SolidModelOpsHost {
 }
 
 /**
- * Rebuilds partial CSG after history when only brush transforms drifted.
+ * Rebuilds partial CSG after history when brush local poses or intermediate
+ * solid-group parent poses drifted (group undo/redo leaves brush TRS alone).
  *
  * @param host Solid model host.
  */
 export function rebuildChangedHistoryTransforms(host: SolidModelOpsHost): void {
-  const changedIds = pullChangedBrushTransforms(host.brushes.getEvaluationList(), {
+  const evaluationList = host.brushes.getEvaluationList();
+  const localChangedIds = pullChangedBrushTransforms(evaluationList, {
     positionLock: true,
     stretchLock: true,
   });
-  if (changedIds.length === 0) return;
+  const parentChainChangedIds = collectParentChainDriftedBrushIds(evaluationList, (brushId) =>
+    host.pipeline.getPreparedParentChainPoseKey(brushId),
+  );
+  const changedIds = mergeUniqueBrushIds(localChangedIds, parentChainChangedIds);
+  if (changedIds.length === 0) {
+    return;
+  }
   host.markBrushesDirty(changedIds);
   host.rebuild(true);
+}
+
+/**
+ * Merges two brush-id lists without duplicates, preserving first-seen order.
+ *
+ * @param firstIds First id list.
+ * @param secondIds Second id list.
+ * @returns Combined unique ids.
+ */
+function mergeUniqueBrushIds(firstIds: readonly string[], secondIds: readonly string[]): string[] {
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  for (const id of firstIds) {
+    if (seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    merged.push(id);
+  }
+  for (const id of secondIds) {
+    if (seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    merged.push(id);
+  }
+  return merged;
 }
 
 /**
@@ -74,7 +113,7 @@ export function cloneBrushWithPreview(
 ): SolidBrushInstance {
   source.pullTransformFromMesh();
   host.brushes.nextBrushCounter();
-  const name = `${source.name}_copy`;
+  const name = hierarchyNameAllocator.allocateFromSourceName(source.name);
   const clone = source.cloneWithId(host.brushes.allocateBrushId(), name);
   clone.position.add(offset);
   const preview = SolidBrushVisual.createHullPreview(name, clone.brush, clone.operation);
@@ -105,7 +144,7 @@ export function cloneSolidCsgGroupSubtree(
   createdBrushIds: string[],
 ): THREE.Group {
   const cloneGroup = new THREE.Group();
-  cloneGroup.name = ObjectDuplicator.getNextDuplicateName(sourceGroup.name);
+  cloneGroup.name = hierarchyNameAllocator.allocateFromSourceName(sourceGroup.name);
   cloneGroup.position.copy(sourceGroup.position).add(offset);
   cloneGroup.quaternion.copy(sourceGroup.quaternion);
   cloneGroup.scale.copy(sourceGroup.scale);

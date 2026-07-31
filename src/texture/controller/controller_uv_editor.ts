@@ -1,5 +1,5 @@
 import { CommandStack } from '@/commands/command_stack.js';
-import { CommandTextureApplyFace } from '@/texture/commands/command_texture_apply_face.js';
+import { CommandTextureFaceApply } from '@/texture/commands/command_texture_face_apply.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { ControllerFaceExtrusion } from '@/tools/face/controller_face_extrusion.js';
 import { SelectionMode } from '@/types/selection_mode.js';
@@ -98,7 +98,7 @@ export class ControllerUvEditor {
       this.reportNoSelection();
       return;
     }
-    const command = new CommandTextureApplyFace(targets, createDefaultFaceTextureMapping(), {
+    const command = new CommandTextureFaceApply(targets, createDefaultFaceTextureMapping(), {
       alignOnly: align,
     });
     this.commandStack.push(command);
@@ -136,7 +136,7 @@ export class ControllerUvEditor {
       this.reportNoSelection();
       return;
     }
-    const command = new CommandTextureApplyFace(targets, createDefaultFaceTextureMapping(), {
+    const command = new CommandTextureFaceApply(targets, createDefaultFaceTextureMapping(), {
       partialTrs: fields,
     });
     this.commandStack.push(command);
@@ -156,7 +156,7 @@ export class ControllerUvEditor {
       this.reportNoSelection();
       return;
     }
-    const command = new CommandTextureApplyFace(targets, createDefaultFaceTextureMapping(), {
+    const command = new CommandTextureFaceApply(targets, createDefaultFaceTextureMapping(), {
       relativeOp: op,
     });
     this.commandStack.push(command);
@@ -174,7 +174,7 @@ export class ControllerUvEditor {
       this.reportNoSelection();
       return;
     }
-    const command = new CommandTextureApplyFace(targets, createDefaultFaceTextureMapping(), {
+    const command = new CommandTextureFaceApply(targets, createDefaultFaceTextureMapping(), {
       resetUvOnly: true,
     });
     this.commandStack.push(command);
@@ -205,7 +205,7 @@ export class ControllerUvEditor {
    * @param mapping Mapping to apply.
    */
   private pushApplyCommand(targets: TextureApplyTarget[], mapping: FaceTextureMapping): void {
-    const command = new CommandTextureApplyFace(targets, mapping);
+    const command = new CommandTextureFaceApply(targets, mapping);
     this.commandStack.push(command);
   }
 

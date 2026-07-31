@@ -66,9 +66,9 @@ import {
 } from '@/layout/setup/viewport_layout_detached.js';
 import { findPrimaryPerspectiveViewport, resolveNamedViewportFields } from '@/layout/setup/layout_named_viewports.js';
 import { createWiredActionHandlers } from '@/layout/setup/factory_layout_action_handler.js';
-import { PanelSolidModel } from '@/solid/ui/panel/panel_solid_model.js';
-import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
-import { setupSolidModelLayout } from '@/solid/layout/layout_solid_model_setup.js';
+import { SolidModelPanel } from '@/solid/ui/panel/solid_model_panel.js';
+import { SolidModelController } from '@/solid/controller/solid_model_controller.js';
+import { setupSolidModelLayout } from '@/solid/layout/solid_model_layout_setup.js';
 import { setupLayoutAi } from '@/layout/setup/layout_ai_setup.js';
 import {
   setupCameraAndShadingCoordinators as createCameraAndShadingCoordinators,
@@ -196,8 +196,8 @@ export abstract class ViewportLayoutCore {
   protected settingsUnsubscribe!: (() => void) | null;
   protected clipPlaneTool!: ToolClipPlane;
   protected clipPlaneHandler!: HandlerClipPlane | null;
-  protected solidModelPanel!: PanelSolidModel | null;
-  protected solidModelController!: ControllerSolidModel | null;
+  protected solidModelPanel!: SolidModelPanel | null;
+  protected solidModelController!: SolidModelController | null;
   protected cadRulerSystem!: CadRulerSystem;
   protected rulerBoundsBuilder!: BuilderOrientedBounds;
   protected editorOverlayPolicy!: PolicyEditorOverlay;
@@ -580,6 +580,7 @@ export abstract class ViewportLayoutCore {
       getViewports: () => this.getAllLiveViewports(),
       getViewportElements: () => this.viewportRegistry.getContainers(),
       selectionVisualController: this.selectionVisualController,
+      getDetachedViewports: () => this.detachedViewportWindow.getViewports(),
     });
     this.cameraFitCoordinator = setup.cameraFitCoordinator;
     this.shadingModeCoordinator = setup.shadingModeCoordinator;

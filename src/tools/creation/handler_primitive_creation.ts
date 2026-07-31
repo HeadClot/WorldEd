@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ToolPrimitiveCreation } from './tool_primitive_creation.js';
-import { CommandCreatePrimitive } from '@/tools/creation/commands/command_create_primitive.js';
+import { CommandPrimitiveCreate } from '@/tools/creation/commands/command_primitive_create.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import {
@@ -104,7 +104,7 @@ export class HandlerPrimitiveCreation {
   private createPrimitive(factory: () => THREE.Mesh, objectRadius: number): void {
     const mesh = factory();
     this.applySpawnPlacement(mesh, objectRadius);
-    const command = new CommandCreatePrimitive(mesh, this.worldObject);
+    const command = new CommandPrimitiveCreate(mesh, this.worldObject);
     this.commandStack.push(command);
     this.onPrimitiveCreatedCallback();
     this.selectionManager.selectObject(mesh);

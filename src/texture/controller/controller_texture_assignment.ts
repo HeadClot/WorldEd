@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { CommandStack } from '@/commands/command_stack.js';
-import { CommandTextureAssignSurface } from '@/texture/commands/command_texture_assign_surface.js';
-import { CommandTextureAssignSolidBrush } from '@/texture/commands/command_texture_assign_solid_brush.js';
-import { CommandTextureAssignSolidFace } from '@/texture/commands/command_texture_assign_solid_face.js';
+import { CommandTextureSurfaceAssign } from '@/texture/commands/command_texture_surface_assign.js';
+import { CommandTextureSolidBrushAssign } from '@/texture/commands/command_texture_solid_brush_assign.js';
+import { CommandTextureSolidFaceAssign } from '@/texture/commands/command_texture_solid_face_assign.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { ControllerFaceExtrusion } from '@/tools/face/controller_face_extrusion.js';
 import { SelectionMode } from '@/types/selection_mode.js';
@@ -92,7 +92,7 @@ export class ControllerTextureAssignment {
       return;
     }
     const meshes = this.selectionManager.getAllSelectedObjectsAsArray();
-    const solidBrushes = CommandTextureAssignSolidBrush.filterBrushMeshes(meshes);
+    const solidBrushes = CommandTextureSolidBrushAssign.filterBrushMeshes(meshes);
     if (solidBrushes.length > 0) {
       this.assignSolidBrushTextures(solidBrushes, entry);
       return;
@@ -116,7 +116,7 @@ export class ControllerTextureAssignment {
     if (faces.length === 0) return false;
     const solidTargets = this.resolveSolidFaceTargets(faces);
     if (solidTargets.length === 0) return false;
-    const command = new CommandTextureAssignSolidFace(solidTargets, entry.id);
+    const command = new CommandTextureSolidFaceAssign(solidTargets, entry.id);
     this.commandStack.push(command);
     this.afterSolidTextureAssign?.();
     this.statusCallback?.(`Assigned ${entry.displayName} to ${solidTargets.length} solid face(s)`);
@@ -225,7 +225,7 @@ export class ControllerTextureAssignment {
    * @param entry Texture entry.
    */
   private assignSolidBrushTextures(brushMeshes: THREE.Mesh[], entry: TextureBrowserEntry): void {
-    const command = new CommandTextureAssignSolidBrush(brushMeshes, entry.id);
+    const command = new CommandTextureSolidBrushAssign(brushMeshes, entry.id);
     this.commandStack.push(command);
     this.afterSolidTextureAssign?.();
     this.statusCallback?.(`Assigned ${entry.displayName} to ${brushMeshes.length} solid brush(es)`);
@@ -238,7 +238,7 @@ export class ControllerTextureAssignment {
    * @param entry Texture to apply.
    */
   private assignTextureToTargets(targets: TextureApplyTarget[], entry: TextureBrowserEntry): void {
-    const command = new CommandTextureAssignSurface(targets, entry.id);
+    const command = new CommandTextureSurfaceAssign(targets, entry.id);
     this.commandStack.push(command);
     this.statusCallback?.(`Assigned ${entry.displayName} to ${targets.length} surface region(s)`);
   }

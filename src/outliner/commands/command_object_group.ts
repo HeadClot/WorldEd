@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { UndoCommand } from '@/commands/command_undo.js';
+import { sortObjectsBySceneOrder } from '@/utils/utils_hierarchy.js';
 
 /**
  * Snapshot capturing the state of each child before grouping. Stores parent
@@ -93,21 +94,33 @@ export class CommandObjectGroup implements UndoCommand {
 
   /**
    * Builds snapshots capturing each child's original parent and position.
+   * Members are ordered top-to-bottom in the scene graph so CSG evaluation and
+   * outliner order match hierarchy, not selection click order.
    *
    * @param objects The objects to snapshot.
-   * @returns An array of child state snapshots.
+   * @returns An array of child state snapshots in scene order.
    */
   private buildSnapshots(objects: THREE.Object3D[]): GroupChildSnapshot[] {
     const snapshots: GroupChildSnapshot[] = [];
-    objects.forEach((child) => {
-      const snapshot: GroupChildSnapshot = {
-        child: child,
-        originalParent: child.parent,
-        siblingIndex: child.parent ? child.parent.children.indexOf(child) : 0,
-      };
-      snapshots.push(snapshot);
+    const orderedMembers = sortObjectsBySceneOrder(objects);
+    orderedMembers.forEach((child) => {
+      snapshots.push(this.buildOneChildSnapshot(child));
     });
     return snapshots;
+  }
+
+  /**
+   * Builds one child snapshot for undo restore.
+   *
+   * @param child Object that will become a group member.
+   * @returns Parent and sibling index snapshot.
+   */
+  private buildOneChildSnapshot(child: THREE.Object3D): GroupChildSnapshot {
+    return {
+      child: child,
+      originalParent: child.parent,
+      siblingIndex: child.parent ? child.parent.children.indexOf(child) : 0,
+    };
   }
 
   /**

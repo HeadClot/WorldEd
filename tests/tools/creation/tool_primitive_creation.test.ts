@@ -4,6 +4,7 @@ import { Theme } from '@/theme.js';
 import { ToolPrimitiveCreation } from '@/tools/creation/tool_primitive_creation.js';
 import { getGeometrySource, resolveGeometrySourceType } from '@/texture/uv/geometry_source.js';
 import { TextureLockSettings } from '@/texture/lock/texture_lock_settings.js';
+import { formatHierarchyHexIndex, hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 
 /**
  * Returns the range of U and V coordinates on a mesh.
@@ -31,6 +32,7 @@ describe('ToolPrimitiveCreation', () => {
   let tool: ToolPrimitiveCreation;
 
   beforeEach(() => {
+    hierarchyNameAllocator.reset();
     scene = new THREE.Scene();
     tool = new ToolPrimitiveCreation(scene);
   });
@@ -63,8 +65,8 @@ describe('ToolPrimitiveCreation', () => {
   it('should name box with auto-incremented number', () => {
     const mesh1 = tool.createBox(1, 1, 1);
     const mesh2 = tool.createBox(1, 1, 1);
-    expect(mesh1.name).toBe('Cube001');
-    expect(mesh2.name).toBe('Cube002');
+    expect(mesh1.name).toBe(`Cube.${formatHierarchyHexIndex(1)}`);
+    expect(mesh2.name).toBe(`Cube.${formatHierarchyHexIndex(2)}`);
   });
 
   it('should create a sphere with correct geometry type', () => {
@@ -81,8 +83,8 @@ describe('ToolPrimitiveCreation', () => {
   it('should name sphere with auto-incremented number', () => {
     const mesh1 = tool.createSphere(1);
     const mesh2 = tool.createSphere(1);
-    expect(mesh1.name).toBe('Sphere001');
-    expect(mesh2.name).toBe('Sphere002');
+    expect(mesh1.name).toBe(`Sphere.${formatHierarchyHexIndex(1)}`);
+    expect(mesh2.name).toBe(`Sphere.${formatHierarchyHexIndex(2)}`);
   });
 
   it('should create a cylinder with correct geometry type', () => {
@@ -101,8 +103,8 @@ describe('ToolPrimitiveCreation', () => {
   it('should name cylinder with auto-incremented number', () => {
     const mesh1 = tool.createCylinder(1, 1, 1);
     const mesh2 = tool.createCylinder(1, 1, 1);
-    expect(mesh1.name).toBe('Cylinder001');
-    expect(mesh2.name).toBe('Cylinder002');
+    expect(mesh1.name).toBe(`Cylinder.${formatHierarchyHexIndex(1)}`);
+    expect(mesh2.name).toBe(`Cylinder.${formatHierarchyHexIndex(2)}`);
   });
 
   it('should create a plane with correct geometry type', () => {
@@ -152,8 +154,8 @@ describe('ToolPrimitiveCreation', () => {
   it('should name plane with auto-incremented number', () => {
     const mesh1 = tool.createPlane(1, 1);
     const mesh2 = tool.createPlane(1, 1);
-    expect(mesh1.name).toBe('Plane001');
-    expect(mesh2.name).toBe('Plane002');
+    expect(mesh1.name).toBe(`Plane.${formatHierarchyHexIndex(1)}`);
+    expect(mesh2.name).toBe(`Plane.${formatHierarchyHexIndex(2)}`);
   });
 
   it('should use theme box color for materials', () => {

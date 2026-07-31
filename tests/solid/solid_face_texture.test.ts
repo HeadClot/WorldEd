@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { CommandTextureAssignSolidFace } from '@/texture/commands/command_texture_assign_solid_face.js';
+import { CommandTextureSolidFaceAssign } from '@/texture/commands/command_texture_solid_face_assign.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
 import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
 
@@ -10,7 +10,7 @@ describe('Solid face texture assignment', () => {
   it('paints one brush face without changing other faces', () => {
     const model = new SolidModel('FaceTex');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const command = new CommandTextureAssignSolidFace(
+    const command = new CommandTextureSolidFaceAssign(
       [{ model, brushId: brush.id, surfaceIndex: 0 }],
       'folder/face0.png',
     );
@@ -25,7 +25,7 @@ describe('Solid face texture assignment', () => {
   it('undo restores the previous face texture', () => {
     const model = new SolidModel('FaceUndo');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
-    const command = new CommandTextureAssignSolidFace(
+    const command = new CommandTextureSolidFaceAssign(
       [{ model, brushId: brush.id, surfaceIndex: 2 }],
       'folder/side.png',
     );

@@ -5,7 +5,7 @@ import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidCsgCompiler } from '@/solid/algorithm/compile/solid_csg_compiler.js';
 import { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
 import { SolidCsgTreeEvaluator } from '@/solid/algorithm/compile/solid_csg_tree_evaluator.js';
-import { BuilderSolidAlgorithmRoutingTable } from '@/solid/algorithm/routing/builder_solid_algorithm_routing_table.js';
+import { SolidAlgorithmRoutingTableBuilder } from '@/solid/algorithm/routing/solid_algorithm_routing_table_builder.js';
 import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
 import { markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
 import { SurfaceCategory } from '@/solid/types/surface_category.js';
@@ -87,7 +87,7 @@ function routeFlatLinearized(
 ): SurfaceCategory {
   const tree = SolidCsgTree.fromPreparedFlat(prepared);
   const peers = prepared.map((_, index) => index).filter((index) => index !== subjectIndex);
-  const table = BuilderSolidAlgorithmRoutingTable.buildForSubject(prepared, subjectIndex, peers, tree, false, true);
+  const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(prepared, subjectIndex, peers, tree, false, true);
   return table.route((preparedIndex) => {
     if (preparedIndex === subjectIndex) return SurfaceCategory.SelfAligned;
     const peer = prepared[preparedIndex];
@@ -206,7 +206,7 @@ describe('Solid CSG group intersect isolation', () => {
     const prepared = prepareVisibleBrushes(model);
     const tree = SolidCsgTree.fromSceneGraph(model.root, prepared);
     expect(tree.isFlat).toBe(false);
-    const table = BuilderSolidAlgorithmRoutingTable.buildForSubject(prepared, 0, [1], tree, false, true);
+    const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(prepared, 0, [1], tree, false, true);
     expect(table.steps.length).toBe(0);
   });
 

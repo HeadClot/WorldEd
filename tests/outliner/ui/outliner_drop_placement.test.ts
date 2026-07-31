@@ -9,9 +9,15 @@ import {
   resolveOutlinerDropTarget,
   resolveOutlinerIndentDepth,
   resolveOutlinerInsertLineGeometry,
+  outlinerDragEdgeScrollDeltaResolve,
+  outlinerRowIndexFromClientYResolve,
   OUTLINER_BASE_PADDING_PX,
+  OUTLINER_DRAG_SCROLL_EDGE_PX,
+  OUTLINER_DRAG_SCROLL_HOLD_RAMP_MS,
   OUTLINER_LEADING_CHROME_PX,
+  OUTLINER_ROW_HEIGHT_PX,
   OUTLINER_TREE_PADDING_PX,
+  outlinerDragEdgeScrollHoldFactorResolve,
 } from '@/outliner/ui/outliner_drop_placement.js';
 
 describe('resolveOutlinerDropPlacement', () => {
@@ -100,6 +106,109 @@ describe('resolveOutlinerInsertLineGeometry', () => {
     expect(grand.left).toBe(outlinerRowDepthOffsetPx(2) + OUTLINER_LEADING_CHROME_PX);
     expect(child.width).toBeLessThan(root.width);
     expect(grand.width).toBeLessThan(child.width);
+  });
+
+  it('should keep left plus width within host width for half-pixel name edges', () => {
+    const hostWidth = 200;
+    const geometry = resolveOutlinerInsertLineGeometry(hostWidth, 1, 42.5);
+    expect(geometry.left).toBe(43);
+    expect(geometry.width).toBe(157);
+    expect(geometry.left + geometry.width).toBe(hostWidth);
+  });
+
+  it('should floor fractional host width so geometry stays inside the client box', () => {
+    const geometry = resolveOutlinerInsertLineGeometry(200.9, 0);
+    expect(geometry.left).toBe(0);
+    expect(geometry.width).toBe(200);
+  });
+});
+
+describe('outlinerDragEdgeScrollDeltaResolve', () => {
+  const fullHold = OUTLINER_DRAG_SCROLL_HOLD_RAMP_MS;
+
+  it('should return zero outside the edge bands', () => {
+    expect(outlinerDragEdgeScrollDeltaResolve(100, 0, 400, fullHold)).toBe(0);
+  });
+
+  it('should scroll up faster at the outer top edge than near the band center', () => {
+    const outer = outlinerDragEdgeScrollDeltaResolve(0, 0, 400, fullHold);
+    const mid = outlinerDragEdgeScrollDeltaResolve(OUTLINER_DRAG_SCROLL_EDGE_PX * 0.5, 0, 400, fullHold);
+    const nearOuter = outlinerDragEdgeScrollDeltaResolve(OUTLINER_DRAG_SCROLL_EDGE_PX * 0.15, 0, 400, fullHold);
+    expect(outer).toBeLessThan(0);
+    expect(Math.abs(outer)).toBeGreaterThan(Math.abs(nearOuter));
+    expect(Math.abs(nearOuter)).toBeGreaterThanOrEqual(Math.abs(mid));
+    expect(Math.abs(outer)).toBeGreaterThanOrEqual(OUTLINER_ROW_HEIGHT_PX * 6);
+  });
+
+  it('should barely move in the outer half of the band until near the rim', () => {
+    const outer = Math.abs(outlinerDragEdgeScrollDeltaResolve(0, 0, 400, fullHold));
+    const half = Math.abs(outlinerDragEdgeScrollDeltaResolve(OUTLINER_DRAG_SCROLL_EDGE_PX * 0.5, 0, 400, fullHold));
+    const threeQuarter = Math.abs(
+      outlinerDragEdgeScrollDeltaResolve(OUTLINER_DRAG_SCROLL_EDGE_PX * 0.25, 0, 400, fullHold),
+    );
+    expect(half).toBeLessThanOrEqual(OUTLINER_ROW_HEIGHT_PX);
+    expect(threeQuarter).toBeLessThan(outer * 0.2);
+  });
+
+  it('should creep slowly just inside the edge band', () => {
+    const almostInner = outlinerDragEdgeScrollDeltaResolve(OUTLINER_DRAG_SCROLL_EDGE_PX - 2, 0, 400, fullHold);
+    expect(Math.abs(almostInner)).toBeLessThanOrEqual(1);
+  });
+
+  it('should keep mid-band drag scroll far below full outer speed', () => {
+    const outer = Math.abs(outlinerDragEdgeScrollDeltaResolve(0, 0, 400, fullHold));
+    const mid = Math.abs(outlinerDragEdgeScrollDeltaResolve(OUTLINER_DRAG_SCROLL_EDGE_PX * 0.5, 0, 400, fullHold));
+    expect(mid).toBeLessThan(outer * 0.08);
+  });
+
+  it('should stay still at the outer edge until hold ramp builds', () => {
+    expect(outlinerDragEdgeScrollDeltaResolve(0, 0, 400, 0)).toBe(0);
+    const early = Math.abs(outlinerDragEdgeScrollDeltaResolve(0, 0, 400, 200));
+    const full = Math.abs(outlinerDragEdgeScrollDeltaResolve(0, 0, 400, fullHold));
+    expect(early).toBeLessThan(full * 0.05);
+    expect(full).toBeGreaterThan(0);
+  });
+
+  it('should ease hold factor from zero to one over the ramp window', () => {
+    expect(outlinerDragEdgeScrollHoldFactorResolve(0)).toBe(0);
+    expect(outlinerDragEdgeScrollHoldFactorResolve(fullHold / 2)).toBeCloseTo(0.25, 5);
+    expect(outlinerDragEdgeScrollHoldFactorResolve(fullHold)).toBe(1);
+  });
+
+  it('should scroll down at the bottom edge', () => {
+    const delta = outlinerDragEdgeScrollDeltaResolve(400, 0, 400, fullHold);
+    expect(delta).toBeGreaterThan(0);
+  });
+});
+
+describe('outlinerRowIndexFromClientYResolve', () => {
+  it('should return null for an empty list', () => {
+    expect(outlinerRowIndexFromClientYResolve(100, 0, 0, 0)).toBeNull();
+  });
+
+  it('should map the first row without scroll', () => {
+    const clientY = OUTLINER_TREE_PADDING_PX + 1;
+    expect(outlinerRowIndexFromClientYResolve(clientY, 0, 0, 1000)).toBe(0);
+  });
+
+  it('should map a deep row using fixed height and scrollTop', () => {
+    const rowIndex = 500;
+    const clientY = OUTLINER_TREE_PADDING_PX + rowIndex * OUTLINER_ROW_HEIGHT_PX + 4;
+    expect(outlinerRowIndexFromClientYResolve(clientY, 0, 0, 1000)).toBe(rowIndex);
+  });
+
+  it('should clamp below the first row and past the last row', () => {
+    expect(outlinerRowIndexFromClientYResolve(-50, 0, 0, 10)).toBe(0);
+    const pastEnd = OUTLINER_TREE_PADDING_PX + 50 * OUTLINER_ROW_HEIGHT_PX;
+    expect(outlinerRowIndexFromClientYResolve(pastEnd, 0, 0, 10)).toBe(9);
+  });
+
+  it('should account for tree host top offset and scrollTop', () => {
+    const treeTop = 80;
+    const scrollTop = 220;
+    const rowIndex = 12;
+    const clientY = treeTop + OUTLINER_TREE_PADDING_PX + rowIndex * OUTLINER_ROW_HEIGHT_PX - scrollTop + 2;
+    expect(outlinerRowIndexFromClientYResolve(clientY, treeTop, scrollTop, 100)).toBe(rowIndex);
   });
 });
 

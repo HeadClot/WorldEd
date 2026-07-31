@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SolidBrush } from '@/solid/brush/solid_brush.js';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
@@ -15,6 +15,7 @@ import {
   serializeFaceTextureMapping,
 } from '@/texture/uv/face_texture_mapping.js';
 import { isResultMesh } from '@/solid/model/solid_model_keys.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 
 /** Serializable snapshot of a solid brush instance. */
 export interface SerializedSolidBrush {
@@ -127,6 +128,7 @@ export class SolidModelCodec {
     const model = new SolidModel(name);
     for (const brushData of data.brushes ?? []) {
       const instance = this.decodeBrush(brushData);
+      hierarchyNameAllocator.noteExistingName(instance.name);
       model.addBrushInstance(instance);
     }
     if (data.hierarchy && data.hierarchy.length > 0) {
@@ -294,6 +296,7 @@ export class SolidModelCodec {
   ): void {
     const group = new THREE.Group();
     group.name = node.name || 'Group';
+    hierarchyNameAllocator.noteExistingName(group.name);
     markAsSolidCsgGroup(group, node.operation);
     group.position.set(node.position.x, node.position.y, node.position.z);
     group.rotation.set(node.rotation.x, node.rotation.y, node.rotation.z, 'XYZ');
@@ -458,7 +461,7 @@ export class SolidModelCodec {
    */
   private static decodeBrushGeometry(data: SerializedSolidBrush): SolidBrush {
     if (!data.vertices || data.vertices.length < 12 || !data.wingEdges?.length) {
-      return FactorySolidBrush.createCenteredBox(2, 2, 2);
+      return SolidBrushFactory.createCenteredBox(2, 2, 2);
     }
     const brush = new SolidBrush();
     brush.vertices = this.inflateVertices(data.vertices);

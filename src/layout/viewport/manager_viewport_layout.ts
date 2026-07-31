@@ -29,7 +29,7 @@ import {
 import { formatKeyboardShortcut } from '@/settings/keyboard/keyboard_shortcut_format.js';
 import { createDefaultKeyboardShortcutSettings } from '@/settings/store/settings_defaults.js';
 import { applyTransformModeUi } from '@/layout/setup/layout_transform_mode_ui.js';
-import { CommandCreateTerrain } from '@/tools/creation/commands/command_create_terrain.js';
+import { CommandTerrainCreate } from '@/tools/creation/commands/command_terrain_create.js';
 import {
   refreshSceneVisualsAfterMutation,
   refreshSceneVisualsAfterTransformCommit,
@@ -436,7 +436,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
   /** Creates a procedural terrain mesh and selects it. */
   private onAddTerrain(): void {
     const mesh = this.terrainGenerator.createTerrain(20, 20, 32, 2.5, Date.now() % 1000);
-    this.commandStack.push(new CommandCreateTerrain(mesh, this.worldObject));
+    this.commandStack.push(new CommandTerrainCreate(mesh, this.worldObject));
     this.selectionManager.selectObject(mesh);
     this.refreshAfterWorldMutation();
     this.showStatusMessage(`Created ${mesh.name}`);
@@ -635,6 +635,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       clipPlaneHandler: this.clipPlaneHandler,
       cadRulerSystem: this.cadRulerSystem,
       transformGizmo: this.transformGizmo,
+      transformHandler: this.transformHandler,
       onBeforeRender: () => {
         this.cadRulerSystem.refreshLabelProjection();
       },

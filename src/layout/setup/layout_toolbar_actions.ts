@@ -4,8 +4,8 @@ import { DocumentationLink } from '@/ui/link/documentation_link.js';
 import type { StatusBar } from '@/ui/status/status_bar.js';
 import type { Toolbar } from '@/ui/toolbar/toolbar.js';
 import type { DetachedViewportWindow } from '@/viewports/detached/detached_viewport_window.js';
-import type { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
-import type { PanelSolidModel } from '@/solid/ui/panel/panel_solid_model.js';
+import type { SolidModelController } from '@/solid/controller/solid_model_controller.js';
+import type { SolidModelPanel } from '@/solid/ui/panel/solid_model_panel.js';
 import { ControllerSnapSettings } from '@/tools/snap/controller_snap_settings.js';
 import type { GridSnap } from '@/transform/snap/grid_snap.js';
 import type { ManagerSnap } from '@/transform/snap/manager_snap.js';
@@ -75,8 +75,8 @@ export function setLayoutMcpToolbarButtonActive(toolbar: Toolbar | null, running
  * @param statusBar Status bar, if present.
  */
 export function toggleLayoutSolidModelPanel(
-  solidModelController: ControllerSolidModel | null,
-  solidModelPanel: PanelSolidModel | null,
+  solidModelController: SolidModelController | null,
+  solidModelPanel: SolidModelPanel | null,
   statusBar: StatusBar | null,
 ): void {
   solidModelController?.togglePanel();

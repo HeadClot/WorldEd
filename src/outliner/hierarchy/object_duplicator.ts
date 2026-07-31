@@ -5,6 +5,7 @@ import { getFaceTextureMaps, setFaceTextureMaps } from '@/texture/uv/face_textur
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '@/solid/model/solid_brush_edge_materials.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 
 /**
  * Pure utility for deep-cloning meshes. Handles geometry, material, and content
@@ -25,33 +26,9 @@ export class ObjectDuplicator {
     meshes.forEach((mesh) => {
       const clone = this.cloneSingleMesh(mesh);
       clone.position.add(offset);
-      clone.name = this.getNextDuplicateName(mesh.name);
       clones.push(clone);
     });
     return clones;
-  }
-
-  /**
-   * Computes the next duplicate name for an original mesh name.
-   *
-   * @param originalName The name of the original mesh.
-   * @returns A new name with _copy or incremented suffix.
-   */
-  public static getNextDuplicateName(originalName: string): string {
-    if (originalName.endsWith('_copy')) {
-      const base = originalName.slice(0, -5);
-      const suffix = this.extractCopySuffix(originalName);
-      if (suffix > 0) {
-        return `${base}_copy${suffix + 1}`;
-      }
-      return `${base}_copy2`;
-    }
-    const suffix = this.extractCopySuffix(originalName);
-    if (suffix > 0) {
-      const base = originalName.replace(/_copy\d+$/, '');
-      return `${base}_copy${suffix + 1}`;
-    }
-    return `${originalName}_copy`;
   }
 
   /**
@@ -67,7 +44,7 @@ export class ObjectDuplicator {
     clone.position.copy(mesh.position);
     clone.quaternion.copy(mesh.quaternion);
     clone.scale.copy(mesh.scale);
-    clone.name = mesh.name;
+    clone.name = hierarchyNameAllocator.allocateFromSourceName(mesh.name);
     this.cloneUserDataMarkers(mesh, clone);
     this.cloneFaceTextureMaps(mesh, clone);
     this.cloneEdgeHelpers(mesh, clone);
@@ -181,19 +158,5 @@ export class ObjectDuplicator {
     if (line.userData['isSelectionHighlight'] === true) return true;
     if (line.userData['isWireframeOverlay'] === true) return true;
     return false;
-  }
-
-  /**
-   * Extracts the numeric copy suffix from a name string.
-   *
-   * @param name The name string to inspect.
-   * @returns The suffix number, or zero if none found.
-   */
-  private static extractCopySuffix(name: string): number {
-    const match = name.match(/_copy(\d+)$/);
-    if (match) {
-      return parseInt(match[1]!, 10);
-    }
-    return 0;
   }
 }

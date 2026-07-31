@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushPlaneClip } from '@/solid/brush/solid_brush_plane_clip.js';
 import { SolidBrushValidator } from '@/solid/brush/solid_brush_validator.js';
 import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { CommandSolidClipBrush } from '@/solid/commands/command_solid_clip_brush.js';
+import { CommandSolidBrushClip } from '@/solid/commands/brush/command_solid_brush_clip.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 import { createFaceTextureMappingFromTrs } from '@/texture/uv/face_texture_mapping.js';
 
 /** Unit tests for solid brush plane clipping used by the clip tool. */
 describe('SolidBrushPlaneClip', () => {
   it('clips a unit box keeping the positive X half as a valid solid', () => {
-    const brush = FactorySolidBrush.createCenteredBox(2, 2, 2);
+    const brush = SolidBrushFactory.createCenteredBox(2, 2, 2);
     const plane = new SolidPlane(new THREE.Vector3(1, 0, 0), 0);
     const clipped = SolidBrushPlaneClip.clipKeepInside(brush, plane);
     expect(clipped).not.toBeNull();
@@ -30,7 +30,7 @@ describe('SolidBrushPlaneClip', () => {
     expect(instance.mesh).toBeTruthy();
     expect(SolidBrushVisual.isBrushObject(instance.mesh!)).toBe(true);
     const plane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
-    const command = new CommandSolidClipBrush(model, instance.id, plane, false);
+    const command = new CommandSolidBrushClip(model, instance.id, plane, false);
     command.execute();
     expect(command.didClip()).toBe(true);
     const updated = model.findBrush(instance.id);
@@ -60,7 +60,7 @@ describe('SolidBrushPlaneClip', () => {
     const beforeUv = instance.getFaceSurface(sideIndex).uv.clone();
     // Clip from above (keep lower half) — side plane equations stay the same.
     const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0.25);
-    const command = new CommandSolidClipBrush(model, instance.id, plane, true);
+    const command = new CommandSolidBrushClip(model, instance.id, plane, true);
     command.execute();
     expect(command.didClip()).toBe(true);
     const updated = model.findBrush(instance.id)!;

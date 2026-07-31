@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CommandStack } from '@/commands/command_stack.js';
-import { SmearMeshSnapshot, CommandTextureSmearUvStroke } from '@/texture/commands/command_texture_smear_uv_stroke.js';
+import { SmearMeshSnapshot, CommandTextureUvStrokeSmear } from '@/texture/commands/command_texture_uv_stroke_smear.js';
 import { expandFaceSelectionIndices } from '@/selection/face/solid_result_face_indices.js';
 import {
   FaceTextureMapping,
@@ -102,11 +102,11 @@ export class ControllerUvSmear {
       const before = this.beforeByMeshId.get(mesh.uuid);
       if (!before) return;
       beforeSnapshots.push(before);
-      afterSnapshots.push(CommandTextureSmearUvStroke.captureMesh(mesh));
+      afterSnapshots.push(CommandTextureUvStrokeSmear.captureMesh(mesh));
     });
     this.resetStrokeState();
     if (beforeSnapshots.length === 0) return;
-    this.commandStack.push(new CommandTextureSmearUvStroke(beforeSnapshots, afterSnapshots));
+    this.commandStack.push(new CommandTextureUvStrokeSmear(beforeSnapshots, afterSnapshots));
   }
 
   /**
@@ -269,7 +269,7 @@ export class ControllerUvSmear {
    */
   private captureBeforeIfNeeded(mesh: THREE.Mesh): void {
     if (this.beforeByMeshId.has(mesh.uuid)) return;
-    this.beforeByMeshId.set(mesh.uuid, CommandTextureSmearUvStroke.captureMesh(mesh));
+    this.beforeByMeshId.set(mesh.uuid, CommandTextureUvStrokeSmear.captureMesh(mesh));
   }
 
   /** Clears stroke bookkeeping without touching the scene. */

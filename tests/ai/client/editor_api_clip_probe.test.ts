@@ -6,11 +6,11 @@ import { CommandStack } from '@/commands/command_stack.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { CommandCreateSolidModel } from '@/solid/commands/command_create_solid_model.js';
+import { CommandSolidModelCreate } from '@/solid/commands/model/command_solid_model_create.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import { ManagerSnap } from '@/transform/snap/manager_snap.js';
-import { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
-import { PanelSolidModel } from '@/solid/ui/panel/panel_solid_model.js';
+import { SolidModelController } from '@/solid/controller/solid_model_controller.js';
+import { SolidModelPanel } from '@/solid/ui/panel/solid_model_panel.js';
 
 /**
  * Builds write API fixture.
@@ -22,8 +22,8 @@ function createApi(): { api: EditorApi; world: THREE.Group; stack: CommandStack 
   const stack = new CommandStack(64);
   const selection = new ManagerSelection();
   const panelHost = document.createElement('div');
-  const panel = new PanelSolidModel(panelHost, { onAddBoxBrush: () => undefined });
-  const solidModelController = new ControllerSolidModel(world, stack, selection, panel);
+  const panel = new SolidModelPanel(panelHost, { onAddBoxBrush: () => undefined });
+  const solidModelController = new SolidModelController(world, stack, selection, panel);
   const host: EditorApiHost = {
     worldObject: world,
     commandStack: stack,
@@ -48,7 +48,7 @@ describe('clip world plane and CSG vs AABB', () => {
     brush.position.set(5, 0, 0);
     brush.pushTransformToMesh();
     model.rebuild(true);
-    stack.push(new CommandCreateSolidModel(model, world));
+    stack.push(new CommandSolidModelCreate(model, world));
     const result = api.invokeTool('clip_brush', {
       brushId: brush.id,
       axis: 'x',
@@ -69,7 +69,7 @@ describe('clip world plane and CSG vs AABB', () => {
     model.root.updateMatrixWorld(true);
     brush.pushTransformToMesh();
     model.rebuild(true);
-    stack.push(new CommandCreateSolidModel(model, world));
+    stack.push(new CommandSolidModelCreate(model, world));
     const result = api.invokeTool('clip_brush', {
       brushId: brush.id,
       axis: 'x',
@@ -89,7 +89,7 @@ describe('clip world plane and CSG vs AABB', () => {
     cutter.position.set(0, 0, 0);
     cutter.pushTransformToMesh();
     model.rebuild(true);
-    stack.push(new CommandCreateSolidModel(model, world));
+    stack.push(new CommandSolidModelCreate(model, world));
     const aabb = api.invokeTool('query_point', { point: { x: 0, y: 0, z: 0 }, modelId: model.root.uuid });
     const csg = api.invokeTool('explain_csg_at_point', {
       point: { x: 0, y: 0, z: 0 },
@@ -111,7 +111,7 @@ describe('clip world plane and CSG vs AABB', () => {
     floating.position.set(50, 0, 0);
     floating.pushTransformToMesh();
     model.rebuild(true);
-    stack.push(new CommandCreateSolidModel(model, world));
+    stack.push(new CommandSolidModelCreate(model, world));
     const result = api.invokeTool('validate_solid_model', { modelId: model.root.uuid });
     expect(result.ok).toBe(true);
     const warnings = (result.data as { warnings: string[] }).warnings;

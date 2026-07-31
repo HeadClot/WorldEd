@@ -17,16 +17,16 @@ import { UvEditor } from '@/texture/ui/uv/uv_editor.js';
 
 describe('TextureBrowser', () => {
   let host: HTMLElement;
-  let onOpenFolder: ReturnType<typeof vi.fn>;
-  let onSelectTexture: ReturnType<typeof vi.fn>;
+  let onOpenFolder: ReturnType<typeof vi.fn<() => void>>;
+  let onSelectTexture: ReturnType<typeof vi.fn<(entryId: string) => void>>;
   let browser: TextureBrowser;
 
   beforeEach(() => {
     FloatingPanelStack.resetForTests();
     host = document.createElement('div');
     document.body.appendChild(host);
-    onOpenFolder = vi.fn();
-    onSelectTexture = vi.fn();
+    onOpenFolder = vi.fn<() => void>();
+    onSelectTexture = vi.fn<(entryId: string) => void>();
     browser = new TextureBrowser(host, {
       onOpenFolder,
       onSelectTexture,

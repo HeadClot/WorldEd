@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { CommandStack } from '@/commands/command_stack.js';
-import { CommandObjectSetColor } from '@/outliner/commands/command_object_set_color.js';
+import { CommandObjectColorSet } from '@/outliner/commands/command_object_color_set.js';
 
 /** Coalesces color-picker gestures into a single undoable CommandObjectSetColor. */
 export class PanelPropertiesColorSession {
   private commandStack: CommandStack | null;
-  private activeCommand: CommandObjectSetColor | null;
+  private activeCommand: CommandObjectColorSet | null;
   private finalizeTimerId: number | null;
 
   /** Creates a color edit session helper. */
@@ -61,7 +61,7 @@ export class PanelPropertiesColorSession {
       return (mesh.material as THREE.MeshStandardMaterial).color.getHex();
     });
     if (originalColorHexes.every((original) => original === colorHex)) return;
-    const command = new CommandObjectSetColor(meshes, colorHex, originalColorHexes);
+    const command = new CommandObjectColorSet(meshes, colorHex, originalColorHexes);
     if (this.commandStack) {
       this.commandStack.push(command);
     } else {

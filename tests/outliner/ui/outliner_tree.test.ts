@@ -41,6 +41,7 @@ describe('OutlinerTree', () => {
     root.add(mesh2);
     tree.refresh(new Set());
     expect(tree.getVisibleRowCountForTests()).toBe(2);
+    expect(tree.getRowElementsForTests().length).toBeGreaterThan(0);
   });
 
   it('should hide decorative edges and selection outlines under meshes', () => {
@@ -90,8 +91,7 @@ describe('OutlinerTree', () => {
     mesh.name = 'Selectable';
     root.add(mesh);
     tree.refresh(new Set());
-    const treeElement = container.children[1] as HTMLElement;
-    const firstItem = treeElement.children[0] as HTMLElement;
+    const firstItem = tree.getRowElementsForTests()[0]!;
     firstItem.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(selectedObj).toBe(mesh);
   });
@@ -105,8 +105,7 @@ describe('OutlinerTree', () => {
     mesh.name = 'Visible';
     root.add(mesh);
     tree.refresh(new Set());
-    const treeElement = container.children[1] as HTMLElement;
-    const firstItem = treeElement.children[0] as HTMLElement;
+    const firstItem = tree.getRowElementsForTests()[0]!;
     const visIcon = firstItem.querySelector('span:nth-child(4)') as HTMLElement;
     visIcon.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(toggledObj).toBe(mesh);
@@ -119,8 +118,7 @@ describe('OutlinerTree', () => {
     const selectionSet = new Set<THREE.Mesh>();
     selectionSet.add(mesh);
     tree.refresh(selectionSet);
-    const treeElement = container.children[1] as HTMLElement;
-    expect((treeElement.children[0] as HTMLElement).style.background).toBe('rgba(232, 106, 23, 0.3)');
+    expect(tree.getRowElementsForTests()[0]!.style.background).toBe('rgba(232, 106, 23, 0.3)');
   });
 
   it('should not highlight unselected objects', () => {
@@ -128,8 +126,7 @@ describe('OutlinerTree', () => {
     mesh.name = 'NotSelected';
     root.add(mesh);
     tree.refresh(new Set());
-    const treeElement = container.children[1] as HTMLElement;
-    expect((treeElement.children[0] as HTMLElement).style.background).toBe('transparent');
+    expect(tree.getRowElementsForTests()[0]!.style.background).toBe('transparent');
   });
 
   it('should filter objects by search query', () => {
@@ -172,16 +169,13 @@ describe('OutlinerTree', () => {
     const searchInput = container.children[0] as HTMLInputElement;
     searchInput.value = 'App';
     searchInput.dispatchEvent(new Event('input'));
-    const treeElement = container.children[1] as HTMLElement;
     expect(tree.getVisibleRowCountForTests()).toBe(1);
-    expect((treeElement.children[0] as HTMLElement).style.background).toBe('transparent');
+    expect(tree.getRowElementsForTests()[0]!.style.background).toBe('transparent');
     searchInput.value = '';
     searchInput.dispatchEvent(new Event('input'));
     expect(tree.getVisibleRowCountForTests()).toBe(2);
-    const bananaRow = Array.from(treeElement.children).find((row) =>
-      (row as HTMLElement).textContent?.includes('Banana'),
-    ) as HTMLElement;
-    expect(bananaRow.style.background).toBe('rgba(232, 106, 23, 0.3)');
+    const bananaRow = tree.getRowElementsForTests().find((row) => row.textContent?.includes('Banana'));
+    expect(bananaRow?.style.background).toBe('rgba(232, 106, 23, 0.3)');
   });
 
   it('reuses matching row elements while refining the search query', () => {
@@ -195,12 +189,11 @@ describe('OutlinerTree', () => {
     const searchInput = container.children[0] as HTMLInputElement;
     searchInput.value = 'B';
     searchInput.dispatchEvent(new Event('input'));
-    const treeElement = container.children[1] as HTMLElement;
-    const bananaRowBefore = treeElement.children[0] as HTMLElement;
+    const bananaRowBefore = tree.getRowElementsForTests()[0]!;
     expect(bananaRowBefore.textContent).toContain('Banana');
     searchInput.value = 'Bana';
     searchInput.dispatchEvent(new Event('input'));
-    expect(treeElement.children[0]).toBe(bananaRowBefore);
+    expect(tree.getRowElementsForTests()[0]).toBe(bananaRowBefore);
   });
 
   it('should show search bar with placeholder', () => {
@@ -252,11 +245,9 @@ describe('OutlinerTree', () => {
     root.add(group);
     root.add(sibling);
     tree.refresh(new Set());
-    const treeElement = container.children[1] as HTMLElement;
-    const groupRow = treeElement.children[0] as HTMLElement;
+    const groupRow = tree.getRowElementsForTests()[0]!;
     const groupChevron = groupRow.querySelector('span:nth-child(1)') as HTMLElement;
     expect(groupChevron.style.visibility).not.toBe('hidden');
-    // Move last child out as sibling after the group: visible order stays Group, Child, Sibling.
     group.remove(child);
     const insertIndex = root.children.indexOf(group) + 1;
     root.children.splice(insertIndex, 0, child);
@@ -279,8 +270,7 @@ describe('OutlinerTree', () => {
     root.add(meshA);
     root.add(meshB);
     tree.refresh(new Set());
-    const treeElement = container.children[1] as HTMLElement;
-    const firstRow = treeElement.children[0] as HTMLElement;
+    const firstRow = tree.getRowElementsForTests()[0]!;
     expect(tree.getVisibleRowCountForTests()).toBe(2);
 
     const meshC = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
@@ -289,8 +279,8 @@ describe('OutlinerTree', () => {
     tree.refresh(new Set());
 
     expect(tree.getVisibleRowCountForTests()).toBe(3);
-    expect(treeElement.children[0]).toBe(firstRow);
-    expect(treeElement.textContent).toContain('CubeC');
+    expect(tree.getRowElementsForTests()[0]).toBe(firstRow);
+    expect(container.textContent).toContain('CubeC');
   });
 
   it('should remove a single deleted root child without rebuilding siblings', () => {
@@ -304,17 +294,30 @@ describe('OutlinerTree', () => {
     root.add(meshB);
     root.add(meshC);
     tree.refresh(new Set());
-    const treeElement = container.children[1] as HTMLElement;
-    const firstRow = treeElement.children[0] as HTMLElement;
-    const thirdRow = treeElement.children[2] as HTMLElement;
+    const firstRow = tree.getRowElementsForTests()[0]!;
+    const poolSizeBefore = tree.getPoolSizeForTests();
 
     root.remove(meshB);
     tree.refresh(new Set());
 
     expect(tree.getVisibleRowCountForTests()).toBe(2);
-    expect(treeElement.children[0]).toBe(firstRow);
-    expect(treeElement.children[1]).toBe(thirdRow);
-    expect(treeElement.textContent).not.toContain('RemoveMe');
+    expect(tree.getRowElementsForTests()[0]).toBe(firstRow);
+    expect(tree.getPoolSizeForTests()).toBe(poolSizeBefore);
+    expect(container.textContent).not.toContain('RemoveMe');
+    expect(container.textContent).toContain('KeepA');
+    expect(container.textContent).toContain('KeepC');
+  });
+
+  it('should keep DOM pool size bounded for large hierarchies', () => {
+    for (let index = 0; index < 300; index += 1) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+      mesh.name = `Mesh${index}`;
+      root.add(mesh);
+    }
+    tree.refresh(new Set());
+    expect(tree.getVisibleRowCountForTests()).toBe(300);
+    expect(tree.getPoolSizeForTests()).toBeLessThan(80);
+    expect(tree.getPoolSizeForTests()).toBeGreaterThan(0);
   });
 
   it('should show a one-pixel insert line when dragging one row over another', () => {
@@ -326,8 +329,9 @@ describe('OutlinerTree', () => {
     root.add(meshB);
     tree.refresh(new Set());
     const treeElement = container.children[1] as HTMLElement;
-    const sourceRow = treeElement.children[0] as HTMLElement;
-    const targetRow = treeElement.children[1] as HTMLElement;
+    const rows = tree.getRowElementsForTests();
+    const sourceRow = rows[0]!;
+    const targetRow = rows[1]!;
     targetRow.getBoundingClientRect = () =>
       ({
         top: 40,
@@ -353,7 +357,6 @@ describe('OutlinerTree', () => {
         toJSON: () => ({}),
       }) as DOMRect;
     Object.defineProperty(treeElement, 'clientWidth', { value: 100, configurable: true });
-    Object.defineProperty(treeElement, 'scrollTop', { value: 0, configurable: true });
     const transfer = {
       data: '',
       effectAllowed: 'all',
@@ -395,12 +398,11 @@ describe('OutlinerTree', () => {
       reparentArgs = { target, placement };
     });
     const treeElement = container.children[1] as HTMLElement;
-    const meshRow = treeElement.children[0] as HTMLElement;
-    const brushRow = Array.from(treeElement.children).find((row) =>
-      (row as HTMLElement).textContent?.includes('Brush'),
-    ) as HTMLElement;
+    const rows = tree.getRowElementsForTests();
+    const meshRow = rows[0]!;
+    const brushRow = rows.find((row) => row.textContent?.includes('Brush'));
     expect(brushRow).toBeTruthy();
-    brushRow.getBoundingClientRect = () =>
+    brushRow!.getBoundingClientRect = () =>
       ({
         top: 40,
         bottom: 60,
@@ -440,10 +442,9 @@ describe('OutlinerTree', () => {
     meshRow.dispatchEvent(dragStart);
     const drop = new Event('drop', { bubbles: true }) as DragEvent;
     Object.defineProperty(drop, 'dataTransfer', { value: transfer });
-    // Bottom half of brush row (after) + shallow X (depth 0) → after solid.
     Object.defineProperty(drop, 'clientY', { value: 55 });
     Object.defineProperty(drop, 'clientX', { value: 6 });
-    brushRow.dispatchEvent(drop);
+    brushRow!.dispatchEvent(drop);
     expect(reparentArgs).not.toBeNull();
     expect(reparentArgs!.target).toBe(solid);
     expect(reparentArgs!.placement).toBe('after');

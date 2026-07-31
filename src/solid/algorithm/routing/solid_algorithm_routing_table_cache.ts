@@ -1,7 +1,7 @@
 import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 import type { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
 import { SolidAlgorithmRoutingTable } from './solid_algorithm_routing_table.js';
-import { BuilderSolidAlgorithmRoutingTable } from './builder_solid_algorithm_routing_table.js';
+import { SolidAlgorithmRoutingTableBuilder } from './solid_algorithm_routing_table_builder.js';
 
 /**
  * Caches per-subject flat routing tables. Cache keys include brush ids (and
@@ -50,7 +50,7 @@ export class SolidAlgorithmRoutingTableCache {
     if (existing && existingKey === cacheKey) {
       return existing;
     }
-    const table = BuilderSolidAlgorithmRoutingTable.buildForSubject(
+    const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(
       prepared,
       subjectIndex,
       peerIndices,

@@ -5,7 +5,7 @@ import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidModelCodec } from '@/solid/io/solid_model_codec.js';
 import { SceneSerializer } from '@/io/scene/scene_serializer.js';
 import { SceneDeserializer } from '@/io/scene/scene_deserializer.js';
-import { CommandTextureApplyFace } from '@/texture/commands/command_texture_apply_face.js';
+import { CommandTextureFaceApply } from '@/texture/commands/command_texture_face_apply.js';
 import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
 import { createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
 import { countTriangles } from '@/texture/uv/planar_uv_projector.js';
@@ -76,7 +76,7 @@ describe('SolidModelCodec', () => {
     mapping.offsetV = -0.1;
     mapping.rotationDeg = 45;
     mapping.align = 'wall';
-    const command = new CommandTextureApplyFace(
+    const command = new CommandTextureFaceApply(
       [{ mesh: result, triangleIndices: indices, previousMapping: null }],
       mapping,
     );
@@ -114,7 +114,7 @@ describe('SolidModelCodec', () => {
     mapping.scaleU = 3;
     mapping.offsetU = 0.5;
     mapping.align = 'floor';
-    new CommandTextureApplyFace(
+    new CommandTextureFaceApply(
       [
         {
           mesh: result,

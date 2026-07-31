@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { CommandStack } from '@/commands/command_stack.js';
 import { CommandMeshClip } from '@/tools/clip_plane/commands/command_mesh_clip.js';
 import { CommandMeshSplit } from '@/tools/clip_plane/commands/command_mesh_split.js';
-import { CommandSolidClipBrush } from '@/solid/commands/command_solid_clip_brush.js';
-import { CommandSolidSplitBrush } from '@/solid/commands/command_solid_split_brush.js';
+import { CommandSolidBrushClip } from '@/solid/commands/brush/command_solid_brush_clip.js';
+import { CommandSolidBrushSplit } from '@/solid/commands/brush/command_solid_brush_split.js';
 import { CsgPlaneSplit } from '@/csg/csg_plane_split.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { ToolClipPlane } from './tool_clip_plane.js';
@@ -209,7 +209,7 @@ export class HandlerClipPlane {
     const model = SolidModel.fromObject(mesh);
     const brush = model?.findBrushByMesh(mesh);
     if (!model || !brush) return null;
-    const command = new CommandSolidClipBrush(model, brush.id, plane, keepFront);
+    const command = new CommandSolidBrushClip(model, brush.id, plane, keepFront);
     command.execute();
     if (!command.didClip()) return null;
     this.deps.commandStack.recordExecuted(command);
@@ -229,7 +229,7 @@ export class HandlerClipPlane {
     const model = SolidModel.fromObject(mesh);
     const brush = model?.findBrushByMesh(mesh);
     if (!model || !brush) return null;
-    const command = new CommandSolidSplitBrush(model, brush.id, plane);
+    const command = new CommandSolidBrushSplit(model, brush.id, plane);
     command.execute();
     if (!command.didSplit()) return null;
     this.deps.commandStack.recordExecuted(command);

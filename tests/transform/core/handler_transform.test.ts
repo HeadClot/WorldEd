@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { BoundsFace } from '@/types/bounds_face.js';
@@ -9,6 +9,7 @@ import { TransformExecutor } from '@/transform/core/transform_executor.js';
 import { TransformConstraint } from '@/transform/core/transform_constraint.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import { HandlerTransform } from '@/transform/core/handler_transform.js';
+import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
 
 describe('TransformHandler', () => {
   let handler: HandlerTransform;
@@ -18,11 +19,16 @@ describe('TransformHandler', () => {
   let constraint: TransformConstraint;
 
   beforeEach(() => {
+    managerMouseCursor.reset();
     constraint = new TransformConstraint();
     executor = new TransformExecutor(new GridSnap(false, 1.0));
     raycaster = new GizmoRaycaster();
     gizmo = new GizmoTransform(Theme);
     handler = new HandlerTransform(gizmo, raycaster, executor, constraint);
+  });
+
+  afterEach(() => {
+    managerMouseCursor.reset();
   });
 
   it('should start with no drag active', () => {
@@ -196,7 +202,7 @@ describe('TransformHandler', () => {
     expect(gizmo.getHighlightedBoundsFaceMode()).toBe('move');
   });
 
-  it('clears bounds hover highlight and cursor style', () => {
+  it('clears bounds hover highlight and stops re-issuing the hover cursor', () => {
     const setup = createBoundsPickSetup(gizmo);
     handler.updateBoundsHover(
       setup.camera,
@@ -205,13 +211,14 @@ describe('TransformHandler', () => {
       setup.gizmoGroup,
     );
     expect(gizmo.getHighlightedBoundsFace()).toBe(BoundsFace.POS_Z);
-    const pickWithStyle = {
-      ...setup.pickElement,
-      style: { cursor: 'move' },
-    } as unknown as HTMLElement;
-    handler.clearBoundsHover(pickWithStyle);
+    expect(managerMouseCursor.getAppliedTargetElement()).toBe(setup.pickElement);
+    handler.clearBoundsHover(setup.pickElement);
     expect(gizmo.getHighlightedBoundsFace()).toBeNull();
-    expect(pickWithStyle.style.cursor).toBe('');
+    managerMouseCursor.update();
+    managerMouseCursor.update();
+    expect(managerMouseCursor.getAppliedCursorCss()).toBe('');
+    handler.refreshBoundsHoverCursor();
+    expect(managerMouseCursor.getAppliedCursorCss()).toBe('');
   });
 
   it('treats bounds face press without movement as a selection click', () => {

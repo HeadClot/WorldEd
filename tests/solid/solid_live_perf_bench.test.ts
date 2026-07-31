@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '@/solid/model/solid_model.js';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { BrushSpatialIndex } from '@/solid/algorithm/spatial/brush_spatial_index.js';
@@ -99,7 +99,7 @@ function buildGridModel(count: number, spacing: number, size: number): SolidMode
   for (let index = 0; index < count; index++) {
     const column = index % columns;
     const row = Math.floor(index / columns);
-    const brush = FactorySolidBrush.createCenteredBox(size, size, size);
+    const brush = SolidBrushFactory.createCenteredBox(size, size, size);
     const instance = new SolidBrushInstance(`brush-${index}`, `Brush${index}`, brush, SolidOperation.Additive);
     instance.position.set(column * spacing, 0, row * spacing);
     instances.push(instance);

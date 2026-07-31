@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  plugins: [],
+  resolve: {
+    tsconfigPaths: true,
+  },
   // Relative base so GitHub Pages project sites resolve index.js next to index.html.
   base: './',
   build: {

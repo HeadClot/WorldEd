@@ -94,7 +94,7 @@ function createMockSurface(workspaceElement: HTMLElement): SharedWebGLSurface {
     getWorkspaceElement: () => workspaceElement,
     getLogicalSize: () => ({ width: 960, height: 720 }),
     resize: vi.fn((width: number, height: number) => {
-      (renderer.setSize as ReturnType<typeof vi.fn>)(width, height, false);
+      renderer.setSize(width, height, false);
     }),
     syncSizeFromWorkspace: vi.fn(),
     renderPanes: vi.fn((_scene: THREE.Scene, panes: Array<{ prepare?: () => void; finalize?: () => void }>) => {

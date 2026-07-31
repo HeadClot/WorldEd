@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { ManagerInput } from '@/input/manager_input.js';
 import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
 import { ManagerViewportSync } from './manager_viewport_sync.js';
-import { createDefaultStartupSolidModel } from '@/solid/model/default_startup_solid_model.js';
+import { createSolidModelStartupDefault } from '@/solid/model/solid_model_startup_default.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 import { ViewportRegistry } from './viewport_registry.js';
 import type { ViewportEditor } from '@/viewports/core/viewport_editor.js';
 import { getGizmoPlaneForKind } from '@/viewports/core/viewport_editor.js';
@@ -162,6 +163,7 @@ export class ViewportSceneBootstrap {
    * @returns Solid model root group to parent under the world.
    */
   private createDefaultSolidModelRoot(): THREE.Group {
-    return createDefaultStartupSolidModel().root;
+    hierarchyNameAllocator.reset();
+    return createSolidModelStartupDefault().root;
   }
 }

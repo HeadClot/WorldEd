@@ -10,7 +10,7 @@ import {
   shouldApplySnap,
   snapEulerWhenRequested,
 } from './editor_api_snap.js';
-import { CommandTransformSetPosition } from '@/transform/commands/command_transform_set_position.js';
+import { CommandTransformPositionSet } from '@/transform/commands/command_transform_position_set.js';
 import { failResult, okResult } from './editor_api_result.js';
 import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import type { SolidModel } from '@/solid/model/solid_model.js';
@@ -202,7 +202,7 @@ export class EditorApiAlign {
     const worldDelta = nextWorldCenter.clone().sub(currentCenter);
     const nextLocal = mesh.position.clone().add(this.worldDeltaToLocal(mesh, worldDelta));
     if (useSnap) this.host.gridSnap.snapVector3(nextLocal);
-    this.host.commandStack.push(new CommandTransformSetPosition([mesh], [nextLocal]));
+    this.host.commandStack.push(new CommandTransformPositionSet([mesh], [nextLocal]));
     found.brush.pullTransformFromMesh();
     this.host.solidModelController.onTransformsCommitted([mesh]);
     this.host.refreshAfterWorldMutation();

@@ -90,6 +90,18 @@ export class SolidCsgCompiler {
   }
 
   /**
+   * Returns the intermediate parent-pose fingerprint stored for a brush at the
+   * last prepare/cache write. Used after undo to detect solid CSG group moves
+   * when brush local TRS is unchanged.
+   *
+   * @param brushId Brush instance id.
+   * @returns Cached parent-chain key, or undefined when missing.
+   */
+  getPreparedParentChainPoseKey(brushId: string): string | undefined {
+    return this.cache.getPrepared(brushId)?.parentChainPoseKey;
+  }
+
+  /**
    * Returns cached compiled polygons for one brush after compile.
    *
    * @param brushId Brush instance id.

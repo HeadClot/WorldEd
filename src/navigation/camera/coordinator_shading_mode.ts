@@ -115,17 +115,36 @@ export class CoordinatorShadingMode {
     return this.getViewports().map((viewport) => viewport.getShadingController());
   }
 
-  /** Binds pointer down events to track the active viewport. */
+  /**
+   * Binds pointer enter/move/down so the active viewport follows the pane under
+   * the cursor (same target model as wheel zoom), not only the last click.
+   */
   private bindViewportActivation(): void {
-    this.getViewportElements().forEach((el, index) => {
-      const listener = () => {
-        this.activeViewportIndex = index;
-        this.shadingModeHandler.setActiveViewportIndex(index);
-        this.syncStatusBarShadingMode();
-      };
-      el.addEventListener('pointerdown', listener);
-      this.activationUnsubscribers.push(() => el.removeEventListener('pointerdown', listener));
+    this.getViewportElements().forEach((element, index) => {
+      const activate = () => this.activateViewportAtIndex(index);
+      element.addEventListener('pointerdown', activate);
+      element.addEventListener('pointerenter', activate);
+      element.addEventListener('pointermove', activate);
+      this.activationUnsubscribers.push(() => {
+        element.removeEventListener('pointerdown', activate);
+        element.removeEventListener('pointerenter', activate);
+        element.removeEventListener('pointermove', activate);
+      });
     });
+  }
+
+  /**
+   * Marks a viewport as active when the pointer is over it.
+   *
+   * @param index Viewport index in pane order.
+   */
+  private activateViewportAtIndex(index: number): void {
+    if (this.activeViewportIndex === index) {
+      return;
+    }
+    this.activeViewportIndex = index;
+    this.shadingModeHandler.setActiveViewportIndex(index);
+    this.syncStatusBarShadingMode();
   }
 
   /** Removes previously registered activation listeners. */
@@ -145,8 +164,7 @@ export class CoordinatorShadingMode {
       const toolbar = viewport.getViewportToolbar();
       toolbar.setActiveShadingMode(viewport.getShadingMode());
       toolbar.setOnShadingMode((mode) => {
-        this.activeViewportIndex = index;
-        this.shadingModeHandler.setActiveViewportIndex(index);
+        this.activateViewportAtIndex(index);
         viewport.setShadingMode(mode);
         this.syncStatusBarShadingMode();
       });

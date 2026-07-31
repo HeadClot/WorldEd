@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import type { CommandStack } from '@/commands/command_stack.js';
 import type { ManagerSelection } from '@/selection/object/manager_selection.js';
-import type { ControllerSolidModel } from '@/solid/controller/controller_solid_model.js';
+import type { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 import type { GridSnap } from '@/transform/snap/grid_snap.js';
 import type { ManagerSnap } from '@/transform/snap/manager_snap.js';
 import { EditorApi } from '@/ai/client/editor_api.js';
@@ -12,7 +12,7 @@ export interface LayoutAiSetupHost {
   worldObject: THREE.Group;
   commandStack: CommandStack;
   selectionManager: ManagerSelection;
-  solidModelController: ControllerSolidModel | null;
+  solidModelController: SolidModelController | null;
   gridSnap: GridSnap;
   snapManager: ManagerSnap;
   getUserSnapEnabled: () => boolean;

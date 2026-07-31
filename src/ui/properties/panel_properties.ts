@@ -3,9 +3,9 @@ import { Theme } from '@/theme.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { UndoCommand } from '@/commands/command_undo.js';
-import { CommandTransformSetPosition } from '@/transform/commands/command_transform_set_position.js';
-import { CommandTransformSetRotation } from '@/transform/commands/command_transform_set_rotation.js';
-import { CommandTransformSetScale } from '@/transform/commands/command_transform_set_scale.js';
+import { CommandTransformPositionSet } from '@/transform/commands/command_transform_position_set.js';
+import { CommandTransformRotationSet } from '@/transform/commands/command_transform_rotation_set.js';
+import { CommandTransformScaleSet } from '@/transform/commands/command_transform_scale_set.js';
 import { TextureLockSettings } from '@/texture/lock/texture_lock_settings.js';
 import { filterUnlockedObjects } from '@/utils/object_lock.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
@@ -315,7 +315,7 @@ export class PanelProperties {
       return next;
     });
     if (panelPropertiesAreObjectPositionsUnchanged(editable, positions)) return;
-    this.pushOrExecute(new CommandTransformSetPosition(editable, positions));
+    this.pushOrExecute(new CommandTransformPositionSet(editable, positions));
     this.applyBoundContentTexturePolicy(true, false);
     this.commitTransformSideEffects(editable);
   }
@@ -335,7 +335,7 @@ export class PanelProperties {
       return new THREE.Euler(rx, ry, rz, 'XYZ');
     });
     if (panelPropertiesAreObjectRotationsUnchanged(editable, rotations)) return;
-    this.pushOrExecute(new CommandTransformSetRotation(editable, rotations));
+    this.pushOrExecute(new CommandTransformRotationSet(editable, rotations));
     this.applyBoundContentTexturePolicy(true, false);
     this.commitTransformSideEffects(editable);
   }
@@ -359,7 +359,7 @@ export class PanelProperties {
     // Heal stale world UV matrices at the pre-scale pose so world-density
     // rebake after CommandTransformSetScale cannot collapse a UV axis.
     this.prepareBoundContentMeshesForTextureOps();
-    this.pushOrExecute(new CommandTransformSetScale(editable, scales));
+    this.pushOrExecute(new CommandTransformScaleSet(editable, scales));
     this.applyBoundContentTexturePolicy(false, true);
     this.commitTransformSideEffects(editable);
   }

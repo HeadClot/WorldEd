@@ -3,6 +3,7 @@ import { Theme } from '@/theme.js';
 import { DECORATIVE_EDGE_USERDATA_KEY, enableFlatShadingOnMesh } from '@/utils/mesh_edge_sync.js';
 import { createContentMaterial } from '@/materials/factory_content_material.js';
 import { initializeMeshTextureUVs } from '@/texture/uv/face_texture_applier.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 
 /**
  * Creates primitive meshes with auto-incremented names and default material.
@@ -41,7 +42,7 @@ export class ToolPrimitiveCreation {
   createBox(width: number, height: number, depth: number, position?: THREE.Vector3): THREE.Mesh {
     this.cubeCount++;
     const geometry = new THREE.BoxGeometry(width, height, depth);
-    const mesh = this.buildMesh(geometry, `Cube${this.padNumber(this.cubeCount)}`);
+    const mesh = this.buildMesh(geometry, hierarchyNameAllocator.allocate('Cube'));
     if (position) mesh.position.copy(position);
     this.addWireframe(mesh);
     this.lastCreated = mesh;
@@ -58,7 +59,7 @@ export class ToolPrimitiveCreation {
   createSphere(radius: number, position?: THREE.Vector3): THREE.Mesh {
     this.sphereCount++;
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const mesh = this.buildMesh(geometry, `Sphere${this.padNumber(this.sphereCount)}`);
+    const mesh = this.buildMesh(geometry, hierarchyNameAllocator.allocate('Sphere'));
     if (position) mesh.position.copy(position);
     this.addWireframe(mesh);
     this.lastCreated = mesh;
@@ -77,7 +78,7 @@ export class ToolPrimitiveCreation {
   createCylinder(radiusTop: number, radiusBottom: number, height: number, position?: THREE.Vector3): THREE.Mesh {
     this.cylinderCount++;
     const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 32);
-    const mesh = this.buildMesh(geometry, `Cylinder${this.padNumber(this.cylinderCount)}`);
+    const mesh = this.buildMesh(geometry, hierarchyNameAllocator.allocate('Cylinder'));
     if (position) mesh.position.copy(position);
     this.addWireframe(mesh);
     this.lastCreated = mesh;
@@ -97,7 +98,7 @@ export class ToolPrimitiveCreation {
   createPlane(width: number, height: number, position?: THREE.Vector3): THREE.Mesh {
     this.planeCount++;
     const geometry = new THREE.PlaneGeometry(width, height);
-    const mesh = this.createBaseMesh(geometry, `Plane${this.padNumber(this.planeCount)}`);
+    const mesh = this.createBaseMesh(geometry, hierarchyNameAllocator.allocate('Plane'));
     if (position) mesh.position.copy(position);
     mesh.rotation.x = -Math.PI / 2;
     mesh.updateMatrixWorld(true);
@@ -128,16 +129,6 @@ export class ToolPrimitiveCreation {
   /** Disposes all resources held by this tool. */
   dispose(): void {
     this.lastCreated = null;
-  }
-
-  /**
-   * Pads a number to a three-digit zero-padded string.
-   *
-   * @param num The number to pad.
-   * @returns A zero-padded string representation.
-   */
-  private padNumber(num: number): string {
-    return String(num).padStart(3, '0');
   }
 
   /**

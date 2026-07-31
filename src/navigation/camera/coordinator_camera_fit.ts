@@ -13,20 +13,25 @@ export class CoordinatorCameraFit {
   private statusBar: StatusBar | null;
   private getOrderedViewports: () => Array<ViewportEditor>;
   private getActiveViewportIndex: () => number;
+  private getDetachedViewports: () => readonly ViewportEditor[];
 
   /**
    * Creates a camera fit coordinator.
    *
    * @param selectionManager Selection source for framing targets.
    * @param statusBar Status bar for fit feedback, or null.
-   * @param getOrderedViewports Returns viewports in activation order.
-   * @param getActiveViewportIndex Returns the active viewport index.
+   * @param getOrderedViewports Returns main-window viewports in activation
+   *   order.
+   * @param getActiveViewportIndex Returns the active main-window viewport
+   *   index.
+   * @param getDetachedViewports Returns live detached multi-monitor viewports.
    */
   constructor(
     selectionManager: ManagerSelection,
     statusBar: StatusBar | null,
     getOrderedViewports: () => Array<ViewportEditor>,
     getActiveViewportIndex: () => number,
+    getDetachedViewports: () => readonly ViewportEditor[] = () => [],
   ) {
     this.cameraFitController = new ControllerCameraFit();
     this.cameraAnimationConfig = this.cameraFitController.getConfig();
@@ -34,6 +39,7 @@ export class CoordinatorCameraFit {
     this.statusBar = statusBar;
     this.getOrderedViewports = getOrderedViewports;
     this.getActiveViewportIndex = getActiveViewportIndex;
+    this.getDetachedViewports = getDetachedViewports;
   }
 
   /**
@@ -42,7 +48,7 @@ export class CoordinatorCameraFit {
    * @param keyboardShortcutHandler Keyboard handler to register on.
    */
   bindKeyboardShortcuts(keyboardShortcutHandler: HandlerKeyboardShortcut): void {
-    keyboardShortcutHandler.setOnFitToSelection(() => this.onFitToSelection());
+    keyboardShortcutHandler.setOnFitToSelection((event) => this.onFitToSelection(event));
     keyboardShortcutHandler.setOnFitAllViewports(() => this.onFitAllViewports());
   }
 
@@ -51,10 +57,17 @@ export class CoordinatorCameraFit {
     this.cameraFitController.updateAnimations();
   }
 
-  /** Fits the currently active viewport to the selection (or whole scene). */
-  onFitToSelection(): void {
-    const viewport = this.getOrderedViewports()[this.getActiveViewportIndex()];
-    if (!viewport) return;
+  /**
+   * Fits the viewport that owns the shortcut key. Detached popups fit their own
+   * pane; main-window keys use the hovered/active main pane.
+   *
+   * @param event Optional key event used to identify the source window.
+   */
+  onFitToSelection(event?: KeyboardEvent): void {
+    const viewport = this.resolveFitTargetViewport(event);
+    if (!viewport) {
+      return;
+    }
     this.fitSpecificViewport(viewport);
   }
 
@@ -69,7 +82,7 @@ export class CoordinatorCameraFit {
     this.showFitFeedback(count);
   }
 
-  /** Fits all viewports to the current selection. */
+  /** Fits all main-window viewports to the current selection. */
   onFitAllViewports(): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     const count = this.cameraFitController.fitAllViewportsToSelection(
@@ -78,6 +91,77 @@ export class CoordinatorCameraFit {
       this.cameraAnimationConfig,
     );
     this.showFitFeedback(count);
+  }
+
+  /**
+   * Chooses the viewport that should receive fit for a keyboard shortcut.
+   *
+   * @param event Optional key event from the focused window.
+   * @returns Target viewport, or undefined when none is available.
+   */
+  private resolveFitTargetViewport(event?: KeyboardEvent): ViewportEditor | undefined {
+    const detachedViewport = this.resolveDetachedViewportFromEvent(event);
+    if (detachedViewport) {
+      return detachedViewport;
+    }
+    return this.getOrderedViewports()[this.getActiveViewportIndex()];
+  }
+
+  /**
+   * Finds the detached viewport hosted by the window that received the key.
+   *
+   * @param event Optional key event.
+   * @returns Matching detached viewport, or null for main-window keys.
+   */
+  private resolveDetachedViewportFromEvent(event?: KeyboardEvent): ViewportEditor | null {
+    const eventWindow = this.readEventWindow(event);
+    if (!eventWindow || eventWindow === window) {
+      return null;
+    }
+    for (const viewport of this.getDetachedViewports()) {
+      if (this.viewportBelongsToWindow(viewport, eventWindow)) {
+        return viewport;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Reads the window that dispatched a keyboard event.
+   *
+   * @param event Optional key event.
+   * @returns Event view window, or null when unavailable.
+   */
+  private readEventWindow(event?: KeyboardEvent): Window | null {
+    if (!event) {
+      return null;
+    }
+    if (event.view) {
+      return event.view;
+    }
+    const target = event.target;
+    if (target instanceof Node) {
+      return target.ownerDocument?.defaultView ?? null;
+    }
+    return null;
+  }
+
+  /**
+   * Returns true when a viewport's DOM lives in the given window.
+   *
+   * @param viewport Editor viewport to test.
+   * @param targetWindow Window that received the shortcut.
+   * @returns True when the viewport is hosted by that window.
+   */
+  private viewportBelongsToWindow(viewport: ViewportEditor, targetWindow: Window): boolean {
+    const ownerDocument = viewport.getContainer().ownerDocument;
+    if (!ownerDocument) {
+      return false;
+    }
+    if (ownerDocument.defaultView === targetWindow) {
+      return true;
+    }
+    return ownerDocument === targetWindow.document;
   }
 
   /**

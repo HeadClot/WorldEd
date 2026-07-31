@@ -179,6 +179,18 @@ describe('CommandObjectGroup', () => {
     expect(group.children).toContain(mesh3);
   });
 
+  it('should order group children top-to-bottom even when selection is reversed', () => {
+    const mesh3 = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
+    mesh3.name = 'Mesh3';
+    parent.add(mesh3);
+    const command = new CommandObjectGroup([mesh3, mesh1, mesh2], parent, 'SceneOrderGroup');
+    command.execute();
+    const group = command.getGroup();
+    expect(group.children[0]).toBe(mesh1);
+    expect(group.children[1]).toBe(mesh2);
+    expect(group.children[2]).toBe(mesh3);
+  });
+
   it('should keep middle insert position across undo and redo', () => {
     const mesh3 = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
     mesh3.name = 'Mesh3';

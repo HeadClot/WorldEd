@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CommandStack } from '@/commands/command_stack.js';
 import { CommandObjectRename } from '@/outliner/commands/command_object_rename.js';
-import { CommandObjectToggleVisibility } from '@/outliner/commands/command_object_toggle_visibility.js';
+import { CommandObjectVisibilityToggle } from '@/outliner/commands/command_object_visibility_toggle.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { isObjectOrAncestorLocked, toggleObjectLocked } from '@/utils/object_lock.js';
 import { HandlerObjectAction } from './handler_object_action.js';
@@ -63,7 +63,7 @@ export function applyOutlinerVisibilityToggle(
   refreshOutliner: () => void,
   syncViewports?: () => void,
 ): void {
-  commandStack.push(new CommandObjectToggleVisibility(obj));
+  commandStack.push(new CommandObjectVisibilityToggle(obj));
   refreshOutliner();
   syncViewports?.();
 }

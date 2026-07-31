@@ -8,6 +8,47 @@ export type OutlinerDropPlacement = 'before' | 'after' | 'into';
 /** Tree host padding (matches {@link OutlinerTree} container padding). */
 export const OUTLINER_TREE_PADDING_PX = 4;
 
+/** Fixed outliner row height (matches {@link OutlinerItem} row styling). */
+export const OUTLINER_ROW_HEIGHT_PX = 22;
+
+/**
+ * Pointer distance from the tree top/bottom edge that triggers drag
+ * auto-scroll. Chrome does not deliver wheel events during HTML5 drag, so edge
+ * scrolling is the reliable scroll path. Wide band keeps early motion subtle
+ * before a high-power ease ramps only near the rim.
+ */
+export const OUTLINER_DRAG_SCROLL_EDGE_PX = 96;
+
+/**
+ * Minimum rows scrolled per animation frame at the inner edge of the band
+ * (near-zero creep when first entering the edge zone).
+ */
+export const OUTLINER_DRAG_SCROLL_MIN_ROWS = 0.02;
+
+/**
+ * Maximum rows scrolled per animation frame at the outer edge after a full hold
+ * ramp (still fast enough for long lists, not teleport-speed).
+ */
+export const OUTLINER_DRAG_SCROLL_MAX_ROWS = 8;
+
+/**
+ * Ease exponent for drag edge scroll position intensity (higher keeps speed low
+ * until the rim). t^6 holds the bulk of the band near creep.
+ */
+export const OUTLINER_DRAG_SCROLL_EASE_POWER = 6;
+
+/**
+ * Hold duration in the edge band before drag auto-scroll reaches full speed.
+ * Prevents grabbing a top/bottom row from instantly flinging the list away.
+ */
+export const OUTLINER_DRAG_SCROLL_HOLD_RAMP_MS = 2000;
+
+/**
+ * Extra vertical room when revealing a selected row via scroll-into-view. About
+ * two row heights so the focus is not glued to the viewport edge.
+ */
+export const OUTLINER_REVEAL_MARGIN_PX = OUTLINER_ROW_HEIGHT_PX * 2;
+
 /** Base left padding on an outliner row (depth 0). */
 export const OUTLINER_BASE_PADDING_PX = 4;
 
@@ -130,6 +171,198 @@ export function resolveOutlinerIndentDepth(clientX: number, treeContentLeft: num
 }
 
 /**
+ * Maps a pointer Y to a visible row index using fixed row height. Used as a
+ * fallback when {@link Document.elementsFromPoint} hits tree chrome/gaps.
+ *
+ * @param clientY Pointer Y in viewport coordinates.
+ * @param treeTop Tree host top edge in viewport coordinates.
+ * @param scrollTop Tree host scrollTop in CSS pixels.
+ * @param rowCount Number of visible outliner rows.
+ * @returns Clamped row index, or null when the list is empty.
+ */
+export function outlinerRowIndexFromClientYResolve(
+  clientY: number,
+  treeTop: number,
+  scrollTop: number,
+  rowCount: number,
+): number | null {
+  if (rowCount <= 0 || !Number.isFinite(clientY) || !Number.isFinite(treeTop)) {
+    return null;
+  }
+  const yInContent = clientY - treeTop + scrollTop - OUTLINER_TREE_PADDING_PX;
+  const rawIndex = Math.floor(yInContent / OUTLINER_ROW_HEIGHT_PX);
+  if (!Number.isFinite(rawIndex)) {
+    return null;
+  }
+  return Math.max(0, Math.min(rowCount - 1, rawIndex));
+}
+
+/**
+ * Viewport Y of the top edge of a visible row using fixed row geometry.
+ *
+ * @param rowIndex Zero-based visible row index.
+ * @param treeTop Tree host top edge in viewport coordinates.
+ * @param scrollTop Tree host scrollTop in CSS pixels.
+ * @returns Row top in viewport coordinates.
+ */
+export function outlinerRowTopFromIndexResolve(rowIndex: number, treeTop: number, scrollTop: number): number {
+  return treeTop + OUTLINER_TREE_PADDING_PX + rowIndex * OUTLINER_ROW_HEIGHT_PX - scrollTop;
+}
+
+/**
+ * Host-content Y of an insert line for a visible row edge.
+ *
+ * @param rowIndex Zero-based visible row index.
+ * @param placement Before uses the row top edge; after uses the bottom edge.
+ * @returns Y relative to the tree host content origin (includes scroll).
+ */
+export function outlinerInsertLineHostLocalYResolve(rowIndex: number, placement: 'before' | 'after'): number {
+  const rowTopInContent = OUTLINER_TREE_PADDING_PX + rowIndex * OUTLINER_ROW_HEIGHT_PX;
+  if (placement === 'after') {
+    return rowTopInContent + OUTLINER_ROW_HEIGHT_PX;
+  }
+  return rowTopInContent;
+}
+
+/**
+ * Scroll delta for drag auto-scroll from pointer position in the tree viewport.
+ * Combines a high-power position ease-in with a hold-time ramp so speed stays
+ * gentle until the pointer has lingered in the edge band. Values are per
+ * frame.
+ *
+ * @param clientY Pointer Y in viewport coordinates.
+ * @param treeTop Tree host top edge in viewport coordinates.
+ * @param treeBottom Tree host bottom edge in viewport coordinates.
+ * @param holdDurationMs How long the pointer has stayed in an edge band.
+ * @returns Signed scroll delta in CSS pixels (negative scrolls up), or 0.
+ */
+export function outlinerDragEdgeScrollDeltaResolve(
+  clientY: number,
+  treeTop: number,
+  treeBottom: number,
+  holdDurationMs: number = OUTLINER_DRAG_SCROLL_HOLD_RAMP_MS,
+): number {
+  if (!Number.isFinite(clientY) || !Number.isFinite(treeTop) || !Number.isFinite(treeBottom)) {
+    return 0;
+  }
+  const holdFactor = outlinerDragEdgeScrollHoldFactorResolve(holdDurationMs);
+  if (holdFactor <= 0) {
+    return 0;
+  }
+  const topDelta = outlinerDragEdgeBandDeltaResolve(clientY - treeTop, -1, holdFactor);
+  if (topDelta !== 0) {
+    return topDelta;
+  }
+  return outlinerDragEdgeBandDeltaResolve(treeBottom - clientY, 1, holdFactor);
+}
+
+/**
+ * Returns whether the pointer Y is inside a drag edge-scroll band.
+ *
+ * @param clientY Pointer Y in viewport coordinates.
+ * @param treeTop Tree host top edge in viewport coordinates.
+ * @param treeBottom Tree host bottom edge in viewport coordinates.
+ * @returns True when edge auto-scroll may run.
+ */
+export function outlinerDragEdgeScrollBandContains(clientY: number, treeTop: number, treeBottom: number): boolean {
+  if (!Number.isFinite(clientY) || !Number.isFinite(treeTop) || !Number.isFinite(treeBottom)) {
+    return false;
+  }
+  if (clientY - treeTop < OUTLINER_DRAG_SCROLL_EDGE_PX) {
+    return true;
+  }
+  return treeBottom - clientY < OUTLINER_DRAG_SCROLL_EDGE_PX;
+}
+
+/**
+ * Converts distance into an edge band into a signed multi-row scroll step.
+ *
+ * @param distanceFromEdge Distance from the tree edge toward the center.
+ * @param scrollSign Negative scrolls up; positive scrolls down.
+ * @param holdFactor Normalized hold ramp in [0, 1].
+ * @returns Signed scroll delta in CSS pixels, or 0 outside the band.
+ */
+function outlinerDragEdgeBandDeltaResolve(distanceFromEdge: number, scrollSign: number, holdFactor: number): number {
+  if (distanceFromEdge >= OUTLINER_DRAG_SCROLL_EDGE_PX) {
+    return 0;
+  }
+  const linearIntensity = 1 - Math.max(0, distanceFromEdge) / OUTLINER_DRAG_SCROLL_EDGE_PX;
+  const easedIntensity = outlinerDragEdgeScrollEaseInPower(linearIntensity) * holdFactor;
+  const rowSpan = OUTLINER_DRAG_SCROLL_MAX_ROWS - OUTLINER_DRAG_SCROLL_MIN_ROWS;
+  const rows = OUTLINER_DRAG_SCROLL_MIN_ROWS + rowSpan * easedIntensity;
+  const pixels = Math.round(rows * OUTLINER_ROW_HEIGHT_PX);
+  if (pixels <= 0) {
+    return 0;
+  }
+  return scrollSign * pixels;
+}
+
+/**
+ * Hold-time ramp for drag edge scroll (ease-in over
+ * {@link OUTLINER_DRAG_SCROLL_HOLD_RAMP_MS}).
+ *
+ * @param holdDurationMs Time spent continuously in an edge band.
+ * @returns Factor in [0, 1].
+ */
+export function outlinerDragEdgeScrollHoldFactorResolve(holdDurationMs: number): number {
+  if (!Number.isFinite(holdDurationMs) || holdDurationMs <= 0) {
+    return 0;
+  }
+  const linear = Math.min(1, holdDurationMs / OUTLINER_DRAG_SCROLL_HOLD_RAMP_MS);
+  return linear * linear;
+}
+
+/**
+ * High-power ease-in for drag edge scroll intensity. Keeps early motion subtle
+ * and reserves high speed for the outer extreme of the band.
+ *
+ * @param linearIntensity Normalized intensity in [0, 1] (0 = inner, 1 = outer).
+ * @returns Eased intensity in [0, 1].
+ */
+export function outlinerDragEdgeScrollEaseInPower(linearIntensity: number): number {
+  if (!Number.isFinite(linearIntensity) || linearIntensity <= 0) {
+    return 0;
+  }
+  if (linearIntensity >= 1) {
+    return 1;
+  }
+  return Math.pow(linearIntensity, OUTLINER_DRAG_SCROLL_EASE_POWER);
+}
+
+/**
+ * Quadratic ease-in helper kept for tests and shared call sites.
+ *
+ * @param linearIntensity Normalized intensity in [0, 1] (0 = inner, 1 = outer).
+ * @returns Eased intensity in [0, 1].
+ */
+export function outlinerDragEdgeScrollEaseInQuadratic(linearIntensity: number): number {
+  if (!Number.isFinite(linearIntensity) || linearIntensity <= 0) {
+    return 0;
+  }
+  if (linearIntensity >= 1) {
+    return 1;
+  }
+  return linearIntensity * linearIntensity;
+}
+
+/**
+ * Host-local Y of an insert line for a visible row edge, relative to the
+ * viewport (scroll offset subtracted so the marker stays on screen).
+ *
+ * @param rowIndex Zero-based logical row index.
+ * @param placement Before uses the row top edge; after uses the bottom edge.
+ * @param scrollOffsetPx Virtual or native scroll offset in CSS pixels.
+ * @returns Y relative to the tree host padding box.
+ */
+export function outlinerInsertLineViewportLocalYResolve(
+  rowIndex: number,
+  placement: 'before' | 'after',
+  scrollOffsetPx: number,
+): number {
+  return outlinerInsertLineHostLocalYResolve(rowIndex, placement) - scrollOffsetPx;
+}
+
+/**
  * Fallback left inset of the insert line when the name column cannot be
  * measured. Root inserts start at the outliner edge. Nested inserts align to
  * the estimated name column (depth padding + chevron + icon).
@@ -145,26 +378,51 @@ export function outlinerInsertLineLeftPx(insertDepth: number): number {
 /**
  * Left inset and width for the insert line at a given hierarchy depth. Prefer
  * {@code nameColumnLeftPx} from the live name label so the line starts exactly
- * where the item text begins.
+ * where the item text begins. Left is quantized first so left + width never
+ * exceeds the host by a rounded pixel (half-pixel name edges under DPI scale).
  *
  * @param hostWidth Tree host client width in CSS pixels.
  * @param insertDepth Depth of the insertion (0 = root-level full line).
  * @param nameColumnLeftPx Optional measured name-column left in host coords.
- * @returns Left offset and line width inside the host.
+ * @returns Integer left offset and line width inside the host.
  */
 export function resolveOutlinerInsertLineGeometry(
   hostWidth: number,
   insertDepth: number,
   nameColumnLeftPx: number | null = null,
 ): { left: number; width: number } {
+  const safeHostWidth = Math.max(0, Math.floor(hostWidth));
   if (insertDepth <= 0) {
-    return { left: 0, width: Math.max(0, hostWidth) };
+    return { left: 0, width: safeHostWidth };
   }
-  const left =
-    nameColumnLeftPx !== null && Number.isFinite(nameColumnLeftPx)
-      ? Math.max(0, nameColumnLeftPx)
-      : outlinerInsertLineLeftPx(insertDepth);
-  return { left, width: Math.max(0, hostWidth - left) };
+  const rawLeft = resolveOutlinerInsertLineRawLeft(insertDepth, nameColumnLeftPx);
+  const left = clampOutlinerInsertLineLeft(rawLeft, safeHostWidth);
+  return { left, width: safeHostWidth - left };
+}
+
+/**
+ * Resolves the unrounded insert-line left before integer clamping.
+ *
+ * @param insertDepth Depth of the insertion.
+ * @param nameColumnLeftPx Optional measured name-column left in host coords.
+ * @returns Raw left offset in CSS pixels.
+ */
+function resolveOutlinerInsertLineRawLeft(insertDepth: number, nameColumnLeftPx: number | null): number {
+  if (nameColumnLeftPx !== null && Number.isFinite(nameColumnLeftPx)) {
+    return Math.max(0, nameColumnLeftPx);
+  }
+  return outlinerInsertLineLeftPx(insertDepth);
+}
+
+/**
+ * Rounds and clamps insert-line left so it stays within the host width.
+ *
+ * @param rawLeft Unrounded left offset in CSS pixels.
+ * @param hostWidth Integer host client width in CSS pixels.
+ * @returns Integer left in {@code [0, hostWidth]}.
+ */
+function clampOutlinerInsertLineLeft(rawLeft: number, hostWidth: number): number {
+  return Math.min(hostWidth, Math.max(0, Math.round(rawLeft)));
 }
 
 /**

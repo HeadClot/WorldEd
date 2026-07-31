@@ -57,12 +57,10 @@ describe('OutlinerPanel', () => {
     root.add(mesh1);
     root.add(mesh2);
     panel.refresh();
-    const panelElement = container.children[0] as HTMLElement;
-    const treeElement = panelElement.children[1] as HTMLElement;
-    const rowCount = Array.from(treeElement.children).filter(
-      (child) => !child.classList.contains('editor-outliner-insert-indicator'),
-    ).length;
-    expect(rowCount).toBe(2);
+    const rows = Array.from(container.querySelectorAll('.editor-outliner-row')).filter(
+      (row) => (row as HTMLElement).style.display !== 'none',
+    );
+    expect(rows.length).toBe(2);
   });
 
   it('should display object names in tree items', () => {
@@ -70,9 +68,7 @@ describe('OutlinerPanel', () => {
     mesh.name = 'TestCube';
     root.add(mesh);
     panel.refresh();
-    const panelElement = container.children[0] as HTMLElement;
-    const treeElement = panelElement.children[1] as HTMLElement;
-    const nameSpan = treeElement.children[0]!.querySelector('span:nth-child(3)') as HTMLSpanElement;
+    const nameSpan = findOutlinerRowByName(container, 'TestCube').querySelector('span:nth-child(3)') as HTMLSpanElement;
     expect(nameSpan.textContent).toBe('TestCube');
   });
 
@@ -82,9 +78,7 @@ describe('OutlinerPanel', () => {
     root.add(mesh);
     selectionManager.selectObject(mesh);
     panel.refresh();
-    const panelElement = container.children[0] as HTMLElement;
-    const treeElement = panelElement.children[1] as HTMLElement;
-    expect((treeElement.children[0] as HTMLElement).style.background).toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowByName(container, 'SelectedObj').style.background).toBe(Theme.outlinerSelectedColor);
   });
 
   it('should not highlight unselected objects in the tree', () => {
@@ -96,9 +90,7 @@ describe('OutlinerPanel', () => {
     root.add(meshB);
     selectionManager.selectObject(meshA);
     panel.refresh();
-    const panelElement = container.children[0] as HTMLElement;
-    const treeElement = panelElement.children[1] as HTMLElement;
-    expect((treeElement.children[1] as HTMLElement).style.background).not.toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowByName(container, 'NotSelected').style.background).not.toBe(Theme.outlinerSelectedColor);
   });
 
   it('should select object on click of tree item', () => {
@@ -106,9 +98,7 @@ describe('OutlinerPanel', () => {
     mesh.name = 'ClickedObj';
     root.add(mesh);
     panel.refresh();
-    const panelElement = container.children[0] as HTMLElement;
-    const treeElement = panelElement.children[1] as HTMLElement;
-    treeElement.children[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    findOutlinerRowByName(container, 'ClickedObj').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
     expect(selectionManager.isObjectSelected(mesh)).toBe(true);
   });
 
@@ -117,9 +107,7 @@ describe('OutlinerPanel', () => {
     group.name = 'EmptyGroup';
     root.add(group);
     panel.refresh();
-    const panelElement = container.children[0] as HTMLElement;
-    const treeElement = panelElement.children[1] as HTMLElement;
-    treeElement.children[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    findOutlinerRowByName(container, 'EmptyGroup').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
     const objects = panel.getObjectsForGrouping();
     expect(objects).toContain(group);
     expect(objects.length).toBe(1);
@@ -183,12 +171,8 @@ describe('OutlinerPanel', () => {
     root.add(meshB);
     selectionManager.selectObject(meshB);
     panel.refresh();
-    const panelElement = container.children[0] as HTMLElement;
-    const treeElement = panelElement.children[1] as HTMLElement;
-    const itemA = treeElement.children[0] as HTMLElement;
-    const itemB = treeElement.children[1] as HTMLElement;
-    expect(itemA.style.background).not.toBe(Theme.outlinerSelectedColor);
-    expect(itemB.style.background).toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowByName(container, 'ObjA').style.background).not.toBe(Theme.outlinerSelectedColor);
+    expect(findOutlinerRowByName(container, 'ObjB').style.background).toBe(Theme.outlinerSelectedColor);
   });
 
   it('should clear tree on refresh with empty scene', () => {
@@ -198,12 +182,10 @@ describe('OutlinerPanel', () => {
     panel.refresh();
     root.remove(mesh);
     panel.refresh();
-    const panelElement = container.children[0] as HTMLElement;
-    const treeElement = panelElement.children[1] as HTMLElement;
-    const rowCount = Array.from(treeElement.children).filter(
-      (child) => !child.classList.contains('editor-outliner-insert-indicator'),
-    ).length;
-    expect(rowCount).toBe(0);
+    const visibleRows = Array.from(container.querySelectorAll('.editor-outliner-row')).filter(
+      (row) => (row as HTMLElement).style.display !== 'none',
+    );
+    expect(visibleRows.length).toBe(0);
   });
 
   it('should pass multi-selected hierarchy roots on reparent drop', () => {

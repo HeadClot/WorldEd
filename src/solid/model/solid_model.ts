@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { SolidBrush } from '@/solid/brush/solid_brush.js';
 import { SolidBrushInstance } from './solid_brush_instance.js';
-import { FactorySolidBrush } from '@/solid/brush/factory_solid_brush.js';
+import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
 import { FaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
@@ -12,9 +12,10 @@ import {
   isSolidModelObject as isSolidModelObjectKey,
   isResultMesh as isResultMeshKey,
 } from './solid_model_keys.js';
-import { RegistrySolidModel } from './registry_solid_model.js';
+import { SolidModelRegistry } from './solid_model_registry.js';
 import { SolidBrushCollection } from './solid_brush_collection.js';
-import { padSolidDisplayNumber, SolidModelPresentation, type BrushUvSnapshot } from './solid_model_presentation.js';
+import { SolidModelPresentation, type BrushUvSnapshot } from './solid_model_presentation.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 import { SolidModelRebuildPipeline } from './solid_model_rebuild_pipeline.js';
 import { disposeBrushPreviewResources } from './solid_model_mesh_disposal.js';
 import { SolidBrushEdgeBatch } from './solid_brush_edge_batch.js';
@@ -54,19 +55,16 @@ export class SolidModel {
   private readonly presentation = new SolidModelPresentation();
   /** Per-brush texture lock baselines for the active interactive drag. */
   private readonly textureLockBaselines = new Map<string, SolidBrushTextureLockBaseline>();
-  private static modelCounter = 0;
-
   /**
    * Creates a solid model group ready for the scene hierarchy.
    *
    * @param name Optional display name.
    */
   constructor(name?: string) {
-    SolidModel.modelCounter += 1;
     this.root = new THREE.Group();
-    this.root.name = name ?? `SolidModel${padSolidDisplayNumber(SolidModel.modelCounter)}`;
+    this.root.name = this.resolveSolidRootDisplayName(name);
     this.root.userData[SOLID_MODEL_USERDATA_KEY] = true;
-    RegistrySolidModel.register(this.root, this);
+    SolidModelRegistry.register(this.root, this);
     this.brushes = new SolidBrushCollection(this.root);
     this.pipeline = new SolidModelRebuildPipeline({
       getResultMesh: () => this.resultMesh,
@@ -76,6 +74,21 @@ export class SolidModel {
     });
     this.resultMesh = this.presentation.createResultMesh();
     this.root.add(this.resultMesh);
+  }
+
+  /**
+   * Resolves the solid root display name. Explicit names (load, import, API)
+   * are preserved and registered; omitted names allocate SolidModel.xxx.
+   *
+   * @param name Optional constructor name.
+   * @returns Hierarchy display name.
+   */
+  private resolveSolidRootDisplayName(name?: string): string {
+    if (name !== undefined && name !== '') {
+      hierarchyNameAllocator.noteExistingName(name);
+      return name;
+    }
+    return hierarchyNameAllocator.allocate('SolidModel');
   }
 
   /**
@@ -147,7 +160,7 @@ export class SolidModel {
    * @returns SolidModel or null.
    */
   static fromObject(object: THREE.Object3D): SolidModel | null {
-    return RegistrySolidModel.fromObject(object);
+    return SolidModelRegistry.fromObject(object);
   }
 
   /**
@@ -158,7 +171,7 @@ export class SolidModel {
    * @param root Scene or world root to scan.
    */
   static rebuildAllUnder(root: THREE.Object3D): void {
-    for (const model of RegistrySolidModel.collectUnder(root)) {
+    for (const model of SolidModelRegistry.collectUnder(root)) {
       model.syncBrushOrderFromScene();
       model.markDirty();
       model.rebuild(true);
@@ -173,7 +186,7 @@ export class SolidModel {
    * @param root Scene or world root to scan.
    */
   static refreshAfterHistoryChange(root: THREE.Object3D): void {
-    for (const model of RegistrySolidModel.collectUnder(root)) {
+    for (const model of SolidModelRegistry.collectUnder(root)) {
       model.refreshAfterHistoryChange();
     }
   }
@@ -257,9 +270,9 @@ export class SolidModel {
     parent: THREE.Object3D | null = null,
     rebuildAfter: boolean = true,
   ): SolidBrushInstance {
-    const counter = this.brushes.nextBrushCounter();
-    const name = `Brush${padSolidDisplayNumber(counter)}`;
-    const brush = FactorySolidBrush.createCenteredBox(size, size, size);
+    this.brushes.nextBrushCounter();
+    const name = hierarchyNameAllocator.allocate('Brush');
+    const brush = SolidBrushFactory.createCenteredBox(size, size, size);
     const instance = new SolidBrushInstance(this.brushes.allocateBrushId(), name, brush, operation);
     const preview = SolidBrushVisual.createBoxPreview(name, size, operation);
     instance.attachMesh(preview);
@@ -304,8 +317,8 @@ export class SolidModel {
     localPosition: THREE.Vector3,
     textureId?: string,
   ): SolidBrushInstance {
-    const counter = this.brushes.nextBrushCounter();
-    const name = `Brush${padSolidDisplayNumber(counter)}`;
+    this.brushes.nextBrushCounter();
+    const name = hierarchyNameAllocator.allocate('Brush');
     const instance = new SolidBrushInstance(this.brushes.allocateBrushId(), name, brush, operation);
     instance.position.copy(localPosition);
     if (textureId) {

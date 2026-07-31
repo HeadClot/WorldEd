@@ -18,6 +18,8 @@ import type { CadViewPlane } from '@/rulers/view/cad_view_plane.js';
 import { BOUNDS_DEFAULT_CURSOR, BOUNDS_MOVE_CURSOR, resolveBoundsResizeCursor } from './bounds_resize_cursor.js';
 import { pickOrthographicSilhouetteEdgeFace } from './bounds_face_interaction.js';
 import { computeSilhouetteExteriorBandWorld } from './bounds_handle_screen_size.js';
+import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
+import { TransformMode } from '@/types/transform_mode.js';
 
 /**
  * Bounds tool interaction: one-sided resize from 3D arrows, 2D ears, or
@@ -32,6 +34,8 @@ export class ControllerBoundsDrag {
   private transformExecutor: TransformExecutor;
   private boundsFacePicker: BoundsFacePicker;
   private textureLock: TextureLockSettings | null;
+  private lastHoverCursorCss: string | null;
+  private lastHoverCursorElement: HTMLElement | null;
 
   /**
    * Creates a bounds drag controller bound to a shared drag session.
@@ -53,6 +57,8 @@ export class ControllerBoundsDrag {
     this.transformExecutor = transformExecutor;
     this.boundsFacePicker = new BoundsFacePicker();
     this.textureLock = null;
+    this.lastHoverCursorCss = null;
+    this.lastHoverCursorElement = null;
   }
 
   /**
@@ -154,7 +160,48 @@ export class ControllerBoundsDrag {
   }
 
   /**
-   * Sets the CSS cursor for handle/edge resize, face body hover, or default.
+   * Re-issues the last hover cursor for the current editor frame when bounds
+   * mode and oriented bounds are still active.
+   */
+  refreshHoverCursor(): void {
+    if (!this.canRefreshHoverCursor()) {
+      return;
+    }
+    const cursorCss = this.lastHoverCursorCss;
+    const targetElement = this.lastHoverCursorElement;
+    if (!cursorCss || !targetElement) {
+      return;
+    }
+    managerMouseCursor.setMouseCursor(cursorCss, targetElement);
+  }
+
+  /**
+   * Forgets the cached hover cursor so the shared cursor manager can restore
+   * the default on the next frame update.
+   */
+  clearHoverCursorCache(): void {
+    this.lastHoverCursorCss = null;
+    this.lastHoverCursorElement = null;
+  }
+
+  /**
+   * Returns true when the cached hover cursor may be re-issued this frame.
+   *
+   * @returns True when bounds mode still has live oriented bounds.
+   */
+  private canRefreshHoverCursor(): boolean {
+    if (this.transformGizmo.getMode() !== TransformMode.BOUNDS) {
+      return false;
+    }
+    if (!this.transformGizmo.getCurrentBounds()) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Resolves and requests the hover CSS cursor for handle/edge resize, face
+   * body hover, or default through the shared mouse cursor manager.
    *
    * @param camera The viewport camera.
    * @param pickElement DOM pick target.
@@ -171,15 +218,43 @@ export class ControllerBoundsDrag {
     resizeFace: BoundsFace | null,
     viewPlane: CadViewPlane,
   ): void {
-    const style = pickElement.style;
-    if (!style) return;
+    const cursorCss = this.resolveHoverCursorCss(camera, pickElement, event, gizmoGroup, resizeFace, viewPlane);
+    this.lastHoverCursorCss = cursorCss;
+    this.lastHoverCursorElement = pickElement;
+    managerMouseCursor.setMouseCursor(cursorCss, pickElement);
+  }
+
+  /**
+   * Chooses the CSS cursor for the current bounds hover target.
+   *
+   * @param camera The viewport camera.
+   * @param pickElement DOM pick target.
+   * @param event The pointer event.
+   * @param gizmoGroup Viewport gizmo group.
+   * @param resizeFace Face under a handle or edge, or null.
+   * @param viewPlane Active pane view plane.
+   * @returns CSS cursor keyword.
+   */
+  private resolveHoverCursorCss(
+    camera: THREE.Camera,
+    pickElement: HTMLElement,
+    event: MouseEvent,
+    gizmoGroup: THREE.Group,
+    resizeFace: BoundsFace | null,
+    viewPlane: CadViewPlane,
+  ): string {
     if (resizeFace) {
       const bounds = this.transformGizmo.getCurrentBounds();
-      style.cursor = bounds ? resolveBoundsResizeCursor(resizeFace, bounds, camera, viewPlane) : BOUNDS_DEFAULT_CURSOR;
-      return;
+      if (!bounds) {
+        return BOUNDS_DEFAULT_CURSOR;
+      }
+      return resolveBoundsResizeCursor(resizeFace, bounds, camera, viewPlane);
     }
     const facePick = this.boundsFacePicker.pickFace(event, camera, pickElement, gizmoGroup);
-    style.cursor = facePick ? BOUNDS_MOVE_CURSOR : BOUNDS_DEFAULT_CURSOR;
+    if (facePick) {
+      return BOUNDS_MOVE_CURSOR;
+    }
+    return BOUNDS_DEFAULT_CURSOR;
   }
 
   /**

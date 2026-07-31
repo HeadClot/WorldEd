@@ -34,6 +34,8 @@ export function setupCameraAndShadingCoordinators(parts: {
   getViewports: () => readonly ViewportEditor[];
   getViewportElements: () => readonly HTMLElement[];
   selectionVisualController: ControllerSelectionVisual;
+  /** Live detached multi-monitor viewports for fit targeting. */
+  getDetachedViewports?: () => readonly ViewportEditor[];
 }): {
   cameraFitCoordinator: CoordinatorCameraFit;
   shadingModeCoordinator: CoordinatorShadingMode;
@@ -49,6 +51,7 @@ export function setupCameraAndShadingCoordinators(parts: {
     parts.statusBar,
     () => shadingModeCoordinator.getOrderedViewports(),
     () => shadingModeCoordinator.getActiveViewportIndex(),
+    () => parts.getDetachedViewports?.() ?? [],
   );
   cameraFitCoordinator.bindKeyboardShortcuts(parts.keyboardShortcutHandler);
   shadingModeCoordinator.wireControls(parts.keyboardShortcutHandler, (viewport) =>

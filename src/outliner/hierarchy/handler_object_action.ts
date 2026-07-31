@@ -1,18 +1,20 @@
 import * as THREE from 'three';
 import { CommandObjectDelete, DeleteSnapshot } from '@/outliner/commands/command_object_delete.js';
-import { CommandObjectDeleteHierarchy } from '@/outliner/commands/command_object_delete_hierarchy.js';
+import { CommandObjectHierarchyDelete } from '@/outliner/commands/command_object_hierarchy_delete.js';
 import { CommandObjectDuplicate } from '@/outliner/commands/command_object_duplicate.js';
-import { CommandSolidDuplicateBrushes } from '@/solid/commands/command_solid_duplicate_brushes.js';
-import { CommandSolidDeleteBrushes } from '@/solid/commands/command_solid_delete_brushes.js';
+import { CommandSolidBrushesDuplicate } from '@/solid/commands/brushes/command_solid_brushes_duplicate.js';
+import { CommandSolidBrushesDelete } from '@/solid/commands/brushes/command_solid_brushes_delete.js';
 import { CommandObjectGroup } from '@/outliner/commands/command_object_group.js';
 import { CommandObjectUngroup } from '@/outliner/commands/command_object_ungroup.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { collapseToHierarchyRoots, findCommonParent } from '@/utils/hierarchy_selection.js';
 import { filterUnlockedObjects, isObjectOrAncestorLocked } from '@/utils/object_lock.js';
+import { collectMeshesUnder } from '@/utils/utils_hierarchy.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { findSolidModelRoot, isSolidCsgGroup, markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 
 /** Callback invoked to sync scene state to all viewports. */
 export type SyncViewportsCallback = () => void;
@@ -39,7 +41,6 @@ export class HandlerObjectAction {
   private syncViewports: SyncViewportsCallback | null;
   private refreshOutliner: RefreshOutlinerCallback | null;
   private showStatusMessage: StatusMessageCallback | null;
-  private groupCounter: number;
 
   /**
    * Creates a new object action handler.
@@ -55,7 +56,6 @@ export class HandlerObjectAction {
     this.syncViewports = null;
     this.refreshOutliner = null;
     this.showStatusMessage = null;
-    this.groupCounter = 0;
   }
 
   /**
@@ -125,10 +125,10 @@ export class HandlerObjectAction {
       otherRoots.push(root);
     }
     if (solidBrushes.length > 0) {
-      this.commandStack.push(new CommandSolidDeleteBrushes(solidBrushes));
+      this.commandStack.push(new CommandSolidBrushesDelete(solidBrushes));
     }
     if (otherRoots.length > 0) {
-      this.commandStack.push(new CommandObjectDeleteHierarchy(otherRoots));
+      this.commandStack.push(new CommandObjectHierarchyDelete(otherRoots));
     }
     this.selectionManager.clearSelection();
     this.notifySyncAndRefresh();
@@ -141,10 +141,10 @@ export class HandlerObjectAction {
    * @param meshes Meshes to delete.
    */
   private deleteMeshesWithSolidSupport(meshes: THREE.Mesh[]): void {
-    const solidBrushes = CommandSolidDeleteBrushes.filterBrushMeshes(meshes);
+    const solidBrushes = CommandSolidBrushesDelete.filterBrushMeshes(meshes);
     const regularMeshes = meshes.filter((mesh) => !SolidBrushVisual.isBrushObject(mesh));
     if (solidBrushes.length > 0) {
-      this.commandStack.push(new CommandSolidDeleteBrushes(solidBrushes));
+      this.commandStack.push(new CommandSolidBrushesDelete(solidBrushes));
     }
     if (regularMeshes.length > 0) {
       const snapshots = this.buildDeleteSnapshots(regularMeshes);
@@ -170,8 +170,9 @@ export class HandlerObjectAction {
   }
 
   /**
-   * Duplicates hierarchy roots: solid CSG groups, solid brushes, and regular
-   * meshes. Nested selection collapses to outermost roots first.
+   * Duplicates hierarchy roots: solid model roots, solid CSG groups, solid
+   * brushes, and regular meshes. Nested selection collapses to outermost roots
+   * first.
    *
    * @param objects Selected hierarchy nodes.
    */
@@ -186,6 +187,10 @@ export class HandlerObjectAction {
     const solidNodes: THREE.Object3D[] = [];
     const regularMeshes: THREE.Mesh[] = [];
     for (const root of roots) {
+      if (SolidModel.isSolidModelObject(root)) {
+        solidNodes.push(root);
+        continue;
+      }
       if (isSolidCsgGroup(root)) {
         solidNodes.push(root);
         continue;
@@ -201,7 +206,7 @@ export class HandlerObjectAction {
     const clonedMeshes: THREE.Mesh[] = [];
     const clonedInspector: THREE.Object3D[] = [];
     if (solidNodes.length > 0) {
-      const solidCommand = new CommandSolidDuplicateBrushes(solidNodes, new THREE.Vector3(0, 0, 0));
+      const solidCommand = new CommandSolidBrushesDuplicate(solidNodes, new THREE.Vector3(0, 0, 0));
       this.commandStack.push(solidCommand);
       clonedMeshes.push(...solidCommand.getClonedMeshes());
       clonedInspector.push(...solidCommand.getClonedInspectorRoots());
@@ -314,6 +319,7 @@ export class HandlerObjectAction {
    * group is parented under the common parent of the members so nesting builds
    * a tree instead of always dumping into the world root. Groups created under
    * a solid model become solid CSG compounds so hierarchical operations work.
+   * Selection moves to the new group so nested groups do not keep the old row.
    *
    * @param objects The objects to group together.
    */
@@ -324,15 +330,45 @@ export class HandlerObjectAction {
       this.showMessage('Solid brushes must stay under their solid model');
       return;
     }
-    this.groupCounter++;
     const groupName = this.buildGroupName();
     const parent = findCommonParent(members, this.worldObject);
     const command = new CommandObjectGroup(members, parent, groupName);
     this.commandStack.push(command);
-    this.finalizeSolidGroupIfNeeded(command.getGroup(), members);
+    const createdGroup = command.getGroup();
+    this.finalizeSolidGroupIfNeeded(createdGroup, members);
     SolidModel.rebuildAllUnder(this.worldObject);
+    this.selectCreatedGroup(createdGroup);
     this.notifySyncAndRefresh();
     this.showGroupFeedback(groupName);
+  }
+
+  /**
+   * Selects the newly created group as the hierarchy focus, with descendant
+   * meshes as the viewport selection.
+   *
+   * @param group Group produced by CommandObjectGroup.
+   */
+  private selectCreatedGroup(group: THREE.Group): void {
+    const meshes = this.collectSelectionMeshesUnder(group);
+    this.selectionManager.setSelection(meshes, [group]);
+  }
+
+  /**
+   * Collects meshes under a hierarchy node for viewport selection, skipping
+   * solid result meshes so solid roots stay transformable as units.
+   *
+   * @param root Hierarchy node to scan.
+   * @returns Selection meshes under the root.
+   */
+  private collectSelectionMeshesUnder(root: THREE.Object3D): THREE.Mesh[] {
+    const meshes: THREE.Mesh[] = [];
+    collectMeshesUnder(root).forEach((mesh) => {
+      if (SolidModel.isResultMesh(mesh)) {
+        return;
+      }
+      meshes.push(mesh);
+    });
+    return meshes;
   }
 
   /**
@@ -404,12 +440,12 @@ export class HandlerObjectAction {
   }
 
   /**
-   * Builds the next group name using the internal counter.
+   * Builds the next unique group display name from the global allocator.
    *
    * @returns A formatted group name string.
    */
   private buildGroupName(): string {
-    return `Group${String(this.groupCounter + 1).padStart(3, '0')}`;
+    return hierarchyNameAllocator.allocate('Group');
   }
 
   /**

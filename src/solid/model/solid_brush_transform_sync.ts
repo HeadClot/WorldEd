@@ -173,6 +173,55 @@ export function collectDriftedBrushIds(brushes: readonly SolidBrushInstance[]): 
 }
 
 /**
+ * Collects nested brush ids whose intermediate solid-group parent poses no
+ * longer match the last prepare-cache fingerprint. Local brush TRS can be
+ * unchanged after undo/redo of a group move while model-space CSG is stale.
+ *
+ * @param brushes Brush instances to inspect.
+ * @param getCachedParentChainKey Returns the parent-chain key from the last
+ *   prepare cache entry for a brush id.
+ * @returns Brush ids that need recompile due to parent-chain drift.
+ */
+export function collectParentChainDriftedBrushIds(
+  brushes: readonly SolidBrushInstance[],
+  getCachedParentChainKey: (brushId: string) => string | undefined,
+): string[] {
+  const driftedIds: string[] = [];
+  for (const brush of brushes) {
+    if (!brushHasParentChainPoseDrift(brush, getCachedParentChainKey)) {
+      continue;
+    }
+    driftedIds.push(brush.id);
+  }
+  return driftedIds;
+}
+
+/**
+ * Returns whether one nested brush has a parent-chain pose that differs from
+ * its last prepare-cache fingerprint.
+ *
+ * @param brush Brush instance to inspect.
+ * @param getCachedParentChainKey Cached parent-chain key lookup.
+ * @returns True when the brush is nested and the parent chain drifted.
+ */
+function brushHasParentChainPoseDrift(
+  brush: SolidBrushInstance,
+  getCachedParentChainKey: (brushId: string) => string | undefined,
+): boolean {
+  if (!brush.mesh) {
+    return false;
+  }
+  if (!brush.isNestedUnderSolidGroups()) {
+    return false;
+  }
+  const cachedKey = getCachedParentChainKey(brush.id);
+  if (cachedKey === undefined) {
+    return false;
+  }
+  return cachedKey !== brush.getParentChainPoseKey();
+}
+
+/**
  * Composes brush local-to-world from instance pose and parent.
  *
  * @param brush Brush instance.

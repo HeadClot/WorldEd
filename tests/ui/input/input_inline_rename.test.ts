@@ -143,6 +143,33 @@ describe('InputInlineRename', () => {
     expect(confirmedName).toBe('BlurName');
   });
 
+  it('should stop caret clicks from bubbling to a draggable host', () => {
+    parentElement.draggable = true;
+    let hostPointerEvents = 0;
+    parentElement.addEventListener('mousedown', () => {
+      hostPointerEvents++;
+    });
+    parentElement.addEventListener('click', () => {
+      hostPointerEvents++;
+    });
+    renameInput.activate();
+    expect(parentElement.draggable).toBe(false);
+    const input = renameInput.getInputElement();
+    input.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    input.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(hostPointerEvents).toBe(0);
+    expect(parentElement.querySelector('input')).not.toBeNull();
+    expect(input.style.userSelect).toBe('text');
+  });
+
+  it('should restore host draggable after rename finishes', () => {
+    parentElement.draggable = true;
+    renameInput.activate();
+    expect(parentElement.draggable).toBe(false);
+    renameInput.confirmRename();
+    expect(parentElement.draggable).toBe(true);
+  });
+
   it('should not throw when Enter confirm is followed by blur', () => {
     let confirmCount = 0;
     renameInput.setConfirmCallback(() => {

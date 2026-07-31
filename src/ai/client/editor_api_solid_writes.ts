@@ -34,22 +34,22 @@ import {
   snapEulerWhenRequested,
 } from './editor_api_snap.js';
 import { buildWorldClipPlane, planeArgsHelpMessage } from './editor_api_plane.js';
-import { EditorApiCommandAddBox } from './editor_api_command_add_box.js';
+import { EditorApiCommandAddBox } from './editor_api_command_box_add.js';
 import { EditorApiCommandRenameBrush } from './editor_api_command_rename.js';
 import { buildRelativeBrushOrder, EditorApiCommandReorderBrushList } from './editor_api_command_reorder.js';
-import { CommandCreateSolidModel } from '@/solid/commands/command_create_solid_model.js';
-import { CommandSolidClipBrush } from '@/solid/commands/command_solid_clip_brush.js';
-import { CommandSolidDeleteBrushes } from '@/solid/commands/command_solid_delete_brushes.js';
-import { CommandSolidDuplicateBrushes } from '@/solid/commands/command_solid_duplicate_brushes.js';
-import { CommandSolidReorderBrushes } from '@/solid/commands/command_solid_reorder_brushes.js';
-import { CommandSolidSetBrushOperation } from '@/solid/commands/command_solid_set_brush_operation.js';
-import { CommandSolidSplitBrush } from '@/solid/commands/command_solid_split_brush.js';
-import { CommandTransformSetPosition } from '@/transform/commands/command_transform_set_position.js';
-import { CommandTransformSetRotation } from '@/transform/commands/command_transform_set_rotation.js';
-import { CommandTransformSetScale } from '@/transform/commands/command_transform_set_scale.js';
+import { CommandSolidModelCreate } from '@/solid/commands/model/command_solid_model_create.js';
+import { CommandSolidBrushClip } from '@/solid/commands/brush/command_solid_brush_clip.js';
+import { CommandSolidBrushesDelete } from '@/solid/commands/brushes/command_solid_brushes_delete.js';
+import { CommandSolidBrushesDuplicate } from '@/solid/commands/brushes/command_solid_brushes_duplicate.js';
+import { CommandSolidBrushesReorder } from '@/solid/commands/brushes/command_solid_brushes_reorder.js';
+import { CommandSolidBrushOperationSet } from '@/solid/commands/brush/command_solid_brush_operation_set.js';
+import { CommandSolidBrushSplit } from '@/solid/commands/brush/command_solid_brush_split.js';
+import { CommandTransformPositionSet } from '@/transform/commands/command_transform_position_set.js';
+import { CommandTransformRotationSet } from '@/transform/commands/command_transform_rotation_set.js';
+import { CommandTransformScaleSet } from '@/transform/commands/command_transform_scale_set.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { DEFAULT_STARTUP_BRUSH_SIZE } from '@/solid/model/default_startup_solid_model.js';
+import { SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE } from '@/solid/model/solid_model_startup_default.js';
 import { assignSnapExact } from './editor_api_optional.js';
 import type { McpToolResult, McpVec3 } from '@/ai/shared/mcp_protocol_types.js';
 
@@ -74,8 +74,8 @@ export class EditorApiSolidWrites {
    */
   createSolidModel(name?: string): McpToolResult {
     const model = new SolidModel(name?.trim() || undefined);
-    const brush = model.addBoxBrush(DEFAULT_STARTUP_BRUSH_SIZE, SolidOperation.Additive);
-    this.host.commandStack.push(new CommandCreateSolidModel(model, this.host.worldObject));
+    const brush = model.addBoxBrush(SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE, SolidOperation.Additive);
+    this.host.commandStack.push(new CommandSolidModelCreate(model, this.host.worldObject));
     this.selectBrushMesh(brush.mesh);
     this.afterMutation(`Created ${model.root.name}`);
     return {
@@ -257,7 +257,7 @@ export class EditorApiSolidWrites {
     if (operation === null) return fail(`Invalid operation: ${operationName}`);
     const meshes = resolveBrushMeshes(this.host.worldObject, brushIds);
     if (meshes.length === 0) return fail('No matching brushes found');
-    this.host.commandStack.push(new CommandSolidSetBrushOperation(meshes, operation));
+    this.host.commandStack.push(new CommandSolidBrushOperationSet(meshes, operation));
     this.afterMutation('Updated brush operation');
     return { ok: true, message: `Set operation to ${operationName}`, data: { count: meshes.length } };
   }
@@ -353,7 +353,7 @@ export class EditorApiSolidWrites {
     if (args.absolute) this.setAxisAngle(nextRotation, axis, radians);
     else this.addAxisAngle(nextRotation, axis, radians);
     if (shouldApplySnap(args)) this.snapAxisAngleIfEnabled(nextRotation, axis);
-    this.host.commandStack.push(new CommandTransformSetRotation([mesh], [nextRotation]));
+    this.host.commandStack.push(new CommandTransformRotationSet([mesh], [nextRotation]));
     found.brush.pullTransformFromMesh();
     this.host.solidModelController.onTransformsCommitted([mesh]);
     this.afterMutation(`Rotated ${found.brush.name}`);
@@ -385,7 +385,7 @@ export class EditorApiSolidWrites {
     const plane = buildWorldClipPlane(args);
     if (!plane) return fail(planeArgsHelpMessage());
     const keepFront = args.keepFront !== false;
-    const command = new CommandSolidClipBrush(found.model, args.brushId, plane, keepFront);
+    const command = new CommandSolidBrushClip(found.model, args.brushId, plane, keepFront);
     command.execute();
     if (!command.didClip()) {
       return fail('Clip failed (plane may miss the brush or empty keep side)');
@@ -416,7 +416,7 @@ export class EditorApiSolidWrites {
     if (!found?.brush.mesh) return fail(`Brush not found: ${args.brushId}`);
     const plane = buildWorldClipPlane(args);
     if (!plane) return fail(planeArgsHelpMessage());
-    const command = new CommandSolidSplitBrush(found.model, args.brushId, plane);
+    const command = new CommandSolidBrushSplit(found.model, args.brushId, plane);
     command.execute();
     if (!command.didSplit()) {
       return fail('Split failed (plane may miss the brush)');
@@ -445,7 +445,7 @@ export class EditorApiSolidWrites {
   deleteBrushes(brushIds: string[]): McpToolResult {
     const meshes = resolveBrushMeshes(this.host.worldObject, brushIds);
     if (meshes.length === 0) return fail('No matching brushes found');
-    this.host.commandStack.push(new CommandSolidDeleteBrushes(meshes));
+    this.host.commandStack.push(new CommandSolidBrushesDelete(meshes));
     this.host.selectionManager.clearSelection();
     this.afterMutation(`Deleted ${meshes.length} brush(es)`);
     return { ok: true, message: `Deleted ${meshes.length} brush(es)`, data: { count: meshes.length } };
@@ -463,7 +463,7 @@ export class EditorApiSolidWrites {
     const nodes = resolveSolidHierarchyNodes(this.host.worldObject, nodeIds).map((entry) => entry.node);
     if (nodes.length === 0) return fail('No matching brushes or CSG groups found');
     const offsetVector = dtoToVec3(args.offset, new THREE.Vector3(1, 0, 0));
-    const command = new CommandSolidDuplicateBrushes(nodes, offsetVector);
+    const command = new CommandSolidBrushesDuplicate(nodes, offsetVector);
     this.host.commandStack.push(command);
     const clones = command.getClonedMeshes();
     const createdBrushIds = clones
@@ -538,7 +538,7 @@ export class EditorApiSolidWrites {
     const nodeIds = [...(args.brushIds ?? []), ...(args.groupIds ?? [])];
     const nodes = resolveSolidHierarchyNodes(this.host.worldObject, nodeIds).map((entry) => entry.node);
     if (nodes.length === 0) return fail('No matching brushes or CSG groups found');
-    this.host.commandStack.push(new CommandSolidReorderBrushes(nodes, args.end));
+    this.host.commandStack.push(new CommandSolidBrushesReorder(nodes, args.end));
     this.afterMutation(`Moved hierarchy nodes to ${args.end}`);
     return {
       ok: true,
@@ -640,7 +640,7 @@ export class EditorApiSolidWrites {
   private applyTransformCommands(mesh: THREE.Mesh, args: SetBrushTransformArgs, useSnap: boolean): void {
     if (args.position) {
       const position = resolveSnappedPosition(this.host, args.position, mesh.position, useSnap);
-      this.host.commandStack.push(new CommandTransformSetPosition([mesh], [position]));
+      this.host.commandStack.push(new CommandTransformPositionSet([mesh], [position]));
     }
     if (args.rotationDegrees || args.rotation) {
       const rotation = snapEulerWhenRequested(
@@ -648,11 +648,11 @@ export class EditorApiSolidWrites {
         resolveEulerFromArgs(args.rotationDegrees, args.rotation),
         useSnap,
       );
-      this.host.commandStack.push(new CommandTransformSetRotation([mesh], [rotation]));
+      this.host.commandStack.push(new CommandTransformRotationSet([mesh], [rotation]));
     }
     if (args.scale) {
       const scale = resolveSnappedScale(this.host, args.scale, mesh.scale, useSnap);
-      this.host.commandStack.push(new CommandTransformSetScale([mesh], [scale]));
+      this.host.commandStack.push(new CommandTransformScaleSet([mesh], [scale]));
     }
   }
 
@@ -695,8 +695,8 @@ export class EditorApiSolidWrites {
     const nextRotation = mesh.rotation.clone();
     // Reflect yaw: X-mirror → -yaw; Z-mirror → π - yaw (not -yaw).
     nextRotation.y = axis === 'x' ? -nextRotation.y : Math.PI - nextRotation.y;
-    this.host.commandStack.push(new CommandTransformSetPosition([mesh], [nextPosition]));
-    this.host.commandStack.push(new CommandTransformSetRotation([mesh], [nextRotation]));
+    this.host.commandStack.push(new CommandTransformPositionSet([mesh], [nextPosition]));
+    this.host.commandStack.push(new CommandTransformRotationSet([mesh], [nextRotation]));
     found.brush.pullTransformFromMesh();
     this.host.solidModelController.onTransformsCommitted([mesh]);
   }
@@ -783,7 +783,11 @@ export class EditorApiSolidWrites {
 function resolveBoxSize(size: number | McpVec3 | undefined): THREE.Vector3 {
   if (typeof size === 'number') return new THREE.Vector3(size, size, size);
   if (size) return new THREE.Vector3(size.x, size.y, size.z);
-  return new THREE.Vector3(DEFAULT_STARTUP_BRUSH_SIZE, DEFAULT_STARTUP_BRUSH_SIZE, DEFAULT_STARTUP_BRUSH_SIZE);
+  return new THREE.Vector3(
+    SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE,
+    SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE,
+    SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE,
+  );
 }
 
 /**

@@ -163,13 +163,23 @@ export class HandlerTransform {
   }
 
   /**
-   * Clears bounds face/handle hover highlights and the pick-element CSS cursor.
+   * Clears bounds face/handle hover highlights and forgets the cached hover
+   * cursor so the shared cursor manager restores the default next frame.
    *
-   * @param pickElement Optional DOM pick target whose cursor should be reset.
+   * @param _pickElement Unused; kept for call-site compatibility.
    */
-  clearBoundsHover(pickElement?: HTMLElement): void {
+  clearBoundsHover(_pickElement?: HTMLElement): void {
     this.transformGizmo.setHighlightedBoundsFace(null);
-    if (pickElement?.style) pickElement.style.cursor = '';
+    this.boundsDragController.clearHoverCursorCache();
+  }
+
+  /**
+   * Re-issues the last bounds hover cursor for the current editor frame when
+   * still valid. Call once per animation frame before the cursor manager
+   * update.
+   */
+  refreshBoundsHoverCursor(): void {
+    this.boundsDragController.refreshHoverCursor();
   }
 
   /**

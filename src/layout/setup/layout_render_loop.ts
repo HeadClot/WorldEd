@@ -7,6 +7,8 @@ import { MultiViewComposer, type MultiViewPanePass } from '@/viewports/core/mult
 import type { SharedWorldScene } from '@/viewports/shared/shared_world_scene.js';
 import type { CadRulerSystem } from '@/rulers/system/cad_ruler_system.js';
 import type { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
+import type { HandlerTransform } from '@/transform/core/handler_transform.js';
+import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
 import { Theme } from '@/theme.js';
 
 /**
@@ -29,6 +31,7 @@ export class LayoutRenderLoop {
   private clipPlaneHandler: HandlerClipPlane | null;
   private cadRulerSystem: CadRulerSystem | null;
   private transformGizmo: GizmoTransform | null;
+  private transformHandler: HandlerTransform | null;
   private onBeforeRender: (() => void) | null;
   private multiViewComposer: MultiViewComposer | null;
   private sharedScene: SharedWorldScene | null;
@@ -48,6 +51,7 @@ export class LayoutRenderLoop {
     this.clipPlaneHandler = null;
     this.cadRulerSystem = null;
     this.transformGizmo = null;
+    this.transformHandler = null;
     this.onBeforeRender = null;
     this.multiViewComposer = null;
     this.sharedScene = null;
@@ -68,6 +72,7 @@ export class LayoutRenderLoop {
     clipPlaneHandler: HandlerClipPlane | null;
     cadRulerSystem?: CadRulerSystem | null;
     transformGizmo?: GizmoTransform | null;
+    transformHandler?: HandlerTransform | null;
     onBeforeRender: () => void;
     multiViewComposer: MultiViewComposer;
     sharedScene: SharedWorldScene;
@@ -77,6 +82,7 @@ export class LayoutRenderLoop {
     this.clipPlaneHandler = parts.clipPlaneHandler;
     this.cadRulerSystem = parts.cadRulerSystem ?? null;
     this.transformGizmo = parts.transformGizmo ?? null;
+    this.transformHandler = parts.transformHandler ?? null;
     this.onBeforeRender = parts.onBeforeRender;
     this.multiViewComposer = parts.multiViewComposer;
     this.sharedScene = parts.sharedScene;
@@ -128,6 +134,7 @@ export class LayoutRenderLoop {
     this.isDisposed = true;
     this.stop();
     this.disconnectResizeObserver();
+    managerMouseCursor.reset();
   }
 
   /**
@@ -165,7 +172,17 @@ export class LayoutRenderLoop {
     this.onBeforeRender?.();
     this.updateClipPreviewScales(activeViewports);
     this.renderMultiView(activeViewports);
+    this.updateMouseCursorForFrame();
     this.scheduleNextFrame();
+  }
+
+  /**
+   * Re-issues tool cursor requests for the frame, then lets the cursor manager
+   * restore the default when nothing refreshed them.
+   */
+  private updateMouseCursorForFrame(): void {
+    this.transformHandler?.refreshBoundsHoverCursor();
+    managerMouseCursor.update();
   }
 
   /**
