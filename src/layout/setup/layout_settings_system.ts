@@ -11,7 +11,7 @@ import type { ViewportPaneLayout } from '@/layout/viewport/viewport_pane_layout.
 import type { StatusBar } from '@/ui/status/status_bar.js';
 import type { Toolbar } from '@/ui/toolbar/toolbar.js';
 import type * as THREE from 'three';
-import type { ViewportEditor } from '@/viewports/core/viewport_editor.js';
+import { isPerspectiveViewport, type ViewportEditor } from '@/viewports/core/viewport_editor.js';
 import type { ViewportPresentationContext } from '@/viewports/presentation/viewport_presentation_context.js';
 import type { GameProfile } from '@/settings/store/settings_types.js';
 
@@ -73,6 +73,7 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
     deps.onViewportPaneCount,
   );
   applyFlyingCameraMoveSpeed(deps.getPerspectiveViewport(), settingsStore.getMouseSettings().moveSpeed);
+  applyLayoutCameraWidgetSize(deps.getViewports, settingsStore.getViewSettings().cameraWidgetSizePx);
   applyLayoutTextureFilterSettings(deps.getRendererHost(), settingsStore.getViewSettings());
   applyLayoutGameProfile(deps, settingsStore.getActiveGameProfile());
   const settingsUnsubscribe = settingsStore.subscribe((snapshot) => {
@@ -86,6 +87,7 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
       deps.onViewportPaneCount,
     );
     applyFlyingCameraMoveSpeed(deps.getPerspectiveViewport(), snapshot.mouse.moveSpeed);
+    applyLayoutCameraWidgetSize(deps.getViewports, snapshot.view.cameraWidgetSizePx);
     applyLayoutTextureFilterSettings(deps.getRendererHost(), snapshot.view);
     applyLayoutGameProfile(deps, settingsStore.getActiveGameProfile());
   });
@@ -125,6 +127,22 @@ export function runEditorFactoryResetAndReload(): void {
  */
 export function applyFlyingCameraMoveSpeed(viewport: Viewport3D | null, moveSpeed: number): void {
   viewport?.setFlyingCameraMoveSpeed(moveSpeed);
+}
+
+/**
+ * Applies the orientation widget size to every live perspective viewport.
+ *
+ * @param getViewports Viewport collection getter.
+ * @param sizePx Orientation widget edge length.
+ */
+export function applyLayoutCameraWidgetSize(
+  getViewports: (() => readonly ViewportEditor[]) | undefined,
+  sizePx: number,
+): void {
+  getViewports?.().forEach((viewport) => {
+    if (!isPerspectiveViewport(viewport)) return;
+    viewport.setCameraWidgetSize(sizePx);
+  });
 }
 
 /**

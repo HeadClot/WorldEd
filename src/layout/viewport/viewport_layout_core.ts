@@ -52,6 +52,7 @@ import { DialogAbout } from '@/ui/about/dialog_about.js';
 import { DialogSettings } from '@/ui/settings/dialog_settings.js';
 import { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
 import { SettingsApplicator } from '@/settings/store/settings_applicator.js';
+import { CAMERA_WIDGET_SIZE_DEFAULT_PX } from '@/settings/store/settings_types.js';
 import { createLayoutCoreSystems } from '@/layout/setup/layout_core_bootstrap.js';
 import {
   setupViewportMaximizeControls as wireViewportMaximizeControls,
@@ -360,6 +361,7 @@ export abstract class ViewportLayoutCore {
       this.sharedWorldScene,
       this.sharedSurface,
       this.viewportPresentationContext,
+      () => this.settingsStore?.getViewSettings().cameraWidgetSizePx ?? CAMERA_WIDGET_SIZE_DEFAULT_PX,
     );
     this.viewportRegistry = bootstrapped.registry;
     this.refreshNamedViewportFields();
@@ -677,6 +679,8 @@ export abstract class ViewportLayoutCore {
       statusBar: this.statusBar,
       editorOverlayPolicy: this.editorOverlayPolicy,
       viewportPresentationContext: this.viewportPresentationContext,
+      getCameraWidgetSizePx: () =>
+        this.settingsStore?.getViewSettings().cameraWidgetSizePx ?? CAMERA_WIDGET_SIZE_DEFAULT_PX,
       setWorkspaceController: (controller) => {
         this.workspaceController = controller;
       },

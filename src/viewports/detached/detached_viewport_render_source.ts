@@ -30,4 +30,7 @@ export interface DetachedViewportRenderSource {
 
   /** Returns the shared active profile presentation context. */
   getViewportPresentationContext?: () => ViewportPresentationContext;
+
+  /** Returns the current perspective orientation widget size. */
+  getCameraWidgetSizePx?: () => number;
 }

@@ -45,6 +45,7 @@ export type MeshResolveCallback = (mesh: THREE.Mesh) => THREE.Mesh;
 /** Options for constructing a shared-scene perspective pane. */
 export interface Viewport3DOptions extends ViewportBaseOptions {
   inputManager: ManagerInput;
+  cameraWidgetSizePx?: number;
 }
 
 export class Viewport3D extends BaseViewport {
@@ -83,6 +84,7 @@ export class Viewport3D extends BaseViewport {
     this.setupFlyingCamera(options.inputManager);
     this.scene.add(this.gridRoot);
     this.cameraWidget = new CameraWidget();
+    this.cameraWidget.setSize(options.cameraWidgetSizePx ?? this.cameraWidget.getSize());
     this.cameraWidget.setPresentationContext(this.presentationContext);
     this.shadingController = new ControllerViewportShading(this);
   }
@@ -159,6 +161,15 @@ export class Viewport3D extends BaseViewport {
    */
   setFlyingCameraMoveSpeed(speed: number): void {
     this.flyingCamera.setMoveSpeed(this.presentationContext.fromProfileUnits(speed));
+  }
+
+  /**
+   * Sets the perspective orientation widget size in logical pixels.
+   *
+   * @param sizePx Requested orientation widget edge length.
+   */
+  setCameraWidgetSize(sizePx: number): void {
+    this.cameraWidget.setSize(sizePx);
   }
 
   /**

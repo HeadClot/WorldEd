@@ -10,6 +10,7 @@ The View tab controls presentation rather than scene content. Available preferen
 - Interface brightness.
 - Material Browser icon size.
 - Renderer font size.
+- Perspective orientation widget size (48–192 px).
 - Number of visible viewport panes.
 - Expanded toolbar button labels.
 
@@ -70,7 +71,7 @@ Choose the unit that matches the destination pipeline:
 - Centimeters are customary for Unreal Engine.
 - Imperial units may suit a project authored around feet or inches.
 
-Viewport measurements preserve physical size while changing their displayed unit. For example, one editor meter appears as 100 cm in a centimeter profile and 1000 mm in a millimeter profile. The orientation widget keeps red, green, and blue semantic colors for right, up, and forward while displaying the profile's signed axis labels.
+Viewport measurements preserve physical size while changing their displayed unit. For example, one editor meter appears as 100 cm in a centimeter profile and 1000 mm in a millimeter profile. The orientation widget keeps X red, Y green, and Z blue while displaying the profile's signed axis labels.
 
 Do not use unit conversion to compensate for an object that was modeled at the wrong relative size. First make the scene internally consistent, then choose the correct export unit.
 

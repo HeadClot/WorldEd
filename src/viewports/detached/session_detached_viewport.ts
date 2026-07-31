@@ -342,6 +342,7 @@ export class DetachedViewportSession {
       sharedScene: this.renderSource.getScene(),
       surface: this.surface,
       presentationContext: this.renderSource.getViewportPresentationContext?.(),
+      getCameraWidgetSizePx: this.renderSource.getCameraWidgetSizePx,
     });
     const world = this.renderSource.getWorldObject?.() ?? null;
     if (world) {

@@ -1,7 +1,12 @@
 import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { isDrawableRect, type PaneLogicalRect } from '@/viewports/pane/pane_content_rect.js';
-import { computeCameraWidgetLogicalRect } from './camera_widget_layout.js';
+import {
+  CAMERA_WIDGET_DEFAULT_SIZE_PX,
+  CAMERA_WIDGET_MAX_SIZE_PX,
+  CAMERA_WIDGET_MIN_SIZE_PX,
+  computeCameraWidgetLogicalRect,
+} from './camera_widget_layout.js';
 import { ViewportPresentationContext } from '@/viewports/presentation/viewport_presentation_context.js';
 
 /**
@@ -22,12 +27,14 @@ export class CameraWidget {
   private readonly arrowLength: number;
   private readonly headLength: number;
   private readonly headWidth: number;
+  private widgetSizePx: number;
 
   /** Creates the orientation arrows and private orthographic camera. */
   constructor() {
     this.arrowLength = 1.2;
     this.headLength = 0.35;
     this.headWidth = 0.2;
+    this.widgetSizePx = CAMERA_WIDGET_DEFAULT_SIZE_PX;
     this.scratchQuaternion = new THREE.Quaternion();
     this.widgetScene = new THREE.Scene();
     this.widgetCamera = this.createWidgetCamera();
@@ -75,10 +82,33 @@ export class CameraWidget {
 
   /** Applies profile-relative directions and labels to the widget arrows. */
   setPresentationContext(context: ViewportPresentationContext): void {
+    const labels = this.getAxisLabels(context);
     this.arrowX.setDirection(context.getEditorRight());
     this.arrowY.setDirection(context.getEditorUp());
     this.arrowZ.setDirection(context.getEditorForward());
-    this.replaceAxisLabels(context);
+    this.setArrowColor(this.arrowX, this.resolveAxisColor(labels.right));
+    this.setArrowColor(this.arrowY, this.resolveAxisColor(labels.up));
+    this.setArrowColor(this.arrowZ, this.resolveAxisColor(labels.forward));
+    this.replaceAxisLabels(labels, context.getEditorRight(), context.getEditorUp(), context.getEditorForward());
+  }
+
+  /**
+   * Sets the complete on-screen widget edge length in logical pixels.
+   *
+   * @param sizePx Requested widget edge length.
+   */
+  setSize(sizePx: number): void {
+    const roundedSize = Math.round(sizePx);
+    this.widgetSizePx = Math.min(CAMERA_WIDGET_MAX_SIZE_PX, Math.max(CAMERA_WIDGET_MIN_SIZE_PX, roundedSize));
+  }
+
+  /**
+   * Returns the current complete on-screen widget edge length.
+   *
+   * @returns Widget edge length in logical pixels.
+   */
+  getSize(): number {
+    return this.widgetSizePx;
   }
 
   /** Returns the current semantic labels shown by the widget. */
@@ -91,12 +121,56 @@ export class CameraWidget {
   }
 
   /** Replaces the three profile-aware axis label sprites. */
-  private replaceAxisLabels(context: ViewportPresentationContext): void {
+  private replaceAxisLabels(
+    labels: { right: string; up: string; forward: string },
+    right: THREE.Vector3,
+    up: THREE.Vector3,
+    forward: THREE.Vector3,
+  ): void {
     this.disposeAxisLabels();
-    const labels = this.getAxisLabels(context);
-    this.addAxisLabel(labels.right, context.getEditorRight(), Theme.widgetXAxisColor);
-    this.addAxisLabel(labels.up, context.getEditorUp(), Theme.widgetYAxisColor);
-    this.addAxisLabel(labels.forward, context.getEditorForward(), Theme.widgetZAxisColor);
+    this.addAxisLabel(labels.right, right, this.resolveAxisColor(labels.right));
+    this.addAxisLabel(labels.up, up, this.resolveAxisColor(labels.up));
+    this.addAxisLabel(labels.forward, forward, this.resolveAxisColor(labels.forward));
+  }
+
+  /**
+   * Applies one semantic axis color to both materials of an arrow.
+   *
+   * @param arrow Arrow whose materials should change.
+   * @param color Semantic axis color.
+   */
+  private setArrowColor(arrow: THREE.ArrowHelper, color: number): void {
+    this.setMaterialColor(arrow.line.material, color);
+    this.setMaterialColor(arrow.cone.material, color);
+  }
+
+  /**
+   * Applies a color to one or more Three.js materials.
+   *
+   * @param material Material or material array to update.
+   * @param color Hex color value.
+   */
+  private setMaterialColor(material: THREE.Material | THREE.Material[], color: number): void {
+    if (Array.isArray(material)) {
+      material.forEach((entry) => this.setMaterialColor(entry, color));
+      return;
+    }
+    if (material instanceof THREE.LineBasicMaterial || material instanceof THREE.MeshBasicMaterial) {
+      material.color.setHex(color);
+    }
+  }
+
+  /**
+   * Resolves a widget color from a signed semantic axis label.
+   *
+   * @param label Signed axis label such as +X or -Z.
+   * @returns Semantic axis color.
+   */
+  private resolveAxisColor(label: string): number {
+    const axis = label.charAt(label.length - 1).toUpperCase();
+    if (axis === 'Y') return Theme.widgetYAxisColor;
+    if (axis === 'Z') return Theme.widgetZAxisColor;
+    return Theme.widgetXAxisColor;
   }
 
   /** Adds one camera-facing profile axis label when canvas text is available. */
@@ -165,7 +239,7 @@ export class CameraWidget {
    *   content.
    */
   renderOverlay(renderer: THREE.WebGLRenderer, paneLogicalRect: PaneLogicalRect): void {
-    const widgetRect = computeCameraWidgetLogicalRect(paneLogicalRect);
+    const widgetRect = computeCameraWidgetLogicalRect(paneLogicalRect, this.widgetSizePx);
     if (!widgetRect || !isDrawableRect(widgetRect)) return;
     renderer.setViewport(widgetRect.x, widgetRect.y, widgetRect.width, widgetRect.height);
     renderer.setScissor(widgetRect.x, widgetRect.y, widgetRect.width, widgetRect.height);

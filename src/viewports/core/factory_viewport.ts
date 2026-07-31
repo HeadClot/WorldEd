@@ -18,6 +18,7 @@ export interface ViewportFactoryDependencies {
   sharedScene: THREE.Scene;
   surface: SharedWebGLSurface;
   presentationContext?: ViewportPresentationContext;
+  getCameraWidgetSizePx?: () => number;
 }
 
 /**
@@ -43,6 +44,7 @@ export function createViewportForKind(
       surface: dependencies.surface,
       inputManager: dependencies.inputManager,
       presentationContext: dependencies.presentationContext,
+      cameraWidgetSizePx: dependencies.getCameraWidgetSizePx?.(),
     });
     viewport.setViewportKind(kind);
     return viewport;

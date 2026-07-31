@@ -32,6 +32,7 @@ export interface LayoutDetachedViewportHost {
   /** Rebinds shared CAD rulers to main + detached panes and refreshes selection. */
   attachCadRulers(): void;
   viewportPresentationContext: ViewportPresentationContext;
+  getCameraWidgetSizePx: () => number;
 }
 
 /**
@@ -47,6 +48,7 @@ export function bindDetachedViewportRenderSource(host: LayoutDetachedViewportHos
     getSeedCamera: () => host.getPrimaryPerspectiveViewport()?.getCamera() ?? null,
     getWorldObject: () => host.worldObject,
     getViewportPresentationContext: () => host.viewportPresentationContext,
+    getCameraWidgetSizePx: () => host.getCameraWidgetSizePx(),
   });
 }
 

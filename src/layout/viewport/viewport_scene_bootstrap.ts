@@ -40,6 +40,7 @@ export class ViewportSceneBootstrap {
     sharedScene: SharedWorldScene,
     surface: SharedWebGLSurface,
     presentationContext?: ViewportPresentationContext,
+    getCameraWidgetSizePx?: () => number,
   ): BootstrappedViewports {
     const registry = new ViewportRegistry();
     registry.populateDefaultQuad(viewportContainers, {
@@ -47,6 +48,7 @@ export class ViewportSceneBootstrap {
       sharedScene: sharedScene.getScene(),
       surface,
       presentationContext,
+      getCameraWidgetSizePx,
     });
     const viewports = registry.getAllViewports();
     const top = viewports[0];

@@ -59,6 +59,7 @@ export interface LayoutCoreHostSource {
   statusBar: StatusBar | null;
   editorOverlayPolicy: PolicyEditorOverlay;
   viewportPresentationContext: ViewportPresentationContext;
+  getCameraWidgetSizePx: () => number;
   /**
    * Assigns the workspace controller field.
    *
@@ -175,6 +176,7 @@ export function buildDetachedViewportHost(source: LayoutCoreHostSource): LayoutD
     updateGizmoVisibility: () => source.updateGizmoVisibility(),
     attachCadRulers: () => source.attachCadRulers(),
     viewportPresentationContext: source.viewportPresentationContext,
+    getCameraWidgetSizePx: source.getCameraWidgetSizePx,
   };
 }
 
