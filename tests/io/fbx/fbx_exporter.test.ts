@@ -47,6 +47,48 @@ describe('FbxExporter', () => {
     expect(text).toMatch(/P: "UnitScaleFactor", "double", "Number", "", 1\b/);
   });
 
+  it.each([
+    ['Blender', 'blender', 'millimeter', 2, 1, 1, 1, 0, 1, 0.1],
+    ['Unity', 'unity', 'meter', 1, 1, 2, 1, 0, 1, 100],
+    ['Godot', 'godot', 'meter', 1, 1, 2, -1, 0, 1, 100],
+    ['Unreal', 'unreal', 'centimeter', 2, 1, 0, 1, 1, 1, 1],
+  ] as const)(
+    'should write %s profile axes and units to FBX metadata',
+    (
+      _name,
+      presetId,
+      metricUnit,
+      upAxis,
+      upAxisSign,
+      frontAxis,
+      frontAxisSign,
+      coordinateAxis,
+      coordinateAxisSign,
+      unitScaleFactor,
+    ) => {
+      worldGroup.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial()));
+      const text = exporter.export(worldGroup, createProfile(presetId, metricUnit));
+      expect(text).toMatch(new RegExp(`P: "UpAxis", "int", "Integer", "", ${upAxis}\\b`));
+      expect(text).toMatch(new RegExp(`P: "UpAxisSign", "int", "Integer", "", ${upAxisSign}\\b`));
+      expect(text).toMatch(new RegExp(`P: "FrontAxis", "int", "Integer", "", ${frontAxis}\\b`));
+      expect(text).toMatch(new RegExp(`P: "FrontAxisSign", "int", "Integer", "", ${frontAxisSign}\\b`));
+      expect(text).toMatch(new RegExp(`P: "CoordAxis", "int", "Integer", "", ${coordinateAxis}\\b`));
+      expect(text).toMatch(new RegExp(`P: "CoordAxisSign", "int", "Integer", "", ${coordinateAxisSign}\\b`));
+      expect(text).toMatch(new RegExp(`P: "UnitScaleFactor", "double", "Number", "", ${unitScaleFactor}\\b`));
+    },
+  );
+
+  it('should keep source transforms unchanged after profile-aware export', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial());
+    mesh.position.set(2, 3, 4);
+    mesh.rotation.set(0.2, 0.3, 0.4);
+    worldGroup.add(mesh);
+    worldGroup.updateMatrixWorld(true);
+    const originalMatrix = mesh.matrixWorld.clone();
+    exporter.export(worldGroup, createProfile('unreal', 'centimeter'));
+    expect(mesh.matrixWorld.elements).toEqual(originalMatrix.elements);
+  });
+
   it('should include hierarchy names for groups and meshes', () => {
     const group = new THREE.Group();
     group.name = 'Room';
@@ -177,6 +219,27 @@ function createCentimeterProfile(): GameProfile {
   profile.unitSystem = 'metric';
   profile.metricUnit = 'centimeter';
   profile.coordinateSpace = getBuiltInCoordinateSpace('threejs') ?? profile.coordinateSpace;
+  return profile;
+}
+
+/**
+ * Builds a profile using one supplied engine coordinate convention.
+ *
+ * @param presetId Built-in coordinate space identifier.
+ * @param metricUnit Profile metric unit.
+ * @returns Profile configured for the selected engine convention.
+ */
+function createProfile(
+  presetId: 'blender' | 'unity' | 'godot' | 'unreal',
+  metricUnit: GameProfile['metricUnit'],
+): GameProfile {
+  const profile = createDefaultGameProfile(`profile-${presetId}`, presetId);
+  profile.metricUnit = metricUnit;
+  const coordinateSpace = getBuiltInCoordinateSpace(presetId);
+  if (!coordinateSpace) {
+    throw new Error(`Missing coordinate space preset: ${presetId}`);
+  }
+  profile.coordinateSpace = coordinateSpace;
   return profile;
 }
 

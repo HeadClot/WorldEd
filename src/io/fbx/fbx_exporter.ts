@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { buildExportScene } from '@/io/scene/builder_export_scene.js';
 import type { GameProfile } from '@/settings/store/settings_types.js';
-import { buildExportRootTransform, resolveFbxUnitScaleFactor } from '@/io/coordinates/coordinate_space_transform.js';
+import {
+  buildExportRootTransform,
+  EDITOR_COORDINATE_SPACE,
+  resolveFbxUnitScaleFactor,
+} from '@/io/coordinates/coordinate_space_transform.js';
 import type { FbxExportPackage } from './fbx_export_types.js';
 import { buildFbxExportPlan } from './fbx_export_graph.js';
 import { FbxAsciiSerializer } from './fbx_ascii_serializer.js';
@@ -62,7 +66,11 @@ export class FbxExporter {
   private buildPlan(worldGroup: THREE.Group, profile: GameProfile | null) {
     const exportRoot = this.wrapForExport(worldGroup, profile);
     exportRoot.updateMatrixWorld(true);
-    return buildFbxExportPlan(exportRoot, resolveFbxUnitScaleFactor(profile));
+    return buildFbxExportPlan(
+      exportRoot,
+      resolveFbxUnitScaleFactor(profile),
+      profile?.coordinateSpace ?? EDITOR_COORDINATE_SPACE,
+    );
   }
 
   /**

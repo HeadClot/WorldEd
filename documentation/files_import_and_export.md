@@ -51,6 +51,14 @@ GLB is a compact glTF model file for Blender, Godot, Unity, Unreal Engine, and o
 
 The export places coordinate conversion on a root node. Preserve that node hierarchy and root transform when importing the GLB. This is especially important for left-handed targets such as Unity and Unreal, where the root can contain a reflection.
 
+## Export OBJ and FBX
+
+OBJ and FBX exports also use the active game profile selected in **Settings > Games**. Changing the selected profile changes the exported unit scale and coordinate basis without changing the editable scene.
+
+OBJ has no transform hierarchy, so its profile conversion is baked into vertex positions and normals. Reflected coordinate spaces automatically reverse triangle winding so the transformed normals and front faces remain consistent.
+
+FBX preserves the profile conversion in the export hierarchy and writes the profile's up, forward, right, handedness-related signs, and file-unit scale into `GlobalSettings`. Preserve the exported hierarchy when importing into the target application.
+
 ## Target application notes
 
 - **Godot:** use the right-handed Y-up profile and preserve the imported root transform.

@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { FbxNodeIdPool } from './fbx_node_id_pool.js';
 import { buildFbxMeshPayload, type FbxMeshPayload } from './fbx_mesh_payload.js';
 import { FbxSurfaceRegistry, type FbxSurfaceRecord } from './fbx_surface_records.js';
+import { buildFbxCoordinateSettings, type FbxCoordinateSettings } from './fbx_coordinate_settings.js';
+import { EDITOR_COORDINATE_SPACE } from '@/io/coordinates/coordinate_space_transform.js';
 
 /**
  * Intermediate plan describing the static FBX scene graph for one export. Built
@@ -49,6 +51,8 @@ export interface FbxExportPlan {
    * export root already baked profile unit conversion.
    */
   unitScaleFactor: number;
+  /** Coordinate basis metadata for FBX GlobalSettings. */
+  coordinateSettings: FbxCoordinateSettings;
 }
 
 /**
@@ -59,14 +63,25 @@ export interface FbxExportPlan {
  *
  * @param exportRoot Filtered and optionally profile-wrapped scene root.
  * @param unitScaleFactor FBX UnitScaleFactor for GlobalSettings (cm per unit).
+ * @param coordinateSpace Target coordinate space for GlobalSettings metadata.
  * @returns Export plan ready for serialization.
  */
-export function buildFbxExportPlan(exportRoot: THREE.Object3D, unitScaleFactor = 100): FbxExportPlan {
+export function buildFbxExportPlan(
+  exportRoot: THREE.Object3D,
+  unitScaleFactor = 100,
+  coordinateSpace = EDITOR_COORDINATE_SPACE,
+): FbxExportPlan {
   const idPool = new FbxNodeIdPool();
   const surfaces = new FbxSurfaceRegistry(idPool);
   const models: FbxModelPlan[] = [];
   walkExportNode(exportRoot, 0, idPool, surfaces, models);
-  return { idPool, models, surfaces, unitScaleFactor };
+  return {
+    idPool,
+    models,
+    surfaces,
+    unitScaleFactor,
+    coordinateSettings: buildFbxCoordinateSettings(coordinateSpace),
+  };
 }
 
 /**
