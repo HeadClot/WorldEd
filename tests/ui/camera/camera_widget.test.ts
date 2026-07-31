@@ -219,21 +219,29 @@ describe('CameraWidget semantic axis colors', () => {
 });
 
 describe('CameraWidget profile directions', () => {
-  it('maps left-handed Unity and Unreal forward axes into editor space', () => {
+  it('maps all built-in profile axes into the editor space with signed labels', () => {
     const expectedEditorBasis = {
       right: new THREE.Vector3(1, 0, 0),
       up: new THREE.Vector3(0, 1, 0),
       forward: new THREE.Vector3(0, 0, -1),
     };
+    const expectedLabels = {
+      godot: { right: '+X', up: '+Y', forward: '-Z' },
+      blender: { right: '+X', up: '+Z', forward: '+Y' },
+      unity: { right: '+X', up: '+Y', forward: '+Z' },
+      unreal: { right: '+Y', up: '+Z', forward: '+X' },
+    } as const;
 
-    ['unity', 'unreal'].forEach((presetId) => {
+    (Object.keys(expectedLabels) as Array<keyof typeof expectedLabels>).forEach((presetId) => {
       const widget = new CameraWidget();
       try {
-        widget.setPresentationContext(new ViewportPresentationContext(buildProfile(presetId)));
+        const context = new ViewportPresentationContext(buildProfile(presetId));
+        widget.setPresentationContext(context);
 
         expectVectorCloseTo(getArrowDirection(widget.getArrowX()), expectedEditorBasis.right);
         expectVectorCloseTo(getArrowDirection(widget.getArrowY()), expectedEditorBasis.up);
         expectVectorCloseTo(getArrowDirection(widget.getArrowZ()), expectedEditorBasis.forward);
+        expect(widget.getAxisLabels(context)).toEqual(expectedLabels[presetId]);
       } finally {
         widget.dispose();
       }
