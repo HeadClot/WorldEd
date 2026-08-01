@@ -1,3 +1,4 @@
+import { cloneCoordinateSpace, getBuiltInCoordinateSpace } from '@/settings/coordinate/coordinate_space_presets.js';
 import type { AxisDirection, CoordinateSpaceDefinition } from '@/settings/coordinate/coordinate_space_types.js';
 
 /** Numeric FBX axis index used by GlobalSettings. */
@@ -17,16 +18,30 @@ export interface FbxCoordinateSettings {
 }
 
 /**
+ * Resolves the coordinate basis that an FBX export will use.
+ *
+ * @param coordinateSpace Requested target coordinate space.
+ * @returns Canonical coordinate space for FBX conversion.
+ */
+export function resolveFbxCoordinateSpace(coordinateSpace: CoordinateSpaceDefinition): CoordinateSpaceDefinition {
+  if (coordinateSpace.presetId !== 'unreal') {
+    return cloneCoordinateSpace(coordinateSpace);
+  }
+  return getBuiltInCoordinateSpace('unreal') ?? cloneCoordinateSpace(coordinateSpace);
+}
+
+/**
  * Converts a profile coordinate basis into FBX GlobalSettings axis metadata.
  *
  * @param coordinateSpace Target coordinate space from the active profile.
  * @returns FBX axis assignments for up, front, and coordinate directions.
  */
 export function buildFbxCoordinateSettings(coordinateSpace: CoordinateSpaceDefinition): FbxCoordinateSettings {
+  const resolvedCoordinateSpace = resolveFbxCoordinateSpace(coordinateSpace);
   return {
-    up: convertAxisDirectionToFbxSetting(coordinateSpace.up),
-    front: convertAxisDirectionToFbxSetting(coordinateSpace.forward),
-    coordinate: convertAxisDirectionToFbxSetting(coordinateSpace.right),
+    up: convertAxisDirectionToFbxSetting(resolvedCoordinateSpace.up),
+    front: convertAxisDirectionToFbxSetting(resolvedCoordinateSpace.forward),
+    coordinate: convertAxisDirectionToFbxSetting(resolvedCoordinateSpace.right),
   };
 }
 

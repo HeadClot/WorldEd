@@ -12,6 +12,7 @@ import { buildFbxExportPlan } from './fbx_export_graph.js';
 import { FbxAsciiSerializer } from './fbx_ascii_serializer.js';
 import { encodeFbxTextureFiles } from './fbx_texture_encoder.js';
 import { FbxSceneCoordinateBaker } from './fbx_scene_coordinate_baker.js';
+import { resolveFbxCoordinateSpace } from './fbx_coordinate_settings.js';
 
 /**
  * Exports a Three.js world group as Autodesk FBX ASCII 7.4 with optional
@@ -67,13 +68,15 @@ export class FbxExporter {
    * @returns Export plan ready for serialization.
    */
   private buildPlan(worldGroup: THREE.Group, profile: GameProfile | null) {
-    const exportRoot = this.wrapForExport(worldGroup, profile);
-    const transform = buildExportRootTransform(profile);
+    const coordinateSpace = resolveFbxCoordinateSpace(profile?.coordinateSpace ?? EDITOR_COORDINATE_SPACE);
+    const exportProfile = profile ? { ...profile, coordinateSpace } : null;
+    const exportRoot = this.wrapForExport(worldGroup, exportProfile);
+    const transform = buildExportRootTransform(exportProfile);
     exportRoot.updateMatrixWorld(true);
     return buildFbxExportPlan(
       exportRoot,
       resolveFbxUnitScaleFactor(profile),
-      profile?.coordinateSpace ?? EDITOR_COORDINATE_SPACE,
+      coordinateSpace,
       isReflectionMatrix(transform),
     );
   }

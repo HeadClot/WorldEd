@@ -64,7 +64,7 @@ FBX writes the profile's up, forward, right, handedness-related signs, and file-
 - **Godot:** use the right-handed Y-up profile and preserve the imported hierarchy.
 - **Blender:** use the Blender profile when you want Z-up conversion and preserve the node hierarchy.
 - **Unity:** use the meter-oriented profile and preserve the exported hierarchy without adding an import rotation.
-- **Unreal Engine:** use the centimeter-oriented profile. Do not add a manual import rotation or an additional front-axis conversion to the already-converted export.
+- **Unreal Engine:** use the centimeter-oriented profile. The export is left-handed, Z-up, `+X` forward, and `+Y` right. Leave **Convert Scene** disabled and enable **Force Front X Axis** so Unreal interprets the exported front axis correctly. Do not add a manual import rotation.
 - **Custom:** verify the selected right, up, and forward axes and the resulting handedness.
 
 ## Validate an export
