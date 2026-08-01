@@ -39,6 +39,7 @@ import {
   type UvRelativeTrsOp,
 } from './uv_trs_ops.js';
 import type { FaceTextureMappingTrs } from './face_texture_mapping.js';
+import { buildTargetsFromSolidBrushMesh, isSolidBrushPreviewMesh } from './solid_brush_texture_targets.js';
 
 /** Describes one mesh region that will receive a texture mapping update. */
 export interface TextureApplyTarget {
@@ -63,24 +64,42 @@ export function buildTargetsFromFaceSelection(selections: FaceSelection[]): Text
 }
 
 /**
- * Builds apply targets covering every triangle on each mesh.
+ * Builds apply targets covering every triangle on each mesh. Solid brush
+ * preview meshes resolve to their CSG result faces so UV tools never rewrite
+ * brush hull materials.
  *
- * @param meshes Selected content meshes.
+ * @param meshes Selected content meshes and/or solid brush previews.
  * @returns One target per coplanar region across all meshes.
  */
 export function buildTargetsFromMeshes(meshes: THREE.Mesh[]): TextureApplyTarget[] {
   const targets: TextureApplyTarget[] = [];
   meshes.forEach((mesh) => {
-    const triangleCount = countTriangles(mesh.geometry);
-    const indices: number[] = [];
-    for (let i = 0; i < triangleCount; i++) indices.push(i);
-    const selections: FaceSelection[] = indices.map((faceIndex) => ({
-      mesh,
-      faceIndex,
-    }));
-    targets.push(...buildTargetsFromFaceSelection(selections));
+    if (isSolidBrushPreviewMesh(mesh)) {
+      targets.push(...buildTargetsFromSolidBrushMesh(mesh));
+      return;
+    }
+    targets.push(...buildTargetsFromWholeContentMesh(mesh));
   });
   return targets;
+}
+
+/**
+ * Builds apply targets covering every triangle on one ordinary content mesh.
+ *
+ * @param mesh Content mesh (not a solid brush preview).
+ * @returns One target per coplanar region on the mesh.
+ */
+function buildTargetsFromWholeContentMesh(mesh: THREE.Mesh): TextureApplyTarget[] {
+  const triangleCount = countTriangles(mesh.geometry);
+  const indices: number[] = [];
+  for (let i = 0; i < triangleCount; i++) {
+    indices.push(i);
+  }
+  const selections: FaceSelection[] = indices.map((faceIndex) => ({
+    mesh,
+    faceIndex,
+  }));
+  return buildTargetsFromFaceSelection(selections);
 }
 
 /**
@@ -420,11 +439,15 @@ function createFaceOrientedDefaultMapping(target: TextureApplyTarget, textureId:
 /**
  * Rebuilds surface materials without reordering solid result triangles. Solid
  * CSG result meshes keep brush-range layout for partial remesh/patch; permuting
- * by texture would scramble neighbor brushes and make them vanish.
+ * by texture would scramble neighbor brushes and make them vanish. Brush
+ * preview hulls are never rebuilt here.
  *
  * @param mesh Mesh receiving material layout.
  */
 function rebuildMaterialsPreservingSolidOrder(mesh: THREE.Mesh): void {
+  if (isSolidBrushPreviewMesh(mesh)) {
+    return;
+  }
   rebuildSurfaceMaterials(mesh, undefined, undefined, {
     preserveTriangleOrder: isResultMesh(mesh),
   });

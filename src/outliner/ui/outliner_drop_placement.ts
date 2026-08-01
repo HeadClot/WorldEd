@@ -68,15 +68,16 @@ export const OUTLINER_ICON_FONT_PX = 12;
 export const OUTLINER_ICON_MARGIN_RIGHT_PX = 4;
 
 /**
- * Icon slot after the chevron (font size plus margin). Depth hit-testing treats
- * this chrome as part of the row lead-in so shallow drops do not require aiming
- * at the far-left gutter.
+ * Icon slot after the chevron (font size plus margin). Used when estimating the
+ * name-column start for nested insert lines.
  */
 export const OUTLINER_ICON_SLOT_PX = OUTLINER_ICON_FONT_PX + OUTLINER_ICON_MARGIN_RIGHT_PX;
 
 /**
- * Chevron plus icon lead-in after a row's depth padding. Pointers left of the
- * name column claim a shallower insert depth (Unity Hierarchy style).
+ * Chevron plus icon lead-in after a row's depth padding. Nested insert lines
+ * start after this chrome so they align with the name column. Depth hit-testing
+ * does not treat this chrome as a shallow zone — only the true left gutter
+ * (shallower than the row's own indent) elevates the drop.
  */
 export const OUTLINER_LEADING_CHROME_PX = OUTLINER_CHEVRON_WIDTH_PX + OUTLINER_ICON_SLOT_PX;
 
@@ -136,21 +137,22 @@ export function outlinerRowDepthOffsetPx(depth: number): number {
 
 /**
  * Minimum local X (from tree host left) required to claim insert depth {@code
- * depth}. Includes tree padding, row depth indent, and chevron/icon chrome so
- * the name column (not the gutter) is the nested zone.
+ * depth}. Uses only the row's depth padding start so chevron and icon on a
+ * nested row still count as that row's depth. Moving left of a row's indent
+ * elevates one level (Unity-style parent insert after the last open child).
  *
  * @param depth Hierarchy depth to claim.
  * @returns Local X threshold in CSS pixels.
  */
 export function outlinerIndentDepthClaimMinX(depth: number): number {
   if (depth <= 0) return 0;
-  return outlinerRowDepthOffsetPx(depth) + OUTLINER_LEADING_CHROME_PX;
+  return outlinerRowDepthOffsetPx(depth);
 }
 
 /**
- * Maps pointer X to a hierarchy indent depth. Shallower depths are claimed when
- * the pointer is still over chevron/icon lead-in of a deeper row, not only the
- * far-left gutter.
+ * Maps pointer X to a hierarchy indent depth. A nested row's chevron, icon, and
+ * name all keep that row's depth. Only the gutter left of the row indent claims
+ * a shallower parent insert.
  *
  * @param clientX Pointer X in viewport coordinates.
  * @param treeContentLeft Left edge of the tree host in viewport coords.
@@ -363,27 +365,42 @@ export function outlinerInsertLineViewportLocalYResolve(
 }
 
 /**
- * Fallback left inset of the insert line when the name column cannot be
- * measured. Root inserts start at the outliner edge. Nested inserts align to
- * the estimated name column (depth padding + chevron + icon).
+ * Estimated left inset of a row name column at the given hierarchy depth (depth
+ * padding + chevron + icon). Used so insert lines can align to parent text such
+ * as the "G" in "Group".
  *
- * @param insertDepth Depth of the insertion (0 = root-level full line).
- * @returns Left offset in CSS pixels.
+ * @param nameDepth Hierarchy depth of the row whose name anchors the line.
+ * @returns Left offset in CSS pixels from the tree host content origin.
  */
-export function outlinerInsertLineLeftPx(insertDepth: number): number {
-  if (insertDepth <= 0) return 0;
-  return outlinerRowDepthOffsetPx(insertDepth) + OUTLINER_LEADING_CHROME_PX;
+export function outlinerInsertLineLeftPx(nameDepth: number): number {
+  return outlinerRowDepthOffsetPx(Math.max(0, nameDepth)) + OUTLINER_LEADING_CHROME_PX;
 }
 
 /**
- * Left inset and width for the insert line at a given hierarchy depth. Prefer
- * {@code nameColumnLeftPx} from the live name label so the line starts exactly
- * where the item text begins. Left is quantized first so left + width never
- * exceeds the host by a rounded pixel (half-pixel name edges under DPI scale).
+ * Hierarchy depth of the name column that should anchor a before/after insert
+ * line. Sibling inserts under a parent align to that parent's text, not the
+ * nested row text (e.g. after Brush1 under Group starts at "Group").
+ *
+ * @param targetDepth Depth of the elevated drop target row.
+ * @returns Parent depth for the line, or -1 when the target is root-level
+ *   (full-width line; no visible parent name).
+ */
+export function outlinerInsertLineNameDepthForTargetDepth(targetDepth: number): number {
+  if (targetDepth <= 0) {
+    return -1;
+  }
+  return targetDepth - 1;
+}
+
+/**
+ * Left inset and width for the insert line. Prefer {@code nameColumnLeftPx}
+ * when provided (including depth-0 parent names). When it is null, {@code
+ * insertDepth <= 0} means a full-width root line; deeper depths fall back to
+ * the estimated name column at that depth.
  *
  * @param hostWidth Tree host client width in CSS pixels.
- * @param insertDepth Depth of the insertion (0 = root-level full line).
- * @param nameColumnLeftPx Optional measured name-column left in host coords.
+ * @param insertDepth Depth used only as fallback when name left is null.
+ * @param nameColumnLeftPx Optional measured or estimated name-column left.
  * @returns Integer left offset and line width inside the host.
  */
 export function resolveOutlinerInsertLineGeometry(
@@ -392,26 +409,15 @@ export function resolveOutlinerInsertLineGeometry(
   nameColumnLeftPx: number | null = null,
 ): { left: number; width: number } {
   const safeHostWidth = Math.max(0, Math.floor(hostWidth));
+  if (nameColumnLeftPx !== null && Number.isFinite(nameColumnLeftPx)) {
+    const left = clampOutlinerInsertLineLeft(nameColumnLeftPx, safeHostWidth);
+    return { left, width: safeHostWidth - left };
+  }
   if (insertDepth <= 0) {
     return { left: 0, width: safeHostWidth };
   }
-  const rawLeft = resolveOutlinerInsertLineRawLeft(insertDepth, nameColumnLeftPx);
-  const left = clampOutlinerInsertLineLeft(rawLeft, safeHostWidth);
+  const left = clampOutlinerInsertLineLeft(outlinerInsertLineLeftPx(insertDepth), safeHostWidth);
   return { left, width: safeHostWidth - left };
-}
-
-/**
- * Resolves the unrounded insert-line left before integer clamping.
- *
- * @param insertDepth Depth of the insertion.
- * @param nameColumnLeftPx Optional measured name-column left in host coords.
- * @returns Raw left offset in CSS pixels.
- */
-function resolveOutlinerInsertLineRawLeft(insertDepth: number, nameColumnLeftPx: number | null): number {
-  if (nameColumnLeftPx !== null && Number.isFinite(nameColumnLeftPx)) {
-    return Math.max(0, nameColumnLeftPx);
-  }
-  return outlinerInsertLineLeftPx(insertDepth);
 }
 
 /**

@@ -126,14 +126,17 @@ export class SolidModelCodec {
    */
   static decode(data: SerializedSolidModel, name: string): SolidModel {
     const model = new SolidModel(name);
+    const instances = [];
     for (const brushData of data.brushes ?? []) {
       const instance = this.decodeBrush(brushData);
       hierarchyNameAllocator.noteExistingName(instance.name);
-      model.addBrushInstance(instance);
+      instances.push(instance);
     }
+    model.addBrushInstancesBatch(instances, 2, false);
     if (data.hierarchy && data.hierarchy.length > 0) {
       this.applyHierarchy(model, data.hierarchy);
     }
+    model.markDirty();
     if (data.invertedWorld === true) {
       model.setInvertedWorld(true);
     } else {
@@ -229,6 +232,7 @@ export class SolidModelCodec {
       this.attachHierarchyNode(model.root, node, brushMeshById);
     }
     model.syncBrushOrderFromScene();
+    model.markDirty();
   }
 
   /**

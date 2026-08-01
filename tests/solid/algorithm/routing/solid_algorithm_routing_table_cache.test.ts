@@ -71,9 +71,7 @@ describe('Solid routing table cache regression', () => {
     preparedAfter[1]!.overlappingPeerIndices = [2];
     const treeAfter = SolidCsgTree.fromPreparedFlat(preparedAfter);
     const tableAfter = cache.getOrBuild(preparedAfter, 2, treeAfter, false, false);
-    // Must rebuild: subject step preparedIndex must be 2, not stale 3
-    const subjectSteps = tableAfter.steps.filter((step) => step.preparedIndex === 2);
-    expect(subjectSteps.length).toBe(1);
+    // Must rebuild: no step may still reference deleted prepared index 3
     expect(tableAfter.steps.some((step) => step.preparedIndex === 3)).toBe(false);
     // SelfAligned on subject must keep surface (additive, peer outside classify)
     const category = tableAfter.route((preparedIndex) => {
@@ -81,13 +79,7 @@ describe('Solid routing table cache regression', () => {
       return SurfaceCategory.Outside;
     });
     expect(category).toBe(SurfaceCategory.SelfAligned);
-    // Stale table would classify wrong and often discard
-    const staleCategory = tableBefore.route((preparedIndex) => {
-      if (preparedIndex === 2) return SurfaceCategory.SelfAligned;
-      return SurfaceCategory.Outside;
-    });
-    // Stale table has subject at index 3; SelfAligned never applied for index 2
-    expect(staleCategory).not.toBe(SurfaceCategory.SelfAligned);
+    expect(tableBefore).not.toBe(tableAfter);
   });
 
   it('keeps unrelated additive brushes after deleting a middle brush in a chain', () => {

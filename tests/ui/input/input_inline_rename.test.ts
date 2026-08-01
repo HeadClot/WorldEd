@@ -34,6 +34,24 @@ describe('InputInlineRename', () => {
     expect(input?.value).toBe('OriginalName');
   });
 
+  it('should select the full value by default', () => {
+    renameInput.activate();
+    const input = renameInput.getInputElement();
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe('OriginalName'.length);
+  });
+
+  it('should apply an optional initial selection range', () => {
+    renameInput.dispose();
+    renameInput = new InputInlineRename(parentElement, textSpan, 'Brush.00A');
+    textSpan.textContent = 'Brush.00A';
+    renameInput.activate({ start: 0, end: 5 });
+    const input = renameInput.getInputElement();
+    expect(input.value).toBe('Brush.00A');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(5);
+  });
+
   it('should place the input before trailing eye and lock controls', () => {
     const visibility = document.createElement('span');
     visibility.textContent = 'eye';

@@ -7,6 +7,8 @@ import { CommandSolidBrushesDelete } from '@/solid/commands/brushes/command_soli
 import { CommandObjectGroup } from '@/outliner/commands/command_object_group.js';
 import { CommandObjectUngroup } from '@/outliner/commands/command_object_ungroup.js';
 import { CommandStack } from '@/commands/command_stack.js';
+import type { UndoCommand } from '@/commands/command_undo.js';
+import { CommandUndoBatch } from '@/commands/command_undo_batch.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { collapseToHierarchyRoots, findCommonParent } from '@/utils/hierarchy_selection.js';
 import { filterUnlockedObjects, isObjectOrAncestorLocked } from '@/utils/object_lock.js';
@@ -21,6 +23,15 @@ export type SyncViewportsCallback = () => void;
 
 /** Callback invoked to refresh the outliner panel. */
 export type RefreshOutlinerCallback = () => void;
+
+/**
+ * Callback that copies outliner expand/collapse state from a source hierarchy
+ * root onto a clone after duplicate.
+ *
+ * @param sourceRoot Source hierarchy root.
+ * @param cloneRoot Clone hierarchy root.
+ */
+export type MirrorExpandStateCallback = (sourceRoot: THREE.Object3D, cloneRoot: THREE.Object3D) => void;
 
 /**
  * Callback invoked to show a status message.
@@ -40,6 +51,7 @@ export class HandlerObjectAction {
   private selectionManager: ManagerSelection;
   private syncViewports: SyncViewportsCallback | null;
   private refreshOutliner: RefreshOutlinerCallback | null;
+  private mirrorExpandState: MirrorExpandStateCallback | null;
   private showStatusMessage: StatusMessageCallback | null;
 
   /**
@@ -55,6 +67,7 @@ export class HandlerObjectAction {
     this.selectionManager = selectionManager;
     this.syncViewports = null;
     this.refreshOutliner = null;
+    this.mirrorExpandState = null;
     this.showStatusMessage = null;
   }
 
@@ -74,6 +87,16 @@ export class HandlerObjectAction {
    */
   setRefreshOutliner(callback: RefreshOutlinerCallback): void {
     this.refreshOutliner = callback;
+  }
+
+  /**
+   * Sets the callback that mirrors outliner expand state after hierarchy
+   * duplicate.
+   *
+   * @param callback Source-to-clone expand copy function.
+   */
+  setMirrorExpandState(callback: MirrorExpandStateCallback): void {
+    this.mirrorExpandState = callback;
   }
 
   /**
@@ -102,8 +125,8 @@ export class HandlerObjectAction {
 
   /**
    * Deletes hierarchy roots (meshes, groups, empty groups) from the scene.
-   * Solid brushes are removed from their solid model CSG tree, not only the
-   * scene.
+   * Solid brushes under those roots are unregistered from their solid models so
+   * CSG and geometry stay in sync with the outliner.
    *
    * @param objects Hierarchy nodes to remove.
    */
@@ -115,24 +138,103 @@ export class HandlerObjectAction {
       this.showMessage('Cannot delete locked object(s)');
       return;
     }
+    const solidBrushes = this.solidBrushMeshesCollectFromRoots(roots);
+    const otherRoots = this.hierarchyRootsExcludeBrushMeshes(roots);
+    this.commandStackPushDeleteSteps(this.hierarchyDeleteStepsBuild(solidBrushes, otherRoots));
+    this.selectionManager.clearSelection();
+    this.notifySyncAndRefresh();
+    this.showMessage(`Deleted ${roots.length} object(s)`);
+  }
+
+  /**
+   * Builds ordered delete steps: solid brushes first, then hierarchy roots.
+   *
+   * @param solidBrushes Solid brush meshes to unregister.
+   * @param otherRoots Non-brush hierarchy roots to remove.
+   * @returns Ordered undoable steps for one history entry.
+   */
+  private hierarchyDeleteStepsBuild(
+    solidBrushes: readonly THREE.Mesh[],
+    otherRoots: readonly THREE.Object3D[],
+  ): UndoCommand[] {
+    const steps: UndoCommand[] = [];
+    if (solidBrushes.length > 0) {
+      steps.push(new CommandSolidBrushesDelete([...solidBrushes]));
+    }
+    if (otherRoots.length > 0) {
+      steps.push(new CommandObjectHierarchyDelete([...otherRoots]));
+    }
+    return steps;
+  }
+
+  /**
+   * Pushes one history entry for delete steps (single command or atomic batch).
+   *
+   * @param steps Ordered delete sub-commands.
+   */
+  private commandStackPushDeleteSteps(steps: readonly UndoCommand[]): void {
+    if (steps.length === 0) {
+      return;
+    }
+    if (steps.length === 1) {
+      this.commandStack.push(steps[0]!);
+      return;
+    }
+    this.commandStack.push(new CommandUndoBatch(steps));
+  }
+
+  /**
+   * Collects unique solid brush preview meshes under hierarchy roots (including
+   * the roots themselves when they are brush meshes).
+   *
+   * @param roots Hierarchy roots being deleted.
+   * @returns Solid brush meshes for CSG unregistration.
+   */
+  private solidBrushMeshesCollectFromRoots(roots: readonly THREE.Object3D[]): THREE.Mesh[] {
     const solidBrushes: THREE.Mesh[] = [];
+    const seen = new Set<THREE.Mesh>();
+    for (const root of roots) {
+      this.solidBrushMeshesAppendUnder(root, solidBrushes, seen);
+    }
+    return solidBrushes;
+  }
+
+  /**
+   * Appends solid brush meshes found at or under one hierarchy root.
+   *
+   * @param root Hierarchy root to scan.
+   * @param solidBrushes Accumulator list.
+   * @param seen Deduping set of mesh identities.
+   */
+  private solidBrushMeshesAppendUnder(root: THREE.Object3D, solidBrushes: THREE.Mesh[], seen: Set<THREE.Mesh>): void {
+    for (const mesh of collectMeshesUnder(root)) {
+      if (!SolidBrushVisual.isBrushObject(mesh)) {
+        continue;
+      }
+      if (seen.has(mesh)) {
+        continue;
+      }
+      seen.add(mesh);
+      solidBrushes.push(mesh);
+    }
+  }
+
+  /**
+   * Filters hierarchy roots to non-brush nodes (groups, solid models, regular
+   * meshes) so solid brush meshes are only handled by solid delete.
+   *
+   * @param roots Hierarchy roots being deleted.
+   * @returns Roots to remove via hierarchy delete.
+   */
+  private hierarchyRootsExcludeBrushMeshes(roots: readonly THREE.Object3D[]): THREE.Object3D[] {
     const otherRoots: THREE.Object3D[] = [];
     for (const root of roots) {
       if (root instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(root)) {
-        solidBrushes.push(root);
         continue;
       }
       otherRoots.push(root);
     }
-    if (solidBrushes.length > 0) {
-      this.commandStack.push(new CommandSolidBrushesDelete(solidBrushes));
-    }
-    if (otherRoots.length > 0) {
-      this.commandStack.push(new CommandObjectHierarchyDelete(otherRoots));
-    }
-    this.selectionManager.clearSelection();
-    this.notifySyncAndRefresh();
-    this.showMessage(`Deleted ${roots.length} object(s)`);
+    return otherRoots;
   }
 
   /**
@@ -143,13 +245,14 @@ export class HandlerObjectAction {
   private deleteMeshesWithSolidSupport(meshes: THREE.Mesh[]): void {
     const solidBrushes = CommandSolidBrushesDelete.filterBrushMeshes(meshes);
     const regularMeshes = meshes.filter((mesh) => !SolidBrushVisual.isBrushObject(mesh));
+    const steps: UndoCommand[] = [];
     if (solidBrushes.length > 0) {
-      this.commandStack.push(new CommandSolidBrushesDelete(solidBrushes));
+      steps.push(new CommandSolidBrushesDelete(solidBrushes));
     }
     if (regularMeshes.length > 0) {
-      const snapshots = this.buildDeleteSnapshots(regularMeshes);
-      this.commandStack.push(new CommandObjectDelete(snapshots));
+      steps.push(new CommandObjectDelete(this.buildDeleteSnapshots(regularMeshes)));
     }
+    this.commandStackPushDeleteSteps(steps);
     this.selectionManager.clearSelection();
     this.notifySyncAndRefresh();
   }
@@ -205,11 +308,17 @@ export class HandlerObjectAction {
     }
     const clonedMeshes: THREE.Mesh[] = [];
     const clonedInspector: THREE.Object3D[] = [];
+    const solidExpandSources: THREE.Object3D[] = [];
+    const solidExpandClones: THREE.Object3D[] = [];
     if (solidNodes.length > 0) {
       const solidCommand = new CommandSolidBrushesDuplicate(solidNodes, new THREE.Vector3(0, 0, 0));
       this.commandStack.push(solidCommand);
       clonedMeshes.push(...solidCommand.getClonedMeshes());
-      clonedInspector.push(...solidCommand.getClonedInspectorRoots());
+      const solidClones = solidCommand.getClonedInspectorRoots();
+      clonedInspector.push(...solidClones);
+      solidExpandSources.push(...solidNodes);
+      solidExpandClones.push(...solidClones);
+      this.mirrorExpandStateForPairs(solidExpandSources, solidExpandClones);
     }
     if (regularMeshes.length > 0) {
       const regularCommand = new CommandObjectDuplicate(regularMeshes, this.worldObject, new THREE.Vector3(0, 0, 0));
@@ -221,6 +330,9 @@ export class HandlerObjectAction {
     if (clonedMeshes.length > 0 || clonedInspector.length > 0) {
       this.selectionManager.setSelection(clonedMeshes, clonedInspector);
     }
+    // Selection reveal expands ancestors of focused rows; re-apply so a closed
+    // source group does not leave its clone open after child brushes are selected.
+    this.mirrorExpandStateForPairs(solidExpandSources, solidExpandClones);
     this.showDuplicateFeedback(Math.max(clonedInspector.length, clonedMeshes.length));
     this.notifyRefresh();
   }
@@ -273,9 +385,10 @@ export class HandlerObjectAction {
       this.showMessage('Cannot ungroup locked group');
       return;
     }
+    const hierarchySeeds = group.children.slice();
     const command = new CommandObjectUngroup(group);
     this.commandStack.push(command);
-    SolidModel.rebuildAllUnder(this.worldObject);
+    SolidModel.hierarchyMutationRefreshFromRoots(hierarchySeeds);
     this.notifySyncAndRefresh();
   }
 
@@ -336,7 +449,7 @@ export class HandlerObjectAction {
     this.commandStack.push(command);
     const createdGroup = command.getGroup();
     this.finalizeSolidGroupIfNeeded(createdGroup, members);
-    SolidModel.rebuildAllUnder(this.worldObject);
+    SolidModel.hierarchyMutationRefreshFromRoots([createdGroup]);
     this.selectCreatedGroup(createdGroup);
     this.notifySyncAndRefresh();
     this.showGroupFeedback(groupName);
@@ -419,6 +532,27 @@ export class HandlerObjectAction {
       return parent;
     }
     return null;
+  }
+
+  /**
+   * Mirrors outliner expand/collapse state for each source/clone pair.
+   *
+   * @param sources Source hierarchy roots that were duplicated.
+   * @param clones Clone roots in the same order as sources.
+   */
+  private mirrorExpandStateForPairs(sources: readonly THREE.Object3D[], clones: readonly THREE.Object3D[]): void {
+    if (!this.mirrorExpandState) {
+      return;
+    }
+    const pairCount = Math.min(sources.length, clones.length);
+    for (let index = 0; index < pairCount; index++) {
+      const source = sources[index];
+      const clone = clones[index];
+      if (!source || !clone) {
+        continue;
+      }
+      this.mirrorExpandState(source, clone);
+    }
   }
 
   /**

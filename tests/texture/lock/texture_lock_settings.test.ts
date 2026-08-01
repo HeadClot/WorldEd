@@ -56,6 +56,20 @@ describe('TextureLockSettings', () => {
     expect(cloneUvArray(mesh)).toEqual(uvBefore);
   });
 
+  it('should stick UVs on face-pivot scale with stretch lock on and position lock off', () => {
+    settings.setPositionLocked(false);
+    settings.setStretchLocked(true);
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    mesh.updateMatrixWorld(true);
+    initializeMeshTextureUVs(mesh);
+    const uvBefore = cloneUvArray(mesh);
+    mesh.scale.x = 2;
+    mesh.position.x = 0.5;
+    mesh.updateMatrixWorld(true);
+    settings.applyContentTransformPolicy([mesh], true, true);
+    expect(cloneUvArray(mesh)).toEqual(uvBefore);
+  });
+
   it('should rebake world density when scaling with stretch lock off', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.updateMatrixWorld(true);

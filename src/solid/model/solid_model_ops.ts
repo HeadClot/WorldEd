@@ -24,7 +24,7 @@ export interface SolidModelOpsHost {
   findBrush: (id: string) => SolidBrushInstance | undefined;
   markBrushesDirty: (brushIds: Iterable<string>) => void;
   markDirty: () => void;
-  rebuild: (force?: boolean) => void;
+  rebuild: (force?: boolean, options?: { skipEdgeBatchRefresh?: boolean }) => void;
 }
 
 /**
@@ -264,8 +264,15 @@ export function reorderBrushesAndRebuild(
   end: 'first' | 'last',
 ): boolean {
   if (!host.brushes.reorderBrushesToEnd(brushIds, end)) return false;
-  host.markDirty();
-  host.rebuild(true);
+  const dirty = new Set<string>(brushIds);
+  for (const brushId of brushIds) {
+    for (const peerId of host.pipeline.getCachedTouchPeerIds(brushId)) {
+      dirty.add(peerId);
+    }
+  }
+  host.pipeline.clearRoutingTables();
+  host.markBrushesDirty(dirty);
+  host.rebuild(true, { skipEdgeBatchRefresh: true });
   return true;
 }
 

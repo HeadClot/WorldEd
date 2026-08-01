@@ -17,12 +17,16 @@ interface ParentOrderSnapshot {
 interface ModelOrderSnapshot {
   model: SolidModel;
   parentSnapshots: ParentOrderSnapshot[];
+  dirtyBrushIds: string[];
 }
 
 /**
  * Undoable command that moves solid brushes and solid CSG groups to first or
  * last among siblings under their own parent. Multi-select reorders each parent
  * tree independently so nested groups do not jump in the solid root.
+ *
+ * CSG uses peer-local partial recompile (moved brushes + touch peers), not a
+ * full map rebuild — matching Chisel touch-only iterative updates.
  */
 export class CommandSolidBrushesReorder implements UndoCommand {
   private readonly sourceNodes: THREE.Object3D[];
@@ -121,10 +125,77 @@ export class CommandSolidBrushesReorder implements UndoCommand {
       anyChanged = true;
     });
     if (!anyChanged) return null;
+    const dirtyBrushIds = this.collectDirtySeedsForNodes(model, nodes);
+    this.rebuildAfterOrderChange(model, dirtyBrushIds);
+    return { model, parentSnapshots, dirtyBrushIds };
+  }
+
+  /**
+   * Collects brush ids under moved brushes and groups (seeds for partial CSG).
+   *
+   * @param model Solid model.
+   * @param nodes Moved hierarchy nodes.
+   * @returns Brush instance ids.
+   */
+  private collectDirtySeedsForNodes(model: SolidModel, nodes: readonly THREE.Object3D[]): string[] {
+    const ids = new Set<string>();
+    for (const node of nodes) {
+      this.collectBrushIdsUnderNode(model, node, ids);
+    }
+    return Array.from(ids);
+  }
+
+  /**
+   * Adds brush ids for a brush mesh or every brush under a solid CSG group.
+   *
+   * @param model Solid model.
+   * @param node Brush mesh or solid CSG group.
+   * @param ids Accumulator set.
+   */
+  private collectBrushIdsUnderNode(model: SolidModel, node: THREE.Object3D, ids: Set<string>): void {
+    if (SolidBrushVisual.isBrushObject(node) && node instanceof THREE.Mesh) {
+      const brush = model.findBrushByMesh(node);
+      if (brush) {
+        ids.add(brush.id);
+      }
+      return;
+    }
+    if (!isSolidCsgGroup(node)) {
+      return;
+    }
+    node.traverse((child) => {
+      if (!SolidBrushVisual.isBrushObject(child) || !(child instanceof THREE.Mesh)) {
+        return;
+      }
+      const brush = model.findBrushByMesh(child);
+      if (brush) {
+        ids.add(brush.id);
+      }
+    });
+  }
+
+  /**
+   * Expands seeds with cached touch peers, clears routing tables, and runs a
+   * partial CSG rebuild.
+   *
+   * @param model Solid model.
+   * @param seedBrushIds Moved brush ids.
+   */
+  private rebuildAfterOrderChange(model: SolidModel, seedBrushIds: readonly string[]): void {
     model.syncBrushOrderFromScene();
-    model.markDirty();
-    model.rebuild(true);
-    return { model, parentSnapshots };
+    const dirty = new Set<string>(seedBrushIds);
+    for (const brushId of seedBrushIds) {
+      for (const peerId of model.getCachedTouchPeerIds(brushId)) {
+        dirty.add(peerId);
+      }
+    }
+    model.clearRoutingTables();
+    if (dirty.size === 0) {
+      model.markDirty();
+    } else {
+      model.markBrushesDirty(dirty);
+    }
+    model.rebuild(true, { skipEdgeBatchRefresh: true });
   }
 
   /**
@@ -156,9 +227,7 @@ export class CommandSolidBrushesReorder implements UndoCommand {
     for (const parentSnapshot of snapshot.parentSnapshots) {
       restoreParentChildren(parentSnapshot.parent, parentSnapshot.previousChildren);
     }
-    snapshot.model.syncBrushOrderFromScene();
-    snapshot.model.markDirty();
-    snapshot.model.rebuild(true);
+    this.rebuildAfterOrderChange(snapshot.model, snapshot.dirtyBrushIds);
   }
 }
 

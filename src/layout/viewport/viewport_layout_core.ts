@@ -571,6 +571,8 @@ export abstract class ViewportLayoutCore {
         syncViewports: () => this.refreshAfterWorldMutation(),
         afterTransformCommit: (objects) => this.refreshVisualsAfterTransformCommit(objects),
         refreshOutliner: () => this.refreshOutliner(),
+        mirrorExpandState: (sourceRoot, cloneRoot) =>
+          this.outlinerPanel.copyExpandStateFromSource(sourceRoot, cloneRoot),
         showStatusMessage: (message) => this.showStatusMessage(message),
         onAxisRestrictionChanged: (axis) => this.onAxisRestrictionChanged(axis),
         statusBar: this.statusBar,
@@ -807,6 +809,7 @@ export abstract class ViewportLayoutCore {
       textureLock: this.textureLock,
       refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
       refreshOutliner: () => this.refreshOutliner(),
+      revealOutlinerObject: (object) => this.outlinerPanel.revealObject(object),
       showStatusMessage: (message) => this.showStatusMessage(message),
     });
     this.solidModelPanel = setup.solidModelPanel;

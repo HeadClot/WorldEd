@@ -201,16 +201,32 @@ export class SolidModelRebuildPipeline {
     return this.compiler.getCachedTouchPeerIds(brushId);
   }
 
+  /** Clears CSG routing tables without dropping polygon caches. */
+  clearRoutingTables(): void {
+    this.compiler.clearRoutingTables();
+  }
+
   /**
-   * Invalidates compiler state for a removed brush.
+   * Invalidates compiler state for a removed brush without forcing a full map
+   * rebuild. Mesh result ranges for other brushes stay intact until the next
+   * assemble pass drops the missing id.
    *
    * @param brushId Removed brush id.
    */
   invalidateBrush(brushId: string): void {
     this.compiler.invalidateBrush(brushId);
     this.meshChunkCache.remove(brushId);
-    this.resultBuffer.clear();
     this.dirty = true;
+  }
+
+  /**
+   * Returns whether the last successful compile included this brush id.
+   *
+   * @param brushId Brush instance id.
+   * @returns True when the brush was in the previous evaluation order.
+   */
+  compileOrderLastContainsBrush(brushId: string): boolean {
+    return this.compiler.getLastBrushOrder().includes(brushId);
   }
 
   /**
@@ -242,6 +258,15 @@ export class SolidModelRebuildPipeline {
    * @returns True after a successful dirty-range patch.
    */
   wasLastResultWritePartialForTesting(): boolean {
+    return this.wasLastResultWritePartial();
+  }
+
+  /**
+   * Returns whether the last result mesh write was an in-place partial patch.
+   *
+   * @returns True after a successful dirty-range patch.
+   */
+  wasLastResultWritePartial(): boolean {
     return this.resultBuffer.wasLastWritePartial();
   }
 
@@ -259,7 +284,7 @@ export class SolidModelRebuildPipeline {
     this.compiler.compile(this.host.getEvaluationList(), this.buildCompileOptions());
     this.rebuildDirtyMeshChunks();
     this.assembleResultFromCompiler();
-    if (!liveDrag) {
+    if (!liveDrag && !this.resultBuffer.wasLastWritePartial()) {
       this.forceFullResultGeometryUpload();
     }
   }

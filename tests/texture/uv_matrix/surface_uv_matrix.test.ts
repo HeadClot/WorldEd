@@ -129,6 +129,19 @@ describe('brush-local UV lock transform', () => {
     expect(Math.abs(updated.project(newFreeLocal).u - uvFreeBefore.u)).toBeGreaterThan(0.4);
   });
 
+  it('keeps UV matrix unchanged on face-pivot scale when only stretch lock is on', () => {
+    const normal = new THREE.Vector3(0, 1, 0);
+    const uv = SurfaceUvMatrix.fromTrs(new THREE.Vector2(0, 0), normal, 0, 1, 1);
+    const prev = new THREE.Matrix4().identity();
+    const next = new THREE.Matrix4().makeScale(2, 1, 1);
+    next.setPosition(0.5, 0, 0);
+    const locked = transformBrushLocalUvForPoseChange(uv, normal, 0, prev, next, {
+      positionLock: false,
+      stretchLock: true,
+    });
+    expect(locked.equals(uv, 1e-6)).toBe(true);
+  });
+
   it('round-trips surface to legacy mapping custom axes', () => {
     const normal = new THREE.Vector3(0, 0, 1);
     const surface = faceTextureMappingToSurface(createDefaultFaceTextureMapping('t'), normal);

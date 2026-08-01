@@ -36,6 +36,12 @@ import {
 import * as solidOps from './solid_model_ops.js';
 import type { SolidModelOpsHost } from './solid_model_ops.js';
 import { findSolidModelRoot, isSolidCsgGroup, isValidSolidTreeParent } from './solid_group.js';
+import { brushRemovalExecute } from './solid_brush_removal_dirty.js';
+import {
+  hierarchyMutationRefreshFromRoots,
+  hierarchyMutationRefreshOnHost,
+} from './hierarchy/solid_hierarchy_mutation_refresh.js';
+import { hierarchySeedBrushIdsCollectUnder } from './hierarchy/solid_hierarchy_seed_collector.js';
 
 export {
   SOLID_MODEL_USERDATA_KEY,
@@ -386,29 +392,43 @@ export class SolidModel {
   }
 
   /**
-   * Removes a brush and its preview mesh, then rebuilds. Invalidates routing
-   * tables for the removed brush. Former touch peers are marked dirty so holes
-   * refill and coplanar faces return; when no peer cache exists, a full rebuild
-   * is forced so neighbors cannot keep stale surfaces.
+   * Removes a brush, marks partial CSG seeds, and optionally rebuilds.
    *
    * @param id Brush id.
-   * @param disposeResources When true, disposes preview GPU resources (default
-   *   true).
+   * @param disposeResources When true, disposes preview GPU resources.
+   * @param rebuildAfter When false, defers rebuild for batched removals.
    * @returns True when removed.
    */
-  removeBrush(id: string, disposeResources: boolean = true): boolean {
-    const touchPeers = this.pipeline.getCachedTouchPeerIds(id);
-    const brush = this.brushes.removeBrushFromList(id);
-    if (!brush) return false;
-    solidOps.detachAndMaybeDisposeBrushMesh(brush, disposeResources);
-    this.pipeline.invalidateBrush(id);
-    if (touchPeers.length > 0) {
-      this.markBrushesDirty(touchPeers);
-    } else {
-      this.markDirty();
-    }
-    this.rebuild(true);
-    return true;
+  removeBrush(id: string, disposeResources: boolean = true, rebuildAfter: boolean = true): boolean {
+    return brushRemovalExecute(this.getOpsHost(), this.pipeline, this.brushes, id, disposeResources, rebuildAfter);
+  }
+
+  /**
+   * Partial CSG after hierarchy edits for this solid (seeds + touch peers).
+   *
+   * @param seedBrushIds Brushes whose hierarchy role changed.
+   */
+  hierarchyMutationRefresh(seedBrushIds: readonly string[]): void {
+    hierarchyMutationRefreshOnHost(this.getOpsHost(), seedBrushIds);
+  }
+
+  /**
+   * Partial CSG for solids that own the given hierarchy roots only.
+   *
+   * @param seedRoots Hierarchy nodes that moved, grouped, or ungrouped.
+   */
+  static hierarchyMutationRefreshFromRoots(seedRoots: readonly THREE.Object3D[]): void {
+    hierarchyMutationRefreshFromRoots(seedRoots);
+  }
+
+  /**
+   * Collects owned brush ids under a hierarchy root.
+   *
+   * @param root Hierarchy node to scan.
+   * @returns Brush instance ids under the root.
+   */
+  hierarchyBrushIdsCollectUnder(root: THREE.Object3D): string[] {
+    return hierarchySeedBrushIdsCollectUnder(this, root);
   }
 
   /**
@@ -665,18 +685,43 @@ export class SolidModel {
   }
 
   /**
+   * Clears routing tables after evaluation-order changes so the next partial
+   * recompile rebuilds tables with current prepared indices.
+   */
+  clearRoutingTables(): void {
+    this.pipeline.clearRoutingTables();
+  }
+
+  /**
+   * Returns cached touch-peer brush ids for partial CSG seeds.
+   *
+   * @param brushId Brush instance id.
+   * @returns Peer brush ids from the last compile.
+   */
+  getCachedTouchPeerIds(brushId: string): string[] {
+    return this.pipeline.getCachedTouchPeerIds(brushId);
+  }
+
+  /**
    * Rebuilds the compiled result mesh from current brush transforms.
    *
    * @param force Rebuild even when not marked dirty.
+   * @param options Optional rebuild flags.
+   * @param options.skipEdgeBatchRefresh When true, leaves static brush edge
+   *   batches untouched (safe for CSG-order-only edits such as To First/Last).
    */
-  rebuild(force: boolean = false): void {
-    if (!this.pipeline.isDirty() && !force) return;
+  rebuild(force: boolean = false, options: { skipEdgeBatchRefresh?: boolean } = {}): void {
+    if (!this.pipeline.isDirty() && !force) {
+      return;
+    }
     this.pipeline.compileResultGeometry();
     solidOps.applyPresentationIfGeometryExists(this.getOpsHost(), true);
     this.pipeline.resetResultLocalTransform();
     this.pipeline.clearDirtyFlag();
     this.pipeline.setInteractiveGeometryCurrent(true);
-    this.refreshStaticBrushEdgeBatches();
+    if (!options.skipEdgeBatchRefresh) {
+      this.refreshStaticBrushEdgeBatches();
+    }
   }
 
   /**
@@ -727,11 +772,23 @@ export class SolidModel {
     }
     this.pipeline.compileResultGeometry(true);
     this.pipeline.resetResultLocalTransform();
-    if (this.pipeline.hasResultGeometry()) {
-      solidOps.applySurfaceLayoutToResult(this.getOpsHost(), false);
-    }
+    this.applyLiveSurfaceLayoutIfNeeded();
     this.pipeline.setDirtyFlag(true);
     this.pipeline.setInteractiveGeometryCurrent(true);
+  }
+
+  /**
+   * Applies surface materials after a live rebuild only when the result layout
+   * may have changed. In-place partial patches keep material ranges valid.
+   */
+  private applyLiveSurfaceLayoutIfNeeded(): void {
+    if (!this.pipeline.hasResultGeometry()) {
+      return;
+    }
+    if (this.pipeline.wasLastResultWritePartial()) {
+      return;
+    }
+    solidOps.applySurfaceLayoutToResult(this.getOpsHost(), false);
   }
 
   /**
@@ -957,15 +1014,11 @@ export class SolidModel {
       findBrush: (id) => this.findBrush(id),
       markBrushesDirty: (ids) => this.markBrushesDirty(ids),
       markDirty: () => this.markDirty(),
-      rebuild: (force) => this.rebuild(force),
+      rebuild: (force, options) => this.rebuild(force, options),
     };
   }
 
-  /**
-   * Rebakes static brush edge batches under this solid root after structural or
-   * transform commits. Selection membership is preserved via
-   * SolidBrushEdgeBatch.
-   */
+  /** Rebakes static brush edge batches under this solid root. */
   private refreshStaticBrushEdgeBatches(): void {
     SolidBrushEdgeBatch.rebuildForSolidRoot(this.root);
   }

@@ -37,6 +37,39 @@ describe('KeyboardShortcutHandler', () => {
     expect(onMode).not.toHaveBeenCalled();
   });
 
+  it('should set solid additive and subtractive on A and S when not flying', () => {
+    const onAdditive = vi.fn();
+    const onSubtractive = vi.fn();
+    handler.setOnSolidOperationAdditive(onAdditive);
+    handler.setOnSolidOperationSubtractive(onSubtractive);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
+    expect(onAdditive).toHaveBeenCalledOnce();
+    expect(onSubtractive).toHaveBeenCalledOnce();
+  });
+
+  it('should not set solid operations while right mouse fly is held', () => {
+    const onAdditive = vi.fn();
+    const onSubtractive = vi.fn();
+    handler.setOnSolidOperationAdditive(onAdditive);
+    handler.setOnSolidOperationSubtractive(onSubtractive);
+    window.dispatchEvent(new PointerEvent('pointerdown', { button: 2 }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
+    expect(onAdditive).not.toHaveBeenCalled();
+    expect(onSubtractive).not.toHaveBeenCalled();
+  });
+
+  it('should still allow Ctrl+S save while solid subtractive uses plain S', () => {
+    const onSave = vi.fn();
+    const onSubtractive = vi.fn();
+    handler.setOnSaveScene(onSave);
+    handler.setOnSolidOperationSubtractive(onSubtractive);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS', ctrlKey: true }));
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSubtractive).not.toHaveBeenCalled();
+  });
+
   it('should not activate transform tools when navigation guard is active', () => {
     const onMode = vi.fn();
     handler.setOnTransformMode(onMode);

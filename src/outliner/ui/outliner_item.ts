@@ -409,7 +409,25 @@ export class OutlinerItem {
       this.renameInput = null;
       this.applyNameLabelText(this.object.name);
     });
-    this.renameInput.activate();
+    this.renameInput.activate(this.resolveOutlinerRenameSelectionRange());
+  }
+
+  /**
+   * Builds the initial rename selection for outliner rows. When the display
+   * name has a valid auto hex id suffix, only the base name is selected so the
+   * gray id is not highlighted.
+   *
+   * @returns Selection range, or undefined for full-name selection.
+   */
+  private resolveOutlinerRenameSelectionRange(): { start: number; end: number } | undefined {
+    if (parseHierarchyHexSuffix(this.object.name) === null) {
+      return undefined;
+    }
+    const baseName = extractHierarchyNameBase(this.object.name);
+    if (baseName.length <= 0 || baseName.length >= this.object.name.length) {
+      return undefined;
+    }
+    return { start: 0, end: baseName.length };
   }
 
   /** Disposes this item and removes it from the DOM. */
@@ -495,6 +513,8 @@ export class OutlinerItem {
     this.styleCenteredSlot(this.chevronElement, OUTLINER_CHEVRON_WIDTH_PX);
     this.chevronElement.style.color = '#888888';
     this.chevronElement.style.fontSize = '10px';
+    this.chevronElement.style.transformOrigin = 'center center';
+    this.chevronElement.style.transition = 'transform 0s';
     if (!this.hasChildren) {
       this.chevronElement.style.visibility = 'hidden';
     }
@@ -507,15 +527,20 @@ export class OutlinerItem {
     });
   }
 
-  /** Updates the chevron character and visibility based on children/expanded. */
+  /**
+   * Updates chevron visibility and orientation. Uses one glyph for both states
+   * and rotates it so open/closed markers stay the same visual size.
+   */
   private updateChevron(): void {
     if (!this.hasChildren) {
       this.chevronElement.style.visibility = 'hidden';
       this.chevronElement.textContent = '';
+      this.chevronElement.style.transform = 'none';
       return;
     }
     this.chevronElement.style.visibility = 'visible';
-    this.chevronElement.textContent = this.isExpanded ? '▼' : '▶';
+    this.chevronElement.textContent = '▶';
+    this.chevronElement.style.transform = this.isExpanded ? 'rotate(90deg)' : 'rotate(0deg)';
   }
 
   /** Builds the object type icon container and fills glyph / badge. */

@@ -181,7 +181,7 @@ export class HandlerHierarchyReparent {
       this.commandStack.push(new CommandObjectObjectsReparent(moves));
     }
     this.ensureSolidGroupMarker(moves[0]!.newParent);
-    SolidModel.rebuildAllUnder(this.worldObject);
+    SolidModel.hierarchyMutationRefreshFromRoots(moves.map((move) => move.object));
     this.syncViewports?.();
     this.refreshOutliner?.();
     this.showMoveStatus(moves);

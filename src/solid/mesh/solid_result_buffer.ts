@@ -115,11 +115,7 @@ export class SolidResultBuffer {
     }
     const updateRanges: SolidMeshUpdateRange[] = [];
     for (const brushId of dirtyBrushIds) {
-      const range = this.rangeByBrushId.get(brushId)!;
-      const chunk = chunkCache.get(brushId)!;
-      this.writeChunkAt(chunk, range.vertexStart);
-      this.replaceBrushRegions(range, chunk);
-      updateRanges.push(this.makeUpdateRange(range));
+      this.patchOneDirtyBrushIfPresent(brushId, chunkCache, updateRanges);
     }
     this.lastUpdateRanges = updateRanges;
     this.partialWrite = true;
@@ -127,9 +123,35 @@ export class SolidResultBuffer {
   }
 
   /**
+   * Writes one dirty brush into its existing range when it still contributes
+   * geometry. Empty free-floating cutters (no range / zero triangles) are a
+   * no-op so they do not force a full map rewrite.
+   *
+   * @param brushId Dirty brush id.
+   * @param chunkCache Mesh chunk cache.
+   * @param updateRanges Accumulator for GPU update windows.
+   */
+  private patchOneDirtyBrushIfPresent(
+    brushId: string,
+    chunkCache: SolidMeshChunkCache,
+    updateRanges: SolidMeshUpdateRange[],
+  ): void {
+    const range = this.rangeByBrushId.get(brushId);
+    const chunk = chunkCache.get(brushId);
+    if (!range || !chunk || chunk.triangleCount === 0 || range.triangleCount === 0) {
+      return;
+    }
+    this.writeChunkAt(chunk, range.vertexStart);
+    this.replaceBrushRegions(range, chunk);
+    updateRanges.push(this.makeUpdateRange(range));
+  }
+
+  /**
    * Rebuilds from the first layout-changing brush onward, keeping a stable
    * prefix. Avoids rewriting the entire map when only a late brush changes
-   * topology.
+   * topology. When evaluation order differs from the stored mesh layout but the
+   * brush set is unchanged, uses the stored layout order so CSG reorder does
+   * not force a full map rewrite.
    *
    * @param dirtyBrushIds Brushes recompiled this pass.
    * @param brushIds Current evaluation order.
@@ -142,12 +164,13 @@ export class SolidResultBuffer {
     chunkCache: SolidMeshChunkCache,
   ): boolean {
     if (this.ranges.length === 0) return false;
-    if (!this.orderMatches(brushIds)) return false;
-    const firstChangedOrderIndex = this.findFirstLayoutChangeOrderIndex(dirtyBrushIds, brushIds, chunkCache);
+    const layoutOrder = this.resolveLayoutOrderForRebuild(brushIds);
+    if (!layoutOrder) return false;
+    const firstChangedOrderIndex = this.findFirstLayoutChangeOrderIndex(dirtyBrushIds, layoutOrder, chunkCache);
     if (firstChangedOrderIndex < 0) return false;
     if (firstChangedOrderIndex === 0) return false;
-    const prefixBrushIds = brushIds.slice(0, firstChangedOrderIndex);
-    const suffixBrushIds = brushIds.slice(firstChangedOrderIndex);
+    const prefixBrushIds = layoutOrder.slice(0, firstChangedOrderIndex);
+    const suffixBrushIds = layoutOrder.slice(firstChangedOrderIndex);
     const prefixVertexEnd = this.vertexEndAfterBrushes(prefixBrushIds);
     const prefixTriangleEnd = this.triangleEndAfterBrushes(prefixBrushIds);
     const suffixChunks = this.collectOrderedChunks(suffixBrushIds, chunkCache);
@@ -172,7 +195,7 @@ export class SolidResultBuffer {
       vertexOffset += entry.chunk.vertexCount;
       triangleOffset += entry.chunk.triangleCount;
     }
-    this.lastBrushOrder = brushIds.slice();
+    this.lastBrushOrder = layoutOrder.slice();
     this.lastUpdateRanges = [
       {
         positionFloatStart: prefixVertexEnd * 3,
@@ -269,11 +292,14 @@ export class SolidResultBuffer {
 
   /**
    * Returns whether dirty brushes can be patched without rebuilding the layout.
+   * Evaluation order may differ from the stored mesh layout order; only the
+   * brush set and per-dirty vertex/triangle sizes must match so CSG reorder (To
+   * First / To Last) can patch without rewriting the whole map.
    *
    * @param dirtyBrushIds Dirty brush ids.
-   * @param brushIds Current order.
+   * @param brushIds Current evaluation order.
    * @param chunkCache Chunk cache.
-   * @returns True when layout is stable.
+   * @returns True when layout is stable for in-place patch.
    */
   private canPatchDirty(
     dirtyBrushIds: readonly string[],
@@ -281,7 +307,7 @@ export class SolidResultBuffer {
     chunkCache: SolidMeshChunkCache,
   ): boolean {
     if (this.ranges.length === 0) return false;
-    if (!this.orderMatches(brushIds)) return false;
+    if (!this.sameBrushSet(brushIds)) return false;
     for (const brushId of dirtyBrushIds) {
       if (!this.dirtyBrushFitsRange(brushId, chunkCache)) return false;
     }
@@ -368,17 +394,44 @@ export class SolidResultBuffer {
   }
 
   /**
-   * Returns whether one dirty brush still fits its stored range.
+   * Returns whether one dirty brush still fits its stored range. Brushes that
+   * contribute no triangles (free-floating subtractive/intersect) fit when they
+   * also have no stored range or a zero-sized range.
    *
    * @param brushId Brush id.
    * @param chunkCache Chunk cache.
-   * @returns True when vertex and triangle counts match.
+   * @returns True when vertex and triangle counts match, or both sides empty.
    */
   private dirtyBrushFitsRange(brushId: string, chunkCache: SolidMeshChunkCache): boolean {
     const range = this.rangeByBrushId.get(brushId);
     const chunk = chunkCache.get(brushId);
-    if (!range || !chunk) return false;
+    if (this.chunkContributesNoGeometry(chunk)) {
+      return this.rangeContributesNoGeometry(range);
+    }
+    if (!range || !chunk) {
+      return false;
+    }
     return chunk.vertexCount === range.vertexCount && chunk.triangleCount === range.triangleCount;
+  }
+
+  /**
+   * Returns whether a chunk is missing or has no triangles.
+   *
+   * @param chunk Mesh chunk or undefined.
+   * @returns True when the brush adds no result geometry.
+   */
+  private chunkContributesNoGeometry(chunk: SolidBrushMeshChunk | undefined): boolean {
+    return !chunk || chunk.triangleCount === 0 || chunk.vertexCount === 0;
+  }
+
+  /**
+   * Returns whether a stored range is missing or has no triangles.
+   *
+   * @param range Brush mesh range or undefined.
+   * @returns True when the brush has no layout slice.
+   */
+  private rangeContributesNoGeometry(range: SolidBrushMeshRange | undefined): boolean {
+    return !range || range.triangleCount === 0 || range.vertexCount === 0;
   }
 
   /**
@@ -393,6 +446,41 @@ export class SolidResultBuffer {
       if (brushIds[index] !== this.lastBrushOrder[index]) return false;
     }
     return true;
+  }
+
+  /**
+   * Returns whether the candidate evaluation list is the same brush set as the
+   * last mesh layout (order may differ).
+   *
+   * @param brushIds Candidate evaluation order.
+   * @returns True when membership matches the stored layout set.
+   */
+  private sameBrushSet(brushIds: readonly string[]): boolean {
+    if (brushIds.length !== this.lastBrushOrder.length) return false;
+    if (this.orderMatches(brushIds)) return true;
+    const layoutSet = new Set(this.lastBrushOrder);
+    for (const brushId of brushIds) {
+      if (!layoutSet.has(brushId)) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Picks the brush order used for mesh layout rebuilds. Prefers evaluation
+   * order when it matches the stored layout; otherwise keeps the stored layout
+   * when only CSG evaluation order changed.
+   *
+   * @param brushIds Current evaluation order.
+   * @returns Layout order, or null when the brush set changed.
+   */
+  private resolveLayoutOrderForRebuild(brushIds: readonly string[]): string[] | null {
+    if (this.orderMatches(brushIds)) {
+      return brushIds.slice();
+    }
+    if (!this.sameBrushSet(brushIds)) {
+      return null;
+    }
+    return this.lastBrushOrder.slice();
   }
 
   /**

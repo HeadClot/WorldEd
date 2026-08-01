@@ -12,7 +12,8 @@ export interface UngroupChildSnapshot {
 
 /**
  * Undoable command for ungrouping a group object. Execute reparents children to
- * the group's parent; undo restores the group.
+ * the group's parent at the group's former sibling index (preserving outliner
+ * and CSG evaluation order). Undo restores the group.
  */
 export class CommandObjectUngroup implements UndoCommand {
   private group: THREE.Group;
@@ -34,41 +35,27 @@ export class CommandObjectUngroup implements UndoCommand {
     this.executed = false;
   }
 
-  /** Executes the ungroup by moving children to the group's original parent. */
+  /**
+   * Moves children to the group's parent at the group's former sibling slot,
+   * then removes the empty group.
+   */
   execute(): void {
-    if (this.executed) return;
-    const childrenToRemove: THREE.Object3D[] = [];
-    this.group.children.forEach((child) => {
-      childrenToRemove.push(child);
-    });
-    childrenToRemove.forEach((child) => {
-      this.group.remove(child);
-      if (this.originalParent) {
-        this.originalParent.add(child);
-      }
-    });
-    if (this.group.parent) {
-      this.group.parent.remove(this.group);
+    if (this.executed) {
+      return;
     }
+    const children = this.groupChildrenDetach();
+    this.groupDetachFromParent();
+    this.childrenInsertAtGroupSlot(children);
     this.executed = true;
   }
 
-  /** Undoes the ungroup by restoring children to the group and re-adding it. */
+  /** Restores children into the group and reinserts the group at its old index. */
   undo(): void {
-    if (!this.executed) return;
-    this.childSnapshots.forEach((snapshot) => {
-      if (snapshot.child.parent) {
-        snapshot.child.parent.remove(snapshot.child);
-      }
-      this.group.add(snapshot.child);
-    });
-    if (this.originalParent) {
-      if (this.groupSiblingIndex < this.originalParent.children.length) {
-        this.originalParent.children.splice(this.groupSiblingIndex, 0, this.group);
-      } else {
-        this.originalParent.add(this.group);
-      }
+    if (!this.executed) {
+      return;
     }
+    this.childrenRestoreIntoGroup();
+    this.groupReinsertAtOriginalSlot();
     this.executed = false;
   }
 
@@ -82,6 +69,74 @@ export class CommandObjectUngroup implements UndoCommand {
   }
 
   /**
+   * Detaches every child from the group without parenting them elsewhere yet.
+   *
+   * @returns Detached children in former sibling order.
+   */
+  private groupChildrenDetach(): THREE.Object3D[] {
+    const children = this.group.children.slice();
+    for (const child of children) {
+      this.group.remove(child);
+    }
+    return children;
+  }
+
+  /** Removes the group from its parent when it still has one. */
+  private groupDetachFromParent(): void {
+    if (!this.group.parent) {
+      return;
+    }
+    this.group.parent.remove(this.group);
+  }
+
+  /**
+   * Inserts ungrouped children into the original parent at the group's former
+   * sibling index so order matches the outliner position of the dissolved
+   * group.
+   *
+   * @param children Detached former group children in order.
+   */
+  private childrenInsertAtGroupSlot(children: readonly THREE.Object3D[]): void {
+    if (!this.originalParent) {
+      return;
+    }
+    let insertIndex = this.groupSiblingIndex;
+    for (const child of children) {
+      this.childInsertAtIndex(this.originalParent, child, insertIndex);
+      insertIndex += 1;
+    }
+  }
+
+  /**
+   * Inserts one child at a sibling index under a parent.
+   *
+   * @param parent Destination parent.
+   * @param child Child to insert.
+   * @param index Sibling index under parent.
+   */
+  private childInsertAtIndex(parent: THREE.Object3D, child: THREE.Object3D, index: number): void {
+    const clamped = Math.max(0, Math.min(index, parent.children.length));
+    parent.children.splice(clamped, 0, child);
+    child.parent = parent;
+  }
+
+  /** Moves snapshot children back into the group for undo. */
+  private childrenRestoreIntoGroup(): void {
+    for (const snapshot of this.childSnapshots) {
+      snapshot.child.parent?.remove(snapshot.child);
+      this.group.add(snapshot.child);
+    }
+  }
+
+  /** Reinserts the group under its original parent at the captured index. */
+  private groupReinsertAtOriginalSlot(): void {
+    if (!this.originalParent) {
+      return;
+    }
+    this.childInsertAtIndex(this.originalParent, this.group, this.groupSiblingIndex);
+  }
+
+  /**
    * Builds snapshots for each child of the group.
    *
    * @param group The group whose children should be snapshotted.
@@ -89,9 +144,9 @@ export class CommandObjectUngroup implements UndoCommand {
    */
   private buildSnapshots(group: THREE.Group): UngroupChildSnapshot[] {
     const snapshots: UngroupChildSnapshot[] = [];
-    group.children.forEach((child) => {
-      snapshots.push({ child: child });
-    });
+    for (const child of group.children) {
+      snapshots.push({ child });
+    }
     return snapshots;
   }
 }

@@ -5,25 +5,24 @@ import { shouldKeepSurfaceCategory, shouldReverseSurfaceWinding } from '@/solid/
 import type { PreparedBrush } from './solid_compile_types.js';
 import { SolidCompiledPolygon } from './solid_compiled_polygon.js';
 import { SolidFragmentRouter } from './solid_fragment_router.js';
-import { SolidMembershipEvaluator } from './solid_membership_evaluator.js';
+import type { SolidMembershipEvaluator } from './solid_membership_evaluator.js';
 
 /**
  * Classifies fragments as solid boundaries and builds compiled polygons for
- * kept surface categories.
+ * kept surface categories using Chisel routing-table categories only.
  */
 export class SolidFragmentFinalizer {
   private readonly router: SolidFragmentRouter;
-  private readonly membership: SolidMembershipEvaluator;
 
   /**
    * Creates a fragment finalizer.
    *
    * @param router Category router for fragment routing.
-   * @param membership Membership evaluator for boundary tests.
+   * @param _membership Unused; kept for call-site compatibility.
    */
-  constructor(router: SolidFragmentRouter, membership: SolidMembershipEvaluator) {
+  constructor(router: SolidFragmentRouter, _membership: SolidMembershipEvaluator) {
     this.router = router;
-    this.membership = membership;
+    void _membership;
   }
 
   /**
@@ -46,9 +45,6 @@ export class SolidFragmentFinalizer {
     subjectIndex: number,
   ): SolidCompiledPolygon | null {
     if (fragment.length < 3) return null;
-    if (!this.membership.isBoundaryFragment(fragment, facePlane.normal, prepared, subjectIndex)) {
-      return null;
-    }
     const category = this.router.routeFragmentCategory(fragment, facePlane.normal, prepared, subjectIndex);
     if (!shouldKeepSurfaceCategory(category)) return null;
     return this.buildCompiledPolygon(fragment, facePlane, surfaceIndex, subject, category);

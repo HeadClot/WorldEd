@@ -13,7 +13,6 @@ export class StatusBar {
   private modeText!: HTMLElement;
   private snapText!: HTMLElement;
   private snapIntervalFormatted: string;
-  private axisText!: HTMLElement;
   private savedInfoText!: HTMLElement;
   private fitFeedbackText!: HTMLElement;
   private shadingModeText!: HTMLElement;
@@ -47,7 +46,6 @@ export class StatusBar {
     this.lastActionText = document.createElement('span');
     this.modeText = document.createElement('span');
     this.snapText = document.createElement('span');
-    this.axisText = document.createElement('span');
     this.savedInfoText = document.createElement('span');
     this.fitFeedbackText = document.createElement('span');
     this.shadingModeText = document.createElement('span');
@@ -60,7 +58,6 @@ export class StatusBar {
     this.applyTextStyle(this.lastActionText);
     this.applyTextStyle(this.modeText);
     this.applyTextStyle(this.snapText);
-    this.applyTextStyle(this.axisText);
     this.applyTextStyle(this.savedInfoText);
     this.applyTextStyle(this.fitFeedbackText);
     this.applyTextStyle(this.shadingModeText);
@@ -80,7 +77,6 @@ export class StatusBar {
     this.leftPanel.appendChild(this.selectionModeText);
     this.rightPanel.appendChild(this.modeText);
     this.rightPanel.appendChild(this.snapText);
-    this.rightPanel.appendChild(this.axisText);
     this.rightPanel.appendChild(this.shadingModeText);
     this.container.appendChild(this.leftPanel);
     this.container.appendChild(this.rightPanel);
@@ -93,7 +89,6 @@ export class StatusBar {
     this.lastActionText.textContent = '';
     this.modeText.textContent = 'Mode: Bounds';
     this.snapText.textContent = ` | Snap: On (${this.snapIntervalFormatted})`;
-    this.axisText.textContent = ' | Axis: ALL';
     this.savedInfoText.textContent = '';
     this.fitFeedbackText.textContent = '';
     this.shadingModeText.textContent = ' | Shading: Solid';
@@ -170,16 +165,6 @@ export class StatusBar {
     const fixed = value.toFixed(4);
     const trimmed = fixed.replace(/0+$/, '').replace(/\.$/, '.0');
     return trimmed;
-  }
-
-  /**
-   * Updates the alignment axis restriction display.
-   *
-   * @param axis The axis restriction label to show in the status bar.
-   */
-  setAxisRestriction(axis: string): void {
-    if (this.isDisposed) return;
-    this.axisText.textContent = ` | Axis: ${axis}`;
   }
 
   /**

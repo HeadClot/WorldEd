@@ -234,6 +234,75 @@ describe('OutlinerTree', () => {
     expect(tree.getVisibleRowCountForTests()).toBe(2);
   });
 
+  it('should keep a duplicated group closed when the source group is closed', () => {
+    const sourceGroup = new THREE.Group();
+    sourceGroup.name = 'ClosedGroup';
+    const child = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    child.name = 'Child';
+    sourceGroup.add(child);
+    root.add(sourceGroup);
+    tree.refresh(new Set());
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
+    tree.toggleExpand(sourceGroup);
+    expect(tree.getVisibleRowCountForTests()).toBe(1);
+    expect(tree.isExpandedUuid(sourceGroup.uuid)).toBe(false);
+    const cloneGroup = new THREE.Group();
+    cloneGroup.name = 'ClosedGroup.001';
+    const cloneChild = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    cloneChild.name = 'Child.001';
+    cloneGroup.add(cloneChild);
+    root.add(cloneGroup);
+    tree.copyExpandStateFromSource(sourceGroup, cloneGroup);
+    // Revealing the group root (post-duplicate selection) must not open it.
+    tree.revealObject(cloneGroup, new Set([cloneChild]), new Set([cloneGroup]));
+    tree.refresh(new Set([cloneChild]), new Set([cloneGroup]));
+    expect(tree.isExpandedUuid(cloneGroup.uuid)).toBe(false);
+    expect(tree.getVisibleRowCountForTests()).toBe(2);
+  });
+
+  it('should keep a duplicated group open when the source group is open', () => {
+    const sourceGroup = new THREE.Group();
+    sourceGroup.name = 'OpenGroup';
+    const child = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    child.name = 'Child';
+    sourceGroup.add(child);
+    root.add(sourceGroup);
+    tree.refresh(new Set());
+    expect(tree.isExpandedUuid(sourceGroup.uuid)).toBe(true);
+    const cloneGroup = new THREE.Group();
+    cloneGroup.name = 'OpenGroup.001';
+    const cloneChild = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    cloneChild.name = 'Child.001';
+    cloneGroup.add(cloneChild);
+    root.add(cloneGroup);
+    tree.copyExpandStateFromSource(sourceGroup, cloneGroup);
+    tree.refresh(new Set());
+    expect(tree.isExpandedUuid(cloneGroup.uuid)).toBe(true);
+    expect(tree.getVisibleRowCountForTests()).toBe(4);
+  });
+
+  it('should restore closed state after a child reveal expands the clone', () => {
+    const sourceGroup = new THREE.Group();
+    sourceGroup.name = 'ClosedGroup';
+    const child = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    sourceGroup.add(child);
+    root.add(sourceGroup);
+    tree.refresh(new Set());
+    tree.toggleExpand(sourceGroup);
+    const cloneGroup = new THREE.Group();
+    const cloneChild = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    cloneGroup.add(cloneChild);
+    root.add(cloneGroup);
+    tree.copyExpandStateFromSource(sourceGroup, cloneGroup);
+    // Child-focused reveal expands the closed clone (selection of brushes).
+    tree.revealObject(cloneChild, new Set([cloneChild]), new Set([cloneGroup]));
+    expect(tree.isExpandedUuid(cloneGroup.uuid)).toBe(true);
+    // Post-duplicate re-mirror closes it again.
+    tree.copyExpandStateFromSource(sourceGroup, cloneGroup);
+    tree.refresh(new Set());
+    expect(tree.isExpandedUuid(cloneGroup.uuid)).toBe(false);
+  });
+
   it('should hide expand chevron when last child leaves a group without list length change', () => {
     const group = new THREE.Group();
     group.name = 'Emptyable';

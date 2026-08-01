@@ -44,27 +44,36 @@ export function transformBrushLocalUvForPoseChange(
   nextLocalToWorld: THREE.Matrix4,
   flags: SurfaceUvLockFlags,
 ): SurfaceUvMatrix {
+  void faceNormalLocal;
+  void facePlaneOffsetLocal;
   previousLocalToWorld.decompose(scratchPrevPos, scratchPrevQuat, scratchPrevScale);
   nextLocalToWorld.decompose(scratchNextPos, scratchNextQuat, scratchNextScale);
   const moved = poseTranslationOrRotationChanged();
   const scaled = !scratchPrevScale.equals(scratchNextScale);
-  if (!moved && !scaled) {
+  if (!shouldApplyWorldFixedUv(flags, moved, scaled)) {
     return uv.clone();
   }
-  if (flags.positionLock && flags.stretchLock) {
-    return uv.clone();
-  }
-  const unlockMove = moved && !flags.positionLock;
-  const unlockScale = scaled && !flags.stretchLock;
-  if (!unlockMove && !unlockScale) {
-    return uv.clone();
-  }
-  // World-fixed UV: keep world appearance under the pose delta.
-  // When stretch is off, this also handles face-pivot scale (scale + translate)
-  // so the stationary side keeps its tiles and the free side reveals more.
-  void faceNormalLocal;
-  void facePlaneOffsetLocal;
   return applyWorldFixedUvMatrix(uv, previousLocalToWorld, nextLocalToWorld);
+}
+
+/**
+ * Returns whether world-fixed UV rewrite (or content rebake) applies for a pose
+ * delta. Scale is governed only by stretch lock so face-pivot scale+translate
+ * still stretches when Stretch Lock is on without Pos Lock.
+ *
+ * @param flags Lock flags.
+ * @param moved True when translation or rotation changed.
+ * @param scaled True when scale changed.
+ * @returns True when the UV matrix should be world-fixed.
+ */
+export function shouldApplyWorldFixedUv(flags: SurfaceUvLockFlags, moved: boolean, scaled: boolean): boolean {
+  if (scaled) {
+    return !flags.stretchLock;
+  }
+  if (moved) {
+    return !flags.positionLock;
+  }
+  return false;
 }
 
 /**

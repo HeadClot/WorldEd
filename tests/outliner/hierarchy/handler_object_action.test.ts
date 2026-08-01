@@ -3,6 +3,9 @@ import * as THREE from 'three';
 import { CommandStack } from '@/commands/command_stack.js';
 import { HandlerObjectAction } from '@/outliner/hierarchy/handler_object_action.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
+import { markAsSolidCsgGroup } from '@/solid/model/solid_group.js';
+import { SolidModel } from '@/solid/model/solid_model.js';
+import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 describe('HandlerObjectAction grouping selection', () => {
   let world: THREE.Group;
@@ -80,3 +83,135 @@ describe('HandlerObjectAction grouping selection', () => {
     expect(selectionManager.getInspectorObjects()[0]).not.toBe(outerExisting);
   });
 });
+
+describe('HandlerObjectAction solid group delete', () => {
+  let world: THREE.Group;
+  let commandStack: CommandStack;
+  let selectionManager: ManagerSelection;
+  let handler: HandlerObjectAction;
+
+  beforeEach(() => {
+    world = new THREE.Group();
+    world.name = 'World';
+    commandStack = new CommandStack(64);
+    selectionManager = new ManagerSelection();
+    handler = new HandlerObjectAction(world, commandStack, selectionManager);
+  });
+
+  it('unregisters nested solid brushes when deleting a solid CSG group', () => {
+    const model = new SolidModel('DeleteGroupSolid');
+    world.add(model.root);
+    const brushA = model.addBoxBrush(2, SolidOperation.Additive, null, false);
+    const brushB = model.addBoxBrush(2, SolidOperation.Additive, null, false);
+    brushB.position.set(4, 0, 0);
+    brushB.pushTransformToMesh();
+    model.markDirty();
+    model.rebuild(true);
+    const trianglesBefore = resultTriangleCountRead(model);
+
+    const group = new THREE.Group();
+    group.name = 'CsgGroup';
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(brushA.mesh!);
+    group.add(brushB.mesh!);
+    model.syncBrushOrderFromScene();
+    model.markDirty();
+    model.rebuild(true);
+
+    handler.deleteHierarchyObjects([group]);
+
+    expect(group.parent).toBeNull();
+    expect(model.findBrush(brushA.id)).toBeUndefined();
+    expect(model.findBrush(brushB.id)).toBeUndefined();
+    expect(model.getBrushCount()).toBe(0);
+    expect(resultTriangleCountRead(model)).toBeLessThan(trianglesBefore);
+    expect(resultTriangleCountRead(model)).toBe(0);
+  });
+
+  it('restores group and nested brushes with a single undo', () => {
+    const model = new SolidModel('DeleteGroupUndoSolid');
+    world.add(model.root);
+    const brushA = model.addBoxBrush(2, SolidOperation.Additive, null, false);
+    const brushB = model.addBoxBrush(2, SolidOperation.Additive, null, false);
+    brushB.position.set(4, 0, 0);
+    brushB.pushTransformToMesh();
+    const group = new THREE.Group();
+    group.name = 'CsgGroup';
+    markAsSolidCsgGroup(group);
+    model.root.add(group);
+    group.add(brushA.mesh!);
+    group.add(brushB.mesh!);
+    model.syncBrushOrderFromScene();
+    model.markDirty();
+    model.rebuild(true);
+    const trianglesBefore = resultTriangleCountRead(model);
+
+    handler.deleteHierarchyObjects([group]);
+    expect(model.getBrushCount()).toBe(0);
+    expect(commandStack.canUndo()).toBe(true);
+
+    commandStack.undo();
+
+    expect(group.parent).toBe(model.root);
+    expect(group.children).toContain(brushA.mesh!);
+    expect(group.children).toContain(brushB.mesh!);
+    expect(model.findBrush(brushA.id)).toBeDefined();
+    expect(model.findBrush(brushB.id)).toBeDefined();
+    expect(model.getBrushCount()).toBe(2);
+    expect(resultTriangleCountRead(model)).toBe(trianglesBefore);
+    expect(commandStack.canUndo()).toBe(false);
+  });
+
+  it('ungroups solid brushes in place under the solid root', () => {
+    const model = new SolidModel('UngroupOrderSolid');
+    world.add(model.root);
+    const first = model.addBoxBrush(2, SolidOperation.Additive, null, false);
+    const second = model.addBoxBrush(2, SolidOperation.Additive, null, false);
+    const third = model.addBoxBrush(2, SolidOperation.Additive, null, false);
+    first.pushTransformToMesh();
+    second.pushTransformToMesh();
+    third.pushTransformToMesh();
+    model.markDirty();
+    model.rebuild(true);
+
+    const group = new THREE.Group();
+    group.name = 'MiddleGroup';
+    markAsSolidCsgGroup(group);
+    const firstMesh = first.mesh!;
+    const secondMesh = second.mesh!;
+    const thirdMesh = third.mesh!;
+    model.root.remove(firstMesh);
+    model.root.remove(secondMesh);
+    model.root.remove(thirdMesh);
+    group.add(secondMesh);
+    model.root.add(firstMesh);
+    model.root.add(group);
+    model.root.add(thirdMesh);
+
+    handler.ungroupGroup(group);
+
+    const brushMeshes = model.root.children.filter(
+      (child) => child === firstMesh || child === secondMesh || child === thirdMesh,
+    );
+    expect(brushMeshes).toEqual([firstMesh, secondMesh, thirdMesh]);
+    model.syncBrushOrderFromScene();
+    expect(model.getBrushes().map((brush) => brush.id)).toEqual([first.id, second.id, third.id]);
+  });
+});
+
+/**
+ * Counts triangles on the compiled solid result mesh.
+ *
+ * @param model Solid model.
+ * @returns Triangle count.
+ */
+function resultTriangleCountRead(model: SolidModel): number {
+  const mesh = model.getResultMesh();
+  const index = mesh.geometry.getIndex();
+  if (index) {
+    return index.count / 3;
+  }
+  const positions = mesh.geometry.getAttribute('position');
+  return positions ? positions.count / 3 : 0;
+}

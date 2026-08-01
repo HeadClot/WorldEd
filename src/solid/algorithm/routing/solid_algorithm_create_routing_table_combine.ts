@@ -1,0 +1,423 @@
+import { SolidOperation } from '@/solid/types/solid_operation.js';
+import {
+  SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH,
+  SolidAlgorithmCategoryRoutingRow,
+  solidAlgorithmOperationTableIndex,
+} from './solid_algorithm_category_routing_row.js';
+import { SolidAlgorithmCategoryStackNode } from './solid_algorithm_category_stack_node.js';
+
+/**
+ * Chisel CreateRoutingTableJob.Combine: merges left and right category stacks
+ * for one hierarchy child operation, with row dedup and index remapping.
+ */
+export class SolidAlgorithmCreateRoutingTableCombine {
+  /**
+   * Combines rightStack into leftStack in place using the child operation.
+   *
+   * @param leftStack Mutable left/output stack.
+   * @param leftHaveGoneBeyondSelf Left-side beyond-self flag snapshot.
+   * @param leftStackStart Start index of the left region in leftStack.
+   * @param leftStackEnd Exclusive end of left region (mutated).
+   * @param rightStack Right stack copy.
+   * @param rightHaveGoneBeyondSelf Right-side beyond-self flag (unused bank).
+   * @param rightStackLength Live length of rightStack.
+   * @param operation Child CSG operation tying the stacks.
+   */
+  static combine(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftHaveGoneBeyondSelf: number,
+    leftStackStart: number,
+    leftStackEnd: { value: number },
+    rightStack: SolidAlgorithmCategoryStackNode[],
+    rightHaveGoneBeyondSelf: number,
+    rightStackLength: number,
+    operation: SolidOperation,
+  ): void {
+    void rightHaveGoneBeyondSelf;
+    if (rightStackLength <= 0) {
+      return;
+    }
+    const routingSteps = this.countRoutingSteps(rightStack, rightStackLength);
+    const combineUsedIndices = new Set<number>();
+    this.seedUsedIndices(leftStack, leftStackStart, leftStackEnd.value, combineUsedIndices);
+    this.duplicateAndBake(
+      leftStack,
+      leftStackStart,
+      leftStackEnd,
+      rightStack,
+      rightStackLength,
+      routingSteps,
+      operation,
+      leftHaveGoneBeyondSelf,
+      combineUsedIndices,
+    );
+  }
+
+  /**
+   * Counts consecutive row runs per unique node id on the right stack.
+   *
+   * @param rightStack Right stack.
+   * @param rightStackLength Live length.
+   * @returns Per-node row counts in order.
+   */
+  private static countRoutingSteps(rightStack: SolidAlgorithmCategoryStackNode[], rightStackLength: number): number[] {
+    const steps: number[] = [];
+    let rightNodeId = rightStack[0]!.nodeIdValue;
+    let counter = 1;
+    for (let index = 1; index < rightStackLength; index++) {
+      if (rightNodeId !== rightStack[index]!.nodeIdValue) {
+        steps.push(counter);
+        counter = 0;
+        rightNodeId = rightStack[index]!.nodeIdValue;
+      }
+      counter++;
+    }
+    steps.push(counter);
+    return steps;
+  }
+
+  /**
+   * Seeds combineUsedIndices from the last left-stack node rows (or all columns
+   * when the left stack is empty).
+   *
+   * @param leftStack Left stack.
+   * @param leftStackStart Left region start.
+   * @param leftStackEnd Left region end.
+   * @param combineUsedIndices Destination set.
+   */
+  private static seedUsedIndices(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftStackStart: number,
+    leftStackEnd: number,
+    combineUsedIndices: Set<number>,
+  ): void {
+    const leftStackCount = leftStackEnd - leftStackStart;
+    if (leftStackCount === 0) {
+      for (let column = 0; column < SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH; column++) {
+        combineUsedIndices.add(column);
+      }
+      return;
+    }
+    let prevNodeIndex = leftStackEnd - 1;
+    while (prevNodeIndex > leftStackStart) {
+      if (leftStack[prevNodeIndex - 1]!.nodeIdValue !== leftStack[prevNodeIndex]!.nodeIdValue) {
+        break;
+      }
+      prevNodeIndex--;
+    }
+    for (let index = prevNodeIndex; index < leftStackEnd; index++) {
+      const row = leftStack[index]!.routingRow;
+      for (let column = 0; column < SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH; column++) {
+        combineUsedIndices.add(row.at(column));
+      }
+    }
+  }
+
+  /**
+   * Duplicates intermediate right nodes and bakes the operation on the last
+   * right node.
+   *
+   * @param leftStack Output stack.
+   * @param leftStackStart Output region start.
+   * @param leftStackEnd Mutable end.
+   * @param rightStack Right stack.
+   * @param rightStackLength Right length.
+   * @param routingSteps Per-node row counts.
+   * @param operation Child operation.
+   * @param leftHaveGoneBeyondSelf Beyond-self flag (HAVE_SELF_CATEGORIES
+   *   unused).
+   * @param combineUsedIndices Live destination set.
+   */
+  private static duplicateAndBake(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftStackStart: number,
+    leftStackEnd: { value: number },
+    rightStack: SolidAlgorithmCategoryStackNode[],
+    rightStackLength: number,
+    routingSteps: number[],
+    operation: SolidOperation,
+    leftHaveGoneBeyondSelf: number,
+    combineUsedIndices: Set<number>,
+  ): void {
+    void leftHaveGoneBeyondSelf;
+    void rightStackLength;
+    let startSearchRowIndex = leftStackEnd.value;
+    let prevNodeIndex = this.findLastLeftNodeStart(leftStack, leftStackStart, startSearchRowIndex);
+    let startRightStackRowIndex = 0;
+    let routingLength = routingSteps[0]!;
+    const combineIndexRemap = new Map<number, number>();
+    for (let stackIndex = 1; stackIndex < routingSteps.length; stackIndex++) {
+      const routingStep = routingSteps[stackIndex]!;
+      const endRight = startRightStackRowIndex + routingLength;
+      this.duplicateIntermediateNode(
+        leftStack,
+        leftStackEnd,
+        startSearchRowIndex,
+        rightStack,
+        startRightStackRowIndex,
+        endRight,
+        routingStep,
+        combineUsedIndices,
+        combineIndexRemap,
+      );
+      if (prevNodeIndex >= leftStackStart) {
+        this.remapIndicesOrAbort(leftStack, combineIndexRemap, prevNodeIndex, startSearchRowIndex);
+      }
+      combineIndexRemap.clear();
+      combineUsedIndices.clear();
+      this.collectUsedFromRange(leftStack, startSearchRowIndex, leftStackEnd.value, combineUsedIndices);
+      prevNodeIndex = startSearchRowIndex;
+      startSearchRowIndex = leftStackEnd.value;
+      startRightStackRowIndex += routingLength;
+      routingLength = routingStep;
+    }
+    this.bakeFinalNode(
+      leftStack,
+      leftStackEnd,
+      startSearchRowIndex,
+      rightStack,
+      startRightStackRowIndex,
+      startRightStackRowIndex + routingLength,
+      operation,
+      combineUsedIndices,
+      combineIndexRemap,
+    );
+    this.finalizeRemapAndTrim(leftStack, leftStackStart, prevNodeIndex, startSearchRowIndex, combineIndexRemap);
+  }
+
+  /**
+   * Walks back from the end of the left stack to the first row of the last
+   * brush node (Chisel prevNodeIndex setup before Combine remaps).
+   *
+   * @param leftStack Left stack.
+   * @param leftStackStart Left region start.
+   * @param leftStackEnd Exclusive end of the left region.
+   * @returns Start index of the last left node, or leftStackEnd - 1.
+   */
+  private static findLastLeftNodeStart(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftStackStart: number,
+    leftStackEnd: number,
+  ): number {
+    if (leftStackEnd <= leftStackStart) {
+      return leftStackEnd - 1;
+    }
+    let prevNodeIndex = leftStackEnd - 1;
+    while (prevNodeIndex > leftStackStart) {
+      if (leftStack[prevNodeIndex - 1]!.nodeIdValue !== leftStack[prevNodeIndex]!.nodeIdValue) {
+        break;
+      }
+      prevNodeIndex--;
+    }
+    return prevNodeIndex;
+  }
+
+  /**
+   * Duplicates one intermediate right-node block CategoryRoutingRow.Length
+   * times.
+   *
+   * @param leftStack Output stack.
+   * @param leftStackEnd Mutable end.
+   * @param startSearchRowIndex Dedup search start.
+   * @param rightStack Right stack.
+   * @param startRight Start right index.
+   * @param endRight End right index.
+   * @param routingStep Next node row count (offset stride).
+   * @param combineUsedIndices Used destination set.
+   * @param combineIndexRemap Remap from old vIndex to new input+1.
+   */
+  private static duplicateIntermediateNode(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftStackEnd: { value: number },
+    startSearchRowIndex: number,
+    rightStack: SolidAlgorithmCategoryStackNode[],
+    startRight: number,
+    endRight: number,
+    routingStep: number,
+    combineUsedIndices: Set<number>,
+    combineIndexRemap: Map<number, number>,
+  ): void {
+    let vIndex = 0;
+    const inputHolder = { value: 0 };
+    let routingOffset = 0;
+    for (let t = 0; t < SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH; t++, routingOffset += routingStep) {
+      for (let rightIndex = startRight; rightIndex < endRight; rightIndex++, vIndex++) {
+        const routingRow = rightStack[rightIndex]!.routingRow.plusOffset(routingOffset);
+        const skip = !combineUsedIndices.has(vIndex);
+        const added = skip
+          ? 0
+          : this.addRowToOutput(
+              leftStack,
+              leftStackEnd,
+              startSearchRowIndex,
+              inputHolder,
+              routingRow,
+              rightStack[rightIndex]!.nodeIdValue,
+            );
+        combineIndexRemap.set(vIndex, added);
+      }
+    }
+  }
+
+  /**
+   * Bakes the operation into the final right-node block.
+   *
+   * @param leftStack Output stack.
+   * @param leftStackEnd Mutable end.
+   * @param startSearchRowIndex Dedup search start.
+   * @param rightStack Right stack.
+   * @param startRight Start right index.
+   * @param endRight End right index.
+   * @param operation Child operation.
+   * @param combineUsedIndices Used destination set.
+   * @param combineIndexRemap Remap map.
+   */
+  private static bakeFinalNode(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftStackEnd: { value: number },
+    startSearchRowIndex: number,
+    rightStack: SolidAlgorithmCategoryStackNode[],
+    startRight: number,
+    endRight: number,
+    operation: SolidOperation,
+    combineUsedIndices: Set<number>,
+    combineIndexRemap: Map<number, number>,
+  ): void {
+    const operationTableOffset = solidAlgorithmOperationTableIndex(operation);
+    let vIndex = 0;
+    const inputHolder = { value: 0 };
+    for (let t = 0; t < SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH; t++) {
+      for (let rightIndex = startRight; rightIndex < endRight; rightIndex++, vIndex++) {
+        const routingRow = SolidAlgorithmCategoryRoutingRow.fromOperation(
+          operationTableOffset,
+          t,
+          rightStack[rightIndex]!.routingRow,
+        );
+        const skip = !combineUsedIndices.has(vIndex);
+        const added = skip
+          ? 0
+          : this.addRowToOutput(
+              leftStack,
+              leftStackEnd,
+              startSearchRowIndex,
+              inputHolder,
+              routingRow,
+              rightStack[rightIndex]!.nodeIdValue,
+            );
+        combineIndexRemap.set(vIndex, added);
+      }
+    }
+  }
+
+  /**
+   * Remaps previous-node destinations after the final combine bake. Missing
+   * remap keys abort the remap (Chisel RemapIndices behavior).
+   *
+   * @param leftStack Output stack.
+   * @param leftStackStart Region start.
+   * @param prevNodeIndex Previous node start.
+   * @param startSearchRowIndex Current node start.
+   * @param combineIndexRemap Final-node remap.
+   */
+  private static finalizeRemapAndTrim(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftStackStart: number,
+    prevNodeIndex: number,
+    startSearchRowIndex: number,
+    combineIndexRemap: Map<number, number>,
+  ): void {
+    if (prevNodeIndex >= leftStackStart) {
+      this.remapIndicesOrAbort(leftStack, combineIndexRemap, prevNodeIndex, startSearchRowIndex);
+    }
+  }
+
+  /**
+   * Collects destination indices used by rows in [start, end).
+   *
+   * @param stack Stack.
+   * @param start Inclusive start.
+   * @param end Exclusive end.
+   * @param used Destination set.
+   */
+  private static collectUsedFromRange(
+    stack: SolidAlgorithmCategoryStackNode[],
+    start: number,
+    end: number,
+    used: Set<number>,
+  ): void {
+    for (let index = start; index < end; index++) {
+      const row = stack[index]!.routingRow;
+      for (let column = 0; column < SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH; column++) {
+        used.add(row.at(column));
+      }
+    }
+  }
+
+  /**
+   * Adds a unique row to the output stack (dedup against existing rows).
+   *
+   * @param outputStack Output stack.
+   * @param outputLength Mutable length.
+   * @param startSearchRowIndex Dedup search start.
+   * @param input Mutable next input index.
+   * @param routingRow Row to add.
+   * @param nodeIdValue Compact node id.
+   * @returns Input index + 1 for remap, or 0 when skipped by caller.
+   */
+  private static addRowToOutput(
+    outputStack: SolidAlgorithmCategoryStackNode[],
+    outputLength: { value: number },
+    startSearchRowIndex: number,
+    input: { value: number },
+    routingRow: SolidAlgorithmCategoryRoutingRow,
+    nodeIdValue: number,
+  ): number {
+    for (let index = startSearchRowIndex; index < outputLength.value; index++) {
+      if (outputStack[index]!.routingRow.equals(routingRow)) {
+        return outputStack[index]!.input + 1;
+      }
+    }
+    outputStack[outputLength.value] = new SolidAlgorithmCategoryStackNode(input.value, nodeIdValue, routingRow);
+    outputLength.value++;
+    input.value++;
+    return input.value;
+  }
+
+  /**
+   * Remaps destinations in [start, last) using remap values. Matches Chisel
+   * RemapIndices: if any key is missing or maps to 0, aborts without modifying
+   * the stack (avoids stale indices that discard surfaces as Outside).
+   *
+   * @param stack Stack.
+   * @param remap Old destination → new destination + 1.
+   * @param start Inclusive start.
+   * @param last Exclusive end.
+   * @returns True when every destination remapped successfully.
+   */
+  private static remapIndicesOrAbort(
+    stack: SolidAlgorithmCategoryStackNode[],
+    remap: Map<number, number>,
+    start: number,
+    last: number,
+  ): boolean {
+    for (let index = start; index < last; index++) {
+      const row = stack[index]!.routingRow;
+      for (let column = 0; column < SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH; column++) {
+        const mapped = remap.get(row.at(column));
+        if (mapped === undefined || mapped === 0) {
+          return false;
+        }
+      }
+    }
+    for (let index = start; index < last; index++) {
+      const node = stack[index]!;
+      const row = node.routingRow;
+      const next = new Uint8Array(SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH);
+      for (let column = 0; column < SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH; column++) {
+        next[column] = remap.get(row.at(column))! - 1;
+      }
+      node.routingRow = new SolidAlgorithmCategoryRoutingRow(next);
+    }
+    return true;
+  }
+}

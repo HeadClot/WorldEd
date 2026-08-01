@@ -251,6 +251,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
         onExportGlb: () => this.onExportGlb(),
         getObjectActionHandler: () => this.objectActionHandler,
         getAlignmentHandler: () => this.alignmentHandler,
+        getSolidModelController: () => this.solidModelController,
       },
       () => this.settingsStore?.getKeyboardShortcutSettings() ?? createDefaultKeyboardShortcutSettings(),
     );
@@ -447,9 +448,13 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
    *
    * @param axis The active alignment axis restriction.
    */
-  protected onAxisRestrictionChanged(axis: AlignmentAxis): void {
-    this.statusBar?.setAxisRestriction(AlignmentAxis[axis]);
-  }
+  /**
+   * Alignment axis cycling was removed; keep the hook for the layout core
+   * contract without status-bar feedback.
+   *
+   * @param _axis Unused axis value.
+   */
+  protected onAxisRestrictionChanged(_axis: AlignmentAxis): void {}
 
   /**
    * Displays a message in the status bar.

@@ -229,7 +229,14 @@ export class VmfParser {
     justEnteredClosure: boolean,
     state: VmfParseCursor,
   ): void {
-    if (closures[0] !== 'world' || closures[1] !== 'solid' || closures[2] !== 'side' || closures[3] !== null) {
+    if (closures[0] !== 'world' || closures[1] !== 'solid' || closures[2] !== 'side') {
+      return;
+    }
+    if (closures[3] === 'vertices_plus') {
+      this.applyVerticesPlusKeyValue(line, state.solidSide);
+      return;
+    }
+    if (closures[3] !== null) {
       return;
     }
     this.ensureSideOnSolid(justEnteredClosure, state);
@@ -319,11 +326,56 @@ export class VmfParser {
     justEnteredClosure: boolean,
     state: VmfParseCursor,
   ): void {
-    if (closures[0] !== 'entity' || closures[1] !== 'solid' || closures[2] !== 'side' || closures[3] !== null) {
+    if (closures[0] !== 'entity' || closures[1] !== 'solid' || closures[2] !== 'side') {
+      return;
+    }
+    if (closures[3] === 'vertices_plus') {
+      this.applyVerticesPlusKeyValue(line, state.solidSide);
+      return;
+    }
+    if (closures[3] !== null) {
       return;
     }
     this.ensureSideOnSolid(justEnteredClosure, state);
     this.applySideKeyValue(line, state.solidSide);
+  }
+
+  /**
+   * Parses a vertices_plus "v" keyvalue onto the current side.
+   *
+   * @param line Content line inside vertices_plus.
+   * @param solidSide Target side or null.
+   */
+  private applyVerticesPlusKeyValue(line: string, solidSide: VmfSolidSide | null): void {
+    if (!solidSide) {
+      return;
+    }
+    const pair = this.tryParseKeyValue(line);
+    if (!pair || pair.key !== 'v') {
+      return;
+    }
+    const vector = this.asVector3(pair.value);
+    if (!vector) {
+      return;
+    }
+    solidSide.verticesPlus.push(vector);
+  }
+
+  /**
+   * Narrows a parsed keyvalue into a Source-space vector.
+   *
+   * @param value Parsed value.
+   * @returns Vector when valid.
+   */
+  private asVector3(value: string | number | VmfVector3 | object): VmfVector3 | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+    const record = value as { x?: unknown; y?: unknown; z?: unknown };
+    if (typeof record.x !== 'number' || typeof record.y !== 'number' || typeof record.z !== 'number') {
+      return null;
+    }
+    return { x: record.x, y: record.y, z: record.z };
   }
 
   /**
@@ -389,6 +441,7 @@ export class VmfParser {
       lightmapScale: 16,
       smoothingGroups: 0,
       displacement: null,
+      verticesPlus: [],
     };
   }
 

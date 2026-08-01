@@ -52,6 +52,34 @@ function rebuildChunks(
 
 /** Unit tests for segmented solid result buffers and dirty-range patches. */
 describe('SolidResultBuffer', () => {
+  it('treats empty free-floating cutters as a no-op patch without full rewrite', () => {
+    const brushes = [
+      makeBox('a', 2, new THREE.Vector3(0, 0, 0)),
+      makeBox('b', 2, new THREE.Vector3(6, 0, 0)),
+      makeBox('cutter', 2, new THREE.Vector3(40, 0, 0)),
+    ];
+    brushes[2]!.operation = SolidOperation.Subtractive;
+    const compiler = new SolidCsgCompiler();
+    const chunkCache = new SolidMeshChunkCache();
+    const builder = new SolidBrushMeshChunkBuilder();
+    const buffer = new SolidResultBuffer();
+    compiler.compile(brushes, { forceFull: true, skipPolygonAssembly: true });
+    rebuildChunks(compiler, chunkCache, builder, compiler.getLastUpdateBrushIds());
+    buffer.rebuildFull(compiler.getLastBrushOrder(), chunkCache);
+    const sourcesBefore = buffer.getTriangleSources().length;
+
+    brushes[2]!.position.x += 1;
+    compiler.compile(brushes, { dirtyBrushIds: ['cutter'], skipPolygonAssembly: true });
+    const dirty = compiler.getLastUpdateBrushIds();
+    expect(dirty).toEqual(['cutter']);
+    rebuildChunks(compiler, chunkCache, builder, dirty);
+    expect(chunkCache.get('cutter')?.triangleCount ?? 0).toBe(0);
+    const patched = buffer.tryPatchDirty(dirty, compiler.getLastBrushOrder(), chunkCache);
+    expect(patched).toBe(true);
+    expect(buffer.wasLastWritePartial()).toBe(true);
+    expect(buffer.getTriangleSources().length).toBe(sourcesBefore);
+  });
+
   it('patches only dirty brush slices when vertex counts stay stable', () => {
     const brushes = [
       makeBox('a', 2, new THREE.Vector3(0, 0, 0)),
@@ -113,6 +141,32 @@ describe('SolidResultBuffer', () => {
     const afterCount = model.getResultMesh().geometry.getAttribute('position').count;
     expect(afterCount).toBe(beforeCount);
     expect(afterCount).toBeGreaterThan(36 * 12);
+  });
+
+  it('patches dirty brushes when evaluation order changes but the brush set is unchanged', () => {
+    const brushes = [
+      makeBox('a', 2, new THREE.Vector3(0, 0, 0)),
+      makeBox('b', 2, new THREE.Vector3(6, 0, 0)),
+      makeBox('c', 2, new THREE.Vector3(12, 0, 0)),
+      makeBox('d', 2, new THREE.Vector3(18, 0, 0)),
+    ];
+    const compiler = new SolidCsgCompiler();
+    const chunkCache = new SolidMeshChunkCache();
+    const builder = new SolidBrushMeshChunkBuilder();
+    const buffer = new SolidResultBuffer();
+    compiler.compile(brushes, { forceFull: true, skipPolygonAssembly: true });
+    rebuildChunks(compiler, chunkCache, builder, compiler.getLastUpdateBrushIds());
+    buffer.rebuildFull(compiler.getLastBrushOrder(), chunkCache);
+    const reordered = [brushes[1]!, brushes[2]!, brushes[3]!, brushes[0]!];
+    compiler.compile(reordered, {
+      dirtyBrushIds: ['a'],
+      skipPolygonAssembly: true,
+    });
+    const dirty = compiler.getLastUpdateBrushIds();
+    rebuildChunks(compiler, chunkCache, builder, dirty);
+    const patched = buffer.tryPatchDirty(dirty, compiler.getLastBrushOrder(), chunkCache);
+    expect(patched).toBe(true);
+    expect(buffer.wasLastWritePartial()).toBe(true);
   });
 
   it('rebuilds only the suffix when an early-stable brush changes topology later', () => {

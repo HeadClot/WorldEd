@@ -4,6 +4,7 @@ import {
   outlinerDragEdgeScrollBandContains,
   outlinerDragEdgeScrollDeltaResolve,
   outlinerInsertLineLeftPx,
+  outlinerInsertLineNameDepthForTargetDepth,
   outlinerInsertLineViewportLocalYResolve,
   outlinerRowIndexFromClientYResolve,
   outlinerRowTopFromIndexResolve,
@@ -717,13 +718,29 @@ export class OutlinerTreeDragSession {
       resolved.placement,
       this.host.getScrollOffsetPx(),
     );
-    const nameColumnLeftPx = resolved.insertDepth > 0 ? outlinerInsertLineLeftPx(resolved.insertDepth) : null;
+    const nameColumnLeftPx = this.insertLineLeftPxResolve(resolved);
     this.insertIndicator.showAtHostLocalY(
       this.host.getTreeElement(),
       hostLocalY,
       resolved.insertDepth,
       nameColumnLeftPx,
     );
+  }
+
+  /**
+   * Chooses insert-line left inset for before/after placement. Sibling inserts
+   * align to the parent container's name column (e.g. "Group"), not the nested
+   * child row text. Root-level siblings use a full-width line.
+   *
+   * @param resolved Elevated drop with edge placement.
+   * @returns Host-local left in CSS pixels, or null for full-width root lines.
+   */
+  private insertLineLeftPxResolve(resolved: OutlinerResolvedDrop<THREE.Object3D>): number | null {
+    const nameDepth = outlinerInsertLineNameDepthForTargetDepth(resolved.insertDepth);
+    if (nameDepth < 0) {
+      return null;
+    }
+    return outlinerInsertLineLeftPx(nameDepth);
   }
 
   /** Hides insert visuals without forgetting the last resolved drop target. */

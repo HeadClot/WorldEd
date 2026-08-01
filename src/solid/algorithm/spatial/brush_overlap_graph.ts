@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BrushSpatialIndex } from './brush_spatial_index.js';
 import { packSpatialCellKey } from './spatial_cell_key.js';
 
 /** Entry used when building undirected AABB overlap adjacency. */
@@ -11,7 +12,9 @@ export interface OverlapBoundsEntry {
 
 /**
  * Builds undirected bounds-overlap adjacency for solid CSG peer filtering. Uses
- * a uniform grid so sparse maps stay near-linear instead of quadratic.
+ * a uniform grid so sparse maps stay near-linear instead of quadratic. Partial
+ * updates prefer a persistent BrushSpatialIndex so large maps avoid
+ * re-binning.
  */
 export class BrushOverlapGraph {
   /**
@@ -19,12 +22,17 @@ export class BrushOverlapGraph {
    *
    * @param entries Prepared brushes with empty overlap lists.
    * @param pad Extra margin added to each bounds test.
+   * @param spatialIndex Optional index used as the full-build grid source.
    */
-  static build(entries: OverlapBoundsEntry[], pad: number): void {
+  static build(entries: OverlapBoundsEntry[], pad: number, spatialIndex?: BrushSpatialIndex): void {
     const count = entries.length;
-    if (count === 0) return;
+    if (count === 0) {
+      return;
+    }
     if (count <= 32) {
       this.buildPairwise(entries, pad);
+    } else if (spatialIndex && spatialIndex.getEntryCount() === count) {
+      this.buildFromSpatialIndex(entries, pad, spatialIndex);
     } else {
       this.buildWithGrid(entries, pad);
     }
@@ -39,19 +47,21 @@ export class BrushOverlapGraph {
    * @param pad Extra margin.
    * @param seedIndices Indices that moved or changed shape.
    * @param previousPeerIndices Previous undirected peer indices per entry.
+   * @param spatialIndex Optional persistent index for seed neighbor queries.
    */
   static buildPartial(
     entries: OverlapBoundsEntry[],
     pad: number,
     seedIndices: ReadonlySet<number>,
     previousPeerIndices: readonly number[][],
+    spatialIndex?: BrushSpatialIndex,
   ): void {
     if (seedIndices.size === 0 || seedIndices.size >= entries.length) {
-      this.build(entries, pad);
+      this.build(entries, pad, spatialIndex);
       return;
     }
     this.restorePreviousPeers(entries, seedIndices, previousPeerIndices);
-    this.linkSeedsAgainstAll(entries, pad, seedIndices);
+    this.linkSeedsAgainstAll(entries, pad, seedIndices, spatialIndex);
     this.sortPeerLists(entries);
   }
 
@@ -95,33 +105,128 @@ export class BrushOverlapGraph {
 
   /**
    * Links each seed brush against overlapping peers and records undirected
-   * edges. Uses the uniform grid for large scenes instead of O(seed * n)
-   * scans.
+   * edges. Prefers a persistent spatial index; otherwise builds a temporary
+   * grid or pairwise scan.
    *
    * @param entries Bounds entries.
    * @param pad Overlap pad.
    * @param seedIndices Seed indices.
+   * @param spatialIndex Optional persistent index.
    */
   private static linkSeedsAgainstAll(
     entries: OverlapBoundsEntry[],
     pad: number,
     seedIndices: ReadonlySet<number>,
+    spatialIndex?: BrushSpatialIndex,
   ): void {
     if (entries.length <= 32 || seedIndices.size >= entries.length / 2) {
       this.linkSeedsPairwise(entries, pad, seedIndices);
       return;
     }
+    if (spatialIndex && spatialIndex.getEntryCount() === entries.length) {
+      this.linkSeedsWithSpatialIndex(entries, pad, seedIndices, spatialIndex);
+      return;
+    }
+    this.linkSeedsWithTemporaryGrid(entries, pad, seedIndices);
+  }
+
+  /**
+   * Links seeds using a persistent spatial index without re-binning all
+   * brushes.
+   *
+   * @param entries Bounds entries.
+   * @param pad Overlap pad.
+   * @param seedIndices Seed indices.
+   * @param spatialIndex Persistent index aligned with prepared order.
+   */
+  private static linkSeedsWithSpatialIndex(
+    entries: OverlapBoundsEntry[],
+    pad: number,
+    seedIndices: ReadonlySet<number>,
+    spatialIndex: BrushSpatialIndex,
+  ): void {
+    for (const seedIndex of seedIndices) {
+      if (seedIndex < 0 || seedIndex >= entries.length) {
+        continue;
+      }
+      this.linkOneSeedFromCandidates(
+        entries,
+        pad,
+        seedIndex,
+        spatialIndex.queryBounds(entries[seedIndex]!.bounds, seedIndex),
+      );
+    }
+  }
+
+  /**
+   * Links seeds after binning all entries into a temporary grid.
+   *
+   * @param entries Bounds entries.
+   * @param pad Overlap pad.
+   * @param seedIndices Seed indices.
+   */
+  private static linkSeedsWithTemporaryGrid(
+    entries: OverlapBoundsEntry[],
+    pad: number,
+    seedIndices: ReadonlySet<number>,
+  ): void {
     const cellSize = this.chooseCellSize(entries);
     const cells = this.binEntriesIntoCells(entries, cellSize, pad);
     for (const seedIndex of seedIndices) {
-      if (seedIndex < 0 || seedIndex >= entries.length) continue;
-      const seedEntry = entries[seedIndex]!;
-      const candidates = this.collectCellCandidates(cells, seedEntry.bounds, cellSize, pad, seedIndex);
+      if (seedIndex < 0 || seedIndex >= entries.length) {
+        continue;
+      }
+      const candidates = this.collectCellCandidates(cells, entries[seedIndex]!.bounds, cellSize, pad, seedIndex);
+      this.linkOneSeedFromCandidates(entries, pad, seedIndex, candidates);
+    }
+  }
+
+  /**
+   * Records undirected overlap edges for one seed against candidate peers.
+   *
+   * @param entries Bounds entries.
+   * @param pad Overlap pad.
+   * @param seedIndex Seed prepared index.
+   * @param candidates Candidate peer indices.
+   */
+  private static linkOneSeedFromCandidates(
+    entries: OverlapBoundsEntry[],
+    pad: number,
+    seedIndex: number,
+    candidates: readonly number[],
+  ): void {
+    const seedEntry = entries[seedIndex]!;
+    for (const other of candidates) {
+      if (!this.boundsOverlap(seedEntry.bounds, entries[other]!.bounds, pad)) {
+        continue;
+      }
+      this.addUndirectedPeer(entries, seedIndex, other);
+    }
+  }
+
+  /**
+   * Builds full undirected adjacency by querying a persistent spatial index.
+   *
+   * @param entries Bounds entries.
+   * @param pad Overlap pad.
+   * @param spatialIndex Index aligned with prepared order.
+   */
+  private static buildFromSpatialIndex(
+    entries: OverlapBoundsEntry[],
+    pad: number,
+    spatialIndex: BrushSpatialIndex,
+  ): void {
+    for (let index = 0; index < entries.length; index++) {
+      const candidates = spatialIndex.queryBounds(entries[index]!.bounds, index);
       for (const other of candidates) {
-        if (!this.boundsOverlap(seedEntry.bounds, entries[other]!.bounds, pad)) {
+        if (other <= index) {
           continue;
         }
-        this.addUndirectedPeer(entries, seedIndex, other);
+        if (!this.boundsOverlap(entries[index]!.bounds, entries[other]!.bounds, pad)) {
+          continue;
+        }
+        entries[index]!.overlappingPeerIndices.push(other);
+        entries[other]!.overlappingPeerIndices.push(index);
       }
     }
   }

@@ -8,6 +8,12 @@ export type InputInlineRenameConfirmCallback = (newName: string) => void;
 /** Callback invoked when the inline rename is cancelled. */
 export type InputInlineRenameCancelCallback = () => void;
 
+/** Inclusive start and exclusive end for the initial text selection. */
+export type InputInlineRenameSelectionRange = {
+  start: number;
+  end: number;
+};
+
 /**
  * Shared inline text input for renaming a label in place (outliner rows,
  * workspace tabs, and similar chrome). Replaces a text span with an editable
@@ -65,8 +71,11 @@ export class InputInlineRename {
    * Activates the inline rename by placing the input where the name span sits,
    * before trailing row controls (visibility / lock). Input metrics are copied
    * from the span first so tabs and outliner rows keep their height.
+   *
+   * @param selection Optional initial selection range. When omitted, the full
+   *   value is selected (workspace tabs and default hosts).
    */
-  activate(): void {
+  activate(selection?: InputInlineRenameSelectionRange): void {
     if (this.isDisposed) {
       return;
     }
@@ -75,7 +84,7 @@ export class InputInlineRename {
     this.matchInputLayoutToTextSpan();
     this.textSpanHide();
     this.inputElementInsertBesideTextSpan();
-    this.inputElementFocusAndSelect();
+    this.inputElementFocusAndSelect(selection);
   }
 
   /**
@@ -237,10 +246,44 @@ export class InputInlineRename {
     this.parentElement.insertBefore(this.inputElement, this.textSpan.nextSibling);
   }
 
-  /** Moves keyboard focus to the input and selects its entire content. */
-  private inputElementFocusAndSelect(): void {
+  /**
+   * Moves keyboard focus to the input and applies the initial selection.
+   *
+   * @param selection Optional range; full value when omitted.
+   */
+  private inputElementFocusAndSelect(selection?: InputInlineRenameSelectionRange): void {
     this.inputElement.focus();
-    this.inputElement.select();
+    if (!selection) {
+      this.inputElement.select();
+      return;
+    }
+    this.inputElementSelectionRangeApply(selection);
+  }
+
+  /**
+   * Applies a clamped selection range on the live input value.
+   *
+   * @param selection Inclusive start and exclusive end indices.
+   */
+  private inputElementSelectionRangeApply(selection: InputInlineRenameSelectionRange): void {
+    const valueLength = this.inputElement.value.length;
+    const start = this.clampSelectionIndex(selection.start, valueLength);
+    const end = this.clampSelectionIndex(selection.end, valueLength);
+    this.inputElement.setSelectionRange(Math.min(start, end), Math.max(start, end));
+  }
+
+  /**
+   * Clamps a selection index into the input value bounds.
+   *
+   * @param index Candidate index.
+   * @param valueLength Length of the input value.
+   * @returns Index in 0..valueLength.
+   */
+  private clampSelectionIndex(index: number, valueLength: number): number {
+    if (!Number.isFinite(index)) {
+      return 0;
+    }
+    return Math.max(0, Math.min(valueLength, Math.floor(index)));
   }
 
   /**

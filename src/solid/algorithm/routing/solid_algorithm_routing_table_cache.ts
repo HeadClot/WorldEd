@@ -1,35 +1,38 @@
 import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 import type { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
+import { SolidAlgorithmCompactHierarchyBuilder } from './solid_algorithm_compact_hierarchy_builder.js';
+import type { SolidAlgorithmCompactNode } from './solid_algorithm_compact_node.js';
+import { SolidAlgorithmCreateRoutingTableJob } from './solid_algorithm_create_routing_table_job.js';
 import { SolidAlgorithmRoutingTable } from './solid_algorithm_routing_table.js';
-import { SolidAlgorithmRoutingTableBuilder } from './solid_algorithm_routing_table_builder.js';
+import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 
 /**
- * Caches per-subject flat routing tables. Cache keys include brush ids (and
- * evaluation order) so insert/delete cannot reuse a table whose step indices
- * still point at the wrong brushes after prepared indices shift.
- *
- * Hierarchical CSG does not use these tables; the builder returns an empty
- * table when the tree is not flat.
+ * Caches per-subject Chisel routing tables and one compact hierarchy per
+ * tree/inverted-world fingerprint so a full map rebuild does not rebuild the
+ * hierarchy once per brush.
  */
 export class SolidAlgorithmRoutingTableCache {
   private readonly tablesBySubjectId = new Map<string, SolidAlgorithmRoutingTable>();
   private readonly keyBySubjectId = new Map<string, string>();
+  private hierarchyCacheKey = '';
+  private hierarchyCache: readonly SolidAlgorithmCompactNode[] = [];
 
-  /** Clears all cached tables. */
+  /** Clears all cached tables and the compact hierarchy. */
   clear(): void {
     this.tablesBySubjectId.clear();
     this.keyBySubjectId.clear();
+    this.hierarchyCacheKey = '';
+    this.hierarchyCache = [];
   }
 
   /**
    * Returns a routing table for the subject, building and caching when needed.
-   * Hierarchical (non-flat) trees produce an empty table from the builder.
    *
    * @param prepared Prepared brushes.
    * @param subjectIndex Subject prepared index.
-   * @param tree CSG tree (flat for real tables).
+   * @param tree CSG tree.
    * @param invertedWorld Whether CSG starts solid.
-   * @param forceFull Whether flat tables include every brush (sequential ∩).
+   * @param _unusedLegacyFullWalk Ignored; tables are always peer-local.
    * @returns Routing table for the subject.
    */
   getOrBuild(
@@ -37,26 +40,28 @@ export class SolidAlgorithmRoutingTableCache {
     subjectIndex: number,
     tree: SolidCsgTree,
     invertedWorld: boolean,
-    forceFull: boolean,
+    _unusedLegacyFullWalk: boolean = false,
   ): SolidAlgorithmRoutingTable {
+    void _unusedLegacyFullWalk;
     const subject = prepared[subjectIndex];
     if (!subject) {
-      return new SolidAlgorithmRoutingTable([], invertedWorld);
+      return SolidAlgorithmRoutingTable.empty(invertedWorld);
     }
-    const peerIndices = subject.overlappingPeerIndices;
-    const cacheKey = this.buildCacheKey(prepared, subjectIndex, peerIndices, invertedWorld, forceFull, tree.isFlat);
+    const cacheKey = this.buildCacheKey(prepared, subjectIndex, invertedWorld, tree);
     const existingKey = this.keyBySubjectId.get(subject.instance.id);
     const existing = this.tablesBySubjectId.get(subject.instance.id);
     if (existing && existingKey === cacheKey) {
       return existing;
     }
-    const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(
+    const hierarchy = this.getOrBuildHierarchy(tree, invertedWorld);
+    const boundsPad = SOLID_FAT_PLANE_EPSILON * 2;
+    const table = SolidAlgorithmCreateRoutingTableJob.buildForSubject(
       prepared,
       subjectIndex,
-      peerIndices,
-      tree,
+      hierarchy,
       invertedWorld,
-      forceFull,
+      boundsPad,
+      SOLID_FAT_PLANE_EPSILON,
     );
     this.tablesBySubjectId.set(subject.instance.id, table);
     this.keyBySubjectId.set(subject.instance.id, cacheKey);
@@ -64,8 +69,7 @@ export class SolidAlgorithmRoutingTableCache {
   }
 
   /**
-   * Drops the cached table for one brush. Also clears every table because a
-   * removal or reorder shifts prepared indices used inside other tables.
+   * Drops all cached tables (prepared indices and hierarchy may shift).
    *
    * @param _brushId Brush instance id (unused; full clear is required).
    */
@@ -75,49 +79,97 @@ export class SolidAlgorithmRoutingTableCache {
   }
 
   /**
-   * Builds a cache key from subject/peer brush ids, prepared indices, operation
-   * codes, and mode flags so both identity and list-order changes invalidate.
+   * Returns a cached compact hierarchy for the tree, building when the
+   * fingerprint changes.
+   *
+   * @param tree CSG tree.
+   * @param invertedWorld Inverted-world flag.
+   * @returns Compact hierarchy nodes.
+   */
+  private getOrBuildHierarchy(tree: SolidCsgTree, invertedWorld: boolean): readonly SolidAlgorithmCompactNode[] {
+    const key = `${invertedWorld ? '1' : '0'}|${this.treeStructureKey(tree.roots)}`;
+    if (this.hierarchyCacheKey === key && this.hierarchyCache.length > 0) {
+      return this.hierarchyCache;
+    }
+    this.hierarchyCache = SolidAlgorithmCompactHierarchyBuilder.build(tree, invertedWorld);
+    this.hierarchyCacheKey = key;
+    return this.hierarchyCache;
+  }
+
+  /**
+   * Builds a cheap topology cache key without plane tests or full-map scans.
    *
    * @param prepared Prepared brushes.
    * @param subjectIndex Subject prepared index.
-   * @param peerIndices Peer prepared indices.
    * @param invertedWorld Inverted-world flag.
-   * @param forceFull Full-walk flag.
-   * @param isFlat Tree flatness.
+   * @param tree CSG tree.
    * @returns Cache key string.
    */
   private buildCacheKey(
     prepared: readonly PreparedBrush[],
     subjectIndex: number,
-    peerIndices: readonly number[],
     invertedWorld: boolean,
-    forceFull: boolean,
-    isFlat: boolean,
+    tree: SolidCsgTree,
   ): string {
     const subject = prepared[subjectIndex];
-    if (!subject) return 'missing';
+    if (!subject) {
+      return 'missing';
+    }
     const parts: string[] = [
       subject.instance.id,
       invertedWorld ? '1' : '0',
-      forceFull ? '1' : '0',
-      isFlat ? '1' : '0',
       `si:${subjectIndex}`,
       `so:${subject.operation}`,
+      `sb:${this.boundsKey(subject)}`,
     ];
-    if (forceFull) {
-      for (let index = 0; index < prepared.length; index++) {
-        const entry = prepared[index];
-        if (!entry) continue;
-        parts.push(`${index}:${entry.instance.id}:${entry.operation}`);
-      }
-      return parts.join('|');
+    if (!tree.isFlat) {
+      parts.push(`th:${this.treeStructureKey(tree.roots)}`);
     }
-    const orderedPeers = peerIndices.slice().sort((left, right) => left - right);
-    for (const peerIndex of orderedPeers) {
-      const entry = prepared[peerIndex];
-      if (!entry) continue;
-      parts.push(`p:${peerIndex}:${entry.instance.id}:${entry.operation}`);
+    for (const peerIndex of subject.overlappingPeerIndices) {
+      const peer = prepared[peerIndex];
+      if (!peer) {
+        continue;
+      }
+      parts.push(`p:${peerIndex}:${peer.instance.id}:${peer.operation}:${this.boundsKey(peer)}`);
     }
     return parts.join('|');
+  }
+
+  /**
+   * Compact bounds fingerprint so AInsideB / BInsideA shortcuts invalidate when
+   * brushes move (without scanning the full map).
+   *
+   * @param entry Prepared brush.
+   * @returns Bounds key string.
+   */
+  private boundsKey(entry: PreparedBrush): string {
+    const b = entry.bounds;
+    return [
+      b.min.x.toFixed(3),
+      b.min.y.toFixed(3),
+      b.min.z.toFixed(3),
+      b.max.x.toFixed(3),
+      b.max.y.toFixed(3),
+      b.max.z.toFixed(3),
+    ].join(',');
+  }
+
+  /**
+   * Serializes tree structure and branch operations into a cache key fragment.
+   *
+   * @param nodes Tree nodes.
+   * @returns Structure key.
+   */
+  private treeStructureKey(
+    nodes: readonly import('@/solid/algorithm/compile/solid_csg_tree.js').SolidCsgTreeNode[],
+  ): string {
+    return nodes
+      .map((node) => {
+        if (node.kind === 'brush') {
+          return `L${node.preparedIndex}:${node.operation}`;
+        }
+        return `B${node.operation}(${this.treeStructureKey(node.children)})`;
+      })
+      .join(',');
   }
 }

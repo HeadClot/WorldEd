@@ -262,11 +262,10 @@ export class CommandSolidBrushesDuplicate implements UndoCommand {
    */
   private undoGroupDuplicate(entry: SolidGroupDuplicateEntry): void {
     for (const brushId of entry.createdBrushIds) {
-      entry.model.removeBrush(brushId, false);
+      entry.model.removeBrush(brushId, false, false);
     }
     entry.createdGroup.parent?.remove(entry.createdGroup);
     entry.model.syncBrushOrderFromScene();
-    entry.model.markDirty();
     entry.model.rebuild(true);
   }
 }
