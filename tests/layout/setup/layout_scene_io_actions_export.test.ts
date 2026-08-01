@@ -20,7 +20,7 @@ describe('layout scene export actions', () => {
     settingsStore = new EditorSettingsStore(new MemorySettingsStorage());
   });
 
-  it('should forward the currently selected profile to every export format', () => {
+  it('should forward the selected profile only to profile-aware export formats', () => {
     const firstProfile = settingsStore.getActiveGameProfile();
     if (!firstProfile) {
       throw new Error('Expected a seeded active game profile');
@@ -33,11 +33,11 @@ describe('layout scene export actions', () => {
       throw new Error('Expected the added profile to be active');
     }
 
-    runLayoutExportGlb(sceneIoHandler, worldObject, null, selectedProfile);
+    runLayoutExportGlb(sceneIoHandler, worldObject, null);
     runLayoutExportObj(sceneIoHandler, worldObject, null, selectedProfile);
     runLayoutExportFbx(sceneIoHandler, worldObject, null, selectedProfile);
 
-    expect(sceneIoHandler.exportGlb).toHaveBeenCalledWith(worldObject, null, selectedProfile);
+    expect(sceneIoHandler.exportGlb).toHaveBeenCalledWith(worldObject, null);
     expect(sceneIoHandler.exportObj).toHaveBeenCalledWith(worldObject, null, selectedProfile);
     expect(sceneIoHandler.exportFbx).toHaveBeenCalledWith(worldObject, null, selectedProfile);
     expect(selectedProfile.id).not.toBe(firstProfile.id);

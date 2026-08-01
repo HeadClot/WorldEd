@@ -59,7 +59,7 @@ A game profile defines how authored editor space is converted for export. It inc
 - A coordinate-space basis.
 - Target-style right, up, and forward axes.
 
-AiWorldEd's authored scene remains in its normal editor coordinate system and meters. The active profile also drives viewport presentation: Top, Front, Side, and Perspective cameras, grids, flying navigation, rulers, and the perspective orientation widget use the profile's semantic axes and unit display. The scene is not permanently rotated or rescaled, and export conversion remains responsible for the final target transform.
+AiWorldEd's authored scene remains in its normal editor coordinate system and meters. The active profile drives viewport presentation and profile-aware OBJ and FBX export. GLB export follows canonical glTF coordinates and meters instead of applying the active profile's target transform.
 
 Built-in or common profile intentions include Godot, Blender, Unity, and Unreal Engine. A custom profile is useful for an engine or pipeline with different axis and unit requirements.
 
