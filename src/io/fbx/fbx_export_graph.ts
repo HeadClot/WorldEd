@@ -61,7 +61,8 @@ export interface FbxExportPlan {
  * Profile conversion is baked into the detached export scene before this plan
  * is built, so the serialized hierarchy contains target-space transforms.
  *
- * @param exportRoot Filtered scene root with any profile conversion already baked.
+ * @param exportRoot Filtered scene root with any profile conversion already
+ *   baked.
  * @param unitScaleFactor FBX UnitScaleFactor for GlobalSettings (cm per unit).
  * @param coordinateSpace Target coordinate space for GlobalSettings metadata.
  * @param reverseTriangleWinding Whether the profile transform reflects the
