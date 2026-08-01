@@ -3,6 +3,8 @@ import { GizmoHandle } from './gizmo_handle.js';
 import { pointerEventToNdc } from '@/utils/pointer_ndc.js';
 import { isGizmoWantedVisible } from './gizmo_viewport_visibility.js';
 import { GizmoAxis } from '@/types/transform_mode.js';
+import { GIZMO_FREE_ROTATE_DISC_PICK_USERDATA, GIZMO_FREE_SCALE_DISC_PICK_USERDATA } from './gizmo_visual_style.js';
+import { applyGizmoScaleFreeBillboards } from './gizmo_scale_free_billboard.js';
 
 /**
  * Picks which gizmo handle was clicked using raycasting. Converts mouse events
@@ -70,6 +72,7 @@ export class GizmoRaycaster {
    */
   private prepareCameraAndGroup(camera: THREE.Camera, gizmoGroup: THREE.Group): void {
     camera.updateMatrixWorld(true);
+    applyGizmoScaleFreeBillboards(gizmoGroup, camera);
     gizmoGroup.updateMatrixWorld(true);
   }
 
@@ -105,28 +108,53 @@ export class GizmoRaycaster {
   }
 
   /**
-   * Chooses a handle from ray hits. Free-move center ({@link GizmoAxis.VIEW})
-   * wins over axis arrows when both are hit so the thick stem pick volumes at
-   * the origin do not steal center grabs.
+   * Chooses a handle from ray hits with Blender-style free-control priority:
+   * center cube beats axis stems at the origin; axis rings/arrows beat free-
+   * scale disc and free-rotate billboard disc volumes.
    *
    * @param handles Master handles for id matching.
    * @param intersections Ray hits sorted by distance.
    * @returns The preferred matching handle, or null.
    */
   private findPreferredHandleHit(handles: GizmoHandle[], intersections: THREE.Intersection[]): GizmoHandle | null {
-    let closest: GizmoHandle | null = null;
-    let viewHandle: GizmoHandle | null = null;
+    let closestAxis: GizmoHandle | null = null;
+    let closestViewCube: GizmoHandle | null = null;
+    let closestFreeViewVolume: GizmoHandle | null = null;
     for (const hit of intersections) {
       if (!(hit.object instanceof THREE.Mesh)) continue;
       const handle = this.findHandleForMesh(handles, hit.object);
       if (!handle) continue;
-      if (!closest) closest = handle;
-      if (handle.getAxis() === GizmoAxis.VIEW) {
-        viewHandle = handle;
-        break;
+      if (handle.getAxis() !== GizmoAxis.VIEW) {
+        if (!closestAxis) {
+          closestAxis = handle;
+        }
+        continue;
+      }
+      if (this.isLowPriorityFreeViewPickMesh(hit.object)) {
+        if (!closestFreeViewVolume) {
+          closestFreeViewVolume = handle;
+        }
+        continue;
+      }
+      if (!closestViewCube) {
+        closestViewCube = handle;
       }
     }
-    return viewHandle ?? closest;
+    return closestViewCube ?? closestAxis ?? closestFreeViewVolume;
+  }
+
+  /**
+   * Returns whether a mesh is a free-scale or free-rotate disc pick (lower
+   * priority than axis handles).
+   *
+   * @param mesh Intersected mesh.
+   * @returns True for free VIEW volume picks.
+   */
+  private isLowPriorityFreeViewPickMesh(mesh: THREE.Mesh): boolean {
+    return (
+      mesh.userData[GIZMO_FREE_SCALE_DISC_PICK_USERDATA] === true ||
+      mesh.userData[GIZMO_FREE_ROTATE_DISC_PICK_USERDATA] === true
+    );
   }
 
   /**

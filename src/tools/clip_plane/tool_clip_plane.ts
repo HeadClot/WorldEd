@@ -158,10 +158,12 @@ export class ToolClipPlane {
     if (this.points.length === 1) return 'Click point 2 · cuts into view / brush';
     if (this.points.length === 2) {
       return this.plane
-        ? 'Plane ready (optional point 3 for free tilt) · Flip / Clip / Split'
+        ? 'Plane ready (optional point 3 for free tilt) · Flip / Clip / Split · USE KEYBOARD SHORTCUTS (UI FIXED SOON)'
         : 'Need a valid second point';
     }
-    return this.plane ? '3-point plane ready · Flip / Clip / Split' : 'Invalid 3-point plane';
+    return this.plane
+      ? '3-point plane ready · Flip / Clip / Split · USE KEYBOARD SHORTCUTS (UI FIXED SOON)'
+      : 'Invalid 3-point plane';
   }
 
   /**

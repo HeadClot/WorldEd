@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { GizmoAxis } from '@/types/transform_mode.js';
 import { GizmoScale } from '@/transform/gizmo/gizmo_scale.js';
+import { GIZMO_SCALE_FREE_BILLBOARD_USERDATA } from '@/transform/gizmo/gizmo_visual_style.js';
 
 describe('GizmoScale', () => {
   let gizmo: GizmoScale;
@@ -11,17 +12,26 @@ describe('GizmoScale', () => {
     gizmo = new GizmoScale(Theme);
   });
 
-  it('should create 3 handles', () => {
+  it('should create three axis handles plus a free-scale center handle', () => {
     const handles = gizmo.createHandles();
-    expect(handles.length).toBe(3);
+    expect(handles.length).toBe(4);
+    expect(handles.some((handle) => handle.getAxis() === GizmoAxis.VIEW)).toBe(true);
   });
 
-  it('should have handles for X, Y, Z axes', () => {
+  it('should have handles for X, Y, Z axes and VIEW center', () => {
     const handles = gizmo.createHandles();
     const axes = handles.map((h) => h.getAxis());
     expect(axes).toContain(GizmoAxis.X);
     expect(axes).toContain(GizmoAxis.Y);
     expect(axes).toContain(GizmoAxis.Z);
+    expect(axes).toContain(GizmoAxis.VIEW);
+  });
+
+  it('should use center color for the free-scale cube', () => {
+    const handles = gizmo.createHandles();
+    const center = handles.find((h) => h.getAxis() === GizmoAxis.VIEW);
+    expect(center).toBeDefined();
+    expect(center!.getColor()).toBe(Theme.gizmoCenterColor);
   });
 
   it('should use correct colors for axis handles', () => {
@@ -42,10 +52,11 @@ describe('GizmoScale', () => {
     });
   });
 
-  it('should return scene objects for addition', () => {
+  it('should return scene objects for axes, center cube, and free-scale ring', () => {
     gizmo.createHandles();
     const sceneObjects = gizmo.getAllSceneObjects();
-    expect(sceneObjects.length).toBe(3);
+    expect(sceneObjects.length).toBe(5);
+    expect(sceneObjects.some((root) => root.userData[GIZMO_SCALE_FREE_BILLBOARD_USERDATA] === true)).toBe(true);
   });
 
   it('should dispose without errors', () => {

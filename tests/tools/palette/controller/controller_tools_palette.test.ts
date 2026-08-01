@@ -70,6 +70,31 @@ describe('ToolsPaletteController', () => {
     expect(controller.getActiveTool()).toBe(EditorToolId.OBJECT);
   });
 
+  it('should refuse all palette tool switches while the editor tool is busy', () => {
+    const busyController = new ControllerToolsPalette({
+      toolsPalette: palette,
+      faceExtrusionController: faceController,
+      clipPlaneTool: clipTool,
+      clipPlaneHandler: {
+        flipPlane: () => undefined,
+        commitClip: () => undefined,
+        commitSplit: () => undefined,
+        cancel: () => {
+          clipTool.deactivate();
+        },
+      } as unknown as HandlerClipPlane,
+      selectionManager,
+      editorOverlayPolicy: overlayPolicy,
+      modalToolSessionRegistry: modalRegistry,
+      showStatusMessage: showStatus,
+      isEditorToolBusy: () => true,
+    });
+    busyController.selectTool(EditorToolId.FACE);
+    expect(busyController.getActiveTool()).toBe(EditorToolId.OBJECT);
+    busyController.selectTool(EditorToolId.CLIP_PLANE);
+    expect(busyController.getActiveTool()).toBe(EditorToolId.OBJECT);
+  });
+
   it('should activate face tool and leave clip inactive', () => {
     controller.selectTool(EditorToolId.FACE);
     expect(controller.getActiveTool()).toBe(EditorToolId.FACE);

@@ -213,6 +213,27 @@ export class DetachedViewportSession {
   }
 
   /**
+   * Returns the popup document when the window is open.
+   *
+   * @returns Popup document, or null.
+   */
+  getOwnerDocument(): Document | null {
+    if (!this.popup || this.popup.closed) {
+      return null;
+    }
+    return this.popup.document;
+  }
+
+  /**
+   * Returns the last pointer client position recorded in this popup.
+   *
+   * @returns Client coordinates, or null before any pointer sample.
+   */
+  getLastPointerClientPosition(): { clientX: number; clientY: number } | null {
+    return this.popupInputManager?.getLastPointerClientPosition() ?? null;
+  }
+
+  /**
    * Focuses the popup when open.
    *
    * @returns True when a live popup was focused.

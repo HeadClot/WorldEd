@@ -26,13 +26,14 @@ describe('GizmoBuilderBase', () => {
     expect(translate.getAllSceneObjects().length).toBe(0);
   });
 
-  it('returns three roots for rotate and scale modes', () => {
+  it('returns four handles for rotate and scale (axes plus free VIEW control)', () => {
     const rotate = new GizmoRotate(Theme);
     const scale = new GizmoScale(Theme);
-    expect(rotate.createHandles().length).toBe(3);
-    expect(rotate.getAllSceneObjects().length).toBe(3);
-    expect(scale.createHandles().length).toBe(3);
-    expect(scale.getAllSceneObjects().length).toBe(3);
+    expect(rotate.createHandles().length).toBe(4);
+    expect(rotate.getAllSceneObjects().length).toBe(4);
+    expect(scale.createHandles().length).toBe(4);
+    // Free scale registers one VIEW handle but two scene roots (cube + ring).
+    expect(scale.getAllSceneObjects().length).toBe(5);
     rotate.dispose();
     scale.dispose();
   });

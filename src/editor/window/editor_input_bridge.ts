@@ -1,0 +1,774 @@
+import { Vector2 } from 'three';
+import type { EditorWindow } from './editor_window.js';
+import { EditorExclusiveMouseShieldDomain } from './editor_exclusive_mouse_shield_domain.js';
+
+/**
+ * Bridges browser pointer events into EditorWindow OnMouse* routing. Mirrors
+ * EditorWindow.Editor.cs event intake:
+ *
+ * - MouseDown only when the pointer is in the viewport.
+ * - MouseUp always raises OnGlobalMouseUp; OnMouseUp only in the viewport.
+ * - Outside release raises OnGlobalMouseUp (rawType MouseUp)
+ * - MouseDrag: OnMouseDrag in viewport + OnGlobalMouseDrag always.
+ * - MouseMove: OnMouseMove always.
+ *
+ * While the active event receiver is busy, a full-screen shield covers chrome
+ * on the main document and every detached viewport document so buttons never
+ * receive the hit. Hit-testing peeks under the shield to decide viewport-local
+ * vs global routing. Tool and focus classes stay 1:1 with Shape Editor.
+ */
+export class EditorInputBridge {
+  private readonly editor: EditorWindow;
+  private readonly exclusiveShieldDomain: EditorExclusiveMouseShieldDomain;
+  private ownerDocument: Document | null;
+  private boundPointerDown: ((event: PointerEvent) => void) | null;
+  private boundPointerUp: ((event: PointerEvent) => void) | null;
+  private boundPointerMove: ((event: PointerEvent) => void) | null;
+  private previousMousePosition: Vector2;
+  private previousMouseGridPosition: Vector2;
+  private exclusiveViewportRoots: HTMLElement[];
+  /**
+   * True while RMB/MMB navigation was started through the shield and should
+   * keep receiving retargeted move/up until release.
+   */
+  private navigationPassThroughActive: boolean;
+  /** Pane content that currently owns navigation pass-through. */
+  private navigationPassThroughRoot: HTMLElement | null;
+  /** Document whose shield currently has pointer-events disabled for navigation. */
+  private navigationPassThroughDocument: Document | null;
+  private boundNavigationWindowPointerUp: ((event: PointerEvent) => void) | null;
+
+  /**
+   * Creates an input bridge bound to the editor window.
+   *
+   * @param editor Shape editor window owning focus and tools.
+   */
+  constructor(editor: EditorWindow) {
+    this.editor = editor;
+    this.exclusiveShieldDomain = new EditorExclusiveMouseShieldDomain();
+    this.ownerDocument = null;
+    this.boundPointerDown = null;
+    this.boundPointerUp = null;
+    this.boundPointerMove = null;
+    this.previousMousePosition = new Vector2();
+    this.previousMouseGridPosition = new Vector2();
+    this.exclusiveViewportRoots = [];
+    this.navigationPassThroughActive = false;
+    this.navigationPassThroughRoot = null;
+    this.navigationPassThroughDocument = null;
+    this.boundNavigationWindowPointerUp = null;
+  }
+
+  /**
+   * Pins the exclusive interaction domain (one or more pane content elements).
+   * Hits inside any root count as in-viewport; chrome outside is blocked while
+   * the active tool is busy. Shields mount on every distinct owner document of
+   * the pinned roots plus the main install document.
+   *
+   * @param roots Viewport content elements, or null/empty to clear.
+   */
+  setExclusiveViewportRoots(roots: readonly HTMLElement[] | null): void {
+    this.exclusiveViewportRoots = roots ? [...roots] : [];
+    this.syncExclusiveShieldMount();
+  }
+
+  /**
+   * Pins a single exclusive viewport content element (single-use convenience).
+   *
+   * @param root Viewport content element, or null to clear.
+   */
+  setExclusiveViewportRoot(root: HTMLElement | null): void {
+    this.setExclusiveViewportRoots(root ? [root] : null);
+  }
+
+  /**
+   * Returns the first pinned exclusive viewport content, if any.
+   *
+   * @returns Viewport content element, or null.
+   */
+  getExclusiveViewportRoot(): HTMLElement | null {
+    return this.exclusiveViewportRoots[0] ?? null;
+  }
+
+  /**
+   * Returns all pinned exclusive viewport content elements.
+   *
+   * @returns Exclusive domain roots.
+   */
+  getExclusiveViewportRoots(): readonly HTMLElement[] {
+    return this.exclusiveViewportRoots;
+  }
+
+  /**
+   * Returns whether any exclusive mouse shield is currently mounted.
+   *
+   * @returns True while busy exclusive overlays cover chrome.
+   */
+  isExclusiveShieldMounted(): boolean {
+    return this.exclusiveShieldDomain.isAnyMounted();
+  }
+
+  /**
+   * Returns how many document-scoped exclusive shields are mounted.
+   *
+   * @returns Mounted shield count (main + detached documents).
+   */
+  getMountedExclusiveShieldCount(): number {
+    return this.exclusiveShieldDomain.getMountedShieldCount();
+  }
+
+  /**
+   * Returns the mounted exclusive shield root for a document.
+   *
+   * @param ownerDocument Document that may host a shield.
+   * @returns Shield element, or null.
+   */
+  getMountedExclusiveShieldElement(ownerDocument: Document): HTMLElement | null {
+    return this.exclusiveShieldDomain.getMountedShieldElement(ownerDocument);
+  }
+
+  /**
+   * Installs document listeners and prepares the exclusive shield domain.
+   *
+   * @param hostElement Root used only to resolve the owner document.
+   */
+  install(hostElement: HTMLElement): void {
+    this.uninstall();
+    this.ownerDocument = hostElement.ownerDocument;
+    this.boundPointerDown = (event) => this.handleDocumentPointerDown(event);
+    this.boundPointerUp = (event) => this.handleDocumentPointerUp(event);
+    this.boundPointerMove = (event) => this.handleDocumentPointerMove(event);
+    this.exclusiveShieldDomain.setListeners({
+      onPointerDown: (event) => this.handleShieldPointerDown(event),
+      onPointerUp: (event) => this.handleShieldPointerUp(event),
+      onPointerMove: (event) => this.handleShieldPointerMove(event),
+      onContextMenu: (event) => this.handleShieldContextMenu(event),
+      onWheel: (event) => this.handleShieldWheel(event),
+    });
+    this.attachDocumentListeners();
+    this.syncExclusiveShieldMount();
+  }
+
+  /** Removes listeners and the exclusive shields. */
+  uninstall(): void {
+    this.endNavigationPassThrough();
+    this.detachDocumentListeners();
+    this.exclusiveShieldDomain.setListeners(null);
+    this.exclusiveShieldDomain.unmountAll();
+    this.ownerDocument = null;
+    this.boundPointerDown = null;
+    this.boundPointerUp = null;
+    this.boundPointerMove = null;
+  }
+
+  /**
+   * Idle document pointerdown. Viewports own gizmo picks; this only arms editor
+   * mouse state when a pinned exclusive root still exists after busy ends.
+   *
+   * @param event Browser pointer event.
+   */
+  private handleDocumentPointerDown(event: PointerEvent): void {
+    this.syncExclusiveShieldMount();
+    if (this.shouldUseExclusiveShield()) {
+      return;
+    }
+    if (this.exclusiveViewportRoots.length === 0) {
+      return;
+    }
+    if (!this.isEventTargetInExclusiveViewport(event)) {
+      return;
+    }
+    this.routeEditorMouseDown(event, true);
+  }
+
+  /**
+   * Idle document pointerup (includes release after busy ends mid-click).
+   *
+   * @param event Browser pointer event.
+   */
+  private handleDocumentPointerUp(event: PointerEvent): void {
+    this.syncExclusiveShieldMount();
+    if (this.shouldUseExclusiveShield()) {
+      return;
+    }
+    if (!this.editor.isLeftMousePressed && !this.editor.isRightMousePressed) {
+      if (this.exclusiveViewportRoots.length === 0) {
+        return;
+      }
+    }
+    const inViewport = this.isEventTargetInExclusiveViewport(event);
+    this.routeEditorMouseUp(event, inViewport);
+  }
+
+  /**
+   * Idle document pointermove for single-use tracking after shield unmounts.
+   *
+   * @param event Browser pointer event.
+   */
+  private handleDocumentPointerMove(event: PointerEvent): void {
+    this.syncExclusiveShieldMount();
+    if (this.shouldUseExclusiveShield()) {
+      return;
+    }
+    if (!this.editor.isLeftMousePressed && !this.editor.isRightMousePressed) {
+      if (this.exclusiveViewportRoots.length === 0) {
+        this.updateMousePositionOnly(event);
+        return;
+      }
+    }
+    const inViewport = this.isEventTargetInExclusiveViewport(event);
+    this.routeEditorMouseMove(event, inViewport);
+  }
+
+  /**
+   * Shield pointerdown while busy. LMB owns tool placement; RMB/MMB over the
+   * pinned viewport are retargeted so 3D fly and 2D pan keep working.
+   *
+   * @param event Browser pointer event on the shield.
+   */
+  private handleShieldPointerDown(event: PointerEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.isViewportNavigationButton(event.button)) {
+      const navigationRoot = this.findNavigationRootAtClientPoint(event.clientX, event.clientY, event);
+      if (navigationRoot) {
+        this.beginNavigationPassThrough(event, navigationRoot);
+        return;
+      }
+    }
+    const hitRoot = this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event);
+    this.routeEditorMouseDown(event, hitRoot !== null);
+    this.syncExclusiveShieldMount();
+  }
+
+  /**
+   * Shield pointerup while busy.
+   *
+   * @param event Browser pointer event on the shield.
+   */
+  private handleShieldPointerUp(event: PointerEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.navigationPassThroughActive) {
+      const root = this.navigationPassThroughRoot;
+      if (root && this.isRetargetRootSameDocumentAsEvent(event, root)) {
+        this.retargetPointerEventToViewportRoot(event, root);
+      }
+      if (!this.areNavigationButtonsHeld(event.buttons)) {
+        this.endNavigationPassThrough();
+      }
+      this.syncExclusiveShieldMount();
+      return;
+    }
+    const hitRoot = this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event);
+    this.routeEditorMouseUp(event, hitRoot !== null);
+    this.syncExclusiveShieldMount();
+  }
+
+  /**
+   * Shield pointermove while busy.
+   *
+   * @param event Browser pointer event on the shield.
+   */
+  private handleShieldPointerMove(event: PointerEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.navigationPassThroughActive) {
+      if (!this.areNavigationButtonsHeld(event.buttons)) {
+        this.endNavigationPassThrough();
+        this.syncExclusiveShieldMount();
+        return;
+      }
+      const root = this.navigationPassThroughRoot;
+      if (root && this.isRetargetRootSameDocumentAsEvent(event, root)) {
+        this.retargetPointerEventToViewportRoot(event, root);
+      }
+      return;
+    }
+    const hitRoot = this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event);
+    this.routeEditorMouseMove(event, hitRoot !== null);
+    this.syncExclusiveShieldMount();
+  }
+
+  /**
+   * Blocks the browser context menu while the exclusive shield is active so
+   * tools and viewport navigation can own right-click.
+   *
+   * @param event Context menu event on the shield.
+   */
+  private handleShieldContextMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  /**
+   * Forwards wheel zoom/scroll to the pinned viewport when the pointer is over
+   * it.
+   *
+   * @param event Wheel event on the shield.
+   */
+  private handleShieldWheel(event: WheelEvent): void {
+    const hitRoot = this.findNavigationRootAtClientPoint(event.clientX, event.clientY, event);
+    if (!hitRoot) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.retargetWheelEventToViewportRoot(event, hitRoot);
+  }
+
+  /**
+   * Returns whether the button is viewport navigation (middle pan / right
+   * fly-pan).
+   *
+   * @param button Mouse button index.
+   * @returns True for middle or right button.
+   */
+  private isViewportNavigationButton(button: number): boolean {
+    return button === 1 || button === 2;
+  }
+
+  /**
+   * Returns whether middle or right mouse buttons are still held.
+   *
+   * @param buttons PointerEvent.buttons bitfield.
+   * @returns True while navigation buttons remain down.
+   */
+  private areNavigationButtonsHeld(buttons: number): boolean {
+    const middleOrRightMask = 2 | 4;
+    return (buttons & middleOrRightMask) !== 0;
+  }
+
+  /**
+   * Re-dispatches a pointer event onto a viewport content element so camera
+   * fly/pan listeners receive it (exclusive shield owns the real target).
+   * Refuses cross-document retarget so detached client coordinates never drive
+   * main-window panes (and vice versa).
+   *
+   * @param event Original shield pointer event.
+   * @param root Viewport content that should receive the event.
+   */
+  private retargetPointerEventToViewportRoot(event: PointerEvent, root: HTMLElement): void {
+    if (!this.isRetargetRootSameDocumentAsEvent(event, root)) {
+      return;
+    }
+    const retargeted = new PointerEvent(event.type, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      isPrimary: event.isPrimary,
+      button: event.button,
+      buttons: event.buttons,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      movementX: event.movementX,
+      movementY: event.movementY,
+      ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey,
+      metaKey: event.metaKey,
+      pressure: event.pressure,
+      width: event.width,
+      height: event.height,
+      tiltX: event.tiltX,
+      tiltY: event.tiltY,
+      twist: event.twist,
+    });
+    root.dispatchEvent(retargeted);
+  }
+
+  /**
+   * Re-dispatches a wheel event onto a viewport content element.
+   *
+   * @param event Original shield wheel event.
+   * @param root Viewport content element that should receive the event.
+   */
+  private retargetWheelEventToViewportRoot(event: WheelEvent, root: HTMLElement): void {
+    if (!this.isRetargetRootSameDocumentAsEvent(event, root)) {
+      return;
+    }
+    const retargeted = new WheelEvent(event.type, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      deltaX: event.deltaX,
+      deltaY: event.deltaY,
+      deltaZ: event.deltaZ,
+      deltaMode: event.deltaMode,
+      ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey,
+      metaKey: event.metaKey,
+    });
+    root.dispatchEvent(retargeted);
+  }
+
+  /**
+   * Returns whether a retarget root lives in the same document as the shield
+   * event so client coordinates stay window-local. When the shield document
+   * cannot be resolved, still allows retarget if the root is a pinned exclusive
+   * root (avoids dropping detached navigation when document identity is
+   * fuzzy).
+   *
+   * @param event Shield pointer or wheel event.
+   * @param root Candidate viewport content root.
+   * @returns True when retarget is safe for this event.
+   */
+  private isRetargetRootSameDocumentAsEvent(event: Event, root: HTMLElement): boolean {
+    const eventDocument = this.resolveEventDocument(event);
+    if (eventDocument) {
+      return root.ownerDocument === eventDocument;
+    }
+    return this.exclusiveViewportRoots.includes(root);
+  }
+
+  /**
+   * EditorWindow.Editor.cs MouseDown: only when in the viewport.
+   *
+   * @param event Pointer event.
+   * @param inViewport Whether the hit is inside the exclusive viewport.
+   */
+  private routeEditorMouseDown(event: PointerEvent, inViewport: boolean): void {
+    if (!inViewport) {
+      return;
+    }
+    this.snapshotPreviousMouse();
+    this.editor.updateMouseStateFromPointer(
+      event.clientX,
+      event.clientY,
+      this.resolveEventTargetNode(event.target),
+      event.button,
+      true,
+    );
+    this.editor.onMouseDown(event.button);
+  }
+
+  /**
+   * EditorWindow.Editor.cs MouseUp: OnGlobalMouseUp always; OnMouseUp when in
+   * viewport.
+   *
+   * @param event Pointer event.
+   * @param inViewport Whether the release is over the viewport.
+   */
+  private routeEditorMouseUp(event: PointerEvent, inViewport: boolean): void {
+    this.editor.updateMouseStateFromPointer(
+      event.clientX,
+      event.clientY,
+      this.resolveEventTargetNode(event.target),
+      event.button,
+      false,
+    );
+    this.editor.onGlobalMouseUp(event.button);
+    if (inViewport) {
+      this.editor.onMouseUp(event.button);
+    }
+  }
+
+  /**
+   * EditorWindow.Editor.cs MouseMove / MouseDrag.
+   *
+   * @param event Pointer event.
+   * @param inViewport Whether the pointer is over the viewport.
+   */
+  private routeEditorMouseMove(event: PointerEvent, inViewport: boolean): void {
+    this.snapshotPreviousMouse();
+    this.editor.updateMouseStateFromPointer(
+      event.clientX,
+      event.clientY,
+      this.resolveEventTargetNode(event.target),
+      -1,
+      false,
+    );
+    const screenDelta = this.editor.mousePosition.clone().sub(this.previousMousePosition);
+    const gridDelta = this.editor.mouseGridPosition.clone().sub(this.previousMouseGridPosition);
+    if (this.editor.isLeftMousePressed || this.editor.isRightMousePressed) {
+      const button = this.editor.isLeftMousePressed ? 0 : 1;
+      if (inViewport) {
+        this.editor.onMouseDrag(button, screenDelta, gridDelta);
+      }
+      this.editor.onGlobalMouseDrag(button, screenDelta, gridDelta);
+      return;
+    }
+    this.editor.onMouseMove(screenDelta, gridDelta);
+  }
+
+  /**
+   * Updates editor mouse coordinates without raising tool mouse events.
+   *
+   * @param event Pointer event.
+   */
+  private updateMousePositionOnly(event: PointerEvent): void {
+    this.editor.updateMouseStateFromPointer(
+      event.clientX,
+      event.clientY,
+      this.resolveEventTargetNode(event.target),
+      -1,
+      false,
+    );
+  }
+
+  /**
+   * Mounts or unmounts exclusive shields on the main document and every
+   * detached viewport document that owns a pinned exclusive root.
+   */
+  private syncExclusiveShieldMount(): void {
+    if (!this.shouldUseExclusiveShield()) {
+      this.endNavigationPassThrough();
+      this.exclusiveShieldDomain.unmountAll();
+      return;
+    }
+    this.exclusiveShieldDomain.syncMountedDocuments(this.collectExclusiveShieldDocuments());
+    if (this.navigationPassThroughActive && this.navigationPassThroughDocument) {
+      this.exclusiveShieldDomain.setBlocksPointerEventsForDocument(this.navigationPassThroughDocument, false);
+    }
+  }
+
+  /**
+   * Collects every document that must host a blocking overlay while busy.
+   *
+   * @returns Unique owner documents for main install + pinned roots.
+   */
+  private collectExclusiveShieldDocuments(): Document[] {
+    const documents = new Set<Document>();
+    if (this.ownerDocument) {
+      documents.add(this.ownerDocument);
+    }
+    for (const root of this.exclusiveViewportRoots) {
+      documents.add(root.ownerDocument);
+    }
+    return [...documents];
+  }
+
+  /**
+   * Returns whether the exclusive shield should cover the page. Stays mounted
+   * while a mouse button is held after busy ends so pointerup still reaches the
+   * shield on detached documents (single-use LMB confirm clears busy on
+   * pointerdown; without this, OnGlobalMouseUp is lost and focus stays stuck on
+   * the finished single-use tool).
+   *
+   * @returns True while exclusive roots are pinned and the tool is busy or a
+   *   mouse button started under the shield is still held.
+   */
+  private shouldUseExclusiveShield(): boolean {
+    if (this.exclusiveViewportRoots.length === 0) {
+      return false;
+    }
+    if (this.editor.isActiveEventReceiverBusy) {
+      return true;
+    }
+    return this.editor.isLeftMousePressed || this.editor.isRightMousePressed;
+  }
+
+  /**
+   * Returns whether a document event target is inside any exclusive viewport.
+   *
+   * @param event Pointer event.
+   * @returns True when the event target is in a pinned root.
+   */
+  private isEventTargetInExclusiveViewport(event: PointerEvent): boolean {
+    if (this.exclusiveViewportRoots.length === 0) {
+      return false;
+    }
+    const targetNode = this.resolveEventTargetNode(event.target);
+    if (!targetNode) {
+      return false;
+    }
+    for (const root of this.exclusiveViewportRoots) {
+      if (root === targetNode || root.contains(targetNode)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Finds which exclusive viewport content owns a client point in the event's
+   * document. Uses the shield that raised the event so main and detached
+   * windows never share hit tests.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param event Event used to resolve the source document.
+   * @returns Matching content root, or null.
+   */
+  private findExclusiveRootAtClientPoint(clientX: number, clientY: number, event: Event): HTMLElement | null {
+    const eventDocument = this.resolveEventDocument(event);
+    return this.exclusiveShieldDomain.findExclusiveRootAtClientPoint(
+      clientX,
+      clientY,
+      this.exclusiveViewportRoots,
+      eventDocument,
+    );
+  }
+
+  /**
+   * Resolves a navigation/wheel target for the shield event document.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param event Event used to resolve the source document.
+   * @returns Navigation content root, or null.
+   */
+  private findNavigationRootAtClientPoint(clientX: number, clientY: number, event: Event): HTMLElement | null {
+    const eventDocument = this.resolveEventDocument(event);
+    return this.exclusiveShieldDomain.findNavigationRootAtClientPoint(
+      clientX,
+      clientY,
+      this.exclusiveViewportRoots,
+      eventDocument,
+    );
+  }
+
+  /**
+   * Resolves the document that raised a pointer or wheel event from the shield
+   * that owns the listener (never guesses another window).
+   *
+   * @param event Browser event.
+   * @returns Source document, or null.
+   */
+  private resolveEventDocument(event: Event): Document | null {
+    const fromShield = this.exclusiveShieldDomain.resolveBoundDocumentFromEvent(event);
+    if (fromShield) {
+      return fromShield;
+    }
+    const currentTarget = event.currentTarget;
+    if (currentTarget instanceof Node) {
+      return currentTarget.ownerDocument;
+    }
+    const target = event.target;
+    if (target instanceof Node) {
+      return target.ownerDocument;
+    }
+    return null;
+  }
+
+  /**
+   * Starts viewport navigation pass-through: delivers the initial button event
+   * to the hit pane, then opens the shield so subsequent real pointer events
+   * reach that pane (trusted movement / pointer lock).
+   *
+   * @param event Shield pointerdown that began navigation.
+   * @param hitRoot Viewport content that owns the navigation gesture.
+   */
+  private beginNavigationPassThrough(event: PointerEvent, hitRoot: HTMLElement): void {
+    this.navigationPassThroughActive = true;
+    this.navigationPassThroughRoot = hitRoot;
+    this.navigationPassThroughDocument = this.resolveEventDocument(event);
+    this.retargetPointerEventToViewportRoot(event, hitRoot);
+    if (this.navigationPassThroughDocument) {
+      this.exclusiveShieldDomain.setBlocksPointerEventsForDocument(this.navigationPassThroughDocument, false);
+    }
+    this.attachNavigationWindowPointerUpListener(event);
+    this.syncExclusiveShieldMount();
+  }
+
+  /** Ends navigation pass-through and restores shield pointer capture. */
+  private endNavigationPassThrough(): void {
+    this.detachNavigationWindowPointerUpListener();
+    if (this.navigationPassThroughDocument) {
+      this.exclusiveShieldDomain.setBlocksPointerEventsForDocument(this.navigationPassThroughDocument, true);
+    }
+    this.navigationPassThroughActive = false;
+    this.navigationPassThroughRoot = null;
+    this.navigationPassThroughDocument = null;
+  }
+
+  /**
+   * Listens for navigation button release on the event window when the shield
+   * is open for pass-through and may not receive the up event.
+   *
+   * @param event Gesture-start pointer event used to resolve the window.
+   */
+  private attachNavigationWindowPointerUpListener(event: PointerEvent): void {
+    this.detachNavigationWindowPointerUpListener();
+    const ownerWindow = this.resolveEventDocument(event)?.defaultView;
+    if (!ownerWindow) {
+      return;
+    }
+    this.boundNavigationWindowPointerUp = (upEvent) => {
+      if (this.isViewportNavigationButton(upEvent.button) || !this.areNavigationButtonsHeld(upEvent.buttons)) {
+        this.endNavigationPassThrough();
+        this.syncExclusiveShieldMount();
+      }
+    };
+    ownerWindow.addEventListener('pointerup', this.boundNavigationWindowPointerUp, true);
+    ownerWindow.addEventListener('pointercancel', this.boundNavigationWindowPointerUp, true);
+  }
+
+  /** Removes temporary navigation window release listeners. */
+  private detachNavigationWindowPointerUpListener(): void {
+    if (!this.boundNavigationWindowPointerUp) {
+      return;
+    }
+    const docs = new Set<Document>();
+    if (this.navigationPassThroughDocument) {
+      docs.add(this.navigationPassThroughDocument);
+    }
+    if (this.ownerDocument) {
+      docs.add(this.ownerDocument);
+    }
+    for (const doc of docs) {
+      const view = doc.defaultView;
+      if (!view) {
+        continue;
+      }
+      view.removeEventListener('pointerup', this.boundNavigationWindowPointerUp, true);
+      view.removeEventListener('pointercancel', this.boundNavigationWindowPointerUp, true);
+    }
+    this.boundNavigationWindowPointerUp = null;
+  }
+
+  /** Copies current mouse positions before a state update. */
+  private snapshotPreviousMouse(): void {
+    this.previousMousePosition.copy(this.editor.mousePosition);
+    this.previousMouseGridPosition.copy(this.editor.mouseGridPosition);
+  }
+
+  /**
+   * Resolves an EventTarget to a Node for hit-testing.
+   *
+   * @param target Event target.
+   * @returns Node when possible, otherwise null.
+   */
+  private resolveEventTargetNode(target: EventTarget | null): Node | null {
+    if (target instanceof Node) {
+      return target;
+    }
+    return null;
+  }
+
+  /** Attaches idle document listeners on the main install document. */
+  private attachDocumentListeners(): void {
+    const doc = this.ownerDocument;
+    if (!doc || !this.boundPointerDown || !this.boundPointerUp || !this.boundPointerMove) {
+      return;
+    }
+    doc.addEventListener('pointerdown', this.boundPointerDown, true);
+    doc.addEventListener('pointerup', this.boundPointerUp, true);
+    doc.addEventListener('pointermove', this.boundPointerMove, true);
+  }
+
+  /** Detaches idle document listeners. */
+  private detachDocumentListeners(): void {
+    const doc = this.ownerDocument;
+    if (this.boundPointerDown) {
+      doc?.removeEventListener('pointerdown', this.boundPointerDown, true);
+    }
+    if (this.boundPointerUp) {
+      doc?.removeEventListener('pointerup', this.boundPointerUp, true);
+    }
+    if (this.boundPointerMove) {
+      doc?.removeEventListener('pointermove', this.boundPointerMove, true);
+    }
+  }
+}

@@ -108,33 +108,50 @@ export function onCadRulerTransformFeedback(
 }
 
 /**
- * Captures pre-drag bounds for CAD ghost wireframes and delta chains.
+ * Captures pre-drag bounds for CAD ghost wireframes and delta chains. Rotate
+ * skips delta mode and only seeds live selection dimensions.
  *
  * @param host CAD ruler host.
  * @param meshes Selected meshes at pointer-down.
  */
 export function beginCadRulerDrag(host: LayoutCadRulerHost, meshes: THREE.Mesh[]): void {
+  const mode = resolveCadRulerDragMode(host);
+  if (mode === 'idle') {
+    host.cadRulerSystem.endDrag();
+    host.cadRulerSystem.updateLiveSelectionMeshes(meshes);
+    return;
+  }
   const startBounds = host.transformHandler.getDragStartBounds() ?? host.rulerBoundsBuilder.buildFromMeshes(meshes);
-  host.cadRulerSystem.beginDrag(startBounds, resolveCadRulerDragMode(host));
+  host.cadRulerSystem.beginDrag(startBounds, mode);
   host.cadRulerSystem.updateLiveSelectionMeshes(meshes);
 }
 
 /**
  * Chooses CAD feedback mode: face-travel for resize/scale, translation path for
- * move tools.
+ * move tools. Rotate keeps selection dimensions only — center-path deltas
+ * thrash when oriented bounds spin around a pivot.
  *
  * @param host CAD ruler host.
  * @returns Drag mode for the ruler system.
  */
-export function resolveCadRulerDragMode(host: LayoutCadRulerHost): 'translate' | 'resize' {
-  if (host.transformHandler.isBoundsResizeDrag()) return 'resize';
-  if (host.transformGizmo.getMode() === TransformMode.SCALE) return 'resize';
+export function resolveCadRulerDragMode(host: LayoutCadRulerHost): 'idle' | 'translate' | 'resize' {
+  if (host.transformHandler.isBoundsResizeDrag()) {
+    return 'resize';
+  }
+  const mode = host.transformGizmo.getMode();
+  if (mode === TransformMode.SCALE) {
+    return 'resize';
+  }
+  if (mode === TransformMode.ROTATE) {
+    return 'idle';
+  }
   return 'translate';
 }
 
 /**
  * Updates CAD drag feedback from live mesh poses. Resize uses face travel;
- * translate uses actual bounds center motion (includes grid snap).
+ * translate uses actual bounds center motion (includes grid snap). Rotate and
+ * idle refresh selection dimensions without delta chains.
  *
  * @param host CAD ruler host.
  * @param meshes Selected meshes during drag.

@@ -1,6 +1,11 @@
+import { keyboardShortcutCodeFromEvent } from './keyboard_event_match.js';
+
 /**
  * Tracks global keyboard and mouse button state for the editor. Clears stuck
- * keys when the window loses focus so navigation cannot run away.
+ * keys when the window loses focus so navigation cannot run away. Also tracks
+ * the last known pointer position for single-use transform tools (G/R/S style).
+ * Letter keys are stored under layout-stable codes so QWERTZ Y/Z match
+ * {@link isKeyDown} queries using KeyY / KeyZ.
  */
 export class ManagerInput {
   private readonly targetWindow: Window;
@@ -10,9 +15,13 @@ export class ManagerInput {
   private keyUpListener: ((event: KeyboardEvent) => void) | null;
   private pointerDownListener: ((event: PointerEvent) => void) | null;
   private pointerUpListener: ((event: PointerEvent) => void) | null;
+  private pointerMoveListener: ((event: PointerEvent) => void) | null;
   private blurListener: (() => void) | null;
   private visibilityListener: (() => void) | null;
   private isDisposed: boolean;
+  private lastPointerClientX: number;
+  private lastPointerClientY: number;
+  private hasLastPointerPosition: boolean;
 
   /**
    * Creates a new input manager and registers keyboard and mouse listeners.
@@ -28,9 +37,13 @@ export class ManagerInput {
     this.keyUpListener = null;
     this.pointerDownListener = null;
     this.pointerUpListener = null;
+    this.pointerMoveListener = null;
     this.blurListener = null;
     this.visibilityListener = null;
     this.isDisposed = false;
+    this.lastPointerClientX = 0;
+    this.lastPointerClientY = 0;
+    this.hasLastPointerPosition = false;
     this.setupKeyboardListeners();
     this.setupMouseListeners();
     this.setupFocusListeners();
@@ -39,25 +52,69 @@ export class ManagerInput {
   /** Registers window-level keyboard event listeners to track key states. */
   private setupKeyboardListeners(): void {
     this.keyDownListener = (event) => {
-      this.keyStates.set(event.code, true);
+      this.recordKeyState(event, true);
     };
     this.keyUpListener = (event) => {
-      this.keyStates.set(event.code, false);
+      this.recordKeyState(event, false);
     };
     this.targetWindow.addEventListener('keydown', this.keyDownListener);
     this.targetWindow.addEventListener('keyup', this.keyUpListener);
+  }
+
+  /**
+   * Records physical and layout-stable codes for a key event.
+   *
+   * @param event Browser keyboard event.
+   * @param isDown True on keydown, false on keyup.
+   */
+  private recordKeyState(event: KeyboardEvent, isDown: boolean): void {
+    this.keyStates.set(event.code, isDown);
+    const logicalCode = keyboardShortcutCodeFromEvent(event);
+    if (logicalCode !== event.code) {
+      this.keyStates.set(logicalCode, isDown);
+    }
   }
 
   /** Registers window-level mouse button listeners for navigation guards. */
   private setupMouseListeners(): void {
     this.pointerDownListener = (event) => {
       this.mouseButtonStates.set(event.button, true);
+      this.recordPointerClientPosition(event.clientX, event.clientY);
     };
     this.pointerUpListener = (event) => {
       this.mouseButtonStates.set(event.button, false);
+      this.recordPointerClientPosition(event.clientX, event.clientY);
+    };
+    this.pointerMoveListener = (event) => {
+      this.recordPointerClientPosition(event.clientX, event.clientY);
     };
     this.targetWindow.addEventListener('pointerdown', this.pointerDownListener);
     this.targetWindow.addEventListener('pointerup', this.pointerUpListener);
+    this.targetWindow.addEventListener('pointermove', this.pointerMoveListener);
+  }
+
+  /**
+   * Stores the latest pointer client coordinates.
+   *
+   * @param clientX Viewport client X.
+   * @param clientY Viewport client Y.
+   */
+  private recordPointerClientPosition(clientX: number, clientY: number): void {
+    this.lastPointerClientX = clientX;
+    this.lastPointerClientY = clientY;
+    this.hasLastPointerPosition = true;
+  }
+
+  /**
+   * Returns the last known pointer client position when available.
+   *
+   * @returns Client coordinates, or null before any pointer event.
+   */
+  getLastPointerClientPosition(): { clientX: number; clientY: number } | null {
+    if (!this.hasLastPointerPosition) {
+      return null;
+    }
+    return { clientX: this.lastPointerClientX, clientY: this.lastPointerClientY };
   }
 
   /** Clears all input state when the window loses focus or is hidden. */
@@ -168,6 +225,10 @@ export class ManagerInput {
     if (this.pointerUpListener) {
       this.targetWindow.removeEventListener('pointerup', this.pointerUpListener);
       this.pointerUpListener = null;
+    }
+    if (this.pointerMoveListener) {
+      this.targetWindow.removeEventListener('pointermove', this.pointerMoveListener);
+      this.pointerMoveListener = null;
     }
   }
 

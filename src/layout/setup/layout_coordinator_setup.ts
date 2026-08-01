@@ -124,6 +124,13 @@ export function setupToolsPaletteAndClipWiring(parts: {
   onOpenUvEditor: () => void;
   editorOverlayPolicy: PolicyEditorOverlay;
   modalToolSessionRegistry: RegistryModalToolSession;
+  isEditorToolBusy?: () => boolean;
+  switchToClipTool?: () => boolean;
+  switchToObjectSelect?: () => void;
+  registerClipTool?: (
+    placement: import('@/tools/clip_plane/tool_clip_plane.js').ToolClipPlane,
+    handler: HandlerClipPlane,
+  ) => void;
 }): {
   clipPlaneHandler: HandlerClipPlane;
   toolsPalette: ToolsPalette;
@@ -150,6 +157,10 @@ export function setupToolsPaletteAndClipWiring(parts: {
     onTransformMode: parts.onTransformMode,
     onOpenUvEditor: parts.onOpenUvEditor,
     onExtrudeFaces: () => parts.faceModeCoordinator.onExtrudeFaces(),
+    ...(parts.isEditorToolBusy !== undefined ? { isEditorToolBusy: parts.isEditorToolBusy } : {}),
+    ...(parts.switchToClipTool !== undefined ? { switchToClipTool: parts.switchToClipTool } : {}),
+    ...(parts.switchToObjectSelect !== undefined ? { switchToObjectSelect: parts.switchToObjectSelect } : {}),
+    ...(parts.registerClipTool !== undefined ? { registerClipTool: parts.registerClipTool } : {}),
   });
 }
 

@@ -36,6 +36,42 @@ describe('TransformHandler', () => {
     expect(handler.isBusy()).toBe(false);
   });
 
+  it('beginSingleUseDrag hides the gizmo (Shape Editor / Blender single-use)', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    mesh.position.set(10, 20, 30);
+    mesh.updateMatrixWorld(true);
+    gizmo.setMode(TransformMode.BOUNDS);
+    gizmo.setVisible(true);
+    const pickElement = {
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    } as unknown as HTMLElement;
+    const camera = new THREE.PerspectiveCamera();
+    const pivot = new THREE.Vector3(10, 20, 30);
+    expect(handler.beginSingleUseDrag(TransformMode.TRANSLATE, [mesh], pivot, camera, pickElement, 100, 100)).toBe(
+      true,
+    );
+    expect(handler.isSingleUseDrag()).toBe(true);
+    expect(gizmo.getMode()).toBe(TransformMode.TRANSLATE);
+    expect(gizmo.isVisible()).toBe(false);
+  });
+
+  it('beginSingleUseDrag hides gizmo for rotate and scale modes', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    mesh.updateMatrixWorld(true);
+    gizmo.setVisible(true);
+    const pickElement = {
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    } as unknown as HTMLElement;
+    const camera = new THREE.PerspectiveCamera();
+    const pivot = new THREE.Vector3(0, 0, 0);
+    expect(handler.beginSingleUseDrag(TransformMode.ROTATE, [mesh], pivot, camera, pickElement, 0, 0)).toBe(true);
+    expect(gizmo.isVisible()).toBe(false);
+    handler.cancelActiveDragIfNeeded();
+    gizmo.setVisible(true);
+    expect(handler.beginSingleUseDrag(TransformMode.SCALE, [mesh], pivot, camera, pickElement, 0, 0)).toBe(true);
+    expect(gizmo.isVisible()).toBe(false);
+  });
+
   it('should start with no active axis', () => {
     expect(handler.getActiveAxis()).toBeNull();
   });

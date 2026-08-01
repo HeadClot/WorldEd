@@ -6,6 +6,7 @@ import { createShellSourceHostFromLayout } from '@/layout/setup/layout_manager_h
 import { onCadRulerTransformFeedback as handleCadRulerTransformFeedback } from '@/layout/setup/bridge_layout_cad_ruler.js';
 import { BridgeTransformInteraction } from '@/tools/bridge/bridge_transform_interaction.js';
 import { createAndRegisterKeyboardShortcuts } from '@/layout/setup/layout_keyboard_bindings.js';
+import { createLayoutToolEditorSystem } from '@/layout/setup/layout_tool_editor_setup.js';
 import { setupUvEditorPanel } from '@/texture/layout/layout_uv_editor_setup.js';
 import { setupTextureBrowserPanel } from '@/texture/layout/layout_texture_browser_setup.js';
 import { TransformSpace } from '@/types/transform_space.js';
@@ -36,9 +37,11 @@ import {
   type SceneMutationVisualHost,
   type SceneTransformCommitVisualHost,
 } from '@/layout/refresh/scene_visual_refresh.js';
-import { isPerspectiveViewport } from '@/viewports/core/viewport_editor.js';
+import type { Viewport3D } from '@/viewports/core/viewport_3d.js';
+import type { Viewport2D } from '@/viewports/core/viewport_2d.js';
 import { disposeLayoutOwnedResources } from '@/layout/setup/helpers_layout_dispose.js';
 import { buildLayoutTestComponents } from '@/layout/setup/layout_testing_accessors.js';
+import { filterUnlockedObjects } from '@/utils/object_lock.js';
 
 /**
  * Root composition manager for the editor viewport layout. Builds UI shell,
@@ -184,6 +187,8 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       onTransformsLive: (meshes) => this.solidModelController?.onTransformsLive(meshes),
       isInteractionEnabled: () => !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
       onRulerTransformFeedback: (meshes, phase) => this.onCadRulerTransformFeedback(meshes, phase),
+      onPermanentGizmoHandleDragBegan: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragBegan(),
+      onPermanentGizmoHandleDragEnded: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragEnded(),
     });
     this.transformInteractionBridge.wireViewports(this.getAllLiveViewports());
     this.wirePropertiesTransformCommit();
@@ -233,13 +238,33 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
 
   /** Sets up keyboard shortcuts using the dedicated shortcut handler. */
   protected setupKeyboardShortcuts(): void {
+    this.toolEditorSystem = createLayoutToolEditorSystem({
+      transformHandler: this.transformHandler,
+      transformGizmo: this.transformGizmo,
+      selectionManager: this.selectionManager,
+      inputManager: this.inputManager,
+      getActiveViewport: () => this.resolveActiveInteractiveViewport(),
+      getInteractiveViewports: () => this.getAllInteractiveViewports() as ReadonlyArray<Viewport3D | Viewport2D>,
+      getLastPointerClientPositionForDocument: (ownerDocument) =>
+        this.detachedViewportWindow.getLastPointerClientPositionForDocument(ownerDocument),
+      getTransformPivot: () => this.computeGizmoPivotForTools(),
+      setStatusMessage: (message) => this.statusBar?.setLastAction(message),
+      refreshGizmoPresentation: () => {
+        this.updateGizmoVisibility();
+        this.updateGizmoPivot();
+        this.updateTransformButtons();
+      },
+      onAfterTransformCommit: (objects) => this.refreshVisualsAfterTransformCommit(objects),
+      onTransformsLive: (meshes) => this.solidModelController?.onTransformsLive(meshes),
+      onRulerTransformFeedback: (meshes, phase) => this.onCadRulerTransformFeedback(meshes, phase),
+      onLiveTransformOverlaySync: (transformTargets, selectedMeshes) => {
+        this.syncLiveTransformOverlay(transformTargets, selectedMeshes);
+      },
+    });
     this.keyboardShortcutHandler = createAndRegisterKeyboardShortcuts(
       this.inputManager,
       {
-        isCameraNavigating: () =>
-          this.getAllInteractiveViewports().some(
-            (viewport) => isPerspectiveViewport(viewport) && viewport.isCameraNavigating(),
-          ),
+        isCameraNavigating: () => this.isEditorNavigationBlockingToolKeys(),
         onTransformMode: (mode) => this.onTransformMode(mode),
         onDeleteSelected: () => this.onDeleteSelected(),
         onEscapeCancel: () => this.onEscapeCancel(),
@@ -255,6 +280,94 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       },
       () => this.settingsStore?.getKeyboardShortcutSettings() ?? createDefaultKeyboardShortcutSettings(),
     );
+    this.toolEditorSystem.setNavigationBlocksActions(() => this.isEditorNavigationBlockingToolKeys());
+    this.toolEditorSystem.setGlobalKeyDownHandler((event) => this.keyboardShortcutHandler.handleGlobalKeyDown(event));
+    this.keyboardShortcutHandler.setOnToolEventRouterKeyDown((event) => this.toolEditorSystem!.handleKeyDown(event));
+    this.transformHandler.setModalStatusTextCallback((text) => {
+      if (text.length === 0) return;
+      this.statusBar?.setLastAction(text);
+    });
+  }
+
+  /**
+   * Computes the current gizmo pivot for single-use tools from the selection.
+   *
+   * @returns World pivot point.
+   */
+  private computeGizmoPivotForTools(): THREE.Vector3 {
+    const selected = filterUnlockedObjects(this.selectionManager.getAllSelectedObjectsAsArray());
+    return this.transformExecutor.computePivot(selected);
+  }
+
+  /**
+   * Keeps clones and selection outlines live during transform. Skips gizmo pose
+   * updates while single-use is active (gizmos stay hidden like Shape Editor /
+   * Blender G/R/S).
+   *
+   * @param transformTargets Objects receiving pose edits.
+   * @param selectedMeshes Current selection meshes.
+   */
+  private syncLiveTransformOverlay(
+    transformTargets: readonly THREE.Object3D[],
+    selectedMeshes: readonly THREE.Mesh[],
+  ): void {
+    this.viewportSyncManager.syncCloneTransformsForWorldObjects(transformTargets);
+    this.selectionVisualController.syncDuringTransform();
+    if (this.transformHandler.isSingleUseDrag()) {
+      return;
+    }
+    this.syncLiveGizmoPoseDuringPermanentDrag(selectedMeshes);
+  }
+
+  /**
+   * Updates permanent-mode gizmo pivot and bounds during a live drag.
+   *
+   * @param selectedMeshes Current selection meshes.
+   */
+  private syncLiveGizmoPoseDuringPermanentDrag(selectedMeshes: readonly THREE.Mesh[]): void {
+    if (this.transformGizmo.getMode() !== TransformMode.ROTATE) {
+      this.transformGizmo.setPivot(this.computeGizmoPivotForTools());
+    }
+    this.transformGizmo.updateBoundsFromMeshes(
+      [...selectedMeshes],
+      this.resolveActiveInteractiveViewport()?.getCamera() ?? null,
+    );
+  }
+
+  /**
+   * Returns whether camera fly/pan must suppress tool-activation keys (Shape
+   * Editor navigation ownership). Continuous WASD still uses ManagerInput.
+   *
+   * @returns True while RMB fly, MMB pan, or right mouse is held.
+   */
+  private isEditorNavigationBlockingToolKeys(): boolean {
+    if (this.inputManager.isRightMouseDown()) {
+      return true;
+    }
+    return this.getAllInteractiveViewports().some(
+      (viewport) => typeof viewport.isCameraNavigating === 'function' && viewport.isCameraNavigating(),
+    );
+  }
+
+  /**
+   * Resolves the interactive viewport under the pointer (hovered/active pane),
+   * falling back to the first interactive viewport.
+   *
+   * @returns Active viewport for single-use projection, or null.
+   */
+  private resolveActiveInteractiveViewport(): Viewport3D | Viewport2D | null {
+    const coordinator = this.shadingModeCoordinator;
+    if (coordinator) {
+      const hovered = coordinator.getOrderedViewports()[coordinator.getActiveViewportIndex()];
+      if (hovered) {
+        return hovered as Viewport3D | Viewport2D;
+      }
+    }
+    const active = this.getActiveViewports()[0];
+    if (active) {
+      return active as Viewport3D | Viewport2D;
+    }
+    return (this.getAllInteractiveViewports()[0] as Viewport3D | Viewport2D | undefined) ?? null;
   }
 
   /** Creates the floating UV editor panel and controller. */
@@ -354,6 +467,9 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
    * @returns True when clip placement is live.
    */
   protected isClipPlaneToolActive(): boolean {
+    if (this.toolEditorSystem?.isClipToolActive()) {
+      return true;
+    }
     return this.clipPlaneTool.isActive();
   }
 
@@ -471,8 +587,14 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
    * @param mode The new transform mode to activate.
    */
   protected onTransformMode(mode: TransformMode): void {
-    this.transformGizmo.setMode(mode);
-    this.updateGizmoPivot();
+    if (this.toolEditorSystem) {
+      if (!this.toolEditorSystem.switchToTransformMode(mode)) {
+        return;
+      }
+    } else {
+      this.transformGizmo.setMode(mode);
+      this.updateGizmoPivot();
+    }
     this.updateTransformButtons();
   }
 
@@ -700,6 +822,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
     this.isDisposed = true;
     this.renderLoop.dispose();
     this.keyboardShortcutHandler?.unregister();
+    this.toolEditorSystem?.uninstallFocusPointerRouter();
     this.inputManager?.dispose();
     this.viewportRegistry?.dispose();
     this.sharedSurface?.dispose();

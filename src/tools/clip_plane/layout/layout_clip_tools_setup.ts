@@ -37,6 +37,23 @@ export interface ClipToolsSetupDeps {
   onExtrudeFaces: () => void;
   editorOverlayPolicy: PolicyEditorOverlay;
   modalToolSessionRegistry: RegistryModalToolSession;
+  /** When true, face/clip palette switches are refused (single-use exclusive). */
+  isEditorToolBusy?: () => boolean;
+  /**
+   * Switches the editor window to the clip tool.
+   *
+   * @returns True when switched.
+   */
+  switchToClipTool?: () => boolean;
+  /** Switches the editor window to object select. */
+  switchToObjectSelect?: () => void;
+  /**
+   * Registers the clip tool with the editor window.
+   *
+   * @param placement Clip placement model.
+   * @param handler Clip handler.
+   */
+  registerClipTool?: (placement: ToolClipPlane, handler: HandlerClipPlane) => void;
 }
 
 /** Result of tools palette and clip plane construction. */
@@ -134,7 +151,7 @@ export function scheduleStartupFloatingPanelLayoutPass(
  * @returns Configured clip plane handler.
  */
 function createClipPlaneHandler(deps: ClipToolsSetupDeps): HandlerClipPlane {
-  return new HandlerClipPlane({
+  const handler = new HandlerClipPlane({
     worldObject: deps.worldObject,
     commandStack: deps.commandStack,
     selectionManager: deps.selectionManager,
@@ -147,6 +164,8 @@ function createClipPlaneHandler(deps: ClipToolsSetupDeps): HandlerClipPlane {
     updateShadingMeshes: deps.updateShadingMeshes,
     onToolStateChanged: deps.onToolStateChanged,
   });
+  deps.registerClipTool?.(deps.clipPlaneTool, handler);
+  return handler;
 }
 
 /**
@@ -195,16 +214,26 @@ function createToolsPaletteController(
     editorOverlayPolicy: deps.editorOverlayPolicy,
     modalToolSessionRegistry: deps.modalToolSessionRegistry,
     showStatusMessage: deps.showStatusMessage,
+    ...(deps.isEditorToolBusy !== undefined ? { isEditorToolBusy: deps.isEditorToolBusy } : {}),
+    ...(deps.switchToClipTool !== undefined ? { switchToClipTool: deps.switchToClipTool } : {}),
+    ...(deps.switchToObjectSelect !== undefined ? { switchToObjectSelect: deps.switchToObjectSelect } : {}),
   });
 }
 
 /**
- * Wires clip plane pointer callbacks on all viewports.
+ * Optional fallback viewport clip callbacks when the editor tool system is not
+ * registered. Prefer ClipTool mouse routing through EditorWindow.
  *
  * @param deps Clip/tools setup dependencies.
  * @param clipPlaneHandler Clip plane handler receiving pointer events.
  */
 function wireClipPlaneViewportCallbacks(deps: ClipToolsSetupDeps, clipPlaneHandler: HandlerClipPlane): void {
+  if (deps.switchToClipTool) {
+    deps.getViewports().forEach((viewport) => {
+      viewport.setClipPlaneCallback(null);
+    });
+    return;
+  }
   deps.getViewports().forEach((viewport) => {
     viewport.setClipPlaneCallback((event) => {
       return clipPlaneHandler.onPointerDown(event, viewport.getCamera(), viewport.getContentElement());

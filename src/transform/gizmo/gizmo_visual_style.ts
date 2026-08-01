@@ -28,11 +28,30 @@ export const GizmoVisualStyle = {
   /** Invisible pick cube edge for scale tips. */
   scaleTipPickSize: 0.32,
   /** Major radius of rotate rings. */
-  ringRadius: 1.75,
+  ringRadius: 1.45,
   /** Invisible pick tube radius for rotate rings. */
   ringPickTubeRadius: 0.13,
+  /**
+   * Camera-facing free-rotate disc radius (matches free-scale ring size; sits
+   * inside the axis rings so ring picks stay reachable).
+   */
+  rotateFreeBillboardRadius: 1.05,
+  /** Opacity of the free-rotate billboard disc. */
+  rotateFreeBillboardOpacity: 0.22,
+  /**
+   * Render order for free-rotate billboard (in front of scene geometry, behind
+   * axis ring front meshes at {@link frontRenderOrder}).
+   */
+  rotateFreeBillboardRenderOrder: 998.5,
   /** Edge length of the free-move center cube on the translate gizmo. */
   centerHandleSize: 0.28,
+  /**
+   * Camera-facing free-scale wire ring radius (local units before gizmo camera
+   * scale). Sits between the center cube and the scale tip cubes.
+   */
+  scaleFreeRingRadius: 1.05,
+  /** Tube radius of the free-scale wire ring visual. */
+  scaleFreeRingTubeRadius: 0.03,
   /** Opacity of gizmo parts in front of scene geometry. */
   frontOpacity: 0.95,
   /** Opacity of gizmo parts occluded by scene geometry. */
@@ -45,6 +64,30 @@ export const GizmoVisualStyle = {
 
 /** UserData flag on invisible pick-volume meshes. */
 export const GIZMO_PICK_VOLUME_USERDATA = 'isGizmoPickVolume';
+
+/**
+ * UserData flag on the scale free-scale disc pick volume. Lower pick priority
+ * than axis handles so thick arrow picks win when both are hit.
+ */
+export const GIZMO_FREE_SCALE_DISC_PICK_USERDATA = 'isGizmoFreeScaleDiscPick';
+
+/**
+ * UserData flag on the free-rotate billboard disc. Same low priority as the
+ * free-scale disc: axis rings win when both are hit.
+ */
+export const GIZMO_FREE_ROTATE_DISC_PICK_USERDATA = 'isGizmoFreeRotateDiscPick';
+
+/**
+ * UserData flag on camera-facing free-scale ring/disc roots. Updated each frame
+ * and before picking so the ring stays billboarded to the active camera.
+ */
+export const GIZMO_SCALE_FREE_BILLBOARD_USERDATA = 'isGizmoScaleFreeBillboard';
+
+/**
+ * UserData key for meshes that must keep a fixed opacity through hover/active
+ * tinting (e.g. free-rotate billboard disc).
+ */
+export const GIZMO_PRESERVE_OPACITY_USERDATA = 'gizmoPreserveOpacity';
 
 /**
  * Creates the solid front-facing gizmo material with depth testing. Parts

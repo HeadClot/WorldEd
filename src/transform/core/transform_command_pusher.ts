@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TransformMode } from '@/types/transform_mode.js';
+import { GizmoAxis, TransformMode } from '@/types/transform_mode.js';
 import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
 import { TransformExecutor } from './transform_executor.js';
 import { CommandStack } from '@/commands/command_stack.js';
@@ -59,7 +59,7 @@ export class TransformCommandPusher {
       this.pushTranslateCommand(selectedObjects);
     }
     if (mode === TransformMode.ROTATE) {
-      this.pushRotateCommand(pivot, selectedObjects);
+      this.pushRotateCommand(selectedObjects);
     }
     if (mode === TransformMode.SCALE) {
       this.pushScaleCommand(pivot, selectedObjects);
@@ -137,41 +137,70 @@ export class TransformCommandPusher {
   }
 
   /**
-   * Creates and pushes a rotate command using the final applied angle.
+   * Creates and pushes a rotate command that commits the live final pose.
    *
-   * @param pivot The rotation pivot point.
    * @param selectedObjects The objects that were rotated.
    */
-  private pushRotateCommand(pivot: THREE.Vector3, selectedObjects: THREE.Object3D[]): void {
+  private pushRotateCommand(selectedObjects: THREE.Object3D[]): void {
     const snappedAngle = this.transformExecutor.getGridSnap().snapAngleRadians(this.session.dragRotationAngle);
     if (Math.abs(snappedAngle) < 1e-8) return;
     const snapshots = this.buildRotationSnapshots(selectedObjects);
-    const axisVector = this.session.activeAxis
-      ? TransformProjectionMath.axisToWorldVector(this.session.activeAxis, this.transformGizmo.getOrientation())
-      : new THREE.Vector3(0, 1, 0);
+    const axisVector = this.resolveRotateCommandAxisVector();
     this.pushTextureAwareCommand(
-      new CommandTransformRotate(snapshots, pivot, axisVector, snappedAngle),
+      new CommandTransformRotate(snapshots, this.session.dragPivot, axisVector, snappedAngle),
       selectedObjects,
     );
   }
 
   /**
-   * Creates and pushes a scale command using the final applied factor.
+   * Resolves the world axis recorded for undo metadata and axis-angle fallback.
    *
-   * @param pivot The scale pivot point.
+   * @returns Unit world rotation axis from the active drag.
+   */
+  private resolveRotateCommandAxisVector(): THREE.Vector3 {
+    if (this.session.frozenRotationAxisWorld) {
+      return this.session.frozenRotationAxisWorld.clone().normalize();
+    }
+    if (!this.session.activeAxis) {
+      return new THREE.Vector3(0, 1, 0);
+    }
+    return TransformProjectionMath.axisToWorldVector(this.session.activeAxis, this.transformGizmo.getOrientation());
+  }
+
+  /**
+   * Creates and pushes a scale command that commits the live final pose.
+   *
+   * @param pivot The scale pivot point (unused; drag pivot is committed).
    * @param selectedObjects The objects that were scaled.
    */
   private pushScaleCommand(pivot: THREE.Vector3, selectedObjects: THREE.Object3D[]): void {
+    void pivot;
     const snappedFactor = this.transformExecutor.getGridSnap().snapScaleFactor(this.session.dragScaleFactor);
     if (Math.abs(snappedFactor - 1) < 1e-8) return;
     const snapshots = this.buildScaleSnapshots(selectedObjects);
-    const axisVector = this.session.activeAxis
-      ? TransformProjectionMath.axisToWorldVector(this.session.activeAxis, this.transformGizmo.getOrientation())
-      : new THREE.Vector3(1, 0, 0);
+    const axisVector = this.resolveScaleCommandAxisVector();
+    const gizmoAxis =
+      this.session.activeAxis === GizmoAxis.X ||
+      this.session.activeAxis === GizmoAxis.Y ||
+      this.session.activeAxis === GizmoAxis.Z
+        ? this.session.activeAxis
+        : GizmoAxis.X;
     this.pushTextureAwareCommand(
-      new CommandTransformScale(snapshots, pivot, axisVector, snappedFactor, this.session.activeAxis ?? undefined),
+      new CommandTransformScale(snapshots, this.session.dragPivot, axisVector, snappedFactor, gizmoAxis),
       selectedObjects,
     );
+  }
+
+  /**
+   * Resolves the world axis recorded for scale undo metadata and fallback.
+   *
+   * @returns Unit world scale axis from the active drag.
+   */
+  private resolveScaleCommandAxisVector(): THREE.Vector3 {
+    if (!this.session.activeAxis || this.session.activeAxis === GizmoAxis.VIEW) {
+      return new THREE.Vector3(1, 0, 0);
+    }
+    return TransformProjectionMath.axisToWorldVector(this.session.activeAxis, this.transformGizmo.getOrientation());
   }
 
   /**
@@ -233,10 +262,10 @@ export class TransformCommandPusher {
   }
 
   /**
-   * Builds rotation snapshots including original quaternions.
+   * Builds rotation snapshots with original and live final poses.
    *
    * @param selectedObjects The objects to build snapshots for.
-   * @returns An array of rotation snapshots.
+   * @returns An array of rotation snapshots including committed finals.
    */
   private buildRotationSnapshots(selectedObjects: THREE.Object3D[]): ObjectRotationSnapshot[] {
     return selectedObjects.map((object) => {
@@ -246,15 +275,17 @@ export class TransformCommandPusher {
         object,
         originalPosition: originalPos ? originalPos.clone() : object.position.clone(),
         originalQuaternion: originalQuat ? originalQuat.clone() : object.quaternion.clone(),
+        finalPosition: object.position.clone(),
+        finalQuaternion: object.quaternion.clone(),
       };
     });
   }
 
   /**
-   * Builds scale snapshots including original scales.
+   * Builds scale snapshots with original and live final poses.
    *
    * @param selectedObjects The objects to build snapshots for.
-   * @returns An array of scale snapshots.
+   * @returns An array of scale snapshots including committed finals.
    */
   private buildScaleSnapshots(selectedObjects: THREE.Object3D[]): ObjectScaleSnapshot[] {
     return selectedObjects.map((object) => {
@@ -264,6 +295,8 @@ export class TransformCommandPusher {
         object,
         originalPosition: originalPos ? originalPos.clone() : object.position.clone(),
         originalScale: originalScale ? originalScale.clone() : object.scale.clone(),
+        finalPosition: object.position.clone(),
+        finalScale: object.scale.clone(),
       };
     });
   }

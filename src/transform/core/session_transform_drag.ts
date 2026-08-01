@@ -12,6 +12,7 @@ import {
   syncContentMeshFaceMappingsToCurrentUvs,
 } from '@/texture/lock/content_mesh_texture_lock.js';
 import { isContentMeshEligibleForTextureLockRebake } from '@/texture/lock/texture_lock_settings.js';
+import { TransformModalAxis } from '@/transform/modal/transform_modal_axis.js';
 
 /**
  * Mutable state for one transform gizmo drag session. Shared by translate,
@@ -56,6 +57,35 @@ export class TransformDragSession {
    * move.
    */
   boundsPointerMoved: boolean;
+  /** Objects included in the current drag (for keyboard re-apply). */
+  dragObjects: THREE.Object3D[];
+  /** Last unconstrained pointer translation delta before modal axis lock. */
+  lastPointerWorldDelta: THREE.Vector3;
+  /** Last pointer-driven rotation angle in radians. */
+  lastPointerRotationAngle: number;
+  /** Last pointer-driven scale factor. */
+  lastPointerScaleFactor: number;
+  /** Last pointer-driven bounds resize delta along the face normal. */
+  lastPointerBoundsResizeDelta: number;
+  /** Keyboard modal axis lock mirrored for bounds drag paths. */
+  modalAxisLock: TransformModalAxis;
+  /**
+   * True when the drag was started as a single-use keyboard tool (G/R/S style)
+   * rather than a gizmo-handle or bounds-widget press.
+   */
+  isSingleUseDrag: boolean;
+  /** True after LMB during single-use: the next pointer-up commits and exits. */
+  singleUseConfirmArmed: boolean;
+  /**
+   * World rotation axis frozen at drag start so local-space gizmo re-frames do
+   * not change the axis mid-rotate.
+   */
+  frozenRotationAxisWorld: THREE.Vector3 | null;
+  /**
+   * Signed screen angle from pivot to mouse at rotate start (Shape Editor /
+   * Blender free-rotate). Used instead of raw screen deltas.
+   */
+  initialScreenAngleRadians: number;
 
   /** Creates an idle drag session with empty snapshots. */
   constructor() {
@@ -87,6 +117,16 @@ export class TransformDragSession {
     this.pointerDownClientX = 0;
     this.pointerDownClientY = 0;
     this.boundsPointerMoved = false;
+    this.dragObjects = [];
+    this.lastPointerWorldDelta = new THREE.Vector3();
+    this.lastPointerRotationAngle = 0;
+    this.lastPointerScaleFactor = 1;
+    this.lastPointerBoundsResizeDelta = 0;
+    this.modalAxisLock = TransformModalAxis.None;
+    this.isSingleUseDrag = false;
+    this.singleUseConfirmArmed = false;
+    this.frozenRotationAxisWorld = null;
+    this.initialScreenAngleRadians = 0;
   }
 
   /**
@@ -133,6 +173,15 @@ export class TransformDragSession {
     this.dragRotationAngle = 0;
     this.dragScaleFactor = 1;
     this.initialDistanceAlongAxis = 1;
+    this.lastPointerWorldDelta.set(0, 0, 0);
+    this.lastPointerRotationAngle = 0;
+    this.lastPointerScaleFactor = 1;
+    this.lastPointerBoundsResizeDelta = 0;
+    this.modalAxisLock = TransformModalAxis.None;
+    this.isSingleUseDrag = false;
+    this.singleUseConfirmArmed = false;
+    this.frozenRotationAxisWorld = null;
+    this.initialScreenAngleRadians = 0;
   }
 
   /** Clears handle, bounds, and pointer samples after pointer-up. */
@@ -154,5 +203,15 @@ export class TransformDragSession {
     this.pointerDownClientX = 0;
     this.pointerDownClientY = 0;
     this.boundsPointerMoved = false;
+    this.dragObjects = [];
+    this.lastPointerWorldDelta.set(0, 0, 0);
+    this.lastPointerRotationAngle = 0;
+    this.lastPointerScaleFactor = 1;
+    this.lastPointerBoundsResizeDelta = 0;
+    this.modalAxisLock = TransformModalAxis.None;
+    this.isSingleUseDrag = false;
+    this.singleUseConfirmArmed = false;
+    this.frozenRotationAxisWorld = null;
+    this.initialScreenAngleRadians = 0;
   }
 }

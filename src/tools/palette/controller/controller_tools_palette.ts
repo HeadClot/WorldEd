@@ -20,6 +20,19 @@ export interface ControllerToolsPaletteDependencies {
   editorOverlayPolicy: PolicyEditorOverlay;
   modalToolSessionRegistry: RegistryModalToolSession;
   showStatusMessage: (message: string) => void;
+  /**
+   * Optional busy probe for the editor focus system. When true, palette tool
+   * switches are refused so a busy tool keeps exclusive ownership.
+   */
+  isEditorToolBusy?: () => boolean;
+  /**
+   * Switches the editor window to the clip tool (SwitchTool).
+   *
+   * @returns True when the clip tool became active.
+   */
+  switchToClipTool?: () => boolean;
+  /** Switches the editor window to object select (box select tool). */
+  switchToObjectSelect?: () => void;
 }
 
 /** Keeps the Tools palette, face mode, and clip tool mutually exclusive. */
@@ -63,6 +76,9 @@ export class ControllerToolsPalette {
    * @param toolId Tool to activate.
    */
   selectTool(toolId: EditorToolId): void {
+    if (this.deps.isEditorToolBusy?.()) {
+      return;
+    }
     if (toolId === EditorToolId.OBJECT) {
       this.activateObjectTool();
       return;
@@ -108,6 +124,7 @@ export class ControllerToolsPalette {
     this.deps.faceExtrusionController.setSelectionMode(SelectionMode.OBJECT);
     this.activeTool = EditorToolId.OBJECT;
     this.deps.toolsPalette.setActiveTool(this.activeTool);
+    this.deps.switchToObjectSelect?.();
     this.refreshPaletteContext();
     this.deps.showStatusMessage('Object select');
   }
@@ -118,6 +135,7 @@ export class ControllerToolsPalette {
     this.deps.faceExtrusionController.setSelectionMode(SelectionMode.FACE);
     this.activeTool = EditorToolId.FACE;
     this.deps.toolsPalette.setActiveTool(this.activeTool);
+    this.deps.switchToObjectSelect?.();
     this.refreshPaletteContext();
     this.deps.showStatusMessage('Face select');
   }
@@ -136,11 +154,15 @@ export class ControllerToolsPalette {
   }
 
   /**
-   * Starts the clip modal session: tool active, CAD rulers suppressed,
-   * selection changes end the session (except tool-owned reselects).
+   * Starts the clip modal session: editor SwitchTool(clip), CAD rulers
+   * suppressed, selection changes end the session (except tool-owned
+   * reselects).
    */
   private beginClipSession(): void {
-    this.deps.clipPlaneTool.activate();
+    const switched = this.deps.switchToClipTool?.() === true;
+    if (!switched) {
+      this.deps.clipPlaneTool.activate();
+    }
     this.activeTool = EditorToolId.CLIP_PLANE;
     this.deps.toolsPalette.setActiveTool(this.activeTool);
     this.deps.editorOverlayPolicy.suppress(EditorOverlayId.CAD_BOUNDS_RULERS, CLIP_PLANE_SESSION_KEY);
@@ -158,7 +180,9 @@ export class ControllerToolsPalette {
       return;
     }
     this.deps.editorOverlayPolicy.release(EditorOverlayId.CAD_BOUNDS_RULERS, CLIP_PLANE_SESSION_KEY);
+    this.deps.modalToolSessionRegistry.unregister(CLIP_PLANE_SESSION_KEY);
     this.deps.clipPlaneHandler.cancel();
+    this.deps.switchToObjectSelect?.();
     this.activeTool = EditorToolId.OBJECT;
     this.deps.faceExtrusionController.setSelectionMode(SelectionMode.OBJECT);
     this.deps.toolsPalette.setActiveTool(this.activeTool);
@@ -178,5 +202,6 @@ export class ControllerToolsPalette {
     if (this.deps.clipPlaneTool.isActive()) {
       this.deps.clipPlaneTool.deactivate();
     }
+    this.deps.switchToObjectSelect?.();
   }
 }

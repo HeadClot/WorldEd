@@ -159,7 +159,8 @@ export class GizmoHandle {
 
   /**
    * Tints a mesh material for idle or hover. Nearly invisible pick meshes keep
-   * their opacity; occluded ghosts stay dimmer than front surfaces.
+   * their opacity; occluded ghosts stay dimmer than front surfaces. Meshes with
+   * a preserved opacity keep that alpha (free-rotate disc stays translucent).
    *
    * @param mesh Target mesh.
    * @param targetColor Hex color.
@@ -172,6 +173,11 @@ export class GizmoHandle {
     const meshMaterial = material as THREE.MeshBasicMaterial;
     meshMaterial.color.setHex(targetColor);
     if (typeof meshMaterial.opacity !== 'number' || !meshMaterial.transparent) return;
+    const preservedOpacity = mesh.userData['gizmoPreserveOpacity'];
+    if (typeof preservedOpacity === 'number') {
+      meshMaterial.opacity = preservedOpacity;
+      return;
+    }
     if (meshMaterial.opacity < 0.05) return;
     if (mesh.userData['isGizmoOccludedGhost'] === true) {
       meshMaterial.opacity = isHovered ? 0.35 : 0.2;

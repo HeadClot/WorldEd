@@ -43,6 +43,17 @@ describe('applyGizmoCloneDepthStyle', () => {
     ghostMaterial.dispose();
   });
 
+  it('keeps always-on-top materials without depth test in perspective', () => {
+    const root = new THREE.Group();
+    const material = new THREE.MeshBasicMaterial({ depthTest: false, transparent: true });
+    tagGizmoDepthRole(material, 'always_on_top');
+    const mesh = new THREE.Mesh(new THREE.CircleGeometry(1, 16), material);
+    root.add(mesh);
+    applyGizmoCloneDepthStyle(root, false);
+    expect(material.depthTest).toBe(false);
+    material.dispose();
+  });
+
   it('leaves untagged materials alone', () => {
     const root = new THREE.Group();
     const material = new THREE.MeshBasicMaterial({ depthTest: false });

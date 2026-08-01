@@ -3,11 +3,18 @@ import { Theme } from '@/theme.js';
 import { GizmoAxis } from '@/types/transform_mode.js';
 import { GizmoHandle } from './gizmo_handle.js';
 import { GizmoBuilderBase } from './gizmo_builder_base.js';
-import { GizmoVisualStyle, createGizmoPickMesh } from './gizmo_visual_style.js';
+import {
+  GizmoVisualStyle,
+  GIZMO_FREE_SCALE_DISC_PICK_USERDATA,
+  GIZMO_SCALE_FREE_BILLBOARD_USERDATA,
+  createGizmoOccludedMesh,
+  createGizmoPickMesh,
+} from './gizmo_visual_style.js';
 
 /**
- * Creates the scale transform gizmo with thin stems/tips and thicker invisible
- * pick volumes for easier clicking.
+ * Creates the scale transform gizmo with thin stems/tips, thicker axis pick
+ * volumes, a free-scale center cube, and a Blender-style camera-facing wire
+ * ring (same free-scale behavior as the cube).
  */
 export class GizmoScale extends GizmoBuilderBase {
   /**
@@ -20,15 +27,16 @@ export class GizmoScale extends GizmoBuilderBase {
   }
 
   /**
-   * Creates all 3 scale handles and returns them.
+   * Creates three axis scale handles plus free-scale center cube and ring.
    *
-   * @returns An array of GizmoHandle instances for X, Y, Z axes.
+   * @returns GizmoHandle instances for X, Y, Z, and VIEW.
    */
   createHandles(): GizmoHandle[] {
     this.beginHandleBuild();
     for (const spec of this.listStandardAxisSpecs()) {
       this.createScaleHandle(spec.axis, spec.color, spec.direction);
     }
+    this.createFreeScaleHandles();
     return this.handles;
   }
 
@@ -134,5 +142,80 @@ export class GizmoScale extends GizmoBuilderBase {
     tipPick.position.copy(tipPosition);
     group.add(stemPick);
     group.add(tipPick);
+  }
+
+  /**
+   * Creates free-scale controls: center cube plus camera-facing wire ring and
+   * disc pick (identical free-scale / X Y Z behavior).
+   */
+  private createFreeScaleHandles(): void {
+    const color = this.theme.gizmoCenterColor;
+    const cubeSize = GizmoVisualStyle.centerHandleSize;
+    const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+    const cubeMesh = this.createFrontMesh(cubeGeometry, color);
+    const handle = new GizmoHandle(GizmoAxis.VIEW, color, cubeMesh);
+    const handleId = handle.getHandleId();
+    this.buildFreeScaleCenterCube(handleId, color, cubeMesh, cubeGeometry);
+    this.buildFreeScaleCameraRing(handleId, color);
+    this.registerHandle(handle);
+  }
+
+  /**
+   * Builds the free-scale center cube (axis-aligned, same VIEW handle).
+   *
+   * @param handleId Shared free-scale handle id.
+   * @param color Center color.
+   * @param cubeMesh Front cube mesh.
+   * @param cubeGeometry Cube geometry for ghost.
+   */
+  private buildFreeScaleCenterCube(
+    handleId: number,
+    color: number,
+    cubeMesh: THREE.Mesh,
+    cubeGeometry: THREE.BoxGeometry,
+  ): void {
+    const group = new THREE.Group();
+    const size = GizmoVisualStyle.centerHandleSize;
+    this.tagHandleId(cubeMesh, handleId);
+    this.addOccludedPair(group, cubeGeometry, color, handleId, cubeMesh.position);
+    const pick = createGizmoPickMesh(new THREE.BoxGeometry(size * 1.35, size * 1.35, size * 1.35), handleId);
+    group.add(pick);
+    group.add(cubeMesh);
+    this.registerSceneRoot(group);
+  }
+
+  /**
+   * Builds the camera-facing free-scale wire ring and disc pick volume.
+   *
+   * @param handleId Shared free-scale handle id.
+   * @param color Ring color.
+   */
+  private buildFreeScaleCameraRing(handleId: number, color: number): void {
+    const billboard = new THREE.Group();
+    billboard.name = 'gizmo_scale_free_billboard';
+    billboard.userData[GIZMO_SCALE_FREE_BILLBOARD_USERDATA] = true;
+    const radius = GizmoVisualStyle.scaleFreeRingRadius;
+    const tube = GizmoVisualStyle.scaleFreeRingTubeRadius;
+    const ringGeometry = new THREE.TorusGeometry(radius, tube, 10, 64);
+    const frontMesh = this.createFrontMesh(ringGeometry, color);
+    this.tagHandleId(frontMesh, handleId);
+    billboard.add(createGizmoOccludedMesh(ringGeometry, color, handleId));
+    billboard.add(frontMesh);
+    billboard.add(this.createFreeScaleDiscPick(handleId, radius));
+    this.registerSceneRoot(billboard);
+  }
+
+  /**
+   * Creates the invisible camera-facing disc used to start free scale when the
+   * pointer is inside the wire ring (axis handles still win when hit).
+   *
+   * @param handleId Shared free-scale handle id.
+   * @param radius Disc radius matching the wire ring.
+   * @returns Pick mesh.
+   */
+  private createFreeScaleDiscPick(handleId: number, radius: number): THREE.Mesh {
+    const disc = createGizmoPickMesh(new THREE.CircleGeometry(radius, 48), handleId);
+    disc.userData[GIZMO_FREE_SCALE_DISC_PICK_USERDATA] = true;
+    return disc;
   }
 }

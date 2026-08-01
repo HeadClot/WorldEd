@@ -2,6 +2,7 @@ import type { EditorSettingsStore } from '@/settings/store/editor_settings_store
 import { formatKeyboardShortcut } from '@/settings/keyboard/keyboard_shortcut_format.js';
 import type { KeyboardShortcutAction, KeyboardShortcutSettings } from '@/settings/store/settings_types.js';
 import { createSettingsCategory, createSettingsControlRow, createSettingsTextInput } from './settings_form_controls.js';
+import { keyboardShortcutCodeFromEvent } from '@/input/keyboard_event_match.js';
 
 /** Keyboard settings rows shown in their editor order. */
 const PRIMARY_SHORTCUT_ROWS: ReadonlyArray<readonly [KeyboardShortcutAction, string]> = [
@@ -27,8 +28,7 @@ const EDITOR_SHORTCUT_ROWS: ReadonlyArray<readonly [KeyboardShortcutAction, stri
   ['group', 'Group Selected'],
   ['ungroup', 'Ungroup Selected'],
   ['align_origin', 'Align to Origin'],
-  ['solid_operation_additive', 'Solid Brush Additive'],
-  ['solid_operation_subtractive', 'Solid Brush Subtractive'],
+  ['solid_operation_toggle', 'Toggle Solid Additive / Subtractive'],
   ['fit_selection', 'Frame Selection'],
   ['fit_all', 'Frame All Viewports'],
   ['extrude', 'Extrude Faces'],
@@ -184,7 +184,7 @@ export class SettingsKeyboardTab {
     event.stopPropagation();
     if (isModifierCode(event.code)) return;
     this.store.setKeyboardShortcut(action, {
-      code: event.code,
+      code: keyboardShortcutCodeFromEvent(event),
       ctrl: event.ctrlKey,
       shift: event.shiftKey,
       alt: event.altKey,

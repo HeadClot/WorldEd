@@ -113,6 +113,73 @@ export class HandlerClipPlane {
     return this.placeNewPoint(event, camera, pickElement);
   }
 
+  /**
+   * Returns whether a placement marker is currently being dragged.
+   *
+   * @returns True while a marker drag session is live.
+   */
+  isMarkerDragging(): boolean {
+    return this.draggingPointIndex >= 0;
+  }
+
+  /**
+   * Continues an active marker drag from editor-routed pointer move.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param shiftKey True when shift is held (disables snap).
+   */
+  onEditorPointerMove(clientX: number, clientY: number, shiftKey: boolean): void {
+    if (this.draggingPointIndex < 0) {
+      return;
+    }
+    if (!this.dragPlane || !this.dragCamera || !this.dragRenderer) {
+      return;
+    }
+    const synthetic = this.createSyntheticMouseEvent(clientX, clientY, shiftKey);
+    const applySnap = !shiftKey;
+    const point = this.pointDrag.projectOntoDragPlane(
+      synthetic,
+      this.dragCamera,
+      this.dragRenderer,
+      this.dragPlane,
+      applySnap,
+    );
+    if (!point) {
+      return;
+    }
+    this.deps.clipPlaneTool.setPoint(this.draggingPointIndex, point);
+  }
+
+  /**
+   * Ends an active marker drag from editor-routed pointer up.
+   *
+   * @param syncViewports Whether to refresh 2D viewport clones.
+   */
+  onEditorPointerUp(syncViewports: boolean = true): void {
+    this.endMarkerDrag(syncViewports);
+  }
+
+  /**
+   * Builds a minimal mouse event for pick/project helpers.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param shiftKey Shift modifier.
+   * @returns Synthetic mouse event.
+   */
+  createSyntheticMouseEvent(clientX: number, clientY: number, shiftKey: boolean = false): MouseEvent {
+    return {
+      clientX,
+      clientY,
+      shiftKey,
+      button: 0,
+      buttons: 1,
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+    } as MouseEvent;
+  }
+
   /** Flips the keep side of the active plane. */
   flipPlane(): void {
     if (!this.deps.clipPlaneTool.isActive()) return;
@@ -260,7 +327,7 @@ export class HandlerClipPlane {
   }
 
   /**
-   * Begins a marker drag session with window-level move/up listeners.
+   * Begins a marker drag session driven by editor tool mouse move / global up.
    *
    * @param index Placement point index.
    * @param point Starting world position.
@@ -273,31 +340,7 @@ export class HandlerClipPlane {
     this.dragPlane = this.pointDrag.createDragPlane(point, camera);
     this.dragCamera = camera;
     this.dragRenderer = pickElement;
-    this.boundDragMove = (moveEvent) => this.onMarkerDragMove(moveEvent);
-    this.boundDragUp = () => this.endMarkerDrag(true);
-    window.addEventListener('pointermove', this.boundDragMove);
-    window.addEventListener('pointerup', this.boundDragUp);
     this.deps.showStatusMessage(`Dragging clip point ${index + 1}`);
-  }
-
-  /**
-   * Updates the dragged point from the pointer position.
-   *
-   * @param event Pointer move event.
-   */
-  private onMarkerDragMove(event: PointerEvent): void {
-    if (this.draggingPointIndex < 0) return;
-    if (!this.dragPlane || !this.dragCamera || !this.dragRenderer) return;
-    const applySnap = !event.shiftKey;
-    const point = this.pointDrag.projectOntoDragPlane(
-      event,
-      this.dragCamera,
-      this.dragRenderer,
-      this.dragPlane,
-      applySnap,
-    );
-    if (!point) return;
-    this.deps.clipPlaneTool.setPoint(this.draggingPointIndex, point);
   }
 
   /**

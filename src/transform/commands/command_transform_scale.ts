@@ -3,18 +3,20 @@ import { UndoCommand } from '@/commands/command_undo.js';
 import { GizmoAxis } from '@/types/transform_mode.js';
 
 /**
- * Snapshot of an object's transform before a scale operation. Stores original
- * position and scale so undo can restore both.
+ * Snapshot of an object's transform for a scale operation. Optional final pose
+ * fields commit the live drag result without re-baking axis-factor math.
  */
 export interface ObjectScaleSnapshot {
   object: THREE.Object3D;
   originalPosition: THREE.Vector3;
   originalScale: THREE.Vector3;
+  finalPosition?: THREE.Vector3;
+  finalScale?: THREE.Vector3;
 }
 
 /**
- * Undoable command for scale operations. Stores original transforms and the
- * scaling parameters for each object.
+ * Undoable command for scale operations. Prefers explicit final poses so free
+ * uniform and parented live previews survive command push.
  */
 export class CommandTransformScale implements UndoCommand {
   private snapshots: ObjectScaleSnapshot[];
@@ -27,8 +29,8 @@ export class CommandTransformScale implements UndoCommand {
    * Creates a new scale command.
    *
    * @param snapshots The scale snapshots of all affected objects.
-   * @param pivot The scale pivot point.
-   * @param axis The scaling axis vector in world space.
+   * @param pivot The scale pivot point for axis-factor fallback.
+   * @param axis The scaling axis vector in world space for fallback.
    * @param factor The scale factor multiplier relative to original state.
    * @param gizmoAxis Local scale component the handle maps to.
    */
@@ -46,12 +48,13 @@ export class CommandTransformScale implements UndoCommand {
     this.gizmoAxis = gizmoAxis;
   }
 
-  /** Executes the scaling by applying factor to positions and mesh scales. */
+  /**
+   * Applies stored final poses when present, otherwise axis-factor from
+   * original.
+   */
   execute(): void {
-    const normalizedAxis = this.axis.clone().normalize();
-    const safeFactor = Math.max(0.01, this.factor);
     this.snapshots.forEach((snapshot) => {
-      this.applyScaleToSnapshot(snapshot, normalizedAxis, safeFactor);
+      this.applySnapshotExecute(snapshot);
     });
   }
 
@@ -64,22 +67,51 @@ export class CommandTransformScale implements UndoCommand {
   }
 
   /**
-   * Applies absolute scale to a snapshot target from its original state.
+   * Writes one object to its committed pose or axis-factor fallback.
    *
-   * @param snapshot The object snapshot to scale from original state.
-   * @param axis The normalized world-space scale axis.
-   * @param factor The total scale factor.
+   * @param snapshot Object snapshot to apply.
    */
-  private applyScaleToSnapshot(snapshot: ObjectScaleSnapshot, axis: THREE.Vector3, factor: number): void {
+  private applySnapshotExecute(snapshot: ObjectScaleSnapshot): void {
+    if (this.applyFinalPoseWhenPresent(snapshot)) {
+      return;
+    }
+    this.applyAxisFactorFromOriginal(snapshot);
+  }
+
+  /**
+   * Copies final position and scale when both were recorded at drag end.
+   *
+   * @param snapshot Object snapshot that may include final pose fields.
+   * @returns True when a final pose was applied.
+   */
+  private applyFinalPoseWhenPresent(snapshot: ObjectScaleSnapshot): boolean {
+    const finalPosition = snapshot.finalPosition;
+    const finalScale = snapshot.finalScale;
+    if (!finalPosition || !finalScale) {
+      return false;
+    }
+    snapshot.object.position.copy(finalPosition);
+    snapshot.object.scale.copy(finalScale);
+    return true;
+  }
+
+  /**
+   * Recomputes position and scale from original local pose via axis factor.
+   *
+   * @param snapshot Object snapshot without final pose fields.
+   */
+  private applyAxisFactorFromOriginal(snapshot: ObjectScaleSnapshot): void {
+    const normalizedAxis = this.axis.clone().normalize();
+    const safeFactor = Math.max(0.01, this.factor);
     const relativePos = snapshot.originalPosition.clone().sub(this.pivot);
-    const projection = relativePos.dot(axis);
+    const projection = relativePos.dot(normalizedAxis);
     const scaledRelative = relativePos
       .clone()
-      .sub(axis.clone().multiplyScalar(projection))
-      .add(axis.clone().multiplyScalar(projection * factor));
+      .sub(normalizedAxis.clone().multiplyScalar(projection))
+      .add(normalizedAxis.clone().multiplyScalar(projection * safeFactor));
     snapshot.object.position.copy(scaledRelative.add(this.pivot));
     snapshot.object.scale.copy(snapshot.originalScale);
-    this.multiplyLocalScaleComponent(snapshot.object.scale, factor);
+    this.multiplyLocalScaleComponent(snapshot.object.scale, safeFactor);
   }
 
   /**

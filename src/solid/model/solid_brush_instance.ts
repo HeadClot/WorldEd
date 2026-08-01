@@ -333,7 +333,11 @@ export class SolidBrushInstance {
     SolidBrushVisual.applyOperationStyle(mesh, this.operation);
   }
 
-  /** Copies transform and name from the scene mesh into this instance. */
+  /**
+   * Copies transform and name from the scene mesh into this instance. Uses the
+   * mesh Euler (not quaternion re-extraction) so yaw values such as π − θ from
+   * Z-mirror stay as written instead of an equivalent XYZ dual form.
+   */
   pullTransformFromMesh(): void {
     if (!this.mesh) return;
     this.position.copy(this.mesh.position);

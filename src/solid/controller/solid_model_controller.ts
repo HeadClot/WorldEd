@@ -4,6 +4,8 @@ import { CommandSolidModelCreate } from '@/solid/commands/model/command_solid_mo
 import { CommandSolidBoxBrushAdd } from '@/solid/commands/brush/command_solid_box_brush_add.js';
 import { CommandSolidBrushOperationSet } from '@/solid/commands/brush/command_solid_brush_operation_set.js';
 import { CommandSolidGroupOperationSet } from '@/solid/commands/group/command_solid_group_operation_set.js';
+import { CommandUndoBatch } from '@/commands/command_undo_batch.js';
+import type { UndoCommand } from '@/commands/command_undo.js';
 import {
   CommandSolidBrushesReorder,
   SolidBrushOrderEnd,
@@ -11,9 +13,15 @@ import {
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidModelPanel } from '@/solid/ui/panel/solid_model_panel.js';
-import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidOperation, solidOperationToggleAdditiveSubtractive } from '@/solid/types/solid_operation.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
-import { findSolidModelRoot, isSolidCsgGroup, isValidSolidTreeParent } from '@/solid/model/solid_group.js';
+import { SolidBrushEdgeBatch } from '@/solid/model/solid_brush_edge_batch.js';
+import {
+  findSolidModelRoot,
+  getSolidGroupOperation,
+  isSolidCsgGroup,
+  isValidSolidTreeParent,
+} from '@/solid/model/solid_group.js';
 import { SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE } from '@/solid/model/solid_model_startup_default.js';
 import {
   computeOcclusionAwareSpawnPosition,
@@ -337,8 +345,8 @@ export class SolidModelController {
 
   /**
    * Applies a CSG operation to currently selected solid brushes and solid CSG
-   * groups (keyboard A/S). Group selection updates the group branch op only;
-   * descendant brush meshes are not also rewritten.
+   * groups. Group selection updates the group branch op only; descendant brush
+   * meshes are not also rewritten.
    *
    * @param operation Additive or subtractive operation to apply.
    */
@@ -354,6 +362,116 @@ export class SolidModelController {
     if (groups.length > 0) {
       this.setGroupOperationForGroups(groups, operation);
     }
+  }
+
+  /**
+   * Toggles selected solid brushes and CSG groups between additive and
+   * subtractive in one undo step (keyboard A). Each item flips independently so
+   * mixed selections swap both ways at once. Intersecting is left unchanged.
+   */
+  toggleAdditiveSubtractiveOnSelection(): void {
+    const groups = this.selectedSolidCsgGroupsCollect();
+    const brushes = this.selectedSolidBrushMeshesOutsideGroupsCollect(groups);
+    const commands = this.buildAdditiveSubtractiveToggleCommands(brushes, groups);
+    if (commands.length === 0) {
+      return;
+    }
+    const command = commands.length === 1 ? commands[0]! : new CommandUndoBatch(commands);
+    this.commandStack.push(command);
+    this.panel.refresh();
+    this.syncViewports?.();
+    this.refreshOutliner?.();
+    this.showStatus?.('Toggled additive / subtractive');
+  }
+
+  /**
+   * Builds undoable commands that flip additive ↔ subtractive for brushes and
+   * groups.
+   *
+   * @param brushes Selected brush meshes outside selected groups.
+   * @param groups Selected solid CSG groups.
+   * @returns Commands to execute (may be empty).
+   */
+  private buildAdditiveSubtractiveToggleCommands(
+    brushes: readonly THREE.Mesh[],
+    groups: readonly THREE.Group[],
+  ): UndoCommand[] {
+    const commands: UndoCommand[] = [];
+    this.appendBrushToggleCommands(brushes, commands);
+    this.appendGroupToggleCommands(groups, commands);
+    return commands;
+  }
+
+  /**
+   * Appends brush operation-set commands for additive ↔ subtractive flips.
+   *
+   * @param brushes Brush meshes.
+   * @param commands Accumulator.
+   */
+  private appendBrushToggleCommands(brushes: readonly THREE.Mesh[], commands: UndoCommand[]): void {
+    const toSubtractive: THREE.Mesh[] = [];
+    const toAdditive: THREE.Mesh[] = [];
+    for (const mesh of brushes) {
+      const operation = this.resolveBrushMeshOperation(mesh);
+      if (operation === null) {
+        continue;
+      }
+      const next = solidOperationToggleAdditiveSubtractive(operation);
+      if (next === SolidOperation.Subtractive) {
+        toSubtractive.push(mesh);
+      } else if (next === SolidOperation.Additive) {
+        toAdditive.push(mesh);
+      }
+    }
+    if (toSubtractive.length > 0) {
+      commands.push(new CommandSolidBrushOperationSet(toSubtractive, SolidOperation.Subtractive));
+    }
+    if (toAdditive.length > 0) {
+      commands.push(new CommandSolidBrushOperationSet(toAdditive, SolidOperation.Additive));
+    }
+  }
+
+  /**
+   * Appends group operation-set commands for additive ↔ subtractive flips.
+   *
+   * @param groups Solid CSG groups.
+   * @param commands Accumulator.
+   */
+  private appendGroupToggleCommands(groups: readonly THREE.Group[], commands: UndoCommand[]): void {
+    const toSubtractive: THREE.Group[] = [];
+    const toAdditive: THREE.Group[] = [];
+    for (const group of groups) {
+      const next = solidOperationToggleAdditiveSubtractive(getSolidGroupOperation(group));
+      if (next === SolidOperation.Subtractive) {
+        toSubtractive.push(group);
+      } else if (next === SolidOperation.Additive) {
+        toAdditive.push(group);
+      }
+    }
+    if (toSubtractive.length > 0) {
+      commands.push(new CommandSolidGroupOperationSet(toSubtractive, SolidOperation.Subtractive));
+    }
+    if (toAdditive.length > 0) {
+      commands.push(new CommandSolidGroupOperationSet(toAdditive, SolidOperation.Additive));
+    }
+  }
+
+  /**
+   * Reads the CSG operation for a solid brush preview mesh.
+   *
+   * @param mesh Brush preview mesh.
+   * @returns Operation, or null when not a solid brush.
+   */
+  private resolveBrushMeshOperation(mesh: THREE.Mesh): SolidOperation | null {
+    const model = SolidModel.fromObject(mesh);
+    if (!model) {
+      return null;
+    }
+    const brush = model.findBrushByMesh(mesh);
+    if (!brush) {
+      return null;
+    }
+    return brush.operation;
   }
 
   /**
@@ -493,6 +611,7 @@ export class SolidModelController {
     this.liveRebuildQueued = false;
     this.pendingLiveMeshes = null;
     this.builtLiveGeneration = this.liveTransformGeneration;
+    SolidBrushEdgeBatch.endLivePoseTracking();
     const models = this.collectAffectedModels(selectedMeshes);
     if (models.size === 0) return false;
     const selectedSet = new Set(selectedMeshes);
@@ -606,12 +725,23 @@ export class SolidModelController {
    */
   onTransformsLive(selectedMeshes: THREE.Mesh[]): void {
     if (!this.involvesSolidModels(selectedMeshes)) return;
+    this.beginBrushWireframeLiveTracking(selectedMeshes);
     if (this.tryBakeSolidRootTransformsLive(selectedMeshes)) {
       return;
     }
     this.pendingLiveMeshes = selectedMeshes;
     this.liveTransformGeneration += 1;
     this.scheduleLiveRebuild();
+  }
+
+  /**
+   * Attaches personal brush edges and drops those brushes from static batches
+   * for the duration of a live transform so wireframes stay glued to the mesh.
+   *
+   * @param selectedMeshes Meshes currently being transformed.
+   */
+  private beginBrushWireframeLiveTracking(selectedMeshes: THREE.Mesh[]): void {
+    SolidBrushEdgeBatch.beginLivePoseTracking(selectedMeshes);
   }
 
   /**

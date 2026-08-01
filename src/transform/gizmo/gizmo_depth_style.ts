@@ -4,13 +4,14 @@ import * as THREE from 'three';
 export const GIZMO_DEPTH_ROLE_USERDATA = 'gizmoDepthRole';
 
 /** Depth role for dual-pass gizmo materials. */
-export type GizmoDepthRole = 'front' | 'occluded';
+export type GizmoDepthRole = 'front' | 'occluded' | 'always_on_top';
 
 /**
  * Tags a material so per-pane depth policy can restore 3D occlusion correctly.
  *
  * @param material Material created for a gizmo front or occluded pass.
- * @param role Front (visible when unoccluded) or occluded ghost pass.
+ * @param role Front (visible when unoccluded), occluded ghost, or always on top
+ *   of scene geometry.
  */
 export function tagGizmoDepthRole(material: THREE.Material, role: GizmoDepthRole): void {
   material.userData[GIZMO_DEPTH_ROLE_USERDATA] = role;
@@ -79,6 +80,10 @@ function collectObjectMaterials(child: THREE.Object3D): THREE.Material[] {
  */
 function applyTaggedMaterialDepthStyle(material: THREE.Material, alwaysOnTop: boolean): void {
   const role = material.userData[GIZMO_DEPTH_ROLE_USERDATA] as GizmoDepthRole | undefined;
+  if (role === 'always_on_top') {
+    material.depthTest = false;
+    return;
+  }
   if (role !== 'front' && role !== 'occluded') return;
   if (alwaysOnTop) {
     material.depthTest = false;

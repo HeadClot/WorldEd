@@ -19,6 +19,7 @@ import {
 import { computeGizmoCameraScale } from './gizmo_camera_scale.js';
 import { isGizmoAxisHiddenInViewPlane } from './gizmo_view_plane_axes.js';
 import { applyGizmoCloneDepthStyle } from './gizmo_depth_style.js';
+import { applyGizmoScaleFreeBillboards } from './gizmo_scale_free_billboard.js';
 
 /**
  * Main orchestrator for the transform gizmo. Manages mode switching, handle
@@ -285,6 +286,7 @@ export class GizmoTransform {
     if (!this.gizmoVisible) return;
     const scale = computeGizmoCameraScale(camera, group.position) * targetScale;
     group.scale.setScalar(scale);
+    applyGizmoScaleFreeBillboards(group, camera);
     this.applyCloneDepthStyleForCamera(group, camera);
   }
 

@@ -45,7 +45,7 @@ export class TransformProjectionMath {
   /**
    * Converts a mouse event into normalized screen coordinates [0,1].
    *
-   * @param renderer The viewport renderer.
+   * @param pickElement The viewport pick element.
    * @param event The pointer event.
    * @returns Normalized screen position.
    */
@@ -54,6 +54,25 @@ export class TransformProjectionMath {
     const x = (event.clientX - rect.left) / Math.max(rect.width, 1);
     const y = (event.clientY - rect.top) / Math.max(rect.height, 1);
     return new THREE.Vector2(x, y);
+  }
+
+  /**
+   * Projects a world point into normalized screen coordinates [0,1] for the
+   * pick element (Shape Editor pivot projection for free rotate).
+   *
+   * @param camera Active camera.
+   * @param pickElement Viewport pick element.
+   * @param worldPoint World-space point.
+   * @returns Normalized screen position (y grows downward like DOM).
+   */
+  static projectWorldPointToNormalizedScreen(
+    camera: THREE.Camera,
+    _pickElement: HTMLElement,
+    worldPoint: THREE.Vector3,
+  ): THREE.Vector2 {
+    camera.updateMatrixWorld(true);
+    const projected = worldPoint.clone().project(camera);
+    return new THREE.Vector2((projected.x + 1) * 0.5, (1 - projected.y) * 0.5);
   }
 
   /**

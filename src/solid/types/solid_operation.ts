@@ -19,3 +19,19 @@ export function solidOperationLabel(operation: SolidOperation): string {
   if (operation === SolidOperation.Subtractive) return 'Subtractive';
   return 'Intersecting';
 }
+
+/**
+ * Flips additive ↔ subtractive for keyboard toggle. Intersecting is left alone.
+ *
+ * @param operation Current CSG operation.
+ * @returns Opposite additive/subtractive, or null when not toggled.
+ */
+export function solidOperationToggleAdditiveSubtractive(operation: SolidOperation): SolidOperation | null {
+  if (operation === SolidOperation.Additive) {
+    return SolidOperation.Subtractive;
+  }
+  if (operation === SolidOperation.Subtractive) {
+    return SolidOperation.Additive;
+  }
+  return null;
+}

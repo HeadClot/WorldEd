@@ -37,37 +37,26 @@ describe('KeyboardShortcutHandler', () => {
     expect(onMode).not.toHaveBeenCalled();
   });
 
-  it('should set solid additive and subtractive on A and S when not flying', () => {
-    const onAdditive = vi.fn();
-    const onSubtractive = vi.fn();
-    handler.setOnSolidOperationAdditive(onAdditive);
-    handler.setOnSolidOperationSubtractive(onSubtractive);
+  it('should toggle solid additive/subtractive on A when not flying', () => {
+    const onToggle = vi.fn();
+    handler.setOnSolidOperationToggle(onToggle);
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
-    expect(onAdditive).toHaveBeenCalledOnce();
-    expect(onSubtractive).toHaveBeenCalledOnce();
+    expect(onToggle).toHaveBeenCalledOnce();
   });
 
-  it('should not set solid operations while right mouse fly is held', () => {
-    const onAdditive = vi.fn();
-    const onSubtractive = vi.fn();
-    handler.setOnSolidOperationAdditive(onAdditive);
-    handler.setOnSolidOperationSubtractive(onSubtractive);
+  it('should not toggle solid operations while right mouse fly is held', () => {
+    const onToggle = vi.fn();
+    handler.setOnSolidOperationToggle(onToggle);
     window.dispatchEvent(new PointerEvent('pointerdown', { button: 2 }));
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
-    expect(onAdditive).not.toHaveBeenCalled();
-    expect(onSubtractive).not.toHaveBeenCalled();
+    expect(onToggle).not.toHaveBeenCalled();
   });
 
-  it('should still allow Ctrl+S save while solid subtractive uses plain S', () => {
-    const onSave = vi.fn();
-    const onSubtractive = vi.fn();
-    handler.setOnSaveScene(onSave);
-    handler.setOnSolidOperationSubtractive(onSubtractive);
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS', ctrlKey: true }));
-    expect(onSave).toHaveBeenCalledOnce();
-    expect(onSubtractive).not.toHaveBeenCalled();
+  it('should not claim plain S for solid ops so scale can use S', () => {
+    const onToggle = vi.fn();
+    handler.setOnSolidOperationToggle(onToggle);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
+    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it('should not activate transform tools when navigation guard is active', () => {
@@ -76,6 +65,25 @@ describe('KeyboardShortcutHandler', () => {
     handler.setNavigationActiveCallback(() => true);
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
     expect(onMode).not.toHaveBeenCalled();
+  });
+
+  it('should keep undo available while fly navigation blocks tool keys', () => {
+    const onUndo = vi.fn();
+    const onMode = vi.fn();
+    handler.setOnUndo(onUndo);
+    handler.setOnTransformMode(onMode);
+    window.dispatchEvent(new PointerEvent('pointerdown', { button: 2 }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ', key: 'z', ctrlKey: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+    expect(onUndo).toHaveBeenCalledOnce();
+    expect(onMode).not.toHaveBeenCalled();
+  });
+
+  it('should match Ctrl+Z undo on QWERTZ where Z has physical code KeyY', () => {
+    const onUndo = vi.fn();
+    handler.setOnUndo(onUndo);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyY', key: 'z', ctrlKey: true }));
+    expect(onUndo).toHaveBeenCalledOnce();
   });
 
   it('should dispatch reconfigured transform, face, and delete shortcuts', () => {

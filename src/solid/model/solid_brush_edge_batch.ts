@@ -49,6 +49,13 @@ interface CachedBrushEdges {
  */
 const individualMeshes = new Set<THREE.Mesh>();
 
+/**
+ * Brushes currently in a live pose transform. They receive personal edges that
+ * follow the mesh and are omitted from static batches so wireframes never lag
+ * behind gizmo or single-use moves.
+ */
+const livePoseMeshes = new Set<THREE.Mesh>();
+
 /** Per-mesh edge caches. */
 const edgeCache = new WeakMap<THREE.Mesh, CachedBrushEdges>();
 
@@ -114,6 +121,60 @@ export class SolidBrushEdgeBatch {
    */
   static isIndividual(mesh: THREE.Mesh): boolean {
     return individualMeshes.has(mesh);
+  }
+
+  /**
+   * Starts live pose tracking for brushes being transformed. Attaches personal
+   * edges and rebuilds static batches once without those brushes so wireframes
+   * cannot lag behind the mesh.
+   *
+   * @param meshes Brush or other meshes involved in the live transform.
+   */
+  static beginLivePoseTracking(meshes: Iterable<THREE.Mesh>): void {
+    const solidRoots = new Set<THREE.Group>();
+    let membershipChanged = false;
+    for (const mesh of meshes) {
+      if (!SolidBrushVisual.isBrushObject(mesh)) {
+        continue;
+      }
+      if (!livePoseMeshes.has(mesh)) {
+        livePoseMeshes.add(mesh);
+        membershipChanged = true;
+      }
+      SolidBrushVisual.ensureLocalEdges(mesh);
+      const solidRoot = this.findSolidRoot(mesh);
+      if (solidRoot) {
+        solidRoots.add(solidRoot);
+      }
+    }
+    if (!membershipChanged && solidRoots.size === 0) {
+      return;
+    }
+    for (const solidRoot of solidRoots) {
+      this.rebuildForSolidRoot(solidRoot);
+    }
+  }
+
+  /**
+   * Ends live pose tracking after transform commit or cancel. Rebuilds static
+   * batches at the final poses; personal edges remain only for individual
+   * selection brushes.
+   */
+  static endLivePoseTracking(): void {
+    if (livePoseMeshes.size === 0) {
+      return;
+    }
+    const solidRoots = new Set<THREE.Group>();
+    for (const mesh of livePoseMeshes) {
+      const solidRoot = this.findSolidRoot(mesh);
+      if (solidRoot) {
+        solidRoots.add(solidRoot);
+      }
+    }
+    livePoseMeshes.clear();
+    for (const solidRoot of solidRoots) {
+      this.rebuildForSolidRoot(solidRoot);
+    }
   }
 
   /**
@@ -200,13 +261,30 @@ export class SolidBrushEdgeBatch {
    * @param mesh Brush preview mesh.
    */
   private static syncLocalEdgesForStructuralRebuild(mesh: THREE.Mesh): void {
-    if (individualMeshes.has(mesh)) {
+    if (individualMeshes.has(mesh) || livePoseMeshes.has(mesh)) {
       SolidBrushVisual.ensureLocalEdges(mesh);
       return;
     }
     if (SolidBrushVisual.hasLocalEdges(mesh)) {
       SolidBrushVisual.stripLocalEdges(mesh);
     }
+  }
+
+  /**
+   * Walks parents to find the solid model root for a brush mesh.
+   *
+   * @param mesh Brush preview mesh.
+   * @returns Solid root group, or null when not under a solid model.
+   */
+  private static findSolidRoot(mesh: THREE.Mesh): THREE.Group | null {
+    let current: THREE.Object3D | null = mesh.parent;
+    while (current) {
+      if (current instanceof THREE.Group && isSolidModelObject(current)) {
+        return current;
+      }
+      current = current.parent;
+    }
+    return null;
   }
 
   /**
@@ -263,9 +341,16 @@ export class SolidBrushEdgeBatch {
   ): Map<SolidOperation, Float32Array[]> {
     const chunksByOperation = new Map<SolidOperation, Float32Array[]>();
     for (const mesh of brushes) {
-      if (!mesh.visible) continue;
+      if (!mesh.visible) {
+        continue;
+      }
+      if (livePoseMeshes.has(mesh)) {
+        continue;
+      }
       const solidSpace = this.getOrBuildSolidSpacePositions(mesh, solidRoot);
-      if (!solidSpace || solidSpace.length < 6) continue;
+      if (!solidSpace || solidSpace.length < 6) {
+        continue;
+      }
       this.appendChunk(chunksByOperation, this.readOperation(mesh), solidSpace);
     }
     return chunksByOperation;

@@ -36,8 +36,7 @@ export interface HandlerKeyboardShortcutActionHost {
   onGroupSelected: ActionCallback | null;
   onUngroupSelected: ActionCallback | null;
   onAlignToOrigin: ActionCallback | null;
-  onSolidOperationAdditive: ActionCallback | null;
-  onSolidOperationSubtractive: ActionCallback | null;
+  onSolidOperationToggle: ActionCallback | null;
   onSaveScene: ActionCallback | null;
   onLoadScene: ActionCallback | null;
   onExportGlb: ActionCallback | null;
@@ -322,7 +321,7 @@ export function handlerKeyboardShortcutHandleAlignKeys(
 }
 
 /**
- * Handles solid brush/group CSG operation shortcuts (additive / subtractive).
+ * Handles solid brush/group CSG operation toggle (additive ↔ subtractive).
  *
  * @param host Action host.
  * @param event Keyboard event.
@@ -331,14 +330,9 @@ export function handlerKeyboardShortcutHandleSolidOperationKeys(
   host: HandlerKeyboardShortcutActionHost,
   event: KeyboardEvent,
 ): void {
-  if (host.onSolidOperationAdditive && host.matchesShortcut(event, 'solid_operation_additive')) {
+  if (host.onSolidOperationToggle && host.matchesShortcut(event, 'solid_operation_toggle')) {
     event.preventDefault();
-    host.onSolidOperationAdditive();
-    return;
-  }
-  if (host.onSolidOperationSubtractive && host.matchesShortcut(event, 'solid_operation_subtractive')) {
-    event.preventDefault();
-    host.onSolidOperationSubtractive();
+    host.onSolidOperationToggle();
   }
 }
 

@@ -19,6 +19,7 @@ import {
   handlerKeyboardShortcutHandleUndoRedoKeys,
   type HandlerKeyboardShortcutActionHost,
 } from './handler_keyboard_shortcut_actions.js';
+import { keyboardEventMatchesCode } from './keyboard_event_match.js';
 
 export type {
   ActionCallback,
@@ -30,9 +31,10 @@ export type {
 } from './handler_keyboard_shortcut_types.js';
 
 /**
- * Configures keyboard shortcuts for editor operations. Binds window-level
- * keydown events to editor actions. Tool keys (W/E/R/T, WASD-adjacent) are
- * blocked while flying with RMB.
+ * Single editor keyboard entry point (Shape Editor OnGUI KeyDown / OnKeyDown).
+ * All action shortcuts and tool keys flow through this handler only. Continuous
+ * fly movement reads {@link ManagerInput.isKeyDown} separately and must never be
+ * mixed with one-shot tool activation.
  */
 export class HandlerKeyboardShortcut {
   private inputManager: ManagerInput;
@@ -44,8 +46,7 @@ export class HandlerKeyboardShortcut {
   private onGroupSelected: ActionCallback | null;
   private onUngroupSelected: ActionCallback | null;
   private onAlignToOrigin: ActionCallback | null;
-  private onSolidOperationAdditive: ActionCallback | null;
-  private onSolidOperationSubtractive: ActionCallback | null;
+  private onSolidOperationToggle: ActionCallback | null;
   private onSaveScene: ActionCallback | null;
   private onLoadScene: ActionCallback | null;
   private onExportGlb: ActionCallback | null;
@@ -62,6 +63,16 @@ export class HandlerKeyboardShortcut {
   private onEscape: ActionCallback | null;
   private isClipToolActive: (() => boolean) | null;
   private isNavigationActive: NavigationActiveCallback | null;
+  /**
+   * Optional modal transform keyboard sink (axis lock + numeric typing during
+   * gizmo/bounds drags). When it returns true the event is fully consumed.
+   */
+  private onModalTransformKeyDown: ((event: KeyboardEvent) => boolean) | null;
+  /**
+   * Optional Shape Editor-style tool event router. When set, it owns the full
+   * keydown chain (active tool first, then global fallthrough via callback).
+   */
+  private onToolEventRouterKeyDown: ((event: KeyboardEvent) => boolean) | null;
   private keydownListener: ((event: KeyboardEvent) => void) | null;
   private readonly registeredWindows: Set<Window>;
   private readonly getKeyboardShortcuts: () => KeyboardShortcutSettings;
@@ -95,8 +106,7 @@ export class HandlerKeyboardShortcut {
     this.onGroupSelected = null;
     this.onUngroupSelected = null;
     this.onAlignToOrigin = null;
-    this.onSolidOperationAdditive = null;
-    this.onSolidOperationSubtractive = null;
+    this.onSolidOperationToggle = null;
     this.onSaveScene = null;
     this.onLoadScene = null;
     this.onExportGlb = null;
@@ -113,6 +123,8 @@ export class HandlerKeyboardShortcut {
     this.onEscape = null;
     this.isClipToolActive = null;
     this.isNavigationActive = null;
+    this.onModalTransformKeyDown = null;
+    this.onToolEventRouterKeyDown = null;
     this.keydownListener = null;
     this.registeredWindows = new Set();
   }
@@ -124,6 +136,79 @@ export class HandlerKeyboardShortcut {
    */
   setOnEscape(callback: ActionCallback): void {
     this.onEscape = callback;
+  }
+
+  /**
+   * Registers a sink for Blender-style modal transform keys during gizmo drags
+   * (X/Y/Z axis lock, numeric typing, Enter confirm, Escape cancel).
+   *
+   * @param callback Returns true when the event was consumed.
+   */
+  setOnModalTransformKeyDown(callback: ((event: KeyboardEvent) => boolean) | null): void {
+    this.onModalTransformKeyDown = callback;
+  }
+
+  /**
+   * Registers the Shape Editor-style tool event router as the primary keydown
+   * owner. The router must call back into {@link handleGlobalKeyDown} for keys
+   * the active tool does not consume.
+   *
+   * @param callback Returns true when the router chain handled the event.
+   */
+  setOnToolEventRouterKeyDown(callback: ((event: KeyboardEvent) => boolean) | null): void {
+    this.onToolEventRouterKeyDown = callback;
+  }
+
+  /**
+   * Runs editor-global shortcuts only (undo, file, tool mode SwitchTool, etc.).
+   * Used as fallthrough after the active tool declines a key, and as the only
+   * path while camera navigation suppresses tool receivers. Tool-activation
+   * keys never run while fly/pan navigation is active.
+   *
+   * @param event Browser keyboard event.
+   * @returns True when a global shortcut handled the event.
+   */
+  handleGlobalKeyDown(event: KeyboardEvent): boolean {
+    if (handlerKeyboardShortcutIsTypingInFormField(event)) {
+      return false;
+    }
+    const host = this.toActionHost();
+    if (this.dispatchNavigationSafeGlobalKeys(host, event)) {
+      return true;
+    }
+    if (this.isFlyNavigationBlockingTools()) {
+      return false;
+    }
+    if (handlerKeyboardShortcutHandleClipPlaneKeys(host, event)) {
+      return true;
+    }
+    handlerKeyboardShortcutDispatchToolKeys(host, event);
+    return event.defaultPrevented;
+  }
+
+  /**
+   * Dispatches shortcuts that remain available during camera fly/pan (escape,
+   * file IO, undo/redo, duplicate).
+   *
+   * @param host Action host bag.
+   * @param event Browser keyboard event.
+   * @returns True when one of those shortcuts handled the event.
+   */
+  private dispatchNavigationSafeGlobalKeys(host: HandlerKeyboardShortcutActionHost, event: KeyboardEvent): boolean {
+    if (handlerKeyboardShortcutHandleEscapeKey(host, event)) {
+      return true;
+    }
+    const beforeFile = event.defaultPrevented;
+    handlerKeyboardShortcutHandleFileKeys(host, event);
+    if (event.defaultPrevented && !beforeFile) {
+      return true;
+    }
+    handlerKeyboardShortcutHandleUndoRedoKeys(host, event);
+    if (event.defaultPrevented) {
+      return true;
+    }
+    handlerKeyboardShortcutHandleDuplicateKey(host, event);
+    return event.defaultPrevented;
   }
 
   /**
@@ -210,22 +295,13 @@ export class HandlerKeyboardShortcut {
   }
 
   /**
-   * Registers the callback for setting selected solid brushes/groups additive.
+   * Registers the callback for toggling selected solid brushes/groups between
+   * additive and subtractive.
    *
-   * @param callback Function to call for the additive operation shortcut.
+   * @param callback Function to call for the solid operation toggle shortcut.
    */
-  setOnSolidOperationAdditive(callback: ActionCallback): void {
-    this.onSolidOperationAdditive = callback;
-  }
-
-  /**
-   * Registers the callback for setting selected solid brushes/groups
-   * subtractive.
-   *
-   * @param callback Function to call for the subtractive operation shortcut.
-   */
-  setOnSolidOperationSubtractive(callback: ActionCallback): void {
-    this.onSolidOperationSubtractive = callback;
+  setOnSolidOperationToggle(callback: ActionCallback): void {
+    this.onSolidOperationToggle = callback;
   }
 
   /**
@@ -394,20 +470,29 @@ export class HandlerKeyboardShortcut {
   }
 
   /**
-   * Processes a keydown event and dispatches to the appropriate callback.
+   * Processes a keydown event through the unified Shape Editor-style pipeline.
+   * Order: form-field ignore → tool event router (navigation gate, active
+   * receiver, busy exclusivity, global fallthrough) → legacy modal/global when
+   * no router is registered.
    *
    * @param event The keyboard event to process.
    */
   private handleKeyDown(event: KeyboardEvent): void {
-    if (handlerKeyboardShortcutIsTypingInFormField(event)) return;
-    const host = this.toActionHost();
-    if (handlerKeyboardShortcutHandleEscapeKey(host, event)) return;
-    handlerKeyboardShortcutHandleFileKeys(host, event);
-    handlerKeyboardShortcutHandleUndoRedoKeys(host, event);
-    handlerKeyboardShortcutHandleDuplicateKey(host, event);
-    if (this.isFlyNavigationBlockingTools()) return;
-    if (handlerKeyboardShortcutHandleClipPlaneKeys(host, event)) return;
-    handlerKeyboardShortcutDispatchToolKeys(host, event);
+    if (handlerKeyboardShortcutIsTypingInFormField(event)) {
+      return;
+    }
+    if (this.onToolEventRouterKeyDown) {
+      if (this.onToolEventRouterKeyDown(event)) {
+        event.preventDefault();
+      }
+      return;
+    }
+    if (this.onModalTransformKeyDown?.(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    this.handleGlobalKeyDown(event);
   }
 
   /**
@@ -427,8 +512,7 @@ export class HandlerKeyboardShortcut {
       onGroupSelected: this.onGroupSelected,
       onUngroupSelected: this.onUngroupSelected,
       onAlignToOrigin: this.onAlignToOrigin,
-      onSolidOperationAdditive: this.onSolidOperationAdditive,
-      onSolidOperationSubtractive: this.onSolidOperationSubtractive,
+      onSolidOperationToggle: this.onSolidOperationToggle,
       onSaveScene: this.onSaveScene,
       onLoadScene: this.onLoadScene,
       onExportGlb: this.onExportGlb,
@@ -486,19 +570,15 @@ export class HandlerKeyboardShortcut {
   }
 
   /**
-   * Matches a shortcut code, using displayed letters for undo and redo.
+   * Matches a shortcut code in a layout-safe way (QWERTZ Y/Z, AZERTY, etc.).
    *
    * @param event Keyboard event to inspect.
-   * @param action Shortcut action identifier.
+   * @param _action Unused; kept for call-site compatibility.
    * @param code Configured keyboard event code.
    * @returns True when the event matches the configured key.
    */
-  private matchesShortcutCode(event: KeyboardEvent, action: keyof KeyboardShortcutSettings, code: string): boolean {
-    if (action !== 'undo' && action !== 'redo' && action !== 'redo_alternate') {
-      return event.code === code;
-    }
-    const letter = code.startsWith('Key') ? code.slice(3).toLowerCase() : '';
-    return letter.length === 1 ? event.key.toLowerCase() === letter : event.code === code;
+  private matchesShortcutCode(event: KeyboardEvent, _action: keyof KeyboardShortcutSettings, code: string): boolean {
+    return keyboardEventMatchesCode(event, code);
   }
 
   /**

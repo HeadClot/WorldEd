@@ -102,4 +102,52 @@ describe('CommandTransformRotate', () => {
     stack.redo();
     expect(mesh1.position.y).toBeCloseTo(2);
   });
+
+  it('commits recorded final pose without re-baking a wrong axis-angle', () => {
+    const livePosition = new THREE.Vector3(0, 0, 2);
+    const liveQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+    mesh1.position.copy(livePosition);
+    mesh1.quaternion.copy(liveQuaternion);
+    const finalSnapshots: ObjectRotationSnapshot[] = [
+      {
+        object: mesh1,
+        originalPosition: new THREE.Vector3(2, 0, 0),
+        originalQuaternion: new THREE.Quaternion(),
+        finalPosition: livePosition.clone(),
+        finalQuaternion: liveQuaternion.clone(),
+      },
+    ];
+    const wrongAxis = new THREE.Vector3(0, 1, 0);
+    const command = new CommandTransformRotate(finalSnapshots, pivot, wrongAxis, Math.PI / 2);
+    command.execute();
+    expect(mesh1.position.x).toBeCloseTo(livePosition.x);
+    expect(mesh1.position.y).toBeCloseTo(livePosition.y);
+    expect(mesh1.position.z).toBeCloseTo(livePosition.z);
+    expect(mesh1.quaternion.angleTo(liveQuaternion)).toBeCloseTo(0, 5);
+  });
+
+  it('restores final pose on redo after undo when finals are recorded', () => {
+    const livePosition = new THREE.Vector3(0, 2, 0);
+    const liveQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+    mesh1.position.copy(livePosition);
+    mesh1.quaternion.copy(liveQuaternion);
+    const finalSnapshots: ObjectRotationSnapshot[] = [
+      {
+        object: mesh1,
+        originalPosition: new THREE.Vector3(2, 0, 0),
+        originalQuaternion: new THREE.Quaternion(),
+        finalPosition: livePosition.clone(),
+        finalQuaternion: liveQuaternion.clone(),
+      },
+    ];
+    const stack = new CommandStack(64);
+    stack.push(new CommandTransformRotate(finalSnapshots, pivot, axis, angle));
+    stack.undo();
+    expect(mesh1.position.x).toBeCloseTo(2);
+    expect(mesh1.position.y).toBeCloseTo(0);
+    stack.redo();
+    expect(mesh1.position.x).toBeCloseTo(livePosition.x);
+    expect(mesh1.position.y).toBeCloseTo(livePosition.y);
+    expect(mesh1.quaternion.angleTo(liveQuaternion)).toBeCloseTo(0, 5);
+  });
 });

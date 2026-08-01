@@ -37,6 +37,7 @@ import { BuilderEditorShell } from '@/layout/shell/builder_editor_shell.js';
 import { filterUnlockedObjects } from '@/utils/object_lock.js';
 import { ViewportSceneBootstrap } from './viewport_scene_bootstrap.js';
 import { BridgeTransformInteraction } from '@/tools/bridge/bridge_transform_interaction.js';
+import type { LayoutToolEditorSystem } from '@/layout/setup/layout_tool_editor_setup.js';
 import { CoordinatorFaceMode } from '@/tools/face/coordinator_face_mode.js';
 import { ControllerSnapSettings } from '@/tools/snap/controller_snap_settings.js';
 import { CoordinatorCameraFit } from '@/navigation/camera/coordinator_camera_fit.js';
@@ -162,6 +163,8 @@ export abstract class ViewportLayoutCore {
   protected gizmoRaycaster!: GizmoRaycaster;
   protected transformExecutor!: TransformExecutor;
   protected transformHandler!: HandlerTransform;
+  /** Shape Editor-style single-active-tool manager (SwitchTool / UseTool). */
+  protected toolEditorSystem: LayoutToolEditorSystem | null = null;
   protected gridSnap!: GridSnap;
   protected userSnapEnabled!: boolean;
   protected transformSpace!: TransformSpace;
@@ -516,6 +519,38 @@ export abstract class ViewportLayoutCore {
     this.setupSolidModelPanel();
     this.setupAiBridge();
     this.setupSnapSettingsController();
+    this.installToolEditorFocusSystem();
+  }
+
+  /**
+   * Registers floating tool windows and installs capture-phase focus routing
+   * (Shape Editor active event receiver + busy exclusivity for GUI).
+   */
+  protected installToolEditorFocusSystem(): void {
+    if (!this.toolEditorSystem) {
+      return;
+    }
+    this.registerToolEditorGuiSurface(this.toolsPalette, 'tools_palette');
+    this.registerToolEditorGuiSurface(this.uvEditor, 'uv_editor');
+    this.registerToolEditorGuiSurface(this.textureBrowser, 'texture_browser');
+    this.registerToolEditorGuiSurface(this.solidModelPanel, 'solid_model_panel');
+    this.toolEditorSystem.installFocusPointerRouter(this.toolbarContainer);
+  }
+
+  /**
+   * Registers a floating panel root with the tool focus manager.
+   *
+   * @param panel Panel exposing a root element, or null when not built.
+   * @param surfaceId Stable surface id for the focus registry.
+   */
+  protected registerToolEditorGuiSurface(
+    panel: { getRootElement(): HTMLElement } | null | undefined,
+    surfaceId: string,
+  ): void {
+    if (!panel || !this.toolEditorSystem) {
+      return;
+    }
+    this.toolEditorSystem.registerGuiSurface(panel.getRootElement(), surfaceId);
   }
 
   /** Creates selection visuals and primitive creation wiring. */
@@ -736,6 +771,14 @@ export abstract class ViewportLayoutCore {
       onOpenUvEditor: () => this.onToggleUvEditor(),
       editorOverlayPolicy: this.editorOverlayPolicy,
       modalToolSessionRegistry: this.modalToolSessionRegistry,
+      isEditorToolBusy: () => this.toolEditorSystem?.isActiveEventReceiverBusy() === true,
+      switchToClipTool: () => this.toolEditorSystem?.switchToClipTool() === true,
+      switchToObjectSelect: () => {
+        this.toolEditorSystem?.switchToObjectSelect();
+      },
+      registerClipTool: (placement, handler) => {
+        this.toolEditorSystem?.registerClipTool(placement, handler);
+      },
     });
     this.clipPlaneHandler = result.clipPlaneHandler;
     this.toolsPalette = result.toolsPalette;
@@ -760,12 +803,22 @@ export abstract class ViewportLayoutCore {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     const unlockedSelected = filterUnlockedObjects(selected);
     this.transformGizmo.setVisible(
-      unlockedSelected.length > 0 && !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
+      unlockedSelected.length > 0 &&
+        !this.isFaceSelectionModeActive() &&
+        !this.isClipPlaneToolActive() &&
+        !this.transformHandler.isSingleUseDrag(),
     );
   }
 
-  /** Clears selection, cancels active tools, and returns to object select. */
+  /**
+   * Cancels single-use tools first (Shape Editor Escape), then clears selection
+   * and returns to object select.
+   */
   protected onEscapeCancel(): void {
+    if (this.toolEditorSystem?.cancelActiveSingleUseTool()) {
+      this.statusBar?.setLastAction('Tool cancelled');
+      return;
+    }
     this.clipPlaneHandler?.cancel();
     this.toolsPaletteController?.selectTool(EditorToolId.OBJECT);
     this.faceModeCoordinator?.getFaceExtrusionController().clearFaceSelection();

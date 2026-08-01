@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GizmoAxis } from '@/types/transform_mode.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
+import { TransformConstraint } from './transform_constraint.js';
 
 /**
  * Applies transform operations to selected objects. Handles translation,
@@ -277,6 +278,58 @@ export class TransformExecutor {
   }
 
   /**
+   * Uniform scale about a world pivot using ScaleAroundPivot on all axes.
+   *
+   * @param objects The objects to scale.
+   * @param initialPositions Map of object to pre-drag local position.
+   * @param initialScales Map of object to pre-drag local scale.
+   * @param worldPivot World-space scale origin.
+   * @param totalFactor Radial distance ratio from drag start.
+   */
+  applyAbsoluteUniformScale(
+    objects: THREE.Object3D[],
+    initialPositions: Map<THREE.Object3D, THREE.Vector3>,
+    initialScales: Map<THREE.Object3D, THREE.Vector3>,
+    worldPivot: THREE.Vector3,
+    totalFactor: number,
+  ): void {
+    this.applyAbsoluteFreeScale(
+      objects,
+      initialPositions,
+      initialScales,
+      worldPivot,
+      new THREE.Vector3(totalFactor, totalFactor, totalFactor),
+    );
+  }
+
+  /**
+   * Free scale about a world pivot with independent X/Y/Z multipliers (uniform
+   * 3D or planar 2D free-scale from the center cube).
+   *
+   * @param objects The objects to scale.
+   * @param initialPositions Map of object to pre-drag local position.
+   * @param initialScales Map of object to pre-drag local scale.
+   * @param worldPivot World-space scale origin.
+   * @param axisFactors Multipliers per world axis (1 leaves that axis).
+   */
+  applyAbsoluteFreeScale(
+    objects: THREE.Object3D[],
+    initialPositions: Map<THREE.Object3D, THREE.Vector3>,
+    initialScales: Map<THREE.Object3D, THREE.Vector3>,
+    worldPivot: THREE.Vector3,
+    axisFactors: THREE.Vector3,
+  ): void {
+    const snapped = new THREE.Vector3(
+      this.gridSnap.snapScaleFactor(axisFactors.x),
+      this.gridSnap.snapScaleFactor(axisFactors.y),
+      this.gridSnap.snapScaleFactor(axisFactors.z),
+    );
+    objects.forEach((object) => {
+      this.applyAbsoluteFreeScaleToObject(object, initialPositions, initialScales, worldPivot, snapped);
+    });
+  }
+
+  /**
    * Computes the center of the bounding box of all objects. Used as the default
    * pivot point for transforms.
    *
@@ -284,8 +337,15 @@ export class TransformExecutor {
    * @returns The bounding box center point.
    */
   computePivot(objects: THREE.Object3D[]): THREE.Vector3 {
-    if (objects.length === 0) return new THREE.Vector3(0, 0, 0);
-    if (objects.length === 1) return objects[0]!.position.clone();
+    if (objects.length === 0) {
+      return new THREE.Vector3(0, 0, 0);
+    }
+    if (objects.length === 1) {
+      const sole = objects[0]!;
+      sole.updateMatrixWorld(true);
+      return sole.getWorldPosition(new THREE.Vector3());
+    }
+    objects.forEach((object) => object.updateMatrixWorld(true));
     this.boundingBox.setFromObject(objects[0]!);
     objects.slice(1).forEach((object) => {
       this.boundingBox.expandByObject(object);
@@ -336,13 +396,82 @@ export class TransformExecutor {
     pivot: THREE.Vector3,
     rotationQuaternion: THREE.Quaternion,
   ): void {
-    const startPos = initialPositions.get(object);
-    const startQuat = initialQuaternions.get(object);
-    if (!startPos || !startQuat) return;
-    const relativePos = startPos.clone().sub(pivot);
-    relativePos.applyQuaternion(rotationQuaternion);
-    object.position.copy(relativePos.add(pivot));
-    object.quaternion.copy(rotationQuaternion).multiply(startQuat);
+    const startLocalPosition = initialPositions.get(object);
+    const startLocalQuaternion = initialQuaternions.get(object);
+    if (!startLocalPosition || !startLocalQuaternion) {
+      return;
+    }
+    this.applyWorldSpaceAbsoluteRotation(object, startLocalPosition, startLocalQuaternion, pivot, rotationQuaternion);
+  }
+
+  /**
+   * Applies a world-space rotation around a world pivot, then writes local TRS.
+   * Required for solid brushes under transformed solid roots so the green hull
+   * and CSG pose stay locked to the same transform.
+   *
+   * @param object Object to update.
+   * @param startLocalPosition Pre-drag local position.
+   * @param startLocalQuaternion Pre-drag local quaternion.
+   * @param worldPivot World-space rotation pivot.
+   * @param worldRotationQuaternion World-space rotation from drag start.
+   */
+  private applyWorldSpaceAbsoluteRotation(
+    object: THREE.Object3D,
+    startLocalPosition: THREE.Vector3,
+    startLocalQuaternion: THREE.Quaternion,
+    worldPivot: THREE.Vector3,
+    worldRotationQuaternion: THREE.Quaternion,
+  ): void {
+    const parent = object.parent;
+    if (!parent) {
+      this.applyRootLevelAbsoluteRotation(
+        object,
+        startLocalPosition,
+        startLocalQuaternion,
+        worldPivot,
+        worldRotationQuaternion,
+      );
+      return;
+    }
+    parent.updateMatrixWorld(true);
+    const parentWorldQuaternion = new THREE.Quaternion();
+    parent.getWorldQuaternion(parentWorldQuaternion);
+    const startWorldPosition = startLocalPosition.clone().applyMatrix4(parent.matrixWorld);
+    const startWorldQuaternion = parentWorldQuaternion.clone().multiply(startLocalQuaternion);
+    const rotatedWorldPosition = startWorldPosition
+      .clone()
+      .sub(worldPivot)
+      .applyQuaternion(worldRotationQuaternion)
+      .add(worldPivot);
+    const rotatedWorldQuaternion = worldRotationQuaternion.clone().multiply(startWorldQuaternion);
+    const parentInverse = parent.matrixWorld.clone().invert();
+    object.position.copy(rotatedWorldPosition).applyMatrix4(parentInverse);
+    object.quaternion.copy(parentWorldQuaternion.clone().invert().multiply(rotatedWorldQuaternion));
+    object.updateMatrixWorld(true);
+  }
+
+  /**
+   * Applies absolute rotation when the object has no parent (world equals
+   * local).
+   *
+   * @param object Object to update.
+   * @param startPosition Pre-drag position.
+   * @param startQuaternion Pre-drag quaternion.
+   * @param worldPivot World pivot.
+   * @param worldRotationQuaternion World rotation from drag start.
+   */
+  private applyRootLevelAbsoluteRotation(
+    object: THREE.Object3D,
+    startPosition: THREE.Vector3,
+    startQuaternion: THREE.Quaternion,
+    worldPivot: THREE.Vector3,
+    worldRotationQuaternion: THREE.Quaternion,
+  ): void {
+    const relativePosition = startPosition.clone().sub(worldPivot);
+    relativePosition.applyQuaternion(worldRotationQuaternion);
+    object.position.copy(relativePosition.add(worldPivot));
+    object.quaternion.copy(worldRotationQuaternion).multiply(startQuaternion);
+    object.updateMatrixWorld(true);
   }
 
   /**
@@ -407,6 +536,125 @@ export class TransformExecutor {
     object.position.copy(scaledRelative.add(pivot));
     object.scale.copy(startScale);
     this.multiplyLocalScaleComponent(object.scale, gizmoAxis, totalFactor);
+  }
+
+  /**
+   * Free ScaleAroundPivot in world space, then writes local TRS.
+   *
+   * @param object Object to update.
+   * @param initialPositions Pre-drag local positions.
+   * @param initialScales Pre-drag local scales.
+   * @param worldPivot World-space pivot.
+   * @param axisFactors Snapped per-axis scale factors.
+   */
+  private applyAbsoluteFreeScaleToObject(
+    object: THREE.Object3D,
+    initialPositions: Map<THREE.Object3D, THREE.Vector3>,
+    initialScales: Map<THREE.Object3D, THREE.Vector3>,
+    worldPivot: THREE.Vector3,
+    axisFactors: THREE.Vector3,
+  ): void {
+    const startLocalPosition = initialPositions.get(object);
+    const startScale = initialScales.get(object);
+    if (!startLocalPosition || !startScale) {
+      return;
+    }
+    this.writeFreeScaledLocalPose(object, startLocalPosition, startScale, worldPivot, axisFactors);
+  }
+
+  /**
+   * Writes local position and free scale from a world-space ScaleAroundPivot.
+   *
+   * @param object Object to update.
+   * @param startLocalPosition Pre-drag local position.
+   * @param startScale Pre-drag local scale.
+   * @param worldPivot World-space pivot.
+   * @param axisFactors Per-axis scale factors.
+   */
+  private writeFreeScaledLocalPose(
+    object: THREE.Object3D,
+    startLocalPosition: THREE.Vector3,
+    startScale: THREE.Vector3,
+    worldPivot: THREE.Vector3,
+    axisFactors: THREE.Vector3,
+  ): void {
+    if (!object.parent) {
+      this.writeRootFreeScaledPose(object, startLocalPosition, startScale, worldPivot, axisFactors);
+      return;
+    }
+    this.writeChildFreeScaledPose(object, startLocalPosition, startScale, worldPivot, axisFactors);
+  }
+
+  /**
+   * Free scale when the object has no parent (world equals local).
+   *
+   * @param object Object to update.
+   * @param startPosition Pre-drag position.
+   * @param startScale Pre-drag scale.
+   * @param worldPivot World pivot.
+   * @param axisFactors Per-axis scale factors.
+   */
+  private writeRootFreeScaledPose(
+    object: THREE.Object3D,
+    startPosition: THREE.Vector3,
+    startScale: THREE.Vector3,
+    worldPivot: THREE.Vector3,
+    axisFactors: THREE.Vector3,
+  ): void {
+    object.position.copy(
+      TransformConstraint.scalePointAroundPivot(startPosition, worldPivot, axisFactors.x, axisFactors.y, axisFactors.z),
+    );
+    this.writeFreeLocalScale(object, startScale, axisFactors);
+    object.updateMatrixWorld(true);
+  }
+
+  /**
+   * Free scale for a child object under a transformed parent.
+   *
+   * @param object Object to update.
+   * @param startLocalPosition Pre-drag local position.
+   * @param startScale Pre-drag local scale.
+   * @param worldPivot World pivot.
+   * @param axisFactors Per-axis scale factors.
+   */
+  private writeChildFreeScaledPose(
+    object: THREE.Object3D,
+    startLocalPosition: THREE.Vector3,
+    startScale: THREE.Vector3,
+    worldPivot: THREE.Vector3,
+    axisFactors: THREE.Vector3,
+  ): void {
+    const parent = object.parent;
+    if (!parent) {
+      return;
+    }
+    parent.updateMatrixWorld(true);
+    const startWorldPosition = startLocalPosition.clone().applyMatrix4(parent.matrixWorld);
+    const scaledWorldPosition = TransformConstraint.scalePointAroundPivot(
+      startWorldPosition,
+      worldPivot,
+      axisFactors.x,
+      axisFactors.y,
+      axisFactors.z,
+    );
+    object.position.copy(scaledWorldPosition).applyMatrix4(parent.matrixWorld.clone().invert());
+    this.writeFreeLocalScale(object, startScale, axisFactors);
+    object.updateMatrixWorld(true);
+  }
+
+  /**
+   * Multiplies local scale components by per-axis free-scale factors.
+   *
+   * @param object Object whose scale is written.
+   * @param startScale Pre-drag local scale.
+   * @param axisFactors Per-axis scale factors.
+   */
+  private writeFreeLocalScale(object: THREE.Object3D, startScale: THREE.Vector3, axisFactors: THREE.Vector3): void {
+    object.scale.set(
+      Math.max(0.01, startScale.x * axisFactors.x),
+      Math.max(0.01, startScale.y * axisFactors.y),
+      Math.max(0.01, startScale.z * axisFactors.z),
+    );
   }
 
   /**

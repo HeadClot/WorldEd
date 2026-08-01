@@ -147,12 +147,11 @@ function createDefaultEditFileShortcuts(): Pick<
  */
 function createDefaultNavigationShortcuts(): Pick<
   KeyboardShortcutSettings,
-  'align_origin' | 'solid_operation_additive' | 'solid_operation_subtractive' | 'fit_selection' | 'fit_all'
+  'align_origin' | 'solid_operation_toggle' | 'fit_selection' | 'fit_all'
 > {
   return {
     align_origin: createShortcut('KeyG', false, false, true),
-    solid_operation_additive: createShortcut('KeyA'),
-    solid_operation_subtractive: createShortcut('KeyS'),
+    solid_operation_toggle: createShortcut('KeyA'),
     fit_selection: createShortcut('KeyF'),
     fit_all: createShortcut('KeyF', false, true),
   };

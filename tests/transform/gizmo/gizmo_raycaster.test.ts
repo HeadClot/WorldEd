@@ -3,6 +3,10 @@ import * as THREE from 'three';
 import { GizmoRaycaster } from '@/transform/gizmo/gizmo_raycaster.js';
 import { GizmoHandle } from '@/transform/gizmo/gizmo_handle.js';
 import { GizmoAxis } from '@/types/transform_mode.js';
+import {
+  GIZMO_FREE_ROTATE_DISC_PICK_USERDATA,
+  GIZMO_FREE_SCALE_DISC_PICK_USERDATA,
+} from '@/transform/gizmo/gizmo_visual_style.js';
 
 describe('GizmoRaycaster', () => {
   let raycaster: GizmoRaycaster;
@@ -144,6 +148,22 @@ describe('GizmoRaycaster', () => {
     expect(result).toBe(setup.viewHandle);
     expect(result?.getAxis()).toBe(GizmoAxis.VIEW);
   });
+
+  it('prefers axis handles over free-scale disc pick so arrows win inside the ring', () => {
+    const setup = createAxisOverFreeScaleDiscPickSetup();
+    const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.pickElement, event, setup.gizmoGroup);
+    expect(result).toBe(setup.axisHandle);
+    expect(result?.getAxis()).toBe(GizmoAxis.X);
+  });
+
+  it('prefers axis rings over free-rotate disc pick', () => {
+    const setup = createAxisOverFreeRotateDiscPickSetup();
+    const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
+    const result = raycaster.pickHandle(setup.handles, setup.camera, setup.pickElement, event, setup.gizmoGroup);
+    expect(result).toBe(setup.axisHandle);
+    expect(result?.getAxis()).toBe(GizmoAxis.Y);
+  });
 });
 
 /**
@@ -182,6 +202,93 @@ function createCenterOverAxisPickSetup(): {
   return {
     handles: [axisHandle, viewHandle],
     viewHandle,
+    camera,
+    pickElement: canvas as unknown as HTMLElement,
+    gizmoGroup,
+  };
+}
+
+/**
+ * Large free-scale disc sits in front of a thinner axis box so distance alone
+ * would prefer free scale; axis handles must still win for Blender-style
+ * scale.
+ *
+ * @returns Fixtures with overlapping free-scale disc and axis handle.
+ */
+function createAxisOverFreeScaleDiscPickSetup(): {
+  handles: GizmoHandle[];
+  axisHandle: GizmoHandle;
+  camera: THREE.PerspectiveCamera;
+  pickElement: HTMLElement;
+  gizmoGroup: THREE.Group;
+} {
+  const discMesh = new THREE.Mesh(new THREE.CircleGeometry(2, 24), new THREE.MeshBasicMaterial());
+  discMesh.position.set(0, 0, 0.2);
+  const viewHandle = new GizmoHandle(GizmoAxis.VIEW, 0xffffff, discMesh);
+  discMesh.userData['handleId'] = viewHandle.getHandleId();
+  discMesh.userData[GIZMO_FREE_SCALE_DISC_PICK_USERDATA] = true;
+  const axisMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshBasicMaterial());
+  axisMesh.position.set(0, 0, 0);
+  const axisHandle = new GizmoHandle(GizmoAxis.X, 0xff0000, axisMesh);
+  axisMesh.userData['handleId'] = axisHandle.getHandleId();
+  const gizmoGroup = new THREE.Group();
+  gizmoGroup.add(discMesh);
+  gizmoGroup.add(axisMesh);
+  gizmoGroup.visible = true;
+  gizmoGroup.updateMatrixWorld(true);
+  const camera = new THREE.PerspectiveCamera(60, 800 / 600, 0.1, 1000);
+  camera.position.set(0, 0, 5);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+  const canvas = {
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+  };
+  return {
+    handles: [viewHandle, axisHandle],
+    axisHandle,
+    camera,
+    pickElement: canvas as unknown as HTMLElement,
+    gizmoGroup,
+  };
+}
+
+/**
+ * Free-rotate disc sits in front of a ring-like axis box so distance alone
+ * would prefer the disc; axis rings must still win.
+ *
+ * @returns Fixtures with overlapping free-rotate disc and axis handle.
+ */
+function createAxisOverFreeRotateDiscPickSetup(): {
+  handles: GizmoHandle[];
+  axisHandle: GizmoHandle;
+  camera: THREE.PerspectiveCamera;
+  pickElement: HTMLElement;
+  gizmoGroup: THREE.Group;
+} {
+  const discMesh = new THREE.Mesh(new THREE.CircleGeometry(2, 24), new THREE.MeshBasicMaterial());
+  discMesh.position.set(0, 0, 0.15);
+  const viewHandle = new GizmoHandle(GizmoAxis.VIEW, 0xffffff, discMesh);
+  discMesh.userData['handleId'] = viewHandle.getHandleId();
+  discMesh.userData[GIZMO_FREE_ROTATE_DISC_PICK_USERDATA] = true;
+  const axisMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial());
+  axisMesh.position.set(0, 0, 0);
+  const axisHandle = new GizmoHandle(GizmoAxis.Y, 0x00ff00, axisMesh);
+  axisMesh.userData['handleId'] = axisHandle.getHandleId();
+  const gizmoGroup = new THREE.Group();
+  gizmoGroup.add(discMesh);
+  gizmoGroup.add(axisMesh);
+  gizmoGroup.visible = true;
+  gizmoGroup.updateMatrixWorld(true);
+  const camera = new THREE.PerspectiveCamera(60, 800 / 600, 0.1, 1000);
+  camera.position.set(0, 0, 5);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+  const canvas = {
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+  };
+  return {
+    handles: [viewHandle, axisHandle],
+    axisHandle,
     camera,
     pickElement: canvas as unknown as HTMLElement,
     gizmoGroup,

@@ -67,15 +67,43 @@ export class TransformConstraint {
   }
 
   /**
-   * Computes a uniform scale factor from initial and current distances.
+   * Shape Editor free/gizmo scale factor: radial distance ratio (|mouse−pivot|
+   * / |mouse0−pivot|). Zero initial distance locks factor at 1.
    *
-   * @param initialDistance The reference distance before scaling.
-   * @param currentDistance The current distance during scaling.
+   * @param initialDistance Pivot-to-mouse distance at scale start.
+   * @param currentDistance Pivot-to-mouse distance at the current sample.
    * @returns The scale factor, clamped to a minimum of 0.01.
    */
   static computeScaleFactor(initialDistance: number, currentDistance: number): number {
-    if (initialDistance === 0) return 1;
-    const factor = currentDistance / initialDistance;
+    if (Math.abs(initialDistance) < 1e-12) {
+      return 1;
+    }
+    const factor = Math.abs(currentDistance) / Math.abs(initialDistance);
     return Math.max(0.01, factor);
+  }
+
+  /**
+   * Scales a point about a pivot by independent axis factors
+   * (ScaleAroundPivot).
+   *
+   * @param point Point in the same space as the pivot.
+   * @param pivot Scale origin.
+   * @param scaleX Multiplier for the X offset from the pivot.
+   * @param scaleY Multiplier for the Y offset from the pivot.
+   * @param scaleZ Multiplier for the Z offset from the pivot.
+   * @returns Scaled point.
+   */
+  static scalePointAroundPivot(
+    point: THREE.Vector3,
+    pivot: THREE.Vector3,
+    scaleX: number,
+    scaleY: number,
+    scaleZ: number,
+  ): THREE.Vector3 {
+    return new THREE.Vector3(
+      pivot.x + (point.x - pivot.x) * scaleX,
+      pivot.y + (point.y - pivot.y) * scaleY,
+      pivot.z + (point.z - pivot.z) * scaleZ,
+    );
   }
 }

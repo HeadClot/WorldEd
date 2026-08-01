@@ -150,6 +150,23 @@ export class DetachedViewportWindow {
   }
 
   /**
+   * Returns the last pointer client position for a detached popup document.
+   *
+   * @param ownerDocument Popup document that owns the pointer sample.
+   * @returns Client coordinates, or null when no matching open session exists.
+   */
+  getLastPointerClientPositionForDocument(ownerDocument: Document): { clientX: number; clientY: number } | null {
+    this.pruneClosedSessions();
+    for (const session of this.sessions.values()) {
+      if (session.getOwnerDocument() !== ownerDocument) {
+        continue;
+      }
+      return session.getLastPointerClientPosition();
+    }
+    return null;
+  }
+
+  /**
    * Returns the number of open detached sessions.
    *
    * @returns Open popup count.

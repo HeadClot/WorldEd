@@ -16,6 +16,7 @@ import { resolveTransformTargets } from '@/selection/object/resolve_transform_ta
 import { WindowPointerDragSession } from '@/utils/session_window_pointer_drag.js';
 import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
 import { getCadViewPlaneForKind } from '@/viewports/core/viewport_editor.js';
+import { TransformMode } from '@/types/transform_mode.js';
 
 /**
  * Dependencies required to route viewport pointer events into the transform
@@ -68,6 +69,16 @@ export interface DependenciesBridgeTransformInteraction {
    * @param phase Drag lifecycle phase.
    */
   onRulerTransformFeedback?: (meshes: THREE.Mesh[], phase: 'begin' | 'move' | 'end') => void;
+  /**
+   * Called when a permanent gizmo/bounds handle drag begins so the editor can
+   * latch widget wantsActive (Shape Editor gizmo isActive).
+   */
+  onPermanentGizmoHandleDragBegan?: () => void;
+  /**
+   * Called when a permanent gizmo/bounds handle drag ends so the editor can
+   * clear widget wantsActive and restore tool focus.
+   */
+  onPermanentGizmoHandleDragEnded?: () => void;
 }
 
 /**
@@ -278,8 +289,9 @@ export class BridgeTransformInteraction {
     if (dragObjects.length === 0) return false;
     this.pendingSelectionClickEvent = event;
     this.pendingSelectionClickViewport = viewport;
-    this.attachWindowDragCapture(viewport);
+    this.attachWindowDragCapture(viewport, event);
     this.deps.onRulerTransformFeedback?.(dragObjects, 'begin');
+    this.deps.onPermanentGizmoHandleDragBegan?.();
     return true;
   }
 
@@ -341,16 +353,24 @@ export class BridgeTransformInteraction {
 
   /**
    * Routes subsequent move/up events through the originating viewport even when
-   * the pointer leaves the canvas (toolbar, side panels, etc.).
+   * the pointer leaves the canvas (toolbar, side panels, etc.). Uses capture-
+   * phase window listeners and element pointer capture so a single mouse-up
+   * always ends the drag.
    *
    * @param viewport The viewport that started the drag.
+   * @param event The pointerdown that began the drag.
    */
-  private attachWindowDragCapture(viewport: Viewport3D | Viewport2D): void {
+  private attachWindowDragCapture(viewport: Viewport3D | Viewport2D, event: MouseEvent): void {
     this.activeDragViewport = viewport;
+    const pointerEvent = event as PointerEvent;
+    const pickElement = viewport.getContentElement();
+    const pointerCapture =
+      typeof pointerEvent.pointerId === 'number' ? { element: pickElement, pointerId: pointerEvent.pointerId } : null;
     this.windowDragSession.begin(
       (moveEvent) => this.onWindowDragMove(moveEvent),
       () => this.handleTransformPointerUp(),
       this.resolveViewportOwnerWindow(viewport),
+      pointerCapture,
     );
   }
 
@@ -408,12 +428,27 @@ export class BridgeTransformInteraction {
     this.deps.onTransformsLive?.(selected);
     this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(transformTargets);
     this.deps.selectionVisualController.syncDuringTransform();
-    this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
-    this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(transformTargets));
+    this.refreshGizmoFrameDuringDrag(transformTargets);
     this.deps.transformGizmo.updateBoundsFromMeshes(selected, camera);
     this.deps.onRulerTransformFeedback?.(selected, 'move');
     this.refreshPropertiesPanelTransform();
     return true;
+  }
+
+  /**
+   * Updates gizmo pivot/orientation during drag only when the mode allows it.
+   * Rotate freezes the gizmo frame so local axes do not re-frame mid-drag and
+   * throw the rotation axis.
+   *
+   * @param transformTargets Live transform targets for orientation resolve.
+   */
+  private refreshGizmoFrameDuringDrag(transformTargets: THREE.Object3D[]): void {
+    const mode = this.deps.transformGizmo.getMode();
+    if (mode === TransformMode.ROTATE) {
+      return;
+    }
+    this.deps.transformGizmo.setPivot(this.computeCurrentPivot());
+    this.deps.transformGizmo.setOrientation(this.resolveGizmoOrientation(transformTargets));
   }
 
   /**
@@ -516,6 +551,7 @@ export class BridgeTransformInteraction {
     const clickEvent = this.pendingSelectionClickEvent;
     const clickViewport = this.pendingSelectionClickViewport;
     this.clearWindowDragCapture();
+    this.deps.onPermanentGizmoHandleDragEnded?.();
     if (selectionClick) {
       this.deps.onRulerTransformFeedback?.(selectedObjects, 'end');
       this.applyBoundsFaceSelectionClick(clickEvent, clickViewport);

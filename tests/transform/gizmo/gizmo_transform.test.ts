@@ -3,6 +3,10 @@ import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { TransformMode, GizmoAxis } from '@/types/transform_mode.js';
 import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
+import {
+  GIZMO_ORTHOGRAPHIC_FRUSTUM_SCALE,
+  GIZMO_PERSPECTIVE_DISTANCE_SCALE,
+} from '@/transform/gizmo/gizmo_camera_scale.js';
 
 describe('GizmoTransform', () => {
   let gizmo: GizmoTransform;
@@ -43,14 +47,15 @@ describe('GizmoTransform', () => {
     expect(gizmo.getHandles().some((handle) => handle.getAxis() === GizmoAxis.VIEW)).toBe(true);
   });
 
-  it('should produce 3 handles in ROTATE mode', () => {
+  it('should produce three axis rings plus free-rotate sphere in ROTATE mode', () => {
     gizmo.setMode(TransformMode.ROTATE);
-    expect(gizmo.getHandles().length).toBe(3);
+    expect(gizmo.getHandles().length).toBe(4);
+    expect(gizmo.getHandles().some((handle) => handle.getAxis() === GizmoAxis.VIEW)).toBe(true);
   });
 
-  it('should produce 3 handles in SCALE mode', () => {
+  it('should produce three axis handles plus free-scale center in SCALE mode', () => {
     gizmo.setMode(TransformMode.SCALE);
-    expect(gizmo.getHandles().length).toBe(3);
+    expect(gizmo.getHandles().length).toBe(4);
   });
 
   it('should return a valid handle group', () => {
@@ -127,11 +132,11 @@ describe('GizmoTransform', () => {
 
   it('should rebuild handles correctly when switching modes back and forth', () => {
     gizmo.setMode(TransformMode.ROTATE);
-    expect(gizmo.getHandles().length).toBe(3);
+    expect(gizmo.getHandles().length).toBe(4);
     gizmo.setMode(TransformMode.TRANSLATE);
     expect(gizmo.getHandles().length).toBe(4);
     gizmo.setMode(TransformMode.SCALE);
-    expect(gizmo.getHandles().length).toBe(3);
+    expect(gizmo.getHandles().length).toBe(4);
   });
 
   it('should have valid handle axes for current mode', () => {
@@ -258,8 +263,8 @@ describe('GizmoTransform', () => {
     camera.position.set(0, 100, 0);
     gizmo.updateScaleForCamera(camera);
     const scale = gizmo.getHandleGroup().scale.x;
-    expect(scale).toBeCloseTo(3 * 0.08);
-    expect(scale).toBeLessThan(100 * 0.08);
+    expect(scale).toBeCloseTo(3 * GIZMO_ORTHOGRAPHIC_FRUSTUM_SCALE);
+    expect(scale).toBeLessThan(100 * GIZMO_PERSPECTIVE_DISTANCE_SCALE);
   });
 
   it('scales each viewport clone from its own camera so 3D fly does not inflate 2D', () => {
@@ -274,12 +279,12 @@ describe('GizmoTransform', () => {
     perspective.position.set(0, 0, 200);
     gizmo.prepareTransformCloneForCamera(orthoClone, ortho);
     gizmo.prepareTransformCloneForCamera(perspectiveClone, perspective);
-    expect(orthoClone.scale.x).toBeCloseTo(6 * 0.08);
-    expect(perspectiveClone.scale.x).toBeCloseTo(200 * 0.08);
+    expect(orthoClone.scale.x).toBeCloseTo(6 * GIZMO_ORTHOGRAPHIC_FRUSTUM_SCALE);
+    expect(perspectiveClone.scale.x).toBeCloseTo(200 * GIZMO_PERSPECTIVE_DISTANCE_SCALE);
     expect(orthoClone.scale.x).toBeLessThan(perspectiveClone.scale.x);
     gizmo.updateScaleForCamera(perspective);
-    expect(gizmo.getHandleGroup().scale.x).toBeCloseTo(200 * 0.08);
-    expect(orthoClone.scale.x).toBeCloseTo(6 * 0.08);
+    expect(gizmo.getHandleGroup().scale.x).toBeCloseTo(200 * GIZMO_PERSPECTIVE_DISTANCE_SCALE);
+    expect(orthoClone.scale.x).toBeCloseTo(6 * GIZMO_ORTHOGRAPHIC_FRUSTUM_SCALE);
   });
 
   it('hides Global depth-axis translate handles in orthographic panes', () => {

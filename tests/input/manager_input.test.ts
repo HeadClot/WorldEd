@@ -16,6 +16,15 @@ describe('InputManager', () => {
     expect(manager.isKeyDown('KeyW')).toBe(false);
   });
 
+  it('should track QWERTZ Z under KeyZ for isKeyDown queries', () => {
+    const manager = new ManagerInput();
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyY', key: 'z' }));
+    expect(manager.isKeyDown('KeyZ')).toBe(true);
+    expect(manager.isKeyDown('KeyY')).toBe(true);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyY', key: 'z' }));
+    expect(manager.isKeyDown('KeyZ')).toBe(false);
+  });
+
   it('should track multiple keys simultaneously', () => {
     const manager = new ManagerInput();
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));

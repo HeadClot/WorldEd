@@ -106,4 +106,26 @@ describe('CommandTransformScale', () => {
     stack.redo();
     expect(mesh1.position.x).toBeCloseTo(4);
   });
+
+  it('commits recorded final pose without re-baking a wrong axis factor', () => {
+    const livePosition = new THREE.Vector3(6, 0, 0);
+    const liveScale = new THREE.Vector3(3, 3, 3);
+    mesh1.position.copy(livePosition);
+    mesh1.scale.copy(liveScale);
+    const finalSnapshots: ObjectScaleSnapshot[] = [
+      {
+        object: mesh1,
+        originalPosition: new THREE.Vector3(2, 0, 0),
+        originalScale: new THREE.Vector3(1, 1, 1),
+        finalPosition: livePosition.clone(),
+        finalScale: liveScale.clone(),
+      },
+    ];
+    const wrongAxis = new THREE.Vector3(0, 1, 0);
+    const command = new CommandTransformScale(finalSnapshots, pivot, wrongAxis, 2, GizmoAxis.Y);
+    command.execute();
+    expect(mesh1.position.x).toBeCloseTo(livePosition.x);
+    expect(mesh1.scale.x).toBeCloseTo(liveScale.x);
+    expect(mesh1.scale.y).toBeCloseTo(liveScale.y);
+  });
 });

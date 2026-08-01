@@ -4,7 +4,7 @@ import * as THREE from 'three';
  * Distance-to-scale factor for perspective cameras. Matches the historical
  * translate/rotate/scale gizmo sizing so 3D views keep their familiar size.
  */
-export const GIZMO_PERSPECTIVE_DISTANCE_SCALE = 0.08;
+export const GIZMO_PERSPECTIVE_DISTANCE_SCALE = 0.065;
 
 /**
  * Orthographic frustum-height-to-scale factor. Keeps unit gizmo geometry a

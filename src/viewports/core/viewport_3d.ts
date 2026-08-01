@@ -241,9 +241,9 @@ export class Viewport3D extends BaseViewport {
   /**
    * Sets the callback to handle clip plane tool pointer events.
    *
-   * @param callback The clip plane event handler function.
+   * @param callback The clip plane event handler function, or null to clear.
    */
-  setClipPlaneCallback(callback: (event: MouseEvent) => boolean): void {
+  setClipPlaneCallback(callback: ((event: MouseEvent) => boolean) | null): void {
     this.clipPlaneCallback = callback;
   }
 
@@ -259,20 +259,54 @@ export class Viewport3D extends BaseViewport {
   /** Configures pointer event listeners for selection and transform. */
   private setupClickSelection(): void {
     this.contentElement.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0) return;
+      if (event.button !== 0) {
+        return;
+      }
+      if (this.isCameraNavigating()) {
+        return;
+      }
       blurActiveFormField();
-      if (this.transformCallback && this.transformCallback(event)) return;
-      if (this.faceSelectionCallback && this.faceSelectionCallback(event)) return;
-      if (this.clipPlaneCallback && this.clipPlaneCallback(event)) return;
-      if (!this.selectionManager) return;
+      if (this.dispatchViewportToolPointerDown(event)) {
+        return;
+      }
+      if (!this.selectionManager) {
+        return;
+      }
       this.handleObjectSelection(event);
     });
     this.contentElement.addEventListener('pointermove', (event) => {
-      if (this.transformCallback) this.transformCallback(event);
+      if (this.isCameraNavigating()) {
+        return;
+      }
+      if (this.transformCallback) {
+        this.transformCallback(event);
+      }
     });
     this.contentElement.addEventListener('pointerup', (event) => {
-      if (this.transformCallback) this.transformCallback(event);
+      if (this.transformCallback) {
+        this.transformCallback(event);
+      }
     });
+  }
+
+  /**
+   * Dispatches LMB through the single viewport tool pipeline: transform, face,
+   * then clip (Shape Editor-style ordered receivers).
+   *
+   * @param event Pointer down event.
+   * @returns True when a tool consumed the event.
+   */
+  private dispatchViewportToolPointerDown(event: PointerEvent): boolean {
+    if (this.transformCallback?.(event)) {
+      return true;
+    }
+    if (this.faceSelectionCallback?.(event)) {
+      return true;
+    }
+    if (this.clipPlaneCallback?.(event)) {
+      return true;
+    }
+    return false;
   }
 
   /**

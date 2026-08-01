@@ -4,6 +4,7 @@ import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { getSolidGroupOperation, isSolidCsgGroup } from '@/solid/model/solid_group.js';
 import { SolidOperation, solidOperationLabel } from '@/solid/types/solid_operation.js';
+import { SolidCsgOperationIcons } from '@/ui/properties/solid_csg_operation_icons.js';
 
 /** Handlers for solid-brush context controls in the inspector. */
 export interface SolidBrushPropertyHandlers {
@@ -334,17 +335,17 @@ export class PanelPropertiesSolidBrushSection {
     return [
       {
         operation: SolidOperation.Additive,
-        icon: this.operationIconSvg('add'),
+        icon: SolidCsgOperationIcons.additive(),
         title: solidOperationLabel(SolidOperation.Additive),
       },
       {
         operation: SolidOperation.Subtractive,
-        icon: this.operationIconSvg('sub'),
+        icon: SolidCsgOperationIcons.subtractive(),
         title: solidOperationLabel(SolidOperation.Subtractive),
       },
       {
         operation: SolidOperation.Intersecting,
-        icon: this.operationIconSvg('int'),
+        icon: SolidCsgOperationIcons.intersecting(),
         title: solidOperationLabel(SolidOperation.Intersecting),
       },
     ];
@@ -427,22 +428,6 @@ export class PanelPropertiesSolidBrushSection {
     button.style.flex = '';
     button.style.width = '100%';
     return button;
-  }
-
-  /**
-   * Returns inline SVG markup for a solid CSG operation icon.
-   *
-   * @param kind Operation visual kind.
-   * @returns SVG HTML string.
-   */
-  private operationIconSvg(kind: 'add' | 'sub' | 'int'): string {
-    if (kind === 'add') {
-      return `<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1.5" fill="currentColor" opacity="0.35"/><rect x="6" y="6" width="10" height="10" rx="1.5" fill="currentColor" opacity="0.85"/><path d="M11 8.5h2v5h-2zM9.5 11h5v2h-5z" fill="#1a1a1a"/></svg>`;
-    }
-    if (kind === 'sub') {
-      return `<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="2" width="14" height="14" rx="1.5" fill="currentColor" opacity="0.85"/><rect x="6" y="6" width="8" height="8" rx="1" fill="#1a1a1a"/><path d="M7 9.2h6v1.6H7z" fill="currentColor"/></svg>`;
-    }
-    return `<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="7" cy="9" r="5" fill="currentColor" opacity="0.45"/><circle cx="11" cy="9" r="5" fill="currentColor" opacity="0.45"/><path d="M9 5.2a5 5 0 0 1 0 7.6 5 5 0 0 1 0-7.6z" fill="currentColor"/></svg>`;
   }
 
   /**

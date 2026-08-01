@@ -20,6 +20,7 @@ import { pickOrthographicSilhouetteEdgeFace } from './bounds_face_interaction.js
 import { computeSilhouetteExteriorBandWorld } from './bounds_handle_screen_size.js';
 import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
 import { TransformMode } from '@/types/transform_mode.js';
+import { transformModalConstrainTranslationDelta } from '@/transform/modal/transform_modal_delta_constrain.js';
 
 /**
  * Bounds tool interaction: one-sided resize from 3D arrows, 2D ears, or
@@ -482,9 +483,40 @@ export class ControllerBoundsDrag {
     const current = this.gizmoRaycaster.projectMouseToPlane(camera, pickElement, event, this.session.boundsMovePlane);
     if (!current) return;
     const totalDelta = current.clone().sub(this.session.initialMousePosition);
-    this.session.dragDeltaAccumulator.copy(totalDelta);
-    this.transformExecutor.applyAbsoluteTranslation(objects, this.session.initialPositions, totalDelta);
+    this.session.lastPointerWorldDelta.copy(totalDelta);
+    const constrainedDelta = this.constrainFaceMoveDelta(totalDelta);
+    this.session.dragDeltaAccumulator.copy(constrainedDelta);
+    this.transformExecutor.applyAbsoluteTranslation(objects, this.session.initialPositions, constrainedDelta);
     this.rebakeLockedTextures(objects, true, false);
+  }
+
+  /**
+   * Constrains a bounds face-move delta by the keyboard modal axis lock when
+   * set.
+   *
+   * @param delta Unconstrained face-plane delta.
+   * @returns Constrained world delta.
+   */
+  private constrainFaceMoveDelta(delta: THREE.Vector3): THREE.Vector3 {
+    return transformModalConstrainTranslationDelta(
+      delta,
+      this.session.modalAxisLock,
+      null,
+      this.transformGizmo.getOrientation(),
+    );
+  }
+
+  /**
+   * Applies a one-sided bounds resize delta from modal re-apply paths.
+   *
+   * @param objects Selected meshes.
+   * @param deltaAlongNormal Displacement along the face outward normal.
+   */
+  applyResizeDelta(objects: THREE.Object3D[], deltaAlongNormal: number): void {
+    this.session.boundsDeltaAlongNormal = deltaAlongNormal;
+    this.session.lastPointerBoundsResizeDelta = deltaAlongNormal;
+    this.applyResizeToObjects(objects, deltaAlongNormal);
+    this.rebakeLockedTextures(objects, false, true);
   }
 
   /**
@@ -510,6 +542,7 @@ export class ControllerBoundsDrag {
     const outward = this.getActiveFaceWorldNormal();
     const rawDelta = current.clone().sub(this.session.initialMousePosition).dot(outward);
     const snappedDelta = this.snapResizeDelta(rawDelta, outward);
+    this.session.lastPointerBoundsResizeDelta = snappedDelta;
     this.session.boundsDeltaAlongNormal = snappedDelta;
     this.applyResizeToObjects(objects, snappedDelta);
   }
