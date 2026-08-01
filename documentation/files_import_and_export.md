@@ -57,14 +57,14 @@ OBJ and FBX exports also use the active game profile selected in **Settings > Ga
 
 OBJ has no transform hierarchy, so its profile conversion is baked into vertex positions and normals. Reflected coordinate spaces automatically reverse triangle winding so the transformed normals and front faces remain consistent.
 
-FBX preserves the profile conversion in the export hierarchy and writes the profile's up, forward, right, handedness-related signs, and file-unit scale into `GlobalSettings`. Preserve the exported hierarchy when importing into the target application.
+FBX writes the profile's up, forward, right, handedness-related signs, and file-unit scale into `GlobalSettings`. Profile axis and unit conversion is baked into the detached export geometry and local node transforms, so the exported root does not carry an extra reflected rotation or negative scale. Preserve the exported hierarchy when importing into the target application.
 
 ## Target application notes
 
-- **Godot:** use the right-handed Y-up profile and preserve the imported root transform.
+- **Godot:** use the right-handed Y-up profile and preserve the imported hierarchy.
 - **Blender:** use the Blender profile when you want Z-up conversion and preserve the node hierarchy.
-- **Unity:** preserve the mirrored root transform. Do not casually bake it into mesh data.
-- **Unreal Engine:** use the centimeter-oriented profile and preserve the mirrored root transform.
+- **Unity:** use the meter-oriented profile and preserve the exported hierarchy without adding an import rotation.
+- **Unreal Engine:** use the centimeter-oriented profile. Do not add a manual import rotation or an additional front-axis conversion to the already-converted export.
 - **Custom:** verify the selected right, up, and forward axes and the resulting handedness.
 
 ## Validate an export

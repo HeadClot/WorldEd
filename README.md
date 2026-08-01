@@ -167,8 +167,8 @@ negative-determinant root transform.
 | -------------- | ------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Godot          | Right-handed, Y-up, `-Z` forward                        | Select the project unit               | Preserve the GLB node hierarchy and root transform.                                      |
 | Blender        | Right-handed, Z-up, `+Y` forward                        | Select the desired Blender unit scale | Preserve the GLB node hierarchy and root transform.                                      |
-| Unity          | Left-handed, Y-up, `+Z` forward                         | Meter profile                         | Preserve the mirrored root transform; do not bake it without reversing triangle winding. |
-| Unreal Engine  | Left-handed, Z-up, `+X` forward                         | Centimeter profile                    | Preserve the mirrored root transform; do not bake it without reversing triangle winding. |
+| Unity          | Left-handed, Y-up, `+Z` forward                         | Meter profile                         | Preserve the exported hierarchy; profile axes and units are baked without a mirrored root. |
+| Unreal Engine  | Left-handed, Z-up, `+X` forward                         | Centimeter profile                    | Preserve the exported hierarchy; use the converted axes and centimeters without extra import rotation. |
 | Custom         | The three selected axes define the basis and handedness | Selected profile unit                 | Apply the same determinant and bake rules as the derived basis.                          |
 
 For every target, validate a test asset containing an asymmetric triangle,

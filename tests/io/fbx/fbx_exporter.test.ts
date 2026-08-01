@@ -101,6 +101,22 @@ describe('FbxExporter', () => {
     expect(text).toMatch(/PolygonVertexIndex: \*3 \{\s*\ta: 0,2,-2/);
   });
 
+  it('should bake Unreal axes and centimeters without a reflected root transform', () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3));
+    geometry.setIndex([0, 1, 2]);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial());
+    mesh.name = 'UnrealTriangle';
+    mesh.position.set(1, 2, 3);
+    worldGroup.add(mesh);
+
+    const text = exporter.export(worldGroup, createProfile('unreal', 'centimeter'));
+
+    expect(text).toMatch(/Model::UnrealTriangle[\s\S]*Lcl Translation[^\n]*-300\.0,100\.0,200\.0/);
+    expect(text).toMatch(/Vertices: \*9 \{\s*\ta: 0,0,0,0,100,0,0,0,100/);
+    expect(text).not.toMatch(/Model::ExportRoot[\s\S]*Lcl Scaling[^\n]*-100\.0/);
+  });
+
   it('should include hierarchy names for groups and meshes', () => {
     const group = new THREE.Group();
     group.name = 'Room';
