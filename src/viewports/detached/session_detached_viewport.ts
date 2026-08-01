@@ -341,8 +341,12 @@ export class DetachedViewportSession {
       inputManager: this.popupInputManager,
       sharedScene: this.renderSource.getScene(),
       surface: this.surface,
-      presentationContext: this.renderSource.getViewportPresentationContext?.(),
-      getCameraWidgetSizePx: this.renderSource.getCameraWidgetSizePx,
+      ...(this.renderSource.getViewportPresentationContext
+        ? { presentationContext: this.renderSource.getViewportPresentationContext() }
+        : {}),
+      ...(this.renderSource.getCameraWidgetSizePx
+        ? { getCameraWidgetSizePx: this.renderSource.getCameraWidgetSizePx }
+        : {}),
     });
     const world = this.renderSource.getWorldObject?.() ?? null;
     if (world) {

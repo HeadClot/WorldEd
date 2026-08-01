@@ -916,7 +916,7 @@ export abstract class ViewportLayoutCore {
       viewportPaneLayout: this.viewportPaneLayout,
       toolbar: this.toolbar,
       resizeAll: () => this.resizeAll(),
-      settingsStore: this.settingsStore ?? undefined,
+      ...(this.settingsStore ? { settingsStore: this.settingsStore } : {}),
       presentationContext: this.viewportPresentationContext,
       getViewports: () => this.getAllInteractiveViewports(),
       onProfileChanged: () => {

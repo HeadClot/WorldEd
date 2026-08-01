@@ -74,7 +74,9 @@ function buildReversedTriangleCornerIndices(cornerIndices: number[]): number[] {
   const reversed = cornerIndices.slice();
   for (let index = 0; index + 2 < reversed.length; index += 3) {
     const second = reversed[index + 1];
-    reversed[index + 1] = reversed[index + 2];
+    const third = reversed[index + 2];
+    if (second === undefined || third === undefined) continue;
+    reversed[index + 1] = third;
     reversed[index + 2] = second;
   }
   return reversed;

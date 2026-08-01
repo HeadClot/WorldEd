@@ -47,8 +47,8 @@ export class ViewportSceneBootstrap {
       inputManager,
       sharedScene: sharedScene.getScene(),
       surface,
-      presentationContext,
-      getCameraWidgetSizePx,
+      ...(presentationContext ? { presentationContext } : {}),
+      ...(getCameraWidgetSizePx ? { getCameraWidgetSizePx } : {}),
     });
     const viewports = registry.getAllViewports();
     const top = viewports[0];

@@ -36,6 +36,7 @@ export function createViewportForKind(
 ): ViewportEditor {
   const contentElement = ensureContentElement(container);
   if (isPerspectiveViewportKind(kind)) {
+    const cameraWidgetSizePx = dependencies.getCameraWidgetSizePx?.();
     const viewport = new Viewport3D({
       container,
       contentElement,
@@ -43,8 +44,8 @@ export function createViewportForKind(
       sharedScene: dependencies.sharedScene,
       surface: dependencies.surface,
       inputManager: dependencies.inputManager,
-      presentationContext: dependencies.presentationContext,
-      cameraWidgetSizePx: dependencies.getCameraWidgetSizePx?.(),
+      ...(dependencies.presentationContext ? { presentationContext: dependencies.presentationContext } : {}),
+      ...(cameraWidgetSizePx === undefined ? {} : { cameraWidgetSizePx }),
     });
     viewport.setViewportKind(kind);
     return viewport;
