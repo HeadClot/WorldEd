@@ -8,6 +8,7 @@ import {
   enableFlatShadingOnMesh,
   usesContentDecorativeEdges,
 } from '@/utils/mesh_edge_sync.js';
+import { ContentViewLitMaterial } from '@/materials/factory_content_view_lit_material.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '@/selection/object/selection_highlight.js';
 import { SOLID_BRUSH_EDGE_USERDATA_KEY } from '@/solid/model/solid_brush_edge_materials.js';
 
@@ -65,6 +66,14 @@ describe('mesh_edge_sync', () => {
     enableFlatShadingOnMesh(mesh);
     const material = mesh.material as THREE.MeshStandardMaterial;
     expect(material.flatShading).toBe(true);
+  });
+
+  it('should leave view-lit materials alone when flatShading is read-only', () => {
+    const viewLitMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new ContentViewLitMaterial());
+    expect(() => enableFlatShadingOnMesh(viewLitMesh)).not.toThrow();
+    expect((viewLitMesh.material as ContentViewLitMaterial).flatShading).toBe(true);
+    viewLitMesh.geometry.dispose();
+    (viewLitMesh.material as THREE.Material).dispose();
   });
 
   it('should not build content edges on solid brush or CSG result meshes', () => {

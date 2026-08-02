@@ -4,11 +4,14 @@ import { createTextureFilterPolicy } from '@/texture/library/policy_texture_filt
 import { TextureMapCache, setTextureMapCacheForTests } from '@/texture/library/texture_map_cache.js';
 import { TextureLibrary } from '@/texture/library/texture_library.js';
 import { createTextureBrowserEntry, type TextureBrowserEntry } from '@/texture/library/texture_browser_entry.js';
+import { disposeDebugCheckerTexture } from '@/texture/library/factory_debug_texture.js';
+import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
 import { mockObjectUrlApis } from './utils_object_url_test.js';
 
 describe('TextureMapCache filter policy', () => {
   afterEach(() => {
     setTextureMapCacheForTests(null);
+    disposeDebugCheckerTexture();
     vi.restoreAllMocks();
   });
 
@@ -42,6 +45,34 @@ describe('TextureMapCache filter policy', () => {
     expect(texture.minFilter).toBe(THREE.NearestFilter);
     expect(texture.generateMipmaps).toBe(false);
     expect(texture.anisotropy).toBe(1);
+  });
+
+  it('applies the global filter policy to the built-in debug checker', () => {
+    const cache = new TextureMapCache();
+    setTextureMapCacheForTests(cache);
+    cache.setFilterPolicy(createTextureFilterPolicy('trilinear', '8x', 16));
+
+    const checker = cache.resolve(DEFAULT_CHECKER_TEXTURE_ID);
+
+    expect(checker.magFilter).toBe(THREE.LinearFilter);
+    expect(checker.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    expect(checker.generateMipmaps).toBe(true);
+    expect(checker.anisotropy).toBe(8);
+  });
+
+  it('updates the shared debug checker when the global filter setting changes', () => {
+    const cache = new TextureMapCache();
+    setTextureMapCacheForTests(cache);
+    const checker = cache.resolve(DEFAULT_CHECKER_TEXTURE_ID);
+    cache.setFilterPolicy(createTextureFilterPolicy('trilinear', '16x', 16));
+    expect(checker.anisotropy).toBe(16);
+
+    cache.setFilterPolicy(createTextureFilterPolicy('point', 'max', 16));
+
+    expect(checker.magFilter).toBe(THREE.NearestFilter);
+    expect(checker.minFilter).toBe(THREE.NearestFilter);
+    expect(checker.generateMipmaps).toBe(false);
+    expect(checker.anisotropy).toBe(1);
   });
 });
 

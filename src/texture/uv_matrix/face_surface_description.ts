@@ -20,7 +20,9 @@ export interface FaceSurfaceDescriptionSerialized {
 }
 
 /**
- * Creates a default surface description (identity UV, optional texture id).
+ * Creates a default surface description (centered UV, optional texture id).
+ * Translation is +0.5 on U and V so textures sit centered on unit-centered
+ * brush faces when oriented per face normal.
  *
  * @param textureId Optional texture identity.
  * @returns New default description.
@@ -28,7 +30,7 @@ export interface FaceSurfaceDescriptionSerialized {
 export function createDefaultFaceSurface(textureId: string = DEFAULT_CHECKER_TEXTURE_ID): FaceSurfaceDescription {
   return {
     textureId: textureId || DEFAULT_CHECKER_TEXTURE_ID,
-    uv: SurfaceUvMatrix.identity(),
+    uv: SurfaceUvMatrix.centered(),
   };
 }
 

@@ -47,6 +47,7 @@ describe('cylinder_side_unwrap', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.updateMatrixWorld(true);
     const regions = splitMeshIntoCoplanarRegions(mesh);
+    const defaultOffsetU = createDefaultFaceTextureMapping().offsetU;
     const entries = regions.map((triangleIndices) =>
       cloneFaceTextureMapEntry({
         triangleIndices,
@@ -55,7 +56,7 @@ describe('cylinder_side_unwrap', () => {
     );
     applyCylinderSideUnwrapOffsets(mesh, entries);
     entries.forEach((entry) => {
-      expect(entry.mapping.offsetU!).toBeCloseTo(0, 5);
+      expect(entry.mapping.offsetU!).toBeCloseTo(defaultOffsetU, 5);
     });
   });
 

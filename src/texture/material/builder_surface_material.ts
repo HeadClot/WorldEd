@@ -4,7 +4,8 @@ import { getFaceTextureMaps, setFaceTextureMaps } from '@/texture/uv/face_textur
 import { countTriangles } from '@/texture/uv/planar_uv_projector.js';
 import { TextureMapCache, getTextureMapCache } from '@/texture/library/texture_map_cache.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
-import { getStudioMatcapTexture } from '@/materials/factory_studio_matcap.js';
+import { createContentViewLitMaterial } from '@/materials/factory_content_view_lit_material.js';
+import type { ContentViewLitMaterial } from '@/materials/factory_content_view_lit_material.js';
 import { invalidateFacePickAcceleration } from '@/selection/pick/mesh_pick_acceleration.js';
 import {
   captureSharedContentMaterials,
@@ -458,27 +459,21 @@ function applyMergedGeometryGroups(
  * @param materials Built surface materials (non-empty when geometry has tris).
  * @returns Material or material array suitable for mesh.material.
  */
-function pickMaterialAssignment(materials: THREE.MeshMatcapMaterial[]): THREE.Material | THREE.Material[] {
+function pickMaterialAssignment(materials: ContentViewLitMaterial[]): THREE.Material | THREE.Material[] {
   const first = materials[0];
   if (materials.length === 1 && first !== undefined) return first;
   return materials;
 }
 
 /**
- * Creates one surface material with the given map and shared studio matcap.
+ * Creates one surface material with the given map and view-direction lighting.
  *
  * @param color Hex tint.
  * @param map Diffuse map texture.
- * @returns MeshMatcapMaterial.
+ * @returns Content view-lit material.
  */
-function createSurfaceMaterial(color: number, map: THREE.Texture): THREE.MeshMatcapMaterial {
-  return new THREE.MeshMatcapMaterial({
-    color,
-    map,
-    matcap: getStudioMatcapTexture(),
-    flatShading: true,
-    side: THREE.FrontSide,
-  });
+function createSurfaceMaterial(color: number, map: THREE.Texture): ContentViewLitMaterial {
+  return createContentViewLitMaterial(color, map, { flatShading: true, side: THREE.FrontSide });
 }
 
 /**
@@ -497,7 +492,7 @@ function extractMeshColor(mesh: THREE.Mesh): number {
   const material = mesh.material;
   const first = Array.isArray(material) ? material[0] : material;
   if (first && !isShadingOverrideMaterial(first) && 'color' in first) {
-    const color = (first as THREE.MeshMatcapMaterial).color;
+    const color = (first as { color?: THREE.Color }).color;
     if (color) return color.getHex();
   }
   return 0xffffff;
@@ -514,7 +509,7 @@ function readColorFromSnapshot(meshUuid: string): number | null {
   if (!snapshot) return null;
   const first = Array.isArray(snapshot.materials) ? snapshot.materials[0] : snapshot.materials;
   if (!first || !('color' in first)) return null;
-  const color = (first as THREE.MeshMatcapMaterial).color;
+  const color = (first as { color?: THREE.Color }).color;
   return color ? color.getHex() : null;
 }
 
@@ -577,9 +572,9 @@ function publishContentMaterials(mesh: THREE.Mesh): void {
  * @param material Material about to be disposed.
  */
 function detachSharedMaps(material: THREE.Material): void {
-  const matcapMaterial = material as THREE.MeshMatcapMaterial;
-  if ('map' in matcapMaterial) matcapMaterial.map = null;
-  if ('matcap' in matcapMaterial) matcapMaterial.matcap = null;
+  const mapHost = material as THREE.Material & { map?: THREE.Texture | null; matcap?: THREE.Texture | null };
+  if ('map' in mapHost) mapHost.map = null;
+  if ('matcap' in mapHost) mapHost.matcap = null;
 }
 
 /**

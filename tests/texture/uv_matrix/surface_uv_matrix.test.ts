@@ -18,6 +18,25 @@ describe('SurfaceUvMatrix', () => {
     expect(uv.v).toBeCloseTo(3, 6);
   });
 
+  it('centered projects with a half-tile UV phase so unit faces cover one tile', () => {
+    const matrix = SurfaceUvMatrix.centered();
+    const atOrigin = matrix.project(new THREE.Vector3(0, 0, 0));
+    expect(atOrigin.u).toBeCloseTo(0.5, 6);
+    expect(atOrigin.v).toBeCloseTo(0.5, 6);
+    const atCorner = matrix.project(new THREE.Vector3(-0.5, -0.5, 0));
+    expect(atCorner.u).toBeCloseTo(0, 6);
+    expect(atCorner.v).toBeCloseTo(0, 6);
+  });
+
+  it('default face mapping and surface use the centered UV matrix', () => {
+    const mapping = createDefaultFaceTextureMapping('checker');
+    expect(mapping.uv.u.w).toBeCloseTo(0.5, 6);
+    expect(mapping.uv.v.w).toBeCloseTo(0.5, 6);
+    const surface = faceTextureMappingToSurface(mapping, new THREE.Vector3(0, 1, 0));
+    expect(surface.uv.u.w).toBeCloseTo(0.5, 6);
+    expect(surface.uv.v.w).toBeCloseTo(0.5, 6);
+  });
+
   it('round-trips TRS decompose for a horizontal face', () => {
     const normal = new THREE.Vector3(0, 1, 0);
     const translation = new THREE.Vector2(0.25, -0.5);

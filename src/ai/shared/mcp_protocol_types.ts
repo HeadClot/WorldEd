@@ -60,7 +60,8 @@ export type McpToolName =
   | 'reorder_brush_relative'
   | 'set_inverted_world'
   | 'select'
-  | 'calculate';
+  | 'calculate'
+  | 'capture_view';
 
 /** JSON vector DTO used at the MCP / EditorApi boundary. */
 export interface McpVec3 {
@@ -75,6 +76,14 @@ export interface McpBounds {
   max: McpVec3;
 }
 
+/** One image payload returned by a tool (MCP image content block source). */
+export interface McpImagePayload {
+  /** IANA mime type, e.g. image/png. */
+  mimeType: string;
+  /** Raw base64 image bytes without a data-URL prefix. */
+  data: string;
+}
+
 /** Result envelope for every EditorApi tool invocation. */
 export interface McpToolResult {
   ok: boolean;
@@ -82,6 +91,11 @@ export interface McpToolResult {
   data?: unknown;
   createdIds?: string[];
   warnings?: string[];
+  /**
+   * Optional images returned as MCP image content blocks (not duplicated in
+   * text).
+   */
+  images?: McpImagePayload[];
 }
 
 /** Live MCP host status returned to the desktop UI. */

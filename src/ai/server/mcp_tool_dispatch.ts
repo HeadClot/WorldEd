@@ -1,8 +1,14 @@
-import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
+import type { McpImagePayload, McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 import { findMcpTool } from './registry_mcp_tool.js';
 
 /** Function that runs a named editor tool in the webview. */
 export type EditorToolInvoker = (name: string, args: Record<string, unknown>) => Promise<McpToolResult>;
+
+/** One MCP tools/call content block (text or image). */
+export type McpContentBlock = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
+
+/** MCP tools/call response body. */
+export type McpToolCallResponse = { content: McpContentBlock[]; isError?: boolean };
 
 /**
  * Handles MCP tools/call by validating the name and forwarding to the editor.
@@ -11,19 +17,16 @@ export type EditorToolInvoker = (name: string, args: Record<string, unknown>) =>
  * @param invoker Editor tool invoker (usually Electrobun RPC).
  * @returns MCP tools/call result content blocks.
  */
-export async function dispatchMcpToolCall(
-  params: unknown,
-  invoker: EditorToolInvoker,
-): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> {
+export async function dispatchMcpToolCall(params: unknown, invoker: EditorToolInvoker): Promise<McpToolCallResponse> {
   const parsed = parseToolCallParams(params);
   if (!parsed) {
-    return textResult({ ok: false, message: 'Invalid tools/call params' }, true);
+    return buildToolCallResponse({ ok: false, message: 'Invalid tools/call params' }, true);
   }
   if (!findMcpTool(parsed.name)) {
-    return textResult({ ok: false, message: `Unknown tool: ${parsed.name}` }, true);
+    return buildToolCallResponse({ ok: false, message: `Unknown tool: ${parsed.name}` }, true);
   }
   const result = await invoker(parsed.name, parsed.arguments);
-  return textResult(result, !result.ok);
+  return buildToolCallResponse(result, !result.ok);
 }
 
 /**
@@ -44,19 +47,46 @@ function parseToolCallParams(params: unknown): { name: string; arguments: Record
 }
 
 /**
- * Wraps a tool result as MCP text content.
+ * Wraps a tool result as MCP text content plus optional image content blocks.
  *
  * @param result Tool result envelope.
  * @param isError Whether to mark the MCP call as an error.
  * @returns MCP content payload.
  */
-function textResult(
-  result: McpToolResult,
-  isError: boolean,
-): { content: Array<{ type: 'text'; text: string }>; isError?: boolean } {
-  const payload = {
-    content: [{ type: 'text' as const, text: JSON.stringify(result) }],
-  };
-  if (isError) return { ...payload, isError: true };
-  return payload;
+function buildToolCallResponse(result: McpToolResult, isError: boolean): McpToolCallResponse {
+  const content: McpContentBlock[] = [{ type: 'text', text: JSON.stringify(stripImagesForText(result)) }];
+  appendImageContentBlocks(content, result.images);
+  if (isError) {
+    return { content, isError: true };
+  }
+  return { content };
+}
+
+/**
+ * Removes image payloads from the JSON text body so base64 is not doubled.
+ *
+ * @param result Full tool result.
+ * @returns Result without images for text serialization.
+ */
+function stripImagesForText(result: McpToolResult): McpToolResult {
+  if (!result.images || result.images.length === 0) {
+    return result;
+  }
+  const { images: _images, ...rest } = result;
+  return rest;
+}
+
+/**
+ * Appends MCP image content blocks for each image payload.
+ *
+ * @param content Content array to extend.
+ * @param images Optional image payloads.
+ */
+function appendImageContentBlocks(content: McpContentBlock[], images: McpImagePayload[] | undefined): void {
+  if (!images || images.length === 0) {
+    return;
+  }
+  for (const image of images) {
+    content.push({ type: 'image', data: image.data, mimeType: image.mimeType });
+  }
 }

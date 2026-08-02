@@ -337,6 +337,17 @@ export class ToolbarIcons {
   }
 
   /**
+   * Image stack icon for the AI capture debug floating window.
+   *
+   * @returns SVG markup string.
+   */
+  static aiCaptureDebug(): string {
+    return this.wrapSvg(
+      '<rect x="4" y="7" width="14" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M7 7V5.5A1.5 1.5 0 0 1 8.5 4h9A1.5 1.5 0 0 1 19 5.5V14M8 14l2.2-2.5 1.8 1.6L15 10l3 4"/><circle cx="9.5" cy="10" r="1" fill="currentColor"/>',
+    );
+  }
+
+  /**
    * Settings / gear icon for the main toolbar. Hub circle is nudged slightly
    * right of the geometric mid so it sits in the gear opening.
    *

@@ -6,6 +6,9 @@ import { findSolidModel, listSolidModels } from './editor_api_lookup.js';
 import { solidOperationToName } from './editor_api_operations.js';
 import { failResult, okResult } from './editor_api_result.js';
 import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
+import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
+import { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
+import { SolidCsgTreeEvaluator } from '@/solid/algorithm/compile/solid_csg_tree_evaluator.js';
 import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import type { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
@@ -44,6 +47,7 @@ export class EditorApiCsgQuery {
       point: vec3ToDto(worldPoint),
       modelPoint: vec3ToDto(modelPoint),
       invertedWorld: model.isInvertedWorld(),
+      hierarchical: fold.hierarchical,
       final: fold.finalSolid ? 'solid' : 'void',
       finalSolid: fold.finalSolid,
       affectingBrushes: fold.affecting,
@@ -126,34 +130,138 @@ interface CsgFoldStep {
   solidAfter: boolean;
 }
 
+/** Result of hierarchical or flat CSG fold at a model-space point. */
+interface CsgFoldResult {
+  finalSolid: boolean;
+  hierarchical: boolean;
+  steps: CsgFoldStep[];
+  affecting: CsgFoldStep[];
+}
+
 /**
- * Folds CSG membership at a model-space point.
+ * Folds CSG membership at a model-space point using the solid scene tree so
+ * compound group operations match the real CSG compiler.
  *
  * @param model Solid model.
  * @param modelPoint Point in model space.
  * @returns Fold result.
  */
-function foldCsgAtModelPoint(
-  model: SolidModel,
+function foldCsgAtModelPoint(model: SolidModel, modelPoint: THREE.Vector3): CsgFoldResult {
+  const prepared = prepareBrushesForMembershipQuery(model);
+  const tree = SolidCsgTree.fromSceneGraph(model.root, prepared);
+  const finalSolid = evaluateTreeMembership(modelPoint, prepared, tree, model.isInvertedWorld());
+  const steps = buildBrushContainmentSteps(prepared, modelPoint, finalSolid, tree.isFlat, model.isInvertedWorld());
+  return {
+    finalSolid,
+    hierarchical: !tree.isFlat,
+    steps,
+    affecting: steps.filter((step) => step.containsPoint),
+  };
+}
+
+/**
+ * Builds prepared brush snapshots in evaluation order for membership queries.
+ *
+ * @param model Solid model.
+ * @returns Prepared brush list.
+ */
+function prepareBrushesForMembershipQuery(model: SolidModel): PreparedBrush[] {
+  model.syncBrushOrderFromScene();
+  return model.getBrushes().map((instance) => prepareOneBrushForQuery(instance));
+}
+
+/**
+ * Prepares one brush instance for point membership tests.
+ *
+ * @param instance Brush instance.
+ * @returns Prepared brush entry.
+ */
+function prepareOneBrushForQuery(instance: SolidBrushInstance): PreparedBrush {
+  instance.pullTransformFromMesh();
+  const brush = instance.getModelSpaceBrush();
+  return {
+    instance,
+    brush,
+    bounds: brush.computeLocalBounds(),
+    overlappingPeerIndices: [],
+    operation: instance.operation,
+  };
+}
+
+/**
+ * Evaluates hierarchical CSG membership at a model-space point.
+ *
+ * @param modelPoint Sample point.
+ * @param prepared Prepared brushes.
+ * @param tree CSG tree from the solid scene graph.
+ * @param invertedWorld Whether evaluation starts solid.
+ * @returns True when the point is solid.
+ */
+function evaluateTreeMembership(
   modelPoint: THREE.Vector3,
-): { finalSolid: boolean; steps: CsgFoldStep[]; affecting: CsgFoldStep[] } {
-  let solid = model.isInvertedWorld();
+  prepared: readonly PreparedBrush[],
+  tree: SolidCsgTree,
+  invertedWorld: boolean,
+): boolean {
+  return SolidCsgTreeEvaluator.evaluateMembership(modelPoint, prepared, tree, invertedWorld, (sample, entry) =>
+    pointInsidePreparedBrush(sample, entry),
+  );
+}
+
+/**
+ * Builds per-brush containment steps for explain_csg_at_point. Flat models
+ * report a running solidAfter fold; hierarchical models stamp the true final
+ * membership on every step so solidAfter is never a misleading flat fold.
+ *
+ * @param prepared Prepared brushes.
+ * @param modelPoint Sample point.
+ * @param finalSolid Hierarchical final membership.
+ * @param isFlat Whether the CSG tree has no compound branches.
+ * @param invertedWorld Starting solid flag for flat folds.
+ * @returns Step list.
+ */
+function buildBrushContainmentSteps(
+  prepared: readonly PreparedBrush[],
+  modelPoint: THREE.Vector3,
+  finalSolid: boolean,
+  isFlat: boolean,
+  invertedWorld: boolean,
+): CsgFoldStep[] {
   const steps: CsgFoldStep[] = [];
-  const brushes = model.getBrushes();
-  for (let orderIndex = 0; orderIndex < brushes.length; orderIndex++) {
-    const brush = brushes[orderIndex]!;
-    const containsPoint = pointInsideBrush(modelPoint, brush);
-    solid = applySolidOperation(solid, containsPoint, brush.operation);
-    steps.push({
-      brushId: brush.id,
-      name: brush.name,
-      operation: solidOperationToName(brush.operation),
-      orderIndex,
-      containsPoint,
-      solidAfter: solid,
-    });
+  let solid = invertedWorld;
+  for (let orderIndex = 0; orderIndex < prepared.length; orderIndex++) {
+    const entry = prepared[orderIndex]!;
+    const containsPoint = pointInsidePreparedBrush(modelPoint, entry);
+    solid = isFlat ? applySolidOperation(solid, containsPoint, entry.operation) : finalSolid;
+    steps.push(createFoldStep(entry, orderIndex, containsPoint, solid));
   }
-  return { finalSolid: solid, steps, affecting: steps.filter((step) => step.containsPoint) };
+  return steps;
+}
+
+/**
+ * Creates one fold step DTO for a prepared brush.
+ *
+ * @param entry Prepared brush.
+ * @param orderIndex Evaluation index.
+ * @param containsPoint Whether the sample is inside the brush.
+ * @param solidAfter Solid flag after this step (or final for hierarchical
+ *   last).
+ * @returns Fold step.
+ */
+function createFoldStep(
+  entry: PreparedBrush,
+  orderIndex: number,
+  containsPoint: boolean,
+  solidAfter: boolean,
+): CsgFoldStep {
+  return {
+    brushId: entry.instance.id,
+    name: entry.instance.name,
+    operation: solidOperationToName(entry.operation),
+    orderIndex,
+    containsPoint,
+    solidAfter,
+  };
 }
 
 /**
@@ -168,16 +276,14 @@ function isSolidAtModelPoint(model: SolidModel, modelPoint: THREE.Vector3): bool
 }
 
 /**
- * Tests whether a model-space point is inside a brush volume.
+ * Tests whether a model-space point is inside a prepared brush volume.
  *
  * @param modelPoint Model-space point.
- * @param brush Brush instance.
+ * @param entry Prepared brush.
  * @returns True when inside or on boundary.
  */
-function pointInsideBrush(modelPoint: THREE.Vector3, brush: SolidBrushInstance): boolean {
-  brush.pullTransformFromMesh();
-  const planes = brush.getModelSpacePlanes();
-  return BrushMembership.isInsidePlanes(modelPoint, planes);
+function pointInsidePreparedBrush(modelPoint: THREE.Vector3, entry: PreparedBrush): boolean {
+  return BrushMembership.isInsidePlanes(modelPoint, entry.brush.planes);
 }
 
 /**

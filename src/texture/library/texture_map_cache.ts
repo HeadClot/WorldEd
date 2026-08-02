@@ -35,13 +35,15 @@ export class TextureMapCache {
   }
 
   /**
-   * Updates filter and anisotropy policy for all cached content maps.
+   * Updates filter and anisotropy policy for all content maps, including the
+   * shared built-in debug checker.
    *
    * @param policy Runtime filter policy including GPU max anisotropy.
    */
   setFilterPolicy(policy: PolicyTextureFilter): void {
     this.filterPolicy = policy;
     this.textures.forEach((texture) => applyTextureFilterPolicy(texture, policy));
+    this.applyFilterPolicyToDebugChecker();
   }
 
   /**
@@ -62,17 +64,32 @@ export class TextureMapCache {
    */
   resolve(textureId: string): THREE.Texture {
     if (isDefaultCheckerTextureId(textureId)) {
-      return getDebugCheckerTexture();
+      return this.resolveDebugChecker();
     }
     const cached = this.textures.get(textureId);
     if (cached) return cached;
     const entry = this.library?.getEntryById(textureId) ?? null;
     if (!entry || isDefaultCheckerTextureId(entry.id)) {
-      return getDebugCheckerTexture();
+      return this.resolveDebugChecker();
     }
     const texture = createTextureFromBrowserEntry(entry, this.filterPolicy);
     this.textures.set(textureId, texture);
     return texture;
+  }
+
+  /**
+   * Returns the shared debug checker with the active global filter policy.
+   *
+   * @returns Shared debug checker texture.
+   */
+  private resolveDebugChecker(): THREE.Texture {
+    this.applyFilterPolicyToDebugChecker();
+    return getDebugCheckerTexture();
+  }
+
+  /** Pushes the active filter policy onto the shared built-in debug checker. */
+  private applyFilterPolicyToDebugChecker(): void {
+    applyTextureFilterPolicy(getDebugCheckerTexture(), this.filterPolicy);
   }
 
   /** Disposes user textures that are no longer present in the library. */
@@ -140,7 +157,9 @@ export function setTextureMapCacheForTests(cache: TextureMapCache | null): void 
  */
 function createTextureFromBrowserEntry(entry: TextureBrowserEntry, filterPolicy: PolicyTextureFilter): THREE.Texture {
   if (entry.id === DEFAULT_CHECKER_TEXTURE_ID) {
-    return getDebugCheckerTexture();
+    const checker = getDebugCheckerTexture();
+    applyTextureFilterPolicy(checker, filterPolicy);
+    return checker;
   }
   const image = new Image();
   const texture = new THREE.Texture(image);

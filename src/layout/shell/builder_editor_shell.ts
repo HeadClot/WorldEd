@@ -54,6 +54,7 @@ export interface EditorToolbarActions {
   onOpenAboutDialog: () => void;
   onOpenMcpDialog: () => void;
   onOpenDetachedViewport: () => void;
+  onToggleAiCaptureDebugPanel: () => void;
   onDeleteSelected: () => void;
   onDuplicateSelected: () => void;
   onGroupSelected: () => void;
@@ -598,6 +599,9 @@ export class BuilderEditorShell {
     toolbar.addIconButton('Documentation', ToolbarIcons.documentation(), () => actions.onOpenDocumentation());
     toolbar.addIconButton('About', ToolbarIcons.about(), () => actions.onOpenAboutDialog());
     toolbar.addIconButton('Detached Viewport', ToolbarIcons.detachedViewport(), () => actions.onOpenDetachedViewport());
+    toolbar.addIconButton('AI Captures', ToolbarIcons.aiCaptureDebug(), () =>
+      actions.onToggleAiCaptureDebugPanel(),
+    ).title = 'AI capture_view images (debug)';
     toolbar.addTrailingSpacer();
     toolbar.addIconButton('MCP', ToolbarIcons.mcp(), () => actions.onOpenMcpDialog()).title =
       'MCP server (orange when running)';

@@ -313,7 +313,7 @@ export class SceneDeserializer {
    * @param entry The entry containing material data.
    * @returns A configured mesh material.
    */
-  private reconstructMaterial(entry: ObjectEntry): THREE.MeshMatcapMaterial {
+  private reconstructMaterial(entry: ObjectEntry): THREE.Material {
     const color = entry.materialColor || 0xffffff;
     return createContentMaterial(color, {
       flatShading: true,

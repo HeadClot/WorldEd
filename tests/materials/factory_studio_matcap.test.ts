@@ -7,6 +7,7 @@ import {
   bakeStudioMatcapTexture,
   disposeStudioMatcapTexture,
   getStudioMatcapTexture,
+  matcapUvToViewNormal,
   sampleStudioMatcapLighting,
 } from '@/materials/factory_studio_matcap.js';
 
@@ -36,29 +37,56 @@ describe('studio_matcap_factory', () => {
     expect(first).toBe(second);
   });
 
-  it('matches face-on brightness for pure camera-facing normals', () => {
+  it('maps matcap UV center to face-on view normal (Three.js convention)', () => {
+    const normal = matcapUvToViewNormal(0.5, 0.5);
+    expect(normal).not.toBeNull();
+    expect(normal!.x).toBeCloseTo(0, 5);
+    expect(normal!.y).toBeCloseTo(0, 5);
+    expect(normal!.z).toBeCloseTo(1, 5);
+  });
+
+  it('maps matcap UV right edge to +X (matches Three.js uv = n.xy * 0.495 + 0.5)', () => {
+    const normal = matcapUvToViewNormal(0.5 + 0.495, 0.5);
+    expect(normal).not.toBeNull();
+    expect(normal!.x).toBeCloseTo(1, 3);
+    expect(Math.abs(normal!.y)).toBeLessThan(0.05);
+  });
+
+  it('face-on normals are near unlit peak so wall textures keep true color', () => {
     const faceOn = sampleStudioMatcapLighting(0, 0, 1);
     const faceOnLuma = averageChannel(faceOn);
-    expect(faceOnLuma).toBeGreaterThan(0.7);
+    expect(faceOnLuma).toBeGreaterThan(0.97);
     expect(faceOnLuma).toBeLessThanOrEqual(STUDIO_MATCAP_PEAK + 0.001);
+    expect(Math.abs(faceOn.r - faceOn.g)).toBeLessThan(0.02);
+    expect(Math.abs(faceOn.g - faceOn.b)).toBeLessThan(0.02);
   });
 
-  it('darkens grazing side normals much more than face-on (Blender-like limbs)', () => {
+  it('darkens grazing side normals much more than face-on (form falloff)', () => {
     const faceOn = averageChannel(sampleStudioMatcapLighting(0, 0, 1));
     const side = averageChannel(sampleStudioMatcapLighting(1, 0, 0));
-    expect(side).toBeLessThan(faceOn * 0.35);
-    expect(side).toBeLessThan(0.25);
-    expect(STUDIO_MATCAP_EDGE_FLOOR).toBeLessThan(0.15);
+    expect(side).toBeLessThan(faceOn * 0.45);
+    expect(side).toBeLessThan(0.35);
+    expect(STUDIO_MATCAP_EDGE_FLOOR).toBeLessThan(0.2);
   });
 
-  it('stores camera-up limb samples at the top of the DataTexture (high y)', () => {
+  it('keeps intermediate angles sculpted so iso views show depth', () => {
+    const faceOn = averageChannel(sampleStudioMatcapLighting(0, 0, 1));
+    const length = Math.hypot(0.65, 0.35, 0.68);
+    const angled = averageChannel(sampleStudioMatcapLighting(0.65 / length, 0.35 / length, 0.68 / length));
+    const side = averageChannel(sampleStudioMatcapLighting(1, 0, 0));
+    expect(angled).toBeLessThan(faceOn * 0.95);
+    expect(angled).toBeGreaterThan(side * 0.8);
+  });
+
+  it('center texel of the baked texture is bright (face-on sample)', () => {
     const size = 64;
     const texture = bakeStudioMatcapTexture(size);
     const image = texture.image as { width: number; height: number; data: Uint8Array };
-    const data = image.data;
-    const topCenter = readPixelLuma(data, size, Math.floor(size / 2), size - 2);
-    const bottomCenter = readPixelLuma(data, size, Math.floor(size / 2), 1);
-    expect(topCenter).toBeGreaterThanOrEqual(bottomCenter * 0.9);
+    const mid = Math.floor(size / 2);
+    const centerLuma = readPixelLuma(image.data, size, mid, mid);
+    const outsideLuma = readPixelLuma(image.data, size, 1, 1);
+    expect(centerLuma).toBeGreaterThan(220 * 3);
+    expect(centerLuma).toBeGreaterThan(outsideLuma * 2);
     texture.dispose();
   });
 });

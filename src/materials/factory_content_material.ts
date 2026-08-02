@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { getDebugCheckerTexture } from '@/texture/library/factory_debug_texture.js';
-import { getStudioMatcapTexture } from './factory_studio_matcap.js';
+import { ContentViewLitMaterial, createContentViewLitMaterial } from './factory_content_view_lit_material.js';
 
 /**
  * Default metalness for export conversion of content materials to standard
@@ -15,13 +15,11 @@ export const CONTENT_METALNESS = 0;
 export const CONTENT_ROUGHNESS = 0.85;
 
 /**
- * Creates a level-content material with the shared debug checker map and studio
- * matcap. Color tints the map; matcap provides solid-mode form without scene
- * lights.
+ * Creates a level-content material: min(0.02 + N·V, 1) × checker × color.
  *
  * @param color Hex color tint.
- * @param options Optional side / flatShading overrides.
- * @returns Configured MeshMatcapMaterial.
+ * @param options Optional side override.
+ * @returns Content view-lit material.
  */
 export function createContentMaterial(
   color: number,
@@ -29,14 +27,6 @@ export function createContentMaterial(
     flatShading?: boolean;
     side?: THREE.Side;
   } = {},
-): THREE.MeshMatcapMaterial {
-  const flatShading = options.flatShading !== false;
-  const side = options.side ?? THREE.FrontSide;
-  return new THREE.MeshMatcapMaterial({
-    color,
-    map: getDebugCheckerTexture(),
-    matcap: getStudioMatcapTexture(),
-    flatShading,
-    side,
-  });
+): ContentViewLitMaterial {
+  return createContentViewLitMaterial(color, getDebugCheckerTexture(), options);
 }

@@ -40,6 +40,7 @@ export interface LayoutShellActionSource {
   onOpenAboutDialog: () => void;
   onOpenMcpDialog: () => void;
   onOpenDetachedViewport: () => void;
+  onToggleAiCaptureDebugPanel: () => void;
   onDeleteSelected: () => void;
   onGroupSelected: () => void;
   onNewScene: () => void;
@@ -121,6 +122,7 @@ export function createToolbarShellActions(source: LayoutShellActionSource) {
     onOpenAboutDialog: () => source.onOpenAboutDialog(),
     onOpenMcpDialog: () => source.onOpenMcpDialog(),
     onOpenDetachedViewport: () => source.onOpenDetachedViewport(),
+    onToggleAiCaptureDebugPanel: () => source.onToggleAiCaptureDebugPanel(),
     onDeleteSelected: () => source.onDeleteSelected(),
     onGroupSelected: () => source.onGroupSelected(),
     onNewScene: () => source.onNewScene(),

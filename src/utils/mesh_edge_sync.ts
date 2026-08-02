@@ -118,12 +118,46 @@ export function prepareFlatShadedGeometry(geometry: THREE.BufferGeometry): THREE
 export function enableFlatShadingOnMesh(mesh: THREE.Mesh): void {
   const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
   materials.forEach((material) => {
-    if (!material) return;
-    if ('flatShading' in material) {
-      (material as THREE.MeshStandardMaterial).flatShading = true;
-      material.needsUpdate = true;
+    if (!material) {
+      return;
     }
+    applyWritableFlatShading(material);
   });
+}
+
+/**
+ * Sets flatShading when the material exposes a writable flag. Materials with a
+ * read-only flatShading getter (view-lit content) are skipped.
+ *
+ * @param material Mesh material to update.
+ */
+function applyWritableFlatShading(material: THREE.Material): void {
+  if (!materialHasWritableFlatShading(material)) {
+    return;
+  }
+  (material as THREE.Material & { flatShading: boolean }).flatShading = true;
+  material.needsUpdate = true;
+}
+
+/**
+ * Returns true when flatShading can be assigned on the material.
+ *
+ * @param material Material to inspect.
+ * @returns True when a setter or data property exists.
+ */
+function materialHasWritableFlatShading(material: THREE.Material): boolean {
+  if (!('flatShading' in material)) {
+    return false;
+  }
+  let current: object | null = material;
+  while (current) {
+    const descriptor = Object.getOwnPropertyDescriptor(current, 'flatShading');
+    if (descriptor) {
+      return typeof descriptor.set === 'function' || descriptor.writable === true;
+    }
+    current = Object.getPrototypeOf(current);
+  }
+  return false;
 }
 
 /**

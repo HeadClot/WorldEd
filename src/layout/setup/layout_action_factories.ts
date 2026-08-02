@@ -58,6 +58,7 @@ export interface ToolbarActionHost {
   onOpenAboutDialog: () => void;
   onOpenMcpDialog: () => void;
   onOpenDetachedViewport: () => void;
+  onToggleAiCaptureDebugPanel: () => void;
   onDeleteSelected: () => void;
   onGroupSelected: () => void;
   onNewScene: () => void;
@@ -167,6 +168,7 @@ function buildPrimitiveToolbarActions(
   | 'onOpenAboutDialog'
   | 'onOpenMcpDialog'
   | 'onOpenDetachedViewport'
+  | 'onToggleAiCaptureDebugPanel'
 > {
   return {
     onAddCube: () => host.getPrimitiveCreationHandler().createCube(),
@@ -184,6 +186,7 @@ function buildPrimitiveToolbarActions(
     onOpenAboutDialog: () => host.onOpenAboutDialog(),
     onOpenMcpDialog: () => host.onOpenMcpDialog(),
     onOpenDetachedViewport: () => host.onOpenDetachedViewport(),
+    onToggleAiCaptureDebugPanel: () => host.onToggleAiCaptureDebugPanel(),
   };
 }
 

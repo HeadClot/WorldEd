@@ -4,6 +4,8 @@ import { SolidModel } from '@/solid/model/solid_model.js';
 import { DECORATIVE_EDGE_USERDATA_KEY, isSolidBrushEdge } from '@/utils/mesh_edge_sync.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '@/selection/object/selection_highlight.js';
 import { CONTENT_METALNESS, CONTENT_ROUGHNESS } from '@/materials/factory_content_material.js';
+import { isContentViewLitMaterial } from '@/materials/factory_content_view_lit_material.js';
+import { isDefaultSurfaceTexture } from '@/texture/library/factory_debug_texture.js';
 
 /**
  * Builds a temporary scene graph for GLB/export that contains only game
@@ -123,8 +125,8 @@ function cloneGroupForExport(group: THREE.Group): THREE.Group | null {
 
 /**
  * Clones a content mesh without editor helper children. Geometry is shared;
- * materials are cloned and canvas debug maps stripped so export stays small and
- * does not embed editor checker textures.
+ * materials are cloned and built-in default surface maps stripped so export
+ * stays small and does not embed editor debug textures.
  *
  * @param mesh Live content or solid result mesh.
  * @returns Mesh clone without helper children.
@@ -159,43 +161,68 @@ function cloneMaterialsForExport(material: THREE.Material | THREE.Material[]): T
  * @returns Cloned material safe for GLTFExporter.
  */
 function cloneOneMaterialForExport(material: THREE.Material): THREE.Material {
-  if (material instanceof THREE.MeshMatcapMaterial) {
-    return createStandardMaterialFromMatcap(material);
+  if (isContentViewLitMaterial(material) || material instanceof THREE.MeshMatcapMaterial) {
+    return createStandardMaterialFromContent(material);
   }
   const cloned = material.clone();
-  clearCanvasMaps(cloned);
+  clearEditorOnlyMaps(cloned);
   return cloned;
 }
 
 /**
- * Builds an export MeshStandardMaterial from a viewport matcap material.
+ * Builds an export MeshStandardMaterial from a viewport content material.
  *
- * @param material Live matcap material.
+ * @param material Live content material (view-lit or legacy matcap).
  * @returns Standard material with albedo only.
  */
-function createStandardMaterialFromMatcap(material: THREE.MeshMatcapMaterial): THREE.MeshStandardMaterial {
-  const map = material.map instanceof THREE.CanvasTexture ? null : material.map;
+function createStandardMaterialFromContent(
+  material: THREE.Material & {
+    color?: THREE.Color;
+    map?: THREE.Texture | null;
+    flatShading?: boolean;
+    side?: THREE.Side;
+  },
+): THREE.MeshStandardMaterial {
+  const map = isEditorOnlySurfaceMap(material.map ?? null) ? null : (material.map ?? null);
   return new THREE.MeshStandardMaterial({
-    color: material.color.clone(),
+    color: material.color?.clone() ?? new THREE.Color(0xffffff),
     map,
     metalness: CONTENT_METALNESS,
     roughness: CONTENT_ROUGHNESS,
-    flatShading: material.flatShading,
-    side: material.side,
+    flatShading: material.flatShading === true,
+    side: material.side ?? THREE.FrontSide,
   });
 }
 
 /**
- * Nulls canvas-backed maps so the exporter does not embed editor checkers.
+ * Nulls editor-only maps so the exporter does not embed the default surface
+ * grid.
  *
  * @param material Cloned material to sanitize.
  */
-function clearCanvasMaps(material: THREE.Material): void {
+function clearEditorOnlyMaps(material: THREE.Material): void {
   const mapHost = material as THREE.Material & { map?: THREE.Texture | null };
-  if (mapHost.map instanceof THREE.CanvasTexture) {
+  if (isEditorOnlySurfaceMap(mapHost.map ?? null)) {
     mapHost.map = null;
     material.needsUpdate = true;
   }
+}
+
+/**
+ * Returns true for maps that must not leave the editor (default grid or
+ * canvas).
+ *
+ * @param map Candidate map.
+ * @returns True when the map is editor-only.
+ */
+function isEditorOnlySurfaceMap(map: THREE.Texture | null): boolean {
+  if (!map) {
+    return false;
+  }
+  if (isDefaultSurfaceTexture(map)) {
+    return true;
+  }
+  return map instanceof THREE.CanvasTexture;
 }
 
 /**

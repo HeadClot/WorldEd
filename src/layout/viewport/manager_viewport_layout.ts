@@ -123,6 +123,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
         onOpenAboutDialog: () => layout.onOpenAboutDialog(),
         onOpenMcpDialog: () => layout.onOpenMcpDialog(),
         onOpenDetachedViewport: () => layout.onOpenDetachedViewport(),
+        onToggleAiCaptureDebugPanel: () => layout.onToggleAiCaptureDebugPanel(),
         onAddTerrain: () => layout.onAddTerrain(),
         onAddSolidModel: () => layout.onAddSolidModel(),
         onUndo: () => layout.onUndo(),

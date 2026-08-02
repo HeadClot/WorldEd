@@ -19,6 +19,10 @@ export interface LayoutAiSetupHost {
   refreshAfterWorldMutation: () => void;
   refreshOutliner: () => void;
   showStatusMessage: (message: string) => void;
+  /** Shared editor scene for offline AI capture_view. */
+  getScene?: () => THREE.Scene | null;
+  /** Shared WebGL renderer for offline AI capture_view. */
+  getRenderer?: () => THREE.WebGLRenderer | null;
 }
 
 /** Result of AI layout wiring. */
@@ -48,6 +52,8 @@ export function setupLayoutAi(host: LayoutAiSetupHost): LayoutAiSetupResult {
     refreshAfterWorldMutation: host.refreshAfterWorldMutation,
     refreshOutliner: host.refreshOutliner,
     showStatus: host.showStatusMessage,
+    ...(host.getScene ? { getScene: host.getScene } : {}),
+    ...(host.getRenderer ? { getRenderer: host.getRenderer } : {}),
   });
   sharedMcpBridgeHandler.bindEditorApi(editorApi);
   return { editorApi };

@@ -40,6 +40,9 @@ describe('mcp_tool_registry', () => {
     expect(findMcpTool('rename_group')).toBeDefined();
     expect(findMcpTool('get_scene_hierarchy')?.description.toLowerCase()).toContain('csg_group');
     expect(findMcpTool('duplicate_brushes')?.description.toLowerCase()).toContain('group');
+    expect(findMcpTool('capture_view')).toBeDefined();
+    expect(findMcpTool('capture_view')?.description.toLowerCase()).toContain('picture');
+    expect(findMcpTool('capture_view')?.description.toLowerCase()).toContain('jpeg');
   });
 
   it('dispatches known tools through the invoker', async () => {
@@ -49,9 +52,35 @@ describe('mcp_tool_registry', () => {
       data: { called: name },
     }));
     expect(result.isError).toBeUndefined();
-    const payload = JSON.parse(result.content[0]!.text) as { ok: boolean; data: { called: string } };
+    const textBlock = result.content[0];
+    expect(textBlock?.type).toBe('text');
+    if (textBlock?.type !== 'text') {
+      throw new Error('expected text content');
+    }
+    const payload = JSON.parse(textBlock.text) as { ok: boolean; data: { called: string } };
     expect(payload.ok).toBe(true);
     expect(payload.data.called).toBe('get_editor_context');
+  });
+
+  it('returns MCP image content blocks without duplicating base64 in text', async () => {
+    const result = await dispatchMcpToolCall({ name: 'capture_view', arguments: {} }, async () => ({
+      ok: true,
+      message: 'Captured view',
+      data: { width: 64, height: 64 },
+      images: [{ mimeType: 'image/png', data: 'fakebase64payload' }],
+    }));
+    expect(result.isError).toBeUndefined();
+    expect(result.content).toHaveLength(2);
+    const textBlock = result.content[0];
+    const imageBlock = result.content[1];
+    expect(textBlock?.type).toBe('text');
+    expect(imageBlock?.type).toBe('image');
+    if (textBlock?.type !== 'text' || imageBlock?.type !== 'image') {
+      throw new Error('expected text + image content');
+    }
+    expect(textBlock.text).not.toContain('fakebase64payload');
+    expect(imageBlock.data).toBe('fakebase64payload');
+    expect(imageBlock.mimeType).toBe('image/png');
   });
 
   it('marks unknown tools as errors', async () => {
@@ -60,7 +89,12 @@ describe('mcp_tool_registry', () => {
       message: 'should not run',
     }));
     expect(result.isError).toBe(true);
-    const payload = JSON.parse(result.content[0]!.text) as { ok: boolean };
+    const errorBlock = result.content[0];
+    expect(errorBlock?.type).toBe('text');
+    if (errorBlock?.type !== 'text') {
+      throw new Error('expected text error content');
+    }
+    const payload = JSON.parse(errorBlock.text) as { ok: boolean };
     expect(payload.ok).toBe(false);
   });
 });

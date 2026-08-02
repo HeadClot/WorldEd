@@ -1,21 +1,20 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import * as THREE from 'three';
 import { CONTENT_METALNESS, CONTENT_ROUGHNESS, createContentMaterial } from '@/materials/factory_content_material.js';
+import { ContentViewLitMaterial } from '@/materials/factory_content_view_lit_material.js';
 import { disposeDebugCheckerTexture } from '@/texture/library/factory_debug_texture.js';
-import { disposeStudioMatcapTexture } from '@/materials/factory_studio_matcap.js';
 
 describe('content_material_factory', () => {
   afterEach(() => {
     disposeDebugCheckerTexture();
-    disposeStudioMatcapTexture();
   });
 
-  it('should create a matcap material with the shared debug map', () => {
+  it('should create a view-lit material with the shared debug map', () => {
     const material = createContentMaterial(0xff0000);
-    expect(material).toBeInstanceOf(THREE.MeshMatcapMaterial);
+    expect(material).toBeInstanceOf(ContentViewLitMaterial);
     expect(material.map).not.toBeNull();
-    expect(material.matcap).not.toBeNull();
     expect(material.color.getHex()).toBe(0xff0000);
+    expect(material.fragmentShader).toContain('studioViewportLuminance');
+    expect(material.fragmentShader).not.toContain('1.0 / r2');
     material.dispose();
   });
 

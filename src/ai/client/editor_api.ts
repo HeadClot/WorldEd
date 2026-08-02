@@ -1,6 +1,7 @@
 import type { EditorApiHost } from './editor_api_host.js';
 import { EditorApiAlign } from './editor_api_align.js';
 import { EditorApiBuilders } from './editor_api_builders.js';
+import { EditorApiCapture } from './editor_api_capture.js';
 import { EditorApiCsgQuery } from './editor_api_csg_query.js';
 import { EditorApiFind } from './editor_api_find.js';
 import { EditorApiHierarchy } from './editor_api_hierarchy.js';
@@ -42,6 +43,7 @@ import type {
   SplitBrushArgs,
   UngroupCsgGroupsArgs,
 } from './editor_api_types.js';
+import type { CaptureViewArgs } from './editor_api_capture_types.js';
 import { calculateExpression } from '@/ai/shared/mcp_calculate.js';
 import type { McpToolResult } from '@/ai/shared/mcp_protocol_types.js';
 
@@ -59,6 +61,7 @@ export class EditorApi {
   private readonly builders: EditorApiBuilders;
   private readonly csgQuery: EditorApiCsgQuery;
   private readonly hierarchy: EditorApiHierarchy;
+  private readonly capture: EditorApiCapture;
 
   /**
    * Creates an editor API bound to live editor systems.
@@ -75,6 +78,7 @@ export class EditorApi {
     this.builders = new EditorApiBuilders(host, this.writes);
     this.csgQuery = new EditorApiCsgQuery(host);
     this.hierarchy = new EditorApiHierarchy(host);
+    this.capture = new EditorApiCapture(host);
   }
 
   /**
@@ -206,6 +210,8 @@ export class EditorApi {
         return this.writes.redo();
       case 'calculate':
         return calculateExpression(stringArg(args, 'expression'));
+      case 'capture_view':
+        return this.capture.captureView(args as CaptureViewArgs);
       default:
         return { ok: false, message: `Unknown tool: ${name}` };
     }

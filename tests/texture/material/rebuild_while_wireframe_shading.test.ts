@@ -43,8 +43,8 @@ describe('rebuildSolidResultMaterials while wireframe shading is live', () => {
       },
     ]);
     const rebuilt = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-    expect(rebuilt).toBeInstanceOf(THREE.MeshMatcapMaterial);
-    expect((rebuilt as THREE.MeshMatcapMaterial).color.getHex()).toBe(0xffffff);
+    expect(rebuilt).toBeTruthy();
+    expect((rebuilt as THREE.Material & { color: THREE.Color }).color.getHex()).toBe(0xffffff);
     expect((rebuilt as THREE.Material).colorWrite).not.toBe(false);
     const snapshot = getSharedContentMaterials(mesh.uuid);
     expect(snapshot).not.toBeNull();

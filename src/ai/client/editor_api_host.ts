@@ -20,4 +20,14 @@ export interface EditorApiHost {
   refreshAfterWorldMutation: () => void;
   refreshOutliner: () => void;
   showStatus: (message: string) => void;
+  /**
+   * Shared editor scene for capture_view. Set by layout bootstrap; unit tests
+   * may omit it.
+   */
+  getScene?: () => THREE.Scene | null;
+  /**
+   * Shared WebGL renderer for capture_view. Set by layout bootstrap; unit tests
+   * may omit it.
+   */
+  getRenderer?: () => THREE.WebGLRenderer | null;
 }

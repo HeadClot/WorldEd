@@ -4,16 +4,25 @@ import * as THREE from 'three';
 export const STUDIO_MATCAP_SIZE = 256;
 
 /**
- * Peak matcap luminance for camera-facing surfaces. Kept under 1 so white
- * albedo never exceeds unlit full-bright.
+ * Peak matcap luminance for camera-facing surfaces. 1 = unlit texture color
+ * (map × matcap leaves albedo unchanged when looking straight at a wall).
  */
-export const STUDIO_MATCAP_PEAK = 0.9;
+export const STUDIO_MATCAP_PEAK = 1;
+
+/** Floor luminance on the dark side of the studio key. */
+export const STUDIO_MATCAP_EDGE_FLOOR = 0.12;
 
 /**
- * Floor luminance for grazing silhouette normals. Low values make steep sides
- * dark relative to faces aimed at the camera.
+ * How tightly face-on surfaces blend to unlit peak. Higher = only
+ * near-perpendicular walls stay fully unlit; angled faces keep studio depth.
  */
-export const STUDIO_MATCAP_EDGE_FLOOR = 0.09;
+export const STUDIO_MATCAP_UNLIT_BLEND_POWER = 5;
+
+/**
+ * Three.js MeshMatcapMaterial shrinks the normal disk slightly (see meshmatcap
+ * fragment shader: * 0.495 + 0.5).
+ */
+const MATCAP_UV_SCALE = 0.495;
 
 /** Shared matcap texture used by all solid content materials. */
 let sharedStudioMatcap: THREE.DataTexture | null = null;
@@ -54,7 +63,7 @@ export function bakeStudioMatcapTexture(size: number): THREE.DataTexture {
  *
  * @param normalX View-space normal X.
  * @param normalY View-space normal Y.
- * @param normalZ View-space normal Z.
+ * @param normalZ View-space normal Z (toward camera when face-on).
  * @returns Linear RGB in 0..peak.
  */
 export function sampleStudioMatcapLighting(
@@ -63,6 +72,26 @@ export function sampleStudioMatcapLighting(
   normalZ: number,
 ): { r: number; g: number; b: number } {
   return evaluateStudioSphereLighting(normalX, normalY, normalZ);
+}
+
+/**
+ * Maps a matcap UV (Three.js sampling space) to a unit view normal for baking.
+ * Matches meshmatcap.glsl: uv = vec2(dot(x,n), dot(y,n)) * 0.495 + 0.5 with
+ * viewDir = (0,0,1) so x=(1,0,0), y=(0,1,0) and uv encodes n.xy.
+ *
+ * @param u Texture U 0..1.
+ * @param v Texture V 0..1.
+ * @returns Unit normal or null outside the matcap disk.
+ */
+export function matcapUvToViewNormal(u: number, v: number): THREE.Vector3 | null {
+  const normalX = (u - 0.5) / MATCAP_UV_SCALE;
+  const normalY = (v - 0.5) / MATCAP_UV_SCALE;
+  const radiusSquared = normalX * normalX + normalY * normalY;
+  if (radiusSquared > 1) {
+    return null;
+  }
+  const normalZ = Math.sqrt(Math.max(0, 1 - radiusSquared));
+  return new THREE.Vector3(normalX, normalY, normalZ);
 }
 
 /**
@@ -85,45 +114,22 @@ function fillStudioMatcapPixels(pixels: Uint8Array, size: number): void {
  * @param pixels Raw RGBA bytes.
  * @param size Texture edge length.
  * @param x Pixel column.
- * @param y Pixel row.
+ * @param y Pixel row (0 = bottom of DataTexture / V = 0).
  */
 function writeStudioMatcapPixel(pixels: Uint8Array, size: number, x: number, y: number): void {
   const index = (y * size + x) * 4;
-  const normalX = mapMatcapTexelToNormalX(x, size);
-  const normalY = mapMatcapTexelToNormalY(y, size);
-  const radiusSquared = normalX * normalX + normalY * normalY;
-  if (radiusSquared > 1) {
+  const u = size <= 1 ? 0.5 : x / (size - 1);
+  const v = size <= 1 ? 0.5 : y / (size - 1);
+  const normal = matcapUvToViewNormal(u, v);
+  if (!normal) {
     writeOutsideSpherePixel(pixels, index);
     return;
   }
-  const normalZ = Math.sqrt(Math.max(0, 1 - radiusSquared));
-  const rgb = evaluateStudioSphereLighting(normalX, normalY, normalZ);
+  const rgb = evaluateStudioSphereLighting(normal.x, normal.y, normal.z);
   pixels[index] = linearChannelToByte(rgb.r);
   pixels[index + 1] = linearChannelToByte(rgb.g);
   pixels[index + 2] = linearChannelToByte(rgb.b);
   pixels[index + 3] = 255;
-}
-
-/**
- * Maps a matcap texel column to view-space normal X for Three.js sampling.
- *
- * @param x Pixel column.
- * @param size Texture edge length.
- * @returns Normal X in -1..1.
- */
-function mapMatcapTexelToNormalX(x: number, size: number): number {
-  return 1 - (x / (size - 1)) * 2;
-}
-
-/**
- * Maps a matcap texel row to view-space normal Y for Three.js sampling.
- *
- * @param y Pixel row.
- * @param size Texture edge length.
- * @returns Normal Y in -1..1.
- */
-function mapMatcapTexelToNormalY(y: number, size: number): number {
-  return (y / (size - 1)) * 2 - 1;
 }
 
 /**
@@ -133,16 +139,15 @@ function mapMatcapTexelToNormalY(y: number, size: number): number {
  * @param index RGBA start index.
  */
 function writeOutsideSpherePixel(pixels: Uint8Array, index: number): void {
-  pixels[index] = 18;
-  pixels[index + 1] = 18;
-  pixels[index + 2] = 22;
+  pixels[index] = 22;
+  pixels[index + 1] = 22;
+  pixels[index + 2] = 26;
   pixels[index + 3] = 255;
 }
 
 /**
- * Evaluates studio matcap lighting for a unit sphere normal. Brightness follows
- * how much the normal faces the camera so steep sides fall off while face-on
- * surfaces stay readable.
+ * Evaluates studio matcap lighting for a unit sphere normal in the same space
+ * Three.js uses for matcap UVs (face-on = +Z).
  *
  * @param normalX View-space normal X.
  * @param normalY View-space normal Y.
@@ -155,36 +160,44 @@ function evaluateStudioSphereLighting(
   normalZ: number,
 ): { r: number; g: number; b: number } {
   const facingAmount = Math.max(0, normalZ);
-  const facingCurve = Math.pow(facingAmount, 1.65);
-  const coreLighting = facingCurve * 0.78;
-  const keyLighting = clampedLambert(normalX, normalY, normalZ, 0.35, 0.72, 0.55) * 0.14 * (0.25 + 0.75 * facingCurve);
-  const limbDarkening = Math.pow(1 - facingAmount, 1.25) * 0.04;
-  const ambientLighting = STUDIO_MATCAP_EDGE_FLOOR + (normalY * 0.5 + 0.5) * 0.025;
-  const luminance = Math.min(
-    STUDIO_MATCAP_PEAK,
-    Math.max(0, coreLighting + keyLighting + ambientLighting - limbDarkening),
-  );
-  return tintStudioLuminance(luminance, keyLighting);
-}
-
-/**
- * Applies a slight warm key tint to the matcap luminance.
- *
- * @param luminance Combined lighting term.
- * @param keyLighting Key contribution for warmth.
- * @returns Tinted RGB.
- */
-function tintStudioLuminance(luminance: number, keyLighting: number): { r: number; g: number; b: number } {
-  const warmthAmount = Math.min(1, keyLighting * 4);
+  const studioLuminance = evaluateStudioSculptLuminance(normalX, normalY, normalZ, facingAmount);
+  const unlitBlend = Math.pow(facingAmount, STUDIO_MATCAP_UNLIT_BLEND_POWER);
+  const luminance = clamp01(studioLuminance * (1 - unlitBlend) + STUDIO_MATCAP_PEAK * unlitBlend);
   return {
-    r: Math.min(STUDIO_MATCAP_PEAK, Math.max(0, luminance * (1 + warmthAmount * 0.04))),
-    g: Math.min(STUDIO_MATCAP_PEAK, Math.max(0, luminance * (1 + warmthAmount * 0.015))),
-    b: Math.min(STUDIO_MATCAP_PEAK, Math.max(0, luminance * (1 - warmthAmount * 0.03))),
+    r: luminance,
+    g: luminance,
+    b: luminance,
   };
 }
 
 /**
- * Clamped Lambert term for the studio key contribution.
+ * Builds sculpted studio lighting for angled surfaces (key + fill + soft
+ * shadow). Directions are in view/matcap space so they track the camera with
+ * the matcap.
+ *
+ * @param normalX View-space normal X.
+ * @param normalY View-space normal Y.
+ * @param normalZ View-space normal Z.
+ * @param facingAmount Camera-facing amount 0..1.
+ * @returns Linear luminance before face-on unlit blend.
+ */
+function evaluateStudioSculptLuminance(
+  normalX: number,
+  normalY: number,
+  normalZ: number,
+  facingAmount: number,
+): number {
+  const keyLighting = clampedLambert(normalX, normalY, normalZ, 0.45, 0.55, 0.7) * 0.55;
+  const fillLighting = clampedLambert(normalX, normalY, normalZ, -0.55, 0.25, 0.45) * 0.22;
+  const topFill = clampedLambert(normalX, normalY, normalZ, 0.1, 0.85, 0.35) * 0.12;
+  const wrap = Math.pow(facingAmount, 1.25) * 0.2;
+  const silhouette = Math.pow(1 - facingAmount, 1.4) * 0.08;
+  const luminance = STUDIO_MATCAP_EDGE_FLOOR + keyLighting + fillLighting + topFill + wrap - silhouette;
+  return clamp01(Math.min(0.9, luminance));
+}
+
+/**
+ * Clamped Lambert term for a light direction.
  *
  * @param normalX Normal X.
  * @param normalY Normal Y.
@@ -210,13 +223,23 @@ function clampedLambert(
 }
 
 /**
+ * Clamps a value to 0..1.
+ *
+ * @param value Input.
+ * @returns Clamped value.
+ */
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+/**
  * Converts a linear 0..1 channel to an 8-bit gamma-encoded byte.
  *
  * @param channel Linear channel.
  * @returns Byte 0..255.
  */
 function linearChannelToByte(channel: number): number {
-  const gammaEncoded = Math.pow(Math.min(1, Math.max(0, channel)), 1 / 2.2);
+  const gammaEncoded = Math.pow(clamp01(channel), 1 / 2.2);
   return Math.round(gammaEncoded * 255);
 }
 

@@ -231,6 +231,11 @@ describe('EditorApi builders and csg helpers', () => {
     expect(cut.operation).toBe(SolidOperation.Subtractive);
     cut.pullTransformFromMesh();
     expect(cut.position.z).toBeCloseTo(front.position.z, 3);
+    const cutLocal = cut.brush.computeLocalBounds().getSize(new THREE.Vector3());
+    // Flush cut: depth matches wall thickness exactly (no overcut overhang).
+    expect(cutLocal.z * cut.scale.z).toBeCloseTo(wallT, 4);
+    expect(cutLocal.x * cut.scale.x).toBeCloseTo(doorWidth, 4);
+    expect(cutLocal.y * cut.scale.y).toBeCloseTo(doorHeight, 4);
     const order = model.getBrushes().map((brush) => brush.id);
     expect(order.indexOf(cut.id)).toBeGreaterThan(order.indexOf(front.id));
   });
@@ -284,9 +289,49 @@ describe('EditorApi builders and csg helpers', () => {
       point: { x: 0, y: 0, z: 0 },
     });
     expect(result.ok).toBe(true);
-    const data = result.data as { finalSolid: boolean; affectingBrushes: Array<{ brushId: string }> };
+    const data = result.data as {
+      finalSolid: boolean;
+      hierarchical: boolean;
+      affectingBrushes: Array<{ brushId: string }>;
+    };
     expect(data.finalSolid).toBe(true);
+    expect(data.hierarchical).toBe(false);
     expect(data.affectingBrushes.some((row) => row.brushId === brush.id)).toBe(true);
+  });
+
+  it('explains hierarchical group subtract using compound membership not flat fold', () => {
+    const { api, world, stack } = createApi();
+    const model = pushModel(world, stack, 'HierCsgModel');
+    const outer = model.getBrushes()[0]!;
+    outer.scale.set(4, 4, 4);
+    outer.pushTransformToMesh();
+    api.invokeTool('add_box_brush', {
+      modelId: model.root.uuid,
+      size: { x: 2, y: 2, z: 2 },
+      position: { x: 0, y: 0, z: 0 },
+      operation: 'additive',
+      name: 'cutter_body',
+      snap: false,
+    });
+    const cutter = model.getBrushes().find((brush) => brush.name === 'cutter_body')!;
+    const grouped = api.invokeTool('create_csg_group', {
+      modelId: model.root.uuid,
+      brushIds: [cutter.id],
+      operation: 'subtractive',
+      name: 'CutCompound',
+    });
+    expect(grouped.ok).toBe(true);
+    model.rebuild(true);
+    const result = api.invokeTool('explain_csg_at_point', {
+      modelId: model.root.uuid,
+      point: { x: 0, y: 0, z: 0 },
+    });
+    expect(result.ok).toBe(true);
+    const data = result.data as { finalSolid: boolean; hierarchical: boolean };
+    // Outer solid minus subtractive compound (additive child) is void at center.
+    // A flat brush-op fold would treat the child as additive and report solid.
+    expect(data.hierarchical).toBe(true);
+    expect(data.finalSolid).toBe(false);
   });
 
   it('reports void connectivity along a clear line', () => {

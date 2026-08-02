@@ -83,7 +83,9 @@ export interface FaceTextureMappingSerialized {
 const DEFAULT_TRS_NORMAL = new THREE.Vector3(0, 1, 0);
 
 /**
- * Creates a default face mapping (identity UV matrix, checker texture).
+ * Creates a default face mapping (centered UV matrix, checker texture). UV
+ * translation is +0.5 on U and V so a unit-centered face maps to one full tile
+ * with the texture centered on each side.
  *
  * @param textureId Optional texture id.
  * @returns New default mapping with TRS accessors.
@@ -93,7 +95,7 @@ export function createDefaultFaceTextureMapping(
 ): FaceTextureMappingWithTrs {
   return withTrsAccessors({
     textureId: textureId || DEFAULT_CHECKER_TEXTURE_ID,
-    uv: SurfaceUvMatrix.identity(),
+    uv: SurfaceUvMatrix.centered(),
     align: 'auto',
   });
 }

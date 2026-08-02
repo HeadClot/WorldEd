@@ -39,6 +39,7 @@ export interface LayoutShellSourceHost {
   onOpenAboutDialog(): void;
   onOpenMcpDialog(): void;
   onOpenDetachedViewport(): void;
+  onToggleAiCaptureDebugPanel(): void;
   onAddTerrain(): void;
   onAddSolidModel(): void;
   onUndo(): void;
@@ -168,6 +169,7 @@ function buildShellPanelCallbacks(
   | 'onOpenAboutDialog'
   | 'onOpenMcpDialog'
   | 'onOpenDetachedViewport'
+  | 'onToggleAiCaptureDebugPanel'
 > {
   return {
     refreshOutliner: () => host.refreshOutliner(),
@@ -183,6 +185,7 @@ function buildShellPanelCallbacks(
     onOpenAboutDialog: () => host.onOpenAboutDialog(),
     onOpenMcpDialog: () => host.onOpenMcpDialog(),
     onOpenDetachedViewport: () => host.onOpenDetachedViewport(),
+    onToggleAiCaptureDebugPanel: () => host.onToggleAiCaptureDebugPanel(),
   };
 }
 

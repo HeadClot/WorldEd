@@ -71,6 +71,7 @@ import { SolidModelPanel } from '@/solid/ui/panel/solid_model_panel.js';
 import { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 import { setupSolidModelLayout } from '@/solid/layout/solid_model_layout_setup.js';
 import { setupLayoutAi } from '@/layout/setup/layout_ai_setup.js';
+import { PanelAiCaptureDebug } from '@/ai/client/ui/panel_ai_capture_debug.js';
 import {
   setupCameraAndShadingCoordinators as createCameraAndShadingCoordinators,
   setupFaceModeCoordinator as createFaceModeCoordinator,
@@ -201,6 +202,7 @@ export abstract class ViewportLayoutCore {
   protected clipPlaneHandler!: HandlerClipPlane | null;
   protected solidModelPanel!: SolidModelPanel | null;
   protected solidModelController!: SolidModelController | null;
+  protected aiCaptureDebugPanel!: PanelAiCaptureDebug | null;
   protected cadRulerSystem!: CadRulerSystem;
   protected rulerBoundsBuilder!: BuilderOrientedBounds;
   protected editorOverlayPolicy!: PolicyEditorOverlay;
@@ -253,6 +255,7 @@ export abstract class ViewportLayoutCore {
     this.clipPlaneHandler = null;
     this.solidModelPanel = null;
     this.solidModelController = null;
+    this.aiCaptureDebugPanel = null;
     this.transformSpace = TransformSpace.Global;
     this.cadRulerSystem = new CadRulerSystem();
     this.rulerBoundsBuilder = new BuilderOrientedBounds();
@@ -576,6 +579,7 @@ export abstract class ViewportLayoutCore {
     this.registerToolEditorGuiSurface(this.uvEditor, 'uv_editor');
     this.registerToolEditorGuiSurface(this.textureBrowser, 'texture_browser');
     this.registerToolEditorGuiSurface(this.solidModelPanel, 'solid_model_panel');
+    this.registerToolEditorGuiSurface(this.aiCaptureDebugPanel, 'ai_capture_debug_panel');
     this.toolEditorSystem.installFocusPointerRouter(this.toolbarContainer);
   }
 
@@ -917,7 +921,45 @@ export abstract class ViewportLayoutCore {
       refreshAfterWorldMutation: () => this.refreshAfterWorldMutation(),
       refreshOutliner: () => this.refreshOutliner(),
       showStatusMessage: (message) => this.showStatusMessage(message),
+      getScene: () => this.sharedWorldScene.getScene(),
+      getRenderer: () => this.sharedSurface.getRenderer(),
     });
+    this.setupAiCaptureDebugPanel();
+  }
+
+  /** Creates the floating AI Captures debug panel (capture_view image history). */
+  protected setupAiCaptureDebugPanel(): void {
+    if (this.aiCaptureDebugPanel) {
+      return;
+    }
+    this.aiCaptureDebugPanel = new PanelAiCaptureDebug(this.toolbarContainer, this.resolveAiCaptureDebugAnchor());
+    this.aiCaptureDebugPanel.setDefaultAnchorResolver(() => this.resolveAiCaptureDebugAnchor());
+  }
+
+  /**
+   * Chooses a viewport pane as the default open position for AI Captures.
+   *
+   * @returns Anchor element or null.
+   */
+  protected resolveAiCaptureDebugAnchor(): HTMLElement | null {
+    const perspective = this.getPrimaryPerspectiveViewport();
+    if (perspective) {
+      return perspective.getContainer();
+    }
+    const first = this.getAllLiveViewports()[0];
+    return first ? first.getContainer() : null;
+  }
+
+  /** Toggles the floating AI Captures debug panel. */
+  protected onToggleAiCaptureDebugPanel(): void {
+    if (!this.aiCaptureDebugPanel) {
+      this.setupAiCaptureDebugPanel();
+    }
+    this.aiCaptureDebugPanel?.toggle();
+    if (this.aiCaptureDebugPanel?.isOpen()) {
+      this.aiCaptureDebugPanel.refresh();
+      this.statusBar?.setLastAction('AI Captures panel opened');
+    }
   }
 
   /** Opens the MCP connection dialog from the main toolbar. */

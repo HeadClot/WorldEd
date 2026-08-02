@@ -149,9 +149,9 @@ export class SolidResultBuffer {
   /**
    * Rebuilds from the first size-changing brush onward, keeping a stable
    * prefix. The prefix is copied from the previous buffer for speed; dirty
-   * brushes that landed in that prefix (same triangle counts, only pose
-   * change) are then rewritten from the chunk cache so a moved seed cannot
-   * stay behind peers that forced a later topology rebuild.
+   * brushes that landed in that prefix (same triangle counts, only pose change)
+   * are then rewritten from the chunk cache so a moved seed cannot stay behind
+   * peers that forced a later topology rebuild.
    *
    * @param dirtyBrushIds Brushes recompiled this pass.
    * @param brushIds Current evaluation order.
@@ -211,8 +211,8 @@ export class SolidResultBuffer {
 
   /**
    * Overwrites dirty brush slices that remained in the copied prefix with
-   * current chunk data. Prefix dirty brushes kept their ranges (same size) so
-   * a pose-only seed update is applied without rewriting the whole map.
+   * current chunk data. Prefix dirty brushes kept their ranges (same size) so a
+   * pose-only seed update is applied without rewriting the whole map.
    *
    * @param dirtyBrushIds Brushes recompiled this pass.
    * @param prefixVertexEnd Exclusive end of the stable prefix in vertices.

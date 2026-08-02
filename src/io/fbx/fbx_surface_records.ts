@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isDefaultSurfaceTexture } from '@/texture/library/factory_debug_texture.js';
 import type { FbxNodeIdPool } from './fbx_node_id_pool.js';
 
 /**
@@ -172,6 +173,7 @@ function readDiffuseMap(material: THREE.Material): THREE.Texture | null {
   const mapHost = material as THREE.Material & { map?: THREE.Texture | null };
   const map = mapHost.map ?? null;
   if (!map || !map.image) return null;
+  if (isDefaultSurfaceTexture(map)) return null;
   if (map instanceof THREE.CanvasTexture) return null;
   return map;
 }

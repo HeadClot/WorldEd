@@ -38,7 +38,9 @@ export function isBuiltinCheckerEntry(entry: TextureBrowserEntry): boolean {
  * @returns Preview URL string.
  */
 function getOrCreateCheckerPreviewUrl(): string {
-  if (checkerPreviewUrl) return checkerPreviewUrl;
+  if (checkerPreviewUrl) {
+    return checkerPreviewUrl;
+  }
   checkerPreviewUrl = buildCheckerDataUrl();
   return checkerPreviewUrl;
 }

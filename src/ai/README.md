@@ -99,12 +99,12 @@ Same-solid only: reparent/group never moves a brush out of its solid model root.
 
 ## Walls, rooms, openings (math)
 
-| Piece            | Placement rule                                                                                                                                                                                                                                                                                                          |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `place_wall`     | Centerline `from`→`to` on XZ. Box size `{thickness, height, length}`. Yaw = `atan2(dx, dz)` so local **+Z** follows the segment. Bottom = `baseY` (default 0).                                                                                                                                                          |
-| `add_room_shell` | Exterior AABB `size`; `position` is center (default floor on y=0). Front wall at **+Z**, back **−Z**, left **−X**, right **+X**. Side walls are shortened so corners do not double-stack.                                                                                                                               |
-| `cut_opening`    | Subtractive box; **position is the hole center**, `size` is full extents. No auto wall align.                                                                                                                                                                                                                           |
-| `add_opening`    | Prefer **`targetBrushId`** = wall brush. Snaps cut to wall **midplane**, uses wall thickness as depth (+ small overcut), reorders cut **after** that wall. `sillHeight` = bottom of hole → center Y = sill + height/2. Doors skip bottom frame strip. **Axis-aligned walls only** (not diagonal `place_wall` segments). |
+| Piece            | Placement rule                                                                                                                                                                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `place_wall`     | Centerline `from`→`to` on XZ. Box size `{thickness, height, length}`. Yaw = `atan2(dx, dz)` so local **+Z** follows the segment. Bottom = `baseY` (default 0).                                                                                                                                                                  |
+| `add_room_shell` | Exterior AABB `size`; `position` is center (default floor on y=0). Front wall at **+Z**, back **−Z**, left **−X**, right **+X**. Side walls are shortened so corners do not double-stack.                                                                                                                                       |
+| `cut_opening`    | Subtractive box; **position is the hole center**, `size` is full extents. No auto wall align.                                                                                                                                                                                                                                   |
+| `add_opening`    | Prefer **`targetBrushId`** = wall brush. Snaps cut to wall **midplane**, uses wall thickness as flush depth (exact, no overcut), reorders cut **after** that wall. `sillHeight` = bottom of hole → center Y = sill + height/2. Doors skip bottom frame strip. **Axis-aligned walls only** (not diagonal `place_wall` segments). |
 
 **Door example:** build room → `find_brushes` nameContains `wall_front` → `add_opening` with `kind: "door"`, `targetBrushId`, `sillHeight` = floor top, `size: { width, height }`, `position` along the wall (x/z of doorway center; y ignored when sillHeight set), `snap: false`.
 
@@ -133,6 +133,84 @@ Same-solid only: reparent/group never moves a brush out of its solid model root.
 | `delete_brushes` / `duplicate_brushes` / `mirror_brushes`         | Delete/mirror: brushes only; duplicate supports `groupIds` |
 | `reorder_brushes` / `reorder_brush_relative`                      | Sibling order (ends or before/after)                       |
 | `set_inverted_world` / `select` / `undo` / `redo`                 | Session                                                    |
+| `capture_view`                                                    | Take a JPEG picture of the 3D world (default 256×256)      |
+
+### Seeing the world (`capture_view`)
+
+**What it does:** Renders one still image of the world and returns it as a **JPEG**. The editor viewports are not moved or changed. In **solid** shading, the default checker texture is replaced with **white** for the capture only; faces with real assigned textures keep those maps.
+
+**Requirements:** AiWorldEd must be running with MCP started (toolbar **MCP** → **Start server**). MCP always runs inside the app; there is no separate browser MCP.
+
+**Size limits (important):** Many MCP clients cap tool results near **20KB** (Grok Build default is 20_000 bytes). A full 512×512 PNG is far too large and gets **truncated**, which shows up as “image bytes are truncated” / “payload too large”.  
+`capture_view` therefore:
+
+- Defaults to **256×256 JPEG**
+- Lowers JPEG quality first; if still too large, **halves** resolution repeatedly: 512→256→128→64→**32**, then gives up
+- Max requested `size` is **512**
+
+If you need larger images in Grok Build, raise the client cap, for example in `~/.grok/config.toml`:
+
+```toml
+[mcp]
+max_output_bytes = 200000
+```
+
+**How to frame the camera** (simple first):
+
+| Approach                        | Arguments                                                                        | Behavior                                 |
+| ------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Focus a brush (recommended)** | `brushId` or `nameContains`                                                      | **Centers** the image on that subject    |
+| Camera side                     | `view`: `iso` (default) / `front` / `back` / `top` / `bottom` / `left` / `right` | Which side to look from                  |
+| Pull farther back               | `distanceOffset`                                                                 | Extra distance after fit                 |
+| Whole solid model               | `modelId` only                                                                   | Frames that model’s **final CSG mesh**   |
+| Free camera                     | `position` + `lookAt`                                                            | Exact pose                               |
+| Point only                      | `lookAt` (+ optional `distanceOffset`, `view`)                                   | Camera on that side looking at the point |
+| Default                         | no framing args                                                                  | Frames all solids’ CSG results           |
+
+**Framing rules:**
+
+- Brush focus always puts the subject **bounds center on the optical axis** (image center).
+- If `nameContains` / `brushId` matches **nothing**, the tool **errors** (does not silently frame the whole map).
+- Whole-model / world framing uses CSG **result** bounds (or additive brushes), not floating subtractive cutters.
+
+**Shading** (`shading`):
+
+| Value             | Look                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| `solid` (default) | Materials; default checker → white                                                   |
+| `overlap`         | Brush hull overdraw (cyan additive / warm subtractive); intersections stack brighter |
+| `flat`            | Unlit flat gray                                                                      |
+
+(Legacy `wireframe` is accepted and mapped to `overlap`.)
+
+**Optional:** `size` (32–512, default 256), `fov` (default 60), `padding` (default 1.15), `includeHelpers` (default false).
+
+**What you get back:**
+
+1. Text JSON: `ok`, `message`, camera position/lookAt, size, framed brush ids, compression flags
+2. Image content: `image/jpeg` (the picture itself)
+
+**Local debug UI:** every successful `capture_view` is also stored in the floating **AI Captures** window (toolbar button next to **Detached Viewport**). Open it to inspect thumbnails, camera summary, shading, and size. Use **Clear** to drop the history (max 48 images).
+
+**Example — look at a wall by name (preferred):**
+
+```json
+{
+  "nameContains": "wall_front",
+  "view": "front",
+  "distanceOffset": 2
+}
+```
+
+**Example — free camera:**
+
+```json
+{
+  "position": { "x": 0, "y": 5, "z": 10 },
+  "lookAt": { "x": 0, "y": 0, "z": 0 },
+  "shading": "overlap"
+}
+```
 
 ### AI level-building tips
 
@@ -163,7 +241,7 @@ Solid mutations (including hierarchy create/reparent/rename/ungroup) are **undoa
 
 ## Not in this build
 
-- **`capture_viewport` / `capture_section`** — need WebGL readback + image transport outside the AI folder.
+- **`capture_section`** — orthographic 2D section slices (top/front/side) are not a separate tool yet; use `capture_view` with a free camera for now.
 - **Separate tag system** — use stable `name` strings instead of a second metadata channel.
 - **Exact navmesh void paths** — connectivity uses a capped grid / line sample only.
 

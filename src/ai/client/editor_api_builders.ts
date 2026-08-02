@@ -23,9 +23,6 @@ import type { AddBoxBrushArgs, AddBoxBrushBatchEntry, AddBoxBrushesArgs } from '
 import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import type { McpToolResult, McpVec3 } from '@/ai/shared/mcp_protocol_types.js';
 
-/** Extra depth so a cut fully clears a wall face (avoids paper-thin remnants). */
-const OPENING_OVERCUT = 0.05;
-
 /** High-level geometry builders for walls, rooms, and openings. */
 export class EditorApiBuilders {
   private readonly host: EditorApiHost;
@@ -198,7 +195,7 @@ export class EditorApiBuilders {
     if (!placement.ok) return failResult(placement.message);
     const { center, axis, depth, targetBrushId } = placement;
     const prefix = args.name?.trim() || args.kind;
-    const cutSize = orientedSize(width, height, depth + OPENING_OVERCUT, axis);
+    const cutSize = orientedSize(width, height, depth, axis);
     const cutArgs: AddBoxBrushArgs = {
       modelId: args.modelId,
       size: cutSize,
@@ -310,8 +307,8 @@ export class EditorApiBuilders {
   }
 
   /**
-   * Builds an optional interior subtract slightly larger than the clear span so
-   * wall inner faces are cleanly nicked when a solid fill is present.
+   * Builds an optional interior subtract matching the clear span between wall
+   * inner faces (flush, no nibble into wall thickness).
    *
    * @param args Room args.
    * @param prefix Name prefix.
@@ -331,9 +328,8 @@ export class EditorApiBuilders {
     ceilT: number,
     wallT: number,
   ): AddBoxBrushBatchEntry {
-    const nibble = Math.min(OPENING_OVERCUT, wallT * 0.25);
-    const innerW = Math.max(args.size.x - wallT * 2 + nibble * 2, 0.01);
-    const innerD = Math.max(args.size.z - wallT * 2 + nibble * 2, 0.01);
+    const innerW = Math.max(args.size.x - wallT * 2, 0.01);
+    const innerD = Math.max(args.size.z - wallT * 2, 0.01);
     const innerH = Math.max(args.size.y - floorT - ceilT, 0.01);
     return {
       name: `${prefix}_interior_cut`,

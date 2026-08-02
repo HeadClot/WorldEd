@@ -5,7 +5,15 @@ import * as THREE from 'three';
  * 1 m and each cell is 0.25 m (default snap).
  */
 const CHECKER_CELLS = 4;
-const TEXTURE_PIXELS = 64;
+
+/**
+ * Texture edge length in pixels. Same 4×4 pattern as the original 64px map;
+ * higher resolution keeps hard cell edges crisp under trilinear / anisotropy.
+ */
+const TEXTURE_PIXELS = 512;
+
+/** UserData key marking the shared built-in default surface map. */
+export const DEFAULT_SURFACE_TEXTURE_USERDATA_KEY = 'isDefaultSurfaceTexture';
 
 let sharedDebugTexture: THREE.CanvasTexture | null = null;
 
@@ -16,7 +24,9 @@ let sharedDebugTexture: THREE.CanvasTexture | null = null;
  * @returns Shared canvas texture with repeat wrapping.
  */
 export function getDebugCheckerTexture(): THREE.CanvasTexture {
-  if (sharedDebugTexture) return sharedDebugTexture;
+  if (sharedDebugTexture) {
+    return sharedDebugTexture;
+  }
   sharedDebugTexture = createCheckerTexture();
   return sharedDebugTexture;
 }
@@ -62,7 +72,7 @@ function paintChecker(context: CanvasRenderingContext2D, pixelSize: number, cell
  * Fallback texture when canvas 2D is unavailable (tests without full DOM
  * canvas).
  *
- * @returns DataTexture with a simple 2x2 checker pattern.
+ * @returns CanvasTexture with a simple 2x2 checker pattern.
  */
 function createFallbackDataTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
@@ -83,18 +93,38 @@ function createFallbackDataTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Applies standard wrap and filter settings for the debug map.
+ * Applies wrap and color-space defaults for the debug map. Mag/min filters and
+ * anisotropy come from the global texture filter policy via
+ * TextureMapCache.setFilterPolicy; defaults match trilinear until then.
  *
  * @param texture Texture to configure.
  */
 function configureTexture(texture: THREE.CanvasTexture): void {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.magFilter = THREE.NearestFilter;
-  texture.minFilter = THREE.NearestFilter;
-  texture.generateMipmaps = false;
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.generateMipmaps = true;
+  texture.name = 'default_surface_grid';
+  texture.userData[DEFAULT_SURFACE_TEXTURE_USERDATA_KEY] = true;
   texture.needsUpdate = true;
+}
+
+/**
+ * Returns true when the texture is the shared built-in default surface map.
+ *
+ * @param texture Candidate texture.
+ * @returns True for the built-in debug checker.
+ */
+export function isDefaultSurfaceTexture(texture: THREE.Texture | null | undefined): boolean {
+  if (!texture) {
+    return false;
+  }
+  if (texture === sharedDebugTexture) {
+    return true;
+  }
+  return texture.userData[DEFAULT_SURFACE_TEXTURE_USERDATA_KEY] === true;
 }
 
 /**
@@ -102,7 +132,9 @@ function configureTexture(texture: THREE.CanvasTexture): void {
  * application is shutting down.
  */
 export function disposeDebugCheckerTexture(): void {
-  if (!sharedDebugTexture) return;
+  if (!sharedDebugTexture) {
+    return;
+  }
   sharedDebugTexture.dispose();
   sharedDebugTexture = null;
 }
@@ -114,4 +146,13 @@ export function disposeDebugCheckerTexture(): void {
  */
 export function getDebugCheckerCellCount(): number {
   return CHECKER_CELLS;
+}
+
+/**
+ * Returns the texture edge length in pixels for the built-in checker.
+ *
+ * @returns Pixel size along one edge.
+ */
+export function getDebugCheckerTexturePixelSize(): number {
+  return TEXTURE_PIXELS;
 }
