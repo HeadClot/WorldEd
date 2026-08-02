@@ -16,7 +16,12 @@ import type { ToolClipPlane } from '@/tools/clip_plane/tool_clip_plane.js';
 import type { HandlerClipPlane } from '@/tools/clip_plane/handler_clip_plane.js';
 import type { Viewport3D } from '@/viewports/core/viewport_3d.js';
 import type { Viewport2D } from '@/viewports/core/viewport_2d.js';
+import { isPerspectiveViewportKind } from '@/viewports/core/viewport_kind.js';
 import { keyboardShortcutCodeFromEvent } from '@/input/keyboard_event_match.js';
+import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
+import { orderObjectPickStackForViewport } from '@/selection/object/selection_pick_order_2d.js';
+import type { BridgeTransformInteraction } from '@/tools/bridge/bridge_transform_interaction.js';
+import type { CoordinatorFaceMode } from '@/tools/face/coordinator_face_mode.js';
 import {
   publishLayoutTransformLiveVisuals,
   shouldPublishLiveVisualsAfterModalKey,
@@ -73,6 +78,18 @@ export interface LayoutToolEditorSetupDeps {
    * @returns Client coordinates, or null when unknown.
    */
   getLastPointerClientPositionForDocument?: (ownerDocument: Document) => { clientX: number; clientY: number } | null;
+  /**
+   * Permanent gizmo interaction bridge (widget-driven; no viewport callbacks).
+   *
+   * @returns Bridge instance when the transform system exists.
+   */
+  getTransformInteractionBridge?: () => BridgeTransformInteraction | null;
+  /**
+   * Face mode coordinator for FaceSelectTool mouse routing.
+   *
+   * @returns Coordinator when face mode is set up.
+   */
+  getFaceModeCoordinator?: () => CoordinatorFaceMode | null;
 }
 
 /** Built tool system exposed to the layout for keyboard and mode switches. */
@@ -92,6 +109,14 @@ export interface LayoutToolEditorSystem {
    * @returns True when object-select is active.
    */
   switchToObjectSelect: () => boolean;
+  /**
+   * Switches to the face select tool.
+   *
+   * @returns True when face-select is active.
+   */
+  switchToFaceSelect: () => boolean;
+  /** Re-pins exclusive routing roots to every interactive pane content element. */
+  refreshInteractiveViewportDomain: () => void;
   /**
    * Cancels an active single-use tool if one is running.
    *
@@ -190,18 +215,28 @@ export function createLayoutToolEditorSystem(deps: LayoutToolEditorSetupDeps): L
     () => globalKeyDown,
     () => navigationBlocks,
     inputBridge,
+    () => editorWindow.lastPointerOwnerDocument,
   );
   editorWindow.setServices(services);
   editorWindow.validateTools();
   wireAfterDragVisualRefresh(deps);
+  const refreshInteractiveViewportDomain = (): void => {
+    inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
+  };
+  refreshInteractiveViewportDomain();
   return {
     editorWindow,
     inputBridge,
     switchToTransformMode: (mode) => switchPermanentTransformMode(editorWindow, mode),
     switchToObjectSelect: () => {
-      editorWindow.userSwitchToBoxSelectTool();
+      editorWindow.userSwitchToBoundsTool();
       return true;
     },
+    switchToFaceSelect: () => {
+      editorWindow.userSwitchToFaceSelectTool();
+      return true;
+    },
+    refreshInteractiveViewportDomain,
     cancelActiveSingleUseTool: () => cancelActiveSingleUseTool(editorWindow),
     isToolBusy: () => editorWindow.isToolBusy,
     isActiveEventReceiverBusy: () => editorWindow.isActiveEventReceiverBusy,
@@ -213,6 +248,7 @@ export function createLayoutToolEditorSystem(deps: LayoutToolEditorSetupDeps): L
     },
     installFocusPointerRouter: (hostElement) => {
       inputBridge.install(hostElement);
+      refreshInteractiveViewportDomain();
     },
     uninstallFocusPointerRouter: () => {
       inputBridge.uninstall();
@@ -257,7 +293,11 @@ function switchPermanentTransformMode(editorWindow: EditorWindow, mode: Transfor
     editorWindow.userSwitchToScaleTool();
     return true;
   }
-  editorWindow.userSwitchToBoxSelectTool();
+  if (mode === TransformMode.BOUNDS) {
+    editorWindow.userSwitchToBoundsTool();
+    return true;
+  }
+  editorWindow.userSwitchToBoundsTool();
   return true;
 }
 
@@ -283,6 +323,7 @@ function cancelActiveSingleUseTool(editorWindow: EditorWindow): boolean {
  * @param getGlobalKeyDown Global keydown fallthrough getter.
  * @param getNavigationBlocks Navigation block getter.
  * @param inputBridge Input bridge for exclusive viewport root.
+ * @param getPointerOwnerDocument Document that owns the last pointer sample.
  * @returns Services implementation.
  */
 function createEditorServices(
@@ -290,6 +331,7 @@ function createEditorServices(
   getGlobalKeyDown: () => ((event: KeyboardEvent) => boolean) | null,
   getNavigationBlocks: () => (() => boolean) | null,
   inputBridge: EditorInputBridge,
+  getPointerOwnerDocument: () => Document | null,
 ): EditorServices {
   const selectableCache = new Map<THREE.Object3D, ISelectable>();
   return {
@@ -336,12 +378,12 @@ function createEditorServices(
     handleModalKeyDown: (_keyCode, event) => handleModalKeyDownWithLiveVisuals(deps, event),
     commitActiveTransformDrag: () => {
       deps.transformHandler.commitActiveDragIfNeeded();
-      inputBridge.setExclusiveViewportRoots(null);
+      inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
       deps.refreshGizmoPresentation();
     },
     cancelActiveTransformDrag: () => {
       deps.transformHandler.cancelActiveDragIfNeeded();
-      inputBridge.setExclusiveViewportRoots(null);
+      inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
       deps.refreshGizmoPresentation();
     },
     pinExclusiveViewportDomain: (pickElements) => {
@@ -355,7 +397,77 @@ function createEditorServices(
       inputBridge.setExclusiveViewportRoot(pickElement);
     },
     clearExclusiveViewport: () => {
-      inputBridge.setExclusiveViewportRoots(null);
+      inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
+    },
+    pickObjectStackAtClientPoint: (clientX, clientY) =>
+      pickObjectStackAtClientPoint(deps, clientX, clientY, null, getPointerOwnerDocument()),
+    clearObjectSelection: () => {
+      deps.selectionManager.clearSelection();
+    },
+    applyObjectClickSelectionAtClientPoint: (clientX, clientY, additive, toggle) => {
+      applyObjectClickSelectionAtClientPoint(deps, clientX, clientY, additive, toggle, getPointerOwnerDocument());
+    },
+    applyObjectMarqueeSelection: (clientMinX, clientMinY, clientMaxX, clientMaxY, subtractive) => {
+      applyObjectMarqueeSelection(
+        deps,
+        clientMinX,
+        clientMinY,
+        clientMaxX,
+        clientMaxY,
+        subtractive,
+        getPointerOwnerDocument(),
+      );
+    },
+    tryBeginPermanentGizmoDragFromEditorPointer: (clientX, clientY, modifiers) => {
+      const bridge = deps.getTransformInteractionBridge?.() ?? null;
+      if (!bridge) {
+        return false;
+      }
+      return bridge.tryBeginFromEditorPointer(clientX, clientY, modifiers);
+    },
+    probePermanentGizmoUnderPointer: (clientX, clientY, modifiers) => {
+      const bridge = deps.getTransformInteractionBridge?.() ?? null;
+      if (!bridge) {
+        return false;
+      }
+      return bridge.probeGizmoUnderPointer(clientX, clientY, modifiers);
+    },
+    updateBoundsHoverAtClientPoint: (clientX, clientY) => {
+      const bridge = deps.getTransformInteractionBridge?.() ?? null;
+      if (!bridge) {
+        return;
+      }
+      bridge.updateBoundsHoverAtClientPoint(clientX, clientY);
+    },
+    clearBoundsHoverAtClientPoint: () => {
+      const bridge = deps.getTransformInteractionBridge?.() ?? null;
+      if (!bridge) {
+        return;
+      }
+      bridge.clearBoundsHover();
+    },
+    enterFaceSelectionMode: () => {
+      deps.getFaceModeCoordinator?.()?.enterFaceSelectionModeFromTool();
+    },
+    leaveFaceSelectionMode: () => {
+      deps.getFaceModeCoordinator?.()?.leaveFaceSelectionModeFromTool();
+    },
+    beginFaceSelectPointerDown: (clientX, clientY, isShiftPressed, isCtrlPressed) => {
+      return (
+        deps
+          .getFaceModeCoordinator?.()
+          ?.beginFaceSelectPointerDown(clientX, clientY, isShiftPressed, isCtrlPressed, getPointerOwnerDocument()) ===
+        true
+      );
+    },
+    continueFaceSelectPointerMove: (clientX, clientY, buttons) => {
+      deps.getFaceModeCoordinator?.()?.continueFaceSelectPointerMove(clientX, clientY, buttons);
+    },
+    endFaceSelectPointerUp: () => {
+      deps.getFaceModeCoordinator?.()?.endFaceSelectPointerUp();
+    },
+    isFaceSelectStrokeActive: () => {
+      return deps.getFaceModeCoordinator?.()?.isFaceSelectStrokeActive() === true;
     },
     setWidgetMode: (mode) => {
       deps.transformGizmo.setMode(mode);
@@ -374,6 +486,7 @@ function createEditorServices(
       deps.inputManager.isKeyDown('ControlRight') ||
       deps.inputManager.isKeyDown('MetaLeft') ||
       deps.inputManager.isKeyDown('MetaRight'),
+    isAltPressed: () => deps.inputManager.isKeyDown('AltLeft') || deps.inputManager.isKeyDown('AltRight'),
     isModifierPressed: () => {
       return (
         deps.inputManager.isKeyDown('ShiftLeft') ||
@@ -389,6 +502,249 @@ function createEditorServices(
     handleGlobalKeyDown: (_keyCode, event) => getGlobalKeyDown()?.(event) === true,
     isNavigationBlockingTools: () => getNavigationBlocks()?.() === true,
   };
+}
+
+/**
+ * Builds the object pick stack under a client point via the hit viewport.
+ *
+ * @param deps Layout services.
+ * @param clientX Pointer client X.
+ * @param clientY Pointer client Y.
+ * @param viewport Optional pre-resolved viewport under the pointer.
+ * @returns Near-to-far world meshes.
+ */
+function pickObjectStackAtClientPoint(
+  deps: LayoutToolEditorSetupDeps,
+  clientX: number,
+  clientY: number,
+  viewport: Viewport3D | Viewport2D | null = null,
+  ownerDocument: Document | null = null,
+): THREE.Mesh[] {
+  const hitViewport = viewport ?? findInteractiveViewportAtClientPoint(deps, clientX, clientY, ownerDocument);
+  if (!hitViewport || typeof hitViewport.getObjectPickStack !== 'function') {
+    return [];
+  }
+  const synthetic = createSyntheticMouseEvent(clientX, clientY);
+  return hitViewport.getObjectPickStack(synthetic);
+}
+
+/**
+ * Applies click selection at a client point with multi-select modifiers.
+ *
+ * @param deps Layout services.
+ * @param clientX Pointer client X.
+ * @param clientY Pointer client Y.
+ * @param additive True when Shift is held.
+ * @param toggle True when Ctrl/Meta is held.
+ * @param ownerDocument Document that owns the client coordinates, or null.
+ */
+function applyObjectClickSelectionAtClientPoint(
+  deps: LayoutToolEditorSetupDeps,
+  clientX: number,
+  clientY: number,
+  additive: boolean,
+  toggle: boolean,
+  ownerDocument: Document | null = null,
+): void {
+  const viewport = findInteractiveViewportAtClientPoint(deps, clientX, clientY, ownerDocument);
+  const stack = pickObjectStackAtClientPoint(deps, clientX, clientY, viewport, ownerDocument);
+  if (stack.length === 0) {
+    if (!additive && !toggle) {
+      deps.selectionManager.clearSelection();
+    }
+    SelectionClickThrough.resetClickThrough();
+    return;
+  }
+  const orderedStack = orderObjectPickStackForViewport(stack, shouldUseReverseOutlinerObjectPick(viewport));
+  const picked = resolveObjectPickFromStack(orderedStack, deps.selectionManager, additive, toggle, clientX, clientY);
+  if (picked) {
+    deps.selectionManager.selectFromClick(picked, additive, toggle);
+  }
+}
+
+/**
+ * Chooses the mesh for a click from a pick-priority stack.
+ *
+ * @param orderedStack Unique world meshes in pick-priority order (3D
+ *   near-to-far or 2D reverse outliner).
+ * @param selectionManager Selection state for click-through.
+ * @param additive True when Shift is held.
+ * @param toggle True when Ctrl/Meta is held.
+ * @param clientX Pointer client X.
+ * @param clientY Pointer client Y.
+ * @returns Mesh to apply, or null.
+ */
+function resolveObjectPickFromStack(
+  orderedStack: THREE.Mesh[],
+  selectionManager: ManagerSelection,
+  additive: boolean,
+  toggle: boolean,
+  clientX: number,
+  clientY: number,
+): THREE.Mesh | null {
+  if (orderedStack.length === 0) {
+    return null;
+  }
+  if (additive || toggle) {
+    SelectionClickThrough.resetClickThrough();
+    return orderedStack[0] ?? null;
+  }
+  return SelectionClickThrough.pickFromStack(orderedStack, selectionManager, clientX, clientY);
+}
+
+/**
+ * Returns whether a viewport uses reverse outliner order for object picks (2D).
+ *
+ * @param viewport Interactive viewport under the pointer, or null.
+ * @returns True for non-perspective (2D) viewports.
+ */
+function shouldUseReverseOutlinerObjectPick(viewport: Viewport3D | Viewport2D | null): boolean {
+  if (!viewport) {
+    return false;
+  }
+  if (typeof viewport.getViewportKind !== 'function') {
+    return false;
+  }
+  return !isPerspectiveViewportKind(viewport.getViewportKind());
+}
+
+/**
+ * Selects or deselects meshes whose projected centers fall inside a marquee.
+ *
+ * @param deps Layout services.
+ * @param clientMinX Marquee min X.
+ * @param clientMinY Marquee min Y.
+ * @param clientMaxX Marquee max X.
+ * @param clientMaxY Marquee max Y.
+ * @param subtractive True when Ctrl marquee removes from selection.
+ */
+function applyObjectMarqueeSelection(
+  deps: LayoutToolEditorSetupDeps,
+  clientMinX: number,
+  clientMinY: number,
+  clientMaxX: number,
+  clientMaxY: number,
+  subtractive: boolean,
+  ownerDocument: Document | null = null,
+): void {
+  const viewport = findInteractiveViewportAtClientPoint(
+    deps,
+    (clientMinX + clientMaxX) * 0.5,
+    (clientMinY + clientMaxY) * 0.5,
+    ownerDocument,
+  );
+  if (!viewport) {
+    return;
+  }
+  const camera = viewport.getCamera();
+  const pickElement = viewport.getContentElement();
+  const rect = pickElement.getBoundingClientRect();
+  const selectable =
+    typeof viewport.getSelectableObjects === 'function'
+      ? viewport.getSelectableObjects()
+      : collectMeshesFromWorldFallback(deps);
+  for (const mesh of selectable) {
+    if (isMeshScreenCenterInMarquee(mesh, camera, rect, clientMinX, clientMinY, clientMaxX, clientMaxY)) {
+      if (subtractive) {
+        deps.selectionManager.removeFromSelection(mesh);
+      } else {
+        deps.selectionManager.addToSelection(mesh);
+      }
+    }
+  }
+}
+
+/**
+ * Returns whether a mesh projected center lies inside a client marquee rect.
+ *
+ * @param mesh Mesh to test.
+ * @param camera Viewport camera.
+ * @param pickRect Pick element client rect.
+ * @param clientMinX Marquee min X.
+ * @param clientMinY Marquee min Y.
+ * @param clientMaxX Marquee max X.
+ * @param clientMaxY Marquee max Y.
+ * @returns True when the center is inside the marquee.
+ */
+function isMeshScreenCenterInMarquee(
+  mesh: THREE.Mesh,
+  camera: THREE.Camera,
+  pickRect: DOMRect,
+  clientMinX: number,
+  clientMinY: number,
+  clientMaxX: number,
+  clientMaxY: number,
+): boolean {
+  mesh.updateMatrixWorld(true);
+  const center = new THREE.Vector3();
+  mesh.getWorldPosition(center);
+  center.project(camera);
+  if (center.z < -1 || center.z > 1) {
+    return false;
+  }
+  const clientX = pickRect.left + (center.x + 1) * 0.5 * pickRect.width;
+  const clientY = pickRect.top + (1 - center.y) * 0.5 * pickRect.height;
+  return clientX >= clientMinX && clientX <= clientMaxX && clientY >= clientMinY && clientY <= clientMaxY;
+}
+
+/**
+ * Fallback mesh list when a viewport does not expose selectable objects.
+ *
+ * @param deps Layout services.
+ * @returns Empty array (marquee requires viewport selectable lists).
+ */
+function collectMeshesFromWorldFallback(_deps: LayoutToolEditorSetupDeps): THREE.Mesh[] {
+  return [];
+}
+
+/**
+ * Finds the interactive viewport under a client point. Client coordinates are
+ * window-local; when ownerDocument is set only panes in that document are
+ * tested so detached popups never hit main-window panes.
+ *
+ * @param deps Layout services.
+ * @param clientX Pointer client X.
+ * @param clientY Pointer client Y.
+ * @param ownerDocument Optional document that owns the client coordinates.
+ * @returns Viewport, or null.
+ */
+function findInteractiveViewportAtClientPoint(
+  deps: LayoutToolEditorSetupDeps,
+  clientX: number,
+  clientY: number,
+  ownerDocument: Document | null = null,
+): Viewport3D | Viewport2D | null {
+  for (const viewport of deps.getInteractiveViewports()) {
+    const pickElement = viewport.getContentElement();
+    if (!pickElement) {
+      continue;
+    }
+    if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
+      continue;
+    }
+    const rect = pickElement.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      continue;
+    }
+    return viewport;
+  }
+  return null;
+}
+
+/**
+ * Builds a minimal MouseEvent-like object for viewport pick helpers.
+ *
+ * @param clientX Pointer client X.
+ * @param clientY Pointer client Y.
+ * @returns Synthetic mouse event.
+ */
+function createSyntheticMouseEvent(clientX: number, clientY: number): MouseEvent {
+  return {
+    clientX,
+    clientY,
+    preventDefault: () => {},
+    stopPropagation: () => {},
+  } as unknown as MouseEvent;
 }
 
 /**

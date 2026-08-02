@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
@@ -8,6 +8,7 @@ import { SolidOperation } from '@/solid/types/solid_operation.js';
 /** Unit tests for static solid-brush edge batching. */
 describe('SolidBrushEdgeBatch', () => {
   beforeEach(() => {
+    SolidBrushEdgeBatch.endLivePoseTracking();
     SolidBrushEdgeBatch.setIndividualMeshesAndSync(null, []);
   });
 
@@ -154,6 +155,23 @@ describe('SolidBrushEdgeBatch', () => {
     expect(SolidBrushVisual.hasLocalEdges(brush)).toBe(false);
     SolidBrushEdgeBatch.rebuildForSolidRoot(model.root);
     expect(SolidBrushVisual.hasLocalEdges(brush)).toBe(true);
+  });
+
+  it('beginLivePoseTracking rebuilds static batches only when membership changes', () => {
+    const model = new SolidModel('LivePoseOnce');
+    model.addBoxBrush(1, SolidOperation.Additive);
+    model.addBoxBrush(1, SolidOperation.Additive);
+    const brush = model.getBrushes()[0]!.mesh!;
+    const rebuildSpy = vi.spyOn(SolidBrushEdgeBatch, 'rebuildForSolidRoot');
+    SolidBrushEdgeBatch.beginLivePoseTracking([brush]);
+    expect(rebuildSpy).toHaveBeenCalledTimes(1);
+    expect(SolidBrushVisual.hasLocalEdges(brush)).toBe(true);
+    SolidBrushEdgeBatch.beginLivePoseTracking([brush]);
+    SolidBrushEdgeBatch.beginLivePoseTracking([brush]);
+    expect(rebuildSpy).toHaveBeenCalledTimes(1);
+    SolidBrushEdgeBatch.endLivePoseTracking();
+    expect(rebuildSpy).toHaveBeenCalledTimes(2);
+    rebuildSpy.mockRestore();
   });
 });
 

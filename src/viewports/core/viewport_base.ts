@@ -27,7 +27,6 @@ export function applyViewportContentDrawableStyles(contentElement: HTMLElement):
   contentElement.style.right = '0';
   contentElement.style.top = `${Theme.viewportToolbarHeightPx}px`;
   contentElement.style.bottom = '0';
-  contentElement.style.pointerEvents = 'auto';
   contentElement.style.background = 'transparent';
 }
 

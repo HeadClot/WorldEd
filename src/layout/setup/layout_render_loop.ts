@@ -177,8 +177,10 @@ export class LayoutRenderLoop {
   }
 
   /**
-   * Re-issues tool cursor requests for the frame, then lets the cursor manager
-   * restore the default when nothing refreshed them.
+   * Shape Editor repaint cursor path: after tools/widgets OnRender re-issue
+   * SetMouseCursor, keep the last request for this frame or restore default.
+   * Bounds hover / active-drag cursor re-issue happens in
+   * BoxSelectTool.onRender via editorWindow onRepaint (onBeforeRender).
    */
   private updateMouseCursorForFrame(): void {
     this.transformHandler?.refreshBoundsHoverCursor();

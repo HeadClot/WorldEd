@@ -15,7 +15,9 @@ import { filterUnlockedObjects } from '@/utils/object_lock.js';
 import { resolveTransformTargets } from '@/selection/object/resolve_transform_targets.js';
 import { WindowPointerDragSession } from '@/utils/session_window_pointer_drag.js';
 import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
+import { orderObjectPickStackForViewport } from '@/selection/object/selection_pick_order_2d.js';
 import { getCadViewPlaneForKind } from '@/viewports/core/viewport_editor.js';
+import { isPerspectiveViewportKind } from '@/viewports/core/viewport_kind.js';
 import { TransformMode } from '@/types/transform_mode.js';
 
 /**
@@ -103,24 +105,24 @@ export class BridgeTransformInteraction {
     this.activeDragViewport = null;
     this.pendingSelectionClickEvent = null;
     this.pendingSelectionClickViewport = null;
+    this.probeViewportAtClientPoint = null;
   }
 
   /**
-   * Wires transform callbacks on all viewports.
+   * Legacy no-op: permanent gizmos are started from EditorWindow widgets via
+   * {@link tryBeginFromEditorPointer}. Kept so layout rewire call sites compile
+   * until fully removed.
    *
-   * @param viewports Viewports that can drive the transform gizmo.
+   * @param _viewports Viewports previously wired for transform callbacks.
    */
-  wireViewports(viewports: Array<Viewport3D | Viewport2D>): void {
-    viewports.forEach((viewport) => {
-      viewport.setTransformCallback((event) => this.onTransformEvent(event, viewport));
-    });
-  }
+  wireViewports(_viewports: Array<Viewport3D | Viewport2D>): void {}
 
   /**
-   * Handles a transform event from a viewport.
+   * Handles a transform pointer event against a known viewport (unit tests and
+   * editor-driven callers). Not wired to viewport DOM listeners.
    *
    * @param event The pointer event.
-   * @param viewport The viewport that received the event.
+   * @param viewport The viewport that owns camera and gizmo group.
    * @returns True if the event was consumed by the transform handler.
    */
   onTransformEvent(event: MouseEvent, viewport: Viewport3D | Viewport2D): boolean {
@@ -140,6 +142,191 @@ export class BridgeTransformInteraction {
       viewport.getGizmoGroup(),
       viewport,
     );
+  }
+
+  /**
+   * Begins a permanent gizmo/bounds drag from the editor tool pipeline under a
+   * client point (Shape Editor widget gizmo hit on mouse down).
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param modifiers Modifier keys for Alt-duplicate and multi-select skip.
+   * @returns True when a handle drag started.
+   */
+  tryBeginFromEditorPointer(
+    clientX: number,
+    clientY: number,
+    modifiers: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean },
+  ): boolean {
+    const viewport = this.findViewportAtClientPoint(clientX, clientY);
+    if (!viewport) return false;
+    const event = this.createSyntheticPointerDown(clientX, clientY, modifiers);
+    return this.onTransformEvent(event, viewport);
+  }
+
+  /**
+   * Probes gizmo/bounds controls under the pointer without starting a drag
+   * (Shape Editor gizmo hover state for widget wantsActive).
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param modifiers Modifier keys (multi-select skips gizmo).
+   * @returns True when a control is under the pointer.
+   */
+  probeGizmoUnderPointer(
+    clientX: number,
+    clientY: number,
+    modifiers: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean },
+  ): boolean {
+    if (!this.deps.selectionManager) return false;
+    if (this.shouldSkipDisabledInteraction()) return false;
+    if (!this.hasGizmoHandles()) return false;
+    if (modifiers.shiftKey || modifiers.ctrlKey || modifiers.metaKey) return false;
+    const viewport = this.findViewportAtClientPoint(clientX, clientY);
+    if (!viewport) return false;
+    if (!this.isGizmoInteractable(viewport)) return false;
+    const event = this.createSyntheticPointerDown(clientX, clientY, modifiers);
+    return this.probeGizmoHitOnViewport(event, viewport);
+  }
+
+  /**
+   * Returns whether a handle or bounds face is under the pointer on a viewport.
+   *
+   * @param event Synthetic pointer event.
+   * @param viewport Viewport under the pointer.
+   * @returns True when a control is hit.
+   */
+  private probeGizmoHitOnViewport(event: MouseEvent, viewport: Viewport3D | Viewport2D): boolean {
+    const camera = viewport.getCamera();
+    const pickElement = viewport.getContentElement();
+    const gizmoGroup = viewport.getGizmoGroup();
+    if (!gizmoGroup) return false;
+    const handles = this.deps.transformGizmo.getHandles();
+    if (this.deps.transformGizmo.getMode() === TransformMode.BOUNDS) {
+      const kind = typeof viewport.getViewportKind === 'function' ? viewport.getViewportKind() : undefined;
+      const viewPlane = kind ? getCadViewPlaneForKind(kind) : 'xyz';
+      return this.deps.transformHandler.probeBoundsControlUnderPointer(
+        camera,
+        pickElement,
+        event,
+        handles,
+        gizmoGroup,
+        viewPlane,
+      );
+    }
+    return this.deps.transformHandler.probeHandleUnderPointer(camera, pickElement, event, handles, gizmoGroup);
+  }
+
+  /**
+   * Updates bounds face hover and resize cursors under a client point from the
+   * editor tool pipeline (replaces viewport transform pointermove wiring).
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   */
+  updateBoundsHoverAtClientPoint(clientX: number, clientY: number): void {
+    if (!this.deps.selectionManager) {
+      return;
+    }
+    if (this.deps.transformHandler.isDragging()) {
+      this.deps.transformHandler.reissueBoundsDragCursor();
+      return;
+    }
+    if (this.shouldSkipDisabledInteraction()) {
+      this.deps.transformHandler.clearBoundsHover();
+      return;
+    }
+    const viewport = this.findViewportAtClientPoint(clientX, clientY);
+    if (!viewport) {
+      this.deps.transformHandler.clearBoundsHover();
+      return;
+    }
+    if (!this.isGizmoInteractable(viewport)) {
+      this.deps.transformHandler.clearBoundsHover();
+      return;
+    }
+    const event = this.createSyntheticPointerMove(clientX, clientY);
+    this.updateIdleBoundsHover(viewport.getCamera(), viewport.getContentElement(), event, viewport);
+  }
+
+  /** Clears bounds hover highlight and cursor cache. */
+  clearBoundsHover(): void {
+    this.deps.transformHandler.clearBoundsHover();
+  }
+
+  /**
+   * Builds a synthetic pointermove for bounds hover hit tests.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @returns Synthetic mouse event.
+   */
+  private createSyntheticPointerMove(clientX: number, clientY: number): MouseEvent {
+    return {
+      type: 'pointermove',
+      clientX,
+      clientY,
+      button: -1,
+      buttons: 0,
+      shiftKey: false,
+      ctrlKey: false,
+      altKey: false,
+      metaKey: false,
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as unknown as MouseEvent;
+  }
+
+  /** Optional layout-provided viewport probe for editor-driven gizmo starts. */
+  private probeViewportAtClientPoint: ((clientX: number, clientY: number) => Viewport3D | Viewport2D | null) | null =
+    null;
+
+  /**
+   * Installs a viewport hit probe used by editor-driven gizmo starts.
+   *
+   * @param probe Function that returns the viewport under a client point.
+   */
+  setViewportProbe(probe: (clientX: number, clientY: number) => Viewport3D | Viewport2D | null): void {
+    this.probeViewportAtClientPoint = probe;
+  }
+
+  /**
+   * Finds a live viewport whose content element contains a client point.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @returns Viewport, or null.
+   */
+  private findViewportAtClientPoint(clientX: number, clientY: number): Viewport3D | Viewport2D | null {
+    return this.probeViewportAtClientPoint?.(clientX, clientY) ?? null;
+  }
+
+  /**
+   * Builds a synthetic pointerdown for transform handler hit tests.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param modifiers Modifier keys.
+   * @returns Synthetic mouse event.
+   */
+  private createSyntheticPointerDown(
+    clientX: number,
+    clientY: number,
+    modifiers: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean },
+  ): MouseEvent {
+    return {
+      type: 'pointerdown',
+      clientX,
+      clientY,
+      button: 0,
+      buttons: 1,
+      shiftKey: modifiers.shiftKey,
+      ctrlKey: modifiers.ctrlKey,
+      altKey: modifiers.altKey,
+      metaKey: modifiers.metaKey,
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as unknown as MouseEvent;
   }
 
   /**
@@ -516,6 +703,19 @@ export class BridgeTransformInteraction {
   }
 
   /**
+   * Returns whether reverse outliner object pick order should be used (2D).
+   *
+   * @param viewport Viewport under the pointer.
+   * @returns True for orthographic (non-perspective) viewports.
+   */
+  private shouldUseReverseOutlinerObjectPick(viewport: Viewport3D | Viewport2D): boolean {
+    if (typeof viewport.getViewportKind !== 'function') {
+      return false;
+    }
+    return !isPerspectiveViewportKind(viewport.getViewportKind());
+  }
+
+  /**
    * Resolves gizmo orientation from transform space and selection. Global (or
    * multi-select) uses world axes; Local uses the object's rotation.
    *
@@ -594,7 +794,13 @@ export class BridgeTransformInteraction {
     if (!event || !viewport) return;
     if (typeof viewport.getObjectPickStack !== 'function') return;
     const stack = viewport.getObjectPickStack(event);
-    const picked = SelectionClickThrough.pickFromStack(stack, this.deps.selectionManager);
+    const orderedStack = orderObjectPickStackForViewport(stack, this.shouldUseReverseOutlinerObjectPick(viewport));
+    const picked = SelectionClickThrough.pickFromStack(
+      orderedStack,
+      this.deps.selectionManager,
+      event.clientX,
+      event.clientY,
+    );
     if (!picked) return;
     this.deps.selectionManager.selectFromClick(picked, false, false);
   }

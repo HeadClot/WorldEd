@@ -48,6 +48,11 @@ export class ControllerFaceExtrusion {
   private extrudeCounter: number;
   private lastCreatedMeshes: THREE.Mesh[];
   private isFaceDragActive: boolean;
+  /**
+   * Shape Editor marquee subtractive latch: true when the stroke began with
+   * isCtrlPressed so drag-paint removes faces instead of adding them.
+   */
+  private isSubtractiveStroke: boolean;
   private lastDragRegionKey: string | null;
   /** True when external listeners need a post-drag selection notification. */
   private externalSelectionNotifyPending: boolean;
@@ -75,6 +80,7 @@ export class ControllerFaceExtrusion {
     this.extrudeCounter = 0;
     this.lastCreatedMeshes = [];
     this.isFaceDragActive = false;
+    this.isSubtractiveStroke = false;
     this.lastDragRegionKey = null;
     this.externalSelectionNotifyPending = false;
     this.bindSelectionChangeCallback();
@@ -182,36 +188,47 @@ export class ControllerFaceExtrusion {
 
   /**
    * Processes a pointer down event for face selection. Starts a drag-paint
-   * session so holding and moving selects more faces.
+   * session so holding and moving selects more faces. Modifier flags match
+   * Shape Editor isShiftPressed / isCtrlPressed (not browser event.shiftKey).
    *
-   * @param event The pointer event.
+   * @param event The pointer event (client coordinates for raycast).
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
+   * @param isShiftPressed When true, do not clear selection first (additive).
+   * @param isCtrlPressed When true, remove faces (subtractive stroke).
    * @returns The picked face when a hit occurred, otherwise null (event still
    *   consumed while in face mode).
    */
-  onPointerDown(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): FacePickResult | null {
+  onPointerDown(
+    event: MouseEvent,
+    camera: THREE.Camera,
+    pickElement: HTMLElement,
+    isShiftPressed: boolean = false,
+    isCtrlPressed: boolean = false,
+  ): FacePickResult | null {
     if (this.currentMode !== SelectionMode.FACE) return null;
     this.isFaceDragActive = true;
+    this.isSubtractiveStroke = isCtrlPressed;
     this.lastDragRegionKey = null;
     const result = this.raycaster.pickFace(event, camera, pickElement, this.availableMeshes);
     if (!result) {
-      if (!event.shiftKey) {
+      if (!isShiftPressed && !isCtrlPressed) {
         this.selectionManager.deselectAll();
       }
       return null;
     }
-    this.paintSelectFace(result, event.shiftKey, false);
+    this.applyFaceClickSelection(result, isShiftPressed, isCtrlPressed);
     return result;
   }
 
   /**
    * Continues face drag-paint while the pointer moves with the button held. New
-   * faces under the cursor are added to the selection.
+   * faces under the cursor are added, or removed when the stroke is subtractive
+   * (isCtrlPressed at down).
    *
    * @param event The pointer event.
    * @param camera The viewport camera.
-   * @param renderer The viewport renderer.
+   * @param pickElement DOM pick target for NDC.
    * @returns The painted pick result, or null when nothing new was painted.
    */
   onPointerMove(event: MouseEvent, camera: THREE.Camera, pickElement: HTMLElement): FacePickResult | null {
@@ -219,6 +236,10 @@ export class ControllerFaceExtrusion {
     if (!this.isFaceDragActive) return null;
     const result = this.raycaster.pickFace(event, camera, pickElement, this.availableMeshes);
     if (!result) return null;
+    if (this.isSubtractiveStroke) {
+      this.paintRemoveFace(result, true);
+      return result;
+    }
     this.paintSelectFace(result, true, true);
     return result;
   }
@@ -226,6 +247,7 @@ export class ControllerFaceExtrusion {
   /** Ends a face drag-paint session and flushes deferred selection listeners. */
   onPointerUp(): void {
     this.isFaceDragActive = false;
+    this.isSubtractiveStroke = false;
     this.lastDragRegionKey = null;
     this.flushExternalSelectionNotify();
   }
@@ -253,6 +275,22 @@ export class ControllerFaceExtrusion {
   }
 
   /**
+   * Applies a single face click using Shape Editor selection rules: unless
+   * isShiftPressed, replace the selection; isCtrlPressed removes the face.
+   *
+   * @param result The raycast pick result.
+   * @param isShiftPressed Additive (do not clear) when true.
+   * @param isCtrlPressed Subtractive when true.
+   */
+  private applyFaceClickSelection(result: FacePickResult, isShiftPressed: boolean, isCtrlPressed: boolean): void {
+    if (isCtrlPressed) {
+      this.paintRemoveFace(result, false);
+      return;
+    }
+    this.paintSelectFace(result, isShiftPressed, false);
+  }
+
+  /**
    * Selects the face unit for a pick, optionally additive while dragging. Solid
    * results expand only within one brush face; ordinary meshes use coplanar.
    *
@@ -265,6 +303,19 @@ export class ControllerFaceExtrusion {
     if (skipIfSameRegion && regionKey === this.lastDragRegionKey) return;
     this.lastDragRegionKey = regionKey;
     this.selectionManager.selectFace(result.mesh, result.faceIndex, addToSelection);
+  }
+
+  /**
+   * Removes the face unit under a pick (Ctrl / subtractive stroke).
+   *
+   * @param result The raycast pick result.
+   * @param skipIfSameRegion When true, ignores repeats of the last drag region.
+   */
+  private paintRemoveFace(result: FacePickResult, skipIfSameRegion: boolean): void {
+    const regionKey = buildFacePickRegionKey(result.mesh, result.faceIndex);
+    if (skipIfSameRegion && regionKey === this.lastDragRegionKey) return;
+    this.lastDragRegionKey = regionKey;
+    this.selectionManager.removeFace(result.mesh, result.faceIndex);
   }
 
   /**

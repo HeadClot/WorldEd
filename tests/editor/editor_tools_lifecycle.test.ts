@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { EditorWindow } from '@/editor/window/editor_window.js';
 import { EditorInputBridge } from '@/editor/window/editor_input_bridge.js';
 import { Tool } from '@/editor/tools/tool.js';
-import { BoxSelectTool } from '@/editor/tools/box_select_tool.js';
+import { BoundsTool } from '@/editor/tools/bounds_tool.js';
 import { TranslateTool } from '@/editor/tools/translate_tool.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
 import * as THREE from 'three';
@@ -67,6 +67,20 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     pinExclusiveViewportDomain: () => {},
     pinExclusiveViewport: () => {},
     clearExclusiveViewport: () => {},
+    pickObjectStackAtClientPoint: () => [],
+    clearObjectSelection: () => {},
+    applyObjectClickSelectionAtClientPoint: () => {},
+    applyObjectMarqueeSelection: () => {},
+    tryBeginPermanentGizmoDragFromEditorPointer: () => false,
+    probePermanentGizmoUnderPointer: () => false,
+    updateBoundsHoverAtClientPoint: () => {},
+    clearBoundsHoverAtClientPoint: () => {},
+    enterFaceSelectionMode: () => {},
+    leaveFaceSelectionMode: () => {},
+    beginFaceSelectPointerDown: () => false,
+    continueFaceSelectPointerMove: () => {},
+    endFaceSelectPointerUp: () => {},
+    isFaceSelectStrokeActive: () => false,
     setWidgetMode: () => {},
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
@@ -76,6 +90,7 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     getLastPointerClientPosition: () => null,
     isShiftPressed: () => false,
     isCtrlPressed: () => false,
+    isAltPressed: () => false,
     isModifierPressed: () => false,
     handleGlobalKeyDown: () => false,
     isNavigationBlockingTools: () => false,
@@ -84,11 +99,11 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
 }
 
 describe('Editor tools lifecycle', () => {
-  it('validateTools installs box select as the default tool', () => {
+  it('validateTools installs bounds tool as the default object tool', () => {
     const editor = new EditorWindow();
     editor.setServices(createStubServices());
     editor.validateTools();
-    expect(editor.activeTool).toBeInstanceOf(BoxSelectTool);
+    expect(editor.activeTool).toBeInstanceOf(BoundsTool);
   });
 
   it('UseTool sets parent and restore via SwitchTool(parent)', () => {
@@ -149,13 +164,13 @@ describe('Editor tools lifecycle', () => {
     expect(handleModalKeyDown).toHaveBeenCalledWith('KeyZ', expect.any(KeyboardEvent));
   });
 
-  it('BoxSelectTool G refuses empty selection', () => {
+  it('BoundsTool G refuses empty selection', () => {
     const editor = new EditorWindow();
     editor.setServices(createStubServices({ getSelectedCount: () => 0 }));
     editor.validateTools();
-    const box = editor.getBoxSelectTool();
-    expect(box.onKeyDown('KeyG')).toBe(false);
-    expect(editor.activeTool).toBe(box);
+    const bounds = editor.getBoundsTool();
+    expect(bounds.onKeyDown('KeyG')).toBe(false);
+    expect(editor.activeTool).toBe(bounds);
   });
 
   it('single-use TranslateTool Escape cancels and restores parent', () => {
@@ -254,7 +269,138 @@ describe('Editor tools lifecycle', () => {
     expect(editor.isToolBusy).toBe(true);
   });
 
-  it('bridge LMB confirm keeps shield until up so parent is restored (detached path)', () => {
+  it('document-path viewport click selects on up without mounting shield (not busy)', () => {
+    const applyClick = vi.fn();
+    const editor = new EditorWindow();
+    const host = document.createElement('div');
+    const viewport = document.createElement('div');
+    host.appendChild(viewport);
+    document.body.appendChild(host);
+    viewport.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200,
+        width: 200,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const bridge = new EditorInputBridge(editor);
+    editor.setServices(
+      createStubServices({
+        applyObjectClickSelectionAtClientPoint: applyClick,
+        getInteractiveViewportPickElements: () => [viewport],
+      }),
+    );
+    editor.validateTools();
+    bridge.install(host);
+    bridge.setExclusiveViewportRoots([viewport]);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    document.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 40,
+        clientY: 50,
+        button: 0,
+        buttons: 1,
+      }),
+    );
+    expect(editor.isLeftMousePressed).toBe(true);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    document.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 40,
+        clientY: 50,
+        button: 0,
+        buttons: 0,
+      }),
+    );
+    expect(editor.isLeftMousePressed).toBe(false);
+    expect(applyClick).toHaveBeenCalledWith(40, 50, false, false);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    document.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 12,
+        clientY: 18,
+        button: 0,
+        buttons: 1,
+      }),
+    );
+    document.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 12,
+        clientY: 18,
+        button: 0,
+        buttons: 0,
+      }),
+    );
+    expect(applyClick).toHaveBeenCalledTimes(2);
+    expect(applyClick).toHaveBeenLastCalledWith(12, 18, false, false);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    bridge.uninstall();
+    host.remove();
+  });
+
+  it('document-path up completes GlobalMouseUp when armed without shield', () => {
+    const applyClick = vi.fn();
+    const editor = new EditorWindow();
+    const host = document.createElement('div');
+    const viewport = document.createElement('div');
+    host.appendChild(viewport);
+    document.body.appendChild(host);
+    viewport.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200,
+        width: 200,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const bridge = new EditorInputBridge(editor);
+    editor.setServices(
+      createStubServices({
+        applyObjectClickSelectionAtClientPoint: applyClick,
+        getInteractiveViewportPickElements: () => [viewport],
+      }),
+    );
+    editor.validateTools();
+    bridge.install(host);
+    bridge.setExclusiveViewportRoots([viewport]);
+    editor.updateMouseStateFromPointer(30, 40, viewport, 0, true);
+    expect(editor.isLeftMousePressed).toBe(true);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    document.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 30,
+        clientY: 40,
+        button: 0,
+        buttons: 0,
+      }),
+    );
+    expect(editor.isLeftMousePressed).toBe(false);
+    expect(applyClick).toHaveBeenCalledWith(30, 40, false, false);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    bridge.uninstall();
+    host.remove();
+  });
+
+  it('bridge LMB confirm unmounts shield when busy ends; document up restores parent', () => {
     let dragActive = false;
     const editor = new EditorWindow();
     const host = document.createElement('div');
@@ -292,7 +438,7 @@ describe('Editor tools lifecycle', () => {
           bridge.setExclusiveViewportRoots([viewport]);
         },
         clearExclusiveViewport: () => {
-          bridge.setExclusiveViewportRoots(null);
+          bridge.setExclusiveViewportRoots([viewport]);
         },
         getInteractiveViewportPickElements: () => [viewport],
         resolveFirstInteractiveViewportInDocument: () => ({
@@ -308,6 +454,7 @@ describe('Editor tools lifecycle', () => {
     editor.validateTools();
     const parent = editor.activeTool;
     bridge.install(host);
+    bridge.setExclusiveViewportRoots([viewport]);
     editor.getActiveEventReceiver().onKeyDown('KeyG');
     expect(editor.isToolBusy).toBe(true);
     expect(bridge.isExclusiveShieldMounted()).toBe(true);
@@ -324,10 +471,9 @@ describe('Editor tools lifecycle', () => {
       }),
     );
     expect(editor.isToolBusy).toBe(false);
-    expect(bridge.isExclusiveShieldMounted()).toBe(true);
-    const shieldAfterDown = bridge.getMountedExclusiveShieldElement(document);
-    expect(shieldAfterDown).toBeTruthy();
-    shieldAfterDown!.dispatchEvent(
+    expect(editor.isLeftMousePressed).toBe(true);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    document.dispatchEvent(
       new PointerEvent('pointerup', {
         bubbles: true,
         cancelable: true,
@@ -367,13 +513,14 @@ describe('Editor tools lifecycle', () => {
     expect(editor.isToolBusy).toBe(false);
   });
 
-  it('SwitchTool clears widgets from the previous tool', () => {
+  it('SwitchTool replaces widgets from the previous tool', () => {
     const editor = new EditorWindow();
     editor.setServices(createStubServices({ getSelectedCount: () => 1 }));
     editor.validateTools();
     editor.userSwitchToTranslateTool();
     expect(editor.getWidgets().length).toBeGreaterThan(0);
-    editor.userSwitchToBoxSelectTool();
-    expect(editor.getWidgets().length).toBe(0);
+    editor.userSwitchToBoundsTool();
+    expect(editor.activeTool).toBeInstanceOf(BoundsTool);
+    expect(editor.getWidgets().length).toBe(1);
   });
 });

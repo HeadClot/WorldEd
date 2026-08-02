@@ -61,6 +61,22 @@ describe('FaceExtrusionController drag select', () => {
     controller.onPointerUp();
     expect(controller.isDraggingFaces()).toBe(false);
   });
+
+  it('additive selectFace keeps prior faces (isShiftPressed path)', () => {
+    controller.selectFace(mesh, 0, false);
+    const firstCount = controller.getSelectedFaceCount();
+    expect(firstCount).toBeGreaterThan(0);
+    controller.selectFace(mesh, 2, true);
+    expect(controller.getSelectedFaceCount()).toBeGreaterThan(firstCount);
+  });
+
+  it('onPointerDown with isCtrlPressed latches subtractive stroke', () => {
+    const event = createMouseEvent(100, 100);
+    controller.onPointerDown(event, camera, renderer.domElement, false, true);
+    expect(controller.isDraggingFaces()).toBe(true);
+    controller.onPointerUp();
+    expect(controller.isDraggingFaces()).toBe(false);
+  });
 });
 
 /**
@@ -74,7 +90,6 @@ function createMouseEvent(clientX: number, clientY: number): MouseEvent {
   return {
     clientX,
     clientY,
-    shiftKey: false,
     button: 0,
   } as MouseEvent;
 }

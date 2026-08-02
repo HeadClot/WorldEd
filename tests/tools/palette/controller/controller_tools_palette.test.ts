@@ -102,6 +102,60 @@ describe('ToolsPaletteController', () => {
     expect(clipTool.isActive()).toBe(false);
   });
 
+  it('should switch the editor FaceSelectTool when face palette is chosen', () => {
+    const switchToFaceSelect = vi.fn();
+    const switchToObjectSelect = vi.fn();
+    const wired = new ControllerToolsPalette({
+      toolsPalette: palette,
+      faceExtrusionController: faceController,
+      clipPlaneTool: clipTool,
+      clipPlaneHandler: {
+        flipPlane: () => undefined,
+        commitClip: () => undefined,
+        commitSplit: () => undefined,
+        cancel: () => {
+          clipTool.deactivate();
+        },
+      } as unknown as HandlerClipPlane,
+      selectionManager,
+      editorOverlayPolicy: overlayPolicy,
+      modalToolSessionRegistry: modalRegistry,
+      showStatusMessage: showStatus,
+      switchToFaceSelect,
+      switchToObjectSelect,
+    });
+    wired.selectTool(EditorToolId.FACE);
+    expect(switchToFaceSelect).toHaveBeenCalledTimes(1);
+    expect(switchToObjectSelect).not.toHaveBeenCalled();
+    wired.selectTool(EditorToolId.OBJECT);
+    expect(switchToObjectSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('should switch FaceSelectTool when external face mode is entered', () => {
+    const switchToFaceSelect = vi.fn();
+    const wired = new ControllerToolsPalette({
+      toolsPalette: palette,
+      faceExtrusionController: faceController,
+      clipPlaneTool: clipTool,
+      clipPlaneHandler: {
+        flipPlane: () => undefined,
+        commitClip: () => undefined,
+        commitSplit: () => undefined,
+        cancel: () => {
+          clipTool.deactivate();
+        },
+      } as unknown as HandlerClipPlane,
+      selectionManager,
+      editorOverlayPolicy: overlayPolicy,
+      modalToolSessionRegistry: modalRegistry,
+      showStatusMessage: showStatus,
+      switchToFaceSelect,
+    });
+    wired.onExternalSelectionModeChanged(SelectionMode.FACE);
+    expect(wired.getActiveTool()).toBe(EditorToolId.FACE);
+    expect(switchToFaceSelect).toHaveBeenCalledTimes(1);
+  });
+
   it('should refuse clip tool without a selection', () => {
     controller.selectTool(EditorToolId.CLIP_PLANE);
     expect(clipTool.isActive()).toBe(false);

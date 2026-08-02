@@ -47,6 +47,8 @@ export interface ClipToolsSetupDeps {
   switchToClipTool?: () => boolean;
   /** Switches the editor window to object select. */
   switchToObjectSelect?: () => void;
+  /** Switches the editor window to face select. */
+  switchToFaceSelect?: () => void;
   /**
    * Registers the clip tool with the editor window.
    *
@@ -77,7 +79,6 @@ export function setupClipToolsAndPalette(deps: ClipToolsSetupDeps): ClipToolsSet
   const toolsPalette = createToolsPalette(deps, controllerHolder, clipPlaneHandler);
   const toolsPaletteController = createToolsPaletteController(deps, toolsPalette, clipPlaneHandler);
   controllerHolder.current = toolsPaletteController;
-  wireClipPlaneViewportCallbacks(deps, clipPlaneHandler);
   wireClipPlaneKeyboardShortcuts(deps, clipPlaneHandler);
   bindFloatingPanelToViewports(toolsPalette, deps.getViewports);
   toolsPalette.show();
@@ -217,27 +218,7 @@ function createToolsPaletteController(
     ...(deps.isEditorToolBusy !== undefined ? { isEditorToolBusy: deps.isEditorToolBusy } : {}),
     ...(deps.switchToClipTool !== undefined ? { switchToClipTool: deps.switchToClipTool } : {}),
     ...(deps.switchToObjectSelect !== undefined ? { switchToObjectSelect: deps.switchToObjectSelect } : {}),
-  });
-}
-
-/**
- * Optional fallback viewport clip callbacks when the editor tool system is not
- * registered. Prefer ClipTool mouse routing through EditorWindow.
- *
- * @param deps Clip/tools setup dependencies.
- * @param clipPlaneHandler Clip plane handler receiving pointer events.
- */
-function wireClipPlaneViewportCallbacks(deps: ClipToolsSetupDeps, clipPlaneHandler: HandlerClipPlane): void {
-  if (deps.switchToClipTool) {
-    deps.getViewports().forEach((viewport) => {
-      viewport.setClipPlaneCallback(null);
-    });
-    return;
-  }
-  deps.getViewports().forEach((viewport) => {
-    viewport.setClipPlaneCallback((event) => {
-      return clipPlaneHandler.onPointerDown(event, viewport.getCamera(), viewport.getContentElement());
-    });
+    ...(deps.switchToFaceSelect !== undefined ? { switchToFaceSelect: deps.switchToFaceSelect } : {}),
   });
 }
 

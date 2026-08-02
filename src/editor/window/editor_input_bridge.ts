@@ -28,6 +28,12 @@ export class EditorInputBridge {
   private previousMouseGridPosition: Vector2;
   private exclusiveViewportRoots: HTMLElement[];
   /**
+   * Documents that currently have idle capture-phase pointer listeners.
+   * Includes the main install document and every detached popup that owns a
+   * pinned root.
+   */
+  private idleListenerDocuments: Set<Document>;
+  /**
    * True while RMB/MMB navigation was started through the shield and should
    * keep receiving retargeted move/up until release.
    */
@@ -53,6 +59,7 @@ export class EditorInputBridge {
     this.previousMousePosition = new Vector2();
     this.previousMouseGridPosition = new Vector2();
     this.exclusiveViewportRoots = [];
+    this.idleListenerDocuments = new Set();
     this.navigationPassThroughActive = false;
     this.navigationPassThroughRoot = null;
     this.navigationPassThroughDocument = null;
@@ -69,6 +76,7 @@ export class EditorInputBridge {
    */
   setExclusiveViewportRoots(roots: readonly HTMLElement[] | null): void {
     this.exclusiveViewportRoots = roots ? [...roots] : [];
+    this.syncIdleDocumentListeners();
     this.syncExclusiveShieldMount();
   }
 
@@ -162,62 +170,78 @@ export class EditorInputBridge {
   }
 
   /**
-   * Idle document pointerdown. Viewports own gizmo picks; this only arms editor
-   * mouse state when a pinned exclusive root still exists after busy ends.
+   * Idle document pointerdown (capture phase). While the busy shield is
+   * mounted, only shield handlers start new presses (avoids retargeted
+   * navigation events re-entering the document path). When idle, arms presses
+   * over pinned viewports. Mounts the shield only when the receiver becomes
+   * busy.
    *
    * @param event Browser pointer event.
    */
   private handleDocumentPointerDown(event: PointerEvent): void {
     this.syncExclusiveShieldMount();
-    if (this.shouldUseExclusiveShield()) {
+    if (this.isEventTargetExclusiveShield(event) || this.isExclusiveShieldMounted()) {
       return;
     }
     if (this.exclusiveViewportRoots.length === 0) {
       return;
     }
-    if (!this.isEventTargetInExclusiveViewport(event)) {
+    const hitRoot = this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event);
+    if (!hitRoot) {
       return;
     }
     this.routeEditorMouseDown(event, true);
+    this.syncExclusiveShieldMount();
   }
 
   /**
-   * Idle document pointerup (includes release after busy ends mid-click).
+   * Idle document pointerup (capture phase). Completes an armed viewport press
+   * when the event is not on the shield. Armed ups must not be dropped when a
+   * shield is or was mounted (pointer capture, busy cleared on down).
    *
    * @param event Browser pointer event.
    */
   private handleDocumentPointerUp(event: PointerEvent): void {
-    this.syncExclusiveShieldMount();
-    if (this.shouldUseExclusiveShield()) {
+    if (this.isEventTargetExclusiveShield(event)) {
       return;
     }
     if (!this.editor.isLeftMousePressed && !this.editor.isRightMousePressed) {
-      if (this.exclusiveViewportRoots.length === 0) {
-        return;
-      }
+      this.syncExclusiveShieldMount();
+      return;
     }
-    const inViewport = this.isEventTargetInExclusiveViewport(event);
-    this.routeEditorMouseUp(event, inViewport);
+    const hitRoot = this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event);
+    this.routeEditorMouseUp(event, hitRoot !== null);
+    this.syncExclusiveShieldMount();
   }
 
   /**
-   * Idle document pointermove for single-use tracking after shield unmounts.
+   * Idle document pointermove (capture phase). Defers shield-target events.
+   * While busy exclusive is mounted and no button is armed, ignore (shield owns
+   * hover). Armed moves always route so pointer-capture drags keep working.
    *
    * @param event Browser pointer event.
    */
   private handleDocumentPointerMove(event: PointerEvent): void {
-    this.syncExclusiveShieldMount();
-    if (this.shouldUseExclusiveShield()) {
+    if (this.isEventTargetExclusiveShield(event)) {
       return;
     }
     if (!this.editor.isLeftMousePressed && !this.editor.isRightMousePressed) {
+      if (this.isExclusiveShieldMounted()) {
+        return;
+      }
       if (this.exclusiveViewportRoots.length === 0) {
         this.updateMousePositionOnly(event);
         return;
       }
+      this.routeEditorMouseMove(
+        event,
+        this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event) !== null,
+      );
+      return;
     }
-    const inViewport = this.isEventTargetInExclusiveViewport(event);
-    this.routeEditorMouseMove(event, inViewport);
+    const hitRoot = this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event);
+    this.routeEditorMouseMove(event, hitRoot !== null);
+    this.syncExclusiveShieldMount();
   }
 
   /**
@@ -449,6 +473,7 @@ export class EditorInputBridge {
       this.resolveEventTargetNode(event.target),
       event.button,
       true,
+      this.resolveEventDocument(event),
     );
     this.editor.onMouseDown(event.button);
   }
@@ -467,6 +492,7 @@ export class EditorInputBridge {
       this.resolveEventTargetNode(event.target),
       event.button,
       false,
+      this.resolveEventDocument(event),
     );
     this.editor.onGlobalMouseUp(event.button);
     if (inViewport) {
@@ -488,6 +514,7 @@ export class EditorInputBridge {
       this.resolveEventTargetNode(event.target),
       -1,
       false,
+      this.resolveEventDocument(event),
     );
     const screenDelta = this.editor.mousePosition.clone().sub(this.previousMousePosition);
     const gridDelta = this.editor.mouseGridPosition.clone().sub(this.previousMouseGridPosition);
@@ -514,6 +541,7 @@ export class EditorInputBridge {
       this.resolveEventTargetNode(event.target),
       -1,
       false,
+      this.resolveEventDocument(event),
     );
   }
 
@@ -550,45 +578,42 @@ export class EditorInputBridge {
   }
 
   /**
-   * Returns whether the exclusive shield should cover the page. Stays mounted
-   * while a mouse button is held after busy ends so pointerup still reaches the
-   * shield on detached documents (single-use LMB confirm clears busy on
-   * pointerdown; without this, OnGlobalMouseUp is lost and focus stays stuck on
-   * the finished single-use tool).
+   * Returns whether the exclusive shield should cover the page.
    *
-   * @returns True while exclusive roots are pinned and the tool is busy or a
-   *   mouse button started under the shield is still held.
+   * Shape Editor exclusive ownership is only while the active event receiver is
+   * busy. Mounting for every left press made document capture skip ups that
+   * never hit the shield (pointer capture, busy cleared on down), leaving the
+   * shield stuck and requiring a second click.
+   *
+   * @returns True while exclusive roots are pinned and the active receiver is
+   *   busy.
    */
   private shouldUseExclusiveShield(): boolean {
     if (this.exclusiveViewportRoots.length === 0) {
       return false;
     }
-    if (this.editor.isActiveEventReceiverBusy) {
-      return true;
-    }
-    return this.editor.isLeftMousePressed || this.editor.isRightMousePressed;
+    return this.editor.isActiveEventReceiverBusy;
   }
 
   /**
-   * Returns whether a document event target is inside any exclusive viewport.
+   * Returns whether the event target is a mounted exclusive mouse shield root.
    *
-   * @param event Pointer event.
-   * @returns True when the event target is in a pinned root.
+   * @param event Browser pointer event.
+   * @returns True when shield handlers will own this event at the target phase.
    */
-  private isEventTargetInExclusiveViewport(event: PointerEvent): boolean {
-    if (this.exclusiveViewportRoots.length === 0) {
+  private isEventTargetExclusiveShield(event: Event): boolean {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
       return false;
     }
-    const targetNode = this.resolveEventTargetNode(event.target);
-    if (!targetNode) {
+    if (target.getAttribute('data-editor-exclusive-mouse-shield') === 'true') {
+      return true;
+    }
+    const ownerDocument = target.ownerDocument;
+    if (!ownerDocument) {
       return false;
     }
-    for (const root of this.exclusiveViewportRoots) {
-      if (root === targetNode || root.contains(targetNode)) {
-        return true;
-      }
-    }
-    return false;
+    return this.exclusiveShieldDomain.getMountedShieldElement(ownerDocument) === target;
   }
 
   /**
@@ -630,8 +655,9 @@ export class EditorInputBridge {
   }
 
   /**
-   * Resolves the document that raised a pointer or wheel event from the shield
-   * that owns the listener (never guesses another window).
+   * Resolves the document that raised a pointer or wheel event. Idle listeners
+   * are on Document itself (ownerDocument is null); busy listeners are on the
+   * shield element. Never cross-matches main and detached windows.
    *
    * @param event Browser event.
    * @returns Source document, or null.
@@ -641,13 +667,35 @@ export class EditorInputBridge {
     if (fromShield) {
       return fromShield;
     }
-    const currentTarget = event.currentTarget;
-    if (currentTarget instanceof Node) {
-      return currentTarget.ownerDocument;
+    const fromCurrent = this.resolveDocumentFromEventTarget(event.currentTarget);
+    if (fromCurrent) {
+      return fromCurrent;
     }
-    const target = event.target;
-    if (target instanceof Node) {
-      return target.ownerDocument;
+    const fromTarget = this.resolveDocumentFromEventTarget(event.target);
+    if (fromTarget) {
+      return fromTarget;
+    }
+    return this.ownerDocument;
+  }
+
+  /**
+   * Resolves a Document from an event target without cross-realm instanceof.
+   * Detached popup documents fail `instanceof Document` against the main
+   * realm.
+   *
+   * @param target Event currentTarget or target.
+   * @returns Self document (nodeType 9) or ownerDocument, or null.
+   */
+  private resolveDocumentFromEventTarget(target: EventTarget | null): Document | null {
+    if (!target || typeof target !== 'object') {
+      return null;
+    }
+    const nodeLike = target as { nodeType?: number; ownerDocument?: Document | null };
+    if (nodeLike.nodeType === 9) {
+      return target as Document;
+    }
+    if (nodeLike.ownerDocument) {
+      return nodeLike.ownerDocument;
     }
     return null;
   }
@@ -735,22 +783,83 @@ export class EditorInputBridge {
   }
 
   /**
-   * Resolves an EventTarget to a Node for hit-testing.
+   * Resolves an EventTarget to a Node for hit-testing without cross-realm
+   * instanceof (detached popup nodes fail `instanceof Node` against main).
    *
    * @param target Event target.
    * @returns Node when possible, otherwise null.
    */
   private resolveEventTargetNode(target: EventTarget | null): Node | null {
-    if (target instanceof Node) {
-      return target;
+    if (!target || typeof target !== 'object') {
+      return null;
+    }
+    const nodeLike = target as { nodeType?: number };
+    if (typeof nodeLike.nodeType === 'number') {
+      return target as Node;
     }
     return null;
   }
 
-  /** Attaches idle document listeners on the main install document. */
+  /**
+   * Attaches idle capture-phase listeners on the main install document and
+   * every detached popup document that owns a pinned exclusive root.
+   */
   private attachDocumentListeners(): void {
-    const doc = this.ownerDocument;
-    if (!doc || !this.boundPointerDown || !this.boundPointerUp || !this.boundPointerMove) {
+    this.syncIdleDocumentListeners();
+  }
+
+  /** Removes idle document listeners from every document that still has them. */
+  private detachDocumentListeners(): void {
+    for (const doc of this.idleListenerDocuments) {
+      this.removeIdleListenersFromDocument(doc);
+    }
+    this.idleListenerDocuments.clear();
+  }
+
+  /**
+   * Keeps idle pointer listeners in sync with the main install document and the
+   * owner documents of pinned exclusive roots so detached popups receive LMB.
+   */
+  private syncIdleDocumentListeners(): void {
+    if (!this.boundPointerDown || !this.boundPointerUp || !this.boundPointerMove) {
+      return;
+    }
+    const desiredDocuments = new Set(this.collectExclusiveShieldDocuments());
+    for (const doc of this.idleListenerDocuments) {
+      if (!desiredDocuments.has(doc)) {
+        this.removeIdleListenersFromDocument(doc);
+        this.idleListenerDocuments.delete(doc);
+      }
+    }
+    for (const doc of desiredDocuments) {
+      if (this.idleListenerDocuments.has(doc)) {
+        continue;
+      }
+      if (!this.canAttachIdleListenersToDocument(doc)) {
+        continue;
+      }
+      this.addIdleListenersToDocument(doc);
+      this.idleListenerDocuments.add(doc);
+    }
+  }
+
+  /**
+   * Returns whether a document can host capture-phase idle pointer listeners.
+   *
+   * @param doc Candidate document (main or detached popup).
+   * @returns True when add/removeEventListener are available.
+   */
+  private canAttachIdleListenersToDocument(doc: Document): boolean {
+    return typeof doc.addEventListener === 'function' && typeof doc.removeEventListener === 'function';
+  }
+
+  /**
+   * Attaches idle capture-phase pointer listeners to one document.
+   *
+   * @param doc Document that should receive idle pointer routing.
+   */
+  private addIdleListenersToDocument(doc: Document): void {
+    if (!this.boundPointerDown || !this.boundPointerUp || !this.boundPointerMove) {
       return;
     }
     doc.addEventListener('pointerdown', this.boundPointerDown, true);
@@ -758,17 +867,20 @@ export class EditorInputBridge {
     doc.addEventListener('pointermove', this.boundPointerMove, true);
   }
 
-  /** Detaches idle document listeners. */
-  private detachDocumentListeners(): void {
-    const doc = this.ownerDocument;
+  /**
+   * Removes idle capture-phase pointer listeners from one document.
+   *
+   * @param doc Document that previously hosted idle pointer routing.
+   */
+  private removeIdleListenersFromDocument(doc: Document): void {
     if (this.boundPointerDown) {
-      doc?.removeEventListener('pointerdown', this.boundPointerDown, true);
+      doc.removeEventListener('pointerdown', this.boundPointerDown, true);
     }
     if (this.boundPointerUp) {
-      doc?.removeEventListener('pointerup', this.boundPointerUp, true);
+      doc.removeEventListener('pointerup', this.boundPointerUp, true);
     }
     if (this.boundPointerMove) {
-      doc?.removeEventListener('pointermove', this.boundPointerMove, true);
+      doc.removeEventListener('pointermove', this.boundPointerMove, true);
     }
   }
 }

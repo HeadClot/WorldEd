@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { blurActiveFormField } from '@/utils/dom_focus.js';
+import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
 
 /**
  * Invoked when the user scrolls to zoom an orthographic viewport toward the
@@ -115,6 +116,7 @@ export class HandlerOrthoPan {
     if (event.button !== 2) return;
     blurActiveFormField();
     this.isPanning = true;
+    SelectionClickThrough.resetClickThrough();
     if (!this.isPointerLocked) {
       this.tryRequestPointerLock();
     }
@@ -184,6 +186,7 @@ export class HandlerOrthoPan {
     const factor = event.deltaY > 0 ? 1.1 : 0.9;
     const pointer = this.readNormalizedPointer(event);
     this.zoomCallback(factor, pointer.u, pointer.v);
+    SelectionClickThrough.resetClickThrough();
   }
 
   /**

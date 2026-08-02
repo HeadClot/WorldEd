@@ -208,15 +208,10 @@ export function resizeReplacedPane(viewport: ViewportEditor): void {
 }
 
 /**
- * Binds the clip-plane pointer callback on one viewport when the tool exists.
+ * No-op: clip input is owned by ClipTool through EditorWindow. Kept so layout
+ * rewire call sites remain stable.
  *
- * @param host Layout chrome host.
- * @param viewport Viewport to wire.
+ * @param _host Layout chrome host.
+ * @param _viewport Viewport to wire.
  */
-export function wireClipCallbackOnViewport(host: LayoutViewportChromeHost, viewport: ViewportEditor): void {
-  const clipPlaneHandler = host.clipPlaneHandler;
-  if (!clipPlaneHandler) return;
-  viewport.setClipPlaneCallback((event) => {
-    return clipPlaneHandler.onPointerDown(event, viewport.getCamera(), viewport.getContentElement());
-  });
-}
+export function wireClipCallbackOnViewport(_host: LayoutViewportChromeHost, _viewport: ViewportEditor): void {}

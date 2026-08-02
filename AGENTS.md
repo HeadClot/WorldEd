@@ -171,6 +171,7 @@ PowerShell is janky, use cmd.
 24. Avoid ! (non-null assertion) and rewrite the code to ensure TypeScript can be sure it is not null (with performance as highest priority).
 25. Remove unused functions and unused variables.
 26. If a function is very complicated and difficult to understand, split it into easier functions with detailed documentation comments (but priority is performance).
+27. Code duplication is NOT ALLOWED, create a single function accessible from both code paths (static class, base class).
 
 ## Coordinates
 

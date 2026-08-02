@@ -336,12 +336,52 @@ export abstract class ViewportLayoutCore {
       this.transformGizmo,
     );
     this.selectionVisualController?.wireViewports(this.getAllLiveViewports());
-    this.transformInteractionBridge?.wireViewports(this.getAllLiveViewports());
-    this.faceModeCoordinator?.rebindViewportFaceCallbacks();
+    this.transformInteractionBridge?.setViewportProbe((clientX, clientY) =>
+      this.findInteractiveViewportAtClientPointForTools(
+        clientX,
+        clientY,
+        this.toolEditorSystem?.editorWindow.lastPointerOwnerDocument ?? null,
+      ),
+    );
+    this.toolEditorSystem?.refreshInteractiveViewportDomain();
     this.shadingModeCoordinator?.rebindViewportUi();
     this.attachCadRulers();
     this.watchResize();
     this.resizeAll();
+  }
+
+  /**
+   * Finds an interactive viewport under a client point for tool/gizmo probes.
+   * Client coordinates are window-local; when ownerDocument is set only panes
+   * in that document are considered.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param ownerDocument Optional document that owns the client coordinates.
+   * @returns Viewport, or null.
+   */
+  private findInteractiveViewportAtClientPointForTools(
+    clientX: number,
+    clientY: number,
+    ownerDocument: Document | null = null,
+  ):
+    import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D | null {
+    for (const viewport of this.getAllInteractiveViewports()) {
+      const pickElement = viewport.getContentElement();
+      if (!pickElement) {
+        continue;
+      }
+      if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
+        continue;
+      }
+      const rect = pickElement.getBoundingClientRect();
+      if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+        continue;
+      }
+      return viewport as
+        import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D;
+    }
+    return null;
   }
 
   /** Creates viewports, sync manager, and shared scene objects. */
@@ -392,6 +432,7 @@ export abstract class ViewportLayoutCore {
    */
   protected wireDetachedViewport(viewport: ViewportEditor): void {
     attachDetachedViewport(this.getDetachedViewportHost(), viewport);
+    this.toolEditorSystem?.refreshInteractiveViewportDomain();
   }
 
   /**
@@ -401,6 +442,7 @@ export abstract class ViewportLayoutCore {
    */
   protected onDetachedViewportDisposed(_viewport: ViewportEditor): void {
     handleDetachedViewportDisposed(this.getDetachedViewportHost());
+    this.toolEditorSystem?.refreshInteractiveViewportDomain();
   }
 
   /**
@@ -775,6 +817,9 @@ export abstract class ViewportLayoutCore {
       switchToClipTool: () => this.toolEditorSystem?.switchToClipTool() === true,
       switchToObjectSelect: () => {
         this.toolEditorSystem?.switchToObjectSelect();
+      },
+      switchToFaceSelect: () => {
+        this.toolEditorSystem?.switchToFaceSelect();
       },
       registerClipTool: (placement, handler) => {
         this.toolEditorSystem?.registerClipTool(placement, handler);

@@ -349,7 +349,70 @@ export class HandlerTransform {
    * update.
    */
   refreshBoundsHoverCursor(): void {
+    if (this.session.dragActive) {
+      this.boundsDragController.reissueActiveDragCursor();
+      return;
+    }
     this.boundsDragController.refreshHoverCursor();
+  }
+
+  /**
+   * Re-issues the bounds drag cursor while a handle is held (Shape Editor
+   * active-gizmo UpdateMouseCursor on every repaint).
+   */
+  reissueBoundsDragCursor(): void {
+    this.boundsDragController.reissueActiveDragCursor();
+  }
+
+  /**
+   * Probes whether a standard gizmo handle is under the pointer without
+   * starting a drag.
+   *
+   * @param camera Viewport camera.
+   * @param pickElement Pick element for NDC.
+   * @param event Pointer event.
+   * @param handles Master handle list.
+   * @param gizmoGroup Viewport gizmo group.
+   * @returns True when a handle is hit.
+   */
+  probeHandleUnderPointer(
+    camera: THREE.Camera,
+    pickElement: HTMLElement,
+    event: MouseEvent,
+    handles: GizmoHandle[],
+    gizmoGroup: THREE.Group,
+  ): boolean {
+    return this.gizmoRaycaster.pickHandle(handles, camera, pickElement, event, gizmoGroup) !== null;
+  }
+
+  /**
+   * Probes whether a bounds handle, edge, or face is under the pointer without
+   * starting a drag.
+   *
+   * @param camera Viewport camera.
+   * @param pickElement Pick element for NDC.
+   * @param event Pointer event.
+   * @param handles Master handle list.
+   * @param gizmoGroup Viewport gizmo group.
+   * @param viewPlane Active pane view plane for orthographic silhouette edges.
+   * @returns True when a bounds control is hit.
+   */
+  probeBoundsControlUnderPointer(
+    camera: THREE.Camera,
+    pickElement: HTMLElement,
+    event: MouseEvent,
+    handles: GizmoHandle[],
+    gizmoGroup: THREE.Group,
+    viewPlane: CadViewPlane = 'xyz',
+  ): boolean {
+    return this.boundsDragController.probeControlUnderPointer(
+      camera,
+      pickElement,
+      event,
+      handles,
+      gizmoGroup,
+      viewPlane,
+    );
   }
 
   /**

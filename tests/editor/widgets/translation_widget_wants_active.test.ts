@@ -40,6 +40,20 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     pinExclusiveViewportDomain: () => {},
     pinExclusiveViewport: () => {},
     clearExclusiveViewport: () => {},
+    pickObjectStackAtClientPoint: () => [],
+    clearObjectSelection: () => {},
+    applyObjectClickSelectionAtClientPoint: () => {},
+    applyObjectMarqueeSelection: () => {},
+    tryBeginPermanentGizmoDragFromEditorPointer: () => false,
+    probePermanentGizmoUnderPointer: () => false,
+    updateBoundsHoverAtClientPoint: () => {},
+    clearBoundsHoverAtClientPoint: () => {},
+    enterFaceSelectionMode: () => {},
+    leaveFaceSelectionMode: () => {},
+    beginFaceSelectPointerDown: () => false,
+    continueFaceSelectPointerMove: () => {},
+    endFaceSelectPointerUp: () => {},
+    isFaceSelectStrokeActive: () => false,
     setWidgetMode: () => {},
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
@@ -49,6 +63,7 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     getLastPointerClientPosition: () => null,
     isShiftPressed: () => false,
     isCtrlPressed: () => false,
+    isAltPressed: () => false,
     isModifierPressed: () => false,
     handleGlobalKeyDown: () => false,
     isNavigationBlockingTools: () => false,
@@ -62,7 +77,8 @@ describe('TranslationWidget wantsActive (Shape Editor gizmo latch)', () => {
     let permanentDrag = true;
     editor.setServices(
       createStubServices({
-        isPermanentGizmoHandleDragActive: () => permanentDrag,
+        probePermanentGizmoUnderPointer: () => permanentDrag,
+        tryBeginPermanentGizmoDragFromEditorPointer: () => permanentDrag,
       }),
     );
     const widget = new TranslationWidget();
@@ -79,7 +95,8 @@ describe('TranslationWidget wantsActive (Shape Editor gizmo latch)', () => {
     const editor = new EditorWindow();
     editor.setServices(
       createStubServices({
-        isPermanentGizmoHandleDragActive: () => false,
+        probePermanentGizmoUnderPointer: () => false,
+        tryBeginPermanentGizmoDragFromEditorPointer: () => false,
       }),
     );
     const widget = new TranslationWidget();
@@ -140,7 +157,8 @@ describe('TranslationWidget wantsActive (Shape Editor gizmo latch)', () => {
     expect(widget.isBusy()).toBe(true);
     editor.onPermanentGizmoHandleDragEnded();
     expect(widget.wantsActive).toBe(false);
-    expect(editor.activeEventReceiverIsTool).toBe(true);
+    expect(editor.getActiveEventReceiver()).toBe(widget);
+    expect(widget.isBusy()).toBe(false);
   });
 
   it('permanent gizmo handle drag blocks W permanent tool shortcut fallthrough', () => {

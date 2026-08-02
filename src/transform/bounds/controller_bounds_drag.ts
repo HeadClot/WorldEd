@@ -104,6 +104,36 @@ export class ControllerBoundsDrag {
   }
 
   /**
+   * Probes whether any bounds control is under the pointer without starting a
+   * drag (Shape Editor gizmo isActive: handles, edges, and face interiors so
+   * face-move latches wantsActive like the translation gizmo body).
+   *
+   * @param camera The viewport camera.
+   * @param pickElement DOM pick target for NDC.
+   * @param event The pointer event.
+   * @param handles Current gizmo handles.
+   * @param gizmoGroup Viewport gizmo group.
+   * @param viewPlane Active pane view plane for orthographic silhouette edges.
+   * @returns True when a handle, silhouette edge, or face is hit.
+   */
+  probeControlUnderPointer(
+    camera: THREE.Camera,
+    pickElement: HTMLElement,
+    event: MouseEvent,
+    handles: GizmoHandle[],
+    gizmoGroup: THREE.Group,
+    viewPlane: CadViewPlane = 'xyz',
+  ): boolean {
+    if (this.gizmoRaycaster.pickHandle(handles, camera, pickElement, event, gizmoGroup)) {
+      return true;
+    }
+    if (this.pickSilhouetteEdgeFace(camera, pickElement, event, viewPlane)) {
+      return true;
+    }
+    return this.boundsFacePicker.pickFace(event, camera, pickElement, gizmoGroup) !== null;
+  }
+
+  /**
    * Highlights the resize side under the pointer and sets the dual-arrow resize
    * cursor. Face interiors keep the regular pointer (no four-way drag cursor).
    *
@@ -177,6 +207,30 @@ export class ControllerBoundsDrag {
   }
 
   /**
+   * Re-issues the bounds resize/move cursor while a handle drag is active
+   * (Shape Editor UpdateMouseCursor on every repaint while the widget is
+   * active). Uses the document body so the exclusive mouse shield inherits it.
+   */
+  reissueActiveDragCursor(): void {
+    if (!this.session.dragActive) {
+      return;
+    }
+    if (!this.session.isBoundsResize && !this.session.isBoundsFaceMove) {
+      return;
+    }
+    const pickElement = this.session.dragRenderer;
+    const camera = this.session.dragCamera;
+    if (!pickElement || !camera) {
+      return;
+    }
+    const cursorHost = this.resolveCursorHost(pickElement);
+    const cursorCss = this.resolveActiveDragCursorCss(camera);
+    this.lastHoverCursorCss = cursorCss;
+    this.lastHoverCursorElement = cursorHost;
+    managerMouseCursor.setMouseCursor(cursorCss, cursorHost);
+  }
+
+  /**
    * Forgets the cached hover cursor so the shared cursor manager can restore
    * the default on the next frame update.
    */
@@ -220,9 +274,39 @@ export class ControllerBoundsDrag {
     viewPlane: CadViewPlane,
   ): void {
     const cursorCss = this.resolveHoverCursorCss(camera, pickElement, event, gizmoGroup, resizeFace, viewPlane);
+    const cursorHost = this.resolveCursorHost(pickElement);
     this.lastHoverCursorCss = cursorCss;
-    this.lastHoverCursorElement = pickElement;
-    managerMouseCursor.setMouseCursor(cursorCss, pickElement);
+    this.lastHoverCursorElement = cursorHost;
+    managerMouseCursor.setMouseCursor(cursorCss, cursorHost);
+  }
+
+  /**
+   * Cursor host for Shape Editor window-wide AddCursorRect behavior. The busy
+   * exclusive shield uses cursor:inherit, so the body must own the style.
+   *
+   * @param pickElement Viewport pick element used to resolve the document.
+   * @returns Document body when available, otherwise the pick element.
+   */
+  private resolveCursorHost(pickElement: HTMLElement): HTMLElement {
+    return pickElement.ownerDocument?.body ?? pickElement;
+  }
+
+  /**
+   * Cursor CSS for the active bounds drag face/handle.
+   *
+   * @param camera Camera used when the drag began.
+   * @returns CSS cursor keyword.
+   */
+  private resolveActiveDragCursorCss(camera: THREE.Camera): string {
+    if (this.session.isBoundsFaceMove) {
+      return BOUNDS_MOVE_CURSOR;
+    }
+    const face = this.session.activeBoundsFace;
+    const bounds = this.session.startBounds ?? this.transformGizmo.getCurrentBounds();
+    if (!face || !bounds) {
+      return BOUNDS_DEFAULT_CURSOR;
+    }
+    return resolveBoundsResizeCursor(face, bounds, camera, 'xyz');
   }
 
   /**
@@ -419,6 +503,7 @@ export class ControllerBoundsDrag {
     this.transformGizmo.setHighlightedBoundsFace(null);
     this.transformGizmo.setBoundsGuideLinesVisible(true);
     this.transformGizmo.setBoundsResizeHandlesVisible(false);
+    this.reissueActiveDragCursor();
     return true;
   }
 
@@ -463,6 +548,7 @@ export class ControllerBoundsDrag {
     this.transformGizmo.setHighlightedBoundsFace(face);
     this.captureResizeStart(camera, pickElement, event, bounds, face);
     this.transformGizmo.setBoundsGuideLinesVisible(true);
+    this.reissueActiveDragCursor();
   }
 
   /**

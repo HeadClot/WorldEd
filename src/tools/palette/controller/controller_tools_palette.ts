@@ -33,6 +33,8 @@ export interface ControllerToolsPaletteDependencies {
   switchToClipTool?: () => boolean;
   /** Switches the editor window to object select (box select tool). */
   switchToObjectSelect?: () => void;
+  /** Switches the editor window to face select tool. */
+  switchToFaceSelect?: () => void;
 }
 
 /** Keeps the Tools palette, face mode, and clip tool mutually exclusive. */
@@ -97,7 +99,19 @@ export class ControllerToolsPalette {
    */
   onExternalSelectionModeChanged(mode: SelectionMode): void {
     this.endClipSessionIfActive();
-    this.activeTool = mode === SelectionMode.FACE ? EditorToolId.FACE : EditorToolId.OBJECT;
+    if (mode === SelectionMode.FACE) {
+      if (this.activeTool !== EditorToolId.FACE) {
+        this.activeTool = EditorToolId.FACE;
+        this.deps.switchToFaceSelect?.();
+      }
+      this.deps.toolsPalette.setActiveTool(this.activeTool);
+      this.refreshPaletteContext();
+      return;
+    }
+    if (this.activeTool !== EditorToolId.OBJECT) {
+      this.activeTool = EditorToolId.OBJECT;
+      this.deps.switchToObjectSelect?.();
+    }
     this.deps.toolsPalette.setActiveTool(this.activeTool);
     this.refreshPaletteContext();
   }
@@ -132,10 +146,13 @@ export class ControllerToolsPalette {
   /** Activates face selection mode. */
   private activateFaceTool(): void {
     this.endClipSessionIfActive();
-    this.deps.faceExtrusionController.setSelectionMode(SelectionMode.FACE);
     this.activeTool = EditorToolId.FACE;
     this.deps.toolsPalette.setActiveTool(this.activeTool);
-    this.deps.switchToObjectSelect?.();
+    if (this.deps.switchToFaceSelect) {
+      this.deps.switchToFaceSelect();
+    } else {
+      this.deps.faceExtrusionController.setSelectionMode(SelectionMode.FACE);
+    }
     this.refreshPaletteContext();
     this.deps.showStatusMessage('Face select');
   }

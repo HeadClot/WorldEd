@@ -65,8 +65,141 @@ export class CoordinatorFaceMode {
     this.dragPickFrame = 0;
     this.pendingDragEvent = null;
     this.bindFaceSelectionCallbacks();
-    this.bindViewportFaceCallbacks();
     this.updateSelectionModeStatus();
+  }
+
+  /** Enters face selection mode from FaceSelectTool activation. */
+  enterFaceSelectionModeFromTool(): void {
+    this.faceExtrusionController.setSelectionMode(SelectionMode.FACE);
+  }
+
+  /** Leaves face selection mode from FaceSelectTool deactivation. */
+  leaveFaceSelectionModeFromTool(): void {
+    this.faceExtrusionController.setSelectionMode(SelectionMode.OBJECT);
+  }
+
+  /**
+   * Starts face pick/paint at a client point (editor tool pipeline).
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param isShiftPressed Shape Editor isShiftPressed (additive).
+   * @param isCtrlPressed Shape Editor isCtrlPressed (subtractive).
+   * @param ownerDocument Document that owns the client coordinates, or null.
+   * @returns True when face mode consumed the press.
+   */
+  beginFaceSelectPointerDown(
+    clientX: number,
+    clientY: number,
+    isShiftPressed: boolean,
+    isCtrlPressed: boolean,
+    ownerDocument: Document | null = null,
+  ): boolean {
+    if (this.faceExtrusionController.getSelectionMode() !== SelectionMode.FACE) {
+      return false;
+    }
+    const viewport = this.findViewportAtClientPoint(clientX, clientY, ownerDocument);
+    if (!viewport) {
+      return false;
+    }
+    const event = this.createSyntheticMouseEvent(clientX, clientY);
+    return this.onViewportFacePointerDown(event, viewport, isShiftPressed, isCtrlPressed);
+  }
+
+  /**
+   * Continues face paint / UV smear from the editor tool pipeline.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param buttons PointerEvent.buttons bitfield.
+   */
+  continueFaceSelectPointerMove(clientX: number, clientY: number, buttons: number): void {
+    if (!this.activeDragViewport) {
+      return;
+    }
+    const event = this.createSyntheticPointerMove(clientX, clientY, buttons);
+    this.onWindowPointerMove(event);
+  }
+
+  /** Ends face paint / UV smear from the editor tool pipeline. */
+  endFaceSelectPointerUp(): void {
+    this.onWindowPointerUp();
+  }
+
+  /**
+   * Returns whether a face paint or UV smear stroke is live.
+   *
+   * @returns True while stroke tracking is active.
+   */
+  isFaceSelectStrokeActive(): boolean {
+    return this.activeDragViewport !== null || this.isSmearStrokeLive;
+  }
+
+  /**
+   * Finds an interactive viewport under a client point. Client coordinates are
+   * window-local; when ownerDocument is set only panes in that document match.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param ownerDocument Optional document that owns the client coordinates.
+   * @returns Viewport, or null.
+   */
+  private findViewportAtClientPoint(
+    clientX: number,
+    clientY: number,
+    ownerDocument: Document | null = null,
+  ): Viewport3D | Viewport2D | null {
+    for (const viewport of this.deps.getViewports()) {
+      const pickElement = viewport.getContentElement();
+      if (!pickElement) {
+        continue;
+      }
+      if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
+        continue;
+      }
+      const rect = pickElement.getBoundingClientRect();
+      if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+        continue;
+      }
+      return viewport;
+    }
+    return null;
+  }
+
+  /**
+   * Builds a synthetic mouse event for face pick helpers.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @returns Synthetic mouse event.
+   */
+  private createSyntheticMouseEvent(clientX: number, clientY: number): MouseEvent {
+    return {
+      clientX,
+      clientY,
+      button: 0,
+      buttons: 1,
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as unknown as MouseEvent;
+  }
+
+  /**
+   * Builds a synthetic pointer move for face drag paint.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param buttons Pointer buttons bitfield.
+   * @returns Synthetic pointer event.
+   */
+  private createSyntheticPointerMove(clientX: number, clientY: number, buttons: number): PointerEvent {
+    return {
+      clientX,
+      clientY,
+      buttons,
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as unknown as PointerEvent;
   }
 
   /**
@@ -186,34 +319,35 @@ export class CoordinatorFaceMode {
     this.deps.keyboardShortcutHandler.setOnExtrudeFaces(() => this.onExtrudeFaces());
   }
 
-  /** Wires face selection callbacks to all viewports. */
-  private bindViewportFaceCallbacks(): void {
-    this.deps.getViewports().forEach((viewport) => {
-      viewport.setFaceSelectionCallback((event) => this.onViewportFacePointerDown(event, viewport));
-    });
-  }
-
-  /** Rebinds face selection callbacks after the live viewport set changes. */
-  rebindViewportFaceCallbacks(): void {
-    this.bindViewportFaceCallbacks();
-  }
+  /**
+   * No-op kept for layout rewire call sites; face input is owned by
+   * FaceSelectTool.
+   */
+  rebindViewportFaceCallbacks(): void {}
 
   /**
-   * Handles face selection pointer down events from any viewport. Starts
-   * window-level drag listeners for multi-face paint and UV smear.
+   * Handles face selection pointer down events from the face select tool.
+   * Starts window-level drag listeners for multi-face paint and UV smear.
    *
-   * @param event The pointer event.
+   * @param event The pointer event (coordinates only; modifiers are explicit).
    * @param viewport The viewport that received the event.
+   * @param isShiftPressed Shape Editor isShiftPressed (additive).
+   * @param isCtrlPressed Shape Editor isCtrlPressed (subtractive).
    * @returns True if the event was consumed by face selection.
    */
-  private onViewportFacePointerDown(event: MouseEvent, viewport: Viewport3D | Viewport2D): boolean {
+  private onViewportFacePointerDown(
+    event: MouseEvent,
+    viewport: Viewport3D | Viewport2D,
+    isShiftPressed: boolean,
+    isCtrlPressed: boolean,
+  ): boolean {
     if (this.faceExtrusionController.getSelectionMode() !== SelectionMode.FACE) {
       return false;
     }
     const smearHeld = this.isUvSmearKeyHeld();
     const camera = viewport.getCamera();
     const pickElement = viewport.getContentElement();
-    const pick = this.faceExtrusionController.onPointerDown(event, camera, pickElement);
+    const pick = this.faceExtrusionController.onPointerDown(event, camera, pickElement, isShiftPressed, isCtrlPressed);
     if (smearHeld && pick) {
       this.uvSmearController.beginStroke(pick.mesh, pick.faceIndex);
       this.isSmearStrokeLive = true;

@@ -125,8 +125,10 @@ export class SolidBrushEdgeBatch {
 
   /**
    * Starts live pose tracking for brushes being transformed. Attaches personal
-   * edges and rebuilds static batches once without those brushes so wireframes
-   * cannot lag behind the mesh.
+   * edges and rebuilds static batches only when membership changes (first
+   * sample of a drag), omitting live brushes so wireframes cannot lag. Later
+   * samples only ensure personal edges — personal LineSegments follow the mesh
+   * matrix without rebaking the whole solid.
    *
    * @param meshes Brush or other meshes involved in the live transform.
    */
@@ -147,7 +149,7 @@ export class SolidBrushEdgeBatch {
         solidRoots.add(solidRoot);
       }
     }
-    if (!membershipChanged && solidRoots.size === 0) {
+    if (!membershipChanged) {
       return;
     }
     for (const solidRoot of solidRoots) {

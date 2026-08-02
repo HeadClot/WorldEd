@@ -4,6 +4,7 @@ import { ControllerCameraFit } from '@/navigation/camera/controller_camera_fit.j
 import { CameraAnimationConfig } from '@/navigation/camera/camera_animation_config.js';
 import { StatusBar } from '@/ui/status/status_bar.js';
 import { HandlerKeyboardShortcut } from '@/input/handler_keyboard_shortcut.js';
+import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
 
 /** Coordinates fit-to-selection camera framing for one or all viewports. */
 export class CoordinatorCameraFit {
@@ -79,6 +80,7 @@ export class CoordinatorCameraFit {
   fitSpecificViewport(viewport: ViewportEditor): void {
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     const count = this.cameraFitController.fitViewportToSelection(viewport, selected, this.cameraAnimationConfig);
+    SelectionClickThrough.resetClickThrough();
     this.showFitFeedback(count);
   }
 
@@ -90,6 +92,7 @@ export class CoordinatorCameraFit {
       selected,
       this.cameraAnimationConfig,
     );
+    SelectionClickThrough.resetClickThrough();
     this.showFitFeedback(count);
   }
 

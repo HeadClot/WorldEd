@@ -6,10 +6,13 @@ import type { GuiWindow } from '../gui/gui_window.js';
 import type { IGuiContainerEventReceiver } from '../gui/gui_container_event_receiver.js';
 import type { EditorServices } from './editor_services.js';
 import { BoxSelectTool } from '../tools/box_select_tool.js';
+import { BoundsTool } from '../tools/bounds_tool.js';
 import { TranslateTool } from '../tools/translate_tool.js';
 import { RotateTool } from '../tools/rotate_tool.js';
 import { ScaleTool } from '../tools/scale_tool.js';
+import { FaceSelectTool } from '../tools/face_select/face_select_tool.js';
 import type { ClipTool } from '../tools/clip_tool.js';
+import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
 
 /**
  * The editor window owning focus, tools, widgets, and input routing (Focus +
@@ -27,9 +30,11 @@ export class EditorWindow {
   private services: EditorServices | null;
 
   private boxSelectTool: BoxSelectTool | null;
+  private boundsTool: BoundsTool | null;
   private translateTool: TranslateTool | null;
   private rotateTool: RotateTool | null;
   private scaleTool: ScaleTool | null;
+  private faceSelectTool: FaceSelectTool | null;
   private clipTool: ClipTool | null;
 
   /** Current mouse position in screen coordinates. */
@@ -76,9 +81,11 @@ export class EditorWindow {
     this.guiWindows = [];
     this.services = null;
     this.boxSelectTool = null;
+    this.boundsTool = null;
     this.translateTool = null;
     this.rotateTool = null;
     this.scaleTool = null;
+    this.faceSelectTool = null;
     this.clipTool = null;
     this.mousePosition = new Vector2();
     this.mouseGridPosition = new Vector2();
@@ -109,6 +116,43 @@ export class EditorWindow {
    */
   getServices(): EditorServices | null {
     return this.services;
+  }
+
+  /**
+   * Shape Editor OnRepaint tool/widget path: active tool and widgets OnRender
+   * every frame so SetMouseCursor re-issues stay live.
+   */
+  onRepaint(): void {
+    this.drawTool();
+    this.drawWidgets();
+  }
+
+  /**
+   * Shape Editor SetMouseCursor: request a CSS cursor for this frame. Call
+   * again every repaint while it should stay active; ManagerMouseCursor.update
+   * resets it when nothing re-issues.
+   *
+   * @param cursorCss CSS cursor value such as `ew-resize`.
+   * @param targetElement Element that receives the cursor style.
+   */
+  setMouseCursor(cursorCss: string, targetElement: HTMLElement): void {
+    managerMouseCursor.setMouseCursor(cursorCss, targetElement);
+  }
+
+  /** Draws the active tool (Shape Editor DrawTool). */
+  private drawTool(): void {
+    if (this.activeTool === null) {
+      return;
+    }
+    this.activeTool.onRender();
+  }
+
+  /** Draws all widgets (Shape Editor DrawWidgets). */
+  private drawWidgets(): void {
+    const widgetsCount = this.widgets.length;
+    for (let i = 0; i < widgetsCount; i += 1) {
+      this.widgets[i]?.onRender();
+    }
   }
 
   /**
@@ -165,10 +209,7 @@ export class EditorWindow {
    * @returns True while focus cannot leave the current receiver.
    */
   get isActiveEventReceiverBusy(): boolean {
-    if (this.getActiveEventReceiver().isBusy()) {
-      return true;
-    }
-    return this.services?.isPermanentGizmoHandleDragActive() === true;
+    return this.getActiveEventReceiver().isBusy();
   }
 
   /**
@@ -186,16 +227,12 @@ export class EditorWindow {
 
   /**
    * Notifies that a permanent gizmo/bounds handle drag ended. Clears widget
-   * wantsActive latches and restores tool focus when a widget still owns it.
+   * wantsActive only (Shape Editor OnGlobalMouseUp on the widget). Focus stays
+   * on the widget until the same release's OnMouseUp / next OnMouseDown
+   * re-resolves the tool so tool selection does not run on drag release.
    */
   onPermanentGizmoHandleDragEnded(): void {
     this.latchAllWidgetsWantsActiveFromGizmo(false);
-    if (!this.activeEventReceiverIsWidget) {
-      return;
-    }
-    if (this.activeTool) {
-      this.trySwitchActiveEventReceiver(this.activeTool);
-    }
   }
 
   /**
@@ -287,23 +324,35 @@ export class EditorWindow {
   validateTools(): void {
     if (this.boxSelectTool === null) {
       this.boxSelectTool = new BoxSelectTool();
+      this.boundsTool = new BoundsTool();
       this.translateTool = new TranslateTool();
       this.rotateTool = new RotateTool();
       this.scaleTool = new ScaleTool();
+      this.faceSelectTool = new FaceSelectTool();
     }
     if (this.activeTool === null) {
-      this.switchTool(this.boxSelectTool);
+      this.switchTool(this.boundsTool as BoundsTool);
     }
   }
 
   /**
-   * Returns the permanent box select tool.
+   * Returns the permanent box select tool (selection base only).
    *
    * @returns Box select tool instance.
    */
   getBoxSelectTool(): BoxSelectTool {
     this.validateTools();
     return this.boxSelectTool as BoxSelectTool;
+  }
+
+  /**
+   * Returns the permanent bounds tool (select + bounds widget).
+   *
+   * @returns Bounds tool instance.
+   */
+  getBoundsTool(): BoundsTool {
+    this.validateTools();
+    return this.boundsTool as BoundsTool;
   }
 
   /**
@@ -334,6 +383,16 @@ export class EditorWindow {
   getScaleTool(): ScaleTool {
     this.validateTools();
     return this.scaleTool as ScaleTool;
+  }
+
+  /**
+   * Returns the permanent face select tool.
+   *
+   * @returns Face select tool instance.
+   */
+  getFaceSelectTool(): FaceSelectTool {
+    this.validateTools();
+    return this.faceSelectTool as FaceSelectTool;
   }
 
   /**
@@ -684,6 +743,8 @@ export class EditorWindow {
    * @param targetNode Event target node.
    * @param button Mouse button, or -1 when not a button event.
    * @param isDown True on pointer down.
+   * @param ownerDocument Document that owns the sample when target resolution
+   *   fails across popup realms (main app or detached viewport).
    */
   updateMouseStateFromPointer(
     clientX: number,
@@ -691,12 +752,13 @@ export class EditorWindow {
     targetNode: Node | null,
     button: number,
     isDown: boolean,
+    ownerDocument: Document | null = null,
   ): void {
     this.lastEventTargetNode = targetNode;
     this.lastPointerClientX = clientX;
     this.lastPointerClientY = clientY;
     this.hasLastPointerClient = true;
-    this.lastPointerOwnerDocument = this.resolveOwnerDocumentFromTarget(targetNode);
+    this.lastPointerOwnerDocument = this.resolveOwnerDocumentFromTarget(targetNode) ?? ownerDocument;
     this.mousePosition.set(clientX, clientY);
     const grid = this.services?.screenPointToGrid(clientX, clientY) ?? { x: clientX, y: clientY };
     this.mouseGridPosition.set(grid.x, grid.y);
@@ -752,9 +814,22 @@ export class EditorWindow {
     this.services?.discardUndo();
   }
 
-  /** User switches to the box select tool unless already active. */
+  /**
+   * User switches to the default object tool (bounds select + widget), matching
+   * map-editor object select.
+   */
   userSwitchToBoxSelectTool(): void {
-    this.switchTool(this.getBoxSelectTool());
+    this.userSwitchToBoundsTool();
+  }
+
+  /** User switches to the permanent bounds tool unless already active. */
+  userSwitchToBoundsTool(): void {
+    this.switchTool(this.getBoundsTool());
+  }
+
+  /** User switches to the face select tool unless already active. */
+  userSwitchToFaceSelectTool(): void {
+    this.switchTool(this.getFaceSelectTool());
   }
 
   /** User switches to the translate tool unless already active. */
@@ -878,7 +953,11 @@ export class EditorWindow {
   }
 
   /**
-   * Shared mouse-up / global mouse-up routing including widget wantsActive.
+   * Shared mouse-up / global mouse-up routing (Shape Editor OnMouseUp /
+   * OnGlobalMouseUp). Busy receivers keep exclusivity. Widgets that no longer
+   * want focus hand off to the active tool without forwarding the up event to
+   * the tool — selection runs only when the tool is already the focus
+   * receiver.
    *
    * @param button Mouse button index.
    * @param isGlobal True for OnGlobalMouseUp.
@@ -890,35 +969,31 @@ export class EditorWindow {
       return;
     }
     if (this.activeEventReceiverIsWidget) {
-      eventReceiver = this.routeWidgetMouseUp(eventReceiver, button, isGlobal);
+      this.routeWidgetMouseUp(eventReceiver, button, isGlobal);
       return;
     }
     this.dispatchMouseUpToReceiver(eventReceiver, button, isGlobal);
   }
 
   /**
-   * Handles widgets that no longer wish to be active.
+   * Handles widgets that no longer wish to be active (Shape Editor OnMouseUp /
+   * OnGlobalMouseUp widget branch). The tool is focused after the widget
+   * receives the up event; the tool does not also receive that up event.
    *
    * @param eventReceiver Current widget receiver.
    * @param button Mouse button index.
    * @param isGlobal True for global mouse up.
-   * @returns Final receiver after possible tool focus restore.
    */
-  private routeWidgetMouseUp(
-    eventReceiver: IEditorEventReceiver,
-    button: number,
-    isGlobal: boolean,
-  ): IEditorEventReceiver {
+  private routeWidgetMouseUp(eventReceiver: IEditorEventReceiver, button: number, isGlobal: boolean): void {
     const widget = eventReceiver as Widget;
     if (!widget.wantsActive) {
       this.dispatchMouseUpToReceiver(eventReceiver, button, isGlobal);
-      if (this.activeTool && this.trySwitchActiveEventReceiver(this.activeTool)) {
-        return this.activeTool;
+      if (this.activeTool) {
+        this.trySwitchActiveEventReceiver(this.activeTool);
       }
-      return eventReceiver;
+      return;
     }
     this.dispatchMouseUpToReceiver(eventReceiver, button, isGlobal);
-    return eventReceiver;
   }
 
   /**
@@ -977,11 +1052,15 @@ export class EditorWindow {
    * @returns Owner document, or null.
    */
   private resolveOwnerDocumentFromTarget(target: EventTarget | Node | null): Document | null {
-    if (target instanceof Document) {
-      return target;
+    if (!target || typeof target !== 'object') {
+      return null;
     }
-    if (target instanceof Node) {
-      return target.ownerDocument;
+    const nodeLike = target as { nodeType?: number; ownerDocument?: Document | null };
+    if (nodeLike.nodeType === 9) {
+      return target as Document;
+    }
+    if (nodeLike.ownerDocument) {
+      return nodeLike.ownerDocument;
     }
     return null;
   }

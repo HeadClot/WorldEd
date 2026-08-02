@@ -1,4 +1,4 @@
-import type { Camera, Object3D, Vector3 } from 'three';
+import type { Camera, Mesh, Object3D, Vector3 } from 'three';
 import type { TransformMode } from '@/types/transform_mode.js';
 import type { ISelectable } from '../i_selectable.js';
 import type { EditorViewportPickContext } from './editor_viewport_pick_context.js';
@@ -213,10 +213,140 @@ export interface EditorServices {
   pinExclusiveViewport(pickElement?: HTMLElement | null): void;
 
   /**
-   * Clears the exclusive viewport domain so chrome may receive activation
-   * again.
+   * Restores the default exclusive domain (all interactive panes) so idle tool
+   * routing continues while chrome may receive activation when not busy.
    */
   clearExclusiveViewport(): void;
+
+  /**
+   * Builds the near-to-far world-mesh pick stack under a client point.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @returns Unique world meshes ordered closest to farthest.
+   */
+  pickObjectStackAtClientPoint(clientX: number, clientY: number): Mesh[];
+
+  /** Clears the object selection set. */
+  clearObjectSelection(): void;
+
+  /**
+   * Picks and applies object selection at a client point (click-through, shift
+   * add, ctrl toggle).
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param additive True when Shift is held.
+   * @param toggle True when Ctrl/Meta is held.
+   */
+  applyObjectClickSelectionAtClientPoint(clientX: number, clientY: number, additive: boolean, toggle: boolean): void;
+
+  /**
+   * Selects or deselects meshes whose projected screen centers fall inside a
+   * marquee rectangle in client coordinates.
+   *
+   * @param clientMinX Marquee min X.
+   * @param clientMinY Marquee min Y.
+   * @param clientMaxX Marquee max X.
+   * @param clientMaxY Marquee max Y.
+   * @param subtractive True when Ctrl marquee removes from selection.
+   */
+  applyObjectMarqueeSelection(
+    clientMinX: number,
+    clientMinY: number,
+    clientMaxX: number,
+    clientMaxY: number,
+    subtractive: boolean,
+  ): void;
+
+  /**
+   * Probes and begins a permanent gizmo/bounds handle drag under the current
+   * editor pointer (Shape Editor widget gizmo hit on mouse down).
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param modifiers Modifier keys for Alt-duplicate and multi-select skip.
+   * @returns True when a handle drag started.
+   */
+  tryBeginPermanentGizmoDragFromEditorPointer(
+    clientX: number,
+    clientY: number,
+    modifiers: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean },
+  ): boolean;
+
+  /**
+   * Probes whether a permanent gizmo/bounds control is under the pointer
+   * without starting a drag (Shape Editor gizmo hover state for widget
+   * wantsActive).
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param modifiers Modifier keys (multi-select skips gizmo).
+   * @returns True when a control is under the pointer.
+   */
+  probePermanentGizmoUnderPointer(
+    clientX: number,
+    clientY: number,
+    modifiers: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean },
+  ): boolean;
+
+  /**
+   * Updates bounds face hover highlight and resize cursors under a client point
+   * (Shape Editor SetMouseCursor re-issue path).
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   */
+  updateBoundsHoverAtClientPoint(clientX: number, clientY: number): void;
+
+  /**
+   * Clears bounds face hover and forgets the cached hover cursor so the frame
+   * cursor manager restores the default.
+   */
+  clearBoundsHoverAtClientPoint(): void;
+
+  /** Enters face selection mode (palette Face tool). */
+  enterFaceSelectionMode(): void;
+
+  /** Leaves face selection mode and restores object-mode feedback. */
+  leaveFaceSelectionMode(): void;
+
+  /**
+   * Starts a face pick/paint stroke at a client point while face tool is
+   * active. Callers pass Shape Editor-style modifier state (isShiftPressed /
+   * isCtrlPressed), not browser event flags.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param isShiftPressed True when Shift is held (additive, do not clear).
+   * @param isCtrlPressed True when Ctrl/Meta is held (subtractive).
+   * @returns True when face mode consumed the press.
+   */
+  beginFaceSelectPointerDown(
+    clientX: number,
+    clientY: number,
+    isShiftPressed: boolean,
+    isCtrlPressed: boolean,
+  ): boolean;
+
+  /**
+   * Continues face paint / UV smear while the button is held.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param buttons PointerEvent.buttons bitfield.
+   */
+  continueFaceSelectPointerMove(clientX: number, clientY: number, buttons: number): void;
+
+  /** Ends face paint / UV smear. */
+  endFaceSelectPointerUp(): void;
+
+  /**
+   * Returns whether a face paint or UV smear stroke is live.
+   *
+   * @returns True while face tool should stay busy.
+   */
+  isFaceSelectStrokeActive(): boolean;
 
   /**
    * Sets the persistent gizmo widget mode.
@@ -277,6 +407,13 @@ export interface EditorServices {
    * @returns True when ctrl is down.
    */
   isCtrlPressed(): boolean;
+
+  /**
+   * Returns whether alt is pressed.
+   *
+   * @returns True when alt is down.
+   */
+  isAltPressed(): boolean;
 
   /**
    * Returns whether any modifier is pressed.

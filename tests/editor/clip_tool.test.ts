@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { EditorWindow } from '@/editor/window/editor_window.js';
 import { ClipTool } from '@/editor/tools/clip_tool.js';
+import { BoundsTool } from '@/editor/tools/bounds_tool.js';
 import { ToolClipPlane } from '@/tools/clip_plane/tool_clip_plane.js';
 import type { HandlerClipPlane } from '@/tools/clip_plane/handler_clip_plane.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
@@ -45,6 +46,20 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     pinExclusiveViewportDomain: () => {},
     pinExclusiveViewport: () => {},
     clearExclusiveViewport: () => {},
+    pickObjectStackAtClientPoint: () => [],
+    clearObjectSelection: () => {},
+    applyObjectClickSelectionAtClientPoint: () => {},
+    applyObjectMarqueeSelection: () => {},
+    tryBeginPermanentGizmoDragFromEditorPointer: () => false,
+    probePermanentGizmoUnderPointer: () => false,
+    updateBoundsHoverAtClientPoint: () => {},
+    clearBoundsHoverAtClientPoint: () => {},
+    enterFaceSelectionMode: () => {},
+    leaveFaceSelectionMode: () => {},
+    beginFaceSelectPointerDown: () => false,
+    continueFaceSelectPointerMove: () => {},
+    endFaceSelectPointerUp: () => {},
+    isFaceSelectStrokeActive: () => false,
     setWidgetMode: () => {},
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
@@ -54,6 +69,7 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     getLastPointerClientPosition: () => ({ clientX: 10, clientY: 10 }),
     isShiftPressed: () => false,
     isCtrlPressed: () => false,
+    isAltPressed: () => false,
     isModifierPressed: () => false,
     handleGlobalKeyDown: () => false,
     isNavigationBlockingTools: () => false,
@@ -108,7 +124,7 @@ describe('ClipTool editor integration', () => {
     expect(editor.isClipToolActive()).toBe(false);
   });
 
-  it('Escape cancels clip and returns to box select', () => {
+  it('Escape cancels clip and returns to bounds select tool', () => {
     const placement = new ToolClipPlane();
     const handler = {
       onEditorPointerUp: vi.fn(),
@@ -123,11 +139,12 @@ describe('ClipTool editor integration', () => {
     const editor = new EditorWindow();
     editor.setServices(createStubServices());
     editor.validateTools();
-    const box = editor.getBoxSelectTool();
+    const bounds = editor.getBoundsTool();
     editor.setClipTool(new ClipTool(placement, handler));
     editor.userSwitchToClipTool();
     expect(editor.getActiveEventReceiver().onKeyDown('Escape')).toBe(true);
-    expect(editor.activeTool).toBe(box);
+    expect(editor.activeTool).toBe(bounds);
+    expect(editor.activeTool).toBeInstanceOf(BoundsTool);
     expect(placement.isActive()).toBe(false);
   });
 

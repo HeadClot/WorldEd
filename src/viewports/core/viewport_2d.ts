@@ -2,15 +2,14 @@ import * as THREE from 'three';
 import { BaseViewport, type ViewportBaseOptions } from './viewport_base.js';
 import { Grids, GridPlane } from '@/viewports/grid/grids.js';
 import { HandlerOrthoPan } from '@/navigation/camera/handler_ortho_pan.js';
-import { ManagerSelection } from '@/selection/object/manager_selection.js';
+import type { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { SelectionHighlight } from '@/selection/object/selection_highlight.js';
 import { SceneRaycaster } from '@/selection/object/scene_raycaster.js';
 import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
-import { TransformCallback, MeshResolveCallback } from './viewport_3d.js';
+import { MeshResolveCallback } from './viewport_3d.js';
 import { FrustumPlanes } from '@/types/frustum_planes.js';
 import { ControllerViewportShading } from '@/viewports/shading/controller_viewport_shading.js';
 import { ShadingMode } from '@/types/shading_mode.js';
-import { blurActiveFormField } from '@/utils/dom_focus.js';
 import { resizeOrthoFrustumPreservingZoom, zoomOrthoFrustumTowardPointer } from './ortho_zoom_limits.js';
 import { isEditorHelperObject } from '@/utils/mesh_edge_sync.js';
 import { DEFAULT_ORTHO_HALF_EXTENT } from '@/types/editor_config.js';
@@ -29,13 +28,9 @@ export class Viewport2D extends BaseViewport {
   private camera: THREE.OrthographicCamera;
   private grids: Grids;
   private selectableObjects!: THREE.Mesh[];
-  private selectionManager!: ManagerSelection | null;
   private raycaster!: SceneRaycaster;
   private worldGroup!: THREE.Group | null;
   private gizmoGroup!: THREE.Group | null;
-  private transformCallback!: TransformCallback | null;
-  private faceSelectionCallback!: ((event: MouseEvent) => boolean) | null;
-  private clipPlaneCallback!: ((event: MouseEvent) => boolean) | null;
   private meshResolveCallback!: MeshResolveCallback | null;
   private shadingController: ControllerViewportShading;
   private panHandler: HandlerOrthoPan | null;
@@ -55,7 +50,6 @@ export class Viewport2D extends BaseViewport {
     this.panHandler = null;
     this.initializeState();
     this.setupPanHandler();
-    this.setupClickSelection();
     this.scene.add(this.gridRoot);
     this.shadingController = new ControllerViewportShading(this);
     // Preference only: applying WIREFRAME here would mutate the shared scene
@@ -67,13 +61,9 @@ export class Viewport2D extends BaseViewport {
   /** Initializes the mutable state properties of this viewport. */
   private initializeState(): void {
     this.selectableObjects = [];
-    this.selectionManager = null;
     this.worldGroup = null;
     this.gizmoGroup = null;
-    this.transformCallback = null;
     this.raycaster = new SceneRaycaster();
-    this.faceSelectionCallback = null;
-    this.clipPlaneCallback = null;
     this.meshResolveCallback = null;
   }
 
@@ -103,13 +93,12 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Sets the selection manager for this viewport.
+   * Accepts the selection manager for API compatibility with selection wiring.
+   * Object picks are resolved by the editor tool pipeline, not the viewport.
    *
-   * @param manager The selection manager instance.
+   * @param _manager The selection manager instance.
    */
-  setSelectionManager(manager: ManagerSelection): void {
-    this.selectionManager = manager;
-  }
+  setSelectionManager(_manager: ManagerSelection): void {}
 
   /**
    * Sets the selection highlight for this viewport.
@@ -161,38 +150,6 @@ export class Viewport2D extends BaseViewport {
   }
 
   /**
-   * Sets the callback to handle transform gizmo pointer events.
-   *
-   * @param callback The transform event handler function.
-   */
-  setTransformCallback(callback: TransformCallback): void {
-    this.transformCallback = callback;
-  }
-
-  /**
-   * Sets the callback to handle face selection pointer events.
-   *
-   * @param callback The face selection event handler function.
-   */
-  setFaceSelectionCallback(callback: (event: MouseEvent) => boolean): void {
-    this.faceSelectionCallback = callback;
-  }
-
-  /**
-   * Sets the callback to handle clip plane tool pointer events.
-   *
-   * @param callback The clip plane event handler function.
-   */
-  /**
-   * Sets the callback to handle clip plane tool pointer events.
-   *
-   * @param callback The clip plane event handler function, or null to clear.
-   */
-  setClipPlaneCallback(callback: ((event: MouseEvent) => boolean) | null): void {
-    this.clipPlaneCallback = callback;
-  }
-
-  /**
    * Sets the callback that remaps raycast hits to world meshes.
    *
    * @param callback The mesh resolve function, or null to disable remapping.
@@ -201,83 +158,9 @@ export class Viewport2D extends BaseViewport {
     this.meshResolveCallback = callback;
   }
 
-  /** Configures pointer event listeners for selection and transform. */
-  private setupClickSelection(): void {
-    this.contentElement.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0) {
-        return;
-      }
-      if (this.isCameraNavigating()) {
-        return;
-      }
-      blurActiveFormField();
-      if (this.dispatchViewportToolPointerDown(event)) {
-        return;
-      }
-      if (!this.selectionManager) {
-        return;
-      }
-      this.handleObjectSelection(event);
-    });
-    this.contentElement.addEventListener('pointermove', (event) => {
-      if (this.isCameraNavigating()) {
-        return;
-      }
-      if (this.transformCallback) {
-        this.transformCallback(event);
-      }
-    });
-    this.contentElement.addEventListener('pointerup', (event) => {
-      if (this.transformCallback) {
-        this.transformCallback(event);
-      }
-    });
-  }
-
   /**
-   * Dispatches LMB through the single viewport tool pipeline: transform, face,
-   * then clip (Shape Editor-style ordered receivers).
-   *
-   * @param event Pointer down event.
-   * @returns True when a tool consumed the event.
-   */
-  private dispatchViewportToolPointerDown(event: PointerEvent): boolean {
-    if (this.transformCallback?.(event)) {
-      return true;
-    }
-    if (this.faceSelectionCallback?.(event)) {
-      return true;
-    }
-    if (this.clipPlaneCallback?.(event)) {
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Handles a mouse click to select or deselect objects. Plain clicks cycle
-   * through overlapping meshes; Shift adds; Ctrl/Meta toggles.
-   *
-   * @param event The pointer event from the click.
-   */
-  private handleObjectSelection(event: MouseEvent): void {
-    const stack = this.getObjectPickStack(event);
-    const additive = event.shiftKey;
-    const toggle = event.ctrlKey || event.metaKey;
-    if (stack.length === 0) {
-      if (!additive && !toggle) this.selectionManager?.clearSelection();
-      return;
-    }
-    if (!this.selectionManager) return;
-    const picked = this.resolvePickFromStack(stack, additive, toggle);
-    if (picked) {
-      this.selectionManager.selectFromClick(picked, additive, toggle);
-    }
-  }
-
-  /**
-   * Builds the near-to-far world-mesh pick stack under the pointer. Used for
-   * click-through selection and for bounds/gizmo skip decisions.
+   * Builds the near-to-far world-mesh pick stack under the pointer. Used by the
+   * editor tool pipeline for click-through selection.
    *
    * @param event The pointer event providing screen coordinates.
    * @returns Unique world meshes ordered closest to farthest.
@@ -287,20 +170,6 @@ export class Viewport2D extends BaseViewport {
     if (objects.length === 0) return [];
     const intersections = this.raycaster.castIntersections(this.camera, this.contentElement, event, objects);
     return SelectionClickThrough.uniqueMeshesFromHits(intersections, (mesh) => this.resolveClickedMesh(mesh));
-  }
-
-  /**
-   * Chooses the mesh for a click: frontmost for multi-select, cycle for plain.
-   *
-   * @param stack Unique world meshes ordered near-to-far.
-   * @param additive True when Shift is held.
-   * @param toggle True when Ctrl/Meta is held.
-   * @returns Mesh to apply selection to, or null.
-   */
-  private resolvePickFromStack(stack: THREE.Mesh[], additive: boolean, toggle: boolean): THREE.Mesh | null {
-    if (stack.length === 0 || !this.selectionManager) return null;
-    if (additive || toggle) return stack[0] ?? null;
-    return SelectionClickThrough.pickFromStack(stack, this.selectionManager);
   }
 
   /**
@@ -540,11 +409,7 @@ export class Viewport2D extends BaseViewport {
     this.scene.remove(this.gridRoot);
     this.grids.dispose();
     this.shadingController.dispose();
-    this.transformCallback = null;
-    this.faceSelectionCallback = null;
-    this.clipPlaneCallback = null;
     this.meshResolveCallback = null;
-    this.selectionManager = null;
     super.dispose();
   }
 }

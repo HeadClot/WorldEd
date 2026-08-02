@@ -124,7 +124,7 @@ describe('EditorWindow focus system', () => {
     bridge.uninstall();
   });
 
-  it('keeps exclusive shield mounted after busy ends until mouse button release', () => {
+  it('unmounts exclusive shield when busy ends; document up still clears armed press', () => {
     const bridge = new EditorInputBridge(editor);
     viewportContent.getBoundingClientRect = () =>
       ({
@@ -157,10 +157,8 @@ describe('EditorWindow focus system', () => {
     select.setBusy(false);
     bridge.setExclusiveViewportRoot(viewportContent);
     expect(editor.isLeftMousePressed).toBe(true);
-    expect(bridge.isExclusiveShieldMounted()).toBe(true);
-    const shieldAfterDown = bridge.getMountedExclusiveShieldElement(document);
-    expect(shieldAfterDown).toBeTruthy();
-    shieldAfterDown!.dispatchEvent(
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    document.dispatchEvent(
       new PointerEvent('pointerup', {
         bubbles: true,
         cancelable: true,
@@ -171,6 +169,7 @@ describe('EditorWindow focus system', () => {
       }),
     );
     expect(editor.isLeftMousePressed).toBe(false);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
     bridge.uninstall();
   });
 
@@ -209,6 +208,56 @@ describe('EditorWindow focus system', () => {
     expect(detachedBody.contains(bridge.getMountedExclusiveShieldElement(detachedDocument)!)).toBe(true);
     bridge.uninstall();
     expect(bridge.getMountedExclusiveShieldCount()).toBe(0);
+  });
+
+  it('idle LMB over a detached popup document arms the editor like the main viewport', () => {
+    const bridge = new EditorInputBridge(editor);
+    const detachedDocument = document.implementation.createHTMLDocument('detached-viewport');
+    const detachedViewport = detachedDocument.createElement('div');
+    detachedDocument.body.appendChild(detachedViewport);
+    detachedViewport.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200,
+        width: 200,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const mouseDown = vi.spyOn(select, 'onMouseDown');
+    bridge.install(host);
+    bridge.setExclusiveViewportRoots([viewportContent, detachedViewport]);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    detachedDocument.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 40,
+        clientY: 50,
+        button: 0,
+        buttons: 1,
+      }),
+    );
+    expect(editor.isLeftMousePressed).toBe(true);
+    expect(mouseDown).toHaveBeenCalledWith(0);
+    expect(editor.lastPointerOwnerDocument).toBe(detachedDocument);
+    expect(bridge.isExclusiveShieldMounted()).toBe(false);
+    detachedDocument.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 40,
+        clientY: 50,
+        button: 0,
+        buttons: 0,
+      }),
+    );
+    expect(editor.isLeftMousePressed).toBe(false);
+    expect(editor.lastPointerOwnerDocument).toBe(detachedDocument);
+    bridge.uninstall();
   });
 
   it('busy exclusive shield OnMouseDown only when the hit is in the pinned viewport', () => {
@@ -318,6 +367,20 @@ describe('EditorWindow focus system', () => {
       pinExclusiveViewportDomain: () => {},
       pinExclusiveViewport: () => {},
       clearExclusiveViewport: () => {},
+      pickObjectStackAtClientPoint: () => [],
+      clearObjectSelection: () => {},
+      applyObjectClickSelectionAtClientPoint: () => {},
+      applyObjectMarqueeSelection: () => {},
+      tryBeginPermanentGizmoDragFromEditorPointer: () => false,
+      probePermanentGizmoUnderPointer: () => false,
+      updateBoundsHoverAtClientPoint: () => {},
+      clearBoundsHoverAtClientPoint: () => {},
+      enterFaceSelectionMode: () => {},
+      leaveFaceSelectionMode: () => {},
+      beginFaceSelectPointerDown: () => false,
+      continueFaceSelectPointerMove: () => {},
+      endFaceSelectPointerUp: () => {},
+      isFaceSelectStrokeActive: () => false,
       setWidgetMode: () => {},
       refreshGizmoPresentation: () => {},
       setStatusMessage: () => {},
@@ -327,6 +390,7 @@ describe('EditorWindow focus system', () => {
       getLastPointerClientPosition: () => null,
       isShiftPressed: () => false,
       isCtrlPressed: () => false,
+      isAltPressed: () => false,
       isModifierPressed: () => false,
       handleGlobalKeyDown: (_k, e) => global(e),
       isNavigationBlockingTools: () => false,

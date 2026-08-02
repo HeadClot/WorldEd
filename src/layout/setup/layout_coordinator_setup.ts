@@ -127,6 +127,7 @@ export function setupToolsPaletteAndClipWiring(parts: {
   isEditorToolBusy?: () => boolean;
   switchToClipTool?: () => boolean;
   switchToObjectSelect?: () => void;
+  switchToFaceSelect?: () => void;
   registerClipTool?: (
     placement: import('@/tools/clip_plane/tool_clip_plane.js').ToolClipPlane,
     handler: HandlerClipPlane,
@@ -160,6 +161,7 @@ export function setupToolsPaletteAndClipWiring(parts: {
     ...(parts.isEditorToolBusy !== undefined ? { isEditorToolBusy: parts.isEditorToolBusy } : {}),
     ...(parts.switchToClipTool !== undefined ? { switchToClipTool: parts.switchToClipTool } : {}),
     ...(parts.switchToObjectSelect !== undefined ? { switchToObjectSelect: parts.switchToObjectSelect } : {}),
+    ...(parts.switchToFaceSelect !== undefined ? { switchToFaceSelect: parts.switchToFaceSelect } : {}),
     ...(parts.registerClipTool !== undefined ? { registerClipTool: parts.registerClipTool } : {}),
   });
 }

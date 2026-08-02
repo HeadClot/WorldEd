@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ManagerInput } from '@/input/manager_input.js';
 import { blurActiveFormField } from '@/utils/dom_focus.js';
+import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
 
 /**
  * First-person flying camera for the 3D viewport. Look and WASD/QE movement
@@ -154,6 +155,7 @@ export class CameraFlying {
       this.beginPan();
       this.activeButtons.add(event.button);
       this.ensurePointerLock();
+      SelectionClickThrough.resetClickThrough();
     }
     if (event.button === 2) {
       blurActiveFormField();
@@ -161,6 +163,7 @@ export class CameraFlying {
       this.isRotating = true;
       this.activeButtons.add(event.button);
       this.ensurePointerLock();
+      SelectionClickThrough.resetClickThrough();
     }
   }
 
@@ -251,6 +254,7 @@ export class CameraFlying {
     const forward = this.getForward();
     const zoomAmount = event.deltaY > 0 ? -1 : 1;
     this.camera.position.addScaledVector(forward, zoomAmount * 0.5);
+    SelectionClickThrough.resetClickThrough();
   }
 
   /**

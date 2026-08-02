@@ -190,8 +190,48 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       onPermanentGizmoHandleDragBegan: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragBegan(),
       onPermanentGizmoHandleDragEnded: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragEnded(),
     });
-    this.transformInteractionBridge.wireViewports(this.getAllLiveViewports());
+    this.transformInteractionBridge.setViewportProbe((clientX, clientY) =>
+      this.findInteractiveViewportAtClientPoint(
+        clientX,
+        clientY,
+        this.toolEditorSystem?.editorWindow.lastPointerOwnerDocument ?? null,
+      ),
+    );
     this.wirePropertiesTransformCommit();
+  }
+
+  /**
+   * Finds an interactive viewport under a client point for editor-driven gizmo
+   * and selection picks. Client coordinates are window-local; when
+   * ownerDocument is set only panes in that document are considered.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param ownerDocument Optional document that owns the client coordinates.
+   * @returns Viewport, or null.
+   */
+  private findInteractiveViewportAtClientPoint(
+    clientX: number,
+    clientY: number,
+    ownerDocument: Document | null = null,
+  ):
+    import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D | null {
+    for (const viewport of this.getAllInteractiveViewports()) {
+      const pickElement = viewport.getContentElement();
+      if (!pickElement) {
+        continue;
+      }
+      if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
+        continue;
+      }
+      const rect = pickElement.getBoundingClientRect();
+      if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+        continue;
+      }
+      return viewport as
+        import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D;
+    }
+    return null;
   }
 
   /**
@@ -260,6 +300,8 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       onLiveTransformOverlaySync: (transformTargets, selectedMeshes) => {
         this.syncLiveTransformOverlay(transformTargets, selectedMeshes);
       },
+      getTransformInteractionBridge: () => this.transformInteractionBridge ?? null,
+      getFaceModeCoordinator: () => this.faceModeCoordinator ?? null,
     });
     this.keyboardShortcutHandler = createAndRegisterKeyboardShortcuts(
       this.inputManager,
@@ -765,6 +807,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       transformHandler: this.transformHandler,
       onBeforeRender: () => {
         this.cadRulerSystem.refreshLabelProjection();
+        this.toolEditorSystem?.editorWindow.onRepaint();
       },
       multiViewComposer: this.multiViewComposer,
       sharedScene: this.sharedWorldScene,

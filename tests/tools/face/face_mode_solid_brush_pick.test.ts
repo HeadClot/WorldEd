@@ -13,11 +13,13 @@ class MockViewport {
   private camera: THREE.PerspectiveCamera;
   private renderer: { domElement: HTMLCanvasElement };
   private scene: THREE.Scene;
+  private contentElement: HTMLDivElement;
 
   constructor() {
     this.camera = new THREE.PerspectiveCamera();
     this.renderer = { domElement: document.createElement('canvas') };
     this.scene = new THREE.Scene();
+    this.contentElement = document.createElement('div');
   }
 
   getCamera(): THREE.Camera {
@@ -32,8 +34,8 @@ class MockViewport {
     return this.scene;
   }
 
-  setFaceSelectionCallback(_callback: (event: MouseEvent) => boolean): void {
-    void _callback;
+  getContentElement(): HTMLElement {
+    return this.contentElement;
   }
 }
 
