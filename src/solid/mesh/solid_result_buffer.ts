@@ -147,11 +147,11 @@ export class SolidResultBuffer {
   }
 
   /**
-   * Rebuilds from the first layout-changing brush onward, keeping a stable
-   * prefix. Avoids rewriting the entire map when only a late brush changes
-   * topology. When evaluation order differs from the stored mesh layout but the
-   * brush set is unchanged, uses the stored layout order so CSG reorder does
-   * not force a full map rewrite.
+   * Rebuilds from the first size-changing brush onward, keeping a stable
+   * prefix. The prefix is copied from the previous buffer for speed; dirty
+   * brushes that landed in that prefix (same triangle counts, only pose
+   * change) are then rewritten from the chunk cache so a moved seed cannot
+   * stay behind peers that forced a later topology rebuild.
    *
    * @param dirtyBrushIds Brushes recompiled this pass.
    * @param brushIds Current evaluation order.
@@ -195,6 +195,7 @@ export class SolidResultBuffer {
       vertexOffset += entry.chunk.vertexCount;
       triangleOffset += entry.chunk.triangleCount;
     }
+    this.rewriteDirtyBrushesInPrefix(dirtyBrushIds, prefixVertexEnd, chunkCache);
     this.lastBrushOrder = layoutOrder.slice();
     this.lastUpdateRanges = [
       {
@@ -206,6 +207,33 @@ export class SolidResultBuffer {
     ];
     this.partialWrite = false;
     return true;
+  }
+
+  /**
+   * Overwrites dirty brush slices that remained in the copied prefix with
+   * current chunk data. Prefix dirty brushes kept their ranges (same size) so
+   * a pose-only seed update is applied without rewriting the whole map.
+   *
+   * @param dirtyBrushIds Brushes recompiled this pass.
+   * @param prefixVertexEnd Exclusive end of the stable prefix in vertices.
+   * @param chunkCache Per-brush chunks.
+   */
+  private rewriteDirtyBrushesInPrefix(
+    dirtyBrushIds: readonly string[],
+    prefixVertexEnd: number,
+    chunkCache: SolidMeshChunkCache,
+  ): void {
+    const unusedRanges: SolidMeshUpdateRange[] = [];
+    for (const brushId of dirtyBrushIds) {
+      const range = this.rangeByBrushId.get(brushId);
+      if (!range) {
+        continue;
+      }
+      if (range.vertexStart + range.vertexCount > prefixVertexEnd) {
+        continue;
+      }
+      this.patchOneDirtyBrushIfPresent(brushId, chunkCache, unusedRanges);
+    }
   }
 
   /**

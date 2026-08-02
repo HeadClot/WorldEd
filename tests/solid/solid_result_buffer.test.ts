@@ -204,4 +204,73 @@ describe('SolidResultBuffer', () => {
     full.rebuildFull(order, chunkCache);
     expect(buffer.getTriangleSources().length).toBe(full.getTriangleSources().length);
   });
+
+  it('suffix rebuild rewrites dirty pose-only seeds that sit before a size-changing peer', () => {
+    const far = makeBox('far', 2, new THREE.Vector3(30, 0, 0));
+    const mover = makeBox('mover', 2, new THREE.Vector3(0, 1.5, 0));
+    const peer = makeBox('peer', 6, new THREE.Vector3(0, 0, 0));
+    const brushes = [far, mover, peer];
+    const compiler = new SolidCsgCompiler();
+    const chunkCache = new SolidMeshChunkCache();
+    const builder = new SolidBrushMeshChunkBuilder();
+    const buffer = new SolidResultBuffer();
+    compiler.compile(brushes, { forceFull: true, skipPolygonAssembly: true });
+    rebuildChunks(compiler, chunkCache, builder, compiler.getLastUpdateBrushIds());
+    buffer.rebuildFull(compiler.getLastBrushOrder(), chunkCache);
+
+    mover.position.set(2.25, 1.5, 0);
+    mover.scale.set(1.4, 1.4, 1.4);
+    compiler.compile(brushes, {
+      dirtyBrushIds: ['mover'],
+      skipPolygonAssembly: true,
+    });
+    const dirty = compiler.getLastUpdateBrushIds();
+    expect(dirty).toContain('mover');
+    expect(dirty).toContain('peer');
+    rebuildChunks(compiler, chunkCache, builder, dirty);
+    const order = compiler.getLastBrushOrder();
+    const patched = buffer.tryPatchDirty(dirty, order, chunkCache);
+    if (!patched) {
+      expect(buffer.tryRebuildFromFirstChanged(dirty, order, chunkCache)).toBe(true);
+    }
+
+    const full = new SolidResultBuffer();
+    full.rebuildFull(order, chunkCache);
+    const geometry = new THREE.BufferGeometry();
+    buffer.uploadToGeometry(geometry);
+    const fullGeometry = new THREE.BufferGeometry();
+    full.uploadToGeometry(fullGeometry);
+    const sources = buffer.getTriangleSources();
+    const fullSources = full.getTriangleSources();
+    expect(sources.length).toBe(fullSources.length);
+    const position = geometry.getAttribute('position');
+    const fullPosition = fullGeometry.getAttribute('position');
+    let moverSum = 0;
+    let moverCount = 0;
+    let fullMoverSum = 0;
+    let fullMoverCount = 0;
+    for (let triangle = 0; triangle < sources.length; triangle++) {
+      if (sources[triangle]!.brushId !== 'mover') {
+        continue;
+      }
+      for (let corner = 0; corner < 3; corner++) {
+        const vertex = triangle * 3 + corner;
+        moverSum += position.getX(vertex);
+        moverCount += 1;
+      }
+    }
+    for (let triangle = 0; triangle < fullSources.length; triangle++) {
+      if (fullSources[triangle]!.brushId !== 'mover') {
+        continue;
+      }
+      for (let corner = 0; corner < 3; corner++) {
+        const vertex = triangle * 3 + corner;
+        fullMoverSum += fullPosition.getX(vertex);
+        fullMoverCount += 1;
+      }
+    }
+    expect(moverCount).toBeGreaterThan(0);
+    expect(moverCount).toBe(fullMoverCount);
+    expect(moverSum / moverCount).toBeCloseTo(fullMoverSum / fullMoverCount, 4);
+  });
 });
