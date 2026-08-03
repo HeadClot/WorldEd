@@ -292,7 +292,11 @@ export class VmfBrushFromSides {
   }
 
   /**
-   * Builds an outward SolidPlane from three Source-space plane points.
+   * Builds an outward SolidPlane from three Source-space plane points. Hammer
+   * lists points clockwise when viewed from outside; right-hand fromPoints then
+   * points inward. With a proper right-handed Source→editor swizzle (det +1) we
+   * reverse the triangle so SolidPlane normals stay outward. The old mirrored
+   * (x,z,y) swizzle flipped winding and hid this.
    *
    * @param side Solid side with plane points.
    * @param unitScale Inches to meters.
@@ -302,6 +306,6 @@ export class VmfBrushFromSides {
     const p1 = sourcePointToEditorMeters(side.plane.p1, unitScale);
     const p2 = sourcePointToEditorMeters(side.plane.p2, unitScale);
     const p3 = sourcePointToEditorMeters(side.plane.p3, unitScale);
-    return SolidPlane.fromPoints(p1, p2, p3);
+    return SolidPlane.fromPoints(p1, p3, p2);
   }
 }

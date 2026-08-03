@@ -47,7 +47,7 @@ describe('VmfBrushFromSides / half-space hull', () => {
     const expectedCenter = new THREE.Vector3(
       (min.x + max.x) * 0.5 * s,
       (min.z + max.z) * 0.5 * s,
-      (min.y + max.y) * 0.5 * s,
+      -(min.y + max.y) * 0.5 * s,
     );
     expect(built!.worldCenter.x).toBeCloseTo(expectedCenter.x, 4);
     expect(built!.worldCenter.y).toBeCloseTo(expectedCenter.y, 4);

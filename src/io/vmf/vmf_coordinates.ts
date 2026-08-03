@@ -8,14 +8,17 @@ import { VmfVector3 } from './vmf_types.js';
 export const VMF_INCHES_TO_METERS = 1 / 32;
 
 /**
- * Converts a Source Engine Z-up point into Three.js Y-up space. Source (x, y,
- * z) maps to Three (x, z, y); values stay in inches until scaled.
+ * Converts a Source Engine Z-up right-handed point into Three.js Y-up
+ * right-handed space. Source (x, y, z) maps to Three (x, z, -y) so +Y Source
+ * (north) becomes editor -Z (forward), matching EDITOR_COORDINATE_SPACE and
+ * preserving handedness (determinant +1). The unflipped (x, z, y) swizzle
+ * mirrors the map on Z.
  *
  * @param source Source-space vector.
  * @returns Three-space vector in inches.
  */
 export function swizzleSourceToThree(source: VmfVector3): THREE.Vector3 {
-  return new THREE.Vector3(source.x, source.z, source.y);
+  return new THREE.Vector3(source.x, source.z, -source.y);
 }
 
 /**
@@ -39,7 +42,7 @@ export function sourcePointToEditorMeters(source: VmfVector3, unitScale: number 
  * @returns Three-space direction.
  */
 export function swizzleSourceDirectionToThree(source: VmfVector3): THREE.Vector3 {
-  return new THREE.Vector3(source.x, source.z, source.y);
+  return new THREE.Vector3(source.x, source.z, -source.y);
 }
 
 /**
@@ -48,8 +51,8 @@ export function swizzleSourceDirectionToThree(source: VmfVector3): THREE.Vector3
  * @param x Source X component.
  * @param y Source Y component.
  * @param z Source Z component.
- * @returns Three-space vector (x, z, y).
+ * @returns Three-space vector (x, z, -y).
  */
 export function swizzleSourceComponentsToThree(x: number, y: number, z: number): THREE.Vector3 {
-  return new THREE.Vector3(x, z, y);
+  return new THREE.Vector3(x, z, -y);
 }
