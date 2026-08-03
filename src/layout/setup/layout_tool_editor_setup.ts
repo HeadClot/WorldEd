@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { TransformMode } from '@/types/transform_mode.js';
 import { HandlerTransform } from '@/transform/core/handler_transform.js';
 import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
+import type { GridSnap } from '@/transform/snap/grid_snap.js';
+import {
+  applyGridSnapPrecisionFromShift,
+  restoreGridSnapUserPreference,
+} from '@/transform/snap/grid_snap_shift_precision.js';
 import { ManagerInput } from '@/input/manager_input.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { filterUnlockedObjects } from '@/utils/object_lock.js';
@@ -33,6 +38,15 @@ export interface LayoutToolEditorSetupDeps {
   transformGizmo: GizmoTransform;
   selectionManager: ManagerSelection;
   inputManager: ManagerInput;
+  /** Live grid snap used by transform math (Shift precision mode mutates this). */
+  gridSnap: GridSnap;
+  /**
+   * Returns the user's snap preference independent of temporary Shift
+   * precision.
+   *
+   * @returns True when the user wants snap enabled.
+   */
+  getUserSnapEnabled: () => boolean;
   getActiveViewport: () => Viewport3D | Viewport2D | null;
   /**
    * All interactive panes (2D + 3D, including detached). Used so tools can
@@ -378,11 +392,13 @@ function createEditorServices(
     handleModalKeyDown: (_keyCode, event) => handleModalKeyDownWithLiveVisuals(deps, event),
     commitActiveTransformDrag: () => {
       deps.transformHandler.commitActiveDragIfNeeded();
+      restoreSingleUseSnapUserPreference(deps);
       inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
       deps.refreshGizmoPresentation();
     },
     cancelActiveTransformDrag: () => {
       deps.transformHandler.cancelActiveDragIfNeeded();
+      restoreSingleUseSnapUserPreference(deps);
       inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
       deps.refreshGizmoPresentation();
     },
@@ -929,6 +945,7 @@ function beginSingleUseDragHiddenGizmo(
   clientY: number,
 ): boolean {
   inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
+  syncSingleUseSnapFromShift(deps);
   const started = deps.transformHandler.beginSingleUseDrag(mode, objects, pivot, camera, pickElement, clientX, clientY);
   if (started) {
     deps.transformGizmo.setVisible(false);
@@ -955,6 +972,7 @@ function applySingleUsePointerMove(
   if (!deps.transformHandler.isDragging()) {
     return;
   }
+  syncSingleUseSnapFromShift(deps);
   const selection = resolveSingleUseSelection(deps);
   const pivot = deps.getTransformPivot();
   const synthetic = {
@@ -965,6 +983,25 @@ function applySingleUsePointerMove(
   } as unknown as MouseEvent;
   deps.transformHandler.onPointerMove(camera, pickElement, synthetic, pivot, selection.transformTargets);
   publishLiveTransformVisuals(deps, selection);
+}
+
+/**
+ * Applies Shift precision snap disable for the current single-use sample from
+ * live InputManager Shift state (not sticky state from a prior parent drag).
+ *
+ * @param deps Layout services with grid snap and input.
+ */
+function syncSingleUseSnapFromShift(deps: LayoutToolEditorSetupDeps): void {
+  applyGridSnapPrecisionFromShift(deps.gridSnap, deps.inputManager.isShiftDown(), deps.getUserSnapEnabled());
+}
+
+/**
+ * Restores the user snap preference after single-use commit or cancel.
+ *
+ * @param deps Layout services with grid snap.
+ */
+function restoreSingleUseSnapUserPreference(deps: LayoutToolEditorSetupDeps): void {
+  restoreGridSnapUserPreference(deps.gridSnap, deps.getUserSnapEnabled());
 }
 
 /**

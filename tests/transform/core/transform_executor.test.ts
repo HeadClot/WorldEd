@@ -68,7 +68,7 @@ describe('TransformExecutor.executeTranslation', () => {
     expect(mesh2.position.z).toBe(15);
   });
 
-  it('should snap absolute positions when snap is enabled', () => {
+  it('should snap the movement delta when snap is enabled', () => {
     const snapEnabled = new GridSnap(true, 1.0);
     const snapExecutor = new TransformExecutor(snapEnabled);
     const mesh = new THREE.Mesh();
@@ -90,47 +90,62 @@ describe('TransformExecutor.executeTranslation', () => {
     expect(mesh.position.z).toBe(4);
   });
 
-  it('should snap only moved axes during absolute translation', () => {
+  it('should preserve off-grid offsets while snapping the shared delta', () => {
     const snapExecutor = new TransformExecutor(new GridSnap(true, 1.0));
     const mesh = new THREE.Mesh();
     mesh.position.set(0.3, 0.7, 0.2);
     const initials = new Map<THREE.Mesh, THREE.Vector3>();
     initials.set(mesh, new THREE.Vector3(0.3, 0.7, 0.2));
     snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(1.1, 0, 0));
-    expect(mesh.position.x).toBeCloseTo(1);
+    expect(mesh.position.x).toBeCloseTo(1.3);
     expect(mesh.position.y).toBeCloseTo(0.7);
     expect(mesh.position.z).toBeCloseTo(0.2);
   });
 
-  it('should snap odd-sized boxes so faces land on the grid, not only the pivot', () => {
+  it('should not force off-grid odd-sized objects onto the grid during a tiny drag', () => {
     const snapExecutor = new TransformExecutor(new GridSnap(true, 0.25));
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    mesh.position.set(1.25, 1.875, 2.5);
+    mesh.position.set(1.1, 1.875, 2.4);
     mesh.scale.set(0.5, 3.75, 3.0);
-    mesh.updateMatrixWorld(true);
     const start = mesh.position.clone();
     const initials = new Map<THREE.Mesh, THREE.Vector3>();
     initials.set(mesh, start.clone());
     snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(0, 0.05, 0));
+    expect(mesh.position.x).toBeCloseTo(1.1, 5);
     expect(mesh.position.y).toBeCloseTo(1.875, 5);
-    const box = new THREE.Box3().setFromObject(mesh);
-    expect(box.min.y % 0.25).toBeCloseTo(0, 5);
-    expect(box.max.y % 0.25).toBeCloseTo(0, 5);
+    expect(mesh.position.z).toBeCloseTo(2.4, 5);
   });
 
-  it('should move an odd-sized box by whole grid steps while keeping faces on grid', () => {
+  it('should move off-grid objects by whole grid steps without changing relative offset', () => {
     const snapExecutor = new TransformExecutor(new GridSnap(true, 0.25));
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    mesh.position.set(1.25, 1.875, 2.5);
-    mesh.scale.set(0.5, 3.75, 3.0);
+    mesh.position.set(1.1, 1.875, 2.4);
     const start = mesh.position.clone();
     const initials = new Map<THREE.Mesh, THREE.Vector3>();
     initials.set(mesh, start.clone());
     snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(0, 0.3, 0));
+    expect(mesh.position.x).toBeCloseTo(1.1, 5);
     expect(mesh.position.y).toBeCloseTo(2.125, 5);
-    const box = new THREE.Box3().setFromObject(mesh);
-    expect(box.min.y).toBeCloseTo(0.25, 5);
-    expect(box.max.y).toBeCloseTo(4.0, 5);
+    expect(mesh.position.z).toBeCloseTo(2.4, 5);
+  });
+
+  it('should keep multi-selection relative spacing when objects start off-grid', () => {
+    const snapExecutor = new TransformExecutor(new GridSnap(true, 0.25));
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1));
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1));
+    meshA.position.set(0.13, 0.07, 0.19);
+    meshB.position.set(0.41, 0.33, 0.52);
+    const relativeBefore = meshB.position.clone().sub(meshA.position);
+    const initials = new Map<THREE.Object3D, THREE.Vector3>([
+      [meshA, meshA.position.clone()],
+      [meshB, meshB.position.clone()],
+    ]);
+    snapExecutor.applyAbsoluteTranslation([meshA, meshB], initials, new THREE.Vector3(0.37, 0.11, 0.19));
+    const relativeAfter = meshB.position.clone().sub(meshA.position);
+    expect(relativeAfter.distanceTo(relativeBefore)).toBeLessThan(1e-8);
+    expect(meshA.position.x).toBeCloseTo(0.38, 5);
+    expect(meshA.position.y).toBeCloseTo(0.07, 5);
+    expect(meshA.position.z).toBeCloseTo(0.44, 5);
   });
 });
 

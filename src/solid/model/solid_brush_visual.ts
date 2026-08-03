@@ -40,15 +40,23 @@ const BRUSH_ORTHO_SELECTED_FILL_RENDER_ORDER = 6;
 /** Default render order for brush helper meshes in perspective. */
 const BRUSH_DEFAULT_RENDER_ORDER = 2;
 
+/**
+ * Polygon offset that pulls selected hull fragments toward the camera so they
+ * win depth against coplanar CSG walls from either side.
+ */
+const HULL_FILL_POLYGON_OFFSET_FACTOR = -2;
+
 /** UserData key marking a brush preview that lives in an orthographic 2D clone. */
 export const SOLID_BRUSH_ORTHO_CLONE_USERDATA_KEY = 'solidBrushOrthoClone';
 
 /**
  * Builds selectable brush preview meshes for the outliner and transform tools.
  * Unselected brushes render operation-colored outlines only (no filled hull).
- * Selected brushes add a cheap translucent fill so the volume is visible. Edge
- * lines use depth testing and distance fade in 3D (no ghost lines behind
- * walls); orthographic multi-view disables depth so full wireframes remain.
+ * Selected brushes add a cheap double-sided translucent fill so the volume is
+ * visible from outside and from inside subtractive rooms. Negative polygon
+ * offset keeps the fill in front of coplanar CSG walls without CPU camera
+ * tests. Edge lines use depth testing and distance fade in 3D; orthographic
+ * multi-view disables depth so full wireframes remain.
  */
 export class SolidBrushVisual {
   /**
@@ -306,7 +314,8 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Applies selected-state fill styling to a brush material.
+   * Applies selected-state fill styling to a brush material. Double-sided so
+   * interiors of subtractive rooms still show the tint without camera tests.
    *
    * @param material Brush surface material.
    * @param operation CSG operation for tint.
@@ -318,7 +327,7 @@ export class SolidBrushVisual {
     material.opacity = 0.22;
     material.depthWrite = false;
     material.colorWrite = true;
-    material.side = THREE.FrontSide;
+    material.side = THREE.DoubleSide;
     material.needsUpdate = true;
   }
 
@@ -392,6 +401,8 @@ export class SolidBrushVisual {
 
   /**
    * Restores depth-tested selected fill presentation for the perspective pane.
+   * Double-sided with a negative polygon offset so coplanar CSG walls do not
+   * bury the hull from outside or inside the volume.
    *
    * @param mesh Brush preview mesh.
    * @param material Selected fill material.
@@ -401,8 +412,9 @@ export class SolidBrushVisual {
     material.depthWrite = false;
     material.depthFunc = THREE.LessEqualDepth;
     material.polygonOffset = true;
-    material.polygonOffsetFactor = -2;
-    material.polygonOffsetUnits = -2;
+    material.polygonOffsetFactor = HULL_FILL_POLYGON_OFFSET_FACTOR;
+    material.polygonOffsetUnits = HULL_FILL_POLYGON_OFFSET_FACTOR;
+    material.side = THREE.DoubleSide;
     mesh.renderOrder = BRUSH_DEFAULT_RENDER_ORDER;
     material.needsUpdate = true;
   }

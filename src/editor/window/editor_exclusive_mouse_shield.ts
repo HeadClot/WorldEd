@@ -1,3 +1,5 @@
+import { claimDomKeyboardFocus } from '@/utils/dom_focus.js';
+
 /**
  * Full-screen pointer and keyboard shield used only while the active event
  * receiver is busy (Shape Editor exclusive mouse ownership). Covers chrome and
@@ -67,7 +69,7 @@ export class EditorExclusiveMouseShield {
     }
     if (this.isMounted && this.ownerDocument === ownerDocument) {
       this.setBlocksPointerEvents(true);
-      this.claimKeyboardFocus(ownerDocument);
+      this.claimKeyboardFocus();
       return;
     }
     this.unmount();
@@ -75,7 +77,7 @@ export class EditorExclusiveMouseShield {
     ownerDocument.body.appendChild(this.rootElement);
     this.isMounted = true;
     this.setBlocksPointerEvents(true);
-    this.claimKeyboardFocus(ownerDocument);
+    this.claimKeyboardFocus();
   }
 
   /**
@@ -100,15 +102,9 @@ export class EditorExclusiveMouseShield {
   /**
    * Blurs the active chrome control (e.g. the Tools palette button that started
    * the tool) and focuses the shield so keyboard events reach the editor.
-   *
-   * @param ownerDocument Document that owns focus.
    */
-  claimKeyboardFocus(ownerDocument: Document): void {
-    const active = ownerDocument.activeElement;
-    if (active instanceof HTMLElement && active !== this.rootElement) {
-      active.blur();
-    }
-    this.rootElement.focus({ preventScroll: true });
+  claimKeyboardFocus(): void {
+    claimDomKeyboardFocus(this.rootElement);
   }
 
   /**

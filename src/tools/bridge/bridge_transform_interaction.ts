@@ -8,6 +8,10 @@ import { GizmoHandle } from '@/transform/gizmo/gizmo_handle.js';
 import { TransformExecutor } from '@/transform/core/transform_executor.js';
 import { HandlerTransform } from '@/transform/core/handler_transform.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
+import {
+  applyGridSnapPrecisionFromShift,
+  restoreGridSnapUserPreference,
+} from '@/transform/snap/grid_snap_shift_precision.js';
 import { ManagerInput } from '@/input/manager_input.js';
 import { ManagerViewportSync } from '@/layout/viewport/manager_viewport_sync.js';
 import { PanelProperties } from '@/ui/properties/panel_properties.js';
@@ -751,6 +755,7 @@ export class BridgeTransformInteraction {
     const clickEvent = this.pendingSelectionClickEvent;
     const clickViewport = this.pendingSelectionClickViewport;
     this.clearWindowDragCapture();
+    this.restoreSnapAfterDragEnds();
     this.deps.onPermanentGizmoHandleDragEnded?.();
     if (selectionClick) {
       this.deps.onRulerTransformFeedback?.(selectedObjects, 'end');
@@ -828,11 +833,15 @@ export class BridgeTransformInteraction {
    */
   private updateSnapFromShiftKey(event?: MouseEvent): void {
     const shiftHeld = event?.shiftKey === true || this.deps.inputManager.isShiftDown();
-    if (shiftHeld) {
-      this.deps.gridSnap.setEnabled(false);
-      return;
-    }
-    this.deps.gridSnap.setEnabled(this.deps.getUserSnapEnabled());
+    applyGridSnapPrecisionFromShift(this.deps.gridSnap, shiftHeld, this.deps.getUserSnapEnabled());
+  }
+
+  /**
+   * Restores the user snap preference when a permanent gizmo drag ends so Shift
+   * precision mode cannot stick into later tools.
+   */
+  private restoreSnapAfterDragEnds(): void {
+    restoreGridSnapUserPreference(this.deps.gridSnap, this.deps.getUserSnapEnabled());
   }
 
   /**

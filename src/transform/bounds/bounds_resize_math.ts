@@ -25,27 +25,20 @@ export function getFixedFaceWorldCenter(bounds: DataOrientedBounds, face: Bounds
 }
 
 /**
- * Snaps a signed face displacement so the face lands on the world grid. Uses
- * the absolute face coordinate (start + delta), not the delta alone, so an
- * off-grid brush can re-enter the grid on the first resize step.
+ * Snaps a signed face displacement to whole grid steps. Rounds the movement
+ * alone so off-grid faces keep their offset and only travel in interval
+ * increments.
  *
  * @param deltaAlongNormal Raw displacement along the face outward normal.
  * @param snapEnabled Whether grid snapping is active.
  * @param snapInterval Grid interval when snapping.
- * @param startFaceCoordinate Face center projected onto the outward normal at
- *   drag start.
  * @returns Snapped or raw delta relative to the start face.
  */
-export function snapBoundsFaceDelta(
-  deltaAlongNormal: number,
-  snapEnabled: boolean,
-  snapInterval: number,
-  startFaceCoordinate: number = 0,
-): number {
-  if (!snapEnabled || snapInterval <= 0) return deltaAlongNormal;
-  const targetCoordinate = startFaceCoordinate + deltaAlongNormal;
-  const snappedCoordinate = Math.round(targetCoordinate / snapInterval) * snapInterval;
-  return snappedCoordinate - startFaceCoordinate;
+export function snapBoundsFaceDelta(deltaAlongNormal: number, snapEnabled: boolean, snapInterval: number): number {
+  if (!snapEnabled || snapInterval <= 0) {
+    return deltaAlongNormal;
+  }
+  return Math.round(deltaAlongNormal / snapInterval) * snapInterval;
 }
 
 /**

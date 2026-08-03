@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { GizmoAxis } from '@/types/transform_mode.js';
-import { SolidModel } from '@/solid/model/solid_model.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import { TransformConstraint } from './transform_constraint.js';
 
@@ -24,25 +23,24 @@ export class TransformExecutor {
   }
 
   /**
-   * Translates all objects by the given delta without snapping the delta
-   * itself. Moved axes snap so world-space bounds sit on the grid (not the
-   * pivot alone).
+   * Translates all objects by the same snapped delta. Grid snap rounds the
+   * movement vector, never each object's absolute position, so relative offsets
+   * and off-grid placements stay intact.
    *
    * @param objects The objects to translate.
-   * @param delta The translation delta vector.
+   * @param delta The unsnapped translation delta vector.
    */
   executeTranslation(objects: THREE.Object3D[], delta: THREE.Vector3): void {
+    const snappedDelta = this.snapTranslationDelta(delta);
     objects.forEach((object) => {
-      const start = object.position.clone();
-      object.position.add(delta);
-      this.snapTranslationOnChangedAxes(object, start);
+      object.position.add(snappedDelta);
     });
   }
 
   /**
-   * Sets absolute positions from initial positions plus a total delta. Snaps
-   * only axes that moved so unconstrained axes stay put. Snapping aligns object
-   * world bounds to the grid, not just the pivot.
+   * Sets each object to its initial position plus one shared snapped delta.
+   * Snapping applies to the movement only, so multi-selection keeps internal
+   * spacing and off-grid offsets.
    *
    * @param objects The objects to position.
    * @param initialPositions Map of object to pre-drag position.
@@ -53,134 +51,41 @@ export class TransformExecutor {
     initialPositions: Map<THREE.Object3D, THREE.Vector3>,
     totalDelta: THREE.Vector3,
   ): void {
+    const snappedDelta = this.snapTranslationDelta(totalDelta);
     objects.forEach((object) => {
-      const start = initialPositions.get(object);
-      if (!start) return;
-      object.position.copy(start).add(totalDelta);
-      this.snapTranslationOnChangedAxes(object, start);
+      this.applySnappedTranslationToObject(object, initialPositions, snappedDelta);
     });
   }
 
   /**
-   * Snaps moved translation axes so each world AABB min lands on the grid.
-   * Keeps odd-sized brushes (e.g. size 3.75 on a 0.25 grid) face-aligned: the
-   * pivot may sit on a half-cell while edges stay on grid lines. Falls back to
-   * pivot snapping when geometry bounds are unavailable.
+   * Writes one object's local position from its start plus a shared delta.
    *
-   * @param object The object whose position was just updated.
-   * @param startPosition Pre-drag local position used to detect changed axes.
+   * @param object The object to update.
+   * @param initialPositions Map of object to pre-drag position.
+   * @param snappedDelta Grid-snapped translation applied to every target.
    */
-  private snapTranslationOnChangedAxes(object: THREE.Object3D, startPosition: THREE.Vector3): void {
-    if (!this.gridSnap.isEnabled()) return;
-    const movedX = this.didAxisMove(object.position.x, startPosition.x);
-    const movedY = this.didAxisMove(object.position.y, startPosition.y);
-    const movedZ = this.didAxisMove(object.position.z, startPosition.z);
-    if (!movedX && !movedY && !movedZ) return;
-    // Local position writes do not refresh matrixWorld. Solid roots measure a
-    // child result mesh for snap, so update this object (and descendants) before
-    // measuring, and again after applying the snap correction.
-    object.updateMatrixWorld(true);
-    const worldBox = this.computeWorldAabb(object);
-    if (!worldBox) {
-      this.gridSnap.snapChangedAxes(object.position, startPosition);
-      object.updateMatrixWorld(true);
+  private applySnappedTranslationToObject(
+    object: THREE.Object3D,
+    initialPositions: Map<THREE.Object3D, THREE.Vector3>,
+    snappedDelta: THREE.Vector3,
+  ): void {
+    const start = initialPositions.get(object);
+    if (!start) {
       return;
     }
-    this.applyBoundsMinSnap(object, worldBox, movedX, movedY, movedZ);
-    object.updateMatrixWorld(true);
+    object.position.copy(start).add(snappedDelta);
   }
 
   /**
-   * Returns whether a scalar axis value changed beyond a tiny epsilon.
+   * Returns a copy of the delta with each component snapped to the grid.
    *
-   * @param current Current axis component.
-   * @param start Start axis component.
-   * @returns True when the axis should be snapped.
+   * @param delta Unsnapped translation delta.
+   * @returns Snapped delta, or a clone of the original when snap is disabled.
    */
-  private didAxisMove(current: number, start: number): boolean {
-    return Math.abs(current - start) > 1e-8;
-  }
-
-  /**
-   * Computes the world-space axis-aligned bounds used for translation snap.
-   * Solid model roots snap from the compiled result mesh so the solid surface
-   * (and bounds gizmo) land on the grid — not the union of every brush hull and
-   * edge batch, which desyncs brushes from the outer solid bounds.
-   *
-   * @param object The object to measure.
-   * @returns World AABB, or null when bounds are unavailable.
-   */
-  private computeWorldAabb(object: THREE.Object3D): THREE.Box3 | null {
-    if (object instanceof THREE.Mesh) {
-      return this.computeMeshWorldAabb(object);
-    }
-    const solidResult = this.resolveSolidResultMeshForSnap(object);
-    if (solidResult) {
-      const resultBox = this.computeMeshWorldAabb(solidResult);
-      if (resultBox) return resultBox;
-    }
-    object.updateMatrixWorld(true);
-    this.boundingBox.setFromObject(object);
-    if (this.boundingBox.isEmpty()) return null;
-    return this.boundingBox;
-  }
-
-  /**
-   * Returns the solid result mesh when the object is a solid model root.
-   *
-   * @param object Candidate transform target.
-   * @returns Result mesh for snap, or null.
-   */
-  private resolveSolidResultMeshForSnap(object: THREE.Object3D): THREE.Mesh | null {
-    if (!SolidModel.isSolidModelObject(object)) return null;
-    const model = SolidModel.fromObject(object);
-    return model?.getResultMesh() ?? null;
-  }
-
-  /**
-   * Computes world AABB from mesh geometry when present.
-   *
-   * @param mesh Mesh with optional geometry.
-   * @returns World AABB or null.
-   */
-  private computeMeshWorldAabb(mesh: THREE.Mesh): THREE.Box3 | null {
-    const geometry = mesh.geometry;
-    if (!geometry) return null;
-    if (!geometry.boundingBox) {
-      geometry.computeBoundingBox();
-    }
-    const localBox = geometry.boundingBox;
-    if (!localBox || localBox.isEmpty()) return null;
-    mesh.updateMatrixWorld(true);
-    this.boundingBox.copy(localBox).applyMatrix4(mesh.matrixWorld);
-    return this.boundingBox;
-  }
-
-  /**
-   * Applies per-axis corrections so world AABB mins snap to the grid.
-   *
-   * @param object Object to adjust.
-   * @param worldBox Current world AABB at the unsnapped position.
-   * @param movedX Whether X should snap.
-   * @param movedY Whether Y should snap.
-   * @param movedZ Whether Z should snap.
-   */
-  private applyBoundsMinSnap(
-    object: THREE.Object3D,
-    worldBox: THREE.Box3,
-    movedX: boolean,
-    movedY: boolean,
-    movedZ: boolean,
-  ): void {
-    if (movedX) {
-      object.position.x += this.gridSnap.snapValue(worldBox.min.x) - worldBox.min.x;
-    }
-    if (movedY) {
-      object.position.y += this.gridSnap.snapValue(worldBox.min.y) - worldBox.min.y;
-    }
-    if (movedZ) {
-      object.position.z += this.gridSnap.snapValue(worldBox.min.z) - worldBox.min.z;
-    }
+  private snapTranslationDelta(delta: THREE.Vector3): THREE.Vector3 {
+    const snappedDelta = delta.clone();
+    this.gridSnap.snapVector3(snappedDelta);
+    return snappedDelta;
   }
 
   /**

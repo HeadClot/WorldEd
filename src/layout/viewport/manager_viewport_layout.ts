@@ -284,6 +284,8 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       transformGizmo: this.transformGizmo,
       selectionManager: this.selectionManager,
       inputManager: this.inputManager,
+      gridSnap: this.gridSnap,
+      getUserSnapEnabled: () => this.userSnapEnabled,
       getActiveViewport: () => this.resolveActiveInteractiveViewport(),
       getInteractiveViewports: () => this.getAllInteractiveViewports() as ReadonlyArray<Viewport3D | Viewport2D>,
       getLastPointerClientPositionForDocument: (ownerDocument) =>

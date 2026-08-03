@@ -70,13 +70,31 @@ describe('SolidBrushVisual', () => {
     expect(material.transparent).toBe(true);
     expect(material.opacity).toBeCloseTo(0.22, 5);
     expect(material.color.getHex()).toBe(0xc0392b);
-    expect(material.side).toBe(THREE.FrontSide);
+    expect(material.side).toBe(THREE.DoubleSide);
     expect(material.depthTest).toBe(true);
+    expect(material.polygonOffset).toBe(true);
+    expect(material.polygonOffsetFactor).toBeLessThan(0);
+    expect(material.polygonOffsetUnits).toBeLessThan(0);
     SolidBrushVisual.setHullFillVisible(mesh, false);
     expect(material.visible).toBe(false);
     expect(material.colorWrite).toBe(false);
     expect(material.transparent).toBe(false);
     expect(material.depthWrite).toBe(false);
+    disposeBrushPreview(mesh);
+  });
+
+  it('keeps double-sided selected fill with negative offset after perspective depth restore', () => {
+    const root = new THREE.Group();
+    const mesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Subtractive);
+    root.add(mesh);
+    SolidBrushVisual.setHullFillVisible(mesh, true);
+    SolidBrushVisual.setHullFillDepthOcclusionEnabled(root, false);
+    SolidBrushVisual.setHullFillDepthOcclusionEnabled(root, true);
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    expect(material.side).toBe(THREE.DoubleSide);
+    expect(material.polygonOffset).toBe(true);
+    expect(material.polygonOffsetFactor).toBeLessThan(0);
+    expect(material.depthTest).toBe(true);
     disposeBrushPreview(mesh);
   });
 

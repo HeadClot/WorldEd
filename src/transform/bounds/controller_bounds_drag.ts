@@ -627,7 +627,7 @@ export class ControllerBoundsDrag {
     if (!current) return;
     const outward = this.getActiveFaceWorldNormal();
     const rawDelta = current.clone().sub(this.session.initialMousePosition).dot(outward);
-    const snappedDelta = this.snapResizeDelta(rawDelta, outward);
+    const snappedDelta = this.snapResizeDelta(rawDelta);
     this.session.lastPointerBoundsResizeDelta = snappedDelta;
     this.session.boundsDeltaAlongNormal = snappedDelta;
     this.applyResizeToObjects(objects, snappedDelta);
@@ -637,30 +637,11 @@ export class ControllerBoundsDrag {
    * Snaps a face displacement when grid snap is enabled.
    *
    * @param rawDelta Unsnapped delta along the face normal.
-   * @param outward Face outward normal.
    * @returns Snapped or raw delta.
    */
-  private snapResizeDelta(rawDelta: number, outward: THREE.Vector3): number {
+  private snapResizeDelta(rawDelta: number): number {
     const gridSnap = this.transformExecutor.getGridSnap();
-    return snapBoundsFaceDelta(
-      rawDelta,
-      gridSnap.isEnabled(),
-      gridSnap.getInterval(),
-      this.getActiveFaceStartCoordinate(outward),
-    );
-  }
-
-  /**
-   * Projects the active face center at drag start onto its outward normal.
-   *
-   * @param outward Unit outward normal for the active face.
-   * @returns Scalar face coordinate along the normal, or 0 when unavailable.
-   */
-  private getActiveFaceStartCoordinate(outward: THREE.Vector3): number {
-    if (!this.session.startBounds || !this.session.activeBoundsFace) return 0;
-    const half = this.getFaceHalfExtent(this.session.startBounds, this.session.activeBoundsFace);
-    const faceCenter = this.session.startBounds.center.clone().addScaledVector(outward, half);
-    return faceCenter.dot(outward);
+    return snapBoundsFaceDelta(rawDelta, gridSnap.isEnabled(), gridSnap.getInterval());
   }
 
   /**
@@ -671,8 +652,12 @@ export class ControllerBoundsDrag {
    * @returns Half-extent along that face's axis.
    */
   private getFaceHalfExtent(bounds: DataOrientedBounds, face: BoundsFace): number {
-    if (face === BoundsFace.POS_X || face === BoundsFace.NEG_X) return bounds.halfExtents.x;
-    if (face === BoundsFace.POS_Y || face === BoundsFace.NEG_Y) return bounds.halfExtents.y;
+    if (face === BoundsFace.POS_X || face === BoundsFace.NEG_X) {
+      return bounds.halfExtents.x;
+    }
+    if (face === BoundsFace.POS_Y || face === BoundsFace.NEG_Y) {
+      return bounds.halfExtents.y;
+    }
     return bounds.halfExtents.z;
   }
 

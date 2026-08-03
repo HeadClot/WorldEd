@@ -26,53 +26,49 @@ function createSolidInWorld(): { model: SolidModel; world: THREE.Group } {
  * @returns World min corner.
  */
 function resultWorldMin(model: SolidModel): THREE.Vector3 {
-  // Update the solid root first — child updateMatrixWorld does not refresh parents.
   model.root.updateMatrixWorld(true);
   const mesh = model.getResultMesh();
   if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
   return mesh.geometry.boundingBox!.clone().applyMatrix4(mesh.matrixWorld).min;
 }
 
-/**
- * True when a value sits on the grid within a small epsilon.
- *
- * @param value Axis value.
- * @param interval Grid interval.
- * @returns True when snapped.
- */
-function isOnGrid(value: number, interval: number): boolean {
-  const scaled = value / interval;
-  return Math.abs(scaled - Math.round(scaled)) < 1e-6;
-}
-
 describe('Bounds face move solid model snap', () => {
-  it('snaps solid result bounds under free plane deltas (bounds body drag)', () => {
+  it('snaps free plane deltas as relative grid steps for bounds body drag', () => {
     const { model } = createSolidInWorld();
+    model.root.position.set(0.13, 0, 0.07);
     const interval = 0.25;
     const executor = new TransformExecutor(new GridSnap(true, interval));
     const start = model.root.position.clone();
+    const minBefore = resultWorldMin(model);
     const initials = new Map<THREE.Object3D, THREE.Vector3>([[model.root, start.clone()]]);
-    // Simulate free bounds-face plane motion (X/Z) like face-drag totalDelta.
-    // Without updating the root matrixWorld before measuring the result child,
-    // snap used a stale pose and free drag stayed continuous.
     executor.applyAbsoluteTranslation([model.root], initials, new THREE.Vector3(0.37, 0, 0.19));
-    const min = resultWorldMin(model);
-    expect(isOnGrid(min.x, interval)).toBe(true);
-    expect(isOnGrid(min.z, interval)).toBe(true);
+    const minAfter = resultWorldMin(model);
+    expect(model.root.position.x).toBeCloseTo(0.38, 5);
+    expect(model.root.position.z).toBeCloseTo(0.32, 5);
+    expect(minAfter.x - minBefore.x).toBeCloseTo(0.25, 5);
+    expect(minAfter.z - minBefore.z).toBeCloseTo(0.25, 5);
   });
 
-  it('keeps successive free-drag samples on the grid (no stale-matrix lag)', () => {
+  it('keeps successive free-drag samples on relative grid steps', () => {
     const { model } = createSolidInWorld();
+    model.root.position.set(0.13, 0, 0.07);
     const interval = 0.25;
     const executor = new TransformExecutor(new GridSnap(true, interval));
     const start = model.root.position.clone();
     const initials = new Map<THREE.Object3D, THREE.Vector3>([[model.root, start.clone()]]);
-    const samples = [0.1, 0.2, 0.35, 0.5, 0.62, 0.8, 1.05];
+    const samples = [
+      { delta: 0.1, expectedRootX: 0.13 },
+      { delta: 0.2, expectedRootX: 0.38 },
+      { delta: 0.35, expectedRootX: 0.38 },
+      { delta: 0.5, expectedRootX: 0.63 },
+      { delta: 0.62, expectedRootX: 0.63 },
+      { delta: 0.8, expectedRootX: 0.88 },
+      { delta: 1.05, expectedRootX: 1.13 },
+    ];
     for (const sample of samples) {
-      executor.applyAbsoluteTranslation([model.root], initials, new THREE.Vector3(sample, 0, sample * 0.5));
-      const min = resultWorldMin(model);
-      expect(isOnGrid(min.x, interval)).toBe(true);
-      expect(isOnGrid(min.z, interval)).toBe(true);
+      executor.applyAbsoluteTranslation([model.root], initials, new THREE.Vector3(sample.delta, 0, sample.delta * 0.5));
+      expect(model.root.position.x).toBeCloseTo(sample.expectedRootX, 5);
+      expect(model.root.position.z).toBeCloseTo(start.z + Math.round((sample.delta * 0.5) / interval) * interval, 5);
     }
   });
 

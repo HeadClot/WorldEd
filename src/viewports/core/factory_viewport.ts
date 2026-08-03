@@ -91,15 +91,32 @@ function createOrthographicViewport(
  */
 function ensureContentElement(container: HTMLElement): HTMLElement {
   const existing = container.querySelector('.editor-viewport-content') as HTMLElement | null;
-  if (existing) return existing;
+  if (existing) {
+    prepareViewportContentForKeyboardFocus(existing);
+    return existing;
+  }
   const ownerDocument = container.ownerDocument;
   const content = ownerDocument.createElement('div');
   content.classList.add('editor-viewport-content');
   content.style.flex = '1';
   content.style.minHeight = '0';
   content.style.position = 'relative';
+  prepareViewportContentForKeyboardFocus(content);
   container.appendChild(content);
   return content;
+}
+
+/**
+ * Makes a viewport content host programmatically focusable without a focus
+ * ring.
+ *
+ * @param content Viewport content element that receives canvas clicks.
+ */
+function prepareViewportContentForKeyboardFocus(content: HTMLElement): void {
+  if (!content.hasAttribute('tabindex')) {
+    content.tabIndex = -1;
+  }
+  content.style.outline = 'none';
 }
 
 /**

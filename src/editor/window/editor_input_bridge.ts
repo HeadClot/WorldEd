@@ -1,6 +1,7 @@
 import { Vector2 } from 'three';
 import type { EditorWindow } from './editor_window.js';
 import { EditorExclusiveMouseShieldDomain } from './editor_exclusive_mouse_shield_domain.js';
+import { claimDomKeyboardFocus } from '@/utils/dom_focus.js';
 
 /**
  * Bridges browser pointer events into EditorWindow OnMouse* routing. Mirrors
@@ -190,6 +191,7 @@ export class EditorInputBridge {
     if (!hitRoot) {
       return;
     }
+    this.claimViewportDomKeyboardFocus(hitRoot);
     this.routeEditorMouseDown(event, true);
     this.syncExclusiveShieldMount();
   }
@@ -261,6 +263,9 @@ export class EditorInputBridge {
       }
     }
     const hitRoot = this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event);
+    if (hitRoot) {
+      this.claimViewportDomKeyboardFocus(hitRoot);
+    }
     this.routeEditorMouseDown(event, hitRoot !== null);
     this.syncExclusiveShieldMount();
   }
@@ -712,12 +717,23 @@ export class EditorInputBridge {
     this.navigationPassThroughActive = true;
     this.navigationPassThroughRoot = hitRoot;
     this.navigationPassThroughDocument = this.resolveEventDocument(event);
+    this.claimViewportDomKeyboardFocus(hitRoot);
     this.retargetPointerEventToViewportRoot(event, hitRoot);
     if (this.navigationPassThroughDocument) {
       this.exclusiveShieldDomain.setBlocksPointerEventsForDocument(this.navigationPassThroughDocument, false);
     }
     this.attachNavigationWindowPointerUpListener(event);
     this.syncExclusiveShieldMount();
+  }
+
+  /**
+   * Moves browser keyboard focus onto the viewport content so chrome controls
+   * no longer light up or activate on key press.
+   *
+   * @param viewportRoot Viewport content element under the pointer.
+   */
+  private claimViewportDomKeyboardFocus(viewportRoot: HTMLElement): void {
+    claimDomKeyboardFocus(viewportRoot);
   }
 
   /** Ends navigation pass-through and restores shield pointer capture. */

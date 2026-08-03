@@ -16,6 +16,8 @@ must create what they need, test the result, check the result).
 
 `bun run build` must pass.
 
+`bun run typecheck:strict` must pass.
+
 PowerShell is janky, use cmd.
 
 ## Coding Style

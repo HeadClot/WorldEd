@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { blurActiveFormField } from '@/utils/dom_focus.js';
+import { blurActiveFormField, claimDomKeyboardFocus } from '@/utils/dom_focus.js';
 
 describe('blurActiveFormField', () => {
   afterEach(() => {
@@ -25,5 +25,40 @@ describe('blurActiveFormField', () => {
     button.focus();
     blurActiveFormField();
     expect(document.activeElement === button || document.activeElement === document.body).toBe(true);
+  });
+});
+
+describe('claimDomKeyboardFocus', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('should steal focus from a focused button onto the target', () => {
+    const button = document.createElement('button');
+    const canvasHost = document.createElement('div');
+    document.body.appendChild(button);
+    document.body.appendChild(canvasHost);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    claimDomKeyboardFocus(canvasHost);
+    expect(document.activeElement).toBe(canvasHost);
+    expect(canvasHost.tabIndex).toBe(-1);
+  });
+
+  it('should keep focus on the target when already focused', () => {
+    const canvasHost = document.createElement('div');
+    document.body.appendChild(canvasHost);
+    claimDomKeyboardFocus(canvasHost);
+    claimDomKeyboardFocus(canvasHost);
+    expect(document.activeElement).toBe(canvasHost);
+  });
+
+  it('should preserve an existing tabindex attribute', () => {
+    const canvasHost = document.createElement('div');
+    canvasHost.tabIndex = 0;
+    document.body.appendChild(canvasHost);
+    claimDomKeyboardFocus(canvasHost);
+    expect(canvasHost.tabIndex).toBe(0);
+    expect(document.activeElement).toBe(canvasHost);
   });
 });

@@ -124,6 +124,39 @@ describe('EditorWindow focus system', () => {
     bridge.uninstall();
   });
 
+  it('viewport pointerdown steals DOM keyboard focus from chrome buttons', () => {
+    const bridge = new EditorInputBridge(editor);
+    viewportContent.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200,
+        width: 200,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    bridge.setExclusiveViewportRoot(viewportContent);
+    bridge.install(host);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    document.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 50,
+        clientY: 50,
+        button: 0,
+        buttons: 1,
+      }),
+    );
+    expect(document.activeElement).toBe(viewportContent);
+    expect(viewportContent.tabIndex).toBe(-1);
+    bridge.uninstall();
+  });
+
   it('unmounts exclusive shield when busy ends; document up still clears armed press', () => {
     const bridge = new EditorInputBridge(editor);
     viewportContent.getBoundingClientRect = () =>

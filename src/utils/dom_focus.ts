@@ -10,6 +10,47 @@ export function blurActiveFormField(): void {
 }
 
 /**
+ * Moves keyboard focus onto a host element so chrome controls stop receiving
+ * key events and focus styles. Makes the host programmatically focusable when
+ * needed.
+ *
+ * @param focusTarget Element that should own keyboard focus.
+ */
+export function claimDomKeyboardFocus(focusTarget: HTMLElement): void {
+  ensureElementIsProgrammaticallyFocusable(focusTarget);
+  blurActiveElementIfDifferent(focusTarget);
+  focusTarget.focus({ preventScroll: true });
+}
+
+/**
+ * Ensures an element can receive programmatic focus without joining tab order.
+ *
+ * @param element Element that must accept .focus().
+ */
+function ensureElementIsProgrammaticallyFocusable(element: HTMLElement): void {
+  if (element.hasAttribute('tabindex')) {
+    return;
+  }
+  element.tabIndex = -1;
+}
+
+/**
+ * Blurs the document active element when it is not already the focus target.
+ *
+ * @param focusTarget Element that should keep focus if already active.
+ */
+function blurActiveElementIfDifferent(focusTarget: HTMLElement): void {
+  const active = focusTarget.ownerDocument.activeElement;
+  if (!(active instanceof HTMLElement)) {
+    return;
+  }
+  if (active === focusTarget) {
+    return;
+  }
+  active.blur();
+}
+
+/**
  * Returns whether an element is a form field that captures typing.
  *
  * @param element Element to test.

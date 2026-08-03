@@ -50,11 +50,15 @@ describe('bounds_resize_math', () => {
     expect(snapBoundsFaceDelta(1.4, false, 1)).toBeCloseTo(1.4, 5);
   });
 
-  it('should snap faces onto absolute grid coordinates from an off-grid start', () => {
+  it('should snap movement only so off-grid faces keep their offset', () => {
     const startFace = 3.625;
     const rawDelta = 0.1;
-    const snapped = snapBoundsFaceDelta(rawDelta, true, 0.25, startFace);
-    expect(startFace + snapped).toBeCloseTo(3.75, 5);
+    const snapped = snapBoundsFaceDelta(rawDelta, true, 0.25);
+    expect(snapped).toBeCloseTo(0, 5);
+    expect(startFace + snapped).toBeCloseTo(3.625, 5);
+    const larger = snapBoundsFaceDelta(0.3, true, 0.25);
+    expect(larger).toBeCloseTo(0.25, 5);
+    expect(startFace + larger).toBeCloseTo(3.875, 5);
   });
 
   it('should only change the scale component of the resized axis', () => {

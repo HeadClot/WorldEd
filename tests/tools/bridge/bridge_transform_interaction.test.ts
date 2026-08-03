@@ -242,16 +242,71 @@ describe('TransformInteractionBridge', () => {
     expect(transformGizmo.getHighlightedBoundsFace()).toBeNull();
   });
 
+  it('disables grid snap while Shift is held during a permanent gizmo drag move', () => {
+    const gridSnap = new GridSnap(true, 1);
+    const bridge = createBridge(() => true, undefined, {
+      gridSnap,
+      getUserSnapEnabled: () => true,
+    });
+    const downEvent = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
+    expect(bridge.onTransformEvent(downEvent, viewport as unknown as Viewport3D)).toBe(true);
+    expect(transformHandler.isDragging()).toBe(true);
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 420, clientY: 310, shiftKey: true }));
+    expect(gridSnap.isEnabled()).toBe(false);
+    window.dispatchEvent(new PointerEvent('pointerup', { button: 0 }));
+  });
+
+  it('restores user snap preference when Shift is released during a drag move', () => {
+    const gridSnap = new GridSnap(true, 1);
+    const bridge = createBridge(() => true, undefined, {
+      gridSnap,
+      getUserSnapEnabled: () => true,
+    });
+    bridge.onTransformEvent(
+      new MouseEvent('pointerdown', { clientX: 400, clientY: 300 }),
+      viewport as unknown as Viewport3D,
+    );
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 420, clientY: 310, shiftKey: true }));
+    expect(gridSnap.isEnabled()).toBe(false);
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 430, clientY: 320, shiftKey: false }));
+    expect(gridSnap.isEnabled()).toBe(true);
+    window.dispatchEvent(new PointerEvent('pointerup', { button: 0 }));
+  });
+
+  it('restores user snap preference on pointerup so Shift precision cannot stick', () => {
+    const gridSnap = new GridSnap(true, 1);
+    const bridge = createBridge(() => true, undefined, {
+      gridSnap,
+      getUserSnapEnabled: () => true,
+    });
+    bridge.onTransformEvent(
+      new MouseEvent('pointerdown', { clientX: 400, clientY: 300 }),
+      viewport as unknown as Viewport3D,
+    );
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 420, clientY: 310, shiftKey: true }));
+    expect(gridSnap.isEnabled()).toBe(false);
+    window.dispatchEvent(new PointerEvent('pointerup', { button: 0, shiftKey: true }));
+    expect(gridSnap.isEnabled()).toBe(true);
+  });
+
   /**
    * Builds a bridge with shared test fixtures.
    *
    * @param isInteractionEnabled Optional gate for transform picks.
+   * @param onDuplicateSelectedForDrag Optional Alt-drag duplicate hook.
+   * @param options Optional snap and Shift overrides for precision tests.
    * @returns Configured TransformInteractionBridge.
    */
   function createBridge(
     isInteractionEnabled: (() => boolean) | undefined,
     onDuplicateSelectedForDrag?: () => void,
+    options?: {
+      gridSnap?: GridSnap;
+      isShiftDown?: () => boolean;
+      getUserSnapEnabled?: () => boolean;
+    },
   ): BridgeTransformInteraction {
+    const gridSnap = options?.gridSnap ?? new GridSnap(false, 1);
     const deps: ConstructorParameters<typeof BridgeTransformInteraction>[0] = {
       selectionManager,
       selectionVisualController: {
@@ -259,16 +314,16 @@ describe('TransformInteractionBridge', () => {
       } as never,
       transformGizmo,
       transformHandler,
-      transformExecutor: new TransformExecutor(new GridSnap(false, 1)),
-      gridSnap: new GridSnap(false, 1),
-      inputManager: { isShiftDown: () => false } as never,
+      transformExecutor: new TransformExecutor(gridSnap),
+      gridSnap,
+      inputManager: { isShiftDown: options?.isShiftDown ?? (() => false) } as never,
       viewportSyncManager: {
         syncClonePositionsToWorldObject: () => undefined,
         syncCloneTransformsForWorldObjects: () => undefined,
       } as never,
       propertiesPanel: { refreshBoundObject: () => undefined } as never,
       worldObject: new THREE.Group(),
-      getUserSnapEnabled: () => false,
+      getUserSnapEnabled: options?.getUserSnapEnabled ?? (() => false),
       isTransformSpaceLocal: () => false,
       onAfterTransformCommit: () => undefined,
     };
