@@ -137,6 +137,7 @@ export class HandlerTransform {
     const syntheticEvent = this.createSyntheticMouseEvent(clientX, clientY);
     this.session.snapshotPreDragState(selectedObjects);
     this.session.resetDragAccumulator();
+    this.transformExecutor.clearSnappedTranslationStepTracking();
     this.session.dragPivot.copy(pivot);
     this.session.dragActive = true;
     this.session.isSingleUseDrag = true;
@@ -435,6 +436,7 @@ export class HandlerTransform {
   ): void {
     this.session.snapshotPreDragState(selectedObjects);
     this.session.resetDragAccumulator();
+    this.transformExecutor.clearSnappedTranslationStepTracking();
     this.session.dragPivot.copy(pivot);
     this.session.dragActive = true;
     this.session.dragObjects = selectedObjects.slice();

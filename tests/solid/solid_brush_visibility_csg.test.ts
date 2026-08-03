@@ -4,6 +4,7 @@ import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { CommandObjectVisibilityToggle } from '@/outliner/commands/command_object_visibility_toggle.js';
 import { SolidUpdateSetBuilder } from '@/solid/algorithm/compile/solid_update_set.js';
+import { SolidAlgorithmIntersectionType } from '@/solid/algorithm/routing/solid_algorithm_intersection_type.js';
 import { BrushMembership } from '@/solid/algorithm/spatial/brush_membership.js';
 import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 
@@ -84,6 +85,7 @@ describe('Solid brush visibility CSG', () => {
   });
 
   it('expands previous peers for seeds no longer in the prepared list', () => {
+    const intersection = SolidAlgorithmIntersectionType.Intersection;
     const updateSet = SolidUpdateSetBuilder.build(
       new Set(['hidden']),
       ['a', 'b'],
@@ -92,9 +94,15 @@ describe('Solid brush visibility CSG', () => {
         ['b', []],
       ]),
       new Map([
-        ['hidden', ['a', 'b']],
-        ['a', ['hidden']],
-        ['b', ['hidden']],
+        [
+          'hidden',
+          [
+            { peerId: 'a', type: intersection },
+            { peerId: 'b', type: intersection },
+          ],
+        ],
+        ['a', [{ peerId: 'hidden', type: intersection }]],
+        ['b', [{ peerId: 'hidden', type: intersection }]],
       ]),
     );
     expect(updateSet.has('a')).toBe(true);

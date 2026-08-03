@@ -4,6 +4,8 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  // Match production inlining so WAV imports resolve under vitest.
+  assetsInclude: ['**/*.wav'],
   test: {
     globals: true,
     environment: 'jsdom',

@@ -360,6 +360,17 @@ export class ToolbarIcons {
   }
 
   /**
+   * Speaker icon for the main toolbar audio toggle.
+   *
+   * @returns SVG markup string.
+   */
+  static audio(): string {
+    return this.wrapSvg(
+      '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M4 10v4h3l5 4V6L7 10H4z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a6 6 0 0 1 0 10"/>',
+    );
+  }
+
+  /**
    * Official Model Context Protocol logo for the main toolbar MCP button. Paths
    * match the public MCP mark (Wikimedia: Model_Context_Protocol_logo.svg).
    *

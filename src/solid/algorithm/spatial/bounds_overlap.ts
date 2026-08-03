@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { SolidBoundsOps } from '@/solid/algorithm/math/solid_bounds_ops.js';
 
 /** Minimal AABB used by padded overlap tests (THREE.Box3 compatible). */
 export type AxisAlignedBounds = {
@@ -8,6 +9,7 @@ export type AxisAlignedBounds = {
 
 /**
  * Returns whether two axis-aligned bounds may touch when expanded by pad.
+ * Delegates to SolidBoundsOps.intersects (Chisel BoundsExtensions.Intersects).
  *
  * @param a First bounds.
  * @param b Second bounds.
@@ -15,14 +17,7 @@ export type AxisAlignedBounds = {
  * @returns True when the padded boxes may overlap.
  */
 export function boundsOverlapPadded(a: AxisAlignedBounds, b: AxisAlignedBounds, pad: number): boolean {
-  return !(
-    a.max.x + pad < b.min.x ||
-    a.min.x - pad > b.max.x ||
-    a.max.y + pad < b.min.y ||
-    a.min.y - pad > b.max.y ||
-    a.max.z + pad < b.min.z ||
-    a.min.z - pad > b.max.z
-  );
+  return SolidBoundsOps.intersects(a, b, pad);
 }
 
 /**

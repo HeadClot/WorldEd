@@ -171,4 +171,37 @@ describe('SolidAlgorithmRoutingTable', () => {
     const carved = table.route((index) => (index === 0 ? SurfaceCategory.SelfAligned : SurfaceCategory.Inside));
     expect(carved).toBe(SurfaceCategory.Outside);
   });
+
+  it('keeps both partial-overlap additives in a subtractive subject table', () => {
+    const prepared = [
+      makePrepared('a0', 2, SolidOperation.Additive, new THREE.Vector3(0, 0, 0)),
+      makePrepared('a1', 2, SolidOperation.Additive, new THREE.Vector3(2, 0, 0)),
+      makePrepared('cut', 1.2, SolidOperation.Subtractive, new THREE.Vector3(1, 0, 0)),
+    ];
+    prepared[0]!.overlappingPeerIndices = [1, 2];
+    prepared[1]!.overlappingPeerIndices = [0, 2];
+    prepared[2]!.overlappingPeerIndices = [0, 1];
+    const tree = SolidCsgTree.fromPreparedFlat(prepared);
+    const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(prepared, 2, [0, 1], tree, false, false);
+    const preparedIndices = table.steps.map((step) => step.preparedIndex);
+    expect(preparedIndices).toContain(0);
+    expect(preparedIndices).toContain(1);
+  });
+
+  it('routes a subtractive through a distant first additive then a near peer', () => {
+    const prepared = [
+      makePrepared('far', 2, SolidOperation.Additive, new THREE.Vector3(50, 0, 0)),
+      makePrepared('near', 2, SolidOperation.Additive, new THREE.Vector3(0, 0, 0)),
+      makePrepared('cut', 1.2, SolidOperation.Subtractive, new THREE.Vector3(0.5, 0, 0)),
+    ];
+    prepared[1]!.overlappingPeerIndices = [2];
+    prepared[2]!.overlappingPeerIndices = [1];
+    const tree = SolidCsgTree.fromPreparedFlat(prepared);
+    const table = SolidAlgorithmRoutingTableBuilder.buildForSubject(prepared, 2, [1], tree, false, false);
+    const preparedIndices = table.steps.map((step) => step.preparedIndex);
+    expect(preparedIndices).toContain(1);
+    expect(preparedIndices).not.toContain(0);
+    const cavity = table.route((index) => (index === 1 ? SurfaceCategory.Inside : SurfaceCategory.SelfAligned));
+    expect(cavity).toBe(SurfaceCategory.SelfReverseAligned);
+  });
 });

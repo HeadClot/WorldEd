@@ -3,6 +3,7 @@ import { SolidBrush } from '@/solid/brush/solid_brush.js';
 import { SolidBrushInstance } from './solid_brush_instance.js';
 import { SolidBrushFactory } from '@/solid/brush/solid_brush_factory.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { NotificationGlobal } from '@/audio/notification/notification_global.js';
 import { SolidBrushVisual } from './solid_brush_visual.js';
 import { FaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
 import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
@@ -459,6 +460,7 @@ export class SolidModel {
     }
     this.markBrushesDirty([id]);
     this.rebuild(true);
+    NotificationGlobal.onSolidCsgOperationFlipped();
     return true;
   }
 

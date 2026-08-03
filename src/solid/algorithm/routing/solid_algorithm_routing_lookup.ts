@@ -1,5 +1,4 @@
 import type { SolidAlgorithmCategoryRoutingRow } from './solid_algorithm_category_routing_row.js';
-import { SolidAlgorithmCategoryRoutingRow as CategoryRoutingRow } from './solid_algorithm_category_routing_row.js';
 
 /**
  * One Chisel RoutingLookup segment: rows for a single hierarchy brush node
@@ -21,11 +20,12 @@ export class SolidAlgorithmRoutingLookup {
   }
 
   /**
-   * Looks up the routing row for an input state inside this segment.
+   * Looks up the routing row for an input state inside this segment. Chisel
+   * TryGetRoute returns false on miss; callers keep the current category.
    *
    * @param routingRows Full table row array.
    * @param inputIndex Current interior category / row index.
-   * @returns Routing row when present, otherwise a constant identity-style row.
+   * @returns Routing row when present, otherwise null (miss).
    */
   tryGetRoute(
     routingRows: readonly SolidAlgorithmCategoryRoutingRow[],
@@ -36,17 +36,5 @@ export class SolidAlgorithmRoutingLookup {
       return null;
     }
     return routingRows[tableIndex] ?? null;
-  }
-
-  /**
-   * Builds a fallback row that repeats the input index (Chisel TryGetRoute miss
-   * path).
-   *
-   * @param inputIndex Input state.
-   * @returns Constant routing row filled with inputIndex.
-   */
-  static fallbackRow(inputIndex: number): SolidAlgorithmCategoryRoutingRow {
-    const value = inputIndex & 0xff;
-    return new CategoryRoutingRow([value, value, value, value, value, value]);
   }
 }

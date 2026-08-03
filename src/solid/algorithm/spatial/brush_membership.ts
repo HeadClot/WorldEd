@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { SolidBrush } from '@/solid/brush/solid_brush.js';
 import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { SurfaceCategory } from '@/solid/types/surface_category.js';
-import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
+import { SOLID_FAT_PLANE_EPSILON, SOLID_NORMAL_ALIGN_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 
 /** Classifies points and polygons against convex solid brushes. */
 export class BrushMembership {
@@ -65,8 +65,8 @@ export class BrushMembership {
     }
     if (closestPlane && minAbsDistance <= SOLID_FAT_PLANE_EPSILON && surfaceNormal) {
       const dot = closestPlane.normal.dot(surfaceNormal);
-      if (dot >= 0.99) return SurfaceCategory.Aligned;
-      if (dot <= -0.99) return SurfaceCategory.ReverseAligned;
+      if (dot >= SOLID_NORMAL_ALIGN_EPSILON) return SurfaceCategory.Aligned;
+      if (dot <= -SOLID_NORMAL_ALIGN_EPSILON) return SurfaceCategory.ReverseAligned;
     }
     return SurfaceCategory.Inside;
   }

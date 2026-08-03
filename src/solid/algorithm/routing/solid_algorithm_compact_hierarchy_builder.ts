@@ -92,7 +92,7 @@ export class SolidAlgorithmCompactHierarchyBuilder {
   private static serializeBreadthFirst(root: HierarchyTempNode): SolidAlgorithmCompactNode[] {
     const nodes: SolidAlgorithmCompactNode[] = [];
     const queue: { temp: HierarchyTempNode; index: number }[] = [];
-    nodes.push(this.toCompactShell(root, 0));
+    nodes.push(this.toCompactShell(root, 0, -1));
     queue.push({ temp: root, index: 0 });
     while (queue.length > 0) {
       const item = queue.shift();
@@ -109,9 +109,14 @@ export class SolidAlgorithmCompactHierarchyBuilder {
    *
    * @param temp Temporary node.
    * @param nodeId Assigned compact node id.
+   * @param parentIndex Parent compact index, or -1 for root.
    * @returns Compact node shell.
    */
-  private static toCompactShell(temp: HierarchyTempNode, nodeId: number): SolidAlgorithmCompactNode {
+  private static toCompactShell(
+    temp: HierarchyTempNode,
+    nodeId: number,
+    parentIndex: number,
+  ): SolidAlgorithmCompactNode {
     return {
       kind: temp.kind,
       nodeId,
@@ -119,12 +124,13 @@ export class SolidAlgorithmCompactHierarchyBuilder {
       operation: temp.operation,
       childOffset: 0,
       childCount: 0,
+      parentIndex,
     };
   }
 
   /**
    * Appends direct children of a branch contiguously and queues nested
-   * branches.
+   * branches. Leading non-Additive children are skipped (CompactTreeBuilder).
    *
    * @param temp Branch temporary node.
    * @param parentIndex Compact index of the parent.
@@ -140,22 +146,79 @@ export class SolidAlgorithmCompactHierarchyBuilder {
     if (temp.kind !== 'branch' || temp.children.length === 0) {
       return;
     }
-    const childOffset = nodes.length;
-    for (const child of temp.children) {
-      const childIndex = nodes.length;
-      nodes.push(this.toCompactShell(child, childIndex));
-      if (child.kind === 'branch') {
-        queue.push({ temp: child, index: childIndex });
-      }
+    const firstChildIndex = this.firstAdditiveChildIndex(temp.children);
+    if (firstChildIndex >= temp.children.length) {
+      this.writeBranchChildren(nodes, parentIndex, temp, nodes.length, 0);
+      return;
     }
+    const childOffset = nodes.length;
+    for (let index = firstChildIndex; index < temp.children.length; index++) {
+      this.appendChildNode(temp.children[index]!, parentIndex, nodes, queue);
+    }
+    this.writeBranchChildren(nodes, parentIndex, temp, childOffset, temp.children.length - firstChildIndex);
+  }
+
+  /**
+   * Returns the first Additive child index (leading subtractive/intersecting
+   * children never produce geometry).
+   *
+   * @param children Branch children in order.
+   * @returns Index of first Additive child, or children.length when none.
+   */
+  private static firstAdditiveChildIndex(children: readonly HierarchyTempNode[]): number {
+    let index = 0;
+    while (index < children.length && children[index]!.operation !== SolidOperation.Additive) {
+      index++;
+    }
+    return index;
+  }
+
+  /**
+   * Appends one child shell and queues nested branches.
+   *
+   * @param child Child temporary node.
+   * @param parentIndex Compact index of the parent branch.
+   * @param nodes Compact array.
+   * @param queue BFS queue for nested branches.
+   */
+  private static appendChildNode(
+    child: HierarchyTempNode,
+    parentIndex: number,
+    nodes: SolidAlgorithmCompactNode[],
+    queue: { temp: HierarchyTempNode; index: number }[],
+  ): void {
+    const childIndex = nodes.length;
+    nodes.push(this.toCompactShell(child, childIndex, parentIndex));
+    if (child.kind === 'branch') {
+      queue.push({ temp: child, index: childIndex });
+    }
+  }
+
+  /**
+   * Writes childOffset/childCount onto a branch compact node.
+   *
+   * @param nodes Compact array.
+   * @param parentIndex Parent compact index.
+   * @param temp Parent temporary node.
+   * @param childOffset First child compact index.
+   * @param childCount Number of emitted children.
+   */
+  private static writeBranchChildren(
+    nodes: SolidAlgorithmCompactNode[],
+    parentIndex: number,
+    temp: HierarchyTempNode,
+    childOffset: number,
+    childCount: number,
+  ): void {
     const parent = nodes[parentIndex]!;
     nodes[parentIndex] = {
       kind: 'branch',
       nodeId: parent.nodeId,
       preparedIndex: temp.preparedIndex,
       operation: temp.operation,
-      childOffset,
-      childCount: temp.children.length,
+      childOffset: childCount > 0 ? childOffset : 0,
+      childCount,
+      parentIndex: parent.parentIndex,
     };
   }
 }

@@ -1,43 +1,65 @@
 import * as THREE from 'three';
-import { SOLID_SQR_VERTEX_EQUAL_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
+import {
+  SOLID_SQR_VERTEX_EQUAL_EPSILON,
+  SOLID_VERTEX_HASH_CELL_SIZE,
+} from '@/solid/algorithm/math/solid_math_constants.js';
 
-/** Welds nearly-identical vertices for solid CSG intermediate geometry. */
+/**
+ * Welds nearly-identical vertices for solid CSG intermediate geometry using a
+ * spatial hash (Chisel HashedVertices).
+ */
 export class HashedVertexTable {
   private readonly vertices: THREE.Vector3[] = [];
   private readonly cellMap = new Map<string, number[]>();
   private readonly cellSize: number;
+  private readonly sqrEqualEpsilon: number;
 
   /**
    * Creates a hashed vertex table.
    *
-   * @param cellSize Spatial hash cell size (defaults near vertex epsilon).
+   * @param cellSize Spatial hash cell size (defaults to Chisel kCellSize).
+   * @param sqrEqualEpsilon Squared distance threshold for welding.
    */
-  constructor(cellSize: number = 0.001) {
+  constructor(
+    cellSize: number = SOLID_VERTEX_HASH_CELL_SIZE,
+    sqrEqualEpsilon: number = SOLID_SQR_VERTEX_EQUAL_EPSILON,
+  ) {
     this.cellSize = cellSize;
+    this.sqrEqualEpsilon = sqrEqualEpsilon;
   }
 
   /**
-   * Inserts a point, returning the stable welded index.
+   * Inserts a point, returning the stable welded index of the closest match.
    *
    * @param point Point to insert.
    * @returns Index of the existing or newly created vertex.
    */
   add(point: THREE.Vector3): number {
-    const cellKey = this.cellKeyForPoint(point);
-    const candidates = this.gatherNearbyIndices(cellKey);
-    for (const index of candidates) {
-      if (this.vertices[index]!.distanceToSquared(point) <= SOLID_SQR_VERTEX_EQUAL_EPSILON) {
-        return index;
-      }
+    const closestIndex = this.findClosestIndex(point);
+    if (closestIndex >= 0) {
+      return closestIndex;
     }
-    const newIndex = this.vertices.length;
-    this.vertices.push(point.clone());
-    this.storeIndexInCell(cellKey, newIndex);
-    return newIndex;
+    return this.insertNewVertex(point);
   }
 
   /**
-   * Returns the welded vertex list.
+   * Returns a clone of the welded position for a point (add + get).
+   *
+   * @param point Point to snap.
+   * @returns Canonical welded position clone.
+   */
+  snap(point: THREE.Vector3): THREE.Vector3 {
+    return this.get(this.add(point)).clone();
+  }
+
+  /** Clears all stored vertices and hash buckets. */
+  clear(): void {
+    this.vertices.length = 0;
+    this.cellMap.clear();
+  }
+
+  /**
+   * Returns the welded vertex list as clones.
    *
    * @returns Vertices in insertion order.
    */
@@ -55,7 +77,7 @@ export class HashedVertexTable {
   }
 
   /**
-   * Returns a vertex by index.
+   * Returns a vertex by index (shared table storage; do not mutate).
    *
    * @param index Vertex index.
    * @returns Vertex position.
@@ -65,15 +87,50 @@ export class HashedVertexTable {
   }
 
   /**
-   * Builds a spatial hash key for a point.
+   * Finds the closest existing vertex within the equal-epsilon ball.
+   *
+   * @param point Query point.
+   * @returns Closest index, or -1 when none match.
+   */
+  private findClosestIndex(point: THREE.Vector3): number {
+    const candidates = this.gatherNearbyIndices(this.cellKeyForPoint(point));
+    let closestIndex = -1;
+    let closestDistance = this.sqrEqualEpsilon;
+    for (const index of candidates) {
+      const distance = this.vertices[index]!.distanceToSquared(point);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    }
+    return closestIndex;
+  }
+
+  /**
+   * Appends a new unique vertex into the table and spatial hash.
+   *
+   * @param point Point to store.
+   * @returns New vertex index.
+   */
+  private insertNewVertex(point: THREE.Vector3): number {
+    const newIndex = this.vertices.length;
+    this.vertices.push(point.clone());
+    this.storeIndexInCell(this.cellKeyForPoint(point), newIndex);
+    return newIndex;
+  }
+
+  /**
+   * Builds a spatial hash key for a point. Cell indices use toward-zero
+   * truncation so negative coordinates match Chisel `(int)(coord /
+   * kCellSize)`.
    *
    * @param point Point to hash.
    * @returns Cell key string.
    */
   private cellKeyForPoint(point: THREE.Vector3): string {
-    const cellX = Math.floor(point.x / this.cellSize);
-    const cellY = Math.floor(point.y / this.cellSize);
-    const cellZ = Math.floor(point.z / this.cellSize);
+    const cellX = Math.trunc(point.x / this.cellSize);
+    const cellY = Math.trunc(point.y / this.cellSize);
+    const cellZ = Math.trunc(point.z / this.cellSize);
     return `${cellX},${cellY},${cellZ}`;
   }
 
@@ -92,13 +149,24 @@ export class HashedVertexTable {
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (let dz = -1; dz <= 1; dz++) {
-          const key = `${cx + dx},${cy + dy},${cz + dz}`;
-          const bucket = this.cellMap.get(key);
-          if (bucket) result.push(...bucket);
+          this.appendCellBucket(result, `${cx + dx},${cy + dy},${cz + dz}`);
         }
       }
     }
     return result;
+  }
+
+  /**
+   * Appends one spatial-cell bucket into a candidate list.
+   *
+   * @param result Candidate index list.
+   * @param key Cell key.
+   */
+  private appendCellBucket(result: number[], key: string): void {
+    const bucket = this.cellMap.get(key);
+    if (bucket) {
+      result.push(...bucket);
+    }
   }
 
   /**

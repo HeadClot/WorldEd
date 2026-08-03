@@ -8,6 +8,7 @@ import { BoundsFacePicker } from './bounds_face_picker.js';
 import {
   computeOneSidedMeshResize,
   computeOneSidedMultiMeshResize,
+  resolveAppliedBoundsFaceDelta,
   snapBoundsFaceDelta,
 } from './bounds_resize_math.js';
 import { DataOrientedBounds } from './builder_oriented_bounds.js';
@@ -21,6 +22,7 @@ import { computeSilhouetteExteriorBandWorld } from './bounds_handle_screen_size.
 import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
 import { TransformMode } from '@/types/transform_mode.js';
 import { transformModalConstrainTranslationDelta } from '@/transform/modal/transform_modal_delta_constrain.js';
+import { NotificationGlobal } from '@/audio/notification/notification_global.js';
 
 /**
  * Bounds tool interaction: one-sided resize from 3D arrows, 2D ears, or
@@ -37,6 +39,8 @@ export class ControllerBoundsDrag {
   private textureLock: TextureLockSettings | null;
   private lastHoverCursorCss: string | null;
   private lastHoverCursorElement: HTMLElement | null;
+  private lastRaisedSnappedResizeDelta: number;
+  private hasRaisedSnappedResizeDelta: boolean;
 
   /**
    * Creates a bounds drag controller bound to a shared drag session.
@@ -60,6 +64,8 @@ export class ControllerBoundsDrag {
     this.textureLock = null;
     this.lastHoverCursorCss = null;
     this.lastHoverCursorElement = null;
+    this.lastRaisedSnappedResizeDelta = 0;
+    this.hasRaisedSnappedResizeDelta = false;
   }
 
   /**
@@ -487,6 +493,7 @@ export class ControllerBoundsDrag {
     if (!pick) return false;
     this.session.snapshotPreDragState(selectedObjects);
     this.session.resetDragAccumulator();
+    this.transformExecutor.clearSnappedTranslationStepTracking();
     this.session.dragPivot.copy(pivot);
     this.session.dragActive = true;
     this.session.isBoundsFaceMove = true;
@@ -532,6 +539,7 @@ export class ControllerBoundsDrag {
   ): void {
     this.session.snapshotPreDragState(selectedObjects);
     this.session.resetDragAccumulator();
+    this.clearSnappedResizeStepTracking();
     this.session.dragPivot.copy(pivot);
     this.session.dragActive = true;
     this.session.isBoundsResize = true;
@@ -603,6 +611,7 @@ export class ControllerBoundsDrag {
     this.session.lastPointerBoundsResizeDelta = deltaAlongNormal;
     this.applyResizeToObjects(objects, deltaAlongNormal);
     this.rebakeLockedTextures(objects, false, true);
+    this.raiseSelectionResizedWithSnappingIfAppliedDeltaStepped(deltaAlongNormal);
   }
 
   /**
@@ -631,6 +640,51 @@ export class ControllerBoundsDrag {
     this.session.lastPointerBoundsResizeDelta = snappedDelta;
     this.session.boundsDeltaAlongNormal = snappedDelta;
     this.applyResizeToObjects(objects, snappedDelta);
+    this.raiseSelectionResizedWithSnappingIfAppliedDeltaStepped(snappedDelta);
+  }
+
+  /** Clears snap-step tracking so the next applied resize can raise audio. */
+  private clearSnappedResizeStepTracking(): void {
+    this.hasRaisedSnappedResizeDelta = false;
+    this.lastRaisedSnappedResizeDelta = 0;
+  }
+
+  /**
+   * Raises snap-resize audio when the clamped applied face delta changes. Raw
+   * snap steps past the minimum size do not raise (no BRRR at the size limit).
+   *
+   * @param requestedDelta Requested face displacement after grid snap.
+   */
+  private raiseSelectionResizedWithSnappingIfAppliedDeltaStepped(requestedDelta: number): void {
+    if (!this.transformExecutor.getGridSnap().isEnabled()) {
+      return;
+    }
+    const face = this.session.activeBoundsFace;
+    const startBounds = this.session.startBounds;
+    if (!face || !startBounds) {
+      return;
+    }
+    const appliedDelta = resolveAppliedBoundsFaceDelta(startBounds, face, requestedDelta);
+    if (!this.appliedResizeDeltaStepped(appliedDelta)) {
+      return;
+    }
+    this.lastRaisedSnappedResizeDelta = appliedDelta;
+    this.hasRaisedSnappedResizeDelta = true;
+    NotificationGlobal.onSelectionResizedWithSnapping(Math.abs(appliedDelta));
+  }
+
+  /**
+   * Returns whether the applied (clamped) resize delta differs from the last
+   * raised step.
+   *
+   * @param appliedDelta Face displacement after min-size clamp.
+   * @returns True when geometry would change relative to the last raise.
+   */
+  private appliedResizeDeltaStepped(appliedDelta: number): boolean {
+    if (!this.hasRaisedSnappedResizeDelta) {
+      return Math.abs(appliedDelta) > 1e-12;
+    }
+    return Math.abs(appliedDelta - this.lastRaisedSnappedResizeDelta) > 1e-12;
   }
 
   /**

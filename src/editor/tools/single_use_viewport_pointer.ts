@@ -1,4 +1,5 @@
 import type { Camera } from 'three';
+import { audioViewportFocus } from '@/audio/spatial/audio_viewport_focus.js';
 import type { EditorServices } from '../window/editor_services.js';
 import type { EditorWindow } from '../window/editor_window.js';
 import type { EditorViewportPickContext } from '../window/editor_viewport_pick_context.js';
@@ -81,10 +82,21 @@ function resolveSingleUsePane(
       ownerDocument,
     );
     if (underPointer) {
+      recordAudioViewportFocusFromPickElement(underPointer.pickElement);
       return underPointer;
     }
   }
   return services.resolveFirstInteractiveViewportInDocument(ownerDocument) ?? resolveActivePaneFallback(services);
+}
+
+/**
+ * Locks mono/3D audio focus to the pane under the cursor when G/R/S starts
+ * (same pane the single-use tool already chose).
+ *
+ * @param pickElement Viewport content element under the pointer.
+ */
+function recordAudioViewportFocusFromPickElement(pickElement: HTMLElement): void {
+  audioViewportFocus.recordFromContentElement(pickElement);
 }
 
 /**

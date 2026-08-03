@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import { TransformExecutor } from '@/transform/core/transform_executor.js';
+import { notificationFrameEvents } from '@/audio/notification/notification_frame_events.js';
+import { audioSettings } from '@/audio/settings/audio_settings.js';
 
 describe('TransformExecutor.computePivot', () => {
   let executor: TransformExecutor;
@@ -146,6 +148,97 @@ describe('TransformExecutor.executeTranslation', () => {
     expect(meshA.position.x).toBeCloseTo(0.38, 5);
     expect(meshA.position.y).toBeCloseTo(0.07, 5);
     expect(meshA.position.z).toBeCloseTo(0.44, 5);
+  });
+});
+
+describe('TransformExecutor snapped translation audio events', () => {
+  beforeEach(() => {
+    audioSettings.setEnabled(true);
+    notificationFrameEvents.reset();
+  });
+
+  afterEach(() => {
+    audioSettings.setEnabled(true);
+    notificationFrameEvents.reset();
+  });
+
+  it('raises selection-moved-with-snapping once after multi-object snap step', () => {
+    const snapExecutor = new TransformExecutor(new GridSnap(true, 1.0));
+    const meshA = new THREE.Mesh();
+    const meshB = new THREE.Mesh();
+    meshA.position.set(0, 0, 0);
+    meshB.position.set(2, 0, 0);
+    const initials = new Map<THREE.Object3D, THREE.Vector3>([
+      [meshA, meshA.position.clone()],
+      [meshB, meshB.position.clone()],
+    ]);
+    snapExecutor.applyAbsoluteTranslation([meshA, meshB], initials, new THREE.Vector3(1.2, 0, 0));
+    notificationFrameEvents.beginFrame();
+    expect(notificationFrameEvents.hasSelectionMovedWithSnappingSnapshot()).toBe(true);
+    expect(notificationFrameEvents.hasSelectionScaledWithSnappingSnapshot()).toBe(false);
+  });
+
+  it('raises selection-scaled-with-snapping when free scale snaps to a new step', () => {
+    const snapExecutor = new TransformExecutor(new GridSnap(true, 1.0));
+    const mesh = new THREE.Mesh();
+    mesh.position.set(0, 0, 0);
+    mesh.scale.set(1, 1, 1);
+    const initials = new Map<THREE.Object3D, THREE.Vector3>([[mesh, mesh.position.clone()]]);
+    const scales = new Map<THREE.Object3D, THREE.Vector3>([[mesh, mesh.scale.clone()]]);
+    snapExecutor.applyAbsoluteFreeScale(
+      [mesh],
+      initials,
+      scales,
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(1.15, 1, 1),
+    );
+    notificationFrameEvents.beginFrame();
+    expect(notificationFrameEvents.hasSelectionScaledWithSnappingSnapshot()).toBe(true);
+    expect(notificationFrameEvents.hasSelectionMovedWithSnappingSnapshot()).toBe(false);
+  });
+
+  it('does not raise when snap is disabled', () => {
+    const snapExecutor = new TransformExecutor(new GridSnap(false, 1.0));
+    const mesh = new THREE.Mesh();
+    const initials = new Map<THREE.Object3D, THREE.Vector3>([[mesh, new THREE.Vector3(0, 0, 0)]]);
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(1, 0, 0));
+    notificationFrameEvents.beginFrame();
+    expect(notificationFrameEvents.hasSelectionMovedWithSnappingSnapshot()).toBe(false);
+  });
+
+  it('does not raise again for the same snapped delta', () => {
+    const snapExecutor = new TransformExecutor(new GridSnap(true, 1.0));
+    const mesh = new THREE.Mesh();
+    const initials = new Map<THREE.Object3D, THREE.Vector3>([[mesh, new THREE.Vector3(0, 0, 0)]]);
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(1.1, 0, 0));
+    notificationFrameEvents.beginFrame();
+    expect(notificationFrameEvents.hasSelectionMovedWithSnappingSnapshot()).toBe(true);
+    notificationFrameEvents.beginFrame();
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(1.2, 0, 0));
+    notificationFrameEvents.beginFrame();
+    expect(notificationFrameEvents.hasSelectionMovedWithSnappingSnapshot()).toBe(false);
+  });
+
+  it('raises again when the snapped delta steps to a new value', () => {
+    const snapExecutor = new TransformExecutor(new GridSnap(true, 1.0));
+    const mesh = new THREE.Mesh();
+    const initials = new Map<THREE.Object3D, THREE.Vector3>([[mesh, new THREE.Vector3(0, 0, 0)]]);
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(1.1, 0, 0));
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(2.1, 0, 0));
+    notificationFrameEvents.beginFrame();
+    expect(notificationFrameEvents.hasSelectionMovedWithSnappingSnapshot()).toBe(true);
+  });
+
+  it('raises again after clearSnappedTranslationStepTracking', () => {
+    const snapExecutor = new TransformExecutor(new GridSnap(true, 1.0));
+    const mesh = new THREE.Mesh();
+    const initials = new Map<THREE.Object3D, THREE.Vector3>([[mesh, new THREE.Vector3(0, 0, 0)]]);
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(1, 0, 0));
+    snapExecutor.clearSnappedTranslationStepTracking();
+    notificationFrameEvents.beginFrame();
+    snapExecutor.applyAbsoluteTranslation([mesh], initials, new THREE.Vector3(1, 0, 0));
+    notificationFrameEvents.beginFrame();
+    expect(notificationFrameEvents.hasSelectionMovedWithSnappingSnapshot()).toBe(true);
   });
 });
 

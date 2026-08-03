@@ -4,7 +4,7 @@ import { SolidAlgorithmCompactHierarchyBuilder } from './solid_algorithm_compact
 import type { SolidAlgorithmCompactNode } from './solid_algorithm_compact_node.js';
 import { SolidAlgorithmCreateRoutingTableJob } from './solid_algorithm_create_routing_table_job.js';
 import { SolidAlgorithmRoutingTable } from './solid_algorithm_routing_table.js';
-import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
+import { SOLID_BOUNDS_EPSILON, SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 
 /**
  * Caches per-subject Chisel routing tables and one compact hierarchy per
@@ -54,13 +54,12 @@ export class SolidAlgorithmRoutingTableCache {
       return existing;
     }
     const hierarchy = this.getOrBuildHierarchy(tree, invertedWorld);
-    const boundsPad = SOLID_FAT_PLANE_EPSILON * 2;
     const table = SolidAlgorithmCreateRoutingTableJob.buildForSubject(
       prepared,
       subjectIndex,
       hierarchy,
       invertedWorld,
-      boundsPad,
+      SOLID_BOUNDS_EPSILON,
       SOLID_FAT_PLANE_EPSILON,
     );
     this.tablesBySubjectId.set(subject.instance.id, table);

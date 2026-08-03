@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 import type { SolidPlane } from '@/solid/brush/solid_plane.js';
-import { boundsOverlapPadded } from '@/solid/algorithm/spatial/bounds_overlap.js';
+import { SolidBoundsOps } from '@/solid/algorithm/math/solid_bounds_ops.js';
+import { SolidPlaneBounds } from '@/solid/algorithm/math/solid_plane_bounds.js';
+import { SolidPlaneBoundsResult } from '@/solid/algorithm/math/solid_plane_bounds_result.js';
 import { SOLID_ALGORITHM_INFINITE_PREPARED_INDEX } from './solid_algorithm_compact_node.js';
 import { SolidAlgorithmIntersectionType } from './solid_algorithm_intersection_type.js';
 
@@ -43,15 +45,17 @@ export class SolidAlgorithmBrushIntersection {
     if (other.instance.id === subject.instance.id) {
       return SolidAlgorithmIntersectionType.Intersection;
     }
-    if (!boundsOverlapPadded(subject.bounds, other.bounds, boundsPad)) {
+    if (!SolidBoundsOps.intersects(subject.bounds, other.bounds, boundsPad)) {
       return SolidAlgorithmIntersectionType.NoIntersection;
     }
     return this.convexPolytopeTouching(subject, other, membershipEpsilon);
   }
 
   /**
-   * Chisel ConvexPolytopeTouching: peer-inside-subject first, then
-   * subject-inside-peer, else Intersection when bounds already overlap.
+   * Chisel ConvexPolytopeTouching: brush0 planes vs brush1 verts first (only
+   * BInsideA or continue), then brush1 planes vs brush0 verts (intersecting
+   * sides force Intersection; all-negative is AInsideB). Bounds early outs
+   * reject separated pairs before vertex WhichSide.
    *
    * @param subject Processed subject brush (brush0).
    * @param other Other brush (brush1).
@@ -63,14 +67,14 @@ export class SolidAlgorithmBrushIntersection {
     other: PreparedBrush,
     epsilon: number,
   ): SolidAlgorithmIntersectionType {
-    const otherVsSubject = this.classifyVerticesAgainstPlanes(other, subject, epsilon);
+    const otherVsSubject = this.classifyBrushAgainstPlanes(other, subject, epsilon, false);
     if (otherVsSubject === 'separated') {
       return SolidAlgorithmIntersectionType.NoIntersection;
     }
     if (otherVsSubject === 'strictlyInside') {
       return SolidAlgorithmIntersectionType.BInsideA;
     }
-    const subjectVsOther = this.classifyVerticesAgainstPlanes(subject, other, epsilon);
+    const subjectVsOther = this.classifyBrushAgainstPlanes(subject, other, epsilon, true);
     if (subjectVsOther === 'separated') {
       return SolidAlgorithmIntersectionType.NoIntersection;
     }
@@ -81,30 +85,74 @@ export class SolidAlgorithmBrushIntersection {
   }
 
   /**
-   * Classifies all vertices of inner against outer planes (Chisel WhichSide
-   * over every plane).
+   * Classifies one brush against another brush's planes using bounds early outs
+   * then Chisel WhichSide over every plane. When trackIntersectingSides is true
+   * (second pass), any mixed/on-plane side returns straddling immediately like
+   * Chisel intersectingSides2 > 0.
    *
-   * @param inner Brush whose vertices are tested.
+   * @param inner Brush whose volume is tested.
    * @param outer Brush providing outward planes.
    * @param epsilon Plane epsilon.
+   * @param trackIntersectingSides Whether mixed sides force straddling early.
    * @returns Separated | strictlyInside | straddling.
    */
-  private static classifyVerticesAgainstPlanes(
+  private static classifyBrushAgainstPlanes(
     inner: PreparedBrush,
     outer: PreparedBrush,
     epsilon: number,
+    trackIntersectingSides: boolean,
   ): 'separated' | 'strictlyInside' | 'straddling' {
     let strictNegativePlaneCount = 0;
+    let intersectingPlaneCount = 0;
     for (const plane of outer.brush.planes) {
-      const side = this.whichSide(inner, plane, epsilon);
-      if (side > 0) {
+      const planeResult = this.classifyBrushAgainstOnePlane(inner, plane, epsilon);
+      if (planeResult === 'separated') {
         return 'separated';
       }
-      if (side < 0) {
+      if (planeResult === 'strictlyInside') {
         strictNegativePlaneCount++;
+      } else {
+        intersectingPlaneCount++;
+        if (trackIntersectingSides) {
+          return 'straddling';
+        }
       }
     }
     if (strictNegativePlaneCount === outer.brush.planes.length && outer.brush.planes.length > 0) {
+      return 'strictlyInside';
+    }
+    if (intersectingPlaneCount > 0) {
+      return 'straddling';
+    }
+    return 'straddling';
+  }
+
+  /**
+   * Classifies one brush against a single outer plane (bounds early out then
+   * WhichSide).
+   *
+   * @param inner Brush whose volume is tested.
+   * @param plane Outer plane.
+   * @param epsilon Plane epsilon.
+   * @returns Separated | strictlyInside | straddling for this plane.
+   */
+  private static classifyBrushAgainstOnePlane(
+    inner: PreparedBrush,
+    plane: SolidPlane,
+    epsilon: number,
+  ): 'separated' | 'strictlyInside' | 'straddling' {
+    const boundsSide = SolidPlaneBounds.classifyFat(plane, inner.bounds, epsilon);
+    if (boundsSide === SolidPlaneBoundsResult.Outside) {
+      return 'separated';
+    }
+    if (boundsSide === SolidPlaneBoundsResult.Inside) {
+      return 'strictlyInside';
+    }
+    const side = this.whichSide(inner, plane, epsilon);
+    if (side > 0) {
+      return 'separated';
+    }
+    if (side < 0) {
       return 'strictlyInside';
     }
     return 'straddling';

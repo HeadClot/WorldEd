@@ -16,6 +16,7 @@ import { HandlerCsgAction } from '@/tools/csg/handler_csg_action.js';
 import { HandlerAlignment } from '@/outliner/alignment/handler_alignment.js';
 import { ControllerSnapSettings } from '@/tools/snap/controller_snap_settings.js';
 import { TextureLockSettings } from '@/texture/lock/texture_lock_settings.js';
+import { audioSettings } from '@/audio/settings/audio_settings.js';
 
 /**
  * Host callbacks used when building outliner shell action bindings. Handler
@@ -59,6 +60,7 @@ export interface ToolbarActionHost {
   onOpenMcpDialog: () => void;
   onOpenDetachedViewport: () => void;
   onToggleAiCaptureDebugPanel: () => void;
+  onToggleAudio: () => void;
   onDeleteSelected: () => void;
   onGroupSelected: () => void;
   onNewScene: () => void;
@@ -169,6 +171,8 @@ function buildPrimitiveToolbarActions(
   | 'onOpenMcpDialog'
   | 'onOpenDetachedViewport'
   | 'onToggleAiCaptureDebugPanel'
+  | 'onToggleAudio'
+  | 'isAudioEnabled'
 > {
   return {
     onAddCube: () => host.getPrimitiveCreationHandler().createCube(),
@@ -187,6 +191,8 @@ function buildPrimitiveToolbarActions(
     onOpenMcpDialog: () => host.onOpenMcpDialog(),
     onOpenDetachedViewport: () => host.onOpenDetachedViewport(),
     onToggleAiCaptureDebugPanel: () => host.onToggleAiCaptureDebugPanel(),
+    onToggleAudio: () => host.onToggleAudio(),
+    isAudioEnabled: () => audioSettings.isEnabled(),
   };
 }
 

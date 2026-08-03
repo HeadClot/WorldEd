@@ -31,6 +31,7 @@ import {
   publishLayoutTransformLiveVisuals,
   shouldPublishLiveVisualsAfterModalKey,
 } from './layout_transform_live_visuals.js';
+import { audioViewportFocus } from '@/audio/spatial/audio_viewport_focus.js';
 
 /** Dependencies for building the Shape Editor-style tool stack. */
 export interface LayoutToolEditorSetupDeps {
@@ -235,8 +236,12 @@ export function createLayoutToolEditorSystem(deps: LayoutToolEditorSetupDeps): L
   editorWindow.validateTools();
   wireAfterDragVisualRefresh(deps);
   const refreshInteractiveViewportDomain = (): void => {
+    syncAudioViewportContentRegistry(deps);
     inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
   };
+  inputBridge.setExclusiveRootHitListener((root) => {
+    audioViewportFocus.recordFromContentElement(root);
+  });
   refreshInteractiveViewportDomain();
   return {
     editorWindow,
@@ -834,6 +839,16 @@ function collectInteractivePickElements(deps: LayoutToolEditorSetupDeps): HTMLEl
     }
   }
   return elements;
+}
+
+/**
+ * Registers interactive viewport content elements for early audio focus hits
+ * from the input bridge (before tools run).
+ *
+ * @param deps Layout services.
+ */
+function syncAudioViewportContentRegistry(deps: LayoutToolEditorSetupDeps): void {
+  audioViewportFocus.registerViewports(deps.getInteractiveViewports());
 }
 
 /**

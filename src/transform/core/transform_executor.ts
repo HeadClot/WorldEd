@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GizmoAxis } from '@/types/transform_mode.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
+import { NotificationGlobal } from '@/audio/notification/notification_global.js';
 import { TransformConstraint } from './transform_constraint.js';
 
 /**
@@ -11,6 +12,12 @@ import { TransformConstraint } from './transform_constraint.js';
 export class TransformExecutor {
   private gridSnap: GridSnap;
   private boundingBox: THREE.Box3;
+  private lastRaisedSnappedTranslationDelta: THREE.Vector3;
+  private hasRaisedSnappedTranslationDelta: boolean;
+  private lastRaisedSnappedScaleFactors: THREE.Vector3;
+  private hasRaisedSnappedScaleFactors: boolean;
+  private lastRaisedSnappedRotationAngle: number;
+  private hasRaisedSnappedRotationAngle: boolean;
 
   /**
    * Creates a new transform executor with the given grid snap configuration.
@@ -20,6 +27,22 @@ export class TransformExecutor {
   constructor(gridSnap: GridSnap) {
     this.gridSnap = gridSnap;
     this.boundingBox = new THREE.Box3();
+    this.lastRaisedSnappedTranslationDelta = new THREE.Vector3();
+    this.hasRaisedSnappedTranslationDelta = false;
+    this.lastRaisedSnappedScaleFactors = new THREE.Vector3(1, 1, 1);
+    this.hasRaisedSnappedScaleFactors = false;
+    this.lastRaisedSnappedRotationAngle = 0;
+    this.hasRaisedSnappedRotationAngle = false;
+  }
+
+  /** Clears snap-step tracking so the next snapped transform can raise audio. */
+  clearSnappedTranslationStepTracking(): void {
+    this.hasRaisedSnappedTranslationDelta = false;
+    this.lastRaisedSnappedTranslationDelta.set(0, 0, 0);
+    this.hasRaisedSnappedScaleFactors = false;
+    this.lastRaisedSnappedScaleFactors.set(1, 1, 1);
+    this.hasRaisedSnappedRotationAngle = false;
+    this.lastRaisedSnappedRotationAngle = 0;
   }
 
   /**
@@ -35,6 +58,7 @@ export class TransformExecutor {
     objects.forEach((object) => {
       object.position.add(snappedDelta);
     });
+    this.raiseSelectionMovedWithSnappingIfStepped(snappedDelta);
   }
 
   /**
@@ -55,6 +79,52 @@ export class TransformExecutor {
     objects.forEach((object) => {
       this.applySnappedTranslationToObject(object, initialPositions, snappedDelta);
     });
+    this.raiseSelectionMovedWithSnappingIfStepped(snappedDelta);
+  }
+
+  /**
+   * Raises the snap-move audio event once when the snapped delta steps to a new
+   * value while snap is enabled.
+   *
+   * @param snappedDelta Grid-snapped translation applied to the selection.
+   */
+  private raiseSelectionMovedWithSnappingIfStepped(snappedDelta: THREE.Vector3): void {
+    if (!this.gridSnap.isEnabled()) {
+      return;
+    }
+    if (!this.snappedTranslationDeltaStepped(snappedDelta)) {
+      return;
+    }
+    const stepLength = this.measureSnappedTranslationStepLength(snappedDelta);
+    this.lastRaisedSnappedTranslationDelta.copy(snappedDelta);
+    this.hasRaisedSnappedTranslationDelta = true;
+    NotificationGlobal.onSelectionMovedWithSnapping(stepLength);
+  }
+
+  /**
+   * World length of this snap step from the previous raised snapped delta.
+   *
+   * @param snappedDelta Newly raised snapped translation delta.
+   * @returns Step length in world units.
+   */
+  private measureSnappedTranslationStepLength(snappedDelta: THREE.Vector3): number {
+    if (!this.hasRaisedSnappedTranslationDelta) {
+      return snappedDelta.length();
+    }
+    return snappedDelta.distanceTo(this.lastRaisedSnappedTranslationDelta);
+  }
+
+  /**
+   * Returns whether the snapped delta differs from the last raised step.
+   *
+   * @param snappedDelta Candidate snapped translation delta.
+   * @returns True when this delta is a new snap step.
+   */
+  private snappedTranslationDeltaStepped(snappedDelta: THREE.Vector3): boolean {
+    if (!this.hasRaisedSnappedTranslationDelta) {
+      return snappedDelta.lengthSq() > 0;
+    }
+    return !this.lastRaisedSnappedTranslationDelta.equals(snappedDelta);
   }
 
   /**
@@ -129,6 +199,52 @@ export class TransformExecutor {
     objects.forEach((object) => {
       this.applyAbsoluteRotationToObject(object, initialPositions, initialQuaternions, pivot, rotationQuaternion);
     });
+    this.raiseSelectionRotatedWithSnappingIfStepped(snappedAngle);
+  }
+
+  /**
+   * Raises rotate-snap audio when the snapped total angle steps to a new value.
+   *
+   * @param snappedAngle Grid-snapped total rotation from drag start (radians).
+   */
+  private raiseSelectionRotatedWithSnappingIfStepped(snappedAngle: number): void {
+    if (!this.gridSnap.isEnabled()) {
+      return;
+    }
+    if (!this.snappedRotationAngleStepped(snappedAngle)) {
+      return;
+    }
+    const stepRadians = this.measureSnappedRotationStepRadians(snappedAngle);
+    this.lastRaisedSnappedRotationAngle = snappedAngle;
+    this.hasRaisedSnappedRotationAngle = true;
+    NotificationGlobal.onSelectionRotatedWithSnapping(stepRadians);
+  }
+
+  /**
+   * Returns whether the snapped rotation angle differs from the last raised
+   * step.
+   *
+   * @param snappedAngle Candidate snapped total angle in radians.
+   * @returns True when this angle is a new snap step.
+   */
+  private snappedRotationAngleStepped(snappedAngle: number): boolean {
+    if (!this.hasRaisedSnappedRotationAngle) {
+      return Math.abs(snappedAngle) > 1e-12;
+    }
+    return Math.abs(snappedAngle - this.lastRaisedSnappedRotationAngle) > 1e-12;
+  }
+
+  /**
+   * Absolute angle of this snap step from the previous raised snapped angle.
+   *
+   * @param snappedAngle Newly raised snapped total angle in radians.
+   * @returns Step magnitude in radians.
+   */
+  private measureSnappedRotationStepRadians(snappedAngle: number): number {
+    if (!this.hasRaisedSnappedRotationAngle) {
+      return Math.abs(snappedAngle);
+    }
+    return Math.abs(snappedAngle - this.lastRaisedSnappedRotationAngle);
   }
 
   /**
@@ -180,6 +296,7 @@ export class TransformExecutor {
         gizmoAxis,
       );
     });
+    this.raiseSelectionScaledWithSnappingIfStepped(this.scaleFactorVectorForAxis(gizmoAxis, snappedFactor));
   }
 
   /**
@@ -232,6 +349,69 @@ export class TransformExecutor {
     objects.forEach((object) => {
       this.applyAbsoluteFreeScaleToObject(object, initialPositions, initialScales, worldPivot, snapped);
     });
+    this.raiseSelectionScaledWithSnappingIfStepped(snapped);
+  }
+
+  /**
+   * Raises scale-snap audio once when snapped scale factors step to a new value
+   * while snap is enabled.
+   *
+   * @param snappedFactors Snapped per-axis scale factors from the drag.
+   */
+  private raiseSelectionScaledWithSnappingIfStepped(snappedFactors: THREE.Vector3): void {
+    if (!this.gridSnap.isEnabled()) {
+      return;
+    }
+    if (!this.snappedScaleFactorsStepped(snappedFactors)) {
+      return;
+    }
+    this.lastRaisedSnappedScaleFactors.copy(snappedFactors);
+    this.hasRaisedSnappedScaleFactors = true;
+    NotificationGlobal.onSelectionScaledWithSnapping();
+  }
+
+  /**
+   * Returns whether snapped scale factors differ from the last raised step.
+   *
+   * @param snappedFactors Candidate snapped scale factors.
+   * @returns True when this is a new snap step away from identity.
+   */
+  private snappedScaleFactorsStepped(snappedFactors: THREE.Vector3): boolean {
+    if (!this.hasRaisedSnappedScaleFactors) {
+      return !this.isIdentityScaleFactors(snappedFactors);
+    }
+    return !this.lastRaisedSnappedScaleFactors.equals(snappedFactors);
+  }
+
+  /**
+   * Returns whether scale factors leave the selection unscaled from drag start.
+   *
+   * @param factors Per-axis scale factors.
+   * @returns True when all components are effectively 1.
+   */
+  private isIdentityScaleFactors(factors: THREE.Vector3): boolean {
+    return Math.abs(factors.x - 1) < 1e-8 && Math.abs(factors.y - 1) < 1e-8 && Math.abs(factors.z - 1) < 1e-8;
+  }
+
+  /**
+   * Builds a three-component scale factor vector for a single-axis scale
+   * handle.
+   *
+   * @param gizmoAxis Handle axis.
+   * @param factor Snapped scale factor along that axis.
+   * @returns Vector with factor on the active axis and 1 elsewhere.
+   */
+  private scaleFactorVectorForAxis(gizmoAxis: GizmoAxis, factor: number): THREE.Vector3 {
+    if (gizmoAxis === GizmoAxis.X) {
+      return new THREE.Vector3(factor, 1, 1);
+    }
+    if (gizmoAxis === GizmoAxis.Y) {
+      return new THREE.Vector3(1, factor, 1);
+    }
+    if (gizmoAxis === GizmoAxis.Z) {
+      return new THREE.Vector3(1, 1, factor);
+    }
+    return new THREE.Vector3(factor, factor, factor);
   }
 
   /**

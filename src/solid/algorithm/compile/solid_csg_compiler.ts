@@ -10,7 +10,7 @@ import { SolidCsgTree } from './solid_csg_tree.js';
 import { SolidFragmentFinalizer } from './solid_fragment_finalizer.js';
 import { SolidFragmentRouter } from './solid_fragment_router.js';
 import { SolidMembershipEvaluator } from './solid_membership_evaluator.js';
-import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
+import { SOLID_BOUNDS_EPSILON, SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 import { SolidSurfaceEmitter } from '@/solid/algorithm/surface/solid_surface_emitter.js';
 import { forBatchesAsync } from '@/utils/async_yield.js';
 
@@ -53,7 +53,7 @@ export class SolidCsgCompiler {
    */
   constructor(membershipEpsilon: number = SOLID_FAT_PLANE_EPSILON) {
     this.membershipEpsilon = membershipEpsilon;
-    this.boundsPad = membershipEpsilon * 2;
+    this.boundsPad = SOLID_BOUNDS_EPSILON;
     this.preparer = new SolidBrushPreparer(this.cache);
     this.planner = new SolidCompilePlanner(this.cache, this.boundsPad);
     this.membership = new SolidMembershipEvaluator(this.membershipEpsilon, this.boundsPad);
@@ -316,7 +316,10 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Rebuilds or incrementally updates the persistent spatial index.
+   * Rebuilds or incrementally updates the persistent spatial index. Matches
+   * Chisel CacheRemappingJob: when brush tree order changes, index-ordered
+   * caches must be remapped; we rebuild the prepared-index grid so partial peer
+   * queries are not served from stale slots after To Last / reorder.
    *
    * @param prepared Prepared brushes.
    * @param options Compile options.
@@ -324,11 +327,28 @@ export class SolidCsgCompiler {
    */
   private syncSpatialIndex(prepared: PreparedBrush[], options: SolidCompileOptions, forceFull: boolean): void {
     void options;
-    if (forceFull || this.spatialIndex.getEntryCount() !== prepared.length) {
+    if (this.spatialIndexNeedsFullRebuild(prepared, forceFull)) {
       this.spatialIndex.rebuild(prepared, this.boundsPad);
       return;
     }
     this.upsertRefreshedSpatialEntries(prepared);
+  }
+
+  /**
+   * Returns whether the spatial index must be rebuilt from prepared order.
+   *
+   * @param prepared Prepared brushes in evaluation order.
+   * @param forceFull Whether this compile is a full rebuild.
+   * @returns True when incremental upsert would leave index slots wrong.
+   */
+  private spatialIndexNeedsFullRebuild(prepared: PreparedBrush[], forceFull: boolean): boolean {
+    if (forceFull) {
+      return true;
+    }
+    if (this.spatialIndex.getEntryCount() !== prepared.length) {
+      return true;
+    }
+    return !this.cache.orderMatchesPrepared(prepared.length, (index) => prepared[index]!.instance.id);
   }
 
   /**
@@ -544,24 +564,20 @@ export class SolidCsgCompiler {
   }
 
   /**
-   * Writes current overlap peers into the persistent touch cache.
+   * Writes current overlap peers with IntersectionType into the persistent
+   * touch cache (Chisel BrushesTouchedByBrush.brushIntersections).
    *
    * @param prepared Prepared brushes after overlap build.
    * @param onlyBrushIds When set, only those brush ids are written.
    */
   private storeTouchCaches(prepared: PreparedBrush[], onlyBrushIds: Set<string> | null): void {
-    for (const entry of prepared) {
+    for (let brushIndex = 0; brushIndex < prepared.length; brushIndex++) {
+      const entry = prepared[brushIndex]!;
       if (onlyBrushIds && !onlyBrushIds.has(entry.instance.id)) {
         continue;
       }
-      const peerIds: string[] = [];
-      for (const peerIndex of entry.overlappingPeerIndices) {
-        const peer = prepared[peerIndex];
-        if (peer) {
-          peerIds.push(peer.instance.id);
-        }
-      }
-      this.cache.setTouchPeerIds(entry.instance.id, peerIds);
+      const peers = this.planner.buildTypedTouchesForBrush(prepared, brushIndex);
+      this.cache.setTouchPeers(entry.instance.id, peers);
     }
   }
 

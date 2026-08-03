@@ -34,6 +34,8 @@ export class SolidFragmentFinalizer {
    * @param subject Subject prepared brush.
    * @param prepared All brushes.
    * @param subjectIndex Subject index.
+   * @param interactionPeerIndices Peers with a PerformCSG surface loop on the
+   *   parent face (optional; omit for isolated emission).
    * @returns Compiled polygon or null when discarded.
    */
   finalizeFragment(
@@ -43,9 +45,16 @@ export class SolidFragmentFinalizer {
     subject: PreparedBrush,
     prepared: PreparedBrush[],
     subjectIndex: number,
+    interactionPeerIndices?: ReadonlySet<number>,
   ): SolidCompiledPolygon | null {
     if (fragment.length < 3) return null;
-    const category = this.router.routeFragmentCategory(fragment, facePlane.normal, prepared, subjectIndex);
+    const category = this.router.routeFragmentCategory(
+      fragment,
+      facePlane.normal,
+      prepared,
+      subjectIndex,
+      interactionPeerIndices,
+    );
     if (!shouldKeepSurfaceCategory(category)) return null;
     return this.buildCompiledPolygon(fragment, facePlane, surfaceIndex, subject, category);
   }

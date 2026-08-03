@@ -65,6 +65,9 @@ export class SolidFragmentRouter {
    * @param normal Face normal.
    * @param prepared All brushes.
    * @param subjectIndex Subject brush index.
+   * @param interactionPeerIndices Peers with a surface loop on the parent face
+   *   (CreateIntersectionLoops presence). When omitted, relative columns are
+   *   used whenever the fragment is not Outside the peer.
    * @returns Final routed category.
    */
   routeFragmentCategory(
@@ -72,10 +75,15 @@ export class SolidFragmentRouter {
     normal: THREE.Vector3,
     prepared: PreparedBrush[],
     subjectIndex: number,
+    interactionPeerIndices?: ReadonlySet<number>,
   ): SurfaceCategory {
     BrushMembership.polygonCentroidInto(fragment, this.scratchCentroid);
     const table = this.resolveTable(prepared, subjectIndex);
-    return table.route((preparedIndex) => this.classifyForTable(preparedIndex, subjectIndex, prepared, normal));
+    return table.route(
+      (preparedIndex) => this.classifyForTable(preparedIndex, subjectIndex, prepared, normal),
+      (preparedIndex) =>
+        this.hasSurfaceInteractionForTable(preparedIndex, subjectIndex, prepared, normal, interactionPeerIndices),
+    );
   }
 
   /**
@@ -116,5 +124,42 @@ export class SolidFragmentRouter {
       return SurfaceCategory.Outside;
     }
     return BrushMembership.classifyPoint(this.scratchCentroid, peer.brush, normal);
+  }
+
+  /**
+   * Returns whether this fragment should use relative category columns for a
+   * peer (PerformCSG intersection-loop path) rather than Outside-only.
+   * Face-level interaction peers replace per-fragment plane scans; non-Outside
+   * relative categories still count as loops (submerged / coplanar pieces).
+   *
+   * @param preparedIndex Step brush index.
+   * @param subjectIndex Subject index.
+   * @param prepared Prepared brushes.
+   * @param normal Face normal.
+   * @param interactionPeerIndices Face-level loop peers, when known.
+   * @returns True when relative columns may apply.
+   */
+  private hasSurfaceInteractionForTable(
+    preparedIndex: number,
+    subjectIndex: number,
+    prepared: PreparedBrush[],
+    normal: THREE.Vector3,
+    interactionPeerIndices: ReadonlySet<number> | undefined,
+  ): boolean {
+    if (preparedIndex === SOLID_ALGORITHM_INFINITE_PREPARED_INDEX) {
+      return true;
+    }
+    if (preparedIndex === subjectIndex) {
+      return true;
+    }
+    if (interactionPeerIndices && interactionPeerIndices.has(preparedIndex)) {
+      return true;
+    }
+    const peer = prepared[preparedIndex];
+    if (!peer) {
+      return false;
+    }
+    const relative = BrushMembership.classifyPoint(this.scratchCentroid, peer.brush, normal);
+    return relative !== SurfaceCategory.Outside;
   }
 }

@@ -21,13 +21,30 @@ describe('EditorShellBuilder toolbar', () => {
     toolbar.dispose();
   });
 
-  it('places MCP as the last toolbar control after a trailing spacer', () => {
+  it('places Audio next to AI Captures before the trailing spacer and MCP last', () => {
     const toolbar = new Toolbar(document.body);
     const builder = new BuilderEditorShell() as unknown as ToolbarButtonBuilder;
     builder.createToolbarButtons(toolbar, createToolbarActions());
     const labels = Array.from(document.querySelectorAll('button')).map(getButtonLabel);
+    const audioIndex = labels.indexOf('Audio');
+    const captureIndex = labels.indexOf('AI Captures');
+    expect(audioIndex).toBe(captureIndex + 1);
     expect(labels[labels.length - 1]).toBe('MCP');
     expect(document.querySelector('[data-toolbar-trailing-spacer="true"]')).not.toBeNull();
+    toolbar.dispose();
+  });
+
+  it('starts the Audio button active by default when settings report enabled', () => {
+    const toolbar = new Toolbar(document.body);
+    const builder = new BuilderEditorShell() as unknown as ToolbarButtonBuilder;
+    const actions = createToolbarActions();
+    (actions as { isAudioEnabled: () => boolean }).isAudioEnabled = () => true;
+    builder.createToolbarButtons(toolbar, actions);
+    const audioButton = Array.from(document.querySelectorAll('button')).find(
+      (button) => getButtonLabel(button) === 'Audio',
+    ) as HTMLButtonElement | undefined;
+    expect(audioButton).toBeTruthy();
+    expect(audioButton!.dataset['active']).toBe('true');
     toolbar.dispose();
   });
 
@@ -64,9 +81,16 @@ function getButtonLabel(button: Element): string {
  */
 function createToolbarActions(): EditorToolbarActions {
   return new Proxy(
-    {},
     {
-      get: () => vi.fn(),
+      isAudioEnabled: () => true,
+    },
+    {
+      get: (target, property, receiver) => {
+        if (property in target) {
+          return Reflect.get(target, property, receiver);
+        }
+        return vi.fn();
+      },
     },
   ) as EditorToolbarActions;
 }

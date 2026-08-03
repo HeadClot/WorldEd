@@ -33,6 +33,9 @@ import { TextureBrowser } from '@/texture/ui/browser/texture_browser.js';
 import { ControllerTextureBrowser } from '@/texture/controller/controller_texture_browser.js';
 import { ControllerTextureAssignment } from '@/texture/controller/controller_texture_assignment.js';
 import { TextureLockSettings } from '@/texture/lock/texture_lock_settings.js';
+import { audioSettings } from '@/audio/settings/audio_settings.js';
+import { audioContextHost } from '@/audio/context/audio_context_host.js';
+import { bindEditorAudioSpaceProbe } from '@/audio/space/audio_space_probe_bind.js';
 import { BuilderEditorShell } from '@/layout/shell/builder_editor_shell.js';
 import { filterUnlockedObjects } from '@/utils/object_lock.js';
 import { ViewportSceneBootstrap } from './viewport_scene_bootstrap.js';
@@ -293,6 +296,7 @@ export abstract class ViewportLayoutCore {
     this.bindWorkspaceSystem();
     this.syncPrimitivesToViewports();
     this.updateTransformButtons();
+    bindEditorAudioSpaceProbe(this.worldObject, this.selectionManager);
     void this.refreshMcpToolbarButton();
   }
 
@@ -965,6 +969,14 @@ export abstract class ViewportLayoutCore {
   /** Opens the MCP connection dialog from the main toolbar. */
   protected onOpenMcpDialog(): void {
     openLayoutMcpDialog(this.container, this.toolbar, this.statusBar, (message) => this.showStatusMessage(message));
+  }
+
+  /** Toggles editor audio feedback and updates the toolbar Audio button. */
+  protected onToggleAudio(): void {
+    audioContextHost.unlock();
+    const enabled = audioSettings.toggle();
+    this.toolbar.setButtonActiveByLabel('Audio', enabled);
+    this.statusBar?.setLastAction(enabled ? 'Audio on' : 'Audio off');
   }
 
   /**

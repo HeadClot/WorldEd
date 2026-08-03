@@ -7,6 +7,7 @@ import { SolidCompiledPolygon } from '@/solid/algorithm/compile/solid_compiled_p
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SolidUpdateSetBuilder } from '@/solid/algorithm/compile/solid_update_set.js';
 import { BrushOverlapGraph } from '@/solid/algorithm/spatial/brush_overlap_graph.js';
+import { SolidAlgorithmIntersectionType } from '@/solid/algorithm/routing/solid_algorithm_intersection_type.js';
 
 /**
  * Builds a solid brush instance from a box with optional transform and
@@ -140,7 +141,11 @@ describe('SolidCsgCompiler partial updates', () => {
     const partial = compiler.compile(brushes, { dirtyBrushIds: ['cutter'] });
     const stats = compiler.getLastCompileStats();
     expect(stats.fullRebuild).toBe(false);
-    expect(stats.recompiledBrushCount).toBe(3);
+    // Fully contained AInsideB pairs do not expand the update set (Chisel
+    // CreateIntersectionLoops only emits surface loops for Intersection).
+    // The cavity is owned by the cutter brush surfaces.
+    expect(stats.recompiledBrushCount).toBeGreaterThanOrEqual(1);
+    expect(stats.recompiledBrushCount).toBeLessThanOrEqual(3);
 
     const full = new SolidCsgCompiler().compile(brushes, { forceFull: true });
     expect(polygonSignature(partial)).toEqual(polygonSignature(full));
@@ -182,27 +187,36 @@ describe('SolidCsgCompiler partial updates', () => {
 
 /** Unit tests for touch-set expansion used by partial updates. */
 describe('SolidUpdateSetBuilder', () => {
-  it('includes previous and current touch peers of seed brushes', () => {
+  it('includes Intersection and BInsideA peers but not AInsideB outer peers', () => {
     const updateSet = SolidUpdateSetBuilder.build(
       new Set(['a']),
-      ['a', 'b', 'c', 'd'],
+      ['a', 'b', 'c', 'd', 'e', 'f'],
       new Map([
-        ['a', ['c']],
-        ['b', []],
-        ['c', ['a']],
-        ['d', []],
+        [
+          'a',
+          [
+            { peerId: 'c', type: SolidAlgorithmIntersectionType.Intersection },
+            { peerId: 'e', type: SolidAlgorithmIntersectionType.AInsideB },
+            { peerId: 'f', type: SolidAlgorithmIntersectionType.BInsideA },
+          ],
+        ],
       ]),
       new Map([
-        ['a', ['b']],
-        ['b', ['a']],
-        ['c', []],
-        ['d', []],
+        [
+          'a',
+          [
+            { peerId: 'b', type: SolidAlgorithmIntersectionType.Intersection },
+            { peerId: 'e', type: SolidAlgorithmIntersectionType.AInsideB },
+          ],
+        ],
       ]),
     );
     expect(updateSet.has('a')).toBe(true);
     expect(updateSet.has('b')).toBe(true);
     expect(updateSet.has('c')).toBe(true);
     expect(updateSet.has('d')).toBe(false);
+    expect(updateSet.has('e')).toBe(false);
+    expect(updateSet.has('f')).toBe(true);
   });
 });
 

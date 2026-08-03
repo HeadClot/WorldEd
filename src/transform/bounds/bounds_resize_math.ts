@@ -184,6 +184,23 @@ function resolveResizeExtents(
 }
 
 /**
+ * Returns the face displacement that will actually be applied after the minimum
+ * half-extent clamp (may be less negative than the requested delta).
+ *
+ * @param startBounds Bounds at drag start.
+ * @param face Face being dragged.
+ * @param deltaAlongNormal Requested signed face displacement.
+ * @returns Applied delta used for position/scale writes.
+ */
+export function resolveAppliedBoundsFaceDelta(
+  startBounds: DataOrientedBounds,
+  face: BoundsFace,
+  deltaAlongNormal: number,
+): number {
+  return resolveResizeExtents(startBounds, face, deltaAlongNormal).appliedDelta;
+}
+
+/**
  * Computes where the geometry AABB center sits relative to the mesh origin
  * after scaling along a face axis. Three.js scales about the mesh origin, so an
  * offset local AABB (common after clipping) expands away from the origin and

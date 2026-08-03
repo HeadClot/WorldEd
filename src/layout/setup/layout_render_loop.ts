@@ -9,6 +9,8 @@ import type { CadRulerSystem } from '@/rulers/system/cad_ruler_system.js';
 import type { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
 import type { HandlerTransform } from '@/transform/core/handler_transform.js';
 import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
+import { notificationFrameEvents } from '@/audio/notification/notification_frame_events.js';
+import { controllerAudioPlayback } from '@/audio/playback/controller_audio_playback.js';
 import { Theme } from '@/theme.js';
 
 /**
@@ -163,6 +165,7 @@ export class LayoutRenderLoop {
       this.animationFrameId = null;
       return;
     }
+    notificationFrameEvents.beginFrame();
     const now = performance.now();
     const delta = (now - this.lastTime) / 1000;
     this.lastTime = now;
@@ -173,6 +176,7 @@ export class LayoutRenderLoop {
     this.updateClipPreviewScales(activeViewports);
     this.renderMultiView(activeViewports);
     this.updateMouseCursorForFrame();
+    controllerAudioPlayback.endFrame();
     this.scheduleNextFrame();
   }
 

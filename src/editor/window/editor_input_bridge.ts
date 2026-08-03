@@ -44,6 +44,11 @@ export class EditorInputBridge {
   /** Document whose shield currently has pointer-events disabled for navigation. */
   private navigationPassThroughDocument: Document | null;
   private boundNavigationWindowPointerUp: ((event: PointerEvent) => void) | null;
+  /**
+   * Invoked when a pointer hit resolves to a pinned exclusive viewport content
+   * root (before tools run). Used for spatial-audio viewport focus.
+   */
+  private exclusiveRootHitListener: ((root: HTMLElement) => void) | null;
 
   /**
    * Creates an input bridge bound to the editor window.
@@ -65,6 +70,17 @@ export class EditorInputBridge {
     this.navigationPassThroughRoot = null;
     this.navigationPassThroughDocument = null;
     this.boundNavigationWindowPointerUp = null;
+    this.exclusiveRootHitListener = null;
+  }
+
+  /**
+   * Sets a listener notified on exclusive-viewport pointerdown hits (not move).
+   * Used so spatial audio locks mono/3D to the press that starts interaction.
+   *
+   * @param listener Callback receiving the content root, or null to clear.
+   */
+  setExclusiveRootHitListener(listener: ((root: HTMLElement) => void) | null): void {
+    this.exclusiveRootHitListener = listener;
   }
 
   /**
@@ -191,6 +207,7 @@ export class EditorInputBridge {
     if (!hitRoot) {
       return;
     }
+    this.notifyExclusiveRootHit(hitRoot);
     this.claimViewportDomKeyboardFocus(hitRoot);
     this.routeEditorMouseDown(event, true);
     this.syncExclusiveShieldMount();
@@ -264,6 +281,7 @@ export class EditorInputBridge {
     }
     const hitRoot = this.findExclusiveRootAtClientPoint(event.clientX, event.clientY, event);
     if (hitRoot) {
+      this.notifyExclusiveRootHit(hitRoot);
       this.claimViewportDomKeyboardFocus(hitRoot);
     }
     this.routeEditorMouseDown(event, hitRoot !== null);
@@ -657,6 +675,15 @@ export class EditorInputBridge {
       this.exclusiveViewportRoots,
       eventDocument,
     );
+  }
+
+  /**
+   * Notifies the exclusive-root hit listener for a pointerdown content hit.
+   *
+   * @param root Hit exclusive content root from a press (not move).
+   */
+  private notifyExclusiveRootHit(root: HTMLElement): void {
+    this.exclusiveRootHitListener?.(root);
   }
 
   /**

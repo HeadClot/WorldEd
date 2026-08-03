@@ -25,6 +25,11 @@ export interface SolidAlgorithmCompactNode {
   childOffset: number;
   /** Number of children (branches only). */
   childCount: number;
+  /**
+   * Compact array index of the parent branch, or -1 for the root. Enables O(1)
+   * ancestor walks (Chisel CompactHierarchy.ParentOf / brushAncestorLegend).
+   */
+  parentIndex: number;
 }
 
 /** Prepared index reserved for the RealtimeCSG-style infinite inverted brush. */

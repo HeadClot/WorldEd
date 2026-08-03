@@ -55,18 +55,25 @@ export class SolidAlgorithmRoutingTable {
    * Routes a fragment by walking lookup segments and classifying against each
    * brush (Chisel PerformCSG interiorCategory walk). Starts at input 0 like
    * PerformCSG base polygons. A missing route keeps the current category
-   * (Chisel continues the step without updating).
+   * (Chisel continues the step without updating). When a peer has no surface
+   * interaction for this fragment, uses the Outside column only (PerformCSG
+   * no-loop path).
    *
    * @param classify Returns relative category for a prepared brush index.
+   * @param hasSurfaceInteraction Optional: false means no intersection loop for
+   *   this peer/surface (force Outside column).
    * @returns Final surface category.
    */
-  route(classify: (preparedIndex: number) => SurfaceCategory): SurfaceCategory {
+  route(
+    classify: (preparedIndex: number) => SurfaceCategory,
+    hasSurfaceInteraction?: (preparedIndex: number) => boolean,
+  ): SurfaceCategory {
     if (this.routingLookups.length === 0) {
       return SurfaceCategory.Outside;
     }
     let interiorCategory = 0;
     for (let lookupIndex = 0; lookupIndex < this.routingLookups.length; lookupIndex++) {
-      interiorCategory = this.routeOneLookup(lookupIndex, interiorCategory, classify);
+      interiorCategory = this.routeOneLookup(lookupIndex, interiorCategory, classify, hasSurfaceInteraction);
     }
     return interiorCategory as SurfaceCategory;
   }
@@ -77,12 +84,14 @@ export class SolidAlgorithmRoutingTable {
    * @param lookupIndex Lookup segment index.
    * @param interiorCategory Current input state.
    * @param classify Relative category classifier.
+   * @param hasSurfaceInteraction Optional surface-loop presence test.
    * @returns Next interior category / row index.
    */
   private routeOneLookup(
     lookupIndex: number,
     interiorCategory: number,
     classify: (preparedIndex: number) => SurfaceCategory,
+    hasSurfaceInteraction: ((preparedIndex: number) => boolean) | undefined,
   ): number {
     const lookup = this.routingLookups[lookupIndex]!;
     const row = lookup.tryGetRoute(this.routingRows, interiorCategory);
@@ -90,8 +99,10 @@ export class SolidAlgorithmRoutingTable {
       return interiorCategory;
     }
     const preparedIndex = this.preparedIndexPerLookup[lookupIndex]!;
-    const relative = classify(preparedIndex);
-    return row.at(relative);
+    if (hasSurfaceInteraction && !hasSurfaceInteraction(preparedIndex)) {
+      return row.at(SurfaceCategory.Outside);
+    }
+    return row.at(classify(preparedIndex));
   }
 
   /**

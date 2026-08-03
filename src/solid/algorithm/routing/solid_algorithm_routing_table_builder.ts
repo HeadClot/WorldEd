@@ -3,7 +3,7 @@ import type { SolidCsgTree } from '@/solid/algorithm/compile/solid_csg_tree.js';
 import { SolidAlgorithmCompactHierarchyBuilder } from './solid_algorithm_compact_hierarchy_builder.js';
 import { SolidAlgorithmCreateRoutingTableJob } from './solid_algorithm_create_routing_table_job.js';
 import { SolidAlgorithmRoutingTable } from './solid_algorithm_routing_table.js';
-import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
+import { SOLID_BOUNDS_EPSILON, SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 
 /**
  * Builds Chisel CreateRoutingTableJob routing tables for solid CSG subjects.
@@ -32,13 +32,12 @@ export class SolidAlgorithmRoutingTableBuilder {
     void _peerIndices;
     void _unusedLegacyFullWalk;
     const hierarchy = SolidAlgorithmCompactHierarchyBuilder.build(tree, invertedWorld);
-    const boundsPad = SOLID_FAT_PLANE_EPSILON * 2;
     return SolidAlgorithmCreateRoutingTableJob.buildForSubject(
       prepared,
       subjectIndex,
       hierarchy,
       invertedWorld,
-      boundsPad,
+      SOLID_BOUNDS_EPSILON,
       SOLID_FAT_PLANE_EPSILON,
     );
   }

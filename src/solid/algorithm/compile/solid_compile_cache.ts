@@ -1,7 +1,19 @@
 import * as THREE from 'three';
 import { SolidBrush } from '@/solid/brush/solid_brush.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { SolidAlgorithmIntersectionType } from '@/solid/algorithm/routing/solid_algorithm_intersection_type.js';
 import { SolidCompiledPolygon } from './solid_compiled_polygon.js';
+
+/**
+ * One spatial peer of a brush with Chisel IntersectionType (stored like
+ * BrushesTouchedByBrush.brushIntersections).
+ */
+export interface SolidCompileTouchPeer {
+  /** Peer brush instance id. */
+  peerId: string;
+  /** Subject-centric intersection type for this peer. */
+  type: SolidAlgorithmIntersectionType;
+}
 
 /** Cached model-space brush geometry reused between partial compiles. */
 export interface CachedPreparedBrush {
@@ -35,14 +47,14 @@ export interface CachedPreparedBrush {
  */
 export class SolidCompileCache {
   private readonly polygonsByBrushId = new Map<string, SolidCompiledPolygon[]>();
-  private readonly touchIdsByBrushId = new Map<string, string[]>();
+  private readonly touchPeersByBrushId = new Map<string, SolidCompileTouchPeer[]>();
   private readonly preparedByBrushId = new Map<string, CachedPreparedBrush>();
   private lastBrushOrder: string[] = [];
 
   /** Clears every cached entry (full rebuild baseline). */
   clear(): void {
     this.polygonsByBrushId.clear();
-    this.touchIdsByBrushId.clear();
+    this.touchPeersByBrushId.clear();
     this.preparedByBrushId.clear();
     this.lastBrushOrder = [];
   }
@@ -87,27 +99,72 @@ export class SolidCompileCache {
    * @returns Peer ids (empty when unknown).
    */
   getTouchPeerIds(brushId: string): string[] {
-    return this.getTouchPeerIdsReadonly(brushId).slice();
+    return this.getTouchPeersReadonly(brushId).map((peer) => peer.peerId);
   }
 
   /**
-   * Returns previously overlapping peer brush ids without copying.
+   * Returns previously overlapping peer brush ids. Allocates a fresh id list.
    *
    * @param brushId Brush instance id.
    * @returns Peer ids (empty when unknown).
    */
   getTouchPeerIdsReadonly(brushId: string): readonly string[] {
-    return this.touchIdsByBrushId.get(brushId) ?? [];
+    const peers = this.touchPeersByBrushId.get(brushId);
+    if (!peers || peers.length === 0) {
+      return [];
+    }
+    return peers.map((peer) => peer.peerId);
   }
 
   /**
-   * Stores the set of peer brushes that currently overlap a brush.
+   * Returns previously overlapping peers with intersection types.
+   *
+   * @param brushId Brush instance id.
+   * @returns Touch peers (empty when unknown).
+   */
+  getTouchPeers(brushId: string): SolidCompileTouchPeer[] {
+    return this.getTouchPeersReadonly(brushId).slice();
+  }
+
+  /**
+   * Returns previously overlapping peers without copying.
+   *
+   * @param brushId Brush instance id.
+   * @returns Touch peers (empty when unknown).
+   */
+  getTouchPeersReadonly(brushId: string): readonly SolidCompileTouchPeer[] {
+    return this.touchPeersByBrushId.get(brushId) ?? [];
+  }
+
+  /**
+   * Stores the set of peer brushes that currently overlap a brush, with Chisel
+   * IntersectionType per peer.
+   *
+   * @param brushId Brush instance id.
+   * @param peers Overlapping peers with types.
+   */
+  setTouchPeers(brushId: string, peers: readonly SolidCompileTouchPeer[]): void {
+    this.touchPeersByBrushId.set(
+      brushId,
+      peers.map((peer) => ({ peerId: peer.peerId, type: peer.type })),
+    );
+  }
+
+  /**
+   * Stores peer ids only (legacy callers). Types default to Intersection so
+   * partial update expansion remains conservative until a typed write occurs.
    *
    * @param brushId Brush instance id.
    * @param peerIds Overlapping peer instance ids.
    */
   setTouchPeerIds(brushId: string, peerIds: string[]): void {
-    this.touchIdsByBrushId.set(brushId, peerIds.slice());
+    this.setTouchPeers(
+      brushId,
+      peerIds.map((peerId) => ({
+        peerId,
+        type: SolidAlgorithmIntersectionType.Intersection,
+      })),
+    );
   }
 
   /**
@@ -137,7 +194,7 @@ export class SolidCompileCache {
    */
   removeBrush(brushId: string): void {
     this.polygonsByBrushId.delete(brushId);
-    this.touchIdsByBrushId.delete(brushId);
+    this.touchPeersByBrushId.delete(brushId);
     this.preparedByBrushId.delete(brushId);
   }
 
@@ -148,7 +205,7 @@ export class SolidCompileCache {
    */
   pruneToIds(activeIds: Set<string>): void {
     this.pruneMapKeys(this.polygonsByBrushId, activeIds);
-    this.pruneMapKeys(this.touchIdsByBrushId, activeIds);
+    this.pruneMapKeys(this.touchPeersByBrushId, activeIds);
     this.pruneMapKeys(this.preparedByBrushId, activeIds);
   }
 
@@ -180,6 +237,26 @@ export class SolidCompileCache {
     if (order.length !== this.lastBrushOrder.length) return false;
     for (let index = 0; index < order.length; index++) {
       if (order[index] !== this.lastBrushOrder[index]) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Returns whether prepared brush ids match the last compiled order without
+   * allocating an intermediate id list (Chisel nodeOrder remapping check).
+   *
+   * @param preparedLength Prepared brush count.
+   * @param preparedIdAt Index → brush id resolver.
+   * @returns True when sequences are identical.
+   */
+  orderMatchesPrepared(preparedLength: number, preparedIdAt: (index: number) => string): boolean {
+    if (preparedLength !== this.lastBrushOrder.length) {
+      return false;
+    }
+    for (let index = 0; index < preparedLength; index++) {
+      if (preparedIdAt(index) !== this.lastBrushOrder[index]) {
+        return false;
+      }
     }
     return true;
   }

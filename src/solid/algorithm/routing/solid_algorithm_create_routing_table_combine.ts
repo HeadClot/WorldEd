@@ -182,7 +182,14 @@ export class SolidAlgorithmCreateRoutingTableCombine {
       combineUsedIndices,
       combineIndexRemap,
     );
-    this.finalizeRemapAndTrim(leftStack, leftStackStart, prevNodeIndex, startSearchRowIndex, combineIndexRemap);
+    this.finalizeRemapAndTrim(
+      leftStack,
+      leftStackStart,
+      prevNodeIndex,
+      startSearchRowIndex,
+      leftStackEnd,
+      combineIndexRemap,
+    );
   }
 
   /**
@@ -310,25 +317,163 @@ export class SolidAlgorithmCreateRoutingTableCombine {
   }
 
   /**
-   * Remaps previous-node destinations after the final combine bake. Missing
-   * remap keys abort the remap (Chisel RemapIndices behavior).
+   * Remaps previous-node destinations after the final bake, collapses constant
+   * final nodes, and strips leading all-Inside single-node rows (Chisel
+   * USE_OPTIMIZATIONS tail of Combine).
    *
    * @param leftStack Output stack.
    * @param leftStackStart Region start.
    * @param prevNodeIndex Previous node start.
-   * @param startSearchRowIndex Current node start.
-   * @param combineIndexRemap Final-node remap.
+   * @param startSearchRowIndex Final-node start.
+   * @param leftStackEnd Mutable exclusive end.
+   * @param combineIndexRemap Final-node remap (Input+1 values).
    */
   private static finalizeRemapAndTrim(
     leftStack: SolidAlgorithmCategoryStackNode[],
     leftStackStart: number,
     prevNodeIndex: number,
     startSearchRowIndex: number,
+    leftStackEnd: { value: number },
     combineIndexRemap: Map<number, number>,
   ): void {
     if (prevNodeIndex >= leftStackStart) {
       this.remapIndicesOrAbort(leftStack, combineIndexRemap, prevNodeIndex, startSearchRowIndex);
+      this.collapseAllEqualFinalNode(leftStack, prevNodeIndex, startSearchRowIndex, leftStackEnd, combineIndexRemap);
     }
+    this.stripLeadingAllZeroNodes(leftStack, leftStackStart, leftStackEnd);
+  }
+
+  /**
+   * Drops the final node when every final row is constant, remapping the
+   * previous node straight to those constant destinations.
+   *
+   * @param leftStack Output stack.
+   * @param prevNodeIndex Previous node start.
+   * @param startSearchRowIndex Final-node start.
+   * @param leftStackEnd Mutable exclusive end.
+   * @param combineIndexRemap Remap map reused for collapse.
+   */
+  private static collapseAllEqualFinalNode(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    prevNodeIndex: number,
+    startSearchRowIndex: number,
+    leftStackEnd: { value: number },
+    combineIndexRemap: Map<number, number>,
+  ): void {
+    if (!this.finalNodeRowsAreAllConstant(leftStack, startSearchRowIndex, leftStackEnd.value)) {
+      return;
+    }
+    combineIndexRemap.clear();
+    this.fillAllEqualCollapseRemap(leftStack, startSearchRowIndex, leftStackEnd.value, combineIndexRemap);
+    leftStackEnd.value = startSearchRowIndex;
+    this.remapIndicesOrAbort(leftStack, combineIndexRemap, prevNodeIndex, startSearchRowIndex);
+  }
+
+  /**
+   * Returns whether every row in the final node block has identical columns.
+   *
+   * @param leftStack Output stack.
+   * @param start Final-node start.
+   * @param end Exclusive end.
+   * @returns True when every row is AreAllTheSame.
+   */
+  private static finalNodeRowsAreAllConstant(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    start: number,
+    end: number,
+  ): boolean {
+    for (let index = start; index < end; index++) {
+      if (!leftStack[index]!.routingRow.areAllTheSame()) {
+        return false;
+      }
+    }
+    return start < end;
+  }
+
+  /**
+   * Fills remap[Input] = constantDestination + 1 for each final-node row.
+   *
+   * @param leftStack Output stack.
+   * @param start Final-node start.
+   * @param end Exclusive end.
+   * @param combineIndexRemap Destination remap map.
+   */
+  private static fillAllEqualCollapseRemap(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    start: number,
+    end: number,
+    combineIndexRemap: Map<number, number>,
+  ): void {
+    for (let index = start; index < end; index++) {
+      const node = leftStack[index]!;
+      combineIndexRemap.set(node.input, node.routingRow.at(0) + 1);
+    }
+  }
+
+  /**
+   * Removes leading single-row nodes whose destinations are all Inside (0).
+   *
+   * @param leftStack Output stack.
+   * @param leftStackStart Region start.
+   * @param leftStackEnd Mutable exclusive end.
+   */
+  private static stripLeadingAllZeroNodes(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftStackStart: number,
+    leftStackEnd: { value: number },
+  ): void {
+    const removeThrough = this.countLeadingAllZeroSingleNodes(leftStack, leftStackStart, leftStackEnd.value);
+    if (removeThrough > leftStackStart) {
+      this.removeRange(leftStack, leftStackStart, removeThrough - leftStackStart, leftStackEnd);
+    }
+  }
+
+  /**
+   * Counts how far leading all-Inside single-node rows extend.
+   *
+   * @param leftStack Output stack.
+   * @param leftStackStart Region start.
+   * @param leftStackEnd Exclusive end.
+   * @returns Exclusive end index of the removable leading run.
+   */
+  private static countLeadingAllZeroSingleNodes(
+    leftStack: SolidAlgorithmCategoryStackNode[],
+    leftStackStart: number,
+    leftStackEnd: number,
+  ): number {
+    let lastRemoveCount = leftStackStart;
+    while (
+      lastRemoveCount < leftStackEnd - 1 &&
+      leftStack[lastRemoveCount]!.nodeIdValue !== leftStack[lastRemoveCount + 1]!.nodeIdValue &&
+      leftStack[lastRemoveCount]!.routingRow.areAllValue(0)
+    ) {
+      lastRemoveCount++;
+    }
+    return lastRemoveCount;
+  }
+
+  /**
+   * Removes count entries starting at start and shifts the tail down.
+   *
+   * @param stack Mutable stack.
+   * @param start Inclusive removal start.
+   * @param count Number of entries to remove.
+   * @param end Mutable exclusive end.
+   */
+  private static removeRange(
+    stack: SolidAlgorithmCategoryStackNode[],
+    start: number,
+    count: number,
+    end: { value: number },
+  ): void {
+    if (count <= 0) {
+      return;
+    }
+    const newEnd = end.value - count;
+    for (let index = start; index < newEnd; index++) {
+      stack[index] = stack[index + count]!;
+    }
+    end.value = newEnd;
   }
 
   /**

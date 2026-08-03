@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
+import { NotificationGlobal } from '@/audio/notification/notification_global.js';
 import { isSolidModelObject } from './solid_model_keys.js';
 
 /** UserData key marking a group that participates in solid hierarchical CSG. */
@@ -52,8 +53,12 @@ export function getSolidGroupOperation(group: THREE.Object3D): SolidOperation {
  * @param operation Operation to store.
  */
 export function setSolidGroupOperation(group: THREE.Object3D, operation: SolidOperation): void {
+  const previous = group.userData[SOLID_GROUP_OPERATION_USERDATA_KEY];
   group.userData[SOLID_GROUP_OPERATION_USERDATA_KEY] = operation;
   group.userData[SOLID_CSG_GROUP_USERDATA_KEY] = true;
+  if (previous !== operation) {
+    NotificationGlobal.onSolidCsgOperationFlipped();
+  }
 }
 
 /**

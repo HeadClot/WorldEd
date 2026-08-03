@@ -2,13 +2,17 @@ import * as THREE from 'three';
 import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SurfaceCategory } from '@/solid/types/surface_category.js';
+import { SOLID_BOUNDS_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
+import { SolidPlaneBounds } from '@/solid/algorithm/math/solid_plane_bounds.js';
+import { SolidPlaneBoundsResult } from '@/solid/algorithm/math/solid_plane_bounds_result.js';
 import { boundsOverlapPadded } from '@/solid/algorithm/spatial/bounds_overlap.js';
 import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_types.js';
 import { SolidCompiledPolygon } from '@/solid/algorithm/compile/solid_compiled_polygon.js';
 import { SolidFragmentFinalizer } from '@/solid/algorithm/compile/solid_fragment_finalizer.js';
 import { SolidAlgorithmRoutingPeers } from '@/solid/algorithm/routing/solid_algorithm_routing_peers.js';
-import { SolidAlgorithmBrushIntersection } from '@/solid/algorithm/routing/solid_algorithm_brush_intersection.js';
 import { SolidAlgorithmIntersectionType } from '@/solid/algorithm/routing/solid_algorithm_intersection_type.js';
+import { SolidAlgorithmBrushPairLocalTable } from '@/solid/algorithm/spatial/solid_algorithm_brush_pair_local_table.js';
+import { HashedVertexTable } from '@/solid/algorithm/spatial/hashed_vertex_table.js';
 import { SurfaceFragmentSplitter } from './surface_fragment_splitter.js';
 
 /**
@@ -21,6 +25,7 @@ export class SolidSurfaceEmitter {
   private invertedWorld = false;
   private hierarchicalCsg = false;
   private readonly scratchFaceBounds = new THREE.Box3();
+  private readonly brushVertexTable = new HashedVertexTable();
 
   /**
    * Creates a surface emitter.
@@ -78,8 +83,16 @@ export class SolidSurfaceEmitter {
       this.emitIsolatedBrushSurfaces(subject, prepared, brushIndex, output);
       return;
     }
+    this.brushVertexTable.clear();
+    const pairLocalTable = SolidAlgorithmBrushPairLocalTable.buildForSubject(
+      prepared,
+      brushIndex,
+      SOLID_BOUNDS_EPSILON,
+      this.membershipEpsilon,
+      this.membershipEpsilon,
+    );
     for (let faceIndex = 0; faceIndex < subject.brush.faces.length; faceIndex++) {
-      this.compileBrushFace(prepared, brushIndex, faceIndex, output);
+      this.compileBrushFace(prepared, brushIndex, faceIndex, pairLocalTable, output);
     }
   }
 
@@ -89,12 +102,14 @@ export class SolidSurfaceEmitter {
    * @param prepared All prepared brushes.
    * @param brushIndex Subject brush index.
    * @param faceIndex Face index on the subject brush.
+   * @param pairLocalTable Precomputed subject/peer local plane tables.
    * @param output Polygon accumulator.
    */
   compileBrushFace(
     prepared: PreparedBrush[],
     brushIndex: number,
     faceIndex: number,
+    pairLocalTable: SolidAlgorithmBrushPairLocalTable,
     output: SolidCompiledPolygon[],
   ): void {
     const subject = prepared[brushIndex];
@@ -103,9 +118,18 @@ export class SolidSurfaceEmitter {
     const facePlane = subject.brush.planes[faceIndex];
     if (!face || !facePlane) return;
     const faceVertices = subject.brush.getFaceVertices(face);
-    const cutPlanes = this.collectCutPlanes(prepared, brushIndex, facePlane, faceVertices);
-    const fragments = this.splitFaceFragments(faceVertices, cutPlanes);
-    this.finalizeFaceFragments(fragments, facePlane, face.surfaceIndex, subject, prepared, brushIndex, output);
+    const cutResult = this.collectCutPlanes(prepared, brushIndex, facePlane, faceVertices, pairLocalTable);
+    const fragments = this.splitFaceFragments(faceVertices, cutResult.planes);
+    this.finalizeFaceFragments(
+      fragments,
+      facePlane,
+      face.surfaceIndex,
+      subject,
+      prepared,
+      brushIndex,
+      cutResult.interactionPeerIndices,
+      output,
+    );
   }
 
   /**
@@ -194,68 +218,55 @@ export class SolidSurfaceEmitter {
    * Collects planes from overlapping peer brushes that may cut the subject
    * face. Peers with AInsideB / BInsideA (Chisel non-Intersection) do not
    * contribute cut planes; CreateIntersectionLoops only builds loops for
-   * Intersection pairs.
+   * Intersection pairs. Peer planes come from the precomputed brush-local
+   * GetIntersectingPlanes table (PrepareBrushPairIntersections), not a per-face
+   * recompute.
    *
    * @param prepared All brushes.
    * @param subjectIndex Subject brush index.
    * @param facePlane Subject face plane.
    * @param faceVertices Subject face vertices.
-   * @returns Planes for fragment splitting.
+   * @param pairLocalTable Precomputed subject/peer local tables.
+   * @returns Cut planes and peers that produce a surface interaction loop on
+   *   this face (PerformCSG intersectionLoops presence).
    */
   collectCutPlanes(
     prepared: PreparedBrush[],
     subjectIndex: number,
     facePlane: SolidPlane,
     faceVertices: THREE.Vector3[],
-  ): SolidPlane[] {
+    pairLocalTable: SolidAlgorithmBrushPairLocalTable,
+  ): { planes: SolidPlane[]; interactionPeerIndices: ReadonlySet<number> } {
     const planes: SolidPlane[] = [];
+    const interactionPeerIndices = new Set<number>();
     const subject = prepared[subjectIndex];
     if (!subject) {
-      return planes;
+      return { planes, interactionPeerIndices };
     }
     this.fillFaceBounds(faceVertices);
-    const pad = this.membershipEpsilon * 2;
+    const pad = SOLID_BOUNDS_EPSILON;
     for (const peerIndex of subject.overlappingPeerIndices) {
       if (!SolidAlgorithmRoutingPeers.peerBelongsInSubjectTable(prepared, subjectIndex, peerIndex)) {
         continue;
       }
-      if (!this.peerContributesIntersectionLoops(prepared, subjectIndex, peerIndex, pad)) {
+      const peer = prepared[peerIndex];
+      const pairEntry = pairLocalTable.get(peerIndex);
+      if (!peer || !pairEntry) {
         continue;
       }
-      const peer = prepared[peerIndex];
-      if (!peer) {
+      if (pairEntry.type !== SolidAlgorithmIntersectionType.Intersection) {
         continue;
       }
       if (!boundsOverlapPadded(this.scratchFaceBounds, peer.bounds, pad)) {
         continue;
       }
-      this.collectPeerCutPlanes(peer, facePlane, faceVertices, planes);
+      const beforeCount = planes.length;
+      this.collectPeerCutPlanesFromLocalTable(pairEntry.peerCutPlanes, facePlane, faceVertices, planes);
+      if (planes.length > beforeCount) {
+        interactionPeerIndices.add(peerIndex);
+      }
     }
-    return planes;
-  }
-
-  /**
-   * Returns whether a peer has true Intersection type vs the subject (not full
-   * containment shortcuts).
-   *
-   * @param prepared Prepared brushes.
-   * @param subjectIndex Subject index.
-   * @param peerIndex Peer index.
-   * @param pad Bounds pad.
-   * @returns True when cut planes from this peer may be needed.
-   */
-  private peerContributesIntersectionLoops(
-    prepared: PreparedBrush[],
-    subjectIndex: number,
-    peerIndex: number,
-    pad: number,
-  ): boolean {
-    const subject = prepared[subjectIndex];
-    if (!subject) {
-      return false;
-    }
-    const type = SolidAlgorithmBrushIntersection.classify(subject, peerIndex, prepared, pad, this.membershipEpsilon);
-    return type === SolidAlgorithmIntersectionType.Intersection;
+    return { planes, interactionPeerIndices };
   }
 
   /**
@@ -271,34 +282,30 @@ export class SolidSurfaceEmitter {
   }
 
   /**
-   * Returns whether a plane straddles a polygon (may produce a cut).
+   * Returns whether a plane straddles a polygon (may produce a cut). Uses the
+   * shared tight cut epsilon, not the fat membership band.
    *
    * @param polygon Face or fragment vertices.
    * @param plane Candidate cut plane.
    * @returns True when the plane may split the polygon.
    */
   planeLikelyCutsPolygon(polygon: THREE.Vector3[], plane: SolidPlane): boolean {
-    let sawInside = false;
-    let sawOutside = false;
-    for (const point of polygon) {
-      const distance = plane.signedDistance(point);
-      if (distance > this.membershipEpsilon) sawOutside = true;
-      if (distance < -this.membershipEpsilon) sawInside = true;
-      if (sawInside && sawOutside) return true;
-    }
-    return false;
+    return SurfaceFragmentSplitter.planeLikelyCutsPolygon(polygon, plane);
   }
 
   /**
-   * Splits face vertices by cut planes when any exist.
+   * Splits face vertices by cut planes when any exist, welding clip points
+   * through the per-brush vertex table.
    *
    * @param faceVertices Original face vertices.
    * @param cutPlanes Planes that may cut the face.
    * @returns Fragment polygons.
    */
   private splitFaceFragments(faceVertices: THREE.Vector3[], cutPlanes: SolidPlane[]): THREE.Vector3[][] {
-    if (cutPlanes.length === 0) return [faceVertices];
-    return SurfaceFragmentSplitter.splitByPlanes(faceVertices, cutPlanes);
+    if (cutPlanes.length === 0) {
+      return [faceVertices];
+    }
+    return SurfaceFragmentSplitter.splitByPlanes(faceVertices, cutPlanes, this.brushVertexTable);
   }
 
   /**
@@ -310,6 +317,7 @@ export class SolidSurfaceEmitter {
    * @param subject Subject prepared brush.
    * @param prepared All brushes.
    * @param brushIndex Subject index.
+   * @param interactionPeerIndices Peers with a surface loop on this face.
    * @param output Polygon accumulator.
    */
   private finalizeFaceFragments(
@@ -319,6 +327,7 @@ export class SolidSurfaceEmitter {
     subject: PreparedBrush,
     prepared: PreparedBrush[],
     brushIndex: number,
+    interactionPeerIndices: ReadonlySet<number>,
     output: SolidCompiledPolygon[],
   ): void {
     for (const fragment of fragments) {
@@ -329,6 +338,7 @@ export class SolidSurfaceEmitter {
         subject,
         prepared,
         brushIndex,
+        interactionPeerIndices,
       );
       if (compiled) output.push(compiled);
     }
@@ -358,24 +368,34 @@ export class SolidSurfaceEmitter {
   }
 
   /**
-   * Appends cut planes from one peer brush that may split the subject face.
+   * Appends cut planes from a peer's precomputed local intersecting-plane
+   * table, with face-bounds and polygon straddle early outs.
    *
-   * @param peer Peer prepared brush.
+   * @param localPlanes Peer planes from GetIntersectingPlanes for this pair.
    * @param facePlane Subject face plane.
    * @param faceVertices Subject face vertices.
    * @param planes Accumulator for cut planes.
    */
-  private collectPeerCutPlanes(
-    peer: PreparedBrush,
+  private collectPeerCutPlanesFromLocalTable(
+    localPlanes: readonly SolidPlane[],
     facePlane: SolidPlane,
     faceVertices: THREE.Vector3[],
     planes: SolidPlane[],
   ): void {
-    for (const plane of peer.brush.planes) {
+    if (localPlanes.length === 0) {
+      return;
+    }
+    for (const plane of localPlanes) {
       if (facePlane.isAlignedWith(plane) || facePlane.isReverseAlignedWith(plane)) {
         continue;
       }
-      if (!this.planeLikelyCutsPolygon(faceVertices, plane)) continue;
+      const faceBoundsSide = SolidPlaneBounds.classifyFat(plane, this.scratchFaceBounds);
+      if (faceBoundsSide !== SolidPlaneBoundsResult.Intersecting) {
+        continue;
+      }
+      if (!this.planeLikelyCutsPolygon(faceVertices, plane)) {
+        continue;
+      }
       planes.push(plane);
     }
   }

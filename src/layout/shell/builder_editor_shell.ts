@@ -55,6 +55,7 @@ export interface EditorToolbarActions {
   onOpenMcpDialog: () => void;
   onOpenDetachedViewport: () => void;
   onToggleAiCaptureDebugPanel: () => void;
+  onToggleAudio: () => void;
   onDeleteSelected: () => void;
   onDuplicateSelected: () => void;
   onGroupSelected: () => void;
@@ -89,6 +90,7 @@ export interface EditorToolbarActions {
   isPositionLockEnabled: () => boolean;
   isStretchLockEnabled: () => boolean;
   isTransformSpaceLocal: () => boolean;
+  isAudioEnabled: () => boolean;
 }
 
 /** Result of building the main editor shell DOM structure. */
@@ -582,8 +584,8 @@ export class BuilderEditorShell {
   }
 
   /**
-   * Adds floating panel toggle icons (UV, textures, tools), About, and MCP as
-   * the trailing rightmost control.
+   * Adds floating panel toggle icons (UV, textures, tools), About, Audio next
+   * to AI Captures, then a trailing spacer and MCP on the far right.
    *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
@@ -602,6 +604,11 @@ export class BuilderEditorShell {
     toolbar.addIconButton('AI Captures', ToolbarIcons.aiCaptureDebug(), () =>
       actions.onToggleAiCaptureDebugPanel(),
     ).title = 'AI capture_view images (debug)';
+    toolbar.addSeparator();
+    const audioButton = toolbar.addButton('Audio', () => actions.onToggleAudio());
+    audioButton.title = 'Editor sound feedback';
+    audioButton.setAttribute('aria-label', 'Audio');
+    toolbar.setButtonActiveByLabel('Audio', actions.isAudioEnabled());
     toolbar.addTrailingSpacer();
     toolbar.addIconButton('MCP', ToolbarIcons.mcp(), () => actions.onOpenMcpDialog()).title =
       'MCP server (orange when running)';

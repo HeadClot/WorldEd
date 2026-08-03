@@ -19,7 +19,7 @@ enum QueuedEventType {
   ListItem = 2,
 }
 
-/** One deferred walk event (Chisel QueuedEvent). */
+/** Chisel QueuedEvent (explicit layout fields; union by type). */
 interface QueuedEvent {
   type: QueuedEventType;
   currIndex: number;
@@ -31,8 +31,8 @@ interface QueuedEvent {
 }
 
 /**
- * Exact port of Chisel CreateRoutingTableJob: builds CategoryStackNode routing
- * tables via GetStackNode / ListItem / Combine over the compact hierarchy.
+ * Chisel CreateRoutingTableJob: GetStackNode / ListItem / Combine over the
+ * compact hierarchy with BrushesTouchedByBrush locality.
  */
 export class SolidAlgorithmCreateRoutingTableJob {
   /**
@@ -54,10 +54,10 @@ export class SolidAlgorithmCreateRoutingTableJob {
     boundsPad: number,
     membershipEpsilon: number,
   ): SolidAlgorithmRoutingTable {
-    const subject = prepared[subjectIndex];
-    if (!subject || hierarchy.length === 0) {
+    if (!prepared[subjectIndex] || hierarchy.length === 0) {
       return SolidAlgorithmRoutingTable.empty(invertedWorld);
     }
+    const preparedIndexToNodeId = this.buildPreparedIndexToNodeIdMap(hierarchy);
     const touched = SolidAlgorithmBrushesTouched.buildForSubject(
       prepared,
       subjectIndex,
@@ -66,35 +66,35 @@ export class SolidAlgorithmCreateRoutingTableJob {
       membershipEpsilon,
     );
     solidAlgorithmMarkInfiniteBrushTouch(hierarchy, touched);
-    const subjectNodeId = this.findSubjectNodeId(hierarchy, subjectIndex);
-    if (subjectNodeId < 0) {
+    const subjectNodeId = preparedIndexToNodeId.get(subjectIndex);
+    if (subjectNodeId === undefined) {
       return SolidAlgorithmRoutingTable.empty(invertedWorld);
     }
     const stack = this.getStackNodes(subjectNodeId, touched, hierarchy);
-    return this.buildTableFromStack(stack, hierarchy, invertedWorld);
+    return this.buildTableFromStack(stack, preparedIndexToNodeId, invertedWorld);
   }
 
   /**
-   * Finds the compact node id for the subject prepared index.
+   * Maps prepared brush index → compact node id (one linear pass).
    *
    * @param hierarchy Compact hierarchy.
-   * @param subjectIndex Subject prepared index.
-   * @returns Node id, or -1 when missing.
+   * @returns Prepared index to node id map.
    */
-  private static findSubjectNodeId(hierarchy: readonly SolidAlgorithmCompactNode[], subjectIndex: number): number {
+  private static buildPreparedIndexToNodeIdMap(hierarchy: readonly SolidAlgorithmCompactNode[]): Map<number, number> {
+    const map = new Map<number, number>();
     for (const node of hierarchy) {
-      if (node.kind === 'brush' && node.preparedIndex === subjectIndex) {
-        return node.nodeId;
+      if (node.kind === 'brush') {
+        map.set(node.preparedIndex, node.nodeId);
       }
     }
-    return -1;
+    return map;
   }
 
   /**
-   * Builds the CategoryStackNode array for the processed subject.
+   * Chisel GetStackNodes: event walk producing CategoryStackNode rows.
    *
    * @param processedNodeId Subject compact node id.
-   * @param touched Touch map.
+   * @param touched BrushesTouchedByBrush.
    * @param hierarchy Compact hierarchy.
    * @returns Live stack nodes.
    */
@@ -111,7 +111,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
     while (events.length > 0) {
       const currEvent = events.pop()!;
       if (currEvent.type === QueuedEventType.GetStackNode) {
-        outputLength = this.handleGetStackNode(
+        outputLength = this.executeGetStackNode(
           currEvent,
           processedNodeId,
           touched,
@@ -124,36 +124,38 @@ export class SolidAlgorithmCreateRoutingTableJob {
           },
           () => haveGoneBeyondSelf,
         );
-        continue;
+      } else if (currEvent.type === QueuedEventType.ListItem) {
+        this.executeListItem(currEvent, outputLength, events, haveGoneBeyondSelf);
+      } else {
+        outputLength = this.executeCombine(currEvent, hierarchy, output, outputLength, haveGoneBeyondSelf);
       }
-      if (currEvent.type === QueuedEventType.ListItem) {
-        this.handleListItem(currEvent, outputLength, events, haveGoneBeyondSelf);
-        continue;
-      }
-      outputLength = this.handleCombine(currEvent, hierarchy, output, outputLength, haveGoneBeyondSelf);
     }
     if (outputLength === 0) {
-      output.push(new SolidAlgorithmCategoryStackNode(0, processedNodeId, SolidAlgorithmCategoryRoutingRow.AllOutside));
+      output[outputLength] = new SolidAlgorithmCategoryStackNode(
+        0,
+        processedNodeId,
+        SolidAlgorithmCategoryRoutingRow.AllOutside,
+      );
       outputLength = 1;
     }
     return output.slice(0, outputLength);
   }
 
   /**
-   * Handles a GetStackNode event.
+   * Chisel GetStackNode case.
    *
-   * @param currEvent Event data.
+   * @param currEvent Event.
    * @param processedNodeId Subject node id.
    * @param touched Touch map.
-   * @param hierarchy Compact hierarchy.
-   * @param output Output stack.
-   * @param outputLength Current length.
-   * @param events Event queue.
-   * @param setBeyondSelf Setter for haveGoneBeyondSelf.
-   * @param getBeyondSelf Getter for haveGoneBeyondSelf.
-   * @returns Updated output length.
+   * @param hierarchy Hierarchy.
+   * @param output Stack.
+   * @param outputLength Length.
+   * @param events Queue.
+   * @param setBeyondSelf Beyond-self setter.
+   * @param getBeyondSelf Beyond-self getter.
+   * @returns New output length.
    */
-  private static handleGetStackNode(
+  private static executeGetStackNode(
     currEvent: QueuedEvent,
     processedNodeId: number,
     touched: SolidAlgorithmBrushesTouched,
@@ -176,7 +178,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
       return outputLength;
     }
     if (currentNode.kind === 'brush') {
-      return this.handleGetStackBrush(
+      return this.appendBrushStackNode(
         currentNode,
         processedNodeId,
         intersectionType,
@@ -186,22 +188,22 @@ export class SolidAlgorithmCreateRoutingTableJob {
         getBeyondSelf,
       );
     }
-    return this.handleGetStackBranch(currentNode, currEvent, touched, hierarchy, output, outputLength, events);
+    return this.queueBranchChildren(currentNode, currEvent, touched, hierarchy, outputLength, events);
   }
 
   /**
-   * Emits a brush shortcut or identity row for GetStackNode.
+   * Appends one brush CategoryStackNode (Chisel brush arm of GetStackNode).
    *
    * @param currentNode Brush node.
    * @param processedNodeId Subject node id.
    * @param intersectionType Touch type.
-   * @param output Output stack.
-   * @param outputLength Current length.
+   * @param output Stack.
+   * @param outputLength Length.
    * @param setBeyondSelf Beyond-self setter.
    * @param getBeyondSelf Beyond-self getter.
-   * @returns Updated output length.
+   * @returns New length.
    */
-  private static handleGetStackBrush(
+  private static appendBrushStackNode(
     currentNode: SolidAlgorithmCompactNode,
     processedNodeId: number,
     intersectionType: SolidAlgorithmIntersectionType,
@@ -247,45 +249,40 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Queues child GetStackNode / ListItem events for a branch.
+   * Queues ListItem/GetStackNode for a branch (Chisel branch arm of
+   * GetStackNode).
    *
    * @param currentNode Branch node.
-   * @param currEvent Parent GetStackNode event.
+   * @param currEvent Parent event.
    * @param touched Touch map.
-   * @param hierarchy Compact hierarchy.
-   * @param output Output stack.
-   * @param outputLength Current length.
-   * @param events Event queue.
-   * @returns Output length reset to the branch start.
+   * @param hierarchy Hierarchy.
+   * @param outputLength Current length (kept when branch is empty).
+   * @param events Queue.
+   * @returns New output length (leftStackStart when children are queued).
    */
-  private static handleGetStackBranch(
+  private static queueBranchChildren(
     currentNode: SolidAlgorithmCompactNode,
     currEvent: QueuedEvent,
     touched: SolidAlgorithmBrushesTouched,
     hierarchy: readonly SolidAlgorithmCompactNode[],
-    output: SolidAlgorithmCategoryStackNode[],
     outputLength: number,
     events: QueuedEvent[],
   ): number {
-    void output;
-    void outputLength;
-    if (currentNode.childCount === 0) {
-      return currEvent.outputStartIndex;
+    const nodeCount = currentNode.childCount;
+    if (nodeCount === 0) {
+      return outputLength;
     }
     let firstIndex = currentNode.childOffset;
-    const lastIndex = firstIndex + currentNode.childCount;
-    while (firstIndex < lastIndex) {
-      const child = hierarchy[firstIndex];
-      if (!child) {
-        break;
-      }
-      if (child.operation === SolidOperation.Additive) {
-        break;
-      }
+    const lastIndex = firstIndex + nodeCount;
+    while (
+      firstIndex < lastIndex &&
+      hierarchy[firstIndex] &&
+      hierarchy[firstIndex]!.operation !== SolidOperation.Additive
+    ) {
       firstIndex++;
     }
     if (lastIndex - firstIndex <= 0) {
-      return currEvent.outputStartIndex;
+      return outputLength;
     }
     const leftStackStartIndex = currEvent.outputStartIndex;
     for (let index = lastIndex - 1; index >= firstIndex + 1; index--) {
@@ -315,14 +312,14 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Queues GetStackNode then Combine for a ListItem event.
+   * Chisel ListItem case: queue Combine then GetStackNode (LIFO).
    *
    * @param currEvent ListItem event.
-   * @param outputLength Current stack length.
-   * @param events Event queue.
-   * @param haveGoneBeyondSelf Current beyond-self flag.
+   * @param outputLength Current length.
+   * @param events Queue.
+   * @param haveGoneBeyondSelf Beyond-self snapshot.
    */
-  private static handleListItem(
+  private static executeListItem(
     currEvent: QueuedEvent,
     outputLength: number,
     events: QueuedEvent[],
@@ -336,34 +333,39 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Combines left and right stacks for a Combine event.
+   * Chisel Combine case.
    *
    * @param currEvent Combine event.
-   * @param hierarchy Compact hierarchy.
-   * @param output Output stack.
-   * @param outputLength Current length.
-   * @param haveGoneBeyondSelf Current beyond-self flag.
-   * @returns Updated output length.
+   * @param hierarchy Hierarchy.
+   * @param output Stack.
+   * @param outputLength Length.
+   * @param haveGoneBeyondSelf Beyond-self flag.
+   * @returns New length.
    */
-  private static handleCombine(
+  private static executeCombine(
     currEvent: QueuedEvent,
     hierarchy: readonly SolidAlgorithmCompactNode[],
     output: SolidAlgorithmCategoryStackNode[],
     outputLength: number,
     haveGoneBeyondSelf: number,
   ): number {
-    const node = hierarchy[currEvent.currIndex];
-    let operation = node?.operation ?? SolidOperation.Additive;
-    if (operation === undefined) {
-      operation = SolidOperation.Additive;
-    }
+    const operation = hierarchy[currEvent.currIndex]?.operation ?? SolidOperation.Additive;
     const leftCount = currEvent.rightStackStartIndex - currEvent.leftStackStartIndex;
     const rightCount = outputLength - currEvent.rightStackStartIndex;
     if (leftCount === 0) {
-      return this.combineEmptyLeft(operation, currEvent, outputLength);
+      if (rightCount === 0) {
+        return currEvent.leftStackStartIndex;
+      }
+      if (operation === SolidOperation.Additive) {
+        return outputLength;
+      }
+      return currEvent.rightStackStartIndex;
     }
     if (rightCount === 0) {
-      return this.combineEmptyRight(operation, currEvent);
+      if (operation === SolidOperation.Intersecting) {
+        return currEvent.leftStackStartIndex;
+      }
+      return currEvent.rightStackStartIndex;
     }
     const rightStack: SolidAlgorithmCategoryStackNode[] = [];
     for (let index = currEvent.rightStackStartIndex; index < outputLength; index++) {
@@ -384,54 +386,23 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Applies empty-left Combine rules.
-   *
-   * @param operation Child operation.
-   * @param currEvent Combine event.
-   * @param outputLength Current length.
-   * @returns Updated length.
-   */
-  private static combineEmptyLeft(operation: SolidOperation, currEvent: QueuedEvent, outputLength: number): number {
-    const rightCount = outputLength - currEvent.rightStackStartIndex;
-    if (rightCount === 0) {
-      return currEvent.leftStackStartIndex;
-    }
-    if (operation === SolidOperation.Additive) {
-      return outputLength;
-    }
-    return currEvent.rightStackStartIndex;
-  }
-
-  /**
-   * Applies empty-right Combine rules.
-   *
-   * @param operation Child operation.
-   * @param currEvent Combine event.
-   * @returns Updated length.
-   */
-  private static combineEmptyRight(operation: SolidOperation, currEvent: QueuedEvent): number {
-    if (operation === SolidOperation.Intersecting) {
-      return currEvent.leftStackStartIndex;
-    }
-    return currEvent.rightStackStartIndex;
-  }
-
-  /**
-   * Converts a live CategoryStackNode array into a RoutingTable blob.
+   * Builds RoutingTable from live stack (Chisel blob packing).
    *
    * @param stack Live stack.
-   * @param hierarchy Compact hierarchy for prepared-index lookup.
+   * @param preparedIndexToNodeId Prepared index → node id map (inverted for
+   *   preparedIndexPerLookup).
    * @param invertedWorld Inverted-world flag.
    * @returns Routing table.
    */
   private static buildTableFromStack(
     stack: SolidAlgorithmCategoryStackNode[],
-    hierarchy: readonly SolidAlgorithmCompactNode[],
+    preparedIndexToNodeId: ReadonlyMap<number, number>,
     invertedWorld: boolean,
   ): SolidAlgorithmRoutingTable {
     if (stack.length === 0) {
       return SolidAlgorithmRoutingTable.empty(invertedWorld);
     }
+    const nodeIdToPreparedIndex = this.invertPreparedIndexMap(preparedIndexToNodeId);
     const routingRows = stack.map((node) => node.routingRow);
     const lookups: SolidAlgorithmRoutingLookup[] = [];
     const preparedIndexPerLookup: number[] = [];
@@ -444,7 +415,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
         index++;
       }
       lookups.push(new SolidAlgorithmRoutingLookup(startIndex, index));
-      preparedIndexPerLookup.push(this.preparedIndexForNodeId(hierarchy, cuttingNodeId));
+      preparedIndexPerLookup.push(nodeIdToPreparedIndex.get(cuttingNodeId) ?? -2);
     }
     let minNodeId = 0;
     let maxNodeId = 0;
@@ -453,7 +424,6 @@ export class SolidAlgorithmCreateRoutingTableJob {
       minNodeId = Math.min(minNodeId, nodeId);
       maxNodeId = Math.max(maxNodeId, nodeId);
     }
-    const nodeIdOffset = minNodeId;
     const mapSize = maxNodeId + 1 - minNodeId;
     const nodeIdToTableIndex = new Array<number>(mapSize).fill(-1);
     for (let lookupIndex = 0; lookupIndex < lookups.length; lookupIndex++) {
@@ -465,34 +435,32 @@ export class SolidAlgorithmCreateRoutingTableJob {
       lookups,
       preparedIndexPerLookup,
       nodeIdToTableIndex,
-      nodeIdOffset,
+      minNodeId,
       invertedWorld,
     );
   }
 
   /**
-   * Resolves prepared index for a compact node id.
+   * Inverts prepared-index → node-id into node-id → prepared-index.
    *
-   * @param hierarchy Compact hierarchy.
-   * @param nodeId Compact node id.
-   * @returns Prepared index, or -2 when missing.
+   * @param preparedIndexToNodeId Forward map.
+   * @returns Inverted map.
    */
-  private static preparedIndexForNodeId(hierarchy: readonly SolidAlgorithmCompactNode[], nodeId: number): number {
-    for (const node of hierarchy) {
-      if (node.nodeId === nodeId) {
-        return node.preparedIndex;
-      }
+  private static invertPreparedIndexMap(preparedIndexToNodeId: ReadonlyMap<number, number>): Map<number, number> {
+    const inverted = new Map<number, number>();
+    for (const [preparedIndex, nodeId] of preparedIndexToNodeId) {
+      inverted.set(nodeId, preparedIndex);
     }
-    return -2;
+    return inverted;
   }
 
   /**
    * Creates a GetStackNode event.
    *
    * @param currIndex Hierarchy index.
-   * @param outputStartIndex Output stack start.
+   * @param outputStartIndex Output start.
    * @param intersectionType Touch type.
-   * @returns Queued event.
+   * @returns Event.
    */
   private static makeGetStackNode(
     currIndex: number,
@@ -513,10 +481,10 @@ export class SolidAlgorithmCreateRoutingTableJob {
   /**
    * Creates a ListItem event.
    *
-   * @param currIndex Hierarchy child index.
-   * @param leftStackStartIndex Left stack start.
+   * @param currIndex Hierarchy index.
+   * @param leftStackStartIndex Left start.
    * @param intersectionType Touch type.
-   * @returns Queued event.
+   * @returns Event.
    */
   private static makeListItem(
     currIndex: number,
@@ -537,11 +505,11 @@ export class SolidAlgorithmCreateRoutingTableJob {
   /**
    * Creates a Combine event.
    *
-   * @param currIndex Hierarchy child index.
+   * @param currIndex Hierarchy index.
    * @param leftHaveGoneBeyondSelf Beyond-self snapshot.
-   * @param leftStackStartIndex Left stack start.
-   * @param rightStackStartIndex Right stack start.
-   * @returns Queued event.
+   * @param leftStackStartIndex Left start.
+   * @param rightStackStartIndex Right start.
+   * @returns Event.
    */
   private static makeCombine(
     currIndex: number,

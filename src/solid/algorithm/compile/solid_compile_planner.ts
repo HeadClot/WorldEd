@@ -1,6 +1,8 @@
 import { BrushOverlapGraph } from '@/solid/algorithm/spatial/brush_overlap_graph.js';
 import type { BrushSpatialIndex } from '@/solid/algorithm/spatial/brush_spatial_index.js';
-import { SolidCompileCache } from './solid_compile_cache.js';
+import { SolidAlgorithmBrushIntersection } from '@/solid/algorithm/routing/solid_algorithm_brush_intersection.js';
+import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
+import { SolidCompileCache, type SolidCompileTouchPeer } from './solid_compile_cache.js';
 import type { PreparedBrush, SolidCompileOptions } from './solid_compile_types.js';
 import { SolidUpdateSetBuilder } from './solid_update_set.js';
 
@@ -163,7 +165,8 @@ export class SolidCompilePlanner {
   }
 
   /**
-   * Builds the partial recompile set from seed dirty ids and touch peers.
+   * Builds the partial recompile set from seed dirty ids and touch peers. Only
+   * Intersection-type peers expand the set (Chisel surface-loop pairs).
    *
    * @param prepared Prepared brushes.
    * @param options Compile options with dirty seeds.
@@ -183,33 +186,71 @@ export class SolidCompilePlanner {
   }
 
   /**
-   * Builds current overlap adjacency for seed brushes and their current peers.
+   * Builds current typed touch lists for seed brushes (AABB peers classified
+   * with ConvexPolytopeTouching).
    *
    * @param prepared Prepared brushes with overlap indices.
    * @param seedIds Seed dirty brush ids.
-   * @returns Map of brush id to peer ids for seeds and neighbors.
+   * @returns Map of brush id to typed touch peers.
    */
-  buildCurrentTouchMapForSeeds(prepared: PreparedBrush[], seedIds: ReadonlySet<string>): Map<string, string[]> {
-    const map = new Map<string, string[]>();
+  buildCurrentTouchMapForSeeds(
+    prepared: PreparedBrush[],
+    seedIds: ReadonlySet<string>,
+  ): Map<string, SolidCompileTouchPeer[]> {
+    const map = new Map<string, SolidCompileTouchPeer[]>();
     const idToIndex = this.buildIdToIndexMap(prepared);
     for (const seedId of seedIds) {
-      this.addCurrentTouchEntry(prepared, idToIndex, seedId, map);
+      const index = idToIndex.get(seedId);
+      if (index === undefined) {
+        continue;
+      }
+      map.set(seedId, this.buildTypedTouchesForBrush(prepared, index));
     }
     return map;
   }
 
   /**
-   * Loads previous touch peers for seed brushes from cache.
+   * Loads previous typed touch peers for seed brushes from cache.
    *
    * @param seedIds Seed dirty brush ids.
-   * @returns Map of brush id to previous peer ids.
+   * @returns Map of brush id to previous typed peers.
    */
-  buildPreviousTouchMapForSeeds(seedIds: ReadonlySet<string>): Map<string, string[]> {
-    const map = new Map<string, string[]>();
+  buildPreviousTouchMapForSeeds(seedIds: ReadonlySet<string>): Map<string, SolidCompileTouchPeer[]> {
+    const map = new Map<string, SolidCompileTouchPeer[]>();
     for (const brushId of seedIds) {
-      map.set(brushId, this.cache.getTouchPeerIdsReadonly(brushId).slice());
+      map.set(brushId, this.cache.getTouchPeers(brushId));
     }
     return map;
+  }
+
+  /**
+   * Classifies AABB peers of one prepared brush into typed touch records.
+   *
+   * @param prepared Prepared brushes.
+   * @param brushIndex Subject prepared index.
+   * @returns Typed touch peers.
+   */
+  buildTypedTouchesForBrush(prepared: PreparedBrush[], brushIndex: number): SolidCompileTouchPeer[] {
+    const subject = prepared[brushIndex];
+    if (!subject) {
+      return [];
+    }
+    const peers: SolidCompileTouchPeer[] = [];
+    for (const peerIndex of subject.overlappingPeerIndices) {
+      const peer = prepared[peerIndex];
+      if (!peer) {
+        continue;
+      }
+      const type = SolidAlgorithmBrushIntersection.classify(
+        subject,
+        peerIndex,
+        prepared,
+        this.boundsPad,
+        SOLID_FAT_PLANE_EPSILON,
+      );
+      peers.push({ peerId: peer.instance.id, type });
+    }
+    return peers;
   }
 
   /**
@@ -236,43 +277,6 @@ export class SolidCompilePlanner {
   }
 
   /**
-   * Records current peers for one brush id into a touch map.
-   *
-   * @param prepared Prepared brushes.
-   * @param idToIndex Id-to-index map.
-   * @param brushId Brush id to record.
-   * @param map Touch map accumulator.
-   */
-  private addCurrentTouchEntry(
-    prepared: PreparedBrush[],
-    idToIndex: Map<string, number>,
-    brushId: string,
-    map: Map<string, string[]>,
-  ): void {
-    const index = idToIndex.get(brushId);
-    if (index === undefined) {
-      return;
-    }
-    const entry = prepared[index]!;
-    const peerIds = entry.overlappingPeerIndices.map((peerIndex) => prepared[peerIndex]!.instance.id);
-    map.set(brushId, peerIds);
-    for (const peerId of peerIds) {
-      if (map.has(peerId)) {
-        continue;
-      }
-      const peerIndex = idToIndex.get(peerId);
-      if (peerIndex === undefined) {
-        continue;
-      }
-      const peerEntry = prepared[peerIndex]!;
-      map.set(
-        peerId,
-        peerEntry.overlappingPeerIndices.map((otherIndex) => prepared[otherIndex]!.instance.id),
-      );
-    }
-  }
-
-  /**
    * Builds a map from brush id to prepared index.
    *
    * @param prepared Prepared brushes.
@@ -294,13 +298,13 @@ export class SolidCompilePlanner {
    * @returns Peer indices present in the prepared list.
    */
   private mapPeerIdsToIndices(brushId: string, idToIndex: Map<string, number>): number[] {
-    const peerIds = this.cache.getTouchPeerIdsReadonly(brushId);
-    if (peerIds.length === 0) {
+    const peers = this.cache.getTouchPeersReadonly(brushId);
+    if (peers.length === 0) {
       return SolidCompilePlanner.emptyPeerIndices;
     }
     const peerIndices: number[] = [];
-    for (const peerId of peerIds) {
-      const peerIndex = idToIndex.get(peerId);
+    for (const peer of peers) {
+      const peerIndex = idToIndex.get(peer.peerId);
       if (peerIndex !== undefined) {
         peerIndices.push(peerIndex);
       }

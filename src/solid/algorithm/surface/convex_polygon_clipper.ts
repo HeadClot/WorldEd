@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
+import type { HashedVertexTable } from '@/solid/algorithm/spatial/hashed_vertex_table.js';
+
+/** Squared distance for consecutive ring cleanup only (not Chisel weld ε). */
+const SQR_RING_DEDUPE_EPSILON = 1e-16;
 
 /** Result of clipping a convex polygon against a plane. */
 export interface PolygonClipResult {
@@ -21,12 +25,15 @@ export class ConvexPolygonClipper {
    * @param polygon Ordered convex polygon vertices.
    * @param plane Clipping plane (positive = outside).
    * @param epsilon Plane thickness for coplanar points.
+   * @param vertexTable Optional welder for clip intersections and retained
+   *   vertices so neighboring fragments share exact positions.
    * @returns Inside and outside polygons (empty arrays when absent).
    */
   static clipByPlane(
     polygon: THREE.Vector3[],
     plane: SolidPlane,
     epsilon: number = SOLID_FAT_PLANE_EPSILON,
+    vertexTable?: HashedVertexTable,
   ): PolygonClipResult {
     if (polygon.length < 3) {
       return { inside: [], outside: [] };
@@ -37,21 +44,7 @@ export class ConvexPolygonClipper {
     for (let index = 0; index < count; index++) {
       const current = polygon[index]!;
       const next = polygon[(index + 1) % count]!;
-      const currentDistance = plane.signedDistance(current);
-      const nextDistance = plane.signedDistance(next);
-      const currentInside = currentDistance <= epsilon;
-      const nextInside = nextDistance <= epsilon;
-      this.emitEdgeClip(
-        current,
-        next,
-        currentDistance,
-        nextDistance,
-        currentInside,
-        nextInside,
-        plane,
-        inside,
-        outside,
-      );
+      this.emitEdgeClipForEndpoints(current, next, plane, epsilon, inside, outside, vertexTable);
     }
     return {
       inside: this.dedupeClosedRing(inside),
@@ -64,15 +57,60 @@ export class ConvexPolygonClipper {
    *
    * @param polygon Source convex polygon.
    * @param planes Outward planes of the solid.
+   * @param vertexTable Optional welder shared across successive clips.
    * @returns Clipped polygon inside the solid, or empty if none.
    */
-  static clipInsideAllPlanes(polygon: THREE.Vector3[], planes: SolidPlane[]): THREE.Vector3[] {
+  static clipInsideAllPlanes(
+    polygon: THREE.Vector3[],
+    planes: SolidPlane[],
+    vertexTable?: HashedVertexTable,
+  ): THREE.Vector3[] {
     let current = polygon;
     for (const plane of planes) {
-      current = this.clipByPlane(current, plane).inside;
-      if (current.length < 3) return [];
+      current = this.clipByPlane(current, plane, SOLID_FAT_PLANE_EPSILON, vertexTable).inside;
+      if (current.length < 3) {
+        return [];
+      }
     }
     return current.map((point) => point.clone());
+  }
+
+  /**
+   * Classifies one polygon edge and emits clipped vertices into both rings.
+   *
+   * @param current Edge start.
+   * @param next Edge end.
+   * @param plane Clipping plane.
+   * @param epsilon Fat-plane thickness.
+   * @param inside Inside ring builder.
+   * @param outside Outside ring builder.
+   * @param vertexTable Optional vertex welder.
+   */
+  private static emitEdgeClipForEndpoints(
+    current: THREE.Vector3,
+    next: THREE.Vector3,
+    plane: SolidPlane,
+    epsilon: number,
+    inside: THREE.Vector3[],
+    outside: THREE.Vector3[],
+    vertexTable: HashedVertexTable | undefined,
+  ): void {
+    const currentDistance = plane.signedDistance(current);
+    const nextDistance = plane.signedDistance(next);
+    const currentInside = currentDistance <= epsilon;
+    const nextInside = nextDistance <= epsilon;
+    this.emitEdgeClip(
+      current,
+      next,
+      currentDistance,
+      nextDistance,
+      currentInside,
+      nextInside,
+      plane,
+      inside,
+      outside,
+      vertexTable,
+    );
   }
 
   /**
@@ -87,6 +125,7 @@ export class ConvexPolygonClipper {
    * @param plane Clipping plane.
    * @param inside Inside ring builder.
    * @param outside Outside ring builder.
+   * @param vertexTable Optional vertex welder.
    */
   private static emitEdgeClip(
     current: THREE.Vector3,
@@ -98,25 +137,91 @@ export class ConvexPolygonClipper {
     plane: SolidPlane,
     inside: THREE.Vector3[],
     outside: THREE.Vector3[],
+    vertexTable: HashedVertexTable | undefined,
   ): void {
     if (currentInside && nextInside) {
-      inside.push(next);
+      inside.push(this.emitVertex(next, vertexTable, false));
       return;
     }
     if (!currentInside && !nextInside) {
-      outside.push(next);
+      outside.push(this.emitVertex(next, vertexTable, false));
       return;
     }
-    const intersection = this.intersectSegmentPlane(current, next, currentDistance, nextDistance, plane);
+    this.emitCrossingEdge(
+      current,
+      next,
+      currentDistance,
+      nextDistance,
+      currentInside,
+      plane,
+      inside,
+      outside,
+      vertexTable,
+    );
+  }
+
+  /**
+   * Emits the plane intersection and trailing endpoint for a straddling edge.
+   *
+   * @param current Edge start.
+   * @param next Edge end.
+   * @param currentDistance Signed distance of start.
+   * @param nextDistance Signed distance of end.
+   * @param currentInside Whether start is inside.
+   * @param plane Clipping plane.
+   * @param inside Inside ring builder.
+   * @param outside Outside ring builder.
+   * @param vertexTable Optional vertex welder.
+   */
+  private static emitCrossingEdge(
+    current: THREE.Vector3,
+    next: THREE.Vector3,
+    currentDistance: number,
+    nextDistance: number,
+    currentInside: boolean,
+    plane: SolidPlane,
+    inside: THREE.Vector3[],
+    outside: THREE.Vector3[],
+    vertexTable: HashedVertexTable | undefined,
+  ): void {
+    const intersection = this.emitVertex(
+      this.intersectSegmentPlane(current, next, currentDistance, nextDistance, plane),
+      vertexTable,
+      true,
+    );
+    const nextVertex = this.emitVertex(next, vertexTable, false);
     if (currentInside) {
       inside.push(intersection);
       outside.push(intersection);
-      outside.push(next);
+      outside.push(nextVertex);
       return;
     }
     outside.push(intersection);
     inside.push(intersection);
-    inside.push(next);
+    inside.push(nextVertex);
+  }
+
+  /**
+   * Returns a welded clone when a table is provided (Chisel HashedVertices.Add
+   * always stores and returns the canonical position). Without a table, returns
+   * a plain clone.
+   *
+   * @param point Source point.
+   * @param vertexTable Optional welder.
+   * @param _forceSnap Kept for call-site clarity; snap is always used with a
+   *   table.
+   * @returns Point suitable for ring storage.
+   */
+  private static emitVertex(
+    point: THREE.Vector3,
+    vertexTable: HashedVertexTable | undefined,
+    _forceSnap: boolean = false,
+  ): THREE.Vector3 {
+    void _forceSnap;
+    if (vertexTable) {
+      return vertexTable.snap(point);
+    }
+    return point.clone();
   }
 
   /**
@@ -149,16 +254,42 @@ export class ConvexPolygonClipper {
    * @returns Cleaned ring (may be empty).
    */
   private static dedupeClosedRing(ring: THREE.Vector3[]): THREE.Vector3[] {
-    if (ring.length === 0) return [];
+    if (ring.length === 0) {
+      return [];
+    }
     const cleaned: THREE.Vector3[] = [];
     for (const point of ring) {
-      const previous = cleaned[cleaned.length - 1];
-      if (previous && previous.distanceToSquared(point) < 1e-16) continue;
-      cleaned.push(point);
+      this.appendIfNotDuplicateOfLast(cleaned, point);
     }
-    if (cleaned.length > 1 && cleaned[0]!.distanceToSquared(cleaned[cleaned.length - 1]!) < 1e-16) {
+    this.popClosingDuplicate(cleaned);
+    return cleaned.length >= 3 ? cleaned : [];
+  }
+
+  /**
+   * Appends a point when it is not within weld epsilon of the previous vertex.
+   *
+   * @param cleaned Ring under construction.
+   * @param point Candidate vertex.
+   */
+  private static appendIfNotDuplicateOfLast(cleaned: THREE.Vector3[], point: THREE.Vector3): void {
+    const previous = cleaned[cleaned.length - 1];
+    if (previous && previous.distanceToSquared(point) < SQR_RING_DEDUPE_EPSILON) {
+      return;
+    }
+    cleaned.push(point);
+  }
+
+  /**
+   * Removes the last vertex when it duplicates the first within ring epsilon.
+   *
+   * @param cleaned Ring under construction.
+   */
+  private static popClosingDuplicate(cleaned: THREE.Vector3[]): void {
+    if (cleaned.length <= 1) {
+      return;
+    }
+    if (cleaned[0]!.distanceToSquared(cleaned[cleaned.length - 1]!) < SQR_RING_DEDUPE_EPSILON) {
       cleaned.pop();
     }
-    return cleaned.length >= 3 ? cleaned : [];
   }
 }
