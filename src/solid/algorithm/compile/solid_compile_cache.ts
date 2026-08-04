@@ -5,7 +5,7 @@ import { SolidAlgorithmIntersectionType } from '@/solid/algorithm/routing/solid_
 import { SolidCompiledPolygon } from './solid_compiled_polygon.js';
 
 /**
- * One spatial peer of a brush with Chisel IntersectionType (stored like
+ * One spatial peer of a brush with IntersectionType (stored like
  * BrushesTouchedByBrush.brushIntersections).
  */
 export interface SolidCompileTouchPeer {
@@ -137,7 +137,7 @@ export class SolidCompileCache {
   }
 
   /**
-   * Stores the set of peer brushes that currently overlap a brush, with Chisel
+   * Stores the set of peer brushes that currently overlap a brush, with
    * IntersectionType per peer.
    *
    * @param brushId Brush instance id.
@@ -243,10 +243,10 @@ export class SolidCompileCache {
 
   /**
    * Returns whether prepared brush ids match the last compiled order without
-   * allocating an intermediate id list (Chisel nodeOrder remapping check).
+   * allocating an intermediate id list.
    *
    * @param preparedLength Prepared brush count.
-   * @param preparedIdAt Index → brush id resolver.
+   * @param preparedIdAt Index to brush id resolver.
    * @returns True when sequences are identical.
    */
   orderMatchesPrepared(preparedLength: number, preparedIdAt: (index: number) => string): boolean {

@@ -6,9 +6,9 @@ import { SolidPlaneBoundsResult } from '@/solid/algorithm/math/solid_plane_bound
 import { SolidAlgorithmIntersectionType } from '@/solid/algorithm/routing/solid_algorithm_intersection_type.js';
 
 /**
- * Chisel PrepareBrushPairIntersectionsJob.GetIntersectingPlanes: builds the
- * local intersecting-plane index table for one brush of a pair. Planes that
- * cannot cut the other brush's bounds/vertices are dropped; if any plane fully
+ * PrepareBrushPairIntersectionsJob.GetIntersectingPlanes: builds the local
+ * intersecting-plane index table for one brush of a pair. Planes that cannot
+ * cut the other brush's bounds/vertices are dropped; if any plane fully
  * separates the other bounds, the table is empty (pair has no loops).
  */
 export class SolidAlgorithmIntersectingPlanes {
@@ -21,7 +21,7 @@ export class SolidAlgorithmIntersectingPlanes {
    *   otherBounds).
    * @param otherBounds Bounds of the other brush.
    * @param otherVertices Vertices of the other brush.
-   * @param epsilon Fat-plane width (Chisel kFatPlaneWidthEpsilon).
+   * @param epsilon Fat-plane width.
    * @returns Indices into sourcePlanes, or empty when the pair is separated.
    */
   static collectIndices(
@@ -120,8 +120,7 @@ export class SolidAlgorithmIntersectingPlanes {
   }
 
   /**
-   * Returns whether vertices are not entirely on one side of the plane (Chisel
-   * min/max distance straddle test inside GetIntersectingPlanes).
+   * Returns whether vertices are not entirely on one side of the plane.
    *
    * @param plane Candidate plane.
    * @param vertices Other brush vertices.

@@ -8,8 +8,8 @@ import { SolidAlgorithmRoutingTableCache } from '@/solid/algorithm/routing/solid
 import { SOLID_ALGORITHM_INFINITE_PREPARED_INDEX } from '@/solid/algorithm/routing/solid_algorithm_compact_node.js';
 
 /**
- * Routes fragment surface categories through exact Chisel CreateRoutingTableJob
- * tables (compact hierarchy, touch locality, infinite inverted brush).
+ * Routes fragment surface categories through per-subject routing tables
+ * (compact hierarchy, touch locality, infinite inverted brush).
  */
 export class SolidFragmentRouter {
   private invertedWorld = false;
@@ -59,7 +59,7 @@ export class SolidFragmentRouter {
   }
 
   /**
-   * Routes a fragment through the subject's Chisel routing table.
+   * Routes a fragment through the subject's routing table.
    *
    * @param fragment Fragment polygon.
    * @param normal Face normal.
@@ -87,13 +87,13 @@ export class SolidFragmentRouter {
   }
 
   /**
-   * Resolves or builds the Chisel routing table for a subject.
+   * Resolves or builds the routing table for a subject.
    *
    * @param prepared Prepared brushes.
    * @param subjectIndex Subject index.
    * @returns Routing table.
    */
-  private resolveTable(prepared: PreparedBrush[], subjectIndex: number): SolidAlgorithmRoutingTable {
+  resolveTable(prepared: PreparedBrush[], subjectIndex: number): SolidAlgorithmRoutingTable {
     const tree = this.csgTree ?? SolidCsgTree.fromPreparedFlat(prepared);
     return this.routingTables.getOrBuild(prepared, subjectIndex, tree, this.invertedWorld, false);
   }

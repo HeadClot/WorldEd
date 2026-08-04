@@ -9,11 +9,11 @@ import { SolidAlgorithmIntersectionType } from './solid_algorithm_intersection_t
 
 /**
  * Classifies how two prepared brushes (or the infinite inverted brush) touch,
- * matching Chisel ConvexPolytopeTouching / IntersectionType.
+ * matching ConvexPolytopeTouching / IntersectionType.
  *
  * BInsideA / AInsideB require every vertex of the inner brush to lie strictly
- * inside every outer plane (Chisel WhichSide all-negative). On-plane contact is
- * Intersection so flush openings still receive cut planes.
+ * inside every outer plane. On-plane contact is Intersection so flush openings
+ * still receive cut planes.
  */
 export class SolidAlgorithmBrushIntersection {
   private static readonly scratchPoint = new THREE.Vector3();
@@ -25,7 +25,7 @@ export class SolidAlgorithmBrushIntersection {
    * @param otherPreparedIndex Other prepared index, or infinite index.
    * @param prepared All prepared brushes.
    * @param boundsPad Bounds padding.
-   * @param membershipEpsilon Plane epsilon (Chisel kBoundsDistanceEpsilon).
+   * @param membershipEpsilon Plane epsilon.
    * @returns Intersection type for CreateRoutingTableJob.
    */
   static classify(
@@ -52,10 +52,10 @@ export class SolidAlgorithmBrushIntersection {
   }
 
   /**
-   * Chisel ConvexPolytopeTouching: brush0 planes vs brush1 verts first (only
-   * BInsideA or continue), then brush1 planes vs brush0 verts (intersecting
-   * sides force Intersection; all-negative is AInsideB). Bounds early outs
-   * reject separated pairs before vertex WhichSide.
+   * ConvexPolytopeTouching: brush0 planes vs brush1 verts first (only BInsideA
+   * or continue), then brush1 planes vs brush0 verts (intersecting sides force
+   * Intersection; all-negative is AInsideB). Bounds early outs reject separated
+   * pairs before vertex WhichSide.
    *
    * @param subject Processed subject brush (brush0).
    * @param other Other brush (brush1).
@@ -86,9 +86,9 @@ export class SolidAlgorithmBrushIntersection {
 
   /**
    * Classifies one brush against another brush's planes using bounds early outs
-   * then Chisel WhichSide over every plane. When trackIntersectingSides is true
+   * then WhichSide over every plane. When trackIntersectingSides is true
    * (second pass), any mixed/on-plane side returns straddling immediately like
-   * Chisel intersectingSides2 > 0.
+   * intersectingSides2 > 0.
    *
    * @param inner Brush whose volume is tested.
    * @param outer Brush providing outward planes.
@@ -159,8 +159,8 @@ export class SolidAlgorithmBrushIntersection {
   }
 
   /**
-   * Chisel WhichSide: -1 all strictly negative, +1 all strictly positive, 0
-   * mixed or on-plane.
+   * WhichSide: -1 all strictly negative, +1 all strictly positive, 0 mixed or
+   * on-plane.
    *
    * @param brush Brush whose vertices are tested.
    * @param plane Outer plane.

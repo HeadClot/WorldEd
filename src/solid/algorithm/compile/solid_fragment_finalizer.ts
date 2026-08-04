@@ -9,7 +9,7 @@ import type { SolidMembershipEvaluator } from './solid_membership_evaluator.js';
 
 /**
  * Classifies fragments as solid boundaries and builds compiled polygons for
- * kept surface categories using Chisel routing-table categories only.
+ * kept surface categories using routing-table categories only.
  */
 export class SolidFragmentFinalizer {
   private readonly router: SolidFragmentRouter;
@@ -23,6 +23,15 @@ export class SolidFragmentFinalizer {
   constructor(router: SolidFragmentRouter, _membership: SolidMembershipEvaluator) {
     this.router = router;
     void _membership;
+  }
+
+  /**
+   * Returns the fragment router used for category tables.
+   *
+   * @returns Fragment router.
+   */
+  getRouter(): SolidFragmentRouter {
+    return this.router;
   }
 
   /**

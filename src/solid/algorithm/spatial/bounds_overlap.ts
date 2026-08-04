@@ -9,7 +9,7 @@ export type AxisAlignedBounds = {
 
 /**
  * Returns whether two axis-aligned bounds may touch when expanded by pad.
- * Delegates to SolidBoundsOps.intersects (Chisel BoundsExtensions.Intersects).
+ * Delegates to SolidBoundsOps.intersects.
  *
  * @param a First bounds.
  * @param b Second bounds.

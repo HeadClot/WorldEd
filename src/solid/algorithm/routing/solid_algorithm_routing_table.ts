@@ -3,8 +3,8 @@ import type { SolidAlgorithmCategoryRoutingRow } from './solid_algorithm_categor
 import { SolidAlgorithmRoutingLookup } from './solid_algorithm_routing_lookup.js';
 
 /**
- * Chisel RoutingTable for one processed subject brush: pre-baked category stack
- * rows, per-node lookup segments, and node-id → lookup mapping.
+ * RoutingTable for one processed subject brush: pre-baked category stack rows,
+ * per-node lookup segments, and node-id → lookup mapping.
  */
 export class SolidAlgorithmRoutingTable {
   readonly routingRows: readonly SolidAlgorithmCategoryRoutingRow[];
@@ -53,11 +53,9 @@ export class SolidAlgorithmRoutingTable {
 
   /**
    * Routes a fragment by walking lookup segments and classifying against each
-   * brush (Chisel PerformCSG interiorCategory walk). Starts at input 0 like
-   * PerformCSG base polygons. A missing route keeps the current category
-   * (Chisel continues the step without updating). When a peer has no surface
-   * interaction for this fragment, uses the Outside column only (PerformCSG
-   * no-loop path).
+   * brush. Starts at input 0 like PerformCSG base polygons. A missing route
+   * keeps the current category . When a peer has no surface interaction for
+   * this fragment, uses the Outside column only (PerformCSG no-loop path).
    *
    * @param classify Returns relative category for a prepared brush index.
    * @param hasSurfaceInteraction Optional: false means no intersection loop for
@@ -121,5 +119,18 @@ export class SolidAlgorithmRoutingTable {
    */
   get steps(): readonly { preparedIndex: number }[] {
     return this.preparedIndexPerLookup.map((preparedIndex) => ({ preparedIndex }));
+  }
+
+  /**
+   * Returns lookup steps with stable lookup indices for PerformCSG surface
+   * walk.
+   *
+   * @returns One entry per routing lookup segment including its table index.
+   */
+  getLookupSteps(): readonly { preparedIndex: number; lookupIndex: number }[] {
+    return this.preparedIndexPerLookup.map((preparedIndex, lookupIndex) => ({
+      preparedIndex,
+      lookupIndex,
+    }));
   }
 }

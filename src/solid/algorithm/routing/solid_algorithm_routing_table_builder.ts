@@ -6,8 +6,8 @@ import { SolidAlgorithmRoutingTable } from './solid_algorithm_routing_table.js';
 import { SOLID_BOUNDS_EPSILON, SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 
 /**
- * Builds Chisel CreateRoutingTableJob routing tables for solid CSG subjects.
- * Prefer SolidAlgorithmRoutingTableCache in hot paths so hierarchy is shared.
+ * Builds CreateRoutingTableJob routing tables for solid CSG subjects. Prefer
+ * SolidAlgorithmRoutingTableCache in hot paths so hierarchy is shared.
  */
 export class SolidAlgorithmRoutingTableBuilder {
   /**

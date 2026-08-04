@@ -4,17 +4,17 @@ import { SOLID_FAT_PLANE_EPSILON, SOLID_PLANE_CUT_EPSILON } from './solid_math_c
 import { SolidPlaneBoundsResult } from './solid_plane_bounds_result.js';
 
 /**
- * Plane versus axis-aligned bounds early-out tests matching Chisel
- * MathExtensions IsInside / IsOutside / Intersection.
+ * Plane versus axis-aligned bounds early-out tests matching MathExtensions
+ * IsInside / IsOutside / Intersection.
  */
 export class SolidPlaneBounds {
   /**
    * Returns whether the entire bounds lies strictly inside the plane half-space
-   * (negative side). Matches Chisel Plane.IsInside(Bounds).
+   * (negative side). Matches Plane.IsInside(Bounds).
    *
    * @param plane Plane (positive = outside for outward solid planes).
    * @param bounds Axis-aligned bounds.
-   * @param epsilon Distance epsilon (default Chisel kDistanceEpsilon).
+   * @param epsilon Distance epsilon (default kDistanceEpsilon).
    * @returns True when every bounds corner is strictly inside.
    */
   static isInside(plane: SolidPlane, bounds: AxisAlignedBounds, epsilon: number = SOLID_PLANE_CUT_EPSILON): boolean {
@@ -28,11 +28,11 @@ export class SolidPlaneBounds {
 
   /**
    * Returns whether the entire bounds lies strictly outside the plane
-   * half-space (positive side). Matches Chisel Plane.IsOutside(Bounds).
+   * half-space (positive side). Matches Plane.IsOutside(Bounds).
    *
    * @param plane Plane (positive = outside).
    * @param bounds Axis-aligned bounds.
-   * @param epsilon Distance epsilon (default Chisel kDistanceEpsilon).
+   * @param epsilon Distance epsilon (default kDistanceEpsilon).
    * @returns True when every bounds corner is strictly outside.
    */
   static isOutside(plane: SolidPlane, bounds: AxisAlignedBounds, epsilon: number = SOLID_PLANE_CUT_EPSILON): boolean {
@@ -46,11 +46,11 @@ export class SolidPlaneBounds {
 
   /**
    * Classifies bounds against a plane as Outside, Inside, or Intersecting.
-   * Matches Chisel Plane.Intersection(Bounds).
+   * Matches Plane.Intersection(Bounds).
    *
    * @param plane Plane (positive = outside).
    * @param bounds Axis-aligned bounds.
-   * @param epsilon Distance epsilon (default Chisel kDistanceEpsilon).
+   * @param epsilon Distance epsilon (default kDistanceEpsilon).
    * @returns Classification for early outs.
    */
   static classify(
@@ -77,12 +77,12 @@ export class SolidPlaneBounds {
   }
 
   /**
-   * Fat-plane classification used by GetIntersectingPlanes (Chisel
-   * kFatPlaneWidthEpsilon). Outside means the pair is separated by this plane.
+   * Fat-plane classification used by GetIntersectingPlanes. Outside means the
+   * pair is separated by this plane.
    *
    * @param plane Candidate plane.
    * @param bounds Bounds of the other brush (same space as the plane).
-   * @param epsilon Fat-plane width (default Chisel kFatPlaneWidthEpsilon).
+   * @param epsilon Fat-plane width (default kFatPlaneWidthEpsilon).
    * @returns Classification with fat epsilon.
    */
   static classifyFat(

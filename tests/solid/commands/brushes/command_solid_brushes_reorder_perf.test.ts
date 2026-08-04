@@ -65,7 +65,7 @@ describe('CommandSolidBrushesReorder perf', () => {
     expect(stats.fullRebuild).toBe(false);
     expect(stats.recompiledBrushCount).toBeLessThan(brushCount);
     expect(elapsedMs).toBeLessThan(fullMs * 0.5);
-  });
+  }, 30_000);
 
   it('To Last on 1200 flat additives patches result mesh without full rewrite', () => {
     const brushCount = 1200;

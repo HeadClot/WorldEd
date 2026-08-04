@@ -166,7 +166,7 @@ export class SolidCompilePlanner {
 
   /**
    * Builds the partial recompile set from seed dirty ids and touch peers. Only
-   * Intersection-type peers expand the set (Chisel surface-loop pairs).
+   * Intersection-type peers expand the set.
    *
    * @param prepared Prepared brushes.
    * @param options Compile options with dirty seeds.

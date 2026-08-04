@@ -1,6 +1,6 @@
 /**
  * Relationship between the processed subject brush and another hierarchy node.
- * Matches Chisel IntersectionType used by CreateRoutingTableJob.
+ * Matches IntersectionType used by CreateRoutingTableJob.
  */
 export enum SolidAlgorithmIntersectionType {
   NoIntersection = 0,

@@ -1,5 +1,5 @@
 /**
- * Result of classifying an axis-aligned bounds against a plane. Matches Chisel
+ * Result of classifying an axis-aligned bounds against a plane. Matches
  * IntersectionResult used by plane/bounds early outs.
  */
 export enum SolidPlaneBoundsResult {

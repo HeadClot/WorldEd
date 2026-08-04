@@ -1,8 +1,8 @@
 import type { SolidAlgorithmCategoryRoutingRow } from './solid_algorithm_category_routing_row.js';
 
 /**
- * One Chisel CategoryStackNode: input row index, compact node id, and routing
- * row produced by CreateRoutingTableJob.
+ * One CategoryStackNode: input row index, compact node id, and routing row
+ * produced by CreateRoutingTableJob.
  */
 export class SolidAlgorithmCategoryStackNode {
   input: number;

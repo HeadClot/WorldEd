@@ -6,7 +6,7 @@ import {
 
 /**
  * Welds nearly-identical vertices for solid CSG intermediate geometry using a
- * spatial hash (Chisel HashedVertices).
+ * spatial hash.
  */
 export class HashedVertexTable {
   private readonly vertices: THREE.Vector3[] = [];
@@ -17,7 +17,7 @@ export class HashedVertexTable {
   /**
    * Creates a hashed vertex table.
    *
-   * @param cellSize Spatial hash cell size (defaults to Chisel kCellSize).
+   * @param cellSize Spatial hash cell size (defaults to kCellSize).
    * @param sqrEqualEpsilon Squared distance threshold for welding.
    */
   constructor(
@@ -121,8 +121,7 @@ export class HashedVertexTable {
 
   /**
    * Builds a spatial hash key for a point. Cell indices use toward-zero
-   * truncation so negative coordinates match Chisel `(int)(coord /
-   * kCellSize)`.
+   * truncation so negative coordinates match `(int)(coord / kCellSize)`.
    *
    * @param point Point to hash.
    * @returns Cell key string.

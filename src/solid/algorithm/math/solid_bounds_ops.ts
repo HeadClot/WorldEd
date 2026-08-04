@@ -2,19 +2,17 @@ import type { AxisAlignedBounds } from '@/solid/algorithm/spatial/bounds_overlap
 import { SOLID_BOUNDS_EPSILON } from './solid_math_constants.js';
 
 /**
- * Axis-aligned bounds operations matching Chisel BoundsExtensions (MinMaxAABB
+ * Axis-aligned bounds operations matching BoundsExtensions (MinMaxAABB
  * intersects with epsilon, validity checks).
  */
 export class SolidBoundsOps {
   /**
    * Returns whether two bounds may touch when expanded by epsilon on each side.
-   * Matches Chisel BoundsExtensions.Intersects(MinMaxAABB, MinMaxAABB,
-   * epsilon).
+   * Matches BoundsExtensions.Intersects(MinMaxAABB, MinMaxAABB, epsilon).
    *
    * @param left First bounds.
    * @param right Second bounds.
-   * @param epsilon Separation tolerance (default Chisel
-   *   kBoundsDistanceEpsilon).
+   * @param epsilon Separation tolerance (default kBoundsDistanceEpsilon).
    * @returns True when the bounds overlap or touch within epsilon.
    */
   static intersects(

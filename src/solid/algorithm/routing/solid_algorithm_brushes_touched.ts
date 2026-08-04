@@ -4,7 +4,7 @@ import { SOLID_ALGORITHM_INFINITE_PREPARED_INDEX } from './solid_algorithm_compa
 import { SolidAlgorithmBrushIntersection } from './solid_algorithm_brush_intersection.js';
 import { SolidAlgorithmIntersectionType } from './solid_algorithm_intersection_type.js';
 
-/** One spatial peer entry (Chisel BrushIntersection / BrushIntersectWith). */
+/** One spatial peer entry. */
 export interface SolidAlgorithmBrushTouchPeer {
   /** Compact hierarchy node id of the peer brush. */
   nodeId: number;
@@ -15,7 +15,7 @@ export interface SolidAlgorithmBrushTouchPeer {
 }
 
 /**
- * Chisel BrushesTouchedByBrush for one processed subject. Built like
+ * BrushesTouchedByBrush for one processed subject. Built like
  * StoreBrushIntersectionsJob.SetUsedNodesBits: subject + root + subject
  * ancestors + each spatial peer with type + each peer's ancestors.
  */
@@ -27,16 +27,14 @@ export class SolidAlgorithmBrushesTouched {
    * Returns the intersection type for a compact node id.
    *
    * @param nodeId Compact hierarchy node id.
-   * @returns Intersection type, or InvalidValue when absent (Chisel bitset
-   *   miss).
+   * @returns Intersection type, or InvalidValue when absent.
    */
   get(nodeId: number): SolidAlgorithmIntersectionType {
     return this.typeByNodeId.get(nodeId) ?? SolidAlgorithmIntersectionType.InvalidValue;
   }
 
   /**
-   * Records an intersection type for a node id (Chisel
-   * BrushIntersectionLookup.Set).
+   * Records an intersection type for a node id.
    *
    * @param nodeId Compact node id.
    * @param type Intersection type.
@@ -97,7 +95,7 @@ export class SolidAlgorithmBrushesTouched {
   }
 
   /**
-   * Chisel SetUsedNodesBits: self, root, self-ancestors, each peer type, peer
+   * SetUsedNodesBits: self, root, self-ancestors, each peer type, peer
    * ancestors.
    *
    * @param hierarchy Compact hierarchy.
@@ -126,9 +124,7 @@ export class SolidAlgorithmBrushesTouched {
   }
 
   /**
-   * Classifies the subject's precomputed bounds-overlap peers (Chisel
-   * StoreBrushIntersectionsJob reads brushIntersectionsWith pairs only — it
-   * does not re-scan the full brush list).
+   * Classifies the subject's precomputed bounds-overlap peers.
    *
    * @param prepared Prepared brushes.
    * @param subjectIndex Subject prepared index.
@@ -173,8 +169,8 @@ export class SolidAlgorithmBrushesTouched {
   }
 
   /**
-   * Sets every ancestor of a hierarchy node to Intersection (Chisel ancestor
-   * walk in SetUsedNodesBits). Uses parentIndex for O(depth) walks.
+   * Sets every ancestor of a hierarchy node to Intersection. Uses parentIndex
+   * for O(depth) walks.
    *
    * @param nodeIndex Child hierarchy index.
    * @param hierarchy Compact hierarchy.

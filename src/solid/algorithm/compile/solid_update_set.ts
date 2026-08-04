@@ -5,17 +5,13 @@ import type { SolidCompileTouchPeer } from './solid_compile_cache.js';
  * Builds the set of brushes that must be recompiled after an edit by expanding
  * seed dirty brushes with spatial neighbors that need surface updates.
  *
- * Matches Chisel InvalidateBrushesJob + pair-type surface semantics:
+ * Pair-type surface semantics:
  *
- * - Intersection: CreateIntersectionLoops builds surface loops; both sides need
- *   rebuild (InvalidateBrushes expands every brushIntersections entry).
- * - BInsideA (peer inside seed): CreateRoutingTableJob emits AllOutside for the
- *   peer when processing the seed and AllInside when processing the peer; the
- *   inner peer's kept surfaces change and must recompile.
- * - AInsideB (seed inside peer): CreateRoutingTableJob emits AllInside for the
- *   peer node on the seed and AllOutside for the seed on the peer; the outer
- *   peer's surface loops are unchanged (CreateIntersectionLoops skips
- *   non-Intersection), so the outer peer is not force-recompiled.
+ * - Intersection: surface loops are built for both sides; both rebuild.
+ * - BInsideA (peer inside seed): the inner peer is fully recategorized and must
+ *   recompile.
+ * - AInsideB (seed inside peer): outer peer surface loops are unchanged, so the
+ *   outer peer is not force-recompiled.
  *
  * Intentionally one-hop: peers of peers are not recompiled.
  */
@@ -49,7 +45,7 @@ export class SolidUpdateSetBuilder {
   }
 
   /**
-   * Adds peers whose Chisel pair type requires a surface rebuild of that peer.
+   * Adds peers whose pair type requires a surface rebuild of that peer.
    *
    * @param updateSet Accumulator set.
    * @param peers Optional typed peer list from the seed's perspective.
@@ -69,12 +65,10 @@ export class SolidUpdateSetBuilder {
   }
 
   /**
-   * Returns whether a seed→peer IntersectionType forces the peer to recompile.
-   * Chisel CreateRoutingTableJob: AInsideB → AllInside on peer node (outer
-   * unchanged for loops); BInsideA → AllOutside (inner peer fully
-   * recategorized); Intersection → Identity + loops.
+   * Returns whether a seed-to-peer intersection type forces the peer to
+   * recompile.
    *
-   * @param type Pair type from the seed brush's BrushesTouchedByBrush entry.
+   * @param type Pair type from the seed brush's touch list.
    * @returns True when the peer brush must be in the update set.
    */
   private static peerNeedsSurfaceRebuild(type: SolidAlgorithmIntersectionType): boolean {

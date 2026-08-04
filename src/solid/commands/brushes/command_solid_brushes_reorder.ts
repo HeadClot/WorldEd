@@ -26,7 +26,7 @@ interface ModelOrderSnapshot {
  * tree independently so nested groups do not jump in the solid root.
  *
  * CSG uses peer-local partial recompile (moved brushes + touch peers), not a
- * full map rebuild — matching Chisel touch-only iterative updates.
+ * full map rebuild — matching touch-only iterative updates.
  */
 export class CommandSolidBrushesReorder implements UndoCommand {
   private readonly sourceNodes: THREE.Object3D[];

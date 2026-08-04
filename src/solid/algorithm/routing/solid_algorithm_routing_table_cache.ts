@@ -7,7 +7,7 @@ import { SolidAlgorithmRoutingTable } from './solid_algorithm_routing_table.js';
 import { SOLID_BOUNDS_EPSILON, SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 
 /**
- * Caches per-subject Chisel routing tables and one compact hierarchy per
+ * Caches per-subject routing tables and one compact hierarchy per
  * tree/inverted-world fingerprint so a full map rebuild does not rebuild the
  * hierarchy once per brush.
  */

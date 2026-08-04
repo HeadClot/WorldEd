@@ -1,17 +1,16 @@
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 
 /**
- * One node in a Chisel-style compact hierarchy array (brush leaf or branch).
- * Children of a branch occupy a contiguous slice [childOffset, childOffset +
+ * One node in a -style compact hierarchy array (brush leaf or branch). Children
+ * of a branch occupy a contiguous slice [childOffset, childOffset +
  * childCount).
  */
 export interface SolidAlgorithmCompactNode {
   /** Brush leaf or branch group. */
   kind: 'brush' | 'branch';
   /**
-   * Unique compact node id used by CreateRoutingTableJob (Chisel
-   * CompactNodeID.slotIndex.index). Stable for the life of one hierarchy
-   * build.
+   * Unique compact node id used by CreateRoutingTableJob. Stable for the life
+   * of one hierarchy build.
    */
   nodeId: number;
   /**
@@ -27,7 +26,7 @@ export interface SolidAlgorithmCompactNode {
   childCount: number;
   /**
    * Compact array index of the parent branch, or -1 for the root. Enables O(1)
-   * ancestor walks (Chisel CompactHierarchy.ParentOf / brushAncestorLegend).
+   * ancestor walks.
    */
   parentIndex: number;
 }

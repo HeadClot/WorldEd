@@ -2,7 +2,7 @@ import type { PreparedBrush } from '@/solid/algorithm/compile/solid_compile_type
 
 /**
  * Selects which touch peers enter a subject's routing surfaces (cut planes).
- * Spatial peers only — Chisel brushesTouchedByBrush / CreateIntersectionLoops
+ * Spatial peers only — brushesTouchedByBrush / CreateIntersectionLoops
  * locality. Routing tables themselves are built by CreateRoutingTableJob from
  * the same spatial touch map.
  */

@@ -317,9 +317,9 @@ export class SolidCsgCompiler {
 
   /**
    * Rebuilds or incrementally updates the persistent spatial index. Matches
-   * Chisel CacheRemappingJob: when brush tree order changes, index-ordered
-   * caches must be remapped; we rebuild the prepared-index grid so partial peer
-   * queries are not served from stale slots after To Last / reorder.
+   * CacheRemappingJob: when brush tree order changes, index-ordered caches must
+   * be remapped; we rebuild the prepared-index grid so partial peer queries are
+   * not served from stale slots after To Last / reorder.
    *
    * @param prepared Prepared brushes.
    * @param options Compile options.
@@ -565,7 +565,7 @@ export class SolidCsgCompiler {
 
   /**
    * Writes current overlap peers with IntersectionType into the persistent
-   * touch cache (Chisel BrushesTouchedByBrush.brushIntersections).
+   * touch cache.
    *
    * @param prepared Prepared brushes after overlap build.
    * @param onlyBrushIds When set, only those brush ids are written.
@@ -629,8 +629,8 @@ export class SolidCsgCompiler {
 
   /**
    * Resolves the set of brush ids that must be recompiled this pass. Uses
-   * Chisel-style touch expansion only (seed + previous/current peers). Distant
-   * ∩ never forces a map-wide recompile of non-touching brushes.
+   * -style touch expansion only (seed + previous/current peers). Distant ∩
+   * never forces a map-wide recompile of non-touching brushes.
    *
    * @param prepared Prepared brushes.
    * @param options Compile options.

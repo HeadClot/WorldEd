@@ -3,7 +3,7 @@ import { SolidPlane } from '@/solid/brush/solid_plane.js';
 import { SOLID_FAT_PLANE_EPSILON } from '@/solid/algorithm/math/solid_math_constants.js';
 import type { HashedVertexTable } from '@/solid/algorithm/spatial/hashed_vertex_table.js';
 
-/** Squared distance for consecutive ring cleanup only (not Chisel weld ε). */
+/** Squared distance for consecutive ring cleanup only (not spatial-hash weld). */
 const SQR_RING_DEDUPE_EPSILON = 1e-16;
 
 /** Result of clipping a convex polygon against a plane. */
@@ -15,7 +15,7 @@ export interface PolygonClipResult {
 }
 
 /**
- * Clips convex polygons against planes using Sutherland–Hodgman. Used by
+ * Clips convex polygons against planes using Sutherland-Hodgman. Used by
  * Sander-style solid CSG for face fragmentation (not the editor BSP soup).
  */
 export class ConvexPolygonClipper {
@@ -202,9 +202,8 @@ export class ConvexPolygonClipper {
   }
 
   /**
-   * Returns a welded clone when a table is provided (Chisel HashedVertices.Add
-   * always stores and returns the canonical position). Without a table, returns
-   * a plain clone.
+   * Returns a welded clone when a table is provided. Without a table, returns a
+   * plain clone.
    *
    * @param point Source point.
    * @param vertexTable Optional welder.

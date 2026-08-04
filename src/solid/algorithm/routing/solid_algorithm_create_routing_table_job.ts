@@ -19,7 +19,7 @@ enum QueuedEventType {
   ListItem = 2,
 }
 
-/** Chisel QueuedEvent (explicit layout fields; union by type). */
+/** QueuedEvent (explicit layout fields; union by type). */
 interface QueuedEvent {
   type: QueuedEventType;
   currIndex: number;
@@ -31,8 +31,8 @@ interface QueuedEvent {
 }
 
 /**
- * Chisel CreateRoutingTableJob: GetStackNode / ListItem / Combine over the
- * compact hierarchy with BrushesTouchedByBrush locality.
+ * CreateRoutingTableJob: GetStackNode / ListItem / Combine over the compact
+ * hierarchy with BrushesTouchedByBrush locality.
  */
 export class SolidAlgorithmCreateRoutingTableJob {
   /**
@@ -91,7 +91,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Chisel GetStackNodes: event walk producing CategoryStackNode rows.
+   * GetStackNodes: event walk producing CategoryStackNode rows.
    *
    * @param processedNodeId Subject compact node id.
    * @param touched BrushesTouchedByBrush.
@@ -142,7 +142,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Chisel GetStackNode case.
+   * GetStackNode case.
    *
    * @param currEvent Event.
    * @param processedNodeId Subject node id.
@@ -192,7 +192,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Appends one brush CategoryStackNode (Chisel brush arm of GetStackNode).
+   * Appends one brush CategoryStackNode.
    *
    * @param currentNode Brush node.
    * @param processedNodeId Subject node id.
@@ -249,8 +249,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Queues ListItem/GetStackNode for a branch (Chisel branch arm of
-   * GetStackNode).
+   * Queues ListItem/GetStackNode for a branch.
    *
    * @param currentNode Branch node.
    * @param currEvent Parent event.
@@ -312,7 +311,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Chisel ListItem case: queue Combine then GetStackNode (LIFO).
+   * ListItem case: queue Combine then GetStackNode (LIFO).
    *
    * @param currEvent ListItem event.
    * @param outputLength Current length.
@@ -333,7 +332,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Chisel Combine case.
+   * Combine case.
    *
    * @param currEvent Combine event.
    * @param hierarchy Hierarchy.
@@ -386,7 +385,7 @@ export class SolidAlgorithmCreateRoutingTableJob {
   }
 
   /**
-   * Builds RoutingTable from live stack (Chisel blob packing).
+   * Builds RoutingTable from live stack.
    *
    * @param stack Live stack.
    * @param preparedIndexToNodeId Prepared index → node id map (inverted for

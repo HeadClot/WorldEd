@@ -1,8 +1,8 @@
 import type { SolidAlgorithmCategoryRoutingRow } from './solid_algorithm_category_routing_row.js';
 
 /**
- * One Chisel RoutingLookup segment: rows for a single hierarchy brush node
- * inside a RoutingTable.
+ * One RoutingLookup segment: rows for a single hierarchy brush node inside a
+ * RoutingTable.
  */
 export class SolidAlgorithmRoutingLookup {
   readonly startIndex: number;
@@ -20,7 +20,7 @@ export class SolidAlgorithmRoutingLookup {
   }
 
   /**
-   * Looks up the routing row for an input state inside this segment. Chisel
+   * Looks up the routing row for an input state inside this segment.
    * TryGetRoute returns false on miss; callers keep the current category.
    *
    * @param routingRows Full table row array.

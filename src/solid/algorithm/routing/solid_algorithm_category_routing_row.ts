@@ -1,14 +1,14 @@
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { SurfaceCategory } from '@/solid/types/surface_category.js';
 
-/** Six destination columns in Chisel CategoryRoutingRow order. */
+/** Six destination columns in CategoryRoutingRow order. */
 export const SOLID_ALGORITHM_CATEGORY_ROUTING_ROW_LENGTH = 6;
 
 /** Invalid destination used by unused operation slots. */
 const INVALID = 255;
 
 /**
- * One Chisel CategoryRoutingRow: six destination bytes indexed by relative
+ * One CategoryRoutingRow: six destination bytes indexed by relative
  * CategoryIndex (Inside … Outside).
  */
 export class SolidAlgorithmCategoryRoutingRow {
@@ -195,8 +195,8 @@ const ReverseAligned = SurfaceCategory.ReverseAligned;
 const Outside = SurfaceCategory.Outside;
 
 /**
- * Exact Chisel kOperationTables with HAVE_SELF_CATEGORIES (Additive,
- * Subtractive, Intersecting, unused AdditiveKeepInside).
+ * Exact kOperationTables with HAVE_SELF_CATEGORIES (Additive, Subtractive,
+ * Intersecting, unused AdditiveKeepInside).
  */
 const OPERATION_TABLES: readonly number[] = [
   Inside,

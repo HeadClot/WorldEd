@@ -7,8 +7,8 @@ import {
 import { SolidAlgorithmCategoryStackNode } from './solid_algorithm_category_stack_node.js';
 
 /**
- * Chisel CreateRoutingTableJob.Combine: merges left and right category stacks
- * for one hierarchy child operation, with row dedup and index remapping.
+ * CreateRoutingTableJob.Combine: merges left and right category stacks for one
+ * hierarchy child operation, with row dedup and index remapping.
  */
 export class SolidAlgorithmCreateRoutingTableCombine {
   /**
@@ -194,7 +194,7 @@ export class SolidAlgorithmCreateRoutingTableCombine {
 
   /**
    * Walks back from the end of the left stack to the first row of the last
-   * brush node (Chisel prevNodeIndex setup before Combine remaps).
+   * brush node.
    *
    * @param leftStack Left stack.
    * @param leftStackStart Left region start.
@@ -318,8 +318,7 @@ export class SolidAlgorithmCreateRoutingTableCombine {
 
   /**
    * Remaps previous-node destinations after the final bake, collapses constant
-   * final nodes, and strips leading all-Inside single-node rows (Chisel
-   * USE_OPTIMIZATIONS tail of Combine).
+   * final nodes, and strips leading all-Inside single-node rows.
    *
    * @param leftStack Output stack.
    * @param leftStackStart Region start.
@@ -529,7 +528,7 @@ export class SolidAlgorithmCreateRoutingTableCombine {
   }
 
   /**
-   * Remaps destinations in [start, last) using remap values. Matches Chisel
+   * Remaps destinations in [start, last) using remap values. Matches
    * RemapIndices: if any key is missing or maps to 0, aborts without modifying
    * the stack (avoids stale indices that discard surfaces as Outside).
    *

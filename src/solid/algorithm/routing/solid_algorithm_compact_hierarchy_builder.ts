@@ -14,7 +14,7 @@ interface HierarchyTempNode {
 }
 
 /**
- * Builds a Chisel compact hierarchy array from a solid CSG tree. Inverted world
+ * Builds a compact hierarchy array from a solid CSG tree. Inverted world
  * injects a virtual infinite additive brush as the first root child. Layout
  * matches CompactTreeBuilder BFS so each parent's direct children occupy a
  * contiguous index range. Each node receives a unique nodeId.

@@ -102,9 +102,8 @@ export class SolidMembershipEvaluator {
   /**
    * Evaluates the ordered CSG expression at a point. Hierarchical trees use
    * full structural evaluation. Flat trees use subject + spatial touch peers
-   * only (Chisel routing-table locality): a brush that does not touch the
-   * subject never appears in that subject's table and cannot empty or solidify
-   * it.
+   * only: a brush that does not touch the subject never appears in that
+   * subject's table and cannot empty or solidify it.
    *
    * @param point Sample point in model space.
    * @param prepared Brush list in tree order.
@@ -123,9 +122,9 @@ export class SolidMembershipEvaluator {
 
   /**
    * Hierarchical membership through compound branches (group operations).
-   * Always walks the full branch/leaf tree (Chisel structural evaluation). Peer
-   * filtering is not applied here: incomplete touch peers would skip a lone
-   * subtractive-group child and leave parent solids uncarved.
+   * Always walks the full branch/leaf tree. Peer filtering is not applied here:
+   * incomplete touch peers would skip a lone subtractive-group child and leave
+   * parent solids uncarved.
    *
    * @param point Sample point.
    * @param prepared Brush list.
