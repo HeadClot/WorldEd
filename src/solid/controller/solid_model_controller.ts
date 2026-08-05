@@ -286,6 +286,10 @@ export class SolidModelController {
    * under the most recently selected solid parent (CSG group or solid root).
    */
   addBoxBrush(): void {
+    if (this.selectionManager.isSelectionChangeLocked()) {
+      this.selectionManager.notifySelectionChangeBlocked();
+      return;
+    }
     const model = this.resolveActiveModel();
     if (!model) {
       this.showStatus?.('Select a solid model or brush first');
@@ -303,7 +307,12 @@ export class SolidModelController {
     this.commandStack.push(command);
     const brush = command.getCreatedBrush();
     if (brush?.mesh) {
-      this.selectionManager.selectObject(brush.mesh);
+      if (!this.selectionManager.selectObject(brush.mesh)) {
+        this.refreshOutliner?.();
+        this.panel.refresh();
+        this.syncViewports?.();
+        return;
+      }
       this.lastBrushInsertParent = brush.mesh.parent;
     }
     this.panel.refresh();

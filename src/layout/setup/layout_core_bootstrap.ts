@@ -8,6 +8,7 @@ import { GizmoTransform } from '@/transform/gizmo/gizmo_transform.js';
 import { GizmoRaycaster } from '@/transform/gizmo/gizmo_raycaster.js';
 import { TransformExecutor } from '@/transform/core/transform_executor.js';
 import { HandlerTransform } from '@/transform/core/handler_transform.js';
+import { HandlerComponentTransform } from '@/edit/transform/handler_component_transform.js';
 import { TransformConstraint } from '@/transform/core/transform_constraint.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import { ManagerSnap } from '@/transform/snap/manager_snap.js';
@@ -34,6 +35,7 @@ export interface LayoutCoreSystems {
   gizmoRaycaster: GizmoRaycaster;
   commandStack: CommandStack;
   transformHandler: HandlerTransform;
+  componentTransformHandler: HandlerComponentTransform;
   textureLock: TextureLockSettings;
   hierarchyReparentHandler: HandlerHierarchyReparent;
   clipPlaneTool: ToolClipPlane;
@@ -123,6 +125,7 @@ function createSnapAndTransformStack(): Pick<
   | 'gizmoRaycaster'
   | 'commandStack'
   | 'transformHandler'
+  | 'componentTransformHandler'
 > {
   const gridSnap = new GridSnap(true, DEFAULT_GRID_SNAP_INTERVAL);
   const transformGizmo = new GizmoTransform(Theme);
@@ -145,5 +148,6 @@ function createSnapAndTransformStack(): Pick<
       transformConstraint,
       commandStack,
     ),
+    componentTransformHandler: new HandlerComponentTransform(gridSnap, commandStack),
   };
 }

@@ -216,17 +216,6 @@ export class ToolbarIcons {
   }
 
   /**
-   * Tools palette wrench/panel icon.
-   *
-   * @returns SVG markup string.
-   */
-  static toolsPanel(): string {
-    return this.wrapSvg(
-      '<rect x="5" y="4" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="4" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="5" y="14" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="14" width="6" height="6" rx="1" fill="currentColor" opacity="0.45"/>',
-    );
-  }
-
-  /**
    * Snap-to-grid icon (grid with a snap target at the intersection).
    *
    * @returns SVG markup string.

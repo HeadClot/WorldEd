@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { MeshDocument } from '@/mesh/document/mesh_document.js';
+import { meshCornerUvsFromBufferGeometry } from './mesh_corner_uv_from_vertex_uv.js';
 import { meshDocumentFromTriangleList } from './mesh_from_triangle_list.js';
 
 /**
@@ -12,7 +13,7 @@ import { meshDocumentFromTriangleList } from './mesh_from_triangle_list.js';
 export function meshDocumentFromBufferGeometry(geometry: THREE.BufferGeometry): MeshDocument {
   const positions = readPositionBuffer(geometry);
   const triangleIndices = readTriangleIndices(geometry);
-  const cornerUvs = readCornerUvsForTriangles(geometry, triangleIndices);
+  const cornerUvs = meshCornerUvsFromBufferGeometry(geometry, triangleIndices);
   return meshDocumentFromTriangleList(positions, triangleIndices, cornerUvs);
 }
 
@@ -80,29 +81,4 @@ function readNonIndexedTriangleIndices(vertexCount: number): number[] {
     values.push(vertexIndex);
   }
   return values;
-}
-
-/**
- * Reads per-triangle-corner UVs matching half-edge order after import.
- *
- * @param geometry Source geometry.
- * @param triangleIndices Flat triangle indices.
- * @returns Interleaved corner u,v or undefined when no UV attribute.
- */
-function readCornerUvsForTriangles(
-  geometry: THREE.BufferGeometry,
-  triangleIndices: number[],
-): Float32Array | undefined {
-  const uv = geometry.getAttribute('uv');
-  if (!uv) {
-    return undefined;
-  }
-  const cornerCount = triangleIndices.length;
-  const cornerUvs = new Float32Array(cornerCount * 2);
-  for (let corner = 0; corner < cornerCount; corner++) {
-    const vertexIndex = triangleIndices[corner]!;
-    cornerUvs[corner * 2] = uv.getX(vertexIndex);
-    cornerUvs[corner * 2 + 1] = uv.getY(vertexIndex);
-  }
-  return cornerUvs;
 }

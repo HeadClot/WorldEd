@@ -23,6 +23,7 @@ import {
   countTriangles,
   rebakeStoredFaceTextureMaps,
   resolveProjectionNormal,
+  splitMeshIntoCoplanarRegions,
 } from './planar_uv_projector.js';
 import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 import { applyCylinderSideUnwrapOffsets } from './cylinder_side_unwrap.js';
@@ -85,21 +86,51 @@ export function buildTargetsFromMeshes(meshes: THREE.Mesh[]): TextureApplyTarget
 
 /**
  * Builds apply targets covering every triangle on one ordinary content mesh.
+ * Prefers stored face maps when present; otherwise uses linear-time coplanar
+ * regionization (never O(n²) seed flood).
  *
  * @param mesh Content mesh (not a solid brush preview).
  * @returns One target per coplanar region on the mesh.
  */
 function buildTargetsFromWholeContentMesh(mesh: THREE.Mesh): TextureApplyTarget[] {
-  const triangleCount = countTriangles(mesh.geometry);
-  const indices: number[] = [];
-  for (let i = 0; i < triangleCount; i++) {
-    indices.push(i);
+  const storedTargets = buildTargetsFromStoredFaceMaps(mesh);
+  if (storedTargets) {
+    return storedTargets;
   }
-  const selections: FaceSelection[] = indices.map((faceIndex) => ({
+  return buildTargetsFromCoplanarMeshRegions(mesh);
+}
+
+/**
+ * Builds targets from stored face texture maps when the mesh already has them.
+ *
+ * @param mesh Content mesh.
+ * @returns Targets, or null when no maps are stored.
+ */
+function buildTargetsFromStoredFaceMaps(mesh: THREE.Mesh): TextureApplyTarget[] | null {
+  const entries = getFaceTextureMapsLive(mesh);
+  if (entries.length === 0) {
+    return null;
+  }
+  return entries.map((entry) => ({
     mesh,
-    faceIndex,
+    triangleIndices: entry.triangleIndices.slice(),
+    previousMapping: cloneFaceTextureMapping(entry.mapping),
   }));
-  return buildTargetsFromFaceSelection(selections);
+}
+
+/**
+ * Builds one target per coplanar region across the full mesh triangle set.
+ *
+ * @param mesh Content mesh.
+ * @returns Coplanar apply targets.
+ */
+function buildTargetsFromCoplanarMeshRegions(mesh: THREE.Mesh): TextureApplyTarget[] {
+  const regions = splitMeshIntoCoplanarRegions(mesh);
+  return regions.map((faceIndices) => ({
+    mesh,
+    triangleIndices: faceIndices,
+    previousMapping: null,
+  }));
 }
 
 /**
@@ -508,6 +539,15 @@ function restoreGeometryAwareUvDefaults(mesh: THREE.Mesh): void {
   setFaceTextureMaps(mesh, entries);
 }
 
+/** Optional UV initialization overrides. */
+export interface InitializeMeshTextureUvOptions {
+  /**
+   * When true, uses brush-style centered UV translation (+0.5) so unit faces
+   * map one full tile with the texture centered on each side.
+   */
+  centerTexture?: boolean;
+}
+
 /**
  * Initializes default UVs, face maps, and surface materials on a content mesh.
  * Uses the last painted texture id when available.
@@ -515,8 +555,15 @@ function restoreGeometryAwareUvDefaults(mesh: THREE.Mesh): void {
  * @param mesh Mesh to prepare.
  * @param textureId Optional texture id override.
  * @param align Optional projection align override (e.g. floor for terrain).
+ * @param options Optional UV init flags (e.g. centered texture like solid
+ *   brushes).
  */
-export function initializeMeshTextureUVs(mesh: THREE.Mesh, textureId?: string, align?: FaceTextureAlign): void {
+export function initializeMeshTextureUVs(
+  mesh: THREE.Mesh,
+  textureId?: string,
+  align?: FaceTextureAlign,
+  options?: InitializeMeshTextureUvOptions,
+): void {
   captureGeometrySourceIfNeeded(mesh);
   const paintId = textureId ?? getStateTexturePaint().getLastTextureId();
   const triangleCount = countTriangles(mesh.geometry);
@@ -528,23 +575,36 @@ export function initializeMeshTextureUVs(mesh: THREE.Mesh, textureId?: string, a
     rebuildSurfaceMaterials(mesh);
     return;
   }
+  const trs = resolveDefaultMeshTextureTrs(paintId, options?.centerTexture === true);
   const entries = targets.map((target) => {
     const faceNormal = computeRegionWorldNormal(mesh, target.triangleIndices);
     const projectionNormal = resolveProjectionNormal(faceNormal, align ?? 'auto');
     return {
       triangleIndices: target.triangleIndices.slice(),
-      mapping: createFaceTextureMappingFromTrs(
-        paintId,
-        projectionNormal,
-        { scaleU: 1, scaleV: 1, offsetU: 0, offsetV: 0, rotationDeg: 0 },
-        align ?? 'auto',
-      ),
+      mapping: createFaceTextureMappingFromTrs(paintId, projectionNormal, trs, align ?? 'auto'),
     };
   });
   applyCylinderSideUnwrapOffsets(mesh, entries);
   setFaceTextureMaps(mesh, entries);
   rebakeStoredFaceTextureMaps(mesh);
   rebuildSurfaceMaterials(mesh);
+}
+
+/**
+ * Resolves default TRS for mesh UV init. Centered matches solid brush defaults.
+ *
+ * @param paintId Texture id for default mapping.
+ * @param centerTexture Whether to use brush-style centered UV translation.
+ * @returns TRS fields for createFaceTextureMappingFromTrs.
+ */
+function resolveDefaultMeshTextureTrs(
+  paintId: string,
+  centerTexture: boolean,
+): { scaleU: number; scaleV: number; offsetU: number; offsetV: number; rotationDeg: number } {
+  if (!centerTexture) {
+    return { scaleU: 1, scaleV: 1, offsetU: 0, offsetV: 0, rotationDeg: 0 };
+  }
+  return getFaceTextureMappingTrs(createDefaultFaceTextureMapping(paintId), new THREE.Vector3(0, 1, 0));
 }
 
 /**

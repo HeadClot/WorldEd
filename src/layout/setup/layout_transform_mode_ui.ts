@@ -1,42 +1,19 @@
 import { TransformMode } from '@/types/transform_mode.js';
-import { StatusBar } from '@/ui/status/status_bar.js';
-import { ToolsPalette } from '@/tools/palette/ui/tools_palette.js';
+import type { ControllerViewportToolChrome } from '@/tools/chrome/controller/controller_viewport_tool_chrome.js';
+import type { StatusBar } from '@/ui/status/status_bar.js';
 
 /**
- * Updates tools-palette transform highlights and status bar mode text.
+ * Updates tool chrome transform mode highlight and status bar action text.
  *
- * @param toolsPalette Floating tools palette that owns transform mode buttons.
- * @param statusBar Optional status bar for mode display.
+ * @param toolsPaletteController Viewport tool chrome controller.
+ * @param statusBar Status bar for last-action text.
  * @param mode Active transform mode.
  */
 export function applyTransformModeUi(
-  toolsPalette: ToolsPalette | null | undefined,
-  statusBar: StatusBar | null,
+  toolsPaletteController: ControllerViewportToolChrome | null | undefined,
+  statusBar: StatusBar | null | undefined,
   mode: TransformMode,
 ): void {
-  toolsPalette?.setActiveTransformMode(mode);
-  updateStatusBarTransformMode(statusBar, mode);
-}
-
-/**
- * Writes the transform mode name into the status bar.
- *
- * @param statusBar Status bar instance, or null when unavailable.
- * @param mode The active transform mode.
- */
-function updateStatusBarTransformMode(statusBar: StatusBar | null, mode: TransformMode): void {
-  if (!statusBar) return;
-  if (mode === TransformMode.TRANSLATE) {
-    statusBar.setTransformMode('Move');
-    return;
-  }
-  if (mode === TransformMode.ROTATE) {
-    statusBar.setTransformMode('Rotate');
-    return;
-  }
-  if (mode === TransformMode.SCALE) {
-    statusBar.setTransformMode('Scale');
-    return;
-  }
-  statusBar.setTransformMode('Bounds');
+  toolsPaletteController?.setActiveTransformMode(mode);
+  statusBar?.setLastAction(`Transform mode: ${mode}`);
 }

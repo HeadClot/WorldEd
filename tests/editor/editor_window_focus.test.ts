@@ -5,6 +5,7 @@ import { Tool } from '@/editor/tools/tool.js';
 import { GuiWindow } from '@/editor/gui/gui_window.js';
 import { EditorInputBridge } from '@/editor/window/editor_input_bridge.js';
 import { FloatingPanelStack } from '@/ui/floating_panel/panel_floating_stack.js';
+import { TransformMode } from '@/types/transform_mode.js';
 
 /** Minimal tool fake for focus and SwitchTool / UseTool tests. */
 class FakeTool extends Tool {
@@ -491,7 +492,10 @@ describe('EditorWindow focus system', () => {
       continueFaceSelectPointerMove: () => {},
       endFaceSelectPointerUp: () => {},
       isFaceSelectStrokeActive: () => false,
+      isEditModeActive: () => false,
+      beginEditSelectPointerDown: () => false,
       setWidgetMode: () => {},
+      getWidgetMode: () => TransformMode.BOUNDS,
       refreshGizmoPresentation: () => {},
       setStatusMessage: () => {},
       registerUndo: () => {},

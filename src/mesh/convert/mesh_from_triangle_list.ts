@@ -1,6 +1,5 @@
-import { MeshAttributeStore } from '@/mesh/attribute/mesh_attribute_store.js';
-import { MeshDocument } from '@/mesh/document/mesh_document.js';
-import { meshTopologyFromTriangleBuffers } from '@/mesh/topology/mesh_topology_builder.js';
+import { meshDocumentFromPolygonList } from './mesh_from_polygon_list.js';
+import type { MeshDocument } from '@/mesh/document/mesh_document.js';
 
 /**
  * Builds a mesh document from packed positions and a flat triangle index list.
@@ -17,28 +16,11 @@ export function meshDocumentFromTriangleList(
   triangleIndices: ArrayLike<number>,
   cornerUvs?: Float32Array,
 ): MeshDocument {
-  const topology = meshTopologyFromTriangleBuffers(positions, triangleIndices);
-  const attributes = new MeshAttributeStore(topology.getHalfEdgeCount(), topology.getFaceCount());
-  if (cornerUvs) {
-    writeCornerUvsFromTriangleOrder(attributes, topology.getHalfEdgeCount(), cornerUvs);
+  const faces: number[][] = [];
+  const triangleCount = Math.floor(triangleIndices.length / 3);
+  for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++) {
+    const base = triangleIndex * 3;
+    faces.push([triangleIndices[base]!, triangleIndices[base + 1]!, triangleIndices[base + 2]!]);
   }
-  return new MeshDocument(topology, attributes);
-}
-
-/**
- * Copies triangle-order corner UVs into the attribute store.
- *
- * @param attributes Attribute store.
- * @param halfEdgeCount Expected half-edge count.
- * @param cornerUvs Interleaved u,v for each triangle corner.
- */
-function writeCornerUvsFromTriangleOrder(
-  attributes: MeshAttributeStore,
-  halfEdgeCount: number,
-  cornerUvs: Float32Array,
-): void {
-  const store = attributes.getCornerUvs();
-  store.ensureCornerCount(halfEdgeCount);
-  const copyCount = Math.min(halfEdgeCount * 2, cornerUvs.length);
-  store.getValues().set(cornerUvs.subarray(0, copyCount));
+  return meshDocumentFromPolygonList(positions, faces, cornerUvs);
 }

@@ -88,13 +88,15 @@ export function createDefaultKeyboardShortcutSettings(): KeyboardShortcutSetting
 }
 
 /**
- * Default transform-mode and selection-mode shortcuts.
+ * Default transform-mode, selection-tool, and interaction-mode shortcuts. Digit
+ * 1–3 are intentionally unbound here so they stay free for later Blender-style
+ * vertex / edge / face component keys.
  *
  * @returns Partial keyboard shortcut settings.
  */
 function createDefaultTransformShortcuts(): Pick<
   KeyboardShortcutSettings,
-  'move' | 'rotate' | 'scale' | 'bounds' | 'face' | 'selection_object'
+  'move' | 'rotate' | 'scale' | 'bounds' | 'face' | 'selection_object' | 'interaction_mode'
 > {
   return {
     move: createShortcut('KeyW'),
@@ -102,7 +104,8 @@ function createDefaultTransformShortcuts(): Pick<
     scale: createShortcut('KeyR'),
     bounds: createShortcut('KeyT'),
     face: createShortcut('Tab', false, true),
-    selection_object: createShortcut('Tab'),
+    selection_object: createShortcut('KeyO'),
+    interaction_mode: createShortcut('Tab'),
   };
 }
 

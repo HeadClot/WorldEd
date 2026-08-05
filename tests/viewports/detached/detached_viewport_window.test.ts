@@ -204,6 +204,7 @@ describe('DetachedViewportWindow', () => {
     expect(viewport).not.toBeNull();
     const content = viewport!.getContentElement();
     expect(content.style.top).toBe(`${Theme.viewportToolbarHeightPx}px`);
+    expect(content.style.left).toBe('0px');
     expect(content).not.toBe(viewport!.getContainer());
     detached.dispose();
   });

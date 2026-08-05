@@ -1,6 +1,7 @@
 import { TransformMode } from '@/types/transform_mode.js';
 import { ShadingMode } from '@/types/shading_mode.js';
 import { SelectionMode } from '@/types/selection_mode.js';
+import { EditorComponentMode } from '@/types/editor_component_mode.js';
 import type { KeyboardShortcutSettings } from '@/settings/store/settings_types.js';
 import type {
   ActionCallback,
@@ -44,6 +45,8 @@ export interface HandlerKeyboardShortcutActionHost {
   onFitAllViewports: ActionCallback | null;
   onShadingMode: ShadingModeCallback | null;
   onSelectionModeToggle: SelectionModeCallback | null;
+  onInteractionModeToggle: ActionCallback | null;
+  onComponentMode: ((mode: EditorComponentMode) => void) | null;
   onSnapIntervalForward: ActionCallback | null;
   onSnapIntervalBackward: ActionCallback | null;
   onExtrudeFaces: ActionCallback | null;
@@ -52,6 +55,7 @@ export interface HandlerKeyboardShortcutActionHost {
   onClipSplit: ActionCallback | null;
   onEscape: ActionCallback | null;
   isClipToolActive: (() => boolean) | null;
+  isEditModeActive: (() => boolean) | null;
 }
 
 /**
@@ -366,6 +370,9 @@ export function handlerKeyboardShortcutHandleShadingModeKeys(
   host: HandlerKeyboardShortcutActionHost,
   event: KeyboardEvent,
 ): void {
+  if (host.isEditModeActive?.()) {
+    return;
+  }
   if (!host.onShadingMode) {
     return;
   }
@@ -388,7 +395,56 @@ export function handlerKeyboardShortcutHandleShadingModeKeys(
 }
 
 /**
- * Handles selection mode toggle shortcuts.
+ * Handles Edit Mode component mode digits (1 vertex, 2 edge, 3 face).
+ *
+ * @param host Action host.
+ * @param event Keyboard event.
+ */
+export function handlerKeyboardShortcutHandleComponentModeKeys(
+  host: HandlerKeyboardShortcutActionHost,
+  event: KeyboardEvent,
+): void {
+  if (!host.isEditModeActive?.() || !host.onComponentMode) {
+    return;
+  }
+  if (event.code === 'Digit1' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
+    event.preventDefault();
+    host.onComponentMode(EditorComponentMode.VERTEX);
+    return;
+  }
+  if (event.code === 'Digit2' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
+    event.preventDefault();
+    host.onComponentMode(EditorComponentMode.EDGE);
+    return;
+  }
+  if (event.code === 'Digit3' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
+    event.preventDefault();
+    host.onComponentMode(EditorComponentMode.FACE);
+  }
+}
+
+/**
+ * Handles Object Mode / Edit Mode toggle (Tab by default).
+ *
+ * @param host Action host.
+ * @param event Keyboard event.
+ */
+export function handlerKeyboardShortcutHandleInteractionModeToggleKey(
+  host: HandlerKeyboardShortcutActionHost,
+  event: KeyboardEvent,
+): void {
+  if (!host.onInteractionModeToggle) {
+    return;
+  }
+  if (!host.matchesShortcut(event, 'interaction_mode')) {
+    return;
+  }
+  event.preventDefault();
+  host.onInteractionModeToggle();
+}
+
+/**
+ * Handles face / object selection tool shortcuts (not Tab).
  *
  * @param host Action host.
  * @param event Keyboard event.
@@ -455,7 +511,9 @@ export function handlerKeyboardShortcutDispatchToolKeys(
   handlerKeyboardShortcutHandleAlignKeys(host, event);
   handlerKeyboardShortcutHandleSolidOperationKeys(host, event);
   handlerKeyboardShortcutHandleFitKeys(host, event);
+  handlerKeyboardShortcutHandleComponentModeKeys(host, event);
   handlerKeyboardShortcutHandleShadingModeKeys(host, event);
+  handlerKeyboardShortcutHandleInteractionModeToggleKey(host, event);
   handlerKeyboardShortcutHandleSelectionModeToggleKey(host, event);
   handlerKeyboardShortcutHandleSnapIntervalKeys(host, event);
   handlerKeyboardShortcutHandleExtrudeKey(host, event);

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { EditorWindow } from '@/editor/window/editor_window.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
+import { TransformMode } from '@/types/transform_mode.js';
 import {
   isSingleUsePointerCompatibleWithPinnedPick,
   resolveSingleUseViewportPointerContext,
@@ -54,7 +55,10 @@ function createServices(overrides: Partial<EditorServices> = {}): EditorServices
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isEditModeActive: () => false,
+    beginEditSelectPointerDown: () => false,
     setWidgetMode: () => {},
+    getWidgetMode: () => TransformMode.BOUNDS,
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
     registerUndo: () => {},

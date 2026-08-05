@@ -12,6 +12,7 @@ import { TransformConstraint } from '@/transform/core/transform_constraint.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { TransformMode } from '@/types/transform_mode.js';
+import { HandlerComponentTransform } from '@/edit/transform/handler_component_transform.js';
 
 describe('layout tool editor single-use Shift snap precision', () => {
   let gridSnap: GridSnap;
@@ -56,6 +57,7 @@ describe('layout tool editor single-use Shift snap precision', () => {
     camera.updateMatrixWorld(true);
     const system = createLayoutToolEditorSystem({
       transformHandler,
+      componentTransformHandler: new HandlerComponentTransform(gridSnap, new CommandStack(16)),
       transformGizmo,
       selectionManager,
       inputManager,

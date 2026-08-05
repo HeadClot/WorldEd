@@ -86,6 +86,25 @@ export const Theme = Object.freeze({
   uiFontFamily: 'Segoe UI, system-ui, -apple-system, sans-serif',
   toolbarHeightPx: 40,
   viewportToolbarHeightPx: 28,
+  /**
+   * Reserved vertical space for the content-sized tool options bar under the
+   * viewport title toolbar (used to place the floating tool rail below it).
+   */
+  viewportToolOptionsBarHeightPx: 36,
+  /**
+   * Shared control height for options-bar buttons and the mode dropdown
+   * (matches Solid / Wireframe icon buttons on the viewport title toolbar).
+   */
+  viewportToolOptionsControlHeightPx: 24,
+  /**
+   * Width of the Shape Editor–style floating tool panel on each viewport
+   * (primary tool icons only; height is content-sized).
+   */
+  viewportToolFloatingWidthPx: 40,
+  /** Inset of the floating tool panel below the options bar. */
+  viewportToolFloatingOffsetTopPx: 10,
+  /** Inset of the floating tool panel from the left of the content area. */
+  viewportToolFloatingOffsetLeftPx: 10,
   viewportToolbarBackground: 'rgba(22, 22, 26, 0.92)',
   viewportToolbarBorder: 'rgba(255, 255, 255, 0.06)',
   viewportToolbarSeparator: 'rgba(255, 255, 255, 0.12)',

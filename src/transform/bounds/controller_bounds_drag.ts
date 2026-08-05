@@ -254,6 +254,9 @@ export class ControllerBoundsDrag {
     if (this.transformGizmo.getMode() !== TransformMode.BOUNDS) {
       return false;
     }
+    if (!this.transformGizmo.isVisible()) {
+      return false;
+    }
     if (!this.transformGizmo.getCurrentBounds()) {
       return false;
     }

@@ -146,6 +146,7 @@ export type KeyboardShortcutAction =
   | 'bounds'
   | 'face'
   | 'selection_object'
+  | 'interaction_mode'
   | 'delete_selected'
   | 'escape'
   | 'save'

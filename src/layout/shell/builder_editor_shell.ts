@@ -47,7 +47,6 @@ export interface EditorToolbarActions {
   onRedo: () => void;
   onToggleUvEditor: () => void;
   onToggleTextureBrowser: () => void;
-  onToggleToolsPalette: () => void;
   onToggleSolidModelPanel: () => void;
   onToggleSettingsDialog: () => void;
   onOpenDocumentation: () => void;
@@ -78,6 +77,7 @@ export interface EditorToolbarActions {
   onSaveScene: () => void;
   onLoadScene: () => void;
   onImportVmf: () => void;
+  onImportObj: () => void;
   onExportGlb: () => void;
   onExportObj: () => void;
   onExportFbx: () => void;
@@ -361,7 +361,8 @@ export class BuilderEditorShell {
 
   /**
    * Creates the modern top toolbar: menus, history, snap, and panel toggles.
-   * Transform modes live in the Tools palette (object-select context).
+   * Transform modes live on each viewport tool options bar (object-select
+   * context).
    *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
@@ -437,6 +438,10 @@ export class BuilderEditorShell {
         {
           label: 'Valve Map Format 2006 (.vmf)…',
           onClick: () => actions.onImportVmf(),
+        },
+        {
+          label: 'Wavefront OBJ (.obj)…',
+          onClick: () => actions.onImportObj(),
         },
       ],
     };
@@ -584,8 +589,8 @@ export class BuilderEditorShell {
   }
 
   /**
-   * Adds floating panel toggle icons (UV, textures, tools), About, Audio next
-   * to AI Captures, then a trailing spacer and MCP on the far right.
+   * Adds floating panel toggle icons (UV, textures), About, Audio next to AI
+   * Captures, then a trailing spacer and MCP on the far right.
    *
    * @param toolbar Toolbar instance to populate.
    * @param actions Callbacks for each toolbar control.
@@ -594,7 +599,6 @@ export class BuilderEditorShell {
     toolbar.addSeparator();
     toolbar.addIconButton('UV Editor', ToolbarIcons.uvEditor(), () => actions.onToggleUvEditor());
     toolbar.addIconButton('Texture Browser', ToolbarIcons.textureBrowser(), () => actions.onToggleTextureBrowser());
-    toolbar.addIconButton('Tools', ToolbarIcons.toolsPanel(), () => actions.onToggleToolsPalette());
     toolbar.addIconButton('Solid Model', ToolbarIcons.solidModel(), () => actions.onToggleSolidModelPanel());
     toolbar.addIconButton('Settings', ToolbarIcons.settings(), () => actions.onToggleSettingsDialog());
     toolbar.addSeparator();

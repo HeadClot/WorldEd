@@ -19,6 +19,13 @@ export interface ContextHelpersLayoutGizmo {
   getGizmoScaleCamera: () => THREE.Camera | null;
   toolbar: Toolbar;
   showStatusMessage: (message: string) => void;
+  /**
+   * Optional Edit Mode component pivot. When present and non-null, overrides
+   * the object-selection pivot while keeping orientation from selection.
+   *
+   * @returns Component world pivot, or null when not in component edit.
+   */
+  resolveEditModeComponentPivot?: () => THREE.Vector3 | null;
 }
 
 /**
@@ -27,6 +34,11 @@ export interface ContextHelpersLayoutGizmo {
  * @param context Gizmo subsystem dependencies.
  */
 export function updateLayoutGizmoPivot(context: ContextHelpersLayoutGizmo): void {
+  const componentPivot = context.resolveEditModeComponentPivot?.() ?? null;
+  if (componentPivot) {
+    applyComponentEditGizmoPose(context, componentPivot);
+    return;
+  }
   const selected = Array.from(context.selectionManager.getSelectedObjects());
   if (selected.length > 0) {
     applySelectionGizmoPose(context, selected);
@@ -35,6 +47,24 @@ export function updateLayoutGizmoPivot(context: ContextHelpersLayoutGizmo): void
   context.transformGizmo.setPivot(new THREE.Vector3(0, 0, 0));
   context.transformGizmo.setOrientation(new THREE.Quaternion());
   context.transformGizmo.updateBoundsFromMeshes([]);
+}
+
+/**
+ * Places the gizmo at a component selection pivot while Edit Mode is active.
+ *
+ * @param context Gizmo subsystem dependencies.
+ * @param pivot Component world pivot.
+ */
+function applyComponentEditGizmoPose(context: ContextHelpersLayoutGizmo, pivot: THREE.Vector3): void {
+  const selected = Array.from(context.selectionManager.getSelectedObjects());
+  context.transformGizmo.setPivot(pivot);
+  context.transformGizmo.setOrientation(resolveLayoutGizmoOrientation(context, selected));
+  syncGizmoOrthoDepthAxisPolicy(context);
+  const camera = context.getGizmoScaleCamera();
+  if (camera) {
+    context.transformGizmo.updateScaleForCamera(camera);
+  }
+  context.transformGizmo.updateBoundsFromMeshes(selected, camera);
 }
 
 /**

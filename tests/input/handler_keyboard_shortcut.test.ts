@@ -110,6 +110,13 @@ describe('KeyboardShortcutHandler', () => {
     expect(onDelete).toHaveBeenCalledOnce();
   });
 
+  it('should toggle Object Mode / Edit Mode on Tab by default', () => {
+    const onInteractionMode = vi.fn();
+    handler.setOnInteractionModeToggle(onInteractionMode);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab', key: 'Tab' }));
+    expect(onInteractionMode).toHaveBeenCalledOnce();
+  });
+
   it('should dispatch reconfigured command and clip plane shortcuts', () => {
     const shortcuts = createDefaultKeyboardShortcutSettings();
     shortcuts.save.code = 'KeyP';

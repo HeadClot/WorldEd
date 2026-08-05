@@ -32,7 +32,6 @@ export interface LayoutShellHostCallbacks {
   onSelectionChanged(): void;
   onToggleUvEditor(): void;
   onToggleTextureBrowser(): void;
-  onToggleToolsPalette(): void;
   onToggleSolidModelPanel(): void;
   onToggleSettingsDialog(): void;
   onOpenDocumentation(): void;
@@ -54,6 +53,7 @@ export interface LayoutShellHostCallbacks {
   onSaveScene(): void;
   onLoadScene(): void;
   onImportVmf(): void;
+  onImportObj(): void;
   onExportGlb(): void;
   onExportObj(): void;
   onExportFbx(): void;
@@ -137,7 +137,6 @@ export function createShellSourceHostFromLayout(
     onSelectionChanged: () => actions.onSelectionChanged(),
     onToggleUvEditor: () => actions.onToggleUvEditor(),
     onToggleTextureBrowser: () => actions.onToggleTextureBrowser(),
-    onToggleToolsPalette: () => actions.onToggleToolsPalette(),
     onToggleSolidModelPanel: () => actions.onToggleSolidModelPanel(),
     onToggleSettingsDialog: () => actions.onToggleSettingsDialog(),
     onOpenDocumentation: () => actions.onOpenDocumentation(),
@@ -159,6 +158,7 @@ export function createShellSourceHostFromLayout(
     onSaveScene: () => actions.onSaveScene(),
     onLoadScene: () => actions.onLoadScene(),
     onImportVmf: () => actions.onImportVmf(),
+    onImportObj: () => actions.onImportObj(),
     onExportGlb: () => actions.onExportGlb(),
     onExportObj: () => actions.onExportObj(),
     onExportFbx: () => actions.onExportFbx(),

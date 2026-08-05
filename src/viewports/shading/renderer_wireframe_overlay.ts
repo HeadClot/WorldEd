@@ -3,7 +3,7 @@ import { Theme } from '@/theme.js';
 import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '@/selection/object/selection_highlight.js';
 import { hasEdgeBuildableGeometry } from '@/utils/mesh_edge_sync.js';
 import { SOLID_BRUSH_USERDATA_KEY } from '@/solid/model/solid_brush_visual.js';
-
+import { isEditModeWireframeSuppressed } from '@/utils/edit_mode_wireframe_suppress.js';
 /**
  * Renders wireframe overlays on top of the viewport scene. Overlays are
  * parented to their source meshes so they follow transforms during live drag
@@ -52,6 +52,10 @@ export class RendererWireframeOverlay {
       lineSegments.position.set(0, 0, 0);
       lineSegments.rotation.set(0, 0, 0);
       lineSegments.scale.set(1, 1, 1);
+      if (isEditModeWireframeSuppressed(lineSegments)) {
+        lineSegments.visible = false;
+        return;
+      }
       lineSegments.visible = this.overlaysVisible;
     });
   }
@@ -92,6 +96,10 @@ export class RendererWireframeOverlay {
   setVisible(visible: boolean): void {
     this.overlaysVisible = visible;
     this.overlayEntries.forEach((lineSegments) => {
+      if (isEditModeWireframeSuppressed(lineSegments)) {
+        lineSegments.visible = false;
+        return;
+      }
       lineSegments.visible = visible;
     });
   }

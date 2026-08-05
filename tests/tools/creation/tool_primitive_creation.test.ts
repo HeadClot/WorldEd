@@ -62,6 +62,22 @@ describe('ToolPrimitiveCreation', () => {
     expect(source?.params['depth']).toBe(4);
   });
 
+  it('should create a box with n-gon quads and centered UVs like solid brushes', () => {
+    const mesh = tool.createBox(1, 1, 1);
+    const document = mesh.userData['meshDocument'] as { getTopology: () => { getFaceCount: () => number } };
+    expect(document.getTopology().getFaceCount()).toBe(6);
+    const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+    expect(uv).toBeDefined();
+    let minU = Infinity;
+    let maxU = -Infinity;
+    for (let index = 0; index < uv.count; index++) {
+      minU = Math.min(minU, uv.getX(index));
+      maxU = Math.max(maxU, uv.getX(index));
+    }
+    expect(minU).toBeLessThan(0.25);
+    expect(maxU).toBeGreaterThan(0.75);
+  });
+
   it('should name box with auto-incremented number', () => {
     const mesh1 = tool.createBox(1, 1, 1);
     const mesh2 = tool.createBox(1, 1, 1);

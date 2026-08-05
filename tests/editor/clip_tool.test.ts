@@ -6,6 +6,7 @@ import { BoundsTool } from '@/editor/tools/bounds_tool.js';
 import { ToolClipPlane } from '@/tools/clip_plane/tool_clip_plane.js';
 import type { HandlerClipPlane } from '@/tools/clip_plane/handler_clip_plane.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
+import { TransformMode } from '@/types/transform_mode.js';
 
 /**
  * Builds stub services for clip tool tests.
@@ -60,7 +61,10 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isEditModeActive: () => false,
+    beginEditSelectPointerDown: () => false,
     setWidgetMode: () => {},
+    getWidgetMode: () => TransformMode.BOUNDS,
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
     registerUndo: () => {},

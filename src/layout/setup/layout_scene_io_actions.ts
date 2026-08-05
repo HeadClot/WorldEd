@@ -12,6 +12,9 @@ import { showMessageBox } from '@/ui/dialog/dialog_message_box.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { createSolidModelStartupDefault } from '@/solid/model/solid_model_startup_default.js';
 import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
+import { CommandPrimitiveCreate } from '@/tools/creation/commands/command_primitive_create.js';
+import { CommandObjectGroup } from '@/outliner/commands/command_object_group.js';
+import { buildObjImportGroupBaseName } from '@/io/obj/obj_importer.js';
 import type * as THREE from 'three';
 
 /** Dependencies for scene load / history refresh side effects. */
@@ -82,6 +85,56 @@ export async function runLayoutVmfImport(
   }
   solidModelController.placeImportedModel(result.model, `Imported ${result.importedBrushCount} brushes from VMF`);
   refreshAfterWorldMutation();
+}
+
+/**
+ * Loads a Wavefront OBJ file and places content meshes with undo support.
+ *
+ * @param sceneIOHandler Scene file dialog and import handler.
+ * @param statusBar Status bar for progress and errors.
+ * @param worldObject World root receiving imported meshes.
+ * @param commandStack Undo stack for create commands.
+ * @param refreshAfterWorldMutation Callback after the world graph changes.
+ */
+export async function runLayoutObjImport(
+  sceneIOHandler: HandlerSceneIo,
+  statusBar: StatusBar | null,
+  worldObject: THREE.Group,
+  commandStack: CommandStack,
+  refreshAfterWorldMutation: () => void,
+): Promise<void> {
+  const result = await sceneIOHandler.importObj(statusBar);
+  if (!result) {
+    return;
+  }
+  placeImportedObjMeshes(result.meshes, result.sourceFileName, worldObject, commandStack);
+  refreshAfterWorldMutation();
+}
+
+/**
+ * Parents imported OBJ meshes into the world. A single mesh is added directly;
+ * multiple meshes share one undoable group named from the file stem.
+ *
+ * @param meshes Imported content meshes.
+ * @param sourceFileName Source file path or name.
+ * @param worldObject World root.
+ * @param commandStack Undo stack.
+ */
+function placeImportedObjMeshes(
+  meshes: readonly THREE.Mesh[],
+  sourceFileName: string,
+  worldObject: THREE.Group,
+  commandStack: CommandStack,
+): void {
+  if (meshes.length === 0) {
+    return;
+  }
+  if (meshes.length === 1) {
+    commandStack.push(new CommandPrimitiveCreate(meshes[0]!, worldObject));
+    return;
+  }
+  const groupName = hierarchyNameAllocator.allocate(buildObjImportGroupBaseName(sourceFileName));
+  commandStack.push(new CommandObjectGroup([...meshes], worldObject, groupName));
 }
 
 /**

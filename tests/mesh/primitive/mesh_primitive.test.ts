@@ -8,19 +8,46 @@ import { validateMeshTopology } from '@/mesh/topology/mesh_topology_validator.js
 import { meshDocumentToBufferGeometry } from '@/mesh/convert/mesh_to_buffer_geometry.js';
 
 describe('mesh primitives', () => {
-  it('creates a closed box with twelve faces and no boundary', () => {
+  it('creates a closed box with six quad faces and no boundary', () => {
     const document = createMeshDocumentBox(2, 2, 2);
     const topology = document.getTopology();
     expect(topology.getVertexCount()).toBe(8);
-    expect(topology.getFaceCount()).toBe(12);
+    expect(topology.getFaceCount()).toBe(6);
+    expect(topology.getHalfEdgeCount()).toBe(24);
     expect(meshTopologyCountBoundaryHalfEdges(topology)).toBe(0);
     expect(validateMeshTopology(topology).isValid).toBe(true);
+    const cornerUvs = document.getAttributes().getCornerUvs().getValues();
+    expect(cornerUvs.length).toBe(24 * 2);
+    const hasCenteredOffset = Array.from(cornerUvs).some((value) => Math.abs(value) > 0.1);
+    expect(hasCenteredOffset).toBe(true);
   });
 
-  it('creates an open plane with boundary edges', () => {
+  it('creates a box with outward-facing normals after buffer conversion', () => {
+    const document = createMeshDocumentBox(2, 2, 2);
+    const geometry = meshDocumentToBufferGeometry(document);
+    const positions = geometry.getAttribute('position');
+    const normals = geometry.getAttribute('normal');
+    expect(positions).toBeTruthy();
+    expect(normals).toBeTruthy();
+    if (!positions || !normals) {
+      return;
+    }
+    for (let vertexIndex = 0; vertexIndex < positions.count; vertexIndex++) {
+      const px = positions.getX(vertexIndex);
+      const py = positions.getY(vertexIndex);
+      const pz = positions.getZ(vertexIndex);
+      const nx = normals.getX(vertexIndex);
+      const ny = normals.getY(vertexIndex);
+      const nz = normals.getZ(vertexIndex);
+      const outwardDot = px * nx + py * ny + pz * nz;
+      expect(outwardDot).toBeGreaterThan(0);
+    }
+  });
+
+  it('creates an open plane with quad faces and boundary edges', () => {
     const document = createMeshDocumentPlane(2, 2, 2, 2);
     const topology = document.getTopology();
-    expect(topology.getFaceCount()).toBe(8);
+    expect(topology.getFaceCount()).toBe(4);
     expect(meshTopologyCountBoundaryHalfEdges(topology)).toBeGreaterThan(0);
     expect(validateMeshTopology(topology).isValid).toBe(true);
   });

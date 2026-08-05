@@ -102,6 +102,10 @@ export class HandlerPrimitiveCreation {
    * @param objectRadius Approximate half-extent used for wall clearance.
    */
   private createPrimitive(factory: () => THREE.Mesh, objectRadius: number): void {
+    if (this.selectionManager.isSelectionChangeLocked()) {
+      this.selectionManager.notifySelectionChangeBlocked();
+      return;
+    }
     const mesh = factory();
     this.applySpawnPlacement(mesh, objectRadius);
     const command = new CommandPrimitiveCreate(mesh, this.worldObject);

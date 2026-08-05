@@ -1,4 +1,4 @@
-/** Interactive editor tools shown in the floating Tools palette. */
+/** Interactive editor tools shown on each viewport tool rail. */
 export enum EditorToolId {
   OBJECT = 'object',
   FACE = 'face',

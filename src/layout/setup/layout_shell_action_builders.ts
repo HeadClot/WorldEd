@@ -33,7 +33,6 @@ export interface LayoutShellActionSource {
   onRedo: () => void;
   onToggleUvEditor: () => void;
   onToggleTextureBrowser: () => void;
-  onToggleToolsPalette: () => void;
   onToggleSolidModelPanel: () => void;
   onToggleSettingsDialog: () => void;
   onOpenDocumentation: () => void;
@@ -48,6 +47,7 @@ export interface LayoutShellActionSource {
   onSaveScene: () => void;
   onLoadScene: () => void;
   onImportVmf: () => void;
+  onImportObj: () => void;
   onExportGlb: () => void;
   onExportObj: () => void;
   onExportFbx: () => void;
@@ -116,7 +116,6 @@ export function createToolbarShellActions(source: LayoutShellActionSource) {
     onRedo: () => source.onRedo(),
     onToggleUvEditor: () => source.onToggleUvEditor(),
     onToggleTextureBrowser: () => source.onToggleTextureBrowser(),
-    onToggleToolsPalette: () => source.onToggleToolsPalette(),
     onToggleSolidModelPanel: () => source.onToggleSolidModelPanel(),
     onToggleSettingsDialog: () => source.onToggleSettingsDialog(),
     onOpenDocumentation: () => source.onOpenDocumentation(),
@@ -131,6 +130,7 @@ export function createToolbarShellActions(source: LayoutShellActionSource) {
     onSaveScene: () => source.onSaveScene(),
     onLoadScene: () => source.onLoadScene(),
     onImportVmf: () => source.onImportVmf(),
+    onImportObj: () => source.onImportObj(),
     onExportGlb: () => source.onExportGlb(),
     onExportObj: () => source.onExportObj(),
     onExportFbx: () => source.onExportFbx(),

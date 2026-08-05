@@ -27,6 +27,13 @@ import { SelectionClickThrough } from '@/selection/object/selection_click_throug
 import { orderObjectPickStackForViewport } from '@/selection/object/selection_pick_order_2d.js';
 import type { BridgeTransformInteraction } from '@/tools/bridge/bridge_transform_interaction.js';
 import type { CoordinatorFaceMode } from '@/tools/face/coordinator_face_mode.js';
+import type { CoordinatorEditMode } from '@/edit/coordinator/coordinator_edit_mode.js';
+import type { HandlerComponentTransform } from '@/edit/transform/handler_component_transform.js';
+import { BridgeComponentTransformInteraction } from '@/edit/transform/bridge_component_transform_interaction.js';
+import {
+  computeComponentTransformPivot,
+  expandComponentSelectionToTransformVertices,
+} from '@/edit/transform/component_transform_selection.js';
 import {
   publishLayoutTransformLiveVisuals,
   shouldPublishLiveVisualsAfterModalKey,
@@ -36,6 +43,7 @@ import { audioViewportFocus } from '@/audio/spatial/audio_viewport_focus.js';
 /** Dependencies for building the Shape Editor-style tool stack. */
 export interface LayoutToolEditorSetupDeps {
   transformHandler: HandlerTransform;
+  componentTransformHandler: HandlerComponentTransform;
   transformGizmo: GizmoTransform;
   selectionManager: ManagerSelection;
   inputManager: ManagerInput;
@@ -105,6 +113,22 @@ export interface LayoutToolEditorSetupDeps {
    * @returns Coordinator when face mode is set up.
    */
   getFaceModeCoordinator?: () => CoordinatorFaceMode | null;
+  /**
+   * Edit Mode coordinator for EditSelectTool mouse routing.
+   *
+   * @returns Coordinator when edit mode is set up.
+   */
+  getEditModeCoordinator?: () => CoordinatorEditMode | null;
+  /**
+   * Called when a permanent gizmo handle drag begins so widgets latch
+   * wantsActive.
+   */
+  onPermanentGizmoHandleDragBegan?: () => void;
+  /**
+   * Called when a permanent gizmo handle drag ends so widgets clear
+   * wantsActive.
+   */
+  onPermanentGizmoHandleDragEnded?: () => void;
 }
 
 /** Built tool system exposed to the layout for keyboard and mode switches. */
@@ -130,6 +154,12 @@ export interface LayoutToolEditorSystem {
    * @returns True when face-select is active.
    */
   switchToFaceSelect: () => boolean;
+  /**
+   * Switches to the Edit Mode select tool.
+   *
+   * @returns True when edit-select is active.
+   */
+  switchToEditSelect: () => boolean;
   /** Re-pins exclusive routing roots to every interactive pane content element. */
   refreshInteractiveViewportDomain: () => void;
   /**
@@ -255,6 +285,10 @@ export function createLayoutToolEditorSystem(deps: LayoutToolEditorSetupDeps): L
       editorWindow.userSwitchToFaceSelectTool();
       return true;
     },
+    switchToEditSelect: () => {
+      editorWindow.userSwitchToEditSelectTool();
+      return true;
+    },
     refreshInteractiveViewportDomain,
     cancelActiveSingleUseTool: () => cancelActiveSingleUseTool(editorWindow),
     isToolBusy: () => editorWindow.isToolBusy,
@@ -353,6 +387,7 @@ function createEditorServices(
   getPointerOwnerDocument: () => Document | null,
 ): EditorServices {
   const selectableCache = new Map<THREE.Object3D, ISelectable>();
+  const componentTransformBridge = createComponentTransformBridge(deps);
   return {
     getTransformTargets: () => {
       const selected = filterUnlockedObjects(deps.selectionManager.getAllSelectedObjectsAsArray());
@@ -360,8 +395,8 @@ function createEditorServices(
     },
     forEachSelectedObject: () =>
       iterateSelectables(filterUnlockedObjects(deps.selectionManager.getAllSelectedObjectsAsArray()), selectableCache),
-    getSelectedCount: () => filterUnlockedObjects(deps.selectionManager.getAllSelectedObjectsAsArray()).length,
-    getTransformPivot: () => deps.getTransformPivot(),
+    getSelectedCount: () => resolveEditorSelectedCount(deps),
+    getTransformPivot: () => resolveEditorTransformPivot(deps),
     getSelectedSegmentsAveragePosition: () => resolveAverageScreenPosition(deps),
     isSnapping: () => false,
     getGridSnap: () => 1,
@@ -376,6 +411,11 @@ function createEditorServices(
       resolveFirstInteractiveViewportInDocument(deps, ownerDocument),
     getInteractiveViewportPickElements: () => collectInteractivePickElements(deps),
     beginSingleUseDrag: (mode, objects, pivot, camera, pickElement, clientX, clientY) => {
+      if (tryBeginComponentSingleUseDrag(deps, mode, camera, pickElement, clientX, clientY)) {
+        deps.transformGizmo.setVisible(false);
+        inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
+        return true;
+      }
       return beginSingleUseDragHiddenGizmo(
         deps,
         inputBridge,
@@ -389,19 +429,40 @@ function createEditorServices(
       );
     },
     applySingleUsePointerMove: (clientX, clientY, camera, pickElement) => {
+      if (deps.componentTransformHandler.isDragging()) {
+        deps.componentTransformHandler.applyPointerMove(clientX, clientY);
+        deps.getEditModeCoordinator?.()?.refreshPresentation();
+        return;
+      }
       applySingleUsePointerMove(deps, clientX, clientY, camera, pickElement);
     },
-    isTransformDragActive: () => deps.transformHandler.isDragging(),
+    isTransformDragActive: () => deps.transformHandler.isDragging() || deps.componentTransformHandler.isDragging(),
     isPermanentGizmoHandleDragActive: () =>
-      deps.transformHandler.isDragging() && !deps.transformHandler.isSingleUseDrag(),
+      (deps.transformHandler.isDragging() && !deps.transformHandler.isSingleUseDrag()) ||
+      deps.componentTransformHandler.isPermanentDrag() ||
+      componentTransformBridge.isPermanentDragActive(),
     handleModalKeyDown: (_keyCode, event) => handleModalKeyDownWithLiveVisuals(deps, event),
     commitActiveTransformDrag: () => {
+      if (deps.componentTransformHandler.isDragging()) {
+        deps.componentTransformHandler.commitIfNeeded();
+        restoreSingleUseSnapUserPreference(deps);
+        inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
+        deps.refreshGizmoPresentation();
+        return;
+      }
       deps.transformHandler.commitActiveDragIfNeeded();
       restoreSingleUseSnapUserPreference(deps);
       inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
       deps.refreshGizmoPresentation();
     },
     cancelActiveTransformDrag: () => {
+      if (deps.componentTransformHandler.isDragging()) {
+        deps.componentTransformHandler.cancelIfNeeded();
+        restoreSingleUseSnapUserPreference(deps);
+        inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
+        deps.refreshGizmoPresentation();
+        return;
+      }
       deps.transformHandler.cancelActiveDragIfNeeded();
       restoreSingleUseSnapUserPreference(deps);
       inputBridge.setExclusiveViewportRoots(collectInteractivePickElements(deps));
@@ -423,12 +484,21 @@ function createEditorServices(
     pickObjectStackAtClientPoint: (clientX, clientY) =>
       pickObjectStackAtClientPoint(deps, clientX, clientY, null, getPointerOwnerDocument()),
     clearObjectSelection: () => {
+      if (deps.getEditModeCoordinator?.()?.isActive() === true) {
+        return;
+      }
       deps.selectionManager.clearSelection();
     },
     applyObjectClickSelectionAtClientPoint: (clientX, clientY, additive, toggle) => {
+      if (deps.getEditModeCoordinator?.()?.isActive() === true) {
+        return;
+      }
       applyObjectClickSelectionAtClientPoint(deps, clientX, clientY, additive, toggle, getPointerOwnerDocument());
     },
     applyObjectMarqueeSelection: (clientMinX, clientMinY, clientMaxX, clientMaxY, subtractive) => {
+      if (deps.getEditModeCoordinator?.()?.isActive() === true) {
+        return;
+      }
       applyObjectMarqueeSelection(
         deps,
         clientMinX,
@@ -440,6 +510,9 @@ function createEditorServices(
       );
     },
     tryBeginPermanentGizmoDragFromEditorPointer: (clientX, clientY, modifiers) => {
+      if (deps.getEditModeCoordinator?.()?.isActive() === true) {
+        return componentTransformBridge.tryBeginFromEditorPointer(clientX, clientY, modifiers);
+      }
       const bridge = deps.getTransformInteractionBridge?.() ?? null;
       if (!bridge) {
         return false;
@@ -447,6 +520,9 @@ function createEditorServices(
       return bridge.tryBeginFromEditorPointer(clientX, clientY, modifiers);
     },
     probePermanentGizmoUnderPointer: (clientX, clientY, modifiers) => {
+      if (deps.getEditModeCoordinator?.()?.isActive() === true) {
+        return componentTransformBridge.probeGizmoUnderPointer(clientX, clientY, modifiers);
+      }
       const bridge = deps.getTransformInteractionBridge?.() ?? null;
       if (!bridge) {
         return false;
@@ -456,6 +532,10 @@ function createEditorServices(
     updateBoundsHoverAtClientPoint: (clientX, clientY) => {
       const bridge = deps.getTransformInteractionBridge?.() ?? null;
       if (!bridge) {
+        return;
+      }
+      if (deps.getEditModeCoordinator?.()?.isActive() === true) {
+        bridge.clearBoundsHover();
         return;
       }
       bridge.updateBoundsHoverAtClientPoint(clientX, clientY);
@@ -490,9 +570,16 @@ function createEditorServices(
     isFaceSelectStrokeActive: () => {
       return deps.getFaceModeCoordinator?.()?.isFaceSelectStrokeActive() === true;
     },
+    isEditModeActive: () => deps.getEditModeCoordinator?.()?.isActive() === true,
+    beginEditSelectPointerDown: (clientX, clientY, isShiftPressed, isCtrlPressed) => {
+      return (
+        deps.getEditModeCoordinator?.()?.pickAtClientPoint(clientX, clientY, isShiftPressed, isCtrlPressed) === true
+      );
+    },
     setWidgetMode: (mode) => {
       deps.transformGizmo.setMode(mode);
     },
+    getWidgetMode: () => deps.transformGizmo.getMode(),
     refreshGizmoPresentation: () => deps.refreshGizmoPresentation(),
     setStatusMessage: (message) => deps.setStatusMessage(message),
     registerUndo: (_name) => {},
@@ -934,6 +1021,56 @@ function resolveLastPointerClientPosition(
 }
 
 /**
+ * Builds the permanent component gizmo bridge for Edit Mode.
+ *
+ * @param deps Layout services.
+ * @returns Component transform interaction bridge.
+ */
+function createComponentTransformBridge(deps: LayoutToolEditorSetupDeps): BridgeComponentTransformInteraction {
+  return new BridgeComponentTransformInteraction({
+    transformGizmo: deps.transformGizmo,
+    componentTransformHandler: deps.componentTransformHandler,
+    gridSnap: deps.gridSnap,
+    inputManager: deps.inputManager,
+    getUserSnapEnabled: deps.getUserSnapEnabled,
+    getEditModeCoordinator: () => deps.getEditModeCoordinator?.() ?? null,
+    probeViewportAtClientPoint: (clientX, clientY) =>
+      resolveInteractiveViewportObjectAtClientPoint(deps, clientX, clientY),
+    onPermanentGizmoHandleDragBegan: () => deps.onPermanentGizmoHandleDragBegan?.(),
+    onPermanentGizmoHandleDragEnded: () => deps.onPermanentGizmoHandleDragEnded?.(),
+    onLiveComponentTransform: () => deps.refreshGizmoPresentation(),
+    onAfterComponentTransformCommit: () => deps.refreshGizmoPresentation(),
+  });
+}
+
+/**
+ * Finds the interactive viewport whose content element contains a client point.
+ *
+ * @param deps Layout services.
+ * @param clientX Pointer client X.
+ * @param clientY Pointer client Y.
+ * @returns Viewport under the pointer, or null.
+ */
+function resolveInteractiveViewportObjectAtClientPoint(
+  deps: LayoutToolEditorSetupDeps,
+  clientX: number,
+  clientY: number,
+): Viewport3D | Viewport2D | null {
+  for (const viewport of deps.getInteractiveViewports()) {
+    const pickElement = viewport.getContentElement();
+    if (!pickElement) {
+      continue;
+    }
+    const rect = pickElement.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      continue;
+    }
+    return viewport;
+  }
+  return null;
+}
+
+/**
  * Starts a single-use drag with gizmos hidden (Shape Editor / Blender: no
  * transform widgets during G/R/S).
  *
@@ -966,6 +1103,100 @@ function beginSingleUseDragHiddenGizmo(
     deps.transformGizmo.setVisible(false);
   }
   return started;
+}
+
+/**
+ * Starts a component single-use drag when Edit Mode has a component selection.
+ *
+ * @param deps Layout deps.
+ * @param mode Transform mode.
+ * @param camera Camera.
+ * @param pickElement Pick element.
+ * @param clientX Pointer X.
+ * @param clientY Pointer Y.
+ * @returns True when a component drag started.
+ */
+function tryBeginComponentSingleUseDrag(
+  deps: LayoutToolEditorSetupDeps,
+  mode: TransformMode,
+  camera: THREE.Camera,
+  pickElement: HTMLElement,
+  clientX: number,
+  clientY: number,
+): boolean {
+  const coordinator = deps.getEditModeCoordinator?.() ?? null;
+  if (!coordinator?.isActive()) {
+    return false;
+  }
+  const session = coordinator.getSession();
+  const vertices = expandComponentSelectionToTransformVertices(
+    session.getComponentSelection().getSelected(),
+    session.getDomain(),
+  );
+  const pivot = computeComponentTransformPivot(vertices);
+  if (!pivot) {
+    return false;
+  }
+  deps.componentTransformHandler.setAfterCommitCallback(() => {
+    coordinator.refreshDomainGeometryPresentation();
+    deps.refreshGizmoPresentation();
+  });
+  deps.componentTransformHandler.setAfterLiveCallback(() => {
+    coordinator.refreshDomainGeometryPresentation();
+    deps.refreshGizmoPresentation();
+  });
+  deps.componentTransformHandler.setStatusCallback((text) => {
+    if (text.length === 0) {
+      return;
+    }
+    deps.setStatusMessage(text);
+  });
+  syncSingleUseSnapFromShift(deps);
+  return deps.componentTransformHandler.beginSingleUseDrag(
+    mode,
+    vertices,
+    pivot,
+    camera,
+    pickElement,
+    clientX,
+    clientY,
+  );
+}
+
+/**
+ * Returns the selection count used by single-use tool launches.
+ *
+ * @param deps Layout deps.
+ * @returns Object or component selection count.
+ */
+function resolveEditorSelectedCount(deps: LayoutToolEditorSetupDeps): number {
+  const coordinator = deps.getEditModeCoordinator?.() ?? null;
+  if (coordinator?.isActive()) {
+    return coordinator.getComponentSelectionCount();
+  }
+  return filterUnlockedObjects(deps.selectionManager.getAllSelectedObjectsAsArray()).length;
+}
+
+/**
+ * Returns the transform pivot for tools and gizmos.
+ *
+ * @param deps Layout deps.
+ * @returns World pivot.
+ */
+function resolveEditorTransformPivot(deps: LayoutToolEditorSetupDeps): THREE.Vector3 {
+  const coordinator = deps.getEditModeCoordinator?.() ?? null;
+  if (coordinator?.isActive()) {
+    const session = coordinator.getSession();
+    const vertices = expandComponentSelectionToTransformVertices(
+      session.getComponentSelection().getSelected(),
+      session.getDomain(),
+    );
+    const pivot = computeComponentTransformPivot(vertices);
+    if (pivot) {
+      return pivot;
+    }
+  }
+  return deps.getTransformPivot();
 }
 
 /**
@@ -1021,18 +1252,41 @@ function restoreSingleUseSnapUserPreference(deps: LayoutToolEditorSetupDeps): vo
 
 /**
  * Routes modal transform keys (axis lock, numeric typing) and refreshes solid
- * geometry / overlays with the same live path as pointer moves.
+ * geometry / overlays with the same live path as pointer moves. Component
+ * single-use G/R/S in Edit Mode uses the same X/Y/Z and math entry as object
+ * tools.
  *
  * @param deps Layout services.
  * @param event Browser keyboard event.
  * @returns True when the modal controller consumed the key.
  */
 function handleModalKeyDownWithLiveVisuals(deps: LayoutToolEditorSetupDeps, event: KeyboardEvent): boolean {
+  if (deps.componentTransformHandler.isDragging()) {
+    return handleComponentModalKeyDownWithLiveVisuals(deps, event);
+  }
   const handled = deps.transformHandler.handleModalKeyDown(event);
   if (!shouldPublishLiveVisualsAfterModalKey(handled, deps.transformHandler.isDragging())) {
     return handled;
   }
   publishLiveTransformVisuals(deps, resolveSingleUseSelection(deps));
+  return true;
+}
+
+/**
+ * Routes modal keys during Edit Mode component transform and refreshes the cage
+ * / wireframe suppress after the pose sample.
+ *
+ * @param deps Layout services.
+ * @param event Browser keyboard event.
+ * @returns True when the component modal controller consumed the key.
+ */
+function handleComponentModalKeyDownWithLiveVisuals(deps: LayoutToolEditorSetupDeps, event: KeyboardEvent): boolean {
+  const handled = deps.componentTransformHandler.handleModalKeyDown(event);
+  if (!handled) {
+    return false;
+  }
+  deps.getEditModeCoordinator?.()?.refreshDomainGeometryPresentation();
+  deps.refreshGizmoPresentation();
   return true;
 }
 

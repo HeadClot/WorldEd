@@ -305,11 +305,34 @@ export interface EditorServices {
    */
   clearBoundsHoverAtClientPoint(): void;
 
-  /** Enters face selection mode (palette Face tool). */
+  /** Enters face selection mode (tool rail Face Select). */
   enterFaceSelectionMode(): void;
 
   /** Leaves face selection mode and restores object-mode feedback. */
   leaveFaceSelectionMode(): void;
+
+  /**
+   * Returns whether Edit Mode is currently active.
+   *
+   * @returns True while component editing is live.
+   */
+  isEditModeActive(): boolean;
+
+  /**
+   * Starts an Edit Mode component pick at a client point.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @param isShiftPressed Additive selection.
+   * @param isCtrlPressed Toggle selection.
+   * @returns True when the pick path ran.
+   */
+  beginEditSelectPointerDown(
+    clientX: number,
+    clientY: number,
+    isShiftPressed: boolean,
+    isCtrlPressed: boolean,
+  ): boolean;
 
   /**
    * Starts a face pick/paint stroke at a client point while face tool is
@@ -354,6 +377,13 @@ export interface EditorServices {
    * @param mode Transform mode.
    */
   setWidgetMode(mode: TransformMode): void;
+
+  /**
+   * Returns the persistent gizmo widget mode.
+   *
+   * @returns Current transform mode.
+   */
+  getWidgetMode(): TransformMode;
 
   /** Refreshes gizmo pivot and visibility. */
   refreshGizmoPresentation(): void;

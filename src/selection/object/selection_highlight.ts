@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { hasEdgeBuildableGeometry } from '@/utils/mesh_edge_sync.js';
 import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
+import { getOrBuildSelectionEdgeGeometry } from './selection_edge_geometry.js';
 
 /**
  * UserData flag marking a LineSegments object as a selection outline. Used to
@@ -189,7 +190,7 @@ export class SelectionHighlight {
    */
   private createOutlineForMesh(mesh: THREE.Mesh): THREE.Group {
     SelectionHighlight.ensureSharedMaterials(this.highlightColor);
-    const edges = new THREE.EdgesGeometry(mesh.geometry);
+    const edges = getOrBuildSelectionEdgeGeometry(mesh);
     const group = new THREE.Group();
     group.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] = true;
     group.matrixAutoUpdate = true;
@@ -210,14 +211,14 @@ export class SelectionHighlight {
   /**
    * Creates one edge line-pass mesh sharing geometry with its sibling pass.
    *
-   * @param edges Shared edge geometry.
+   * @param edges Shared edge geometry (cached; not disposed by the pass).
    * @param material Front or occluded line material.
    * @param renderOrder Draw order for the pass.
    * @param isOccludedPass Whether this is the dim behind-geometry pass.
    * @returns Configured line segments.
    */
   private createEdgePass(
-    edges: THREE.EdgesGeometry,
+    edges: THREE.BufferGeometry,
     material: THREE.LineBasicMaterial,
     renderOrder: number,
     isOccludedPass: boolean,
@@ -225,6 +226,7 @@ export class SelectionHighlight {
     const lineSegments = new THREE.LineSegments(edges, material);
     lineSegments.renderOrder = renderOrder;
     lineSegments.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] = true;
+    lineSegments.userData['selectionEdgeGeometryShared'] = true;
     if (isOccludedPass) {
       lineSegments.userData[SELECTION_HIGHLIGHT_OCCLUDED_USERDATA_KEY] = true;
       lineSegments.visible = SelectionHighlight.depthOcclusionEnabled;
@@ -340,7 +342,6 @@ export class SelectionHighlight {
         this.disposeOutlineGroup(mesh, child);
       } else {
         mesh.remove(child);
-        (child as THREE.LineSegments).geometry.dispose();
       }
     });
   }
@@ -353,13 +354,7 @@ export class SelectionHighlight {
    */
   private disposeOutlineGroup(mesh: THREE.Mesh, outlineGroup: THREE.Group): void {
     mesh.remove(outlineGroup);
-    let sharedGeometry: THREE.BufferGeometry | null = null;
-    for (const child of outlineGroup.children) {
-      if (!(child instanceof THREE.LineSegments)) continue;
-      if (!sharedGeometry) sharedGeometry = child.geometry;
-    }
     outlineGroup.clear();
-    if (sharedGeometry) sharedGeometry.dispose();
   }
 
   /**

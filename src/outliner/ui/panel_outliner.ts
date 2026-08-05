@@ -82,6 +82,14 @@ export type OutlinerFaceModeSelectionHandler = (
 ) => boolean;
 
 /**
+ * Guard that blocks object selection changes from the outliner (e.g. Edit
+ * Mode).
+ *
+ * @returns True when object selection must not change.
+ */
+export type OutlinerObjectSelectionLockGuard = () => boolean;
+
+/**
  * Hierarchical scene object panel with tree rendering. Displays scene objects
  * as a collapsible tree with type icons, visibility toggles, inline rename, and
  * context menu support.
@@ -233,6 +241,20 @@ export class PanelOutliner {
   }
 
   /**
+   * Registers a lock that prevents object selection changes from outliner row
+   * clicks (used while Edit Mode owns the domain selection).
+   *
+   * @param isLocked Guard returning true when selection must not change.
+   * @param onBlocked Optional status callback when a click is blocked.
+   */
+  setObjectSelectionLockGuard(
+    isLocked: OutlinerObjectSelectionLockGuard | null,
+    onBlocked: (() => void) | null = null,
+  ): void {
+    this.selectionManager.setSelectionChangeLockGuard(isLocked, onBlocked);
+  }
+
+  /**
    * Maintains backward compatibility for legacy context callback registration.
    *
    * @param onDuplicate The callback invoked when Duplicate is selected.
@@ -355,11 +377,33 @@ export class PanelOutliner {
     if (this.tryApplyFaceModeSelection(obj, isShiftPressed, isCtrlPressed)) {
       return;
     }
+    if (this.tryBlockObjectSelectionWhileLocked(obj)) {
+      return;
+    }
     this.isApplyingOutlinerSelection = true;
     this.updateHierarchySelection(obj, isShiftPressed, isCtrlPressed);
     this.syncMeshSelectionFromHierarchy();
     this.isApplyingOutlinerSelection = false;
     this.refreshSelectionOnly();
+  }
+
+  /**
+   * Blocks object selection changes while ManagerSelection is locked (Edit
+   * Mode), unless the click only re-targets an already selected hierarchy row
+   * without modifiers.
+   *
+   * @param obj Clicked hierarchy object.
+   * @returns True when the pick was blocked.
+   */
+  private tryBlockObjectSelectionWhileLocked(obj: THREE.Object3D): boolean {
+    if (!this.selectionManager.isSelectionChangeLocked()) {
+      return false;
+    }
+    if (this.hierarchySelection.size === 1 && this.hierarchySelection.has(obj)) {
+      return true;
+    }
+    this.selectionManager.notifySelectionChangeBlocked();
+    return true;
   }
 
   /**

@@ -8,9 +8,13 @@ import { resolveInspectorObjects } from './resolve_transform_targets.js';
  */
 export type SelectionChangedCallback = (selected: Set<THREE.Mesh>) => void;
 
+/** Guard that reports whether selection mutations must be refused. */
+export type SelectionChangeLockGuard = () => boolean;
+
 /**
  * Central selection state manager. Maintains a set of selected meshes and
- * notifies listeners on changes.
+ * notifies listeners on changes. Optional lock guards (e.g. Edit Mode) refuse
+ * all user-facing selection mutations at this single entry point.
  */
 export class ManagerSelection {
   private selectedObjects: Set<THREE.Mesh>;
@@ -22,6 +26,8 @@ export class ManagerSelection {
    * mesh selection (e.g. solid model root while the result mesh is selected).
    */
   private inspectorObjects: THREE.Object3D[];
+  private selectionChangeLockGuard: SelectionChangeLockGuard | null;
+  private selectionChangeBlockedCallback: (() => void) | null;
 
   /** Creates a new selection manager with an initially empty selection set. */
   constructor() {
@@ -29,27 +35,63 @@ export class ManagerSelection {
     this.changeCallbacks = [];
     this.lastSelectedMesh = null;
     this.inspectorObjects = [];
+    this.selectionChangeLockGuard = null;
+    this.selectionChangeBlockedCallback = null;
+  }
+
+  /**
+   * Installs a selection-change lock. When the guard returns true, all user
+   * selection mutations return false without changing state.
+   *
+   * @param isLocked Guard that reports lock state, or null to clear.
+   * @param onBlocked Optional callback when a mutation is refused.
+   */
+  setSelectionChangeLockGuard(isLocked: SelectionChangeLockGuard | null, onBlocked: (() => void) | null = null): void {
+    this.selectionChangeLockGuard = isLocked;
+    this.selectionChangeBlockedCallback = onBlocked;
+  }
+
+  /**
+   * Returns whether selection mutations are currently locked.
+   *
+   * @returns True when the lock guard refuses changes.
+   */
+  isSelectionChangeLocked(): boolean {
+    return this.selectionChangeLockGuard?.() === true;
+  }
+
+  /**
+   * Invokes the blocked callback when a selection mutation is refused (for UI
+   * that detects the lock before calling mutators).
+   */
+  notifySelectionChangeBlocked(): void {
+    this.selectionChangeBlockedCallback?.();
   }
 
   /**
    * Selects a single object, clearing any previous selection.
    *
    * @param mesh The mesh to select.
+   * @returns True when applied or already selected; false when locked.
    */
-  selectObject(mesh: THREE.Mesh): void {
+  selectObject(mesh: THREE.Mesh): boolean {
     const nextInspector = resolveInspectorObjects([mesh]);
     if (
       this.selectedObjects.size === 1 &&
       this.selectedObjects.has(mesh) &&
       this.isSameInspectorObjects(nextInspector)
     ) {
-      return;
+      return true;
+    }
+    if (!this.tryAllowSelectionChange()) {
+      return false;
     }
     this.selectedObjects.clear();
     this.selectedObjects.add(mesh);
     this.lastSelectedMesh = mesh;
     this.inspectorObjects = nextInspector;
     this.notifyChange();
+    return true;
   }
 
   /**
@@ -59,15 +101,22 @@ export class ManagerSelection {
    * @param meshes The meshes that should become the selection set.
    * @param inspectorObjects Optional hierarchy nodes for the inspector
    *   (defaults to resolved inspector targets for meshes).
+   * @returns True when applied or already matching; false when locked.
    */
-  setSelection(meshes: THREE.Mesh[], inspectorObjects?: THREE.Object3D[]): void {
+  setSelection(meshes: THREE.Mesh[], inspectorObjects?: THREE.Object3D[]): boolean {
     const nextInspector = inspectorObjects ?? resolveInspectorObjects(meshes);
-    if (this.isSameSelection(meshes) && this.isSameInspectorObjects(nextInspector)) return;
+    if (this.isSameSelection(meshes) && this.isSameInspectorObjects(nextInspector)) {
+      return true;
+    }
+    if (!this.tryAllowSelectionChange()) {
+      return false;
+    }
     this.selectedObjects.clear();
     meshes.forEach((mesh) => this.selectedObjects.add(mesh));
     this.lastSelectedMesh = meshes[meshes.length - 1] ?? null;
     this.inspectorObjects = nextInspector.slice();
     this.notifyChange();
+    return true;
   }
 
   /**
@@ -95,21 +144,32 @@ export class ManagerSelection {
    * Adds an object to the current selection set.
    *
    * @param mesh The mesh to add to selection.
+   * @returns True when applied or already selected; false when locked.
    */
-  addToSelection(mesh: THREE.Mesh): void {
-    if (this.selectedObjects.has(mesh)) return;
+  addToSelection(mesh: THREE.Mesh): boolean {
+    if (this.selectedObjects.has(mesh)) {
+      return true;
+    }
+    if (!this.tryAllowSelectionChange()) {
+      return false;
+    }
     this.selectedObjects.add(mesh);
     this.lastSelectedMesh = mesh;
     this.inspectorObjects = resolveInspectorObjects(Array.from(this.selectedObjects));
     this.notifyChange();
+    return true;
   }
 
   /**
    * Toggles a mesh in or out of the multi-selection set.
    *
    * @param mesh The mesh to toggle.
+   * @returns True when applied; false when locked.
    */
-  toggleSelection(mesh: THREE.Mesh): void {
+  toggleSelection(mesh: THREE.Mesh): boolean {
+    if (!this.tryAllowSelectionChange()) {
+      return false;
+    }
     if (this.selectedObjects.has(mesh)) {
       this.selectedObjects.delete(mesh);
       if (this.lastSelectedMesh === mesh) {
@@ -121,6 +181,7 @@ export class ManagerSelection {
     }
     this.inspectorObjects = resolveInspectorObjects(Array.from(this.selectedObjects));
     this.notifyChange();
+    return true;
   }
 
   /**
@@ -130,47 +191,63 @@ export class ManagerSelection {
    * @param mesh The mesh that was clicked.
    * @param additive True when Shift is held (add if missing).
    * @param toggle True when Ctrl/Meta is held (toggle membership).
+   * @returns True when applied; false when locked.
    */
-  selectFromClick(mesh: THREE.Mesh, additive: boolean, toggle: boolean): void {
+  selectFromClick(mesh: THREE.Mesh, additive: boolean, toggle: boolean): boolean {
     if (toggle) {
-      this.toggleSelection(mesh);
-      return;
+      return this.toggleSelection(mesh);
     }
     if (additive) {
-      this.addToSelection(mesh);
-      return;
+      return this.addToSelection(mesh);
     }
-    this.selectObject(mesh);
+    return this.selectObject(mesh);
   }
 
   /**
    * Removes an object from the current selection set.
    *
    * @param mesh The mesh to deselect.
+   * @returns True when applied or not selected; false when locked.
    */
-  removeFromSelection(mesh: THREE.Mesh): void {
-    if (!this.selectedObjects.has(mesh)) return;
+  removeFromSelection(mesh: THREE.Mesh): boolean {
+    if (!this.selectedObjects.has(mesh)) {
+      return true;
+    }
+    if (!this.tryAllowSelectionChange()) {
+      return false;
+    }
     this.selectedObjects.delete(mesh);
     if (this.lastSelectedMesh === mesh) {
       this.lastSelectedMesh = this.getFirstSelectedObject();
     }
     this.inspectorObjects = resolveInspectorObjects(Array.from(this.selectedObjects));
     this.notifyChange();
+    return true;
   }
 
-  /** Clears all selected objects. */
-  clearSelection(): void {
-    if (this.selectedObjects.size === 0 && this.inspectorObjects.length === 0) return;
+  /**
+   * Clears all selected objects.
+   *
+   * @returns True when applied or already empty; false when locked.
+   */
+  clearSelection(): boolean {
+    if (this.selectedObjects.size === 0 && this.inspectorObjects.length === 0) {
+      return true;
+    }
+    if (!this.tryAllowSelectionChange()) {
+      return false;
+    }
     this.selectedObjects.clear();
     this.lastSelectedMesh = null;
     this.inspectorObjects = [];
     this.notifyChange();
+    return true;
   }
 
   /**
    * Drops selected meshes that are no longer under the given scene root. Use
    * after load, delete, undo, or redo so the selection never keeps references
-   * to meshes removed from the scene graph.
+   * to meshes removed from the scene graph. Bypasses the selection lock.
    *
    * @param sceneRoot The world root objects must remain under.
    * @returns True when at least one mesh was removed from the selection.
@@ -194,6 +271,20 @@ export class ManagerSelection {
     this.inspectorObjects = resolveInspectorObjects(survivors);
     this.notifyChange();
     return true;
+  }
+
+  /**
+   * Returns whether a selection mutation is allowed. Invokes the blocked
+   * callback when refused.
+   *
+   * @returns True when the mutation may proceed.
+   */
+  private tryAllowSelectionChange(): boolean {
+    if (!this.isSelectionChangeLocked()) {
+      return true;
+    }
+    this.notifySelectionChangeBlocked();
+    return false;
   }
 
   /**
@@ -306,12 +397,14 @@ export class ManagerSelection {
     }
   }
 
-  /** Removes all change callbacks and clears selection. */
+  /** Removes all change callbacks and clears selection (bypasses lock). */
   dispose(): void {
     this.selectedObjects.clear();
     this.inspectorObjects = [];
     this.lastSelectedMesh = null;
     this.changeCallbacks = [];
+    this.selectionChangeLockGuard = null;
+    this.selectionChangeBlockedCallback = null;
   }
 
   /** Notifies all registered callbacks of a selection change. */

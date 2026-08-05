@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { EditorWindow } from '@/editor/window/editor_window.js';
 import { FaceSelectTool } from '@/editor/tools/face_select/face_select_tool.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
+import { TransformMode } from '@/types/transform_mode.js';
 
 /**
  * Builds stub services for face select tool tests.
@@ -51,7 +52,10 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isEditModeActive: () => false,
+    beginEditSelectPointerDown: () => false,
     setWidgetMode: () => {},
+    getWidgetMode: () => TransformMode.BOUNDS,
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
     registerUndo: () => {},

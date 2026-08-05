@@ -26,6 +26,7 @@ import {
   runLayoutExportFbx,
   runLayoutNewScene,
   runLayoutVmfImport,
+  runLayoutObjImport,
 } from '@/layout/setup/layout_scene_io_actions.js';
 import { formatKeyboardShortcut } from '@/settings/keyboard/keyboard_shortcut_format.js';
 import { createDefaultKeyboardShortcutSettings } from '@/settings/store/settings_defaults.js';
@@ -42,6 +43,10 @@ import type { Viewport2D } from '@/viewports/core/viewport_2d.js';
 import { disposeLayoutOwnedResources } from '@/layout/setup/helpers_layout_dispose.js';
 import { buildLayoutTestComponents } from '@/layout/setup/layout_testing_accessors.js';
 import { filterUnlockedObjects } from '@/utils/object_lock.js';
+import {
+  computeComponentTransformPivot,
+  expandComponentSelectionToTransformVertices,
+} from '@/edit/transform/component_transform_selection.js';
 
 /**
  * Root composition manager for the editor viewport layout. Builds UI shell,
@@ -116,7 +121,6 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
         onSelectionChanged: () => layout.onSelectionChanged(),
         onToggleUvEditor: () => layout.onToggleUvEditor(),
         onToggleTextureBrowser: () => layout.onToggleTextureBrowser(),
-        onToggleToolsPalette: () => layout.onToggleToolsPalette(),
         onToggleSolidModelPanel: () => layout.onToggleSolidModelPanel(),
         onToggleSettingsDialog: () => layout.onToggleSettingsDialog(),
         onOpenDocumentation: () => layout.onOpenDocumentation(),
@@ -138,6 +142,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
         onSaveScene: () => layout.onSaveScene(),
         onLoadScene: () => layout.onLoadScene(),
         onImportVmf: () => layout.onImportVmf(),
+        onImportObj: () => layout.onImportObj(),
         onExportGlb: () => layout.onExportGlb(),
         onExportObj: () => layout.onExportObj(),
         onExportFbx: () => layout.onExportFbx(),
@@ -186,7 +191,8 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       onDuplicateSelectedForDrag: () => this.objectActionHandler.onDuplicateSelected(),
       onAfterTransformCommit: (meshes) => this.refreshVisualsAfterTransformCommit(meshes),
       onTransformsLive: (meshes) => this.solidModelController?.onTransformsLive(meshes),
-      isInteractionEnabled: () => !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
+      isInteractionEnabled: () =>
+        !this.isFaceSelectionModeActive() && !this.isEditModeActive() && !this.isClipPlaneToolActive(),
       onRulerTransformFeedback: (meshes, phase) => this.onCadRulerTransformFeedback(meshes, phase),
       onPermanentGizmoHandleDragBegan: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragBegan(),
       onPermanentGizmoHandleDragEnded: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragEnded(),
@@ -279,6 +285,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
   protected setupKeyboardShortcuts(): void {
     this.toolEditorSystem = createLayoutToolEditorSystem({
       transformHandler: this.transformHandler,
+      componentTransformHandler: this.componentTransformHandler,
       transformGizmo: this.transformGizmo,
       selectionManager: this.selectionManager,
       inputManager: this.inputManager,
@@ -303,6 +310,9 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       },
       getTransformInteractionBridge: () => this.transformInteractionBridge ?? null,
       getFaceModeCoordinator: () => this.faceModeCoordinator ?? null,
+      getEditModeCoordinator: () => this.editModeCoordinator ?? null,
+      onPermanentGizmoHandleDragBegan: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragBegan(),
+      onPermanentGizmoHandleDragEnded: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragEnded(),
     });
     this.keyboardShortcutHandler = createAndRegisterKeyboardShortcuts(
       this.inputManager,
@@ -475,8 +485,19 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
     this.modalToolSessionRegistry.onSelectionChanged();
     this.updateGizmoVisibility();
     this.updateGizmoPivot();
-    this.uvEditorController?.refreshFromSelection();
+    this.refreshUvEditorFromSelectionIfOpen();
     this.refreshCadRulersFromSelection();
+  }
+
+  /**
+   * Refreshes UV editor fields only while the panel is open so object select on
+   * dense meshes does not pay full-mesh regionization cost on every click.
+   */
+  private refreshUvEditorFromSelectionIfOpen(): void {
+    if (!this.uvEditor?.isOpen()) {
+      return;
+    }
+    this.uvEditorController?.refreshFromSelection();
   }
 
   /**
@@ -560,7 +581,30 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       getGizmoScaleCamera: () => this.resolveGizmoScaleCamera(),
       toolbar: this.toolbar,
       showStatusMessage: (message) => this.showStatusMessage(message),
+      resolveEditModeComponentPivot: () => this.resolveEditModeComponentGizmoPivot(),
     };
+  }
+
+  /**
+   * Returns the component selection centroid while Edit Mode is active.
+   *
+   * @returns World pivot, or null outside Edit Mode / empty component
+   *   selection.
+   */
+  private resolveEditModeComponentGizmoPivot(): THREE.Vector3 | null {
+    if (!this.isEditModeActive()) {
+      return null;
+    }
+    const coordinator = this.editModeCoordinator;
+    if (!coordinator || coordinator.getComponentSelectionCount() <= 0) {
+      return null;
+    }
+    const session = coordinator.getSession();
+    const vertices = expandComponentSelectionToTransformVertices(
+      session.getComponentSelection().getSelected(),
+      session.getDomain(),
+    );
+    return computeComponentTransformPivot(vertices);
   }
 
   /**
@@ -620,11 +664,17 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
   }
 
   /**
-   * Handles transform mode change from toolbar or keyboard.
+   * Handles transform mode change from toolbar or keyboard. In Edit Mode,
+   * pressing the already-active translate/rotate/scale mode again clears
+   * widgets (Bounds sentinel, no orange toolbar highlight).
    *
    * @param mode The new transform mode to activate.
    */
   protected onTransformMode(mode: TransformMode): void {
+    if (this.isEditModeActive()) {
+      this.applyEditModeTransformModeToggle(mode);
+      return;
+    }
     if (this.toolEditorSystem) {
       if (!this.toolEditorSystem.switchToTransformMode(mode)) {
         return;
@@ -636,9 +686,60 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
     this.updateTransformButtons();
   }
 
-  /** Updates tools palette transform highlights and status bar mode text. */
+  /**
+   * Applies or toggles permanent transform widgets in Edit Mode without
+   * replacing EditSelectTool.
+   *
+   * @param mode Requested toolbar mode (Bounds is ignored; use T/R/S).
+   */
+  private applyEditModeTransformModeToggle(mode: TransformMode): void {
+    if (mode === TransformMode.BOUNDS) {
+      return;
+    }
+    const current = this.transformGizmo.getMode();
+    if (current === mode) {
+      this.applyEditModeTransformModeOnly(TransformMode.BOUNDS);
+      this.showStatusMessage('Transform widgets off');
+      return;
+    }
+    this.applyEditModeTransformModeOnly(mode);
+  }
+
+  /**
+   * Changes gizmo mode in Edit Mode without replacing EditSelectTool (component
+   * picks stay on the permanent select tool; widgets re-sync from gizmo mode).
+   * Bounds means widgets off.
+   *
+   * @param mode Translate, rotate, scale, or Bounds (widgets off).
+   */
+  private applyEditModeTransformModeOnly(mode: TransformMode): void {
+    this.transformGizmo.setMode(mode);
+    this.updateGizmoPivot();
+    this.updateGizmoVisibility();
+    this.updateEditModeTransformButtons(mode);
+  }
+
+  /**
+   * Updates Edit Mode transform toolbar highlight. Bounds clears all T/R/S
+   * highlights so the bar matches the no-widget state.
+   *
+   * @param mode Active mode (Bounds = none selected).
+   */
+  private updateEditModeTransformButtons(mode: TransformMode): void {
+    if (mode === TransformMode.BOUNDS) {
+      this.toolsPaletteController?.setActiveTransformMode(TransformMode.BOUNDS);
+      return;
+    }
+    applyTransformModeUi(this.toolsPaletteController, this.statusBar, mode);
+  }
+
+  /** Updates tool chrome transform highlights and status bar mode text. */
   protected updateTransformButtons(): void {
-    applyTransformModeUi(this.toolsPalette, this.statusBar, this.transformGizmo.getMode());
+    if (this.isEditModeActive()) {
+      this.updateEditModeTransformButtons(this.transformGizmo.getMode());
+      return;
+    }
+    applyTransformModeUi(this.toolsPaletteController, this.statusBar, this.transformGizmo.getMode());
   }
 
   /** Handles File → New: confirms discard, then restores the startup cube. */
@@ -706,6 +807,16 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
   /** Handles File → Import VMF: picks a map and places a solid model. */
   private onImportVmf(): void {
     void runLayoutVmfImport(this.sceneIOHandler, this.statusBar, this.solidModelController, () =>
+      this.refreshAfterWorldMutation(),
+    );
+  }
+
+  /**
+   * Handles File → Import OBJ: picks a Wavefront file and places content
+   * meshes.
+   */
+  private onImportObj(): void {
+    void runLayoutObjImport(this.sceneIOHandler, this.statusBar, this.worldObject, this.commandStack, () =>
       this.refreshAfterWorldMutation(),
     );
   }
@@ -833,6 +944,9 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
         viewport.resize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
       }
     });
+    this.toolsPaletteController?.syncPaneContainers(
+      this.getAllLiveViewports().map((viewport) => viewport.getContainer()),
+    );
   }
 
   /**
@@ -891,7 +1005,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       uvEditor: this.uvEditor,
       textureBrowserController: this.textureBrowserController,
       textureBrowser: this.textureBrowser,
-      toolsPalette: this.toolsPalette,
+      toolsPalette: this.toolsPaletteController,
       settingsDialog: this.settingsDialog,
       settingsApplicator: this.settingsApplicator,
       aboutDialog: this.aboutDialog,

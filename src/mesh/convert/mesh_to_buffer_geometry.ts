@@ -1,10 +1,15 @@
 import * as THREE from 'three';
 import type { MeshDocument } from '@/mesh/document/mesh_document.js';
-import { meshTopologyFaceHalfEdgeIndices } from '@/mesh/topology/mesh_topology_query.js';
+import {
+  meshTopologyFaceHalfEdgeIndices,
+  meshTopologyHalfEdgeCornerVertex,
+} from '@/mesh/topology/mesh_topology_query.js';
+import { triangulateSimplePolygon3d } from './mesh_polygon_triangulate.js';
 
 /**
  * Builds a display BufferGeometry from a mesh document. Corners are expanded so
- * face-corner UVs do not fight shared topology vertices (GPU split).
+ * face-corner UVs do not fight shared topology vertices (GPU split). N-gons are
+ * ear-clip triangulated for the index buffer.
  *
  * @param document Source mesh document.
  * @returns New buffer geometry with position, index, and uv attributes.
@@ -27,7 +32,7 @@ interface ExpandedCornerBuffers {
 }
 
 /**
- * Expands each face corner into a unique GPU vertex.
+ * Expands each face corner into a unique GPU vertex and triangulates faces.
  *
  * @param document Source document.
  * @returns Expanded position, uv, and index buffers.
@@ -39,24 +44,24 @@ function expandDocumentCorners(document: MeshDocument): ExpandedCornerBuffers {
   const cornerCount = countTotalCorners(document);
   const positions = new Float32Array(cornerCount * 3);
   const uvs = new Float32Array(cornerCount * 2);
-  const indices = new Uint32Array(countTriangleIndices(document));
+  const triangleIndexList: number[] = [];
   let cornerWrite = 0;
-  let indexWrite = 0;
   for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
-    const result = writeFaceCorners(
+    cornerWrite = writeFaceCornersAndTriangles(
       document,
       faceIndex,
       positions,
       uvs,
-      indices,
+      triangleIndexList,
       cornerWrite,
-      indexWrite,
       cornerUvs.getValues(),
     );
-    cornerWrite = result.cornerWrite;
-    indexWrite = result.indexWrite;
   }
-  return { positions, uvs, indices };
+  return {
+    positions,
+    uvs,
+    indices: Uint32Array.from(triangleIndexList),
+  };
 }
 
 /**
@@ -70,56 +75,69 @@ function countTotalCorners(document: MeshDocument): number {
 }
 
 /**
- * Counts triangle indices emitted for all faces (fan triangulation).
- *
- * @param document Mesh document.
- * @returns Index count.
- */
-function countTriangleIndices(document: MeshDocument): number {
-  const topology = document.getTopology();
-  let indexCount = 0;
-  const faceCount = topology.getFaceCount();
-  for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
-    const cornerCount = meshTopologyFaceHalfEdgeIndices(topology, faceIndex).length;
-    if (cornerCount >= 3) {
-      indexCount += (cornerCount - 2) * 3;
-    }
-  }
-  return indexCount;
-}
-
-/**
- * Writes one face's expanded corners and fan indices.
+ * Writes one face's expanded corners and ear-clip triangle indices.
  *
  * @param document Mesh document.
  * @param faceIndex Face index.
  * @param positions Output positions.
  * @param uvs Output uvs.
- * @param indices Output indices.
+ * @param triangleIndexList Output triangle indices.
  * @param cornerWrite Next free corner slot.
- * @param indexWrite Next free index slot.
  * @param cornerUvValues Packed corner UV buffer.
- * @returns Updated write cursors.
+ * @returns Updated corner write cursor.
  */
-function writeFaceCorners(
+function writeFaceCornersAndTriangles(
   document: MeshDocument,
   faceIndex: number,
   positions: Float32Array,
   uvs: Float32Array,
-  indices: Uint32Array,
+  triangleIndexList: number[],
   cornerWrite: number,
-  indexWrite: number,
   cornerUvValues: Float32Array,
-): { cornerWrite: number; indexWrite: number } {
+): number {
   const topology = document.getTopology();
   const halfEdgeIndices = meshTopologyFaceHalfEdgeIndices(topology, faceIndex);
   const faceCornerStart = cornerWrite;
+  const facePoints: Array<{ x: number; y: number; z: number }> = [];
   for (const halfEdgeIndex of halfEdgeIndices) {
     writeOneCorner(document, halfEdgeIndex, positions, uvs, cornerWrite, cornerUvValues);
+    const vertexIndex = meshTopologyHalfEdgeCornerVertex(topology, halfEdgeIndex);
+    const source = topology.getPositions();
+    const base = vertexIndex * 3;
+    facePoints.push({
+      x: source[base]!,
+      y: source[base + 1]!,
+      z: source[base + 2]!,
+    });
     cornerWrite += 1;
   }
-  indexWrite = writeFaceFanIndices(indices, indexWrite, faceCornerStart, halfEdgeIndices.length);
-  return { cornerWrite, indexWrite };
+  appendFaceTriangleIndices(facePoints, faceCornerStart, triangleIndexList);
+  return cornerWrite;
+}
+
+/**
+ * Appends ear-clip (or trivial) triangle indices for one expanded face.
+ *
+ * @param facePoints Ordered face corner positions.
+ * @param faceCornerStart First expanded corner index of the face.
+ * @param triangleIndexList Output index list.
+ */
+function appendFaceTriangleIndices(
+  facePoints: ReadonlyArray<{ x: number; y: number; z: number }>,
+  faceCornerStart: number,
+  triangleIndexList: number[],
+): void {
+  if (facePoints.length < 3) {
+    return;
+  }
+  if (facePoints.length === 3) {
+    triangleIndexList.push(faceCornerStart, faceCornerStart + 1, faceCornerStart + 2);
+    return;
+  }
+  const loopTriangles = triangulateSimplePolygon3d(facePoints);
+  for (let index = 0; index < loopTriangles.length; index++) {
+    triangleIndexList.push(faceCornerStart + loopTriangles[index]!);
+  }
 }
 
 /**
@@ -152,28 +170,4 @@ function writeOneCorner(
   const uvDest = cornerSlot * 2;
   uvs[uvDest] = cornerUvValues[uvBase] ?? 0;
   uvs[uvDest + 1] = cornerUvValues[uvBase + 1] ?? 0;
-}
-
-/**
- * Writes fan triangulation indices for an expanded face.
- *
- * @param indices Output index buffer.
- * @param indexWrite Next free index slot.
- * @param faceCornerStart First expanded corner of the face.
- * @param cornerCount Face corner count.
- * @returns Updated index write cursor.
- */
-function writeFaceFanIndices(
-  indices: Uint32Array,
-  indexWrite: number,
-  faceCornerStart: number,
-  cornerCount: number,
-): number {
-  for (let fan = 1; fan < cornerCount - 1; fan++) {
-    indices[indexWrite] = faceCornerStart;
-    indices[indexWrite + 1] = faceCornerStart + fan;
-    indices[indexWrite + 2] = faceCornerStart + fan + 1;
-    indexWrite += 3;
-  }
-  return indexWrite;
 }

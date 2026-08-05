@@ -1,16 +1,21 @@
 import * as THREE from 'three';
 import { pointerEventToNdc } from '@/utils/pointer_ndc.js';
+import { getOrBuildFacePickBvh } from '@/selection/pick/mesh_pick_acceleration.js';
 
 /**
- * Shared raycasting utility for click-to-select across all viewports. Keeps
- * camera matrices current, rejects meshes with world-sphere tests before
- * triangle tests, and only forces double-sided materials on sphere hits so
- * dense solid maps stay interactive.
+ * Shared raycasting utility for click-to-select across all viewports. Uses a
+ * sphere/AABB prefilter and the cached triangle BVH (same acceleration as face
+ * pick) so dense terrain and complex meshes stay interactive.
  */
 export class SceneRaycaster {
   private raycaster: THREE.Raycaster;
   private ndcVector: THREE.Vector2;
   private readonly scratchSphere = new THREE.Sphere();
+  private readonly scratchWorldBox = new THREE.Box3();
+  private readonly scratchBoxHit = new THREE.Vector3();
+  private readonly scratchInverse = new THREE.Matrix4();
+  private readonly scratchLocalOrigin = new THREE.Vector3();
+  private readonly scratchLocalDirection = new THREE.Vector3();
   private readonly candidateMeshes: THREE.Mesh[] = [];
 
   /** Creates a new shared raycaster instance for click-to-select operations. */
@@ -24,7 +29,7 @@ export class SceneRaycaster {
    * objects.
    *
    * @param camera The camera to cast from.
-   * @param renderer The renderer for canvas dimensions.
+   * @param pickElement DOM element defining the view rectangle for NDC.
    * @param event The mouse event providing the click position.
    * @param selectableObjects The array of meshes to test against.
    * @returns The first intersected mesh, or null if no intersection.
@@ -66,7 +71,7 @@ export class SceneRaycaster {
    * @param pickElement DOM element defining the view rectangle for NDC.
    * @param event The mouse event providing the click position.
    * @param selectableObjects The array of meshes to test against.
-   * @returns Raw Three.js intersections (distance-sorted).
+   * @returns Intersection records (distance-sorted).
    */
   castIntersections(
     camera: THREE.Camera,
@@ -80,15 +85,19 @@ export class SceneRaycaster {
     this.raycaster.setFromCamera(this.ndcVector, camera);
     this.collectSphereCandidates(selectableObjects);
     if (this.candidateMeshes.length === 0) return [];
-    const restored = this.enableDoubleSidedPicking(this.candidateMeshes);
-    const intersections = this.raycaster.intersectObjects(this.candidateMeshes, false);
-    this.restoreMaterialSides(restored);
+    const intersections: THREE.Intersection[] = [];
+    for (const mesh of this.candidateMeshes) {
+      const hit = this.pickMeshWithBvh(mesh);
+      if (hit) {
+        intersections.push(hit);
+      }
+    }
+    intersections.sort((left, right) => left.distance - right.distance);
     return intersections;
   }
 
   /**
    * Collects meshes whose world bounding spheres may intersect the pick ray.
-   * Refreshes matrices only when dirty so static maps stay cheap.
    *
    * @param meshes Selectable meshes.
    */
@@ -124,54 +133,60 @@ export class SceneRaycaster {
   }
 
   /**
-   * Temporarily enables DoubleSide on materials so back-facing triangles still
-   * pick.
+   * Picks the closest double-sided triangle on one mesh via the cached BVH.
    *
-   * @param meshes The meshes being picked.
-   * @returns Previous side values for restoration.
+   * @param mesh Candidate mesh.
+   * @returns Three.js-style intersection, or null.
    */
-  private enableDoubleSidedPicking(meshes: THREE.Mesh[]): Array<{ material: THREE.Material; side: THREE.Side }> {
-    const restored: Array<{ material: THREE.Material; side: THREE.Side }> = [];
-    for (const mesh of meshes) {
-      this.snapshotAndForceDoubleSide(mesh, restored);
+  private pickMeshWithBvh(mesh: THREE.Mesh): THREE.Intersection | null {
+    if (!this.rayIntersectsMeshWorldBox(mesh)) {
+      return null;
     }
-    return restored;
+    const bvh = getOrBuildFacePickBvh(mesh);
+    if (!bvh) {
+      return null;
+    }
+    this.scratchInverse.copy(mesh.matrixWorld).invert();
+    this.scratchLocalOrigin.copy(this.raycaster.ray.origin).applyMatrix4(this.scratchInverse);
+    this.scratchLocalDirection.copy(this.raycaster.ray.direction).transformDirection(this.scratchInverse).normalize();
+    const hit = bvh.raycastDoubleSided(this.scratchLocalOrigin, this.scratchLocalDirection, Infinity);
+    if (!hit) {
+      return null;
+    }
+    const worldPoint = hit.point.clone().applyMatrix4(mesh.matrixWorld);
+    const worldDistance = this.raycaster.ray.origin.distanceTo(worldPoint);
+    return {
+      distance: worldDistance,
+      point: worldPoint,
+      object: mesh,
+      faceIndex: hit.faceIndex,
+    } as THREE.Intersection;
   }
 
   /**
-   * Snapshots material sides on a mesh and forces DoubleSide for picking.
+   * Cheap world AABB rejection before local BVH transform.
    *
-   * @param mesh The mesh whose materials should be temporarily double-sided.
-   * @param restored Accumulator for side restoration data.
+   * @param mesh Candidate mesh.
+   * @returns True when the ray may hit the mesh AABB.
    */
-  private snapshotAndForceDoubleSide(
-    mesh: THREE.Mesh,
-    restored: Array<{ material: THREE.Material; side: THREE.Side }>,
-  ): void {
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    for (const material of materials) {
-      if (!material) continue;
-      restored.push({ material, side: material.side });
-      material.side = THREE.DoubleSide;
+  private rayIntersectsMeshWorldBox(mesh: THREE.Mesh): boolean {
+    const geometry = mesh.geometry;
+    if (!geometry.boundingBox) {
+      geometry.computeBoundingBox();
     }
-  }
-
-  /**
-   * Restores material side values after object picking.
-   *
-   * @param restored Previous material side snapshots.
-   */
-  private restoreMaterialSides(restored: Array<{ material: THREE.Material; side: THREE.Side }>): void {
-    for (const entry of restored) {
-      entry.material.side = entry.side;
+    const box = geometry.boundingBox;
+    if (!box) {
+      return true;
     }
+    this.scratchWorldBox.copy(box).applyMatrix4(mesh.matrixWorld);
+    return this.raycaster.ray.intersectBox(this.scratchWorldBox, this.scratchBoxHit) !== null;
   }
 
   /**
    * Collects every mesh object from a sorted intersection list.
    *
    * @param intersections Raycast hits sorted by distance.
-   * @returns Hit meshes in the same order (may include the same mesh twice).
+   * @returns Hit meshes in the same order.
    */
   private allMeshHits(intersections: THREE.Intersection[]): THREE.Mesh[] {
     const meshes: THREE.Mesh[] = [];
@@ -183,9 +198,6 @@ export class SceneRaycaster {
     return meshes;
   }
 
-  /**
-   * Disposes internal Three.js resources. Raycaster and Vector2 do not require
-   * explicit disposal.
-   */
+  /** Disposes internal Three.js resources. */
   dispose(): void {}
 }

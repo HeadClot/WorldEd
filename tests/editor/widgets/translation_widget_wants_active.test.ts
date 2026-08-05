@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { EditorWindow } from '@/editor/window/editor_window.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
+import { TransformMode } from '@/types/transform_mode.js';
 import { TranslationWidget } from '@/editor/widgets/translation_widget.js';
 import { TranslateTool } from '@/editor/tools/translate_tool.js';
 import { BoxSelectTool } from '@/editor/tools/box_select_tool.js';
@@ -54,7 +55,10 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isEditModeActive: () => false,
+    beginEditSelectPointerDown: () => false,
     setWidgetMode: () => {},
+    getWidgetMode: () => TransformMode.BOUNDS,
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
     registerUndo: () => {},

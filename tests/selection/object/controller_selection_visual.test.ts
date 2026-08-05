@@ -99,6 +99,15 @@ describe('SelectionVisualController', () => {
     expect(hasOutline).toBe(false);
   });
 
+  it('should clear object selection outlines when chrome is disabled for Edit Mode', () => {
+    selectionManager.selectObject(mesh);
+    expect(mesh.children.some((child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true)).toBe(true);
+    controller.setObjectSelectionChromeEnabled(false);
+    expect(mesh.children.some((child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true)).toBe(false);
+    controller.setObjectSelectionChromeEnabled(true);
+    expect(mesh.children.some((child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true)).toBe(true);
+  });
+
   it('should show solid brush hull fill only while the brush is selected', () => {
     const brushMesh = SolidBrushVisual.createBoxPreview('Brush', 2, SolidOperation.Subtractive);
     world.add(brushMesh);

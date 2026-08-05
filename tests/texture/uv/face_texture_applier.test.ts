@@ -23,6 +23,26 @@ describe('face_texture_applier', () => {
     expect(targets.length).toBeGreaterThanOrEqual(6);
   });
 
+  it('builds whole-mesh targets for dense geometry without multi-second hangs', () => {
+    const geometry = new THREE.SphereGeometry(1, 120, 120);
+    const mesh = new THREE.Mesh(geometry);
+    const triangleCount = Math.floor((geometry.getIndex()?.count ?? 0) / 3);
+    expect(triangleCount).toBeGreaterThan(20_000);
+    const started = performance.now();
+    const targets = buildTargetsFromMeshes([mesh]);
+    const elapsed = performance.now() - started;
+    expect(targets.length).toBeGreaterThan(0);
+    const covered = new Set<number>();
+    for (const target of targets) {
+      for (const faceIndex of target.triangleIndices) {
+        covered.add(faceIndex);
+      }
+    }
+    expect(covered.size).toBe(triangleCount);
+    expect(elapsed).toBeLessThan(1500);
+    geometry.dispose();
+  });
+
   it('should store mappings when applying to targets', () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     mesh.position.set(0, 0.5, 0);

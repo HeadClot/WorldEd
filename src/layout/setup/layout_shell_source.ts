@@ -32,7 +32,6 @@ export interface LayoutShellSourceHost {
   onSelectionChanged(): void;
   onToggleUvEditor(): void;
   onToggleTextureBrowser(): void;
-  onToggleToolsPalette(): void;
   onToggleSolidModelPanel(): void;
   onToggleSettingsDialog(): void;
   onOpenDocumentation(): void;
@@ -54,6 +53,7 @@ export interface LayoutShellSourceHost {
   onSaveScene(): void;
   onLoadScene(): void;
   onImportVmf(): void;
+  onImportObj(): void;
   onExportGlb(): void;
   onExportObj(): void;
   onExportFbx(): void;
@@ -163,7 +163,6 @@ function buildShellPanelCallbacks(
   | 'onSelectionChanged'
   | 'onToggleUvEditor'
   | 'onToggleTextureBrowser'
-  | 'onToggleToolsPalette'
   | 'onToggleSolidModelPanel'
   | 'onToggleSettingsDialog'
   | 'onOpenDocumentation'
@@ -180,7 +179,6 @@ function buildShellPanelCallbacks(
     onSelectionChanged: () => host.onSelectionChanged(),
     onToggleUvEditor: () => host.onToggleUvEditor(),
     onToggleTextureBrowser: () => host.onToggleTextureBrowser(),
-    onToggleToolsPalette: () => host.onToggleToolsPalette(),
     onToggleSolidModelPanel: () => host.onToggleSolidModelPanel(),
     onToggleSettingsDialog: () => host.onToggleSettingsDialog(),
     onOpenDocumentation: () => host.onOpenDocumentation(),
@@ -239,6 +237,7 @@ function buildShellIoCallbacks(
   | 'onSaveScene'
   | 'onLoadScene'
   | 'onImportVmf'
+  | 'onImportObj'
   | 'onExportGlb'
   | 'onExportObj'
   | 'onExportFbx'
@@ -249,6 +248,7 @@ function buildShellIoCallbacks(
     onSaveScene: () => host.onSaveScene(),
     onLoadScene: () => host.onLoadScene(),
     onImportVmf: () => host.onImportVmf(),
+    onImportObj: () => host.onImportObj(),
     onExportGlb: () => host.onExportGlb(),
     onExportObj: () => host.onExportObj(),
     onExportFbx: () => host.onExportFbx(),

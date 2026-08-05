@@ -10,6 +10,7 @@ const PRIMARY_SHORTCUT_ROWS: ReadonlyArray<readonly [KeyboardShortcutAction, str
   ['rotate', 'Rotate'],
   ['scale', 'Scale'],
   ['bounds', 'Bounds Scale'],
+  ['interaction_mode', 'Object Mode / Edit Mode'],
   ['selection_object', 'Object Selection'],
   ['face', 'Face Selection'],
   ['delete_selected', 'Delete Selected Object'],

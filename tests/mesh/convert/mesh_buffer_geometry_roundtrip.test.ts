@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { meshDocumentFromBufferGeometry } from '@/mesh/convert/mesh_from_buffer_geometry.js';
 import { meshDocumentToBufferGeometry } from '@/mesh/convert/mesh_to_buffer_geometry.js';
 import { meshDocumentFromTriangleList } from '@/mesh/convert/mesh_from_triangle_list.js';
+import { meshDocumentFromPolygonList } from '@/mesh/convert/mesh_from_polygon_list.js';
 import {
   meshTopologyCountBoundaryHalfEdges,
   meshTopologyFaceVertexIndices,
@@ -55,6 +56,17 @@ describe('mesh buffer geometry convert', () => {
     expect(document.getTopology().getFaceCount()).toBe(triangleCount);
     const rebuilt = meshDocumentToBufferGeometry(document);
     expect(countGeometryTriangles(rebuilt)).toBe(triangleCount);
+    expect(validateMeshTopology(document.getTopology()).isValid).toBe(true);
+  });
+
+  it('stores a quad face as one n-gon and expands to two display triangles', () => {
+    const positions = new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]);
+    const document = meshDocumentFromPolygonList(positions, [[0, 1, 2, 3]]);
+    expect(document.getTopology().getFaceCount()).toBe(1);
+    expect(document.getTopology().getHalfEdgeCount()).toBe(4);
+    expect(meshTopologyFaceVertexIndices(document.getTopology(), 0)).toEqual([0, 1, 2, 3]);
+    const geometry = meshDocumentToBufferGeometry(document);
+    expect(countGeometryTriangles(geometry)).toBe(2);
     expect(validateMeshTopology(document.getTopology()).isValid).toBe(true);
   });
 

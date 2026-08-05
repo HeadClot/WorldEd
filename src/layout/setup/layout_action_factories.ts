@@ -52,7 +52,6 @@ export interface ToolbarActionHost {
   onRedo: () => void;
   onToggleUvEditor: () => void;
   onToggleTextureBrowser: () => void;
-  onToggleToolsPalette: () => void;
   onToggleSolidModelPanel: () => void;
   onToggleSettingsDialog: () => void;
   onOpenDocumentation: () => void;
@@ -67,6 +66,7 @@ export interface ToolbarActionHost {
   onSaveScene: () => void;
   onLoadScene: () => void;
   onImportVmf: () => void;
+  onImportObj: () => void;
   onExportGlb: () => void;
   onExportObj: () => void;
   onExportFbx: () => void;
@@ -163,7 +163,6 @@ function buildPrimitiveToolbarActions(
   | 'onAddSolidModel'
   | 'onToggleUvEditor'
   | 'onToggleTextureBrowser'
-  | 'onToggleToolsPalette'
   | 'onToggleSolidModelPanel'
   | 'onToggleSettingsDialog'
   | 'onOpenDocumentation'
@@ -183,7 +182,6 @@ function buildPrimitiveToolbarActions(
     onAddSolidModel: () => host.onAddSolidModel(),
     onToggleUvEditor: () => host.onToggleUvEditor(),
     onToggleTextureBrowser: () => host.onToggleTextureBrowser(),
-    onToggleToolsPalette: () => host.onToggleToolsPalette(),
     onToggleSolidModelPanel: () => host.onToggleSolidModelPanel(),
     onToggleSettingsDialog: () => host.onToggleSettingsDialog(),
     onOpenDocumentation: () => host.onOpenDocumentation(),
@@ -287,6 +285,7 @@ function buildIoToolbarActions(
   | 'onSaveScene'
   | 'onLoadScene'
   | 'onImportVmf'
+  | 'onImportObj'
   | 'onExportGlb'
   | 'onExportObj'
   | 'onExportFbx'
@@ -297,6 +296,7 @@ function buildIoToolbarActions(
     onSaveScene: () => host.onSaveScene(),
     onLoadScene: () => host.onLoadScene(),
     onImportVmf: () => host.onImportVmf(),
+    onImportObj: () => host.onImportObj(),
     onExportGlb: () => host.onExportGlb(),
     onExportObj: () => host.onExportObj(),
     onExportFbx: () => host.onExportFbx(),

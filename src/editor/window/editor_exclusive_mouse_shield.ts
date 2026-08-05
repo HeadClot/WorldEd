@@ -5,7 +5,7 @@ import { claimDomKeyboardFocus } from '@/utils/dom_focus.js';
  * receiver is busy (Shape Editor exclusive mouse ownership). Covers chrome and
  * floating panels so they never receive the hit; hit-testing peeks under the
  * shield to decide whether the pointer is in the pinned viewport (local mouse)
- * or outside (global mouse). Also steals keyboard focus from palette buttons so
+ * or outside (global mouse). Also steals keyboard focus from chrome buttons so
  * tool keys are not swallowed by the control that activated the tool.
  *
  * One instance is bound to a single Document (main window or a detached popup).
@@ -100,8 +100,8 @@ export class EditorExclusiveMouseShield {
   }
 
   /**
-   * Blurs the active chrome control (e.g. the Tools palette button that started
-   * the tool) and focuses the shield so keyboard events reach the editor.
+   * Blurs the active chrome control (e.g. a toolbar button that started the
+   * tool) and focuses the shield so keyboard events reach the editor.
    */
   claimKeyboardFocus(): void {
     claimDomKeyboardFocus(this.rootElement);

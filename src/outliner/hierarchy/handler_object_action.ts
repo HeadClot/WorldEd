@@ -41,6 +41,14 @@ export type MirrorExpandStateCallback = (sourceRoot: THREE.Object3D, cloneRoot: 
 export type StatusMessageCallback = (message: string) => void;
 
 /**
+ * Guard that marks hierarchy objects as non-deletable (e.g. Edit Mode domain).
+ *
+ * @param object Candidate for deletion.
+ * @returns True when delete must be refused for this object.
+ */
+export type ObjectDeleteProtectionGuard = (object: THREE.Object3D) => boolean;
+
+/**
  * Centralized handler for object-level actions: delete, duplicate, group,
  * ungroup. Coordinates command execution, viewport sync, outliner refresh, and
  * feedback.
@@ -53,6 +61,7 @@ export class HandlerObjectAction {
   private refreshOutliner: RefreshOutlinerCallback | null;
   private mirrorExpandState: MirrorExpandStateCallback | null;
   private showStatusMessage: StatusMessageCallback | null;
+  private deleteProtectionGuard: ObjectDeleteProtectionGuard | null;
 
   /**
    * Creates a new object action handler.
@@ -69,6 +78,7 @@ export class HandlerObjectAction {
     this.refreshOutliner = null;
     this.mirrorExpandState = null;
     this.showStatusMessage = null;
+    this.deleteProtectionGuard = null;
   }
 
   /**
@@ -109,15 +119,31 @@ export class HandlerObjectAction {
   }
 
   /**
+   * Registers a guard that blocks deleting Edit Mode domain objects (and their
+   * ancestors that would remove them).
+   *
+   * @param guard Protection predicate, or null to clear.
+   */
+  setDeleteProtectionGuard(guard: ObjectDeleteProtectionGuard | null): void {
+    this.deleteProtectionGuard = guard;
+  }
+
+  /**
    * Handles deletion of selected meshes (viewport mesh selection). Solid
    * brushes are unregistered from their solid model so CSG drops them.
    */
   onDeleteSelected(): void {
     const selected = this.selectionManager.getSelectedObjects();
     if (selected.size === 0) return;
-    const toRemove = filterUnlockedObjects(Array.from(selected));
-    if (toRemove.length === 0) {
+    const unlocked = filterUnlockedObjects(Array.from(selected));
+    if (unlocked.length === 0) {
       this.showMessage('Cannot delete locked object(s)');
+      return;
+    }
+    const toRemove = this.filterDeletableObjects(unlocked).filter(
+      (object): object is THREE.Mesh => object instanceof THREE.Mesh,
+    );
+    if (toRemove.length === 0) {
       return;
     }
     this.deleteMeshesWithSolidSupport(toRemove);
@@ -131,11 +157,15 @@ export class HandlerObjectAction {
    * @param objects Hierarchy nodes to remove.
    */
   deleteHierarchyObjects(objects: THREE.Object3D[]): void {
-    const roots = filterUnlockedObjects(
+    const unlockedRoots = filterUnlockedObjects(
       collapseToHierarchyRoots(objects).filter((object) => object !== this.worldObject),
     );
-    if (roots.length === 0) {
+    if (unlockedRoots.length === 0) {
       this.showMessage('Cannot delete locked object(s)');
+      return;
+    }
+    const roots = this.filterDeletableObjects(unlockedRoots);
+    if (roots.length === 0) {
       return;
     }
     const solidBrushes = this.solidBrushMeshesCollectFromRoots(roots);
@@ -144,6 +174,32 @@ export class HandlerObjectAction {
     this.selectionManager.clearSelection();
     this.notifySyncAndRefresh();
     this.showMessage(`Deleted ${roots.length} object(s)`);
+  }
+
+  /**
+   * Drops objects protected by the delete guard and reports when any were
+   * blocked.
+   *
+   * @param objects Candidates after lock filtering.
+   * @returns Objects allowed to delete.
+   */
+  private filterDeletableObjects(objects: readonly THREE.Object3D[]): THREE.Object3D[] {
+    if (!this.deleteProtectionGuard) {
+      return objects.slice();
+    }
+    const allowed: THREE.Object3D[] = [];
+    let blockedCount = 0;
+    for (const object of objects) {
+      if (this.deleteProtectionGuard(object)) {
+        blockedCount += 1;
+        continue;
+      }
+      allowed.push(object);
+    }
+    if (blockedCount > 0) {
+      this.showMessage('Cannot delete objects being edited in Edit Mode');
+    }
+    return allowed;
   }
 
   /**

@@ -8,6 +8,7 @@ const KEYBOARD_SHORTCUT_ACTIONS = [
   'bounds',
   'face',
   'selection_object',
+  'interaction_mode',
   'delete_selected',
   'escape',
   'save',

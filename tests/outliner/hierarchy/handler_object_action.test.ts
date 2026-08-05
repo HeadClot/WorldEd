@@ -21,6 +21,23 @@ describe('HandlerObjectAction grouping selection', () => {
     handler = new HandlerObjectAction(world, commandStack, selectionManager);
   });
 
+  it('refuses to delete objects protected by the delete guard', () => {
+    const protectedMesh = createNamedMesh('Protected');
+    const freeMesh = createNamedMesh('Free');
+    world.add(protectedMesh);
+    world.add(freeMesh);
+    let status = '';
+    handler.setShowStatusMessage((message) => {
+      status = message;
+    });
+    handler.setDeleteProtectionGuard((object) => object === protectedMesh);
+    selectionManager.setSelection([protectedMesh, freeMesh], [protectedMesh, freeMesh]);
+    handler.onDeleteSelected();
+    expect(world.children).toContain(protectedMesh);
+    expect(world.children).not.toContain(freeMesh);
+    expect(status).toContain('Edit Mode');
+  });
+
   /**
    * Builds a mesh with a box geometry and basic material.
    *

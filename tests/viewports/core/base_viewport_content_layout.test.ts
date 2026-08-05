@@ -7,8 +7,8 @@ import {
 } from '@/viewports/core/viewport_base.js';
 
 /**
- * Content must sit under the pane title bar so multi-view scissor never draws
- * GL under chrome (and never bleeds into the separator above the bar).
+ * Content sits under the title bar only. The floating tool panel overlays the
+ * content area and does not reserve layout space.
  */
 describe('applyViewportContentDrawableStyles', () => {
   it('should place content strictly below the viewport title bar height', () => {

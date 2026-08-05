@@ -92,6 +92,23 @@ export class SolidBrushVisual {
   }
 
   /**
+   * Replaces a brush preview mesh geometry from updated brush topology.
+   *
+   * @param mesh Existing brush preview mesh.
+   * @param brush Updated local brush geometry.
+   */
+  static replaceHullGeometry(mesh: THREE.Mesh, brush: SolidBrush): void {
+    if (!this.isBrushObject(mesh)) {
+      return;
+    }
+    const previous = mesh.geometry;
+    mesh.geometry = this.buildHullGeometry(brush);
+    previous.dispose();
+    this.stripLocalEdges(mesh);
+    this.ensureLocalEdges(mesh);
+  }
+
+  /**
    * Builds a triangulated BufferGeometry from brush faces.
    *
    * @param brush Convex brush with wing-edge topology.

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { ManagerSelection } from './manager_selection.js';
-import { SelectionHighlight } from './selection_highlight.js';
+import { SelectionHighlight, SELECTION_HIGHLIGHT_USERDATA_KEY } from './selection_highlight.js';
 import { ManagerViewportSync } from '@/layout/viewport/manager_viewport_sync.js';
 import { ControllerViewportShading } from '@/viewports/shading/controller_viewport_shading.js';
 import { Viewport3D } from '@/viewports/core/viewport_3d.js';
@@ -23,6 +23,11 @@ export class ControllerSelectionVisual {
   private shadingControllers: ControllerViewportShading[];
   /** Brush meshes currently showing a translucent hull fill. */
   private hullFillMeshes = new Set<THREE.Mesh>();
+  /**
+   * When false, orange object selection outlines and solid-brush hull fills are
+   * suppressed (Edit Mode). Does not touch permanent content/brush wireframes.
+   */
+  private objectSelectionChromeEnabled: boolean;
 
   /**
    * Creates a selection visual controller.
@@ -35,6 +40,24 @@ export class ControllerSelectionVisual {
     this.viewportSyncManager = viewportSyncManager;
     this.selectionHighlights = [];
     this.shadingControllers = [];
+    this.objectSelectionChromeEnabled = true;
+  }
+
+  /**
+   * Enables or disables object-mode selection chrome (orange outlines and solid
+   * brush hull fills). Permanent mesh/brush edge wireframes are not modified.
+   * Disabling always rebuilds so leftover outlines cannot stick after Edit
+   * Mode.
+   *
+   * @param enabled True to show object selection visuals.
+   */
+  setObjectSelectionChromeEnabled(enabled: boolean): void {
+    const changed = this.objectSelectionChromeEnabled !== enabled;
+    this.objectSelectionChromeEnabled = enabled;
+    if (!changed && enabled) {
+      return;
+    }
+    this.refreshFromSelection();
   }
 
   /**
@@ -66,11 +89,98 @@ export class ControllerSelectionVisual {
   /** Rebuilds selection outlines for the current selection set. */
   refreshFromSelection(): void {
     this.clearAllHighlights();
+    if (!this.objectSelectionChromeEnabled) {
+      this.applyObjectSelectionChromeDisabled();
+      return;
+    }
+    this.applyObjectSelectionChromeEnabled();
+  }
+
+  /** Clears outlines, hull fills, and personal brush edges for Edit Mode. */
+  private applyObjectSelectionChromeDisabled(): void {
+    this.stripOrphanSelectionOutlinesFromSelection();
+    this.hideAllSolidBrushHullFills();
+    this.clearSolidBrushEdgeIndividualSet();
+    SolidBrushEdgeFader.invalidateCameraCache();
+  }
+
+  /** Applies outlines and hull fills for the current Object Mode selection. */
+  private applyObjectSelectionChromeEnabled(): void {
     const selected = this.selectionManager.getSelectedObjects();
     selected.forEach((mesh) => this.applyHighlightToMesh(mesh));
     this.syncSolidBrushHullFills();
     this.syncSolidBrushEdgeBatches();
     SolidBrushEdgeFader.invalidateCameraCache();
+  }
+
+  /** Clears individual solid-brush edge tracking while chrome is suppressed. */
+  private clearSolidBrushEdgeIndividualSet(): void {
+    const worldObject =
+      typeof this.viewportSyncManager.getWorldObject === 'function' ? this.viewportSyncManager.getWorldObject() : null;
+    SolidBrushEdgeBatch.setIndividualMeshesAndSync(worldObject, []);
+  }
+
+  /**
+   * Removes selection outline children that are no longer tracked by a
+   * highlight instance (orphans from multi-viewport apply or interrupted
+   * clears).
+   */
+  private stripOrphanSelectionOutlinesFromSelection(): void {
+    for (const mesh of this.selectionManager.getSelectedObjects()) {
+      this.stripOrphanSelectionOutlinesFromMesh(mesh);
+    }
+  }
+
+  /**
+   * Removes selection outline groups and line children from one mesh.
+   *
+   * @param mesh Mesh that may still own orange selection outlines.
+   */
+  private stripOrphanSelectionOutlinesFromMesh(mesh: THREE.Mesh): void {
+    const orphans = mesh.children.filter(
+      (child) =>
+        child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true || child.userData['isSelectionHighlight'] === true,
+    );
+    for (const orphan of orphans) {
+      mesh.remove(orphan);
+      this.disposeSelectionOutlineObject(orphan);
+    }
+  }
+
+  /**
+   * Disposes geometry for a detached selection outline object.
+   *
+   * @param object Outline group or line segments.
+   */
+  private disposeSelectionOutlineObject(object: THREE.Object3D): void {
+    if (object instanceof THREE.LineSegments) {
+      object.geometry.dispose();
+      return;
+    }
+    if (!(object instanceof THREE.Group)) {
+      return;
+    }
+    let sharedGeometry: THREE.BufferGeometry | null = null;
+    for (const child of object.children) {
+      if (!(child instanceof THREE.LineSegments)) {
+        continue;
+      }
+      if (!sharedGeometry) {
+        sharedGeometry = child.geometry;
+      }
+    }
+    object.clear();
+    if (sharedGeometry) {
+      sharedGeometry.dispose();
+    }
+  }
+
+  /** Hides every solid-brush translucent hull fill currently tracked. */
+  private hideAllSolidBrushHullFills(): void {
+    for (const mesh of this.hullFillMeshes) {
+      this.applyBrushHullFillToMesh(mesh, false);
+    }
+    this.hullFillMeshes = new Set();
   }
 
   /** Re-applies outlines after viewport selectable lists are refreshed. */

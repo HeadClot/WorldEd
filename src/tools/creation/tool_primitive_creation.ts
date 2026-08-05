@@ -4,6 +4,10 @@ import { DECORATIVE_EDGE_USERDATA_KEY, enableFlatShadingOnMesh } from '@/utils/m
 import { createContentMaterial } from '@/materials/factory_content_material.js';
 import { initializeMeshTextureUVs } from '@/texture/uv/face_texture_applier.js';
 import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
+import { createMeshDocumentBox } from '@/mesh/primitive/mesh_primitive_box.js';
+import { meshDocumentToBufferGeometry } from '@/mesh/convert/mesh_to_buffer_geometry.js';
+import { writePersistentMeshDocument } from '@/mesh/document/mesh_document_binding.js';
+import { setGeometrySource } from '@/texture/uv/geometry_source.js';
 
 /**
  * Creates primitive meshes with auto-incremented names and default material.
@@ -41,9 +45,19 @@ export class ToolPrimitiveCreation {
    */
   createBox(width: number, height: number, depth: number, position?: THREE.Vector3): THREE.Mesh {
     this.cubeCount++;
-    const geometry = new THREE.BoxGeometry(width, height, depth);
-    const mesh = this.buildMesh(geometry, hierarchyNameAllocator.allocate('Cube'));
-    if (position) mesh.position.copy(position);
+    const document = createMeshDocumentBox(width, height, depth);
+    const geometry = meshDocumentToBufferGeometry(document);
+    const mesh = this.createBaseMesh(geometry, hierarchyNameAllocator.allocate('Cube'));
+    writePersistentMeshDocument(mesh, document);
+    setGeometrySource(mesh, {
+      type: 'box',
+      params: { width, height, depth },
+    });
+    if (position) {
+      mesh.position.copy(position);
+    }
+    mesh.updateMatrixWorld(true);
+    initializeMeshTextureUVs(mesh, undefined, undefined, { centerTexture: true });
     this.addWireframe(mesh);
     this.lastCreated = mesh;
     return mesh;

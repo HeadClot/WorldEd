@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 
@@ -18,6 +18,26 @@ describe('SelectionManager', () => {
   it('should start with an empty selection', () => {
     expect(manager.getSelectedObjectCount()).toBe(0);
     expect(manager.getSelectedObjects().size).toBe(0);
+  });
+
+  it('refuses selection mutations while the change lock is active', () => {
+    const blocked = vi.fn();
+    manager.selectObject(meshA);
+    manager.setSelectionChangeLockGuard(() => true, blocked);
+    expect(manager.selectObject(meshB)).toBe(false);
+    expect(manager.addToSelection(meshB)).toBe(false);
+    expect(manager.clearSelection()).toBe(false);
+    expect(manager.setSelection([meshB])).toBe(false);
+    expect(manager.isObjectSelected(meshA)).toBe(true);
+    expect(manager.isObjectSelected(meshB)).toBe(false);
+    expect(blocked).toHaveBeenCalled();
+  });
+
+  it('allows no-op select of the already selected object while locked', () => {
+    manager.selectObject(meshA);
+    manager.setSelectionChangeLockGuard(() => true);
+    expect(manager.selectObject(meshA)).toBe(true);
+    expect(manager.isObjectSelected(meshA)).toBe(true);
   });
 
   it('should select a single object', () => {

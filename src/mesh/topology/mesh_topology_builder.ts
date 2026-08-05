@@ -5,17 +5,18 @@ import { MESH_VERTEX_POSITION_STRIDE } from './mesh_topology_constants.js';
 import { meshVertexPositionWrite } from './mesh_vertex_position.js';
 
 /**
- * Builds mesh topology from vertex positions and triangle index lists. Twins
- * are paired by directed edge keys; unpaired edges remain boundary.
+ * Builds mesh topology from vertex positions and polygonal face loops. Twins
+ * are paired by directed edge keys; unpaired edges remain boundary. Faces may
+ * be triangles, quads, or higher n-gons.
  */
 export class MeshTopologyBuilder {
   private readonly positions: number[];
-  private readonly triangles: number[];
+  private readonly faces: number[][];
 
   /** Creates an empty builder. */
   constructor() {
     this.positions = [];
-    this.triangles = [];
+    this.faces = [];
   }
 
   /**
@@ -40,45 +41,43 @@ export class MeshTopologyBuilder {
    * @param vertexC Third vertex index.
    */
   appendTriangle(vertexA: number, vertexB: number, vertexC: number): void {
-    this.triangles.push(vertexA, vertexB, vertexC);
+    this.appendFace([vertexA, vertexB, vertexC]);
   }
 
   /**
-   * Builds a topology from the accumulated vertices and triangles.
+   * Appends a polygonal face by ordered vertex indices (winding order).
+   *
+   * @param vertexIndices Corner vertex indices (at least three).
+   */
+  appendFace(vertexIndices: readonly number[]): void {
+    if (vertexIndices.length < 3) {
+      return;
+    }
+    this.faces.push(vertexIndices.slice());
+  }
+
+  /**
+   * Builds a topology from the accumulated vertices and faces.
    *
    * @returns New mesh topology with paired twins.
    */
   build(): MeshTopology {
     const topology = new MeshTopology();
     topology.setPositions(Float32Array.from(this.positions));
-    this.appendAllTrianglesToTopology(topology);
+    this.appendAllFacesToTopology(topology);
     pairMeshTopologyTwins(topology);
     return topology;
   }
 
   /**
-   * Appends every stored triangle as a three-edge face loop.
+   * Appends every stored face loop onto the topology.
    *
    * @param topology Target topology.
    */
-  private appendAllTrianglesToTopology(topology: MeshTopology): void {
-    const triangleCount = Math.floor(this.triangles.length / 3);
-    for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++) {
-      const base = triangleIndex * 3;
-      this.appendTriangleFace(topology, this.triangles[base]!, this.triangles[base + 1]!, this.triangles[base + 2]!);
+  private appendAllFacesToTopology(topology: MeshTopology): void {
+    for (const face of this.faces) {
+      appendPolygonFaceOnTopology(topology, face);
     }
-  }
-
-  /**
-   * Creates three half-edges and one face for a triangle.
-   *
-   * @param topology Target topology.
-   * @param vertexA First corner vertex.
-   * @param vertexB Second corner vertex.
-   * @param vertexC Third corner vertex.
-   */
-  private appendTriangleFace(topology: MeshTopology, vertexA: number, vertexB: number, vertexC: number): void {
-    appendTriangleFaceOnTopology(topology, vertexA, vertexB, vertexC);
   }
 }
 
@@ -94,50 +93,56 @@ export function meshTopologyFromTriangleBuffers(
   positions: Float32Array,
   triangleIndices: ArrayLike<number>,
 ): MeshTopology {
+  const faces: number[][] = [];
+  const triangleCount = Math.floor(triangleIndices.length / 3);
+  for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++) {
+    const base = triangleIndex * 3;
+    faces.push([triangleIndices[base]!, triangleIndices[base + 1]!, triangleIndices[base + 2]!]);
+  }
+  return meshTopologyFromPolygonFaces(positions, faces);
+}
+
+/**
+ * Builds topology from packed positions and polygonal face loops.
+ *
+ * @param positions Packed xyz floats.
+ * @param faces Ordered vertex index loops (each length ≥ 3).
+ * @returns New mesh topology with paired twins.
+ */
+export function meshTopologyFromPolygonFaces(
+  positions: Float32Array,
+  faces: readonly (readonly number[])[],
+): MeshTopology {
   const topology = new MeshTopology();
   topology.setPositions(new Float32Array(positions));
-  appendTriangleIndicesAsFaces(topology, triangleIndices);
+  for (const face of faces) {
+    appendPolygonFaceOnTopology(topology, face);
+  }
   pairMeshTopologyTwins(topology);
   return topology;
 }
 
 /**
- * Appends triangle faces from a flat index list.
+ * Appends one polygonal face loop on an existing topology. Half-edge
+ * vertexIndex is the face-corner vertex in winding order.
  *
  * @param topology Target topology.
- * @param triangleIndices Flat vertex indices (groups of three).
+ * @param vertexIndices Ordered corner vertices (length ≥ 3).
  */
-function appendTriangleIndicesAsFaces(topology: MeshTopology, triangleIndices: ArrayLike<number>): void {
-  const triangleCount = Math.floor(triangleIndices.length / 3);
-  for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++) {
-    const base = triangleIndex * 3;
-    appendTriangleFaceOnTopology(
-      topology,
-      triangleIndices[base]!,
-      triangleIndices[base + 1]!,
-      triangleIndices[base + 2]!,
+export function appendPolygonFaceOnTopology(topology: MeshTopology, vertexIndices: readonly number[]): void {
+  if (vertexIndices.length < 3) {
+    return;
+  }
+  const faceIndex = topology.getFaceCount();
+  const halfEdgeStart = topology.getHalfEdgeCount();
+  const cornerCount = vertexIndices.length;
+  for (let corner = 0; corner < cornerCount; corner++) {
+    const nextHalfEdge = halfEdgeStart + ((corner + 1) % cornerCount);
+    topology.appendHalfEdge(
+      createMeshHalfEdge(vertexIndices[corner]!, MESH_HALF_EDGE_BOUNDARY_TWIN, nextHalfEdge, faceIndex),
     );
   }
-}
-
-/**
- * Appends one triangle face loop on an existing topology. Half-edge vertexIndex
- * is the face-corner vertex in winding order.
- *
- * @param topology Target topology.
- * @param vertexA First corner vertex.
- * @param vertexB Second corner vertex.
- * @param vertexC Third corner vertex.
- */
-function appendTriangleFaceOnTopology(topology: MeshTopology, vertexA: number, vertexB: number, vertexC: number): void {
-  const edgeA = topology.getHalfEdgeCount();
-  const edgeB = edgeA + 1;
-  const edgeC = edgeA + 2;
-  const faceIndex = topology.getFaceCount();
-  topology.appendHalfEdge(createMeshHalfEdge(vertexA, MESH_HALF_EDGE_BOUNDARY_TWIN, edgeB, faceIndex));
-  topology.appendHalfEdge(createMeshHalfEdge(vertexB, MESH_HALF_EDGE_BOUNDARY_TWIN, edgeC, faceIndex));
-  topology.appendHalfEdge(createMeshHalfEdge(vertexC, MESH_HALF_EDGE_BOUNDARY_TWIN, edgeA, faceIndex));
-  topology.appendFace(createMeshFace(edgeA));
+  topology.appendFace(createMeshFace(halfEdgeStart));
 }
 
 /**

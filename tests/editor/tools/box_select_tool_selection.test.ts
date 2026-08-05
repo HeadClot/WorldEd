@@ -4,6 +4,7 @@ import { EditorWindow } from '@/editor/window/editor_window.js';
 import { BoxSelectTool } from '@/editor/tools/box_select_tool.js';
 import { BoundsTool } from '@/editor/tools/bounds_tool.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
+import { TransformMode } from '@/types/transform_mode.js';
 
 /**
  * Builds stub services for box select selection tests.
@@ -52,7 +53,10 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isEditModeActive: () => false,
+    beginEditSelectPointerDown: () => false,
     setWidgetMode: () => {},
+    getWidgetMode: () => TransformMode.BOUNDS,
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
     registerUndo: () => {},

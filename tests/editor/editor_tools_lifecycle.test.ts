@@ -5,6 +5,7 @@ import { Tool } from '@/editor/tools/tool.js';
 import { BoundsTool } from '@/editor/tools/bounds_tool.js';
 import { TranslateTool } from '@/editor/tools/translate_tool.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
+import { TransformMode } from '@/types/transform_mode.js';
 import * as THREE from 'three';
 
 /** Minimal tool fake for parent restore tests. */
@@ -81,7 +82,10 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isEditModeActive: () => false,
+    beginEditSelectPointerDown: () => false,
     setWidgetMode: () => {},
+    getWidgetMode: () => TransformMode.BOUNDS,
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
     registerUndo: () => {},

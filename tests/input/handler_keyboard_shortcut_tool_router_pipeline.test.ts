@@ -4,6 +4,7 @@ import { ManagerInput } from '@/input/manager_input.js';
 import { EditorWindow } from '@/editor/window/editor_window.js';
 import { Tool } from '@/editor/tools/tool.js';
 import type { EditorServices } from '@/editor/window/editor_services.js';
+import { TransformMode } from '@/types/transform_mode.js';
 import * as THREE from 'three';
 
 /** Select tool that consumes G. */
@@ -70,7 +71,10 @@ function createServices(globalHandler: (event: KeyboardEvent) => boolean): Edito
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isEditModeActive: () => false,
+    beginEditSelectPointerDown: () => false,
     setWidgetMode: () => {},
+    getWidgetMode: () => TransformMode.BOUNDS,
     refreshGizmoPresentation: () => {},
     setStatusMessage: () => {},
     registerUndo: () => {},

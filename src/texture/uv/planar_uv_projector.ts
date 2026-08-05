@@ -22,9 +22,10 @@ const WORLD_RIGHT = new THREE.Vector3(1, 0, 0);
  * Auto always uses the true face normal (face-plane projection).
  */
 const FLOOR_NORMAL_DOT = 0.9;
-/** Coplanar normal agreement threshold. */
-const COPLANAR_NORMAL_DOT = 0.995;
-/** Coplanar plane distance tolerance in local units. */
+/**
+ * Coplanar plane distance tolerance in local units (also drives plane-key
+ * quantize).
+ */
 const COPLANAR_DISTANCE = 1e-3;
 
 const scratchLocal = new THREE.Vector3();
@@ -346,71 +347,96 @@ export function splitMeshIntoCoplanarRegions(mesh: THREE.Mesh): number[][] {
 }
 
 /**
- * Splits triangle indices into coplanar regions using normals and plane tests.
+ * Splits triangle indices into coplanar regions in linear time via quantized
+ * plane keys (avoids O(n²) seed flood on high-poly meshes).
  *
  * @param mesh Mesh geometry owner.
  * @param triangleIndices Triangles to group.
- * @returns Arrays of coplanar triangle indices.
+ * @returns Arrays of coplanar triangle indices sorted by seed face index.
  */
 export function splitIntoCoplanarRegions(mesh: THREE.Mesh, triangleIndices: number[]): number[][] {
-  const remaining = new Set(triangleIndices);
-  const regions: number[][] = [];
-  const sorted = triangleIndices.slice().sort((a, b) => a - b);
-  sorted.forEach((seed) => {
-    if (!remaining.has(seed)) return;
-    const region = growCoplanarRegion(mesh, seed, remaining, triangleIndices);
-    regions.push(region.sort((a, b) => a - b));
-  });
-  return regions;
+  if (triangleIndices.length === 0) {
+    return [];
+  }
+  if (triangleIndices.length === 1) {
+    return [[triangleIndices[0]!]];
+  }
+  return splitIntoCoplanarRegionsByPlaneHash(mesh.geometry, triangleIndices);
 }
 
 /**
- * Grows one coplanar region from a seed triangle.
+ * Buckets triangles by quantized local plane so coplanar faces share a region.
  *
- * @param mesh Mesh owner.
- * @param seed Seed triangle index.
- * @param remaining Unclaimed triangle indices.
- * @param triangleIndices Full candidate list.
- * @returns Region triangle indices including the seed.
+ * @param geometry Source geometry.
+ * @param triangleIndices Candidate triangle indices.
+ * @returns Coplanar regions ordered by first face index.
  */
-function growCoplanarRegion(
-  mesh: THREE.Mesh,
-  seed: number,
-  remaining: Set<number>,
-  triangleIndices: number[],
-): number[] {
-  const region = [seed];
-  remaining.delete(seed);
-  const seedNormal = computeLocalTriangleNormal(mesh.geometry, seed);
-  const seedPoint = getTriangleCentroid(mesh.geometry, seed);
-  triangleIndices.forEach((candidate) => {
-    if (!remaining.has(candidate)) return;
-    if (!isCoplanar(mesh.geometry, candidate, seedNormal, seedPoint)) return;
-    region.push(candidate);
-    remaining.delete(candidate);
-  });
-  return region;
+function splitIntoCoplanarRegionsByPlaneHash(
+  geometry: THREE.BufferGeometry,
+  triangleIndices: readonly number[],
+): number[][] {
+  const buckets = new Map<string, number[]>();
+  for (const faceIndex of triangleIndices) {
+    appendTriangleToPlaneBucket(geometry, faceIndex, buckets);
+  }
+  return collectSortedPlaneBuckets(buckets);
 }
 
 /**
- * Returns whether a triangle shares the seed plane.
+ * Inserts one triangle into the plane-key bucket map.
  *
- * @param geometry Geometry.
- * @param faceIndex Candidate triangle.
- * @param seedNormal Seed normal.
- * @param seedPoint Point on seed plane.
- * @returns True when coplanar with matching normal.
+ * @param geometry Source geometry.
+ * @param faceIndex Triangle index.
+ * @param buckets Plane key → triangle list.
  */
-function isCoplanar(
+function appendTriangleToPlaneBucket(
   geometry: THREE.BufferGeometry,
   faceIndex: number,
-  seedNormal: THREE.Vector3,
-  seedPoint: THREE.Vector3,
-): boolean {
+  buckets: Map<string, number[]>,
+): void {
+  const planeKey = buildLocalPlaneBucketKey(geometry, faceIndex);
+  const existing = buckets.get(planeKey);
+  if (existing) {
+    existing.push(faceIndex);
+    return;
+  }
+  buckets.set(planeKey, [faceIndex]);
+}
+
+/**
+ * Builds a quantized plane key from a triangle normal and plane constant.
+ *
+ * @param geometry Source geometry.
+ * @param faceIndex Triangle index.
+ * @returns Stable string key for coplanar faces.
+ */
+function buildLocalPlaneBucketKey(geometry: THREE.BufferGeometry, faceIndex: number): string {
   const normal = computeLocalTriangleNormal(geometry, faceIndex);
-  if (Math.abs(normal.dot(seedNormal)) < COPLANAR_NORMAL_DOT) return false;
   const centroid = getTriangleCentroid(geometry, faceIndex);
-  return Math.abs(centroid.sub(seedPoint).dot(seedNormal)) <= COPLANAR_DISTANCE;
+  const planeConstant = normal.dot(centroid);
+  const normalScale = 100;
+  const distanceScale = 1 / COPLANAR_DISTANCE;
+  const nx = Math.round(normal.x * normalScale);
+  const ny = Math.round(normal.y * normalScale);
+  const nz = Math.round(normal.z * normalScale);
+  const nd = Math.round(planeConstant * distanceScale);
+  return `${nx},${ny},${nz},${nd}`;
+}
+
+/**
+ * Converts plane buckets into sorted region arrays.
+ *
+ * @param buckets Plane key → triangle indices.
+ * @returns Regions ordered by lowest face index.
+ */
+function collectSortedPlaneBuckets(buckets: Map<string, number[]>): number[][] {
+  const regions: number[][] = [];
+  for (const faceIndices of buckets.values()) {
+    faceIndices.sort((left, right) => left - right);
+    regions.push(faceIndices);
+  }
+  regions.sort((left, right) => (left[0] ?? 0) - (right[0] ?? 0));
+  return regions;
 }
 
 /**

@@ -45,13 +45,14 @@ import { CoordinatorFaceMode } from '@/tools/face/coordinator_face_mode.js';
 import { ControllerSnapSettings } from '@/tools/snap/controller_snap_settings.js';
 import { CoordinatorCameraFit } from '@/navigation/camera/coordinator_camera_fit.js';
 import { CoordinatorShadingMode } from '@/navigation/camera/coordinator_shading_mode.js';
-import { ToolsPalette } from '@/tools/palette/ui/tools_palette.js';
-import { ControllerToolsPalette } from '@/tools/palette/controller/controller_tools_palette.js';
+import { ControllerViewportToolChrome } from '@/tools/chrome/controller/controller_viewport_tool_chrome.js';
 import { PolicyEditorOverlay } from '@/tools/overlay/policy_editor_overlay.js';
 import { RegistryModalToolSession } from '@/tools/session/registry_modal_tool_session.js';
 import { ToolClipPlane } from '@/tools/clip_plane/tool_clip_plane.js';
 import { HandlerClipPlane } from '@/tools/clip_plane/handler_clip_plane.js';
 import { EditorToolId } from '@/types/editor_tool_id.js';
+import { CoordinatorEditMode } from '@/edit/coordinator/coordinator_edit_mode.js';
+import { EditorComponentMode } from '@/types/editor_component_mode.js';
 import { DialogAbout } from '@/ui/about/dialog_about.js';
 import { DialogSettings } from '@/ui/settings/dialog_settings.js';
 import { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
@@ -80,6 +81,7 @@ import {
   setupFaceModeCoordinator as createFaceModeCoordinator,
   setupToolsPaletteAndClipWiring as createToolsPaletteAndClip,
   cancelClipToolSelection,
+  refreshViewportToolChrome,
 } from '@/layout/setup/layout_coordinator_setup.js';
 import {
   createLayoutSnapSettingsController,
@@ -93,6 +95,8 @@ import {
 import { LayoutRenderLoop } from '@/layout/setup/layout_render_loop.js';
 import { TransformSpace } from '@/types/transform_space.js';
 import { TransformMode } from '@/types/transform_mode.js';
+import type { ObjectApplyTransformKind } from '@/types/object_apply_transform_kind.js';
+import { HandlerObjectApplyTransform } from '@/transform/apply/handler_object_apply_transform.js';
 import { ViewportPaneLayout } from './viewport_pane_layout.js';
 import {
   createLayoutSettingsDialog,
@@ -171,6 +175,7 @@ export abstract class ViewportLayoutCore {
   protected gizmoRaycaster!: GizmoRaycaster;
   protected transformExecutor!: TransformExecutor;
   protected transformHandler!: HandlerTransform;
+  protected componentTransformHandler!: import('@/edit/transform/handler_component_transform.js').HandlerComponentTransform;
   /** Shape Editor-style single-active-tool manager (SwitchTool / UseTool). */
   protected toolEditorSystem: LayoutToolEditorSystem | null = null;
   protected gridSnap!: GridSnap;
@@ -198,8 +203,8 @@ export abstract class ViewportLayoutCore {
   protected textureBrowserController!: ControllerTextureBrowser | null;
   protected textureAssignmentController!: ControllerTextureAssignment | null;
   protected textureLock!: TextureLockSettings;
-  protected toolsPalette!: ToolsPalette | null;
-  protected toolsPaletteController!: ControllerToolsPalette | null;
+  protected toolsPaletteController!: ControllerViewportToolChrome | null;
+  protected editModeCoordinator!: CoordinatorEditMode | null;
   protected aboutDialog!: DialogAbout | null;
   protected settingsDialog!: DialogSettings | null;
   protected settingsStore!: EditorSettingsStore | null;
@@ -252,8 +257,8 @@ export abstract class ViewportLayoutCore {
     this.textureBrowser = null;
     this.textureBrowserController = null;
     this.textureAssignmentController = null;
-    this.toolsPalette = null;
     this.toolsPaletteController = null;
+    this.editModeCoordinator = null;
     this.aboutDialog = null;
     this.settingsDialog = null;
     this.settingsStore = null;
@@ -444,6 +449,7 @@ export abstract class ViewportLayoutCore {
   protected wireDetachedViewport(viewport: ViewportEditor): void {
     attachDetachedViewport(this.getDetachedViewportHost(), viewport);
     this.toolEditorSystem?.refreshInteractiveViewportDomain();
+    this.toolsPaletteController?.attachPane(viewport.getContainer());
   }
 
   /**
@@ -583,7 +589,7 @@ export abstract class ViewportLayoutCore {
     if (!this.toolEditorSystem) {
       return;
     }
-    this.registerToolEditorGuiSurface(this.toolsPalette, 'tools_palette');
+
     this.registerToolEditorGuiSurface(this.uvEditor, 'uv_editor');
     this.registerToolEditorGuiSurface(this.textureBrowser, 'texture_browser');
     this.registerToolEditorGuiSurface(this.solidModelPanel, 'solid_model_panel');
@@ -812,6 +818,7 @@ export abstract class ViewportLayoutCore {
       },
     });
     this.wireOutlinerFaceModeSelection();
+    this.wireEditModeOutlinerAndDeleteGuards();
   }
 
   /**
@@ -825,8 +832,28 @@ export abstract class ViewportLayoutCore {
     );
   }
 
-  /** Creates the floating Tools palette, clip plane tool, and related wiring. */
+  /**
+   * Installs the central object-selection lock for Edit Mode (all selection
+   * mutators refuse) and delete protection for domain objects.
+   */
+  private wireEditModeOutlinerAndDeleteGuards(): void {
+    this.selectionManager.setSelectionChangeLockGuard(
+      () => this.editModeCoordinator?.isObjectSelectionChangeBlocked() === true,
+      () => this.showStatusMessage('Cannot change object selection while in Edit Mode'),
+    );
+    this.objectActionHandler.setDeleteProtectionGuard(
+      (object) => this.editModeCoordinator?.isObjectDeleteProtected(object) === true,
+    );
+  }
+
+  /** Creates per-viewport tool chrome, clip plane tool, and related wiring. */
   protected setupToolsPaletteAndClip(): void {
+    this.editModeCoordinator = new CoordinatorEditMode({
+      getPrimaryScene: () => this.getPrimaryScene(),
+      getSelectedObjects: () => this.selectionManager.getAllSelectedObjectsAsArray(),
+      getViewports: () => this.getAllLiveViewports(),
+      showStatusMessage: (message) => this.showStatusMessage(message),
+    });
     const result = createToolsPaletteAndClip({
       worldObject: this.worldObject,
       commandStack: this.commandStack,
@@ -855,23 +882,52 @@ export abstract class ViewportLayoutCore {
       switchToFaceSelect: () => {
         this.toolEditorSystem?.switchToFaceSelect();
       },
+      switchToEditSelect: () => {
+        this.toolEditorSystem?.switchToEditSelect();
+      },
       registerClipTool: (placement, handler) => {
         this.toolEditorSystem?.registerClipTool(placement, handler);
       },
+      onEnterEditMode: () => this.editModeCoordinator?.enterFromObjectSelection() === true,
+      onExitEditMode: () => {
+        this.editModeCoordinator?.exitToObjectMode();
+      },
+      onComponentMode: (mode: EditorComponentMode) => {
+        this.editModeCoordinator?.setComponentMode(mode);
+      },
+      onEditModePresentationChanged: () => {
+        if (this.isEditModeActive()) {
+          this.applyEditModeDefaultNoTransformWidget();
+          this.editModeCoordinator?.suppressObjectModeWireframes();
+          this.transformInteractionBridge?.clearBoundsHover();
+          this.transformHandler?.clearBoundsHover();
+        }
+        this.updateGizmoVisibility();
+        this.updateTransformButtons();
+        this.refreshCadRulersFromSelection();
+        this.selectionVisualController?.setObjectSelectionChromeEnabled(!this.isEditModeActive());
+      },
+      onApplyObjectTransform: (kind) => this.applyObjectTransformsFromChrome(kind),
     });
     this.clipPlaneHandler = result.clipPlaneHandler;
-    this.toolsPalette = result.toolsPalette;
     this.toolsPaletteController = result.toolsPaletteController;
+    this.keyboardShortcutHandler.setOnComponentMode(
+      (mode) => {
+        this.toolsPaletteController?.setComponentMode(mode);
+      },
+      () => this.isEditModeActive(),
+    );
     this.renderLoop.setClipPlaneHandler(result.clipPlaneHandler);
     this.editorOverlayPolicy.addChangeListener(() => this.refreshCadRulersFromSelection());
+    refreshViewportToolChrome(this.toolsPaletteController, () => this.getAllLiveViewports());
   }
 
-  /** Cancels the clip tool and returns to object select in the palette. */
+  /** Cancels the clip tool and returns to object select in tool chrome. */
   protected onClipCancel(): void {
     cancelClipToolSelection(this.clipPlaneHandler, this.toolsPaletteController);
   }
 
-  /** Refreshes palette context and hides transform gizmos while clipping. */
+  /** Refreshes tool chrome and hides transform gizmos while clipping. */
   protected onClipToolStateChanged(): void {
     this.toolsPaletteController?.refreshPaletteContext();
     this.updateGizmoVisibility();
@@ -879,14 +935,77 @@ export abstract class ViewportLayoutCore {
 
   /** Shows or hides transform/bounds gizmos based on selection and active tools. */
   protected updateGizmoVisibility(): void {
+    if (this.componentTransformHandler?.isDragging() || this.transformHandler.isSingleUseDrag()) {
+      this.transformGizmo.setVisible(false);
+      return;
+    }
+    if (this.isEditModeActive()) {
+      const componentCount = this.editModeCoordinator?.getComponentSelectionCount() ?? 0;
+      const mode = this.transformGizmo.getMode();
+      const widgetsEnabled =
+        mode === TransformMode.TRANSLATE || mode === TransformMode.ROTATE || mode === TransformMode.SCALE;
+      this.transformGizmo.setVisible(componentCount > 0 && widgetsEnabled && !this.isClipPlaneToolActive());
+      return;
+    }
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     const unlockedSelected = filterUnlockedObjects(selected);
     this.transformGizmo.setVisible(
-      unlockedSelected.length > 0 &&
-        !this.isFaceSelectionModeActive() &&
-        !this.isClipPlaneToolActive() &&
-        !this.transformHandler.isSingleUseDrag(),
+      unlockedSelected.length > 0 && !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
     );
+  }
+
+  /**
+   * Returns whether Edit Mode currently has a permanent transform widget mode
+   * (translate / rotate / scale). Bounds is the off/toggle-clear state.
+   *
+   * @returns True when a widget mode is active.
+   */
+  protected isEditModeTransformWidgetEnabled(): boolean {
+    const mode = this.transformGizmo.getMode();
+    return mode === TransformMode.TRANSLATE || mode === TransformMode.ROTATE || mode === TransformMode.SCALE;
+  }
+
+  /**
+   * Clears permanent transform widgets when entering Edit Mode (Bounds
+   * sentinel, no T/R/S toolbar highlight). G/R/S single-use tools still work.
+   */
+  protected applyEditModeDefaultNoTransformWidget(): void {
+    this.transformGizmo.setMode(TransformMode.BOUNDS);
+    this.toolsPaletteController?.setActiveTransformMode(TransformMode.BOUNDS);
+  }
+
+  /**
+   * Returns whether Edit Mode is active.
+   *
+   * @returns True while component editing is live.
+   */
+  protected isEditModeActive(): boolean {
+    return this.editModeCoordinator?.isActive() === true;
+  }
+
+  /**
+   * Runs Object → Apply from Edit Mode chrome and refreshes domain
+   * presentation.
+   *
+   * @param kind Apply kind.
+   */
+  protected applyObjectTransformsFromChrome(kind: ObjectApplyTransformKind): void {
+    const handler = new HandlerObjectApplyTransform({
+      commandStack: this.commandStack,
+      getSelectedObjects: () => this.selectionManager.getAllSelectedObjectsAsArray(),
+      getEditDomainTargets: () =>
+        this.editModeCoordinator?.isActive() ? this.editModeCoordinator.getSession().getDomain() : null,
+      showStatusMessage: (message) => this.showStatusMessage(message),
+      onAfterApply: (objects) => {
+        this.selectionVisualController?.rebuildHighlightGeometries();
+        this.selectionVisualController?.refreshFromSelection();
+        this.refreshVisualsAfterTransformCommit(objects);
+        this.editModeCoordinator?.refreshDomainGeometryPresentation();
+        this.updateGizmoVisibility();
+        this.updateGizmoPivot();
+      },
+    });
+    handler.apply(kind);
   }
 
   /**
@@ -903,14 +1022,6 @@ export abstract class ViewportLayoutCore {
     this.faceModeCoordinator?.getFaceExtrusionController().clearFaceSelection();
     this.selectionManager.clearSelection();
     this.statusBar?.setLastAction('Selection cleared');
-  }
-
-  /** Toggles the floating Tools palette. */
-  protected onToggleToolsPalette(): void {
-    this.toolsPalette?.toggle();
-    if (this.toolsPalette?.isOpen()) {
-      this.statusBar?.setLastAction('Tools palette opened');
-    }
   }
 
   /** Creates the solid model floating panel and controller. */
@@ -1148,7 +1259,7 @@ export abstract class ViewportLayoutCore {
   /** Syncs world selectables to viewports and refreshes selection visuals. */
   protected abstract syncPrimitivesToViewports(): void;
 
-  /** Updates tools palette transform highlights and status bar mode text. */
+  /** Updates tool chrome transform highlights and status bar mode text. */
   protected abstract updateTransformButtons(): void;
 
   /** Refreshes the outliner panel from the live world hierarchy. */

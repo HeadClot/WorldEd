@@ -492,7 +492,7 @@ export class CoordinatorFaceMode {
   }
 
   /**
-   * Handles selection mode toggle from keyboard shortcut or tools palette.
+   * Handles selection mode toggle from keyboard shortcut or tool rail.
    *
    * @param mode The new selection mode to activate.
    */

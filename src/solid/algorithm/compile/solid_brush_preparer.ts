@@ -3,6 +3,7 @@ import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { BrushShapeFingerprint } from '@/solid/algorithm/spatial/brush_shape_fingerprint.js';
 import { SolidCompileCache } from './solid_compile_cache.js';
 import type { PreparedBrush, SolidCompileOptions } from './solid_compile_types.js';
+import { isSolidBrushMarkedNonConvex } from '@/edit/transform/brush_edit_convexity.js';
 
 /**
  * Transforms visible brush instances into prepared model-space snapshots,
@@ -62,6 +63,9 @@ export class SolidBrushPreparer {
       if (!instance.visible) {
         continue;
       }
+      if (instance.mesh && isSolidBrushMarkedNonConvex(instance.mesh)) {
+        continue;
+      }
       prepared.push(this.prepareOneBrush(instance, null));
     }
     return prepared;
@@ -79,6 +83,9 @@ export class SolidBrushPreparer {
     const prepared: PreparedBrush[] = [];
     for (const instance of instances) {
       if (!instance.visible) {
+        continue;
+      }
+      if (instance.mesh && isSolidBrushMarkedNonConvex(instance.mesh)) {
         continue;
       }
       prepared.push(this.prepareOneBrushPartial(instance, dirtySeeds));

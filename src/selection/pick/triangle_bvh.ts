@@ -84,6 +84,40 @@ export class TriangleBvh {
     localDirection: THREE.Vector3,
     maxDistance: number = Infinity,
   ): TriangleBvhHit | null {
+    return this.raycastClosest(localOrigin, localDirection, maxDistance, true);
+  }
+
+  /**
+   * Finds the closest triangle hit on either face (object-select style).
+   *
+   * @param localOrigin Ray origin in mesh-local coordinates.
+   * @param localDirection Normalized ray direction in mesh-local coordinates.
+   * @param maxDistance Maximum ray distance to consider.
+   * @returns Closest hit, or null when none.
+   */
+  raycastDoubleSided(
+    localOrigin: THREE.Vector3,
+    localDirection: THREE.Vector3,
+    maxDistance: number = Infinity,
+  ): TriangleBvhHit | null {
+    return this.raycastClosest(localOrigin, localDirection, maxDistance, false);
+  }
+
+  /**
+   * Traverses the BVH for the closest triangle hit.
+   *
+   * @param localOrigin Ray origin in mesh-local coordinates.
+   * @param localDirection Normalized ray direction in mesh-local coordinates.
+   * @param maxDistance Maximum ray distance to consider.
+   * @param frontFacingOnly When true, reject back-facing triangles.
+   * @returns Closest hit, or null when none.
+   */
+  private raycastClosest(
+    localOrigin: THREE.Vector3,
+    localDirection: THREE.Vector3,
+    maxDistance: number,
+    frontFacingOnly: boolean,
+  ): TriangleBvhHit | null {
     if (this.nodes.length === 0) return null;
     let bestDistance = maxDistance;
     let bestFaceIndex = -1;
@@ -95,7 +129,7 @@ export class TriangleBvh {
         continue;
       }
       if (node.left < 0) {
-        const leafHit = this.raycastLeaf(node, localOrigin, localDirection, bestDistance);
+        const leafHit = this.raycastLeaf(node, localOrigin, localDirection, bestDistance, frontFacingOnly);
         if (leafHit) {
           bestDistance = leafHit.distance;
           bestFaceIndex = leafHit.faceIndex;
@@ -296,12 +330,13 @@ export class TriangleBvh {
   }
 
   /**
-   * Tests every triangle in a leaf and returns the closest front-facing hit.
+   * Tests every triangle in a leaf and returns the closest accepted hit.
    *
    * @param node Leaf node.
    * @param origin Ray origin.
    * @param direction Ray direction.
    * @param bestDistance Current best distance.
+   * @param frontFacingOnly When true, reject back-facing triangles.
    * @returns Closest leaf hit, or null.
    */
   private raycastLeaf(
@@ -309,13 +344,14 @@ export class TriangleBvh {
     origin: THREE.Vector3,
     direction: THREE.Vector3,
     bestDistance: number,
+    frontFacingOnly: boolean,
   ): { faceIndex: number; distance: number } | null {
     const end = node.start + node.count;
     let distance = bestDistance;
     let faceIndex = -1;
     for (let index = node.start; index < end; index++) {
       const candidate = this.triangleIndices[index]!;
-      const hitDistance = this.intersectFrontFacingTriangle(candidate, origin, direction, distance);
+      const hitDistance = this.intersectTriangle(candidate, origin, direction, distance, frontFacingOnly);
       if (hitDistance === null) continue;
       distance = hitDistance;
       faceIndex = candidate;
@@ -325,19 +361,21 @@ export class TriangleBvh {
   }
 
   /**
-   * Möller–Trumbore intersection that only accepts front-facing triangles.
+   * Möller–Trumbore triangle intersection with optional front-face culling.
    *
    * @param faceIndex Triangle index.
    * @param origin Ray origin.
    * @param direction Ray direction.
    * @param maxDistance Maximum accepted distance.
-   * @returns Hit distance, or null when missed / back-facing / farther.
+   * @param frontFacingOnly When true, reject back-facing triangles.
+   * @returns Hit distance, or null when missed / culled / farther.
    */
-  private intersectFrontFacingTriangle(
+  private intersectTriangle(
     faceIndex: number,
     origin: THREE.Vector3,
     direction: THREE.Vector3,
     maxDistance: number,
+    frontFacingOnly: boolean,
   ): number | null {
     const [i0, i1, i2] = getTriangleVertexIndices(this.geometry, faceIndex);
     this.vertexA.set(this.positions.getX(i0), this.positions.getY(i0), this.positions.getZ(i0));
@@ -347,7 +385,11 @@ export class TriangleBvh {
     this.edge2.subVectors(this.vertexC, this.vertexA);
     this.pvec.crossVectors(direction, this.edge2);
     const determinant = this.edge1.dot(this.pvec);
-    if (determinant <= 1e-12) return null;
+    if (frontFacingOnly) {
+      if (determinant <= 1e-12) return null;
+    } else if (Math.abs(determinant) <= 1e-12) {
+      return null;
+    }
     const inverseDeterminant = 1 / determinant;
     this.tvec.subVectors(origin, this.vertexA);
     const u = this.tvec.dot(this.pvec) * inverseDeterminant;

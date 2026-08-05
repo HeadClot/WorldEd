@@ -11,8 +11,10 @@ import { TranslateTool } from '../tools/translate_tool.js';
 import { RotateTool } from '../tools/rotate_tool.js';
 import { ScaleTool } from '../tools/scale_tool.js';
 import { FaceSelectTool } from '../tools/face_select/face_select_tool.js';
+import { EditSelectTool } from '@/edit/tool/edit_select_tool.js';
 import type { ClipTool } from '../tools/clip_tool.js';
 import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
+import { TransformMode } from '@/types/transform_mode.js';
 
 /**
  * The editor window owning focus, tools, widgets, and input routing (Focus +
@@ -35,6 +37,7 @@ export class EditorWindow {
   private rotateTool: RotateTool | null;
   private scaleTool: ScaleTool | null;
   private faceSelectTool: FaceSelectTool | null;
+  private editSelectTool: EditSelectTool | null;
   private clipTool: ClipTool | null;
 
   /** Current mouse position in screen coordinates. */
@@ -86,6 +89,7 @@ export class EditorWindow {
     this.rotateTool = null;
     this.scaleTool = null;
     this.faceSelectTool = null;
+    this.editSelectTool = null;
     this.clipTool = null;
     this.mousePosition = new Vector2();
     this.mouseGridPosition = new Vector2();
@@ -329,6 +333,7 @@ export class EditorWindow {
       this.rotateTool = new RotateTool();
       this.scaleTool = new ScaleTool();
       this.faceSelectTool = new FaceSelectTool();
+      this.editSelectTool = new EditSelectTool();
     }
     if (this.activeTool === null) {
       this.switchTool(this.boundsTool as BoundsTool);
@@ -393,6 +398,16 @@ export class EditorWindow {
   getFaceSelectTool(): FaceSelectTool {
     this.validateTools();
     return this.faceSelectTool as FaceSelectTool;
+  }
+
+  /**
+   * Returns the permanent Edit Mode select tool.
+   *
+   * @returns Edit select tool instance.
+   */
+  getEditSelectTool(): EditSelectTool {
+    this.validateTools();
+    return this.editSelectTool as EditSelectTool;
   }
 
   /**
@@ -832,6 +847,11 @@ export class EditorWindow {
     this.switchTool(this.getFaceSelectTool());
   }
 
+  /** User switches to the Edit Mode select tool unless already active. */
+  userSwitchToEditSelectTool(): void {
+    this.switchTool(this.getEditSelectTool());
+  }
+
   /** User switches to the translate tool unless already active. */
   userSwitchToTranslateTool(): void {
     this.switchTool(this.getTranslateTool());
@@ -1142,6 +1162,9 @@ export class EditorWindow {
    * @returns True when a default tool shortcut handled the key.
    */
   private dispatchToolModeDefaultShortcuts(keyCode: string, event: KeyboardEvent): boolean {
+    if (this.services?.isEditModeActive()) {
+      return this.dispatchEditModeTransformModeShortcuts(keyCode, event);
+    }
     if (keyCode === 'KeyQ') {
       this.userSwitchToBoxSelectTool();
       return true;
@@ -1156,6 +1179,33 @@ export class EditorWindow {
     }
     if (keyCode === 'KeyS' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
       this.userSwitchToScaleTool();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Applies W/R/S transform-mode shortcuts in Edit Mode without leaving
+   * EditSelectTool.
+   *
+   * @param keyCode Key code string.
+   * @param event Browser keyboard event.
+   * @returns True when a transform mode shortcut was handled.
+   */
+  private dispatchEditModeTransformModeShortcuts(keyCode: string, event: KeyboardEvent): boolean {
+    if (keyCode === 'KeyW') {
+      this.services?.setWidgetMode(TransformMode.TRANSLATE);
+      this.services?.refreshGizmoPresentation();
+      return true;
+    }
+    if (keyCode === 'KeyR') {
+      this.services?.setWidgetMode(TransformMode.ROTATE);
+      this.services?.refreshGizmoPresentation();
+      return true;
+    }
+    if (keyCode === 'KeyS' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      this.services?.setWidgetMode(TransformMode.SCALE);
+      this.services?.refreshGizmoPresentation();
       return true;
     }
     return false;

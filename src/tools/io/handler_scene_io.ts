@@ -3,6 +3,7 @@ import { SceneSerializer } from '@/io/scene/scene_serializer.js';
 import { SceneDeserializer } from '@/io/scene/scene_deserializer.js';
 import { GlbExporter } from '@/io/glb/glb_exporter.js';
 import { ObjExporter } from '@/io/obj/obj_exporter.js';
+import { ObjImporter, type ObjImportResult } from '@/io/obj/obj_importer.js';
 import { FbxExporter } from '@/io/fbx/fbx_exporter.js';
 import { ManagerFileDialog } from '@/io/dialog/manager_file_dialog.js';
 import { StatusBar } from '@/ui/status/status_bar.js';
@@ -15,7 +16,7 @@ import type { SceneJSON } from '@/io/scene/io_types.js';
 import { CLIP_PREVIEW_USERDATA_KEY } from '@/tools/clip_plane/clip_plane_preview.js';
 
 /**
- * Orchestrates save, load, new scene, GLB/OBJ/FBX export, and VMF import
+ * Orchestrates save, load, new scene, GLB/OBJ/FBX export, and VMF/OBJ import
  * operations. Coordinates serializer, deserializer, exporters, and file
  * dialog.
  */
@@ -24,6 +25,7 @@ export class HandlerSceneIo {
   private sceneDeserializer: SceneDeserializer;
   private glbExporter: GlbExporter;
   private objExporter: ObjExporter;
+  private objImporter: ObjImporter;
   private fbxExporter: FbxExporter;
   private fileDialogManager: ManagerFileDialog;
   private vmfImporter: VmfSolidImporter;
@@ -34,6 +36,7 @@ export class HandlerSceneIo {
     this.sceneDeserializer = new SceneDeserializer();
     this.glbExporter = new GlbExporter();
     this.objExporter = new ObjExporter();
+    this.objImporter = new ObjImporter();
     this.fbxExporter = new FbxExporter();
     this.fileDialogManager = new ManagerFileDialog();
     this.vmfImporter = new VmfSolidImporter();
@@ -238,6 +241,66 @@ export class HandlerSceneIo {
       overlay.hide();
       overlay.dispose();
     }
+  }
+
+  /**
+   * Opens an OBJ file dialog and builds content meshes through the mesh
+   * pipeline. Does not parent meshes; the caller places them with undo.
+   *
+   * @param statusBar Status bar for feedback, or null.
+   * @returns Import result, or null when cancelled or failed.
+   */
+  async importObj(statusBar: StatusBar | null): Promise<ObjImportResult | null> {
+    try {
+      const file = await this.fileDialogManager.loadTextFile('.obj,text/plain', 'Wavefront OBJ', ['.obj']);
+      if (!file) {
+        this.showError(statusBar, 'OBJ import cancelled');
+        return null;
+      }
+      return this.importObjFromText(file.text, file.filename, statusBar);
+    } catch (error) {
+      this.showError(statusBar, `Failed to import OBJ: ${this.formatError(error)}`);
+      return null;
+    }
+  }
+
+  /**
+   * Imports Wavefront OBJ text into content meshes.
+   *
+   * @param source OBJ file contents.
+   * @param filename Source filename for status messages.
+   * @param statusBar Status bar for feedback, or null.
+   * @returns Import result, or null when no meshes were produced.
+   */
+  importObjFromText(source: string, filename: string, statusBar: StatusBar | null): ObjImportResult | null {
+    try {
+      const result = this.objImporter.importFromText(source, filename);
+      if (result.importedObjectCount === 0) {
+        this.showError(statusBar, 'OBJ contained no importable mesh objects');
+        return null;
+      }
+      this.showObjImportResult(result, filename, statusBar);
+      return result;
+    } catch (error) {
+      this.showError(statusBar, `Failed to import OBJ: ${this.formatError(error)}`);
+      return null;
+    }
+  }
+
+  /**
+   * Reports a successful OBJ import in the status bar.
+   *
+   * @param result Import result.
+   * @param filename Source file name.
+   * @param statusBar Status bar, or null.
+   */
+  private showObjImportResult(result: ObjImportResult, filename: string, statusBar: StatusBar | null): void {
+    if (!statusBar) {
+      return;
+    }
+    statusBar.setLastAction(
+      `Imported ${result.importedObjectCount} mesh(es) (${result.importedFaceCount} faces) from ${filename}`,
+    );
   }
 
   /**

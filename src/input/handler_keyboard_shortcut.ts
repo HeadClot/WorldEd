@@ -54,6 +54,8 @@ export class HandlerKeyboardShortcut {
   private onFitAllViewports: ActionCallback | null;
   private onShadingMode: ShadingModeCallback | null;
   private onSelectionModeToggle: SelectionModeCallback | null;
+  private onInteractionModeToggle: ActionCallback | null;
+  private onComponentMode: ((mode: import('@/types/editor_component_mode.js').EditorComponentMode) => void) | null;
   private onSnapIntervalForward: ActionCallback | null;
   private onSnapIntervalBackward: ActionCallback | null;
   private onExtrudeFaces: ActionCallback | null;
@@ -62,6 +64,7 @@ export class HandlerKeyboardShortcut {
   private onClipSplit: ActionCallback | null;
   private onEscape: ActionCallback | null;
   private isClipToolActive: (() => boolean) | null;
+  private isEditModeActive: (() => boolean) | null;
   private isNavigationActive: NavigationActiveCallback | null;
   /**
    * Optional modal transform keyboard sink (axis lock + numeric typing during
@@ -115,6 +118,8 @@ export class HandlerKeyboardShortcut {
     this.onFitAllViewports = null;
     this.onShadingMode = null;
     this.onSelectionModeToggle = null;
+    this.onInteractionModeToggle = null;
+    this.onComponentMode = null;
     this.onSnapIntervalForward = null;
     this.onSnapIntervalBackward = null;
     this.onExtrudeFaces = null;
@@ -123,6 +128,7 @@ export class HandlerKeyboardShortcut {
     this.onClipSplit = null;
     this.onEscape = null;
     this.isClipToolActive = null;
+    this.isEditModeActive = null;
     this.isNavigationActive = null;
     this.onModalTransformKeyDown = null;
     this.onToolEventRouterKeyDown = null;
@@ -361,12 +367,37 @@ export class HandlerKeyboardShortcut {
   }
 
   /**
-   * Registers the callback for selection mode toggling via Tab key.
+   * Registers the callback for face / object selection tool shortcuts
+   * (defaults: O for object, Shift+Tab for face). Digit 1–3 stay free.
    *
-   * @param callback The function to call when Tab is pressed.
+   * @param callback The function to call when a selection tool key is pressed.
    */
   setOnSelectionModeToggle(callback: SelectionModeCallback): void {
     this.onSelectionModeToggle = callback;
+  }
+
+  /**
+   * Registers the callback for Object Mode / Edit Mode toggle (default Tab).
+   *
+   * @param callback The function to call when the interaction mode key is
+   *   pressed.
+   */
+  setOnInteractionModeToggle(callback: ActionCallback): void {
+    this.onInteractionModeToggle = callback;
+  }
+
+  /**
+   * Registers Edit Mode component mode changes (digits 1–3 while editing).
+   *
+   * @param callback Component mode callback.
+   * @param isEditModeActive Guard that reports whether Edit Mode is live.
+   */
+  setOnComponentMode(
+    callback: (mode: import('@/types/editor_component_mode.js').EditorComponentMode) => void,
+    isEditModeActive: () => boolean,
+  ): void {
+    this.onComponentMode = callback;
+    this.isEditModeActive = isEditModeActive;
   }
 
   /**
@@ -521,6 +552,8 @@ export class HandlerKeyboardShortcut {
       onFitAllViewports: this.onFitAllViewports,
       onShadingMode: this.onShadingMode,
       onSelectionModeToggle: this.onSelectionModeToggle,
+      onInteractionModeToggle: this.onInteractionModeToggle,
+      onComponentMode: this.onComponentMode,
       onSnapIntervalForward: this.onSnapIntervalForward,
       onSnapIntervalBackward: this.onSnapIntervalBackward,
       onExtrudeFaces: this.onExtrudeFaces,
@@ -529,6 +562,7 @@ export class HandlerKeyboardShortcut {
       onClipSplit: this.onClipSplit,
       onEscape: this.onEscape,
       isClipToolActive: this.isClipToolActive,
+      isEditModeActive: this.isEditModeActive,
     };
   }
 

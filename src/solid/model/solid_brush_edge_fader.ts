@@ -5,6 +5,7 @@ import {
   SOLID_BRUSH_EDGE_USERDATA_KEY,
   SolidBrushEdgeMaterials,
 } from './solid_brush_edge_materials.js';
+import { isEditModeWireframeSuppressed } from '@/utils/edit_mode_wireframe_suppress.js';
 
 /**
  * Multiplier on fade-far for selected brushes so their edges stay available
@@ -163,6 +164,12 @@ export class SolidBrushEdgeFader {
     for (const child of brushMesh.children) {
       if (!(child instanceof THREE.LineSegments)) continue;
       if (child.userData[SOLID_BRUSH_EDGE_USERDATA_KEY] !== true) continue;
+      if (isEditModeWireframeSuppressed(child)) {
+        if (child.visible) {
+          child.visible = false;
+        }
+        continue;
+      }
       if (child.visible !== showEdges) {
         child.visible = showEdges;
       }

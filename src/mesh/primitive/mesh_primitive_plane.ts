@@ -20,7 +20,7 @@ export function createMeshDocumentPlane(
   const segmentsY = Math.max(1, Math.floor(heightSegments));
   const builder = new MeshTopologyBuilder();
   const grid = appendPlaneGrid(builder, width, height, segmentsX, segmentsY);
-  appendPlaneTriangles(builder, grid, segmentsX, segmentsY);
+  appendPlaneQuads(builder, grid, segmentsX, segmentsY);
   return new MeshDocument(builder.build());
 }
 
@@ -77,27 +77,21 @@ function appendPlaneGridRow(
 }
 
 /**
- * Appends two triangles per grid cell.
+ * Appends one quad face per grid cell.
  *
  * @param builder Topology builder.
  * @param grid Row-major vertex indices.
  * @param segmentsX X segment count.
  * @param segmentsY Y segment count.
  */
-function appendPlaneTriangles(
-  builder: MeshTopologyBuilder,
-  grid: number[][],
-  segmentsX: number,
-  segmentsY: number,
-): void {
+function appendPlaneQuads(builder: MeshTopologyBuilder, grid: number[][], segmentsX: number, segmentsY: number): void {
   for (let row = 0; row < segmentsY; row++) {
     for (let column = 0; column < segmentsX; column++) {
       const a = grid[row]![column]!;
       const b = grid[row]![column + 1]!;
       const c = grid[row + 1]![column + 1]!;
       const d = grid[row + 1]![column]!;
-      builder.appendTriangle(a, b, c);
-      builder.appendTriangle(a, c, d);
+      builder.appendFace([a, b, c, d]);
     }
   }
 }
