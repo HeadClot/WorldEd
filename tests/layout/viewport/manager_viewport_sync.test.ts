@@ -70,10 +70,6 @@ describe('ViewportSyncManager (shared scene)', () => {
     expect(syncManager.resolveToWorldMesh(mesh)).toBe(mesh);
   });
 
-  it('should report no clone meshes in shared-scene mode', () => {
-    expect(syncManager.findCloneMeshesForWorldUuid('any')).toEqual([]);
-  });
-
   it('should keep world geometry alive across resync', () => {
     const worldObject = createWorldGroupWithChildren([[0, 0, 0]]);
     const originalGeometry = (worldObject.children[0] as THREE.Mesh).geometry;

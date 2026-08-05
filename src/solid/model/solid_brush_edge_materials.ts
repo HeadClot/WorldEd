@@ -28,7 +28,7 @@ export const BRUSH_EDGE_FADE_FAR = 85;
 /** Opacity for depth-tested brush edges (3D). */
 export const BRUSH_EDGE_FRONT_OPACITY = 0.88;
 
-/** Near/far values that effectively disable distance fade (2D clones, tests). */
+/** Near/far values that effectively disable distance fade (ortho, tests). */
 const FADE_DISABLED_NEAR = 1e7;
 
 /** Far plane for disabled distance fade. */
@@ -129,9 +129,9 @@ export class SolidBrushEdgeMaterials {
   }
 
   /**
-   * Disables distance fade on a material (used for 2D viewport clones).
+   * Disables distance fade on a material.
    *
-   * @param material Line material after clone.
+   * @param material Line material to update.
    */
   static disableDistanceFade(material: THREE.Material): void {
     if (material.userData[BRUSH_EDGE_DISTANCE_FADE_KEY] !== true) return;
@@ -143,11 +143,11 @@ export class SolidBrushEdgeMaterials {
   }
 
   /**
-   * Prepares a cloned brush edge material for orthographic 2D viewports.
-   * Disables distance fade and depth testing so outlines stay visible from
-   * every axis (side/top/front) even when solid result depth would hide them.
+   * Prepares a brush edge material for orthographic multi-view. Disables
+   * distance fade and depth testing so outlines stay visible from every axis
+   * even when solid result depth would hide them.
    *
-   * @param material Line material after clone.
+   * @param material Line material to update.
    */
   static prepareForOrthoClone(material: THREE.Material): void {
     this.disableDistanceFade(material);

@@ -5,6 +5,7 @@ import { CsgBooleanOps, CsgOperation } from '@/csg/csg_boolean_ops.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 
 /**
  * Coordinates mesh CSG boolean actions from the toolbar menu. Only regular
@@ -19,7 +20,6 @@ export class HandlerCsgAction {
   private syncViewports: (() => void) | null;
   private refreshOutliner: (() => void) | null;
   private showStatus: ((message: string) => void) | null;
-  private resultCounter: number;
 
   /**
    * Creates a CSG action handler.
@@ -36,7 +36,6 @@ export class HandlerCsgAction {
     this.syncViewports = null;
     this.refreshOutliner = null;
     this.showStatus = null;
-    this.resultCounter = 0;
   }
 
   /**
@@ -81,7 +80,8 @@ export class HandlerCsgAction {
 
   /**
    * Runs a boolean operation on the first two selected regular meshes. No-ops
-   * when the selection includes solid brushes or solid results.
+   * when the selection includes solid brushes or solid results. The result
+   * keeps the primary mesh name (first selection; the base for subtract).
    *
    * @param operation The CSG operation to run.
    */
@@ -90,8 +90,7 @@ export class HandlerCsgAction {
     if (!this.validateMeshBooleanSelection(selected)) return;
     const meshA = selected[0]!;
     const meshB = selected[1]!;
-    this.resultCounter += 1;
-    const resultName = `CSG_${operation}_${String(this.resultCounter).padStart(3, '0')}`;
+    const resultName = resolveMeshCsgResultName(meshA);
     const result = this.booleanOps.operate(meshA, meshB, operation, resultName);
     if (!result) {
       this.emitStatus('CSG produced empty geometry');
@@ -178,4 +177,19 @@ export class HandlerCsgAction {
       this.showStatus(message);
     }
   }
+}
+
+/**
+ * Resolves the display name for a mesh CSG result from the primary operand.
+ * Empty primary names fall back to a fresh hierarchy allocation.
+ *
+ * @param primaryMesh First selected mesh (base for subtract).
+ * @returns Name for the result mesh.
+ */
+export function resolveMeshCsgResultName(primaryMesh: THREE.Mesh): string {
+  const primaryName = primaryMesh.name.trim();
+  if (primaryName.length > 0) {
+    return primaryName;
+  }
+  return hierarchyNameAllocator.allocate('Object');
 }

@@ -33,15 +33,19 @@ describe('UvEditor', () => {
 
   it('should start hidden', () => {
     expect(editor.isOpen()).toBe(false);
+    expect(editor.isMountedInHost()).toBe(false);
+    expect(host.contains(editor.getRootElement())).toBe(false);
   });
 
   it('should open and close without a pin control', () => {
     editor.show();
     expect(editor.isOpen()).toBe(true);
+    expect(host.contains(editor.getRootElement())).toBe(true);
     expect(host.textContent).not.toContain('Pin');
     expect(host.textContent).toContain('UV Editor');
     editor.hide(true);
     expect(editor.isOpen()).toBe(false);
+    expect(host.contains(editor.getRootElement())).toBe(false);
   });
 
   it('should toggle visibility', () => {
@@ -52,6 +56,7 @@ describe('UvEditor', () => {
   });
 
   it('should update status text from field state', () => {
+    editor.show();
     editor.setFromFieldState({
       scaleU: 1,
       scaleV: 1,
@@ -65,6 +70,7 @@ describe('UvEditor', () => {
   });
 
   it('should report no surfaces when target count is zero', () => {
+    editor.show();
     editor.setFromFieldState({
       scaleU: null,
       scaleV: null,
@@ -134,6 +140,38 @@ describe('UvEditor', () => {
     scaleU.value = '2';
     scaleU.dispatchEvent(new Event('change'));
     expect(onApplyPartialTrs).toHaveBeenCalledWith({ scaleU: 2 });
+  });
+
+  it('should evaluate math expressions on UV field submit', () => {
+    editor.show();
+    editor.setFromFieldState({
+      scaleU: null,
+      scaleV: null,
+      offsetU: null,
+      offsetV: null,
+      rotationDeg: null,
+      align: null,
+      targetCount: 2,
+    });
+    const inputs = Array.from(host.querySelectorAll('input')) as HTMLInputElement[];
+    const scaleU = inputs[0]!;
+    scaleU.value = '1+1';
+    scaleU.dispatchEvent(new Event('change'));
+    expect(onApplyPartialTrs).toHaveBeenCalledWith({ scaleU: 2 });
+    onApplyPartialTrs.mockClear();
+    editor.setFromFieldState({
+      scaleU: null,
+      scaleV: null,
+      offsetU: null,
+      offsetV: null,
+      rotationDeg: null,
+      align: null,
+      targetCount: 2,
+    });
+    const rotation = inputs[4]!;
+    rotation.value = '45*2';
+    rotation.dispatchEvent(new Event('change'));
+    expect(onApplyPartialTrs).toHaveBeenCalledWith({ rotationDeg: 90 });
   });
 
   it('should open at the bottom-left of the default anchor element', () => {

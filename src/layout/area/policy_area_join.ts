@@ -1,4 +1,4 @@
-import { areRectsJoinable, type AreaRect } from './area_rect.js';
+import { areRectsJoinable } from './area_rect.js';
 import { countAreaLeaves, findAreaLeafPlacement, listAreaLeafPlacements } from './area_layout_tree.js';
 import type { AreaLeafPlacement } from './area_leaf_placement.js';
 import type { AreaTreeNode } from './area_tree_node.js';
@@ -103,15 +103,4 @@ function emptyJoinCheck(allowed: boolean, reason: string): AreaJoinCheck {
     survivorPlacement: null,
     removePlacement: null,
   };
-}
-
-/**
- * Returns whether two normalized rects are joinable (re-export convenience).
- *
- * @param first First rect.
- * @param second Second rect.
- * @returns True when a full edge is shared.
- */
-export function areAreaRectsJoinable(first: AreaRect, second: AreaRect): boolean {
-  return areRectsJoinable(first, second);
 }

@@ -40,14 +40,18 @@ describe('TextureBrowser', () => {
 
   it('should start hidden until shown', () => {
     expect(browser.isOpen()).toBe(false);
+    expect(browser.isMountedInHost()).toBe(false);
+    expect(host.contains(browser.getRootElement())).toBe(false);
   });
 
   it('should open and close without a pin control', () => {
     browser.show();
     expect(browser.isOpen()).toBe(true);
+    expect(host.contains(browser.getRootElement())).toBe(true);
     expect(host.textContent).not.toContain('Pin');
     browser.hide(true);
     expect(browser.isOpen()).toBe(false);
+    expect(host.contains(browser.getRootElement())).toBe(false);
   });
 
   it('should toggle visibility', () => {
@@ -91,6 +95,7 @@ describe('TextureBrowser', () => {
   it('should highlight the selected tile with aria-selected', () => {
     browser.setEntries([createEntry('a.png', 'a', 'blob:a'), createEntry('b.png', 'b', 'blob:b')], 'a.png', 'Pack');
     browser.setSelectedId('b.png');
+    browser.show();
     const selected = host.querySelector('[aria-label="b.png"]') as HTMLElement;
     const unselected = host.querySelector('[aria-label="a.png"]') as HTMLElement;
     expect(selected.getAttribute('aria-selected')).toBe('true');
@@ -177,6 +182,7 @@ describe('TextureBrowser', () => {
 
   it('should mark thumbs for CSS square sizing via container queries', () => {
     browser.setEntries([createEntry('tile.png', 'tile', 'blob:tile')], 'tile.png', 'Pack');
+    browser.show();
     const thumb = host.querySelector('[data-preview-thumb="true"]') as HTMLElement;
     expect(thumb.classList.contains(TEXTURE_BROWSER_THUMB_CLASS)).toBe(true);
     const sheet = document.getElementById('tb-browser-stylesheet');
@@ -192,8 +198,8 @@ describe('TextureBrowser', () => {
     });
     uvEditor.show();
     browser.show();
-    const browserRoot = host.children[0] as HTMLElement;
-    const uvEditorRoot = host.children[1] as HTMLElement;
+    const browserRoot = browser.getRootElement();
+    const uvEditorRoot = uvEditor.getRootElement();
     expect(Number(browserRoot.style.zIndex)).toBeGreaterThan(Number(uvEditorRoot.style.zIndex));
     uvEditorRoot.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     expect(Number(uvEditorRoot.style.zIndex)).toBeGreaterThan(Number(browserRoot.style.zIndex));
@@ -202,6 +208,7 @@ describe('TextureBrowser', () => {
 
   it('should show empty-state copy when no entries are loaded', () => {
     browser.setEntries([], null, null);
+    browser.show();
     expect(host.textContent).toContain('Open a folder to browse textures');
     expect(host.textContent).toContain('No folder open');
   });

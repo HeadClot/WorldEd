@@ -76,11 +76,3 @@ export function quaternionForViewPlaneEar(face: BoundsFace, viewPlane: CadViewPl
   const matrix = new THREE.Matrix4().makeBasis(alongEdge, outward, basisZ);
   return new THREE.Quaternion().setFromRotationMatrix(matrix);
 }
-
-/**
- * Ear size relative to the base handle world size: long along the edge, thin
- * bar thickness, slight gap off the bounds face.
- */
-export const CAD_EAR_ALONG_EDGE_SCALE = 2.4;
-export const CAD_EAR_THICKNESS_SCALE = 0.55;
-export const CAD_EAR_OFFSET_SCALE = 0.28;

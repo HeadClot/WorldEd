@@ -87,10 +87,58 @@ describe('TransformModalController numeric typing', () => {
     expect(applyNumericValue).not.toHaveBeenCalled();
   });
 
-  it('requires single-use plus axis lock for scale and rotate numeric entry', () => {
+  it('applies typed free scale on all axes without a Blender axis constraint (S 2 Enter)', () => {
     const applyNumericValue = vi.fn(() => true);
     const host = createHost({
       getMode: () => TransformMode.SCALE,
+      applyNumericValue,
+    });
+    const controller = new TransformModalController();
+    controller.setHost(host);
+    controller.beginDrag();
+    expect(controller.handleKeyDown(keyEvent('Digit2', '2'))).toBe(true);
+    expect(controller.hasTypedValue()).toBe(true);
+    expect(applyNumericValue).toHaveBeenLastCalledWith(2, TransformModalAxis.None);
+    expect(controller.handleKeyDown(keyEvent('Enter', 'Enter'))).toBe(true);
+    expect(host.commitDrag).toHaveBeenCalled();
+    expect(controller.isActive()).toBe(false);
+  });
+
+  it('applies typed free scale decimals without an axis constraint (S 0.5 Enter)', () => {
+    const applyNumericValue = vi.fn(() => true);
+    const host = createHost({
+      getMode: () => TransformMode.SCALE,
+      applyNumericValue,
+    });
+    const controller = new TransformModalController();
+    controller.setHost(host);
+    controller.beginDrag();
+    expect(controller.handleKeyDown(keyEvent('Digit0', '0'))).toBe(true);
+    expect(controller.handleKeyDown(keyEvent('Period', '.'))).toBe(true);
+    expect(controller.handleKeyDown(keyEvent('Digit5', '5'))).toBe(true);
+    expect(applyNumericValue).toHaveBeenLastCalledWith(0.5, TransformModalAxis.None);
+    expect(controller.handleKeyDown(keyEvent('Enter', 'Enter'))).toBe(true);
+    expect(host.commitDrag).toHaveBeenCalled();
+  });
+
+  it('still applies axis-locked scale after a Blender Y constraint (S Y 2)', () => {
+    const applyNumericValue = vi.fn(() => true);
+    const host = createHost({
+      getMode: () => TransformMode.SCALE,
+      applyNumericValue,
+    });
+    const controller = new TransformModalController();
+    controller.setHost(host);
+    controller.beginDrag();
+    expect(controller.handleKeyDown(keyEvent('KeyY', 'y'))).toBe(true);
+    expect(controller.handleKeyDown(keyEvent('Digit2', '2'))).toBe(true);
+    expect(applyNumericValue).toHaveBeenLastCalledWith(2, TransformModalAxis.Y);
+  });
+
+  it('requires single-use plus axis lock for rotate numeric entry', () => {
+    const applyNumericValue = vi.fn(() => true);
+    const host = createHost({
+      getMode: () => TransformMode.ROTATE,
       applyNumericValue,
     });
     const controller = new TransformModalController();
@@ -102,7 +150,7 @@ describe('TransformModalController numeric typing', () => {
     expect(applyNumericValue).toHaveBeenLastCalledWith(2, TransformModalAxis.Y);
   });
 
-  it('clears typed digits when the axis lock is toggled off', () => {
+  it('clears typed digits when the axis lock is toggled off for translate', () => {
     const reapplyMouseDrivenTransform = vi.fn();
     const host = createHost({ reapplyMouseDrivenTransform });
     const controller = new TransformModalController();
@@ -115,6 +163,25 @@ describe('TransformModalController numeric typing', () => {
     expect(controller.getAxis()).toBe(TransformModalAxis.None);
     expect(controller.hasTypedValue()).toBe(false);
     expect(reapplyMouseDrivenTransform).toHaveBeenCalled();
+  });
+
+  it('keeps typed free scale digits when an axis lock is toggled off', () => {
+    const applyNumericValue = vi.fn(() => true);
+    const host = createHost({
+      getMode: () => TransformMode.SCALE,
+      applyNumericValue,
+    });
+    const controller = new TransformModalController();
+    controller.setHost(host);
+    controller.beginDrag();
+    controller.handleKeyDown(keyEvent('Digit3', '3'));
+    expect(controller.hasTypedValue()).toBe(true);
+    controller.handleKeyDown(keyEvent('KeyX', 'x'));
+    expect(applyNumericValue).toHaveBeenLastCalledWith(3, TransformModalAxis.X);
+    controller.handleKeyDown(keyEvent('KeyX', 'x'));
+    expect(controller.getAxis()).toBe(TransformModalAxis.None);
+    expect(controller.hasTypedValue()).toBe(true);
+    expect(applyNumericValue).toHaveBeenLastCalledWith(3, TransformModalAxis.None);
   });
 
   it('clears typed input on Escape without cancelling the drag first', () => {

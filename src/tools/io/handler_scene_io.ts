@@ -236,6 +236,7 @@ export class HandlerSceneIo {
       return null;
     } finally {
       overlay.hide();
+      overlay.dispose();
     }
   }
 

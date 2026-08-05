@@ -50,23 +50,6 @@ function buildSettingsDialogCss(): string {
 }
 
 /**
- * Applies full-viewport modal backdrop styles.
- *
- * @param backdrop Backdrop element.
- */
-export function styleSettingsBackdrop(backdrop: HTMLElement): void {
-  backdrop.classList.add('settings-dialog-backdrop');
-  backdrop.style.position = 'fixed';
-  backdrop.style.inset = '0';
-  backdrop.style.zIndex = '12100';
-  backdrop.style.display = 'none';
-  backdrop.style.alignItems = 'center';
-  backdrop.style.justifyContent = 'center';
-  backdrop.style.padding = '24px';
-  backdrop.style.background = 'rgba(0, 0, 0, 0.55)';
-}
-
-/**
  * Applies chrome styles to the settings panel card.
  *
  * @param panel Panel element.
@@ -85,6 +68,7 @@ export function styleSettingsPanel(panel: HTMLElement): void {
   panel.style.color = Theme.buttonTextColor;
   panel.style.overflow = 'hidden';
   panel.style.boxShadow = '0 12px 36px rgba(0, 0, 0, 0.55)';
+  panel.style.boxSizing = 'border-box';
 }
 
 /**

@@ -202,11 +202,11 @@ export function mapSnapRotateSpeedToPlaybackRate(snapsPerSecond: number): number
 }
 
 /**
- * Maps bounds-resize face travel (ruler distance so far) to playbackRate. Zero
- * travel (or plain scale) stays at default pitch; pitch climbs sooner with
- * distance.
+ * Maps scale/resize travel (bounds face distance or scale snap steps from
+ * identity) to playbackRate. Zero travel stays at default pitch; pitch climbs
+ * with distance.
  *
- * @param travelDistance Absolute applied face delta from drag start.
+ * @param travelDistance Absolute travel from drag start.
  * @returns Playback rate for the resize/scale click sample.
  */
 export function mapResizeTravelToPlaybackRate(travelDistance: number): number {

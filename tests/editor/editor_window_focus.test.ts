@@ -4,6 +4,7 @@ import { EditorWindow } from '@/editor/window/editor_window.js';
 import { Tool } from '@/editor/tools/tool.js';
 import { GuiWindow } from '@/editor/gui/gui_window.js';
 import { EditorInputBridge } from '@/editor/window/editor_input_bridge.js';
+import { FloatingPanelStack } from '@/ui/floating_panel/panel_floating_stack.js';
 
 /** Minimal tool fake for focus and SwitchTool / UseTool tests. */
 class FakeTool extends Tool {
@@ -64,6 +65,7 @@ describe('EditorWindow focus system', () => {
   let viewportContent: HTMLElement;
 
   beforeEach(() => {
+    FloatingPanelStack.resetForTests();
     editor = new EditorWindow();
     select = new FakeTool('select');
     move = new FakeTool('move');
@@ -79,6 +81,7 @@ describe('EditorWindow focus system', () => {
   });
 
   afterEach(() => {
+    FloatingPanelStack.resetForTests();
     host.remove();
   });
 
@@ -154,6 +157,80 @@ describe('EditorWindow focus system', () => {
     );
     expect(document.activeElement).toBe(viewportContent);
     expect(viewportContent.tabIndex).toBe(-1);
+    bridge.uninstall();
+  });
+
+  it('does not start a tool press when the pointer is on a floating window surface over the viewport', () => {
+    const bridge = new EditorInputBridge(editor);
+    const mouseDownSpy = vi.spyOn(editor, 'onMouseDown');
+    viewportContent.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200,
+        width: 200,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    FloatingPanelStack.register(panelRoot, undefined, 'modal');
+    bridge.setExclusiveViewportRoot(viewportContent);
+    bridge.install(host);
+    button.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 50,
+        clientY: 50,
+        button: 0,
+        buttons: 1,
+      }),
+    );
+    expect(mouseDownSpy).not.toHaveBeenCalled();
+    expect(editor.isLeftMousePressed).toBe(false);
+    bridge.uninstall();
+  });
+
+  it('does not start a tool press when the pointer is on an open menu over the viewport', () => {
+    const bridge = new EditorInputBridge(editor);
+    const mouseDownSpy = vi.spyOn(editor, 'onMouseDown');
+    viewportContent.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200,
+        width: 200,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const menuRoot = document.createElement('div');
+    menuRoot.className = 'editor-toolbar-dropdown-menu';
+    const menuItem = document.createElement('button');
+    menuItem.className = 'editor-toolbar-dropdown-item';
+    menuRoot.appendChild(menuItem);
+    document.body.appendChild(menuRoot);
+    FloatingPanelStack.registerPointerBlockSurface(menuRoot);
+    bridge.setExclusiveViewportRoot(viewportContent);
+    bridge.install(host);
+    menuItem.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 50,
+        clientY: 50,
+        button: 0,
+        buttons: 1,
+      }),
+    );
+    expect(mouseDownSpy).not.toHaveBeenCalled();
+    expect(editor.isLeftMousePressed).toBe(false);
+    FloatingPanelStack.unregisterPointerBlockSurface(menuRoot);
+    menuRoot.remove();
     bridge.uninstall();
   });
 

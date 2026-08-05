@@ -23,12 +23,18 @@ describe('SettingsDialog', () => {
 
   it('should start hidden until toggled open', () => {
     expect(dialog.isOpen()).toBe(false);
+    expect(dialog.isMountedInHost()).toBe(false);
     expect(dialog.getBackdropElement().style.display).toBe('none');
+    expect(host.contains(dialog.getBackdropElement())).toBe(false);
     dialog.toggle();
     expect(dialog.isOpen()).toBe(true);
+    expect(dialog.isMountedInHost()).toBe(true);
+    expect(host.contains(dialog.getBackdropElement())).toBe(true);
     expect(dialog.getBackdropElement().style.display).toBe('flex');
     dialog.toggle();
     expect(dialog.isOpen()).toBe(false);
+    expect(dialog.isMountedInHost()).toBe(false);
+    expect(host.contains(dialog.getBackdropElement())).toBe(false);
   });
 
   it('should expose settings tabs without the removed Themes tab', () => {
@@ -66,6 +72,7 @@ describe('SettingsDialog', () => {
     expect(yes).toBeTruthy();
     expect(resetCalls).toBe(0);
     yes.click();
+    await Promise.resolve();
     await Promise.resolve();
     expect(resetCalls).toBe(1);
   });

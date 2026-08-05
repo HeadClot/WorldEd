@@ -48,7 +48,7 @@ export class ControllerViewportShading {
 
   /**
    * Re-applies the current shading mode to all meshes in the scene. Call after
-   * meshes are cloned or replaced so materials stay consistent.
+   * meshes are added or replaced so materials stay consistent.
    */
   refreshShadingMode(): void {
     applySharedShadingPass(this.scene, this.currentMode, true);

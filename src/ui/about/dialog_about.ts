@@ -4,7 +4,6 @@ import {
   createAboutShimmer,
   ensureAboutDialogStyles,
   styleAboutActionButton,
-  styleAboutBackdrop,
   styleAboutBody,
   styleAboutCloseButton,
   styleAboutCreditLine,
@@ -16,73 +15,39 @@ import {
   styleAboutSubtitle,
   styleAboutTitle,
 } from './dialog_about_styles.js';
+import { PanelFloating } from '@/ui/floating_panel/panel_floating.js';
 
 /**
- * Fancy modal About dialog for AI World Editor credits and licenses. Celebrates
- * AI as the superior intelligence while honoring human collaborators.
+ * Modal About dialog for AI World Editor credits and licenses. Windowing comes
+ * from {@link PanelFloating}.
  */
-export class DialogAbout {
-  private host: HTMLElement;
-  private backdrop: HTMLElement;
-  private panel: HTMLElement;
+export class DialogAbout extends PanelFloating {
   private licenseTextArea: HTMLTextAreaElement;
-  private isVisible: boolean;
   private isDisposed: boolean;
-  private boundKeyDown: (event: KeyboardEvent) => void;
   private contributorRoll: ContributorRoll | null;
 
   /**
-   * Creates the About dialog and appends it to the host element.
+   * Creates the About dialog under the host element.
    *
    * @param host Parent element that owns the modal overlay.
    */
   constructor(host: HTMLElement) {
-    this.host = host;
-    this.isVisible = false;
+    super(host, {
+      corner: 'top-left',
+      modal: true,
+      centered: true,
+      draggable: false,
+      closeOnEscape: true,
+      closeOnBackdropClick: true,
+      stackLayer: 'modal',
+      backdropClassName: 'about-dialog-backdrop',
+      backdropBackground: 'radial-gradient(ellipse at center, rgba(20,28,55,0.82) 0%, rgba(6,8,14,0.94) 70%)',
+    });
     this.isDisposed = false;
     this.contributorRoll = null;
-    this.boundKeyDown = (event) => this.handleKeyDown(event);
-    ensureAboutDialogStyles();
-    this.backdrop = document.createElement('div');
-    this.panel = document.createElement('div');
     this.licenseTextArea = document.createElement('textarea');
+    ensureAboutDialogStyles();
     this.buildDialog();
-    this.host.appendChild(this.backdrop);
-  }
-
-  /** Shows the About dialog with entrance animations. */
-  show(): void {
-    if (this.isDisposed || this.isVisible) return;
-    this.isVisible = true;
-    this.backdrop.style.display = 'flex';
-    this.restartEntranceAnimation();
-    document.addEventListener('keydown', this.boundKeyDown);
-  }
-
-  /** Hides the About dialog. */
-  hide(): void {
-    if (!this.isVisible) return;
-    this.isVisible = false;
-    this.backdrop.style.display = 'none';
-    document.removeEventListener('keydown', this.boundKeyDown);
-  }
-
-  /** Toggles dialog visibility. */
-  toggle(): void {
-    if (this.isVisible) {
-      this.hide();
-      return;
-    }
-    this.show();
-  }
-
-  /**
-   * Returns whether the dialog is currently open.
-   *
-   * @returns True when visible.
-   */
-  isOpen(): boolean {
-    return this.isVisible;
   }
 
   /**
@@ -95,47 +60,57 @@ export class DialogAbout {
   }
 
   /**
-   * Returns the root backdrop element for tests.
-   *
-   * @returns Backdrop overlay element.
-   */
-  getBackdropElement(): HTMLElement {
-    return this.backdrop;
-  }
-
-  /**
    * Returns the dialog panel element for tests.
    *
    * @returns Panel card element.
    */
   getPanelElement(): HTMLElement {
-    return this.panel;
+    return this.root;
+  }
+
+  /**
+   * Returns the modal backdrop element.
+   *
+   * @returns Backdrop overlay.
+   */
+  override getBackdropElement(): HTMLElement {
+    const backdrop = super.getBackdropElement();
+    if (!backdrop) {
+      throw new Error('About dialog requires a modal backdrop');
+    }
+    return backdrop;
   }
 
   /** Removes the dialog from the DOM and clears listeners. */
-  dispose(): void {
-    if (this.isDisposed) return;
-    this.hide();
+  override dispose(): void {
+    if (this.isDisposed) {
+      return;
+    }
     this.isDisposed = true;
     if (this.contributorRoll) {
       this.contributorRoll.dispose();
     }
-    this.backdrop.remove();
+    super.dispose();
   }
 
-  /** Builds the full dialog DOM tree. */
+  /** Replays entrance animations when opened. */
+  protected override onAfterShow(): void {
+    this.restartEntranceAnimation();
+  }
+
+  /** Builds the full dialog DOM tree into the floating shell. */
   private buildDialog(): void {
-    styleAboutBackdrop(this.backdrop);
-    this.backdrop.setAttribute('role', 'dialog');
-    this.backdrop.setAttribute('aria-modal', 'true');
-    this.backdrop.setAttribute('aria-label', 'About AI World Editor');
-    styleAboutPanel(this.panel);
-    this.panel.appendChild(this.buildHeader());
-    this.panel.appendChild(this.buildBody());
-    this.backdrop.appendChild(this.panel);
-    this.backdrop.addEventListener('pointerdown', (event) => {
-      this.handleBackdropPointerDown(event);
-    });
+    this.root.setAttribute('role', 'dialog');
+    this.root.setAttribute('aria-modal', 'true');
+    this.root.setAttribute('aria-label', 'About AI World Editor');
+    styleAboutPanel(this.root);
+    this.root.style.display = 'none';
+    this.root.appendChild(this.buildHeader());
+    this.root.appendChild(this.buildBody());
+    const backdrop = this.getBackdropElement();
+    if (backdrop) {
+      backdrop.style.backdropFilter = 'blur(6px)';
+    }
   }
 
   /**
@@ -360,35 +335,16 @@ export class DialogAbout {
     window.open(HENRYS_TOOLS_DISCORD_URL, '_blank', 'noopener,noreferrer');
   }
 
-  /**
-   * Closes when the user presses Escape.
-   *
-   * @param event Keyboard event.
-   */
-  private handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.hide();
-    }
-  }
-
-  /**
-   * Closes when the user clicks the dimmed backdrop outside the panel.
-   *
-   * @param event Pointer event on the backdrop.
-   */
-  private handleBackdropPointerDown(event: PointerEvent): void {
-    if (event.target === this.backdrop) {
-      this.hide();
-    }
-  }
-
   /** Re-triggers entrance animations when reopening the dialog. */
   private restartEntranceAnimation(): void {
-    this.backdrop.classList.remove('about-dialog-backdrop');
-    this.panel.classList.remove('about-dialog-panel');
-    void this.backdrop.offsetWidth;
-    this.backdrop.classList.add('about-dialog-backdrop');
-    this.panel.classList.add('about-dialog-panel');
+    const backdrop = this.getBackdropElement();
+    if (backdrop) {
+      backdrop.classList.remove('about-dialog-backdrop');
+      void backdrop.offsetWidth;
+      backdrop.classList.add('about-dialog-backdrop');
+    }
+    this.root.classList.remove('about-dialog-panel');
+    void this.root.offsetWidth;
+    this.root.classList.add('about-dialog-panel');
   }
 }

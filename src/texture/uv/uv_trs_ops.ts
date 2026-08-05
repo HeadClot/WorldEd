@@ -111,7 +111,8 @@ export function readMappingTrs(mapping: FaceTextureMapping, faceNormal: THREE.Ve
 }
 
 /**
- * Picks a normal for reading TRS from an existing matrix.
+ * Picks a normal for reading TRS from an existing matrix. Aligns the UV plane
+ * normal to the face side so negative scale (mirror) does not flip decompose.
  *
  * @param mapping Incoming mapping.
  * @param fallbackNormal Face projection normal.
@@ -119,8 +120,7 @@ export function readMappingTrs(mapping: FaceTextureMapping, faceNormal: THREE.Ve
  */
 function resolveTrsExtractNormal(mapping: FaceTextureMapping, fallbackNormal: THREE.Vector3): THREE.Vector3 {
   if (mapping.uv instanceof SurfaceUvMatrix) {
-    const planeNormal = mapping.uv.planeNormal();
-    if (planeNormal.lengthSq() > 1e-12) return planeNormal;
+    return mapping.uv.planeNormalAlignedTo(fallbackNormal);
   }
   return fallbackNormal.clone().normalize();
 }

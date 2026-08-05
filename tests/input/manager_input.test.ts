@@ -16,11 +16,51 @@ describe('InputManager', () => {
     expect(manager.isKeyDown('KeyW')).toBe(false);
   });
 
-  it('should track QWERTZ Z under KeyZ for isKeyDown queries', () => {
+  it('should track QWERTZ Z only under layout-stable KeyZ for isKeyDown queries', () => {
     const manager = new ManagerInput();
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyY', key: 'z' }));
     expect(manager.isKeyDown('KeyZ')).toBe(true);
+    expect(manager.isKeyDown('KeyY')).toBe(false);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyY', key: 'z' }));
+    expect(manager.isKeyDown('KeyZ')).toBe(false);
+  });
+
+  it('should track QWERTZ Y only under layout-stable KeyY for isKeyDown queries', () => {
+    const manager = new ManagerInput();
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ', key: 'y' }));
     expect(manager.isKeyDown('KeyY')).toBe(true);
+    expect(manager.isKeyDown('KeyZ')).toBe(false);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyZ', key: 'y' }));
+    expect(manager.isKeyDown('KeyY')).toBe(false);
+  });
+
+  it('should track AZERTY W under layout-stable KeyW for fly-camera queries', () => {
+    const manager = new ManagerInput();
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ', key: 'w' }));
+    expect(manager.isKeyDown('KeyW')).toBe(true);
+    expect(manager.isKeyDown('KeyZ')).toBe(false);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyZ', key: 'w' }));
+    expect(manager.isKeyDown('KeyW')).toBe(false);
+  });
+
+  it('should track AZERTY A under layout-stable KeyA for fly-camera queries', () => {
+    const manager = new ManagerInput();
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyQ', key: 'a' }));
+    expect(manager.isKeyDown('KeyA')).toBe(true);
+    expect(manager.isKeyDown('KeyQ')).toBe(false);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyQ', key: 'a' }));
+    expect(manager.isKeyDown('KeyA')).toBe(false);
+  });
+
+  it('should release QWERTZ Y and Z independently without cross-clearing holds', () => {
+    const manager = new ManagerInput();
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ', key: 'y' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyY', key: 'z' }));
+    expect(manager.isKeyDown('KeyY')).toBe(true);
+    expect(manager.isKeyDown('KeyZ')).toBe(true);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyZ', key: 'y' }));
+    expect(manager.isKeyDown('KeyY')).toBe(false);
+    expect(manager.isKeyDown('KeyZ')).toBe(true);
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyY', key: 'z' }));
     expect(manager.isKeyDown('KeyZ')).toBe(false);
   });

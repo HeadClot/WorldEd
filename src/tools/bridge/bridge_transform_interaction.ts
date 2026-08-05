@@ -13,7 +13,6 @@ import {
   restoreGridSnapUserPreference,
 } from '@/transform/snap/grid_snap_shift_precision.js';
 import { ManagerInput } from '@/input/manager_input.js';
-import { ManagerViewportSync } from '@/layout/viewport/manager_viewport_sync.js';
 import { PanelProperties } from '@/ui/properties/panel_properties.js';
 import { filterUnlockedObjects } from '@/utils/object_lock.js';
 import { resolveTransformTargets } from '@/selection/object/resolve_transform_targets.js';
@@ -36,7 +35,6 @@ export interface DependenciesBridgeTransformInteraction {
   transformExecutor: TransformExecutor;
   gridSnap: GridSnap;
   inputManager: ManagerInput;
-  viewportSyncManager: ManagerViewportSync;
   propertiesPanel: PanelProperties;
   worldObject: THREE.Group;
   getUserSnapEnabled: () => boolean;
@@ -48,9 +46,9 @@ export interface DependenciesBridgeTransformInteraction {
    */
   onDuplicateSelectedForDrag?: () => void;
   /**
-   * Required hook after a transform drag commits. Must refresh 2D clones,
-   * selection outlines, brush hulls, CAD rulers, gizmo, and solid CSG — the
-   * same contract as inspector edits and undo/redo
+   * Required hook after a transform drag commits. Must refresh selection
+   * outlines, brush hulls, CAD rulers, gizmo, and solid CSG — the same contract
+   * as inspector edits and undo/redo
    * ({@link refreshSceneVisualsAfterTransformCommit}).
    *
    * @param objects Objects that received pose edits (meshes and/or groups).
@@ -88,8 +86,8 @@ export interface DependenciesBridgeTransformInteraction {
 }
 
 /**
- * Bridges viewport pointer events to the transform handler and keeps clone
- * positions, selection visuals, and properties in sync during drag.
+ * Bridges viewport pointer events to the transform handler and keeps selection
+ * visuals and properties in sync during drag.
  */
 export class BridgeTransformInteraction {
   private deps: DependenciesBridgeTransformInteraction;
@@ -617,7 +615,6 @@ export class BridgeTransformInteraction {
     this.updateSnapFromShiftKey(event);
     this.deps.transformHandler.onPointerMove(camera, pickElement, event, pivot, transformTargets);
     this.deps.onTransformsLive?.(selected);
-    this.deps.viewportSyncManager.syncCloneTransformsForWorldObjects(transformTargets);
     this.deps.selectionVisualController.syncDuringTransform();
     this.refreshGizmoFrameDuringDrag(transformTargets);
     this.deps.transformGizmo.updateBoundsFromMeshes(selected, camera);
@@ -781,7 +778,7 @@ export class BridgeTransformInteraction {
 
   /**
    * Commits a completed transform drag through the shared layout visual refresh
-   * (clones, selection, rulers, gizmo, solid finalize).
+   * (selection, rulers, gizmo, solid finalize).
    *
    * @param transformTargets Objects that received pose edits.
    */

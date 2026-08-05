@@ -75,6 +75,7 @@ describe('TextureBrowserController', () => {
     await controller.openFolder();
     expect(controller.getLibrary().getEntryCount()).toBe(2);
     expect(controller.getLibrary().getFolderName()).toBe('Walls');
+    browser.show();
     expect(host.textContent).toContain('Checker');
     expect(host.textContent).toContain('brick');
     expect(host.textContent).toContain('Folder: Walls');
@@ -106,6 +107,7 @@ describe('TextureBrowserController', () => {
     controller.refreshBrowserUi();
     await controller.openFolder();
     expect(controller.getLibrary().getEntryCount()).toBe(2);
+    browser.show();
     expect(host.textContent).toContain('2 texture(s)');
   });
 

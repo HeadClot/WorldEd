@@ -66,6 +66,22 @@ export type OutlinerReparentCallback = (
 ) => void;
 
 /**
+ * Face-mode outliner pick handler. When it returns true, the outliner does not
+ * object-select; Shift adds and Ctrl removes faces (same as viewport face
+ * paint).
+ *
+ * @param hierarchyObject Clicked outliner object.
+ * @param isShiftPressed Additive when true.
+ * @param isCtrlPressed Subtractive when true.
+ * @returns True when face mode consumed the pick.
+ */
+export type OutlinerFaceModeSelectionHandler = (
+  hierarchyObject: THREE.Object3D,
+  isShiftPressed: boolean,
+  isCtrlPressed: boolean,
+) => boolean;
+
+/**
  * Hierarchical scene object panel with tree rendering. Displays scene objects
  * as a collapsible tree with type icons, visibility toggles, inline rename, and
  * context menu support.
@@ -85,6 +101,7 @@ export class PanelOutliner {
   private visibilityCallback: OutlinerVisibilityCallback | null;
   private lockCallback: OutlinerLockCallback | null;
   private reparentCallback: OutlinerReparentCallback | null;
+  private faceModeSelectionHandler: OutlinerFaceModeSelectionHandler | null;
   private hierarchySelection: Set<THREE.Object3D>;
   private isApplyingOutlinerSelection: boolean;
 
@@ -110,6 +127,7 @@ export class PanelOutliner {
     this.visibilityCallback = null;
     this.lockCallback = null;
     this.reparentCallback = null;
+    this.faceModeSelectionHandler = null;
     this.hierarchySelection = new Set();
     this.isApplyingOutlinerSelection = false;
     this.applyContainerStyles();
@@ -201,6 +219,17 @@ export class PanelOutliner {
    */
   setReparentCallback(callback: OutlinerReparentCallback | null): void {
     this.reparentCallback = callback;
+  }
+
+  /**
+   * Registers the face-mode outliner selection handler. When active and the
+   * handler returns true, hierarchy picks become face selection instead of
+   * object selection.
+   *
+   * @param handler Face-mode pick handler, or null to disable.
+   */
+  setFaceModeSelectionHandler(handler: OutlinerFaceModeSelectionHandler | null): void {
+    this.faceModeSelectionHandler = handler;
   }
 
   /**
@@ -312,7 +341,8 @@ export class PanelOutliner {
   /**
    * Handles object selection from the tree view with multi-select modifiers.
    * Tracks hierarchy nodes (meshes and groups) for grouping, and syncs mesh
-   * selection so viewports/gizmos still highlight content meshes.
+   * selection so viewports/gizmos still highlight content meshes. In face mode,
+   * picks become face selection (Shift add / Ctrl remove) without object bind.
    *
    * @param obj The Three.js object that was selected.
    * @param event Optional mouse event providing Shift/Ctrl state.
@@ -320,13 +350,66 @@ export class PanelOutliner {
   private onSelectObject(obj: THREE.Object3D, event?: MouseEvent): void {
     if (obj === this.root) return;
     if (event && event.detail > 1) return;
-    const additive = event?.shiftKey === true;
-    const toggle = event?.ctrlKey === true || event?.metaKey === true;
+    const isShiftPressed = event?.shiftKey === true;
+    const isCtrlPressed = event?.ctrlKey === true || event?.metaKey === true;
+    if (this.tryApplyFaceModeSelection(obj, isShiftPressed, isCtrlPressed)) {
+      return;
+    }
     this.isApplyingOutlinerSelection = true;
-    this.updateHierarchySelection(obj, additive, toggle);
+    this.updateHierarchySelection(obj, isShiftPressed, isCtrlPressed);
     this.syncMeshSelectionFromHierarchy();
     this.isApplyingOutlinerSelection = false;
     this.refreshSelectionOnly();
+  }
+
+  /**
+   * Applies face-mode outliner selection when a handler is registered and
+   * consumes the pick. Keeps object selection empty so the inspector cannot
+   * move meshes under a floating face highlight.
+   *
+   * @param obj Clicked hierarchy object.
+   * @param isShiftPressed Additive when true.
+   * @param isCtrlPressed Subtractive when true.
+   * @returns True when face mode handled the pick.
+   */
+  private tryApplyFaceModeSelection(obj: THREE.Object3D, isShiftPressed: boolean, isCtrlPressed: boolean): boolean {
+    if (!this.faceModeSelectionHandler) {
+      return false;
+    }
+    if (!this.faceModeSelectionHandler(obj, isShiftPressed, isCtrlPressed)) {
+      return false;
+    }
+    this.isApplyingOutlinerSelection = true;
+    this.updateHierarchySelectionForFaceMode(obj, isShiftPressed, isCtrlPressed);
+    this.selectionManager.clearSelection();
+    this.isApplyingOutlinerSelection = false;
+    this.refreshSelectionOnly();
+    return true;
+  }
+
+  /**
+   * Updates outliner hierarchy highlight for face-mode picks. Plain replaces,
+   * Shift adds the row, Ctrl removes the row.
+   *
+   * @param obj Clicked hierarchy object.
+   * @param isShiftPressed Additive when true.
+   * @param isCtrlPressed Subtractive when true.
+   */
+  private updateHierarchySelectionForFaceMode(
+    obj: THREE.Object3D,
+    isShiftPressed: boolean,
+    isCtrlPressed: boolean,
+  ): void {
+    if (isCtrlPressed) {
+      this.hierarchySelection.delete(obj);
+      return;
+    }
+    if (isShiftPressed) {
+      this.hierarchySelection.add(obj);
+      return;
+    }
+    this.hierarchySelection.clear();
+    this.hierarchySelection.add(obj);
   }
 
   /**

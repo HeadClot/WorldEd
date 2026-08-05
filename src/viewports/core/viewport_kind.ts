@@ -22,7 +22,6 @@ export interface ViewportKindMetadata {
   cadViewPlane: CadViewPlane;
   /** Transform gizmo plane key used when cloning handles. */
   gizmoPlane: GridPlane | 'xyz';
-  prefersWorldHost: boolean;
 }
 
 const KIND_METADATA: Readonly<Record<ViewportKind, ViewportKindMetadata>> = {
@@ -33,7 +32,6 @@ const KIND_METADATA: Readonly<Record<ViewportKind, ViewportKindMetadata>> = {
     gridPlane: 'xz',
     cadViewPlane: 'xz',
     gizmoPlane: 'xz',
-    prefersWorldHost: false,
   },
   [ViewportKind.FRONT]: {
     kind: ViewportKind.FRONT,
@@ -42,7 +40,6 @@ const KIND_METADATA: Readonly<Record<ViewportKind, ViewportKindMetadata>> = {
     gridPlane: 'xy',
     cadViewPlane: 'xy',
     gizmoPlane: 'xy',
-    prefersWorldHost: false,
   },
   [ViewportKind.SIDE]: {
     kind: ViewportKind.SIDE,
@@ -51,7 +48,6 @@ const KIND_METADATA: Readonly<Record<ViewportKind, ViewportKindMetadata>> = {
     gridPlane: 'yz',
     cadViewPlane: 'yz',
     gizmoPlane: 'yz',
-    prefersWorldHost: false,
   },
   [ViewportKind.PERSPECTIVE]: {
     kind: ViewportKind.PERSPECTIVE,
@@ -60,7 +56,6 @@ const KIND_METADATA: Readonly<Record<ViewportKind, ViewportKindMetadata>> = {
     gridPlane: 'xz',
     cadViewPlane: 'xyz',
     gizmoPlane: 'xyz',
-    prefersWorldHost: true,
   },
 };
 

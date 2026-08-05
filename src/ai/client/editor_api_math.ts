@@ -18,16 +18,6 @@ export function vec3ToDto(vector: THREE.Vector3): McpVec3 {
 }
 
 /**
- * Converts Euler rotation (radians) into a plain MCP DTO.
- *
- * @param euler Source Euler angles.
- * @returns Plain {x,y,z} rotation in radians.
- */
-export function eulerToDto(euler: THREE.Euler): McpVec3 {
-  return { x: euler.x, y: euler.y, z: euler.z };
-}
-
-/**
  * Builds a Three.js vector from an MCP DTO.
  *
  * @param dto Plain vector or undefined.

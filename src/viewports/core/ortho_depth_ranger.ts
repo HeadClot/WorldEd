@@ -27,7 +27,7 @@ export class OrthoDepthRanger {
    * Updates an orthographic camera so all scene content lies within near/far.
    *
    * @param camera Orthographic viewport camera.
-   * @param scene Viewport scene containing content clones.
+   * @param scene Viewport scene containing content meshes.
    */
   static update(camera: THREE.OrthographicCamera, scene: THREE.Scene): void {
     const range = this.measureContentDepthRange(scene, camera);

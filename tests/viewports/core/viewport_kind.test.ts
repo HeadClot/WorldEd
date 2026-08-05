@@ -28,11 +28,13 @@ describe('ViewportKind', () => {
     expect(getViewportKindMetadata(ViewportKind.SIDE).gridPlane).toBe('yz');
   });
 
-  it('should mark only perspective as preferring the world host', () => {
-    expect(getViewportKindMetadata(ViewportKind.PERSPECTIVE).prefersWorldHost).toBe(true);
-    expect(getViewportKindMetadata(ViewportKind.TOP).prefersWorldHost).toBe(false);
+  it('should mark only perspective kinds as perspective', () => {
     expect(isPerspectiveViewportKind(ViewportKind.PERSPECTIVE)).toBe(true);
     expect(isPerspectiveViewportKind(ViewportKind.FRONT)).toBe(false);
+    expect(isPerspectiveViewportKind(ViewportKind.TOP)).toBe(false);
+    expect(isPerspectiveViewportKind(ViewportKind.SIDE)).toBe(false);
+    expect(getViewportKindMetadata(ViewportKind.PERSPECTIVE).isPerspective).toBe(true);
+    expect(getViewportKindMetadata(ViewportKind.TOP).isPerspective).toBe(false);
   });
 
   it('should order menu kinds for the type dropdown', () => {

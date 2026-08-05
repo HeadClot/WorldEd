@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { FaceTextureMapping, createDefaultFaceTextureMapping } from '@/texture/uv/face_texture_mapping.js';
 import { getFaceTextureMaps, setFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
 import { countTriangles } from '@/texture/uv/planar_uv_projector.js';
 import { TextureMapCache, getTextureMapCache } from '@/texture/library/texture_map_cache.js';
@@ -575,16 +574,4 @@ function detachSharedMaps(material: THREE.Material): void {
   const mapHost = material as THREE.Material & { map?: THREE.Texture | null; matcap?: THREE.Texture | null };
   if ('map' in mapHost) mapHost.map = null;
   if ('matcap' in mapHost) mapHost.matcap = null;
-}
-
-/**
- * Returns a default mapping using the paint state's last texture when provided.
- *
- * @param textureId Optional texture id override.
- * @returns New FaceTextureMapping.
- */
-export function createMappingWithTextureId(textureId: string): FaceTextureMapping {
-  const mapping = createDefaultFaceTextureMapping();
-  mapping.textureId = textureId;
-  return mapping;
 }

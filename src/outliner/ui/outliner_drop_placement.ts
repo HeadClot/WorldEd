@@ -332,22 +332,6 @@ export function outlinerDragEdgeScrollEaseInPower(linearIntensity: number): numb
 }
 
 /**
- * Quadratic ease-in helper kept for tests and shared call sites.
- *
- * @param linearIntensity Normalized intensity in [0, 1] (0 = inner, 1 = outer).
- * @returns Eased intensity in [0, 1].
- */
-export function outlinerDragEdgeScrollEaseInQuadratic(linearIntensity: number): number {
-  if (!Number.isFinite(linearIntensity) || linearIntensity <= 0) {
-    return 0;
-  }
-  if (linearIntensity >= 1) {
-    return 1;
-  }
-  return linearIntensity * linearIntensity;
-}
-
-/**
  * Host-local Y of an insert line for a visible row edge, relative to the
  * viewport (scroll offset subtracted so the marker stays on screen).
  *

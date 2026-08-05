@@ -245,23 +245,25 @@ function buildFaceOrientedMapping(target: TextureApplyTarget, mapping: FaceTextu
   const faceNormal = computeRegionWorldNormal(target.mesh, target.triangleIndices);
   const align = mapping.align ?? 'face';
   const projectionNormal = resolveProjectionNormal(faceNormal, align);
-  const extractNormal = resolveTrsExtractNormal(mapping, projectionNormal);
-  const trs = getFaceTextureMappingTrs(mapping, extractNormal);
+  const trs = getFaceTextureMappingTrs(mapping, resolveSourceMatrixNormal(mapping, projectionNormal));
   return createFaceTextureMappingFromTrs(textureId, projectionNormal, trs, align);
 }
 
 /**
- * Picks a normal for reading TRS from an existing matrix (prefers the matrix
- * plane; falls back to the face projection normal).
+ * Extracts TRS from a source mapping in that matrix's authored plane. Does not
+ * re-align to each target face, so the same editor scale/rotation is stamped
+ * onto every face (negative scale stays negative for all).
  *
  * @param mapping Incoming mapping.
- * @param fallbackNormal Face projection normal.
+ * @param fallbackNormal Used when the matrix plane is degenerate.
  * @returns Unit normal for TRS decompose.
  */
-function resolveTrsExtractNormal(mapping: FaceTextureMapping, fallbackNormal: THREE.Vector3): THREE.Vector3 {
+function resolveSourceMatrixNormal(mapping: FaceTextureMapping, fallbackNormal: THREE.Vector3): THREE.Vector3 {
   if (mapping.uv instanceof SurfaceUvMatrix) {
     const planeNormal = mapping.uv.planeNormal();
-    if (planeNormal.lengthSq() > 1e-12) return planeNormal;
+    if (planeNormal.lengthSq() > 1e-20) {
+      return planeNormal;
+    }
   }
   return fallbackNormal.clone().normalize();
 }
@@ -504,14 +506,6 @@ function restoreGeometryAwareUvDefaults(mesh: THREE.Mesh): void {
   if (entries.length === 0) return;
   applyCylinderSideUnwrapOffsets(mesh, entries);
   setFaceTextureMaps(mesh, entries);
-}
-
-/**
- * @deprecated Use resetUvParamsOnTargets — name kept for older call sites.
- * @param targets Regions to reset.
- */
-export function resetTargetsToDefault(targets: TextureApplyTarget[]): void {
-  resetUvParamsOnTargets(targets);
 }
 
 /**

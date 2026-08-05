@@ -1,5 +1,6 @@
 import { Theme } from '@/theme.js';
 import { hexToRgb } from '@/utils/utils_color.js';
+import { PanelFloating } from '@/ui/floating_panel/panel_floating.js';
 
 /**
  * Options for a reusable modal message box (Yes/No style prompts such as File →
@@ -32,8 +33,11 @@ export interface MessageBoxOptions {
  */
 export function showMessageBox(options: MessageBoxOptions): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
-    const controller = new MessageBoxController(options, resolve);
-    controller.open();
+    const dialog = new DialogMessageBox(options, (confirmed) => {
+      resolve(confirmed);
+      queueMicrotask(() => dialog.dispose());
+    });
+    dialog.show();
   });
 }
 
@@ -51,37 +55,74 @@ export function showConfirmDialog(options: MessageBoxOptions): Promise<boolean> 
 export type ConfirmDialogOptions = MessageBoxOptions;
 
 /**
- * Internal modal lifecycle for one message box. Disposes itself after the first
- * user decision.
+ * Modal Yes/No message box built on {@link PanelFloating}. Settles once when the
+ * user chooses a button, Escape, or the backdrop.
  */
-class MessageBoxController {
+class DialogMessageBox extends PanelFloating {
   private readonly options: MessageBoxOptions;
-  private readonly resolve: (confirmed: boolean) => void;
-  private readonly backdrop: HTMLElement;
-  private readonly panel: HTMLElement;
-  private readonly boundKeyDown: (event: KeyboardEvent) => void;
+  private readonly settle: (confirmed: boolean) => void;
   private settled: boolean;
+  private readonly boundKeyDown: (event: KeyboardEvent) => void;
 
   /**
    * @param options Dialog configuration.
-   * @param resolve Promise settle callback.
+   * @param settle Callback invoked once with the user decision.
    */
-  constructor(options: MessageBoxOptions, resolve: (confirmed: boolean) => void) {
+  constructor(options: MessageBoxOptions, settle: (confirmed: boolean) => void) {
+    super(options.host, {
+      corner: 'top-left',
+      modal: true,
+      centered: true,
+      draggable: false,
+      closeOnEscape: false,
+      closeOnBackdropClick: false,
+      stackLayer: 'confirm',
+      backdropClassName: 'editor-message-box-backdrop',
+    });
     this.options = options;
-    this.resolve = resolve;
+    this.settle = settle;
     this.settled = false;
     this.boundKeyDown = (event) => this.handleKeyDown(event);
-    this.backdrop = this.createBackdrop();
-    this.panel = this.createPanel();
-    this.backdrop.appendChild(this.panel);
+    this.buildDialog();
+    this.bindBackdropDismiss();
   }
 
-  /** Appends the dialog and focuses the cancel button by default. */
-  open(): void {
-    this.options.host.appendChild(this.backdrop);
+  /** Focuses the cancel button after the shell becomes visible. */
+  protected override onAfterShow(): void {
     document.addEventListener('keydown', this.boundKeyDown);
-    const cancelButton = this.panel.querySelector<HTMLButtonElement>('[data-message-box-cancel="true"]');
+    const cancelButton = this.root.querySelector<HTMLButtonElement>('[data-message-box-cancel="true"]');
     cancelButton?.focus();
+  }
+
+  /** Removes temporary key listeners when hidden. */
+  protected override onAfterHide(): void {
+    document.removeEventListener('keydown', this.boundKeyDown);
+  }
+
+  /** Builds title, message body, and action buttons into the shell. */
+  private buildDialog(): void {
+    this.root.className = 'editor-message-box-panel';
+    this.root.setAttribute('role', 'alertdialog');
+    this.root.setAttribute('aria-modal', 'true');
+    this.root.setAttribute('aria-labelledby', 'editor-message-box-title');
+    this.applyPanelChrome();
+    this.root.appendChild(this.createTitle());
+    this.root.appendChild(this.createMessageBody());
+    this.root.appendChild(this.createButtonRow());
+    this.root.addEventListener('mousedown', (event) => event.stopPropagation());
+  }
+
+  /** Binds backdrop click as a cancel action. */
+  private bindBackdropDismiss(): void {
+    const backdrop = this.getBackdropElement();
+    if (!backdrop) {
+      return;
+    }
+    backdrop.addEventListener('mousedown', (event) => {
+      if (event.target === backdrop) {
+        this.settleDecision(false);
+      }
+    });
   }
 
   /**
@@ -92,84 +133,41 @@ class MessageBoxController {
   private handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault();
-      this.settle(false);
+      this.settleDecision(false);
       return;
     }
     if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) {
       event.preventDefault();
-      this.settle(true);
+      this.settleDecision(true);
     }
   }
 
   /**
-   * Settles the promise once and removes the dialog from the DOM.
+   * Settles the promise once and hides the dialog.
    *
    * @param confirmed True when the user chose Yes.
    */
-  private settle(confirmed: boolean): void {
-    if (this.settled) return;
+  private settleDecision(confirmed: boolean): void {
+    if (this.settled) {
+      return;
+    }
     this.settled = true;
-    document.removeEventListener('keydown', this.boundKeyDown);
-    this.backdrop.remove();
-    this.resolve(confirmed);
+    this.hide(true);
+    this.settle(confirmed);
   }
 
-  /**
-   * Creates the full-screen dimmed backdrop.
-   *
-   * @returns Backdrop element.
-   */
-  private createBackdrop(): HTMLElement {
-    const backdrop = document.createElement('div');
-    backdrop.className = 'editor-message-box-backdrop';
-    backdrop.style.position = 'fixed';
-    backdrop.style.inset = '0';
-    backdrop.style.display = 'flex';
-    backdrop.style.alignItems = 'center';
-    backdrop.style.justifyContent = 'center';
-    backdrop.style.background = 'rgba(0, 0, 0, 0.55)';
-    backdrop.style.zIndex = '20000';
-    backdrop.style.fontFamily = Theme.uiFontFamily;
-    backdrop.addEventListener('mousedown', (event) => {
-      if (event.target === backdrop) this.settle(false);
-    });
-    return backdrop;
-  }
-
-  /**
-   * Creates the centered dialog panel with title, message, and buttons.
-   *
-   * @returns Panel element.
-   */
-  private createPanel(): HTMLElement {
-    const panel = document.createElement('div');
-    panel.className = 'editor-message-box-panel';
-    panel.setAttribute('role', 'alertdialog');
-    panel.setAttribute('aria-modal', 'true');
-    panel.setAttribute('aria-labelledby', 'editor-message-box-title');
-    this.applyPanelChrome(panel);
-    panel.appendChild(this.createTitle());
-    panel.appendChild(this.createMessageBody());
-    panel.appendChild(this.createButtonRow());
-    panel.addEventListener('mousedown', (event) => event.stopPropagation());
-    return panel;
-  }
-
-  /**
-   * Applies Blender-inspired dark chrome to the dialog panel.
-   *
-   * @param panel Panel element.
-   */
-  private applyPanelChrome(panel: HTMLElement): void {
-    panel.style.minWidth = '360px';
-    panel.style.maxWidth = '440px';
-    panel.style.padding = '18px 20px 16px';
-    panel.style.borderRadius = '10px';
-    panel.style.background = `linear-gradient(180deg, ${hexToRgb(Theme.toolbarBackground)} 0%, ${hexToRgb(Theme.toolbarBackgroundEnd)} 100%)`;
-    panel.style.border = '1px solid rgba(255,255,255,0.1)';
-    panel.style.boxShadow = '0 18px 48px rgba(0,0,0,0.65)';
-    panel.style.color = Theme.buttonTextColor;
-    panel.style.boxSizing = 'border-box';
+  /** Applies Blender-inspired dark chrome to the dialog panel. */
+  private applyPanelChrome(): void {
+    this.root.style.minWidth = '360px';
+    this.root.style.maxWidth = '440px';
+    this.root.style.padding = '18px 20px 16px';
+    this.root.style.borderRadius = '10px';
+    this.root.style.background = `linear-gradient(180deg, ${hexToRgb(Theme.toolbarBackground)} 0%, ${hexToRgb(Theme.toolbarBackgroundEnd)} 100%)`;
+    this.root.style.border = '1px solid rgba(255,255,255,0.1)';
+    this.root.style.boxShadow = '0 18px 48px rgba(0,0,0,0.65)';
+    this.root.style.color = Theme.buttonTextColor;
+    this.root.style.boxSizing = 'border-box';
+    this.root.style.fontFamily = Theme.uiFontFamily;
   }
 
   /**
@@ -259,7 +257,7 @@ class MessageBoxController {
       button.dataset['confirmAccept'] = 'true';
     }
     this.styleActionButton(button, isConfirm);
-    button.addEventListener('click', () => this.settle(isConfirm));
+    button.addEventListener('click', () => this.settleDecision(isConfirm));
     return button;
   }
 

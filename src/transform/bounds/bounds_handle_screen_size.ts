@@ -209,9 +209,6 @@ export function computeBoundsCubeVisualPixels(distance: number): number {
   return falloffPixels(distance, BOUNDS_CUBE_VISUAL_NEAR_PIXELS, BOUNDS_CUBE_VISUAL_MIN_PIXELS);
 }
 
-/** @deprecated Use {@link computeBoundsCubePickPixels}. */
-export const computeBoundsCubeTargetPixels = computeBoundsCubePickPixels;
-
 /**
  * Inverse falloff from near pixels toward a minimum as distance grows.
  *

@@ -2,6 +2,7 @@ import { Theme } from '@/theme.js';
 import { hexToRgb } from '@/utils/utils_color.js';
 import type { BridgeMcpDesktop } from './bridge_mcp_desktop.js';
 import type { McpHostStatus } from '@/ai/shared/mcp_protocol_types.js';
+import { PanelFloating } from '@/ui/floating_panel/panel_floating.js';
 
 /** Options for the MCP connection dialog. */
 export interface McpDialogOptions {
@@ -24,132 +25,92 @@ export interface McpDialogOptions {
  */
 export function showMcpDialog(options: McpDialogOptions): Promise<void> {
   return new Promise<void>((resolve) => {
-    const controller = new McpDialogController(options, resolve);
-    void controller.open();
+    const dialog = new DialogMcp(options, () => {
+      dialog.dispose();
+      resolve();
+    });
+    void dialog.open();
   });
 }
 
-/**
- * Modal lifecycle for the MCP instructions dialog. Mirrors message-box chrome
- * and settles once when closed.
- */
-class McpDialogController {
+/** Modal MCP connection dialog built on {@link PanelFloating}. */
+class DialogMcp extends PanelFloating {
   private readonly options: McpDialogOptions;
-  private readonly resolve: () => void;
-  private readonly backdrop: HTMLElement;
-  private readonly panel: HTMLElement;
+  private readonly onClosed: () => void;
   private readonly statusLine: HTMLElement;
   private readonly urlField: HTMLInputElement;
   private readonly primaryButton: HTMLButtonElement;
-  private readonly boundKeyDown: (event: KeyboardEvent) => void;
-  private settled: boolean;
+  private closed: boolean;
   private running: boolean;
 
   /**
    * @param options Dialog configuration.
-   * @param resolve Close callback.
+   * @param onClosed Callback when the dialog finishes closing.
    */
-  constructor(options: McpDialogOptions, resolve: () => void) {
+  constructor(options: McpDialogOptions, onClosed: () => void) {
+    super(options.host, {
+      corner: 'top-left',
+      modal: true,
+      centered: true,
+      draggable: false,
+      closeOnEscape: true,
+      closeOnBackdropClick: true,
+      stackLayer: 'confirm',
+      backdropClassName: 'editor-message-box-backdrop',
+    });
     this.options = options;
-    this.resolve = resolve;
-    this.settled = false;
+    this.onClosed = onClosed;
+    this.closed = false;
     this.running = false;
-    this.boundKeyDown = (event) => this.handleKeyDown(event);
     this.statusLine = document.createElement('p');
     this.urlField = this.createReadonlyField('mcp-url');
     this.primaryButton = document.createElement('button');
-    this.backdrop = this.createBackdrop();
-    this.panel = this.createPanel();
-    this.backdrop.appendChild(this.panel);
+    this.buildDialog();
   }
 
-  /** Appends the dialog and loads current MCP host status. */
+  /** Shows the dialog and loads current MCP host status. */
   async open(): Promise<void> {
-    this.options.host.appendChild(this.backdrop);
-    document.addEventListener('keydown', this.boundKeyDown);
+    this.show();
     await this.refreshStatus();
     this.primaryButton.focus();
   }
 
-  /**
-   * Handles Escape as close.
-   *
-   * @param event Document keydown event.
-   */
-  private handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.close();
+  /** Notifies the open promise when the shell closes. */
+  protected override onAfterHide(): void {
+    if (this.closed) {
+      return;
     }
+    this.closed = true;
+    this.onClosed();
   }
 
-  /** Removes the dialog and settles the open promise. */
-  private close(): void {
-    if (this.settled) return;
-    this.settled = true;
-    document.removeEventListener('keydown', this.boundKeyDown);
-    this.backdrop.remove();
-    this.resolve();
+  /** Builds the MCP panel chrome into the floating shell. */
+  private buildDialog(): void {
+    this.root.className = 'editor-message-box-panel';
+    this.root.setAttribute('role', 'dialog');
+    this.root.setAttribute('aria-modal', 'true');
+    this.root.setAttribute('aria-labelledby', 'editor-mcp-dialog-title');
+    this.applyPanelChrome();
+    this.root.appendChild(this.createTitle());
+    this.root.appendChild(this.createStatusLine());
+    this.root.appendChild(this.createInstructions());
+    this.root.appendChild(this.createFieldBlock('URL', this.urlField));
+    this.root.appendChild(this.createButtonRow());
+    this.root.addEventListener('mousedown', (event) => event.stopPropagation());
   }
 
-  /**
-   * Creates the full-screen dimmed backdrop (message-box style).
-   *
-   * @returns Backdrop element.
-   */
-  private createBackdrop(): HTMLElement {
-    const backdrop = document.createElement('div');
-    backdrop.className = 'editor-message-box-backdrop';
-    backdrop.style.position = 'fixed';
-    backdrop.style.inset = '0';
-    backdrop.style.display = 'flex';
-    backdrop.style.alignItems = 'center';
-    backdrop.style.justifyContent = 'center';
-    backdrop.style.background = 'rgba(0, 0, 0, 0.55)';
-    backdrop.style.zIndex = '20000';
-    backdrop.style.fontFamily = Theme.uiFontFamily;
-    backdrop.addEventListener('mousedown', (event) => {
-      if (event.target === backdrop) this.close();
-    });
-    return backdrop;
-  }
-
-  /**
-   * Creates the centered dialog panel.
-   *
-   * @returns Panel element.
-   */
-  private createPanel(): HTMLElement {
-    const panel = document.createElement('div');
-    panel.className = 'editor-message-box-panel';
-    panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-modal', 'true');
-    panel.setAttribute('aria-labelledby', 'editor-mcp-dialog-title');
-    this.applyPanelChrome(panel);
-    panel.appendChild(this.createTitle());
-    panel.appendChild(this.createStatusLine());
-    panel.appendChild(this.createInstructions());
-    panel.appendChild(this.createFieldBlock('URL', this.urlField));
-    panel.appendChild(this.createButtonRow());
-    panel.addEventListener('mousedown', (event) => event.stopPropagation());
-    return panel;
-  }
-
-  /**
-   * Applies Blender-inspired dark chrome matching the message box.
-   *
-   * @param panel Panel element.
-   */
-  private applyPanelChrome(panel: HTMLElement): void {
-    panel.style.minWidth = '420px';
-    panel.style.maxWidth = '520px';
-    panel.style.padding = '18px 20px 16px';
-    panel.style.borderRadius = '10px';
-    panel.style.background = `linear-gradient(180deg, ${hexToRgb(Theme.toolbarBackground)} 0%, ${hexToRgb(Theme.toolbarBackgroundEnd)} 100%)`;
-    panel.style.border = '1px solid rgba(255,255,255,0.1)';
-    panel.style.boxShadow = '0 18px 48px rgba(0,0,0,0.65)';
-    panel.style.color = Theme.buttonTextColor;
-    panel.style.boxSizing = 'border-box';
+  /** Applies Blender-inspired dark chrome matching the message box. */
+  private applyPanelChrome(): void {
+    this.root.style.minWidth = '420px';
+    this.root.style.maxWidth = '520px';
+    this.root.style.padding = '18px 20px 16px';
+    this.root.style.borderRadius = '10px';
+    this.root.style.background = `linear-gradient(180deg, ${hexToRgb(Theme.toolbarBackground)} 0%, ${hexToRgb(Theme.toolbarBackgroundEnd)} 100%)`;
+    this.root.style.border = '1px solid rgba(255,255,255,0.1)';
+    this.root.style.boxShadow = '0 18px 48px rgba(0,0,0,0.65)';
+    this.root.style.color = Theme.buttonTextColor;
+    this.root.style.boxSizing = 'border-box';
+    this.root.style.fontFamily = Theme.uiFontFamily;
   }
 
   /**
@@ -265,7 +226,7 @@ class McpDialogController {
     row.style.gap = '8px';
     row.appendChild(this.createSecondaryButton('Copy URL', () => void this.copyUrl()));
     row.appendChild(this.createPrimaryToggleButton());
-    row.appendChild(this.createSecondaryButton('Close', () => this.close(), true));
+    row.appendChild(this.createSecondaryButton('Close', () => this.hide(), true));
     return row;
   }
 
@@ -300,7 +261,9 @@ class McpDialogController {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = label;
-    if (isDefaultFocus) button.dataset['messageBoxCancel'] = 'true';
+    if (isDefaultFocus) {
+      button.dataset['messageBoxCancel'] = 'true';
+    }
     this.styleActionButton(button, false);
     button.addEventListener('click', onClick);
     return button;

@@ -36,9 +36,3 @@ export const AXIS_DIRECTION_LABELS: Readonly<Record<AxisDirection, string>> = Ob
   '+z': '+Z',
   '-z': '-Z',
 });
-
-/** Human-readable labels for handedness. */
-export const HANDEDNESS_LABELS: Readonly<Record<Handedness, string>> = Object.freeze({
-  right: 'Right-handed',
-  left: 'Left-handed',
-});

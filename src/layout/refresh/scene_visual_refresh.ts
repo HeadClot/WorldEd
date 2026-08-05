@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { resolveTransformTargets } from '@/selection/object/resolve_transform_targets.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
 import { collectMeshesUnder } from '@/utils/utils_hierarchy.js';
 
@@ -7,7 +6,7 @@ import { collectMeshesUnder } from '@/utils/utils_hierarchy.js';
  * Host callbacks for a full world-mutation visual refresh.
  *
  * Use {@link refreshSceneVisualsAfterMutation} after hierarchy graph changes
- * (delete, reparent, load). It reclones and refreshes overlays but does
+ * (delete, reparent, load). It refreshes selectable lists and overlays but does
  * <strong>not</strong> recompile solid CSG from brush mesh poses — that would
  * thrash CSG on every structural edit.
  *
@@ -17,7 +16,7 @@ import { collectMeshesUnder } from '@/utils/utils_hierarchy.js';
  * in lockstep without per-tool patches.
  */
 export interface SceneMutationVisualHost {
-  /** Reclones world objects into 2D views and reapplies selection outlines. */
+  /** Refreshes selectable mesh lists and selection outlines across viewports. */
   syncPrimitivesToViewports: () => void;
   /** Rebuilds the outliner tree from the live hierarchy. */
   refreshOutliner: () => void;
@@ -44,15 +43,13 @@ export interface SceneMutationVisualHost {
 
 /**
  * Host callbacks for transform-commit refresh (properties inspector and gizmo
- * pointer-up). Guarantees clone poses, selection visuals, CAD rulers, and gizmo
- * match the world after any authoritative transform write.
+ * pointer-up). Guarantees selection visuals, CAD rulers, and gizmo match the
+ * world after any authoritative transform write.
  */
 export interface SceneTransformCommitVisualHost {
-  /** Copies local transforms of world subtrees onto matching 2D clones. */
-  syncCloneTransformsForWorldObjects: (worldObjects: readonly THREE.Object3D[]) => void;
   /** Keeps outline children and wireframe overlays glued during/after move. */
   syncSelectionVisualsDuringTransform: () => void;
-  /** Full reclone path when a light transform copy is not enough. */
+  /** Full selectable-list refresh when solid-only handling is not enough. */
   syncPrimitivesToViewports: () => void;
   /**
    * Forces world matrices current before CAD rulers and gizmo measure selection
@@ -69,7 +66,8 @@ export interface SceneTransformCommitVisualHost {
   updateGizmoPivot: () => void;
   /**
    * Optional solid CSG finalize for brush/result edits. Return true when only
-   * solid-model meshes were handled so a full world reclone can be skipped.
+   * solid-model meshes were handled so a full viewport selectable refresh can
+   * be skipped.
    *
    * @param meshes Transformed meshes (may include non-solid meshes).
    */
@@ -79,7 +77,7 @@ export interface SceneTransformCommitVisualHost {
 }
 
 /**
- * Full visual refresh after hierarchy mutations. Reclones viewports and
+ * Full visual refresh after hierarchy mutations. Refreshes selectable lists and
  * overlays. Does not recompile solid CSG from brush poses (see file contract).
  *
  * @param host Layout-owned visual subsystems.
@@ -96,8 +94,8 @@ export function refreshSceneVisualsAfterMutation(host: SceneMutationVisualHost):
  * Mandatory refresh after any tool writes object local transforms. Finalizes
  * solid CSG once via
  * {@link SceneTransformCommitVisualHost.finalizeSolidTransforms}, then syncs
- * clones and overlays. Call this instead of a bare viewport reclone after
- * align, inspector pose fields, gizmo pointer-up, or MCP pose writes.
+ * selection visuals and overlays. Call this after align, inspector pose fields,
+ * gizmo pointer-up, or MCP pose writes.
  *
  * @param host Transform-commit visual subsystems.
  * @param transformedObjects World objects whose local transforms just changed.
@@ -109,7 +107,7 @@ export function refreshSceneVisualsAfterTransformCommit(
   const meshes = collectMeshesForSolidFinalize(transformedObjects);
   const solidOnlyHandled = host.finalizeSolidTransforms?.(meshes) === true;
   if (solidOnlyHandled) {
-    applyLightTransformCloneSync(host, meshes, transformedObjects);
+    host.syncSelectionVisualsDuringTransform();
   } else {
     host.syncPrimitivesToViewports();
   }
@@ -138,46 +136,6 @@ function refreshOverlayPoseVisuals(
   host.refreshCadRulersFromSelection();
   host.updateGizmoVisibility();
   host.updateGizmoPivot();
-}
-
-/**
- * Light path: copy transforms for solid-only commits without recloning the
- * entire world (large-map gizmo pointer-up).
- *
- * @param host Transform-commit host.
- * @param meshes Transformed meshes.
- * @param transformedObjects All transformed roots (may include non-mesh
- *   groups).
- */
-function applyLightTransformCloneSync(
-  host: SceneTransformCommitVisualHost,
-  meshes: THREE.Mesh[],
-  transformedObjects: readonly THREE.Object3D[],
-): void {
-  const syncTargets = collectTransformSyncTargets(meshes, transformedObjects);
-  host.syncCloneTransformsForWorldObjects(syncTargets);
-  host.syncSelectionVisualsDuringTransform();
-}
-
-/**
- * Builds the set of world objects whose clones must receive transform copies.
- *
- * @param meshes Transformed meshes.
- * @param transformedObjects All transformed objects from the edit.
- * @returns Unique roots to mirror into 2D viewports.
- */
-function collectTransformSyncTargets(
-  meshes: THREE.Mesh[],
-  transformedObjects: readonly THREE.Object3D[],
-): THREE.Object3D[] {
-  const targets = resolveTransformTargets(meshes);
-  const seen = new Set<THREE.Object3D>(targets);
-  for (const object of transformedObjects) {
-    if (seen.has(object)) continue;
-    seen.add(object);
-    targets.push(object);
-  }
-  return targets;
 }
 
 /**

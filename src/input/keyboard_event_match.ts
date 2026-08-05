@@ -67,25 +67,6 @@ function keyboardShortcutCodeFromMinusEvent(event: KeyboardEvent): string | null
 }
 
 /**
- * Returns whether the event is a bare modifier with no other key.
- *
- * @param event Browser keyboard event.
- * @returns True for Shift/Ctrl/Alt/Meta alone.
- */
-export function keyboardEventIsModifierOnly(event: KeyboardEvent): boolean {
-  return (
-    event.code === 'ShiftLeft' ||
-    event.code === 'ShiftRight' ||
-    event.code === 'ControlLeft' ||
-    event.code === 'ControlRight' ||
-    event.code === 'AltLeft' ||
-    event.code === 'AltRight' ||
-    event.code === 'MetaLeft' ||
-    event.code === 'MetaRight'
-  );
-}
-
-/**
  * Maps a KeyA–KeyZ code to its logical letter.
  *
  * @param code Shortcut code.

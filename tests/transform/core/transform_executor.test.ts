@@ -197,6 +197,26 @@ describe('TransformExecutor snapped translation audio events', () => {
     expect(notificationFrameEvents.hasSelectionMovedWithSnappingSnapshot()).toBe(false);
   });
 
+  it('pitches scale snaps from factor travel, not snap-step count', () => {
+    const snapExecutor = new TransformExecutor(new GridSnap(true, 1.0, 15, 0.1));
+    const mesh = new THREE.Mesh();
+    mesh.position.set(0, 0, 0);
+    mesh.scale.set(1, 1, 1);
+    const initials = new Map<THREE.Object3D, THREE.Vector3>([[mesh, mesh.position.clone()]]);
+    const scales = new Map<THREE.Object3D, THREE.Vector3>([[mesh, mesh.scale.clone()]]);
+    snapExecutor.applyAbsoluteFreeScale(
+      [mesh],
+      initials,
+      scales,
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(1.7, 1, 1),
+    );
+    notificationFrameEvents.beginFrame();
+    expect(notificationFrameEvents.hasSelectionScaledWithSnappingSnapshot()).toBe(true);
+    expect(notificationFrameEvents.getSelectionResizeTravelSnapshot()).toBeCloseTo(0.7, 5);
+    expect(notificationFrameEvents.getSelectionResizeTravelSnapshot()).toBeLessThan(2);
+  });
+
   it('does not raise when snap is disabled', () => {
     const snapExecutor = new TransformExecutor(new GridSnap(false, 1.0));
     const mesh = new THREE.Mesh();

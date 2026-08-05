@@ -3,7 +3,6 @@ import { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidModelRegistry } from '@/solid/model/solid_model_registry.js';
 import type { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
 import { isSolidCsgGroup } from '@/solid/model/solid_group.js';
-import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 
 /** Lookup result for a brush and its owning solid model. */
 export interface BrushLookup {
@@ -167,14 +166,4 @@ export function resolveSolidTreeParent(
   const group = findCsgGroup(worldObject, parentId);
   if (group) return { model: group.model, parent: group.group };
   return null;
-}
-
-/**
- * Returns whether an object is a solid brush preview mesh.
- *
- * @param object Candidate scene object.
- * @returns True for solid brush meshes.
- */
-export function isSolidBrushNode(object: THREE.Object3D): boolean {
-  return object instanceof THREE.Mesh && SolidBrushVisual.isBrushObject(object);
 }

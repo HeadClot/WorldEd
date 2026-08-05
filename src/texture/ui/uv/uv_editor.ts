@@ -5,9 +5,7 @@ import { FaceTextureAlign, FaceTextureMappingTrs } from '@/texture/uv/face_textu
 import type { UvEditorTrsFieldState } from '@/texture/uv/face_texture_applier.js';
 import { UV_OFFSET_NUDGE, type UvRelativeTrsOp } from '@/texture/uv/uv_trs_ops.js';
 import { PanelFloating } from '@/ui/floating_panel/panel_floating.js';
-
-/** Unity-style dash for mixed multi-selection values. */
-const MIXED_VALUE_DISPLAY = '—';
+import { InputNumeric } from '@/ui/input/input_numeric.js';
 
 /**
  * Fixed layout metrics for a neat UV editor grid. Top icons and field rows use
@@ -51,11 +49,11 @@ export interface UvEditorHandlers {
  */
 export class UvEditor extends PanelFloating {
   private handlers: UvEditorHandlers;
-  private scaleUInput: HTMLInputElement;
-  private scaleVInput: HTMLInputElement;
-  private offsetUInput: HTMLInputElement;
-  private offsetVInput: HTMLInputElement;
-  private rotationInput: HTMLInputElement;
+  private scaleUInput: InputNumeric;
+  private scaleVInput: InputNumeric;
+  private offsetUInput: InputNumeric;
+  private offsetVInput: InputNumeric;
+  private rotationInput: InputNumeric;
   private statusLabel: HTMLElement;
   private lastAlign: FaceTextureAlign;
   private suppressFieldEmit: boolean;
@@ -73,11 +71,11 @@ export class UvEditor extends PanelFloating {
     this.handlers = handlers;
     this.lastAlign = 'auto';
     this.suppressFieldEmit = false;
-    this.scaleUInput = document.createElement('input');
-    this.scaleVInput = document.createElement('input');
-    this.offsetUInput = document.createElement('input');
-    this.offsetVInput = document.createElement('input');
-    this.rotationInput = document.createElement('input');
+    this.scaleUInput = this.createUvNumericField(0.25);
+    this.scaleVInput = this.createUvNumericField(0.25);
+    this.offsetUInput = this.createUvNumericField(UV_OFFSET_NUDGE);
+    this.offsetVInput = this.createUvNumericField(UV_OFFSET_NUDGE);
+    this.rotationInput = this.createUvNumericField(1);
     this.statusLabel = document.createElement('div');
     this.populateRoot();
     this.setFromFieldState({
@@ -99,14 +97,20 @@ export class UvEditor extends PanelFloating {
   setFromFieldState(fields: UvEditorTrsFieldState): void {
     this.suppressFieldEmit = true;
     this.lastAlign = fields.align ?? this.lastAlign;
-    this.writeField(this.scaleUInput, fields.scaleU, 2);
-    this.writeField(this.scaleVInput, fields.scaleV, 2);
-    this.writeField(this.offsetUInput, fields.offsetU, 2);
-    this.writeField(this.offsetVInput, fields.offsetV, 2);
-    this.writeField(this.rotationInput, fields.rotationDeg, 1);
+    this.scaleUInput.setNumber(fields.scaleU, 2);
+    this.scaleVInput.setNumber(fields.scaleV, 2);
+    this.offsetUInput.setNumber(fields.offsetU, 2);
+    this.offsetVInput.setNumber(fields.offsetV, 2);
+    this.rotationInput.setNumber(fields.rotationDeg, 1);
     this.statusLabel.textContent =
       fields.targetCount === 0 ? 'No surfaces selected' : `${fields.targetCount} face region(s)`;
     this.suppressFieldEmit = false;
+  }
+
+  /** Hides, unregisters, and disposes numeric field listeners. */
+  override dispose(): void {
+    this.disposeNumericFields();
+    super.dispose();
   }
 
   /**
@@ -241,13 +245,13 @@ export class UvEditor extends PanelFloating {
   private buildScaleSection(): HTMLElement {
     const section = this.createSection('Scale');
     section.appendChild(
-      this.buildAxisRowWithButtons('U', this.scaleUInput, 0.25, [
+      this.buildAxisRowWithButtons('U', this.scaleUInput, [
         { label: '×2', title: 'Double U scale (larger tiles)', op: { kind: 'multiplyScale', axis: 'u', factor: 2 } },
         { label: '½', title: 'Halve U scale (smaller tiles)', op: { kind: 'multiplyScale', axis: 'u', factor: 0.5 } },
       ]),
     );
     section.appendChild(
-      this.buildAxisRowWithButtons('V', this.scaleVInput, 0.25, [
+      this.buildAxisRowWithButtons('V', this.scaleVInput, [
         { label: '×2', title: 'Double V scale (larger tiles)', op: { kind: 'multiplyScale', axis: 'v', factor: 2 } },
         { label: '½', title: 'Halve V scale (smaller tiles)', op: { kind: 'multiplyScale', axis: 'v', factor: 0.5 } },
       ]),
@@ -264,13 +268,13 @@ export class UvEditor extends PanelFloating {
     const section = this.createSection('Offset');
     const step = UV_OFFSET_NUDGE;
     section.appendChild(
-      this.buildAxisRowWithButtons('U', this.offsetUInput, step, [
+      this.buildAxisRowWithButtons('U', this.offsetUInput, [
         { label: '−¼', title: 'Shift U by −¼ tile', op: { kind: 'addOffset', axis: 'u', delta: -step } },
         { label: '+¼', title: 'Shift U by +¼ tile', op: { kind: 'addOffset', axis: 'u', delta: step } },
       ]),
     );
     section.appendChild(
-      this.buildAxisRowWithButtons('V', this.offsetVInput, step, [
+      this.buildAxisRowWithButtons('V', this.offsetVInput, [
         { label: '−¼', title: 'Shift V by −¼ tile', op: { kind: 'addOffset', axis: 'v', delta: -step } },
         { label: '+¼', title: 'Shift V by +¼ tile', op: { kind: 'addOffset', axis: 'v', delta: step } },
       ]),
@@ -286,7 +290,7 @@ export class UvEditor extends PanelFloating {
   private buildRotationSection(): HTMLElement {
     const section = this.createSection('Rotation');
     section.appendChild(
-      this.buildAxisRowWithButtons('°', this.rotationInput, 1, [
+      this.buildAxisRowWithButtons('°', this.rotationInput, [
         { label: '−90', title: 'Rotate UV −90°', op: { kind: 'addRotation', degrees: -90 } },
         { label: '+90', title: 'Rotate UV +90°', op: { kind: 'addRotation', degrees: 90 } },
       ]),
@@ -318,15 +322,13 @@ export class UvEditor extends PanelFloating {
    * Builds one labeled input row with fixed-width nudge buttons.
    *
    * @param label Axis label.
-   * @param input Input element.
-   * @param step Input step.
+   * @param field Shared numeric field.
    * @param buttons Nudge button specs.
    * @returns Row element.
    */
   private buildAxisRowWithButtons(
     label: string,
-    input: HTMLInputElement,
-    step: number,
+    field: InputNumeric,
     buttons: Array<{ label: string; title: string; op: UvRelativeTrsOp }>,
   ): HTMLElement {
     const row = document.createElement('div');
@@ -338,8 +340,7 @@ export class UvEditor extends PanelFloating {
     row.style.width = `${UV_LAYOUT.contentWidth}px`;
     row.style.boxSizing = 'border-box';
     row.appendChild(this.createAxisLabel(label));
-    this.configureNumberInput(input, step);
-    row.appendChild(input);
+    row.appendChild(field.getElement());
     buttons.forEach((spec) => {
       row.appendChild(this.createNudgeButton(spec.label, spec.title, () => this.handlers.onRelativeOp(spec.op)));
     });
@@ -366,30 +367,22 @@ export class UvEditor extends PanelFloating {
   }
 
   /**
-   * Configures a compact number-like text input (supports mixed dash display).
+   * Creates a fixed-width UV numeric field with shared math parsing.
    *
-   * @param input Input element.
-   * @param step Step size.
+   * @param step Step size stored for future nudge tooling.
+   * @returns Numeric field controller.
    */
-  private configureNumberInput(input: HTMLInputElement, step: number): void {
-    input.type = 'text';
-    input.inputMode = 'decimal';
-    input.placeholder = MIXED_VALUE_DISPLAY;
-    input.dataset['step'] = String(step);
-    input.style.width = `${UV_LAYOUT.fieldWidth}px`;
-    input.style.minWidth = `${UV_LAYOUT.fieldWidth}px`;
-    input.style.maxWidth = `${UV_LAYOUT.fieldWidth}px`;
-    input.style.height = `${UV_LAYOUT.fieldHeight}px`;
-    input.style.boxSizing = 'border-box';
-    input.style.background = Theme.inputBackgroundColor;
-    input.style.color = Theme.inputTextColor;
-    input.style.border = `1px solid ${Theme.inputBorderColor}`;
-    input.style.borderRadius = '3px';
-    input.style.padding = '0 4px';
-    input.style.fontFamily = 'monospace';
-    input.style.fontSize = '11px';
-    input.style.textAlign = 'right';
-    this.bindMixedValueFocusClear(input);
+  private createUvNumericField(step: number): InputNumeric {
+    return new InputNumeric({
+      step,
+      width: `${UV_LAYOUT.fieldWidth}px`,
+      minWidth: `${UV_LAYOUT.fieldWidth}px`,
+      maxWidth: `${UV_LAYOUT.fieldWidth}px`,
+      height: `${UV_LAYOUT.fieldHeight}px`,
+      padding: '0 4px',
+      borderRadius: '3px',
+      textAlign: 'right',
+    });
   }
 
   /**
@@ -507,29 +500,25 @@ export class UvEditor extends PanelFloating {
   /** Binds change events on numeric fields to apply partial TRS. */
   private bindNumericApply(): void {
     const apply = () => this.emitPartialFromFields();
-    [this.scaleUInput, this.scaleVInput, this.offsetUInput, this.offsetVInput, this.rotationInput].forEach((input) => {
-      input.addEventListener('change', apply);
-      input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          (event.target as HTMLInputElement).blur();
-          apply();
-        }
-      });
-    });
+    for (const field of this.allNumericFields()) {
+      field.bindCommit(apply);
+    }
   }
 
   /**
-   * Clears a mixed-value dash when the user focuses the field so typing
-   * replaces it (Unity properties pattern).
+   * Returns every UV TRS numeric field.
    *
-   * @param input Field input.
+   * @returns Field controllers.
    */
-  private bindMixedValueFocusClear(input: HTMLInputElement): void {
-    input.addEventListener('focus', () => {
-      if (input.value.trim() !== MIXED_VALUE_DISPLAY) return;
-      input.value = '';
-    });
+  private allNumericFields(): InputNumeric[] {
+    return [this.scaleUInput, this.scaleVInput, this.offsetUInput, this.offsetVInput, this.rotationInput];
+  }
+
+  /** Disposes listeners on every UV numeric field. */
+  private disposeNumericFields(): void {
+    for (const field of this.allNumericFields()) {
+      field.dispose();
+    }
   }
 
   /**
@@ -537,9 +526,13 @@ export class UvEditor extends PanelFloating {
    * multi-select can set one field without requiring all others.
    */
   private emitPartialFromFields(): void {
-    if (this.suppressFieldEmit) return;
+    if (this.suppressFieldEmit) {
+      return;
+    }
     const fields = this.readPartialFieldsFromInputs();
-    if (Object.keys(fields).length === 0) return;
+    if (Object.keys(fields).length === 0) {
+      return;
+    }
     this.handlers.onApplyPartialTrs(fields);
   }
 
@@ -550,41 +543,30 @@ export class UvEditor extends PanelFloating {
    */
   private readPartialFieldsFromInputs(): Partial<FaceTextureMappingTrs> {
     const fields: Partial<FaceTextureMappingTrs> = {};
-    const scaleU = this.parseOptionalNumber(this.scaleUInput.value);
-    const scaleV = this.parseOptionalNumber(this.scaleVInput.value);
-    const offsetU = this.parseOptionalNumber(this.offsetUInput.value);
-    const offsetV = this.parseOptionalNumber(this.offsetVInput.value);
-    const rotationDeg = this.parseOptionalNumber(this.rotationInput.value);
-    if (scaleU !== null) fields.scaleU = scaleU;
-    if (scaleV !== null) fields.scaleV = scaleV;
-    if (offsetU !== null) fields.offsetU = offsetU;
-    if (offsetV !== null) fields.offsetV = offsetV;
-    if (rotationDeg !== null) fields.rotationDeg = rotationDeg;
+    this.assignParsedField(fields, 'scaleU', this.scaleUInput);
+    this.assignParsedField(fields, 'scaleV', this.scaleVInput);
+    this.assignParsedField(fields, 'offsetU', this.offsetUInput);
+    this.assignParsedField(fields, 'offsetV', this.offsetVInput);
+    this.assignParsedField(fields, 'rotationDeg', this.rotationInput);
     return fields;
   }
 
   /**
-   * Parses an input string into a number, or null when mixed/empty/invalid.
+   * Copies one parsed numeric field into a partial TRS when present.
    *
-   * @param text Raw input text.
-   * @returns Parsed number, or null to leave the field unchanged.
+   * @param fields Partial TRS accumulator.
+   * @param key TRS property name.
+   * @param field Numeric field to parse.
    */
-  private parseOptionalNumber(text: string): number | null {
-    const trimmed = text.trim();
-    if (trimmed === '' || trimmed === MIXED_VALUE_DISPLAY || trimmed === '-') return null;
-    const value = parseFloat(trimmed);
-    if (isNaN(value)) return null;
-    return value;
-  }
-
-  /**
-   * Writes a shared number or mixed dash into an input.
-   *
-   * @param input Target input.
-   * @param value Shared value or null when mixed.
-   * @param decimals Fixed decimal places.
-   */
-  private writeField(input: HTMLInputElement, value: number | null, decimals: number): void {
-    input.value = value === null ? MIXED_VALUE_DISPLAY : value.toFixed(decimals);
+  private assignParsedField(
+    fields: Partial<FaceTextureMappingTrs>,
+    key: keyof FaceTextureMappingTrs,
+    field: InputNumeric,
+  ): void {
+    const value = field.parseNumberOrNull();
+    if (value === null) {
+      return;
+    }
+    fields[key] = value;
   }
 }

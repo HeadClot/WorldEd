@@ -94,7 +94,11 @@ import { LayoutRenderLoop } from '@/layout/setup/layout_render_loop.js';
 import { TransformSpace } from '@/types/transform_space.js';
 import { TransformMode } from '@/types/transform_mode.js';
 import { ViewportPaneLayout } from './viewport_pane_layout.js';
-import { createLayoutSettingsSystem, openLayoutAboutDialog } from '@/layout/setup/layout_settings_system.js';
+import {
+  createLayoutSettingsDialog,
+  createLayoutSettingsSystem,
+  openLayoutAboutDialog,
+} from '@/layout/setup/layout_settings_system.js';
 import { CadRulerSystem } from '@/rulers/system/cad_ruler_system.js';
 import { BuilderOrientedBounds } from '@/transform/bounds/builder_oriented_bounds.js';
 import {
@@ -594,13 +598,23 @@ export abstract class ViewportLayoutCore {
    * @param surfaceId Stable surface id for the focus registry.
    */
   protected registerToolEditorGuiSurface(
-    panel: { getRootElement(): HTMLElement } | null | undefined,
+    panel:
+      | {
+          getRootElement(): HTMLElement;
+          getInteractionRootElement?: () => HTMLElement;
+        }
+      | null
+      | undefined,
     surfaceId: string,
   ): void {
     if (!panel || !this.toolEditorSystem) {
       return;
     }
-    this.toolEditorSystem.registerGuiSurface(panel.getRootElement(), surfaceId);
+    const interactionRoot =
+      typeof panel.getInteractionRootElement === 'function'
+        ? panel.getInteractionRootElement()
+        : panel.getRootElement();
+    this.toolEditorSystem.registerGuiSurface(interactionRoot, surfaceId);
   }
 
   /** Creates selection visuals and primitive creation wiring. */
@@ -797,6 +811,18 @@ export abstract class ViewportLayoutCore {
         this.updateGizmoPivot();
       },
     });
+    this.wireOutlinerFaceModeSelection();
+  }
+
+  /**
+   * Routes outliner hierarchy picks into face selection while face mode is
+   * active so Shift/Ctrl match viewport face paint and object selection stays
+   * empty.
+   */
+  private wireOutlinerFaceModeSelection(): void {
+    this.outlinerPanel.setFaceModeSelectionHandler((hierarchyObject, isShiftPressed, isCtrlPressed) =>
+      this.faceModeCoordinator.applyOutlinerHierarchyFaceSelection(hierarchyObject, isShiftPressed, isCtrlPressed),
+    );
   }
 
   /** Creates the floating Tools palette, clip plane tool, and related wiring. */
@@ -896,7 +922,6 @@ export abstract class ViewportLayoutCore {
       propertiesPanel: this.propertiesPanel,
       toolbarContainer: this.toolbarContainer,
       solidPanelAnchor: this.viewports[3]!,
-      viewportSyncManager: this.viewportSyncManager,
       viewport3D: this.viewport3D,
       gridSnap: this.gridSnap,
       textureLock: this.textureLock,
@@ -1008,7 +1033,11 @@ export abstract class ViewportLayoutCore {
 
   /** Opens the About dialog, creating it on first use. */
   protected onOpenAboutDialog(): void {
+    const wasMissing = this.aboutDialog === null;
     this.aboutDialog = openLayoutAboutDialog(this.container, this.aboutDialog, this.statusBar);
+    if (wasMissing) {
+      this.registerToolEditorGuiSurface(this.aboutDialog, 'about_dialog');
+    }
   }
 
   /**
@@ -1031,6 +1060,7 @@ export abstract class ViewportLayoutCore {
   /** Toggles the Settings dialog, creating store and dialog on first use. */
   protected onToggleSettingsDialog(): void {
     this.ensureSettingsSystem();
+    this.ensureSettingsDialog();
     this.settingsDialog?.toggle();
     if (this.settingsDialog?.isOpen()) {
       this.statusBar?.setLastAction('Settings opened');
@@ -1039,13 +1069,15 @@ export abstract class ViewportLayoutCore {
     this.statusBar?.setLastAction('Settings closed');
   }
 
-  /** Lazily creates the settings store, applicator, and dialog. */
+  /**
+   * Ensures the settings store and applicator exist so preferences apply even
+   * when the settings dialog has never been opened.
+   */
   protected ensureSettingsSystem(): void {
-    if (this.settingsStore && this.settingsDialog) {
+    if (this.settingsStore) {
       return;
     }
     const parts = createLayoutSettingsSystem({
-      container: this.container,
       getPerspectiveViewport: () => this.getPrimaryPerspectiveViewport(),
       getRendererHost: () =>
         this.getPrimaryPerspectiveViewport() ??
@@ -1063,8 +1095,24 @@ export abstract class ViewportLayoutCore {
     });
     this.settingsStore = parts.settingsStore;
     this.settingsApplicator = parts.settingsApplicator;
-    this.settingsDialog = parts.settingsDialog;
     this.settingsUnsubscribe = parts.settingsUnsubscribe;
+  }
+
+  /**
+   * Creates the settings dialog on first open so no modal DOM exists at
+   * startup.
+   */
+  protected ensureSettingsDialog(): void {
+    if (this.settingsDialog) {
+      return;
+    }
+    this.ensureSettingsSystem();
+    const store = this.settingsStore;
+    if (!store) {
+      return;
+    }
+    this.settingsDialog = createLayoutSettingsDialog(this.container, store);
+    this.registerToolEditorGuiSurface(this.settingsDialog, 'settings_dialog');
   }
 
   /** Creates and initializes the snap settings controller. */
@@ -1097,7 +1145,7 @@ export abstract class ViewportLayoutCore {
   /** Creates ResizeObserver-based resize handling for workspace and panes. */
   protected abstract watchResize(): void;
 
-  /** Syncs world objects into clone viewports and selection visuals. */
+  /** Syncs world selectables to viewports and refreshes selection visuals. */
   protected abstract syncPrimitivesToViewports(): void;
 
   /** Updates tools palette transform highlights and status bar mode text. */
@@ -1127,7 +1175,10 @@ export abstract class ViewportLayoutCore {
   /** Full visual refresh after hierarchy/world mutations. */
   protected abstract refreshAfterWorldMutation(): void;
 
-  /** Pose-commit refresh (solid finalize once + clones) after transform writes. */
+  /**
+   * Pose-commit refresh (solid finalize once + overlays) after transform
+   * writes.
+   */
   protected abstract refreshVisualsAfterTransformCommit(transformedObjects: readonly THREE.Object3D[]): void;
 
   /** @param message Status bar message text. */

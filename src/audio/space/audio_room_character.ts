@@ -107,28 +107,6 @@ export const AUDIO_ROOM_CHARACTER_OPEN: Readonly<AudioRoomCharacter> = Object.fr
   wetLowpassHz: 2400,
 });
 
-/** Corridor landmark — a bit more air along the run, still dry-forward. */
-export const AUDIO_ROOM_CHARACTER_HALLWAY: Readonly<AudioRoomCharacter> = Object.freeze({
-  dryGain: 0.89,
-  wetGain: 0.16,
-  tailFeedback: 0.3,
-  earlyDelayScale: 0.75,
-  tailDelayScale: 1.2,
-  earlyGainScale: 0.95,
-  wetLowpassHz: 1800,
-});
-
-/** Large chamber landmark. */
-export const AUDIO_ROOM_CHARACTER_CHAMBER: Readonly<AudioRoomCharacter> = Object.freeze({
-  dryGain: 0.86,
-  wetGain: 0.2,
-  tailFeedback: 0.34,
-  earlyDelayScale: 1.2,
-  tailDelayScale: 1.35,
-  earlyGainScale: 1,
-  wetLowpassHz: 2500,
-});
-
 /**
  * Both rays miss on an axis: use this free length. CSG maps are closed, so a
  * double miss means “beyond probe range”, not outdoor void.

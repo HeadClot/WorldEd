@@ -48,4 +48,33 @@ describe('FloatingPanelStack', () => {
     expect(Number(c.style.zIndex)).toBe(UiStackLayers.floatingPanelBase + 1);
     expect(FloatingPanelStack.getRegisteredCount()).toBe(3);
   });
+
+  it('reports whether an event target lies inside a registered window surface', () => {
+    const backdrop = document.createElement('div');
+    const child = document.createElement('button');
+    backdrop.appendChild(child);
+    document.body.appendChild(backdrop);
+    FloatingPanelStack.register(backdrop, undefined, 'modal');
+    expect(FloatingPanelStack.containsEventTarget(child)).toBe(true);
+    expect(FloatingPanelStack.containsEventTarget(backdrop)).toBe(true);
+    expect(FloatingPanelStack.containsEventTarget(document.body)).toBe(false);
+    expect(FloatingPanelStack.containsEventTarget(null)).toBe(false);
+    backdrop.remove();
+  });
+
+  it('reports open menu pointer-block surfaces without changing tool-panel stacking', () => {
+    const menu = document.createElement('div');
+    const item = document.createElement('button');
+    menu.appendChild(item);
+    document.body.appendChild(menu);
+    FloatingPanelStack.registerPointerBlockSurface(menu);
+    expect(FloatingPanelStack.getPointerBlockSurfaceCount()).toBe(1);
+    expect(FloatingPanelStack.containsEventTarget(item)).toBe(true);
+    expect(FloatingPanelStack.containsEventTarget(menu)).toBe(true);
+    expect(menu.style.zIndex).toBe('');
+    FloatingPanelStack.unregisterPointerBlockSurface(menu);
+    expect(FloatingPanelStack.getPointerBlockSurfaceCount()).toBe(0);
+    expect(FloatingPanelStack.containsEventTarget(item)).toBe(false);
+    menu.remove();
+  });
 });

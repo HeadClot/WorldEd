@@ -31,9 +31,6 @@ export type UiThemePreference = 'system' | 'light' | 'dark';
 /** Number of editor viewports visible in the workspace. */
 export type ViewportPaneCount = 1 | 2 | 3 | 4;
 
-/** Ordered viewport pane count options shown in View preferences. */
-export const VIEWPORT_PANE_COUNT_OPTIONS: readonly ViewportPaneCount[] = Object.freeze([1, 2, 3, 4]);
-
 /** Theme preference labels for dropdowns. */
 export const UI_THEME_LABELS: Readonly<Record<UiThemePreference, string>> = Object.freeze({
   system: 'System',

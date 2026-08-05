@@ -78,9 +78,10 @@ export class HandlerKeyboardShortcut {
   private readonly getKeyboardShortcuts: () => KeyboardShortcutSettings;
 
   /**
-   * Returns whether a keyboard code is currently held.
+   * Returns whether a layout-stable keyboard code is currently held.
    *
-   * @param keyCode KeyboardEvent.code value (e.g. KeyG).
+   * @param keyCode Layout-stable code (e.g. KeyG, KeyZ) from the shared input
+   *   path.
    * @returns True while the key is down.
    */
   isKeyDown(keyCode: string): boolean {

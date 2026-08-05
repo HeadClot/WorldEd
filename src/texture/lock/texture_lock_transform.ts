@@ -1,7 +1,4 @@
 import * as THREE from 'three';
-import { SolidBrushInstance } from '@/solid/model/solid_brush_instance.js';
-import { FaceSurfaceDescription, cloneFaceSurface } from '@/texture/uv_matrix/face_surface_description.js';
-import { lockFaceSurfaceForBrushTransform } from './solid_brush_texture_lock.js';
 import { shouldApplyWorldFixedUv, type SurfaceUvLockFlags } from '@/texture/uv_matrix/surface_uv_matrix_transform.js';
 
 /** Position and stretch texture lock flags. */
@@ -48,31 +45,6 @@ export function shouldUpdateMappingsForLocks(
   const moved = poseMoved(scratchPrevPos, scratchNextPos, scratchPrevQuat, scratchNextQuat);
   const scaled = !scratchPrevScale.equals(scratchNextScale);
   return shouldApplyWorldFixedUv(flags, moved, scaled);
-}
-
-/**
- * Applies position/stretch locks to a solid brush face surface.
- *
- * @param surface Surface before the transform.
- * @param instance Brush instance.
- * @param faceIndex Face index.
- * @param previousWorldMatrix Prior brush local-to-world.
- * @param nextWorldMatrix New brush local-to-world.
- * @param flags Lock flags.
- * @returns Surface for the new pose.
- */
-export function applyTextureLocksToBrushFaceSurface(
-  surface: FaceSurfaceDescription,
-  instance: SolidBrushInstance,
-  faceIndex: number,
-  previousWorldMatrix: THREE.Matrix4,
-  nextWorldMatrix: THREE.Matrix4,
-  flags: TextureLockFlags,
-): FaceSurfaceDescription {
-  if (!shouldUpdateMappingsForLocks(previousWorldMatrix, nextWorldMatrix, flags)) {
-    return cloneFaceSurface(surface);
-  }
-  return lockFaceSurfaceForBrushTransform(surface, instance, faceIndex, previousWorldMatrix, nextWorldMatrix, flags);
 }
 
 /**

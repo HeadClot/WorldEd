@@ -25,14 +25,13 @@ describe('scene_visual_refresh', () => {
     ]);
   });
 
-  it('uses light clone sync when solid-only commit is handled', () => {
+  it('uses selection visual sync when solid-only commit is handled', () => {
     const order: string[] = [];
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     const host = createTransformCommitHost(order, true);
     refreshSceneVisualsAfterTransformCommit(host, [mesh]);
     expect(order).toEqual([
       'finalizeSolidTransforms',
-      'syncCloneTransformsForWorldObjects',
       'syncSelectionVisualsDuringTransform',
       'ensureWorldMatricesCurrent',
       'endCadRulerDrag',
@@ -43,7 +42,7 @@ describe('scene_visual_refresh', () => {
     ]);
   });
 
-  it('falls back to full reclone when solid finalize is not solid-only', () => {
+  it('falls back to full viewport sync when solid finalize is not solid-only', () => {
     const order: string[] = [];
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     const host = createTransformCommitHost(order, false);
@@ -96,20 +95,6 @@ describe('scene_visual_refresh', () => {
     expect(solidRoot.matrixWorld.elements[12]).toBeCloseTo(12, 5);
     refreshSceneVisualsAfterMutation(host);
     expect(measured[measured.length - 1]).toBeCloseTo(0, 5);
-  });
-
-  it('includes non-mesh transform roots in light clone sync targets', () => {
-    const group = new THREE.Group();
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    group.add(mesh);
-    const synced: THREE.Object3D[] = [];
-    const host = createTransformCommitHost([], true);
-    host.syncCloneTransformsForWorldObjects = (objects) => {
-      synced.push(...objects);
-    };
-    refreshSceneVisualsAfterTransformCommit(host, [group, mesh]);
-    expect(synced).toContain(group);
-    expect(synced).toContain(mesh);
   });
 
   it('expands intermediate groups into nested meshes for solid finalize', () => {
@@ -171,7 +156,6 @@ function createMutationHost(order: string[]): SceneMutationVisualHost {
  */
 function createTransformCommitHost(order: string[], solidOnly: boolean | undefined): SceneTransformCommitVisualHost {
   const host: SceneTransformCommitVisualHost = {
-    syncCloneTransformsForWorldObjects: () => order.push('syncCloneTransformsForWorldObjects'),
     syncSelectionVisualsDuringTransform: () => order.push('syncSelectionVisualsDuringTransform'),
     syncPrimitivesToViewports: () => order.push('syncPrimitivesToViewports'),
     ensureWorldMatricesCurrent: () => order.push('ensureWorldMatricesCurrent'),

@@ -3,6 +3,10 @@ import { SelectionMode } from '@/types/selection_mode.js';
 import { FaceSelection, ManagerFaceSelection } from '@/selection/face/manager_face_selection.js';
 import { RaycasterFaceSelection, FacePickResult } from '@/selection/face/raycaster_face_selection.js';
 import { FaceSelectionHighlight } from '@/selection/face/face_selection_highlight.js';
+import {
+  collectFaceSelectionSeedsFromFacePick,
+  collectFaceSelectionSeedsFromHierarchyObject,
+} from '@/selection/face/face_selection_hierarchy_targets.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { ExtrudeCreation, CommandMeshFacesExtrude } from '@/tools/face/commands/command_mesh_faces_extrude.js';
 import { createConvexPrismFromFace } from '@/transform/extrusion/convex_face_prism.js';
@@ -15,6 +19,12 @@ import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import type { SolidTriangleSourceRef } from '@/selection/face/solid_result_face_indices.js';
+
+/** Max interval between pointer downs that count as a face-tool double-click. */
+const FACE_DOUBLE_CLICK_MAX_INTERVAL_MS = 400;
+
+/** Max client-pixel drift between double-click pointer downs. */
+const FACE_DOUBLE_CLICK_MAX_DISTANCE_PX = 6;
 
 /**
  * Callback for selection mode changes.
@@ -56,6 +66,9 @@ export class ControllerFaceExtrusion {
   private lastDragRegionKey: string | null;
   /** True when external listeners need a post-drag selection notification. */
   private externalSelectionNotifyPending: boolean;
+  private lastPointerDownTimeMs: number;
+  private lastPointerDownClientX: number;
+  private lastPointerDownClientY: number;
 
   /**
    * Creates a new face extrusion controller.
@@ -83,6 +96,9 @@ export class ControllerFaceExtrusion {
     this.isSubtractiveStroke = false;
     this.lastDragRegionKey = null;
     this.externalSelectionNotifyPending = false;
+    this.lastPointerDownTimeMs = 0;
+    this.lastPointerDownClientX = 0;
+    this.lastPointerDownClientY = 0;
     this.bindSelectionChangeCallback();
   }
 
@@ -210,6 +226,7 @@ export class ControllerFaceExtrusion {
     this.isFaceDragActive = true;
     this.isSubtractiveStroke = isCtrlPressed;
     this.lastDragRegionKey = null;
+    const isDoubleClick = this.consumePointerDoubleClick(event.clientX, event.clientY);
     const result = this.raycaster.pickFace(event, camera, pickElement, this.availableMeshes);
     if (!result) {
       if (!isShiftPressed && !isCtrlPressed) {
@@ -217,7 +234,11 @@ export class ControllerFaceExtrusion {
       }
       return null;
     }
-    this.applyFaceClickSelection(result, isShiftPressed, isCtrlPressed);
+    if (isDoubleClick) {
+      this.applyDoubleClickBrushSelection(result, isShiftPressed, isCtrlPressed);
+    } else {
+      this.applyFaceClickSelection(result, isShiftPressed, isCtrlPressed);
+    }
     return result;
   }
 
@@ -291,6 +312,64 @@ export class ControllerFaceExtrusion {
   }
 
   /**
+   * Double-click expands a face pick to the whole solid brush (or mesh) and
+   * adds or removes those faces. Shift always adds; Ctrl always removes; plain
+   * toggles (add unless every region is already selected).
+   *
+   * @param result The raycast pick result.
+   * @param isShiftPressed Additive when true.
+   * @param isCtrlPressed Subtractive when true.
+   */
+  private applyDoubleClickBrushSelection(
+    result: FacePickResult,
+    isShiftPressed: boolean,
+    isCtrlPressed: boolean,
+  ): void {
+    const seeds = collectFaceSelectionSeedsFromFacePick(result.mesh, result.faceIndex);
+    if (seeds.length === 0) {
+      this.applyFaceClickSelection(result, isShiftPressed, isCtrlPressed);
+      return;
+    }
+    if (isCtrlPressed || (!isShiftPressed && this.areAllFaceSeedsSelected(seeds))) {
+      this.selectionManager.removeFaceSeeds(seeds);
+      return;
+    }
+    this.selectionManager.selectFaceSeeds(seeds, true);
+  }
+
+  /**
+   * Returns whether every seed region is already selected.
+   *
+   * @param seeds Candidate face seeds.
+   * @returns True when all seeds are selected.
+   */
+  private areAllFaceSeedsSelected(seeds: FaceSelection[]): boolean {
+    if (seeds.length === 0) {
+      return false;
+    }
+    return seeds.every((seed) => this.selectionManager.isFaceSelected(seed.mesh, seed.faceIndex));
+  }
+
+  /**
+   * Detects a double-click from successive face-tool pointer downs.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @returns True when this press completes a double-click.
+   */
+  private consumePointerDoubleClick(clientX: number, clientY: number): boolean {
+    const nowMs = performance.now();
+    const isDoubleClick =
+      nowMs - this.lastPointerDownTimeMs <= FACE_DOUBLE_CLICK_MAX_INTERVAL_MS &&
+      Math.abs(clientX - this.lastPointerDownClientX) <= FACE_DOUBLE_CLICK_MAX_DISTANCE_PX &&
+      Math.abs(clientY - this.lastPointerDownClientY) <= FACE_DOUBLE_CLICK_MAX_DISTANCE_PX;
+    this.lastPointerDownTimeMs = nowMs;
+    this.lastPointerDownClientX = clientX;
+    this.lastPointerDownClientY = clientY;
+    return isDoubleClick;
+  }
+
+  /**
    * Selects the face unit for a pick, optionally additive while dragging. Solid
    * results expand only within one brush face; ordinary meshes use coplanar.
    *
@@ -345,6 +424,32 @@ export class ControllerFaceExtrusion {
    */
   selectFace(mesh: THREE.Mesh, faceIndex: number, addToSelection: boolean): void {
     this.selectionManager.selectFace(mesh, faceIndex, addToSelection);
+  }
+
+  /**
+   * Applies outliner hierarchy picks as face selection. Matches face-tool
+   * modifiers: plain replace, Shift add, Ctrl remove. Does not object-select.
+   *
+   * @param hierarchyObject Clicked outliner object.
+   * @param isShiftPressed Additive when true.
+   * @param isCtrlPressed Subtractive when true.
+   * @returns True when face mode consumed the outliner pick.
+   */
+  applyOutlinerHierarchyFaceSelection(
+    hierarchyObject: THREE.Object3D,
+    isShiftPressed: boolean,
+    isCtrlPressed: boolean,
+  ): boolean {
+    if (this.currentMode !== SelectionMode.FACE) {
+      return false;
+    }
+    const seeds = collectFaceSelectionSeedsFromHierarchyObject(hierarchyObject);
+    if (isCtrlPressed) {
+      this.selectionManager.removeFaceSeeds(seeds);
+      return true;
+    }
+    this.selectionManager.selectFaceSeeds(seeds, isShiftPressed);
+    return true;
   }
 
   /**

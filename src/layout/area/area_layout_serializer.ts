@@ -1,4 +1,4 @@
-import { createViewportLeafPayload, type AreaEditorType, type AreaLeafPayload } from './area_editor_type.js';
+import { createViewportLeafPayload, type AreaLeafPayload } from './area_editor_type.js';
 import { isAreaSplitDirection, type AreaSplitDirection } from './area_split_direction.js';
 import { clampAreaSplitRatio } from './area_layout_tree.js';
 import { createAreaLeafNode, createAreaSplitNode, isAreaLeafNode, type AreaTreeNode } from './area_tree_node.js';
@@ -237,14 +237,4 @@ function parseOptionalViewportKind(value: unknown): ViewportKind | null {
  */
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
-}
-
-/**
- * Returns whether a string is a known area editor type (extensible).
- *
- * @param value Candidate type.
- * @returns True for supported types.
- */
-export function isSupportedAreaEditorType(value: string): value is AreaEditorType {
-  return value === 'viewport';
 }

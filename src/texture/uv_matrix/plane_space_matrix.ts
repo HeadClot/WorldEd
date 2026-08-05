@@ -53,25 +53,6 @@ export function buildLocalToPlaneMatrix(normal: THREE.Vector3, planeOffset: numb
 }
 
 /**
- * Converts a world-space transform into plane-space form for UV matrix updates:
- * planeSpace = localToPlane * worldTransform * planeToLocal.
- *
- * @param worldTransform Transform applied to world (or local) positions.
- * @param normal Unit plane normal in the same space as the transform domain.
- * @param planeOffset Plane offset d in that space.
- * @returns Plane-space 4×4 transform.
- */
-export function worldTransformToPlaneSpace(
-  worldTransform: THREE.Matrix4,
-  normal: THREE.Vector3,
-  planeOffset: number,
-): THREE.Matrix4 {
-  const localToPlane = buildLocalToPlaneMatrix(normal, planeOffset);
-  const planeToLocal = localToPlane.clone().invert();
-  return localToPlane.clone().multiply(worldTransform).multiply(planeToLocal);
-}
-
-/**
  * Picks the world axis most orthogonal to the given normal.
  *
  * @param normal Unit normal.

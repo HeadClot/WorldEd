@@ -1,6 +1,6 @@
 import { Viewport2D } from './viewport_2d.js';
 import { Viewport3D } from './viewport_3d.js';
-import { ViewportKind, getViewportKindMetadata, isPerspectiveViewportKind } from './viewport_kind.js';
+import { ViewportKind, getViewportKindMetadata } from './viewport_kind.js';
 import type { CadViewPlane } from '@/rulers/view/cad_view_plane.js';
 import type { GridPlane } from '@/viewports/grid/grid_plane.js';
 
@@ -45,24 +45,4 @@ export function getCadViewPlaneForKind(kind: ViewportKind): CadViewPlane {
  */
 export function getGizmoPlaneForKind(kind: ViewportKind): GridPlane | 'xyz' {
   return getViewportKindMetadata(kind).gizmoPlane;
-}
-
-/**
- * Returns whether a kind prefers hosting the authoritative world object.
- *
- * @param kind Viewport kind.
- * @returns True for perspective kinds.
- */
-export function kindPrefersWorldHost(kind: ViewportKind): boolean {
-  return getViewportKindMetadata(kind).prefersWorldHost;
-}
-
-/**
- * Returns whether the given kind uses a perspective projection.
- *
- * @param kind Viewport kind.
- * @returns True for perspective.
- */
-export function kindIsPerspective(kind: ViewportKind): boolean {
-  return isPerspectiveViewportKind(kind);
 }

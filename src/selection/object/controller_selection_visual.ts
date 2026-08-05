@@ -12,8 +12,9 @@ import { SolidBrushEdgeBatch } from '@/solid/model/solid_brush_edge_batch.js';
 
 /**
  * Owns selection outline instances across all viewports. Keeps orange outlines
- * glued to meshes during live transforms and after clone rebuilds. Also toggles
- * solid-brush hull fills so only selected brushes draw translucent volumes.
+ * glued to meshes during live transforms and after selectable-list refresh.
+ * Also toggles solid-brush hull fills so only selected brushes draw translucent
+ * volumes.
  */
 export class ControllerSelectionVisual {
   private selectionManager: ManagerSelection;
@@ -27,7 +28,7 @@ export class ControllerSelectionVisual {
    * Creates a selection visual controller.
    *
    * @param selectionManager The shared selection state.
-   * @param viewportSyncManager Used to find 2D clone meshes for a world mesh.
+   * @param viewportSyncManager Provides the authoritative world object.
    */
   constructor(selectionManager: ManagerSelection, viewportSyncManager: ManagerViewportSync) {
     this.selectionManager = selectionManager;
@@ -66,13 +67,13 @@ export class ControllerSelectionVisual {
   refreshFromSelection(): void {
     this.clearAllHighlights();
     const selected = this.selectionManager.getSelectedObjects();
-    selected.forEach((mesh) => this.highlightMeshAndClones(mesh));
+    selected.forEach((mesh) => this.applyHighlightToMesh(mesh));
     this.syncSolidBrushHullFills();
     this.syncSolidBrushEdgeBatches();
     SolidBrushEdgeFader.invalidateCameraCache();
   }
 
-  /** Re-applies outlines after 2D viewport clones are rebuilt. */
+  /** Re-applies outlines after viewport selectable lists are refreshed. */
   reapplyAfterViewportSync(): void {
     this.refreshFromSelection();
   }
@@ -98,18 +99,6 @@ export class ControllerSelectionVisual {
   }
 
   /**
-   * Highlights a world mesh and every matching 2D clone.
-   *
-   * @param mesh The world mesh to outline.
-   */
-  private highlightMeshAndClones(mesh: THREE.Mesh): void {
-    this.applyHighlightToMesh(mesh);
-    this.viewportSyncManager
-      .findCloneMeshesForWorldUuid(mesh.uuid)
-      .forEach((clone) => this.applyHighlightToMesh(clone));
-  }
-
-  /**
    * Applies a highlight only in the viewport scene that owns this mesh. Each
    * mesh gets at most one orange outline child (not one per viewport).
    *
@@ -127,20 +116,20 @@ export class ControllerSelectionVisual {
   }
 
   /**
-   * Shows translucent brush hulls only for selected solid brushes (world +
-   * clones). Unselected brushes keep operation-colored outlines without filled
-   * volumes. Only brushes that enter or leave selection are restyled so maps
-   * with thousands of brushes stay interactive.
+   * Shows translucent brush hulls only for selected solid brushes. Unselected
+   * brushes keep operation-colored outlines without filled volumes. Only
+   * brushes that enter or leave selection are restyled so maps with thousands
+   * of brushes stay interactive.
    */
   private syncSolidBrushHullFills(): void {
     const nextFills = this.collectSelectedBrushMeshes();
     for (const mesh of this.hullFillMeshes) {
       if (nextFills.has(mesh)) continue;
-      this.applyBrushHullFillToMeshAndClones(mesh, false);
+      this.applyBrushHullFillToMesh(mesh, false);
     }
     for (const mesh of nextFills) {
       if (this.hullFillMeshes.has(mesh)) continue;
-      this.applyBrushHullFillToMeshAndClones(mesh, true);
+      this.applyBrushHullFillToMesh(mesh, true);
     }
     this.hullFillMeshes = nextFills;
   }
@@ -162,18 +151,15 @@ export class ControllerSelectionVisual {
   }
 
   /**
-   * Applies hull fill visibility to a world brush mesh and its 2D clones.
-   * Always updates the world mesh userData even when detached so undo/redo
-   * cannot resurrect a selected fill after the brush is re-parented.
+   * Applies hull fill visibility to a world brush mesh. Always updates the
+   * world mesh userData even when detached so undo/redo cannot resurrect a
+   * selected fill after the brush is re-parented.
    *
    * @param worldMesh Authoritative brush preview mesh.
    * @param fillVisible Whether the translucent volume should be drawn.
    */
-  private applyBrushHullFillToMeshAndClones(worldMesh: THREE.Mesh, fillVisible: boolean): void {
+  private applyBrushHullFillToMesh(worldMesh: THREE.Mesh, fillVisible: boolean): void {
     SolidBrushVisual.setHullFillVisible(worldMesh, fillVisible);
-    this.viewportSyncManager
-      .findCloneMeshesForWorldUuid(worldMesh.uuid)
-      .forEach((clone) => SolidBrushVisual.setHullFillVisible(clone, fillVisible));
   }
 
   /**

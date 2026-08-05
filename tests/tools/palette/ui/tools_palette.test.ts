@@ -45,14 +45,18 @@ describe('ToolsPalette', () => {
 
   it('should start hidden until shown', () => {
     expect(palette.isOpen()).toBe(false);
+    expect(palette.isMountedInHost()).toBe(false);
+    expect(host.contains(palette.getRootElement())).toBe(false);
   });
 
   it('should open and close without a pin control', () => {
     palette.show();
     expect(palette.isOpen()).toBe(true);
+    expect(host.contains(palette.getRootElement())).toBe(true);
     expect(host.textContent).not.toContain('Pin');
     palette.hide(true);
     expect(palette.isOpen()).toBe(false);
+    expect(host.contains(palette.getRootElement())).toBe(false);
   });
 
   it('should open at the top-left of the default anchor under the viewport toolbar', () => {
@@ -163,6 +167,7 @@ describe('ToolsPalette', () => {
   });
 
   it('should update context status text', () => {
+    palette.show();
     palette.setContextStatus('Click point 1');
     expect(host.textContent).toContain('Click point 1');
   });
@@ -176,8 +181,8 @@ describe('ToolsPalette', () => {
     });
     palette.show();
     uvEditor.show();
-    const toolsRoot = host.children[0] as HTMLElement;
-    const uvEditorRoot = host.children[1] as HTMLElement;
+    const toolsRoot = palette.getRootElement();
+    const uvEditorRoot = uvEditor.getRootElement();
     expect(Number(uvEditorRoot.style.zIndex)).toBeGreaterThan(Number(toolsRoot.style.zIndex));
     toolsRoot.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     expect(Number(toolsRoot.style.zIndex)).toBeGreaterThan(Number(uvEditorRoot.style.zIndex));

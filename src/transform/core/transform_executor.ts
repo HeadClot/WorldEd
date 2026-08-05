@@ -354,7 +354,8 @@ export class TransformExecutor {
 
   /**
    * Raises scale-snap audio once when snapped scale factors step to a new value
-   * while snap is enabled.
+   * while snap is enabled. Travel (snap steps from identity) pitches the click
+   * like bounds face travel.
    *
    * @param snappedFactors Snapped per-axis scale factors from the drag.
    */
@@ -367,7 +368,7 @@ export class TransformExecutor {
     }
     this.lastRaisedSnappedScaleFactors.copy(snappedFactors);
     this.hasRaisedSnappedScaleFactors = true;
-    NotificationGlobal.onSelectionScaledWithSnapping();
+    NotificationGlobal.onSelectionScaledWithSnapping(this.computeScaleTravelDistance(snappedFactors));
   }
 
   /**
@@ -391,6 +392,18 @@ export class TransformExecutor {
    */
   private isIdentityScaleFactors(factors: THREE.Vector3): boolean {
     return Math.abs(factors.x - 1) < 1e-8 && Math.abs(factors.y - 1) < 1e-8 && Math.abs(factors.z - 1) < 1e-8;
+  }
+
+  /**
+   * Maps scale factors from drag start (1 = unchanged) to pitch travel. Uses
+   * absolute factor deviation (not snap-step count) so pitch rises over a large
+   * scale range, similar to several meters of bounds face travel.
+   *
+   * @param snappedFactors Snapped per-axis scale factors from the drag.
+   * @returns Non-negative travel for resize/scale pitch mapping.
+   */
+  private computeScaleTravelDistance(snappedFactors: THREE.Vector3): number {
+    return Math.max(Math.abs(snappedFactors.x - 1), Math.abs(snappedFactors.y - 1), Math.abs(snappedFactors.z - 1));
   }
 
   /**

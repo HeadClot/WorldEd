@@ -81,20 +81,6 @@ export function removeDecorativeEdges(mesh: THREE.Mesh): void {
 }
 
 /**
- * Removes selection and wireframe overlay children that should not persist
- * across geometry replacement (they are recreated by their owners).
- *
- * @param mesh The mesh to clean.
- */
-export function stripEditorOverlayChildren(mesh: THREE.Mesh): void {
-  const toRemove = mesh.children.filter((child) => isEditorOverlayChild(child));
-  toRemove.forEach((child) => {
-    mesh.remove(child);
-    disposeLineObject(child);
-  });
-}
-
-/**
  * Prepares a geometry for hard-edge (flat) shading used by the world editor.
  * Converts to non-indexed triangles so each face has independent normals. Does
  * not dispose the input geometry (caller owns that reference).

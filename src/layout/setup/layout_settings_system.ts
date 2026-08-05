@@ -12,11 +12,10 @@ import type { StatusBar } from '@/ui/status/status_bar.js';
 import type { Toolbar } from '@/ui/toolbar/toolbar.js';
 import type * as THREE from 'three';
 
-/** Result of creating the settings store, applicator, and dialog. */
+/** Result of creating the settings store, applicator, and subscription. */
 export interface LayoutSettingsSystemParts {
   settingsStore: EditorSettingsStore;
   settingsApplicator: SettingsApplicator;
-  settingsDialog: DialogSettings;
   settingsUnsubscribe: () => void;
 }
 
@@ -27,7 +26,6 @@ export interface LayoutSettingsRendererHost {
 
 /** Dependencies required to create and wire the settings subsystem. */
 export interface LayoutSettingsCreateDeps {
-  container: HTMLElement;
   /**
    * Live perspective viewport when one exists. Read through a getter so
    * orthographic-only layouts (e.g. a single remaining 2D pane) do not crash
@@ -48,7 +46,8 @@ export interface LayoutSettingsCreateDeps {
 }
 
 /**
- * Creates the settings store, applicator, dialog, and subscription.
+ * Creates the settings store, applicator, and subscription. Does not construct
+ * the settings dialog so no modal DOM exists until the user opens Settings.
  *
  * @param deps Layout settings create dependencies.
  * @returns Owned settings subsystem parts.
@@ -80,12 +79,22 @@ export function createLayoutSettingsSystem(deps: LayoutSettingsCreateDeps): Layo
     applyFlyingCameraMoveSpeed(deps.getPerspectiveViewport(), snapshot.mouse.moveSpeed);
     applyLayoutTextureFilterSettings(deps.getRendererHost(), snapshot.view);
   });
-  const settingsDialog = new DialogSettings(deps.container, settingsStore, {
+  return { settingsStore, settingsApplicator, settingsUnsubscribe };
+}
+
+/**
+ * Creates the settings dialog when the user first opens Settings.
+ *
+ * @param container Editor root element that owns the modal overlay.
+ * @param store Shared editor settings store.
+ * @returns Settings dialog instance (hidden until shown).
+ */
+export function createLayoutSettingsDialog(container: HTMLElement, store: EditorSettingsStore): DialogSettings {
+  return new DialogSettings(container, store, {
     onResetAllSettings: () => {
       runEditorFactoryResetAndReload();
     },
   });
-  return { settingsStore, settingsApplicator, settingsDialog, settingsUnsubscribe };
 }
 
 /**

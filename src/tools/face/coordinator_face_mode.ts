@@ -290,6 +290,28 @@ export class CoordinatorFaceMode {
   }
 
   /**
+   * Maps an outliner hierarchy pick to face selection while face mode is
+   * active. Plain click replaces, Shift adds, Ctrl removes (same rules as
+   * viewport face paint).
+   *
+   * @param hierarchyObject Clicked outliner object.
+   * @param isShiftPressed Additive when true.
+   * @param isCtrlPressed Subtractive when true.
+   * @returns True when face mode consumed the pick.
+   */
+  applyOutlinerHierarchyFaceSelection(
+    hierarchyObject: THREE.Object3D,
+    isShiftPressed: boolean,
+    isCtrlPressed: boolean,
+  ): boolean {
+    return this.faceExtrusionController.applyOutlinerHierarchyFaceSelection(
+      hierarchyObject,
+      isShiftPressed,
+      isCtrlPressed,
+    );
+  }
+
+  /**
    * Returns meshes currently allowed for face picking (for tests).
    *
    * @returns Face-pickable mesh list.

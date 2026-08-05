@@ -14,9 +14,9 @@ export const BOUNDS_MOVE_HIGHLIGHT_COLOR = 0xf0f0f0;
 /**
  * Applies or clears the edge-outline highlight for a bounds face. Resize uses
  * selection orange; move uses white (callers should skip move mode on 2D
- * clones).
+ * panes).
  *
- * @param root Gizmo root (master or viewport clone).
+ * @param root Gizmo root (master or viewport gizmo clone).
  * @param highlightedFace Face to outline, or null to clear.
  * @param mode Resize (orange) or move (white).
  * @param theme Theme colors.

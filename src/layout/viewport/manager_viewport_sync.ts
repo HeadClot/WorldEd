@@ -6,7 +6,7 @@ import { SELECTION_HIGHLIGHT_USERDATA_KEY } from '@/selection/object/selection_h
 import { CLIP_PREVIEW_USERDATA_KEY } from '@/tools/clip_plane/clip_plane_preview.js';
 import { EDITOR_SOURCE_UUID_KEY } from './viewport_sync_keys.js';
 
-export { EDITOR_SOURCE_UUID_KEY, EDITOR_VIEWPORT_CLONE_KEY } from './viewport_sync_keys.js';
+export { EDITOR_SOURCE_UUID_KEY } from './viewport_sync_keys.js';
 
 /** Configuration mapping a viewport to its container element. */
 export interface ViewportContainerPair {
@@ -18,9 +18,8 @@ export interface ViewportContainerPair {
 }
 
 /**
- * Keeps selectable mesh lists in sync for shared-scene multi-view. World
- * content is no longer cloned per pane; all panes raycast the authoritative
- * meshes.
+ * Keeps selectable mesh lists in sync for shared-scene multi-view. All panes
+ * raycast the authoritative world meshes.
  */
 export class ManagerViewportSync {
   private allViewports: ViewportEditor[];
@@ -77,9 +76,9 @@ export class ManagerViewportSync {
   }
 
   /**
-   * Returns all viewport scenes (shared scene repeated for compatibility).
+   * Returns unique scene roots used by live viewports.
    *
-   * @returns Scene references from live viewports.
+   * @returns Scene references from live viewports (shared scene once).
    */
   getAllViewportScenes(): THREE.Scene[] {
     const scenes: THREE.Scene[] = [];
@@ -116,9 +115,8 @@ export class ManagerViewportSync {
   }
 
   /**
-   * Resolves a raycast hit mesh to the world mesh. With shared scenes this is
-   * typically identity; source UUID tags remain supported for detached
-   * streams.
+   * Resolves a raycast hit mesh to the authoritative world mesh. Shared-scene
+   * hits are usually identity; source UUID tags remain supported when present.
    *
    * @param hitMesh The mesh returned by raycasting.
    * @returns The corresponding world mesh, or the original if already
@@ -151,17 +149,6 @@ export class ManagerViewportSync {
   }
 
   /**
-   * Clone lookup retained for API compatibility; shared-scene mode returns
-   * empty.
-   *
-   * @param _worldUuid Unused world mesh UUID.
-   * @returns Always empty in shared-scene mode.
-   */
-  findCloneMeshesForWorldUuid(_worldUuid: string): THREE.Mesh[] {
-    return [];
-  }
-
-  /**
    * Refreshes selectable mesh lists on every live viewport from the world.
    *
    * @param worldObject The world object to expose for selection.
@@ -171,30 +158,6 @@ export class ManagerViewportSync {
     const worldMeshes = this.getWorldSelectableMeshes();
     this.allViewports.forEach((viewport) => viewport.setSelectableObjects(worldMeshes));
   }
-
-  /**
-   * No-op geometry push retained for API compatibility.
-   *
-   * @param _worldMeshes Unused.
-   */
-  syncMeshGeometriesToClones(_worldMeshes: THREE.Mesh[]): void {}
-
-  /**
-   * No-op clone transform sync retained for API compatibility.
-   *
-   * @param _worldObject Unused.
-   */
-  syncClonePositionsToWorldObject(_worldObject: THREE.Group): void {}
-
-  /**
-   * No-op clone transform sync retained for API compatibility.
-   *
-   * @param _worldObjects Unused.
-   */
-  syncCloneTransformsForWorldObjects(_worldObjects: readonly THREE.Object3D[]): void {}
-
-  /** No-op index rebuild retained for API compatibility. */
-  rebuildCloneSourceIndex(): void {}
 
   /**
    * Returns true for wireframe helpers and highlight overlays that must not be

@@ -3,7 +3,6 @@ import { hexToRgb } from '@/utils/utils_color.js';
 import { PanelFloating } from '@/ui/floating_panel/panel_floating.js';
 import { clampFloatingPanelRectToScreen } from '@/ui/floating_panel/panel_floating_screen_bounds.js';
 import { TextureBrowserEntry } from '@/texture/library/texture_browser_entry.js';
-import { TEXTURE_BROWSER_MIN_THUMB_PX } from './texture_browser_layout.js';
 import {
   TEXTURE_BROWSER_GRID_CLASS,
   TEXTURE_BROWSER_NAME_CLASS,
@@ -24,9 +23,6 @@ export const TEXTURE_BROWSER_MIN_WIDTH_PX = 280;
 
 /** Minimum outer height when resizing the panel. */
 export const TEXTURE_BROWSER_MIN_HEIGHT_PX = 240;
-
-/** @deprecated Use TEXTURE_BROWSER_MIN_THUMB_PX from texture_browser_layout. */
-export const TEXTURE_BROWSER_TILE_MIN_WIDTH_PX = TEXTURE_BROWSER_MIN_THUMB_PX;
 
 /** Callbacks the texture browser panel uses for user actions. */
 export interface TextureBrowserHandlers {

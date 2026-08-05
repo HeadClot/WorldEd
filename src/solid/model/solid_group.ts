@@ -62,22 +62,6 @@ export function setSolidGroupOperation(group: THREE.Object3D, operation: SolidOp
 }
 
 /**
- * Returns whether an object lives under a solid model root (including the
- * root).
- *
- * @param object Candidate object.
- * @returns True when a solid model root is found on the parent chain.
- */
-export function isUnderSolidModel(object: THREE.Object3D): boolean {
-  let current: THREE.Object3D | null = object;
-  while (current) {
-    if (isSolidModelObject(current)) return true;
-    current = current.parent;
-  }
-  return false;
-}
-
-/**
  * Walks parents to find the solid model root that owns an object.
  *
  * @param object Brush, group, or other solid descendant.

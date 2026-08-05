@@ -452,20 +452,3 @@ export function rebakeStoredFaceTextureMaps(mesh: THREE.Mesh): void {
     bakeFaceUVs(mesh, entry.triangleIndices, entry.mapping);
   });
 }
-
-/**
- * Builds a lookup from triangle index to mapping for CSG export.
- *
- * @param mesh Source mesh.
- * @returns Map of triangle index → mapping (defaults filled for unmapped).
- */
-export function buildTriangleMappingLookup(mesh: THREE.Mesh): Map<number, FaceTextureMapping> {
-  const lookup = new Map<number, FaceTextureMapping>();
-  const entries = getFaceTextureMaps(mesh);
-  entries.forEach((entry) => {
-    entry.triangleIndices.forEach((index) => {
-      lookup.set(index, entry.mapping);
-    });
-  });
-  return lookup;
-}

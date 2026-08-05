@@ -1,3 +1,4 @@
+import { TransformMode } from '@/types/transform_mode.js';
 import { TransformModalAxis, transformModalAxisIsLocked, transformModalAxisToggle } from './transform_modal_axis.js';
 import { TransformModalKeyboardAction, type TransformModalKeyboardEvent } from './transform_modal_keyboard_action.js';
 import { transformModalKeyboardRoute } from './transform_modal_keyboard_router.js';
@@ -9,8 +10,9 @@ import type { TransformModalApplyHost } from './transform_modal_apply_host.js';
 
 /**
  * Reusable Blender-style modal keyboard controller for transform drags: axis
- * lock (X/Y/Z), and numeric typing only during single-use G/R/S after an axis
- * constraint is enabled.
+ * lock (X/Y/Z), and numeric typing during single-use G/R/S. Move and rotate
+ * require an axis constraint; free single-use scale accepts typed uniform
+ * factors without a constraint.
  */
 export class TransformModalController {
   private readonly session: TransformModalSession;
@@ -156,12 +158,16 @@ export class TransformModalController {
 
   /**
    * Clears typed digits when the keyboard axis lock is removed so numeric entry
-   * cannot stick without an active Blender constraint.
+   * cannot stick without an active Blender constraint, except free single-use
+   * scale which keeps typed uniform factors without a lock.
    *
    * @param axis Axis lock after the toggle.
    */
   private clearNumericBufferWhenAxisUnlocked(axis: TransformModalAxis): void {
     if (transformModalAxisIsLocked(axis)) {
+      return;
+    }
+    if (this.allowsNumericTypingWithoutAxisLock()) {
       return;
     }
     this.session.getNumericBuffer().clear();
@@ -282,8 +288,9 @@ export class TransformModalController {
   }
 
   /**
-   * Returns whether exact numeric entry is allowed: single-use G/R/S only, and
-   * only while a keyboard X/Y/Z axis constraint is active.
+   * Returns whether exact numeric entry is allowed: single-use G/R/S only. Move
+   * and rotate need a keyboard X/Y/Z axis constraint. Free single-use scale
+   * accepts typed numbers without a constraint for uniform scaling.
    *
    * @returns True when digits may be typed and applied.
    */
@@ -291,11 +298,25 @@ export class TransformModalController {
     if (!this.host?.isSingleUseDrag()) {
       return false;
     }
+    if (this.allowsNumericTypingWithoutAxisLock()) {
+      return true;
+    }
     return transformModalAxisIsLocked(this.session.getAxis());
   }
 
   /**
-   * Applies a fully parsed typed buffer along the locked keyboard axis.
+   * Returns whether the active mode may type exact numbers without an axis
+   * constraint (single-use free scale only).
+   *
+   * @returns True for single-use scale without requiring X/Y/Z lock.
+   */
+  private allowsNumericTypingWithoutAxisLock(): boolean {
+    return this.host?.getMode() === TransformMode.SCALE;
+  }
+
+  /**
+   * Applies a fully parsed typed buffer along the locked keyboard axis, or as
+   * free uniform scale when single-use scale has no axis constraint.
    *
    * @param text Numeric buffer text.
    * @returns True when the value was applied.
@@ -309,7 +330,7 @@ export class TransformModalController {
       return false;
     }
     const axis = this.session.getAxis();
-    if (!transformModalAxisIsLocked(axis)) {
+    if (!transformModalAxisIsLocked(axis) && !this.allowsNumericTypingWithoutAxisLock()) {
       return false;
     }
     return this.host.applyNumericValue(value, axis);

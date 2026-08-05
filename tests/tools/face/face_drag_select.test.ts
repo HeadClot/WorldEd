@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 import { ControllerFaceExtrusion } from '@/tools/face/controller_face_extrusion.js';
 import { SelectionMode } from '@/types/selection_mode.js';
@@ -76,6 +76,29 @@ describe('FaceExtrusionController drag select', () => {
     expect(controller.isDraggingFaces()).toBe(true);
     controller.onPointerUp();
     expect(controller.isDraggingFaces()).toBe(false);
+  });
+
+  it('double-click expands an ordinary mesh pick to all faces then toggles off', () => {
+    const pick = {
+      mesh,
+      faceIndex: 0,
+      hitPoint: new THREE.Vector3(),
+      faceNormal: new THREE.Vector3(0, 1, 0),
+    };
+    const raycaster = (
+      controller as unknown as {
+        raycaster: { pickFace: (...args: unknown[]) => typeof pick };
+      }
+    ).raycaster;
+    vi.spyOn(raycaster, 'pickFace').mockReturnValue(pick);
+    controller.onPointerDown(createMouseEvent(50, 50), camera, renderer.domElement, false, false);
+    controller.onPointerUp();
+    expect(controller.getSelectedFaceCount()).toBeLessThan(12);
+    controller.onPointerDown(createMouseEvent(51, 51), camera, renderer.domElement, false, false);
+    expect(controller.getSelectedFaceCount()).toBe(12);
+    controller.onPointerUp();
+    controller.onPointerDown(createMouseEvent(50, 50), camera, renderer.domElement, false, false);
+    expect(controller.getSelectedFaceCount()).toBe(0);
   });
 });
 

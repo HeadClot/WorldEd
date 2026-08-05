@@ -1,7 +1,22 @@
 import * as THREE from 'three';
+import {
+  INPUT_NUMERIC_VALUE_EPSILON,
+  inputNumericAreAllNumberSkips,
+  inputNumericAreValuesShared,
+  inputNumericEvaluateNumberExpression,
+  inputNumericHasInvalidNumber,
+  inputNumericIsSkippedNumberText,
+  inputNumericNumberFromCalculateData,
+  inputNumericNumberOrNull,
+  inputNumericParseOptionalNumber,
+  type InputNumericParseResult,
+} from '@/ui/input/input_numeric_parse.js';
 
 /** Equality epsilon for shared numeric fields. */
-export const PANEL_PROPERTIES_VALUE_EPSILON = 1e-5;
+export const PANEL_PROPERTIES_VALUE_EPSILON = INPUT_NUMERIC_VALUE_EPSILON;
+
+/** Result of parsing an inspector numeric text field. */
+export type PanelPropertiesNumberParseResult = InputNumericParseResult;
 
 /**
  * Returns whether all numbers in the list are equal within epsilon.
@@ -10,29 +25,120 @@ export const PANEL_PROPERTIES_VALUE_EPSILON = 1e-5;
  * @returns True when all values match.
  */
 export function panelPropertiesAreValuesShared(values: number[]): boolean {
-  if (values.length <= 1) {
-    return true;
-  }
-  const first = values[0]!;
-  return values.every((value) => Math.abs(value - first) <= PANEL_PROPERTIES_VALUE_EPSILON);
+  return inputNumericAreValuesShared(values);
 }
 
 /**
- * Parses a UI text field into a finite number, or null when empty/invalid.
+ * Parses a UI text field as a number or arithmetic expression.
  *
  * @param text Input text.
- * @returns Parsed number or null.
+ * @returns Value, skip, or invalid parse result.
  */
-export function panelPropertiesParseOptionalNumber(text: string): number | null {
-  const trimmed = text.trim();
-  if (trimmed === '' || trimmed === '—' || trimmed === '-') {
-    return null;
+export function panelPropertiesParseOptionalNumber(text: string): PanelPropertiesNumberParseResult {
+  return inputNumericParseOptionalNumber(text);
+}
+
+/**
+ * Returns whether text means "do not write this axis".
+ *
+ * @param trimmed Trimmed field text.
+ * @returns True for empty or mixed-value placeholders.
+ */
+export function panelPropertiesIsSkippedNumberText(trimmed: string): boolean {
+  return inputNumericIsSkippedNumberText(trimmed);
+}
+
+/**
+ * Evaluates a non-empty expression with the shared safe math parser.
+ *
+ * @param expression Expression text after trim.
+ * @returns Value when finite, otherwise invalid.
+ */
+export function panelPropertiesEvaluateNumberExpression(expression: string): PanelPropertiesNumberParseResult {
+  return inputNumericEvaluateNumberExpression(expression);
+}
+
+/**
+ * Extracts a finite number from calculate tool data.
+ *
+ * @param data Calculate result payload.
+ * @returns Value when present and finite, otherwise invalid.
+ */
+export function panelPropertiesNumberFromCalculateData(data: unknown): PanelPropertiesNumberParseResult {
+  return inputNumericNumberFromCalculateData(data);
+}
+
+/**
+ * Returns true when any parse result is invalid.
+ *
+ * @param results Axis parse results.
+ * @returns True when at least one result is invalid.
+ */
+export function panelPropertiesHasInvalidNumber(...results: PanelPropertiesNumberParseResult[]): boolean {
+  return inputNumericHasInvalidNumber(...results);
+}
+
+/**
+ * Returns true when every parse result skips the axis.
+ *
+ * @param results Axis parse results.
+ * @returns True when all results are skip.
+ */
+export function panelPropertiesAreAllNumberSkips(...results: PanelPropertiesNumberParseResult[]): boolean {
+  return inputNumericAreAllNumberSkips(...results);
+}
+
+/**
+ * Returns the numeric value when present, otherwise null.
+ *
+ * @param result Axis parse result.
+ * @returns Finite value or null for skip/invalid.
+ */
+export function panelPropertiesNumberOrNull(result: PanelPropertiesNumberParseResult): number | null {
+  return inputNumericNumberOrNull(result);
+}
+
+/** Resolved X/Y/Z numbers for an inspector section (null means keep per-object). */
+export interface PanelPropertiesAxisNumbers {
+  x: number | null;
+  y: number | null;
+  z: number | null;
+}
+
+/** Outcome of parsing three axis text fields together. */
+export type PanelPropertiesAxisNumbersResolve =
+  { kind: 'values'; axes: PanelPropertiesAxisNumbers } | { kind: 'invalid' } | { kind: 'skip_all' };
+
+/**
+ * Parses three axis fields, combining value/skip/invalid outcomes.
+ *
+ * @param xText X field text.
+ * @param yText Y field text.
+ * @param zText Z field text.
+ * @returns Values, invalid, or all-skip.
+ */
+export function panelPropertiesResolveAxisNumbers(
+  xText: string,
+  yText: string,
+  zText: string,
+): PanelPropertiesAxisNumbersResolve {
+  const x = panelPropertiesParseOptionalNumber(xText);
+  const y = panelPropertiesParseOptionalNumber(yText);
+  const z = panelPropertiesParseOptionalNumber(zText);
+  if (panelPropertiesHasInvalidNumber(x, y, z)) {
+    return { kind: 'invalid' };
   }
-  const value = parseFloat(trimmed);
-  if (isNaN(value)) {
-    return null;
+  if (panelPropertiesAreAllNumberSkips(x, y, z)) {
+    return { kind: 'skip_all' };
   }
-  return value;
+  return {
+    kind: 'values',
+    axes: {
+      x: panelPropertiesNumberOrNull(x),
+      y: panelPropertiesNumberOrNull(y),
+      z: panelPropertiesNumberOrNull(z),
+    },
+  };
 }
 
 /**

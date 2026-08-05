@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MenuContext, MenuContextItem } from '@/ui/menu/menu_context.js';
+import { FloatingPanelStack } from '@/ui/floating_panel/panel_floating_stack.js';
 
 describe('MenuContext', () => {
   let container: HTMLElement;
@@ -9,6 +10,7 @@ describe('MenuContext', () => {
   let callback2: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
+    FloatingPanelStack.resetForTests();
     container = document.createElement('div');
     document.body.appendChild(container);
     callback1 = vi.fn<() => void>();
@@ -25,6 +27,7 @@ describe('MenuContext', () => {
     if (container.parentNode) {
       container.parentNode.removeChild(container);
     }
+    FloatingPanelStack.resetForTests();
   });
 
   it('should create menu with action rows using the shared menu system', () => {
@@ -71,9 +74,11 @@ describe('MenuContext', () => {
     menu.show(100, 100);
     const menuEl = menu.getElement();
     expect(menuEl.style.display).toBe('block');
+    expect(document.body.contains(menuEl)).toBe(true);
     const firstItem = menuEl.querySelector('.editor-toolbar-dropdown-item') as HTMLButtonElement;
     firstItem.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(menuEl.style.display).toBe('none');
+    expect(document.body.contains(menuEl)).toBe(false);
   });
 
   it('should hide menu on outside click', () => {
@@ -84,6 +89,7 @@ describe('MenuContext', () => {
     document.body.appendChild(outsideTarget);
     outsideTarget.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     expect(menuEl.style.display).toBe('none');
+    expect(document.body.contains(menuEl)).toBe(false);
     outsideTarget.remove();
   });
 
@@ -93,6 +99,16 @@ describe('MenuContext', () => {
     expect(menuEl.style.display).toBe('block');
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }));
     expect(menuEl.style.display).toBe('none');
+    expect(document.body.contains(menuEl)).toBe(false);
+  });
+
+  it('should remove the menu shell from the document when closed via hide', () => {
+    menu.show(50, 60);
+    const menuEl = menu.getElement();
+    expect(document.body.contains(menuEl)).toBe(true);
+    menu.hide();
+    expect(document.body.contains(menuEl)).toBe(false);
+    expect(FloatingPanelStack.containsEventTarget(menuEl)).toBe(false);
   });
 
   it('should not invoke callback for disabled items', () => {

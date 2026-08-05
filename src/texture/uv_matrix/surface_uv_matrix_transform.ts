@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { SurfaceUvMatrix } from './surface_uv_matrix.js';
-import { worldTransformToPlaneSpace } from './plane_space_matrix.js';
 
 /** Position and stretch lock flags for solid brush UV matrices. */
 export interface SurfaceUvLockFlags {
@@ -108,34 +107,4 @@ function poseTranslationOrRotationChanged(): boolean {
     Math.abs(scratchPrevQuat.z - scratchNextQuat.z) > 1e-10 ||
     Math.abs(scratchPrevQuat.w - scratchNextQuat.w) > 1e-10
   );
-}
-
-/**
- * Applies a plane-space transform to a UV matrix (UV' = UV * planeT).
- *
- * @param uv Source UV matrix.
- * @param planeSpaceTransform Transform in plane space.
- * @returns Transformed UV matrix.
- */
-export function transformUvMatrixInPlaneSpace(
-  uv: SurfaceUvMatrix,
-  planeSpaceTransform: THREE.Matrix4,
-): SurfaceUvMatrix {
-  return uv.multiplyMatrix4(planeSpaceTransform);
-}
-
-/**
- * Builds a plane-space form of a world transform for a face plane.
- *
- * @param worldTransform World-space transform.
- * @param normal Plane normal.
- * @param planeOffset Plane offset d.
- * @returns Plane-space transform.
- */
-export function buildPlaneSpaceTransform(
-  worldTransform: THREE.Matrix4,
-  normal: THREE.Vector3,
-  planeOffset: number,
-): THREE.Matrix4 {
-  return worldTransformToPlaneSpace(worldTransform, normal, planeOffset);
 }

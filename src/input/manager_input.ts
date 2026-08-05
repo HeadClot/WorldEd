@@ -4,8 +4,9 @@ import { keyboardShortcutCodeFromEvent } from './keyboard_event_match.js';
  * Tracks global keyboard and mouse button state for the editor. Clears stuck
  * keys when the window loses focus so navigation cannot run away. Also tracks
  * the last known pointer position for single-use transform tools (G/R/S style).
- * Letter keys are stored under layout-stable codes so QWERTZ Y/Z match
- * {@link isKeyDown} queries using KeyY / KeyZ.
+ * All letter and digit keys are stored under the same layout-stable codes as
+ * {@link keyboardShortcutCodeFromEvent} so continuous holds (fly WASD/QE) and
+ * one-shot shortcuts (undo, axis lock) share one path on QWERTZ, AZERTY, etc.
  */
 export class ManagerInput {
   private readonly targetWindow: Window;
@@ -62,17 +63,13 @@ export class ManagerInput {
   }
 
   /**
-   * Records physical and layout-stable codes for a key event.
+   * Records a layout-stable key code for continuous hold queries.
    *
    * @param event Browser keyboard event.
    * @param isDown True on keydown, false on keyup.
    */
   private recordKeyState(event: KeyboardEvent, isDown: boolean): void {
-    this.keyStates.set(event.code, isDown);
-    const logicalCode = keyboardShortcutCodeFromEvent(event);
-    if (logicalCode !== event.code) {
-      this.keyStates.set(logicalCode, isDown);
-    }
+    this.keyStates.set(keyboardShortcutCodeFromEvent(event), isDown);
   }
 
   /** Registers window-level mouse button listeners for navigation guards. */
@@ -130,9 +127,10 @@ export class ManagerInput {
   }
 
   /**
-   * Checks whether a specific key is currently pressed.
+   * Checks whether a layout-stable key code is currently held.
    *
-   * @param keyCode The keyboard event code string to check.
+   * @param keyCode Layout-stable code from {@link keyboardShortcutCodeFromEvent}
+   *   (e.g. KeyW, KeyZ, ShiftLeft).
    * @returns True if the key is held down.
    */
   isKeyDown(keyCode: string): boolean {

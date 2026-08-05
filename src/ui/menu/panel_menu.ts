@@ -16,6 +16,7 @@ import {
   styleMenuShortcut,
   styleMenuSubmenuCaret,
 } from './menu_styles.js';
+import { FloatingPanelStack } from '@/ui/floating_panel/panel_floating_stack.js';
 
 /** Bound action or submenu row with its live entry definition. */
 interface BoundMenuRow {
@@ -28,8 +29,14 @@ interface BoundMenuRow {
 }
 
 /**
- * Builds and manages one dropdown or flyout panel. Nested submenus open on
- * hover in a Windows-style cascade and close when sibling rows are entered.
+ * Shared menu panel base for toolbar dropdowns, nested flyouts, and floating
+ * context menus. Owns one lifecycle for every root panel:
+ *
+ * - Mount only while open (body for floating roots).
+ * - Register as a pointer-block surface while open.
+ * - Toolbar-anchored roots return to their home host when closed.
+ * - Ephemeral body roots ({@link openAt}) leave the document when closed so closed
+ *   context menus never linger on `document.body`.
  */
 /** Delay before a submenu flyout closes after pointer leave (Windows-like). */
 const SUBMENU_CLOSE_DELAY_MS = 200;
@@ -44,6 +51,11 @@ export class PanelMenu {
   private pendingCloseTimer: ReturnType<typeof setTimeout> | null;
   private homeParent: HTMLElement | null;
   private homeNextSibling: ChildNode | null;
+  /**
+   * True when this root was opened via {@link openAt} as a body-only popup with
+   * no toolbar home host (context menus and any future openAt consumers).
+   */
+  private isEphemeralBodyMount: boolean;
 
   /**
    * Creates a menu panel from declarative entries.
@@ -60,6 +72,7 @@ export class PanelMenu {
     this.pendingCloseTimer = null;
     this.homeParent = null;
     this.homeNextSibling = null;
+    this.isEphemeralBodyMount = false;
     this.onRequestCloseRoot = onRequestCloseRoot;
     this.root = document.createElement('div');
     this.root.classList.add(isSubmenu ? 'editor-toolbar-dropdown-submenu' : 'editor-toolbar-dropdown-menu');
@@ -80,7 +93,8 @@ export class PanelMenu {
   /**
    * Shows the panel and refreshes live enablement and shortcut labels. Root
    * menus mount on document.body with fixed positioning so they stack above
-   * floating tool windows (Tools, Texture, …).
+   * floating tool windows (Tools, Texture, …) and register as pointer-block
+   * surfaces so viewport tools do not steal item clicks.
    *
    * @param anchor Optional trigger control used to place a root menu.
    */
@@ -90,31 +104,42 @@ export class PanelMenu {
       this.mountRootMenuOnBody(anchor);
     }
     this.root.style.display = 'block';
+    this.registerRootPointerBlockSurface();
   }
 
   /**
    * Opens a root menu as a floating context panel at screen coordinates. Mounts
-   * on the owner document body (same stacking path as toolbar menus).
+   * on the owner document body only while open; {@link close} removes it from
+   * the document (ephemeral body mount used by {@link MenuContext} and any
+   * future openAt caller).
    *
    * @param clientX Viewport X in CSS pixels.
    * @param clientY Viewport Y in CSS pixels.
    * @param ownerDocument Document that owns the click (main or detached).
    */
   openAt(clientX: number, clientY: number, ownerDocument: Document = document): void {
-    if (this.isSubmenu) return;
+    if (this.isSubmenu) {
+      return;
+    }
     this.refresh();
     this.mountRootMenuAtPoint(clientX, clientY, ownerDocument);
     this.root.style.display = 'block';
     this.clampRootMenuToViewport(ownerDocument);
+    this.registerRootPointerBlockSurface();
   }
 
-  /** Hides the panel and any open child flyout. */
+  /**
+   * Hides the panel and any open child flyout. Root shells leave their open
+   * mount: toolbar menus return to the home host; ephemeral body menus are
+   * removed from the document.
+   */
   close(): void {
     this.cancelPendingClose();
     this.closeOpenChild();
     this.setActiveRow(null);
     this.root.style.display = 'none';
-    this.restoreRootMenuHome();
+    this.unregisterRootPointerBlockSurface();
+    this.unmountRootShellAfterClose();
   }
 
   /**
@@ -123,11 +148,48 @@ export class PanelMenu {
    */
   dispose(): void {
     this.close();
-    if (this.root.parentNode) {
-      this.root.parentNode.removeChild(this.root);
-    }
+    this.unregisterRootPointerBlockSurface();
+    this.root.remove();
     this.homeParent = null;
     this.homeNextSibling = null;
+    this.isEphemeralBodyMount = false;
+  }
+
+  /**
+   * Registers this root menu so the editor input bridge ignores viewport
+   * coordinate hits under open menu items.
+   */
+  private registerRootPointerBlockSurface(): void {
+    if (this.isSubmenu) {
+      return;
+    }
+    FloatingPanelStack.registerPointerBlockSurface(this.root);
+  }
+
+  /** Unregisters this root menu from pointer-block routing when closed. */
+  private unregisterRootPointerBlockSurface(): void {
+    if (this.isSubmenu) {
+      return;
+    }
+    FloatingPanelStack.unregisterPointerBlockSurface(this.root);
+  }
+
+  /**
+   * After hide, restores a toolbar-anchored root to its home host, or removes
+   * an ephemeral body-mounted root from the document entirely.
+   */
+  private unmountRootShellAfterClose(): void {
+    if (this.isSubmenu) {
+      return;
+    }
+    if (this.isEphemeralBodyMount || !this.homeParent) {
+      this.root.remove();
+      this.isEphemeralBodyMount = false;
+      this.homeParent = null;
+      this.homeNextSibling = null;
+      return;
+    }
+    this.restoreRootMenuHome();
   }
 
   /**
@@ -138,6 +200,7 @@ export class PanelMenu {
    * @param anchor Button or control that opened the menu.
    */
   private mountRootMenuOnBody(anchor: HTMLElement): void {
+    this.isEphemeralBodyMount = false;
     this.rememberRootMenuHome();
     const rect = anchor.getBoundingClientRect();
     this.root.style.position = 'fixed';
@@ -148,14 +211,17 @@ export class PanelMenu {
   }
 
   /**
-   * Mounts a root menu on the document body at an absolute viewport point.
+   * Mounts a root menu on the document body at an absolute viewport point with
+   * no home host. Close removes this shell from the document.
    *
    * @param clientX Viewport X in CSS pixels.
    * @param clientY Viewport Y in CSS pixels.
    * @param ownerDocument Document that should own the menu DOM.
    */
   private mountRootMenuAtPoint(clientX: number, clientY: number, ownerDocument: Document): void {
-    this.rememberRootMenuHome();
+    this.homeParent = null;
+    this.homeNextSibling = null;
+    this.isEphemeralBodyMount = true;
     this.root.style.position = 'fixed';
     this.root.style.top = `${Math.round(clientY)}px`;
     this.root.style.left = `${Math.round(clientX)}px`;
@@ -163,11 +229,13 @@ export class PanelMenu {
   }
 
   /**
-   * Records the original parent so close can restore toolbar-hosted menus.
-   * Context menus created without a parent leave home null and stay on body.
+   * Records the original parent so close can restore toolbar-hosted menus. Only
+   * used for anchor-opened roots, never for ephemeral {@link openAt} mounts.
    */
   private rememberRootMenuHome(): void {
-    if (this.homeParent) return;
+    if (this.homeParent) {
+      return;
+    }
     this.homeParent = this.root.parentElement;
     this.homeNextSibling = this.root.nextSibling;
   }

@@ -44,6 +44,43 @@ describe('MenuPanel stacking', () => {
     expect(menu.style.display).toBe('none');
   });
 
+  it('should register open root menus as pointer-block surfaces and clear on close', () => {
+    const home = document.createElement('div');
+    document.body.appendChild(home);
+    const anchor = document.createElement('button');
+    home.appendChild(anchor);
+    Object.defineProperty(anchor, 'getBoundingClientRect', {
+      value: () => ({ left: 10, bottom: 40, top: 20, right: 70, width: 60, height: 20 }),
+    });
+    const panel = new PanelMenu([{ kind: 'action', label: 'Save', onClick: () => undefined }], () => undefined);
+    home.appendChild(panel.getElement());
+    expect(FloatingPanelStack.getPointerBlockSurfaceCount()).toBe(0);
+    panel.open(anchor);
+    const menu = panel.getElement();
+    const item = menu.querySelector('.editor-toolbar-dropdown-item') as HTMLElement;
+    expect(FloatingPanelStack.getPointerBlockSurfaceCount()).toBe(1);
+    expect(FloatingPanelStack.containsEventTarget(item)).toBe(true);
+    panel.close();
+    expect(FloatingPanelStack.getPointerBlockSurfaceCount()).toBe(0);
+    expect(FloatingPanelStack.containsEventTarget(item)).toBe(false);
+    expect(menu.parentElement).toBe(home);
+  });
+
+  it('should unmount ephemeral openAt roots from the document when closed', () => {
+    const panel = new PanelMenu([{ kind: 'action', label: 'Duplicate', onClick: () => undefined }], () => undefined);
+    panel.openAt(120, 80, document);
+    const menu = panel.getElement();
+    expect(document.body.contains(menu)).toBe(true);
+    expect(FloatingPanelStack.getPointerBlockSurfaceCount()).toBe(1);
+    panel.close();
+    expect(document.body.contains(menu)).toBe(false);
+    expect(FloatingPanelStack.getPointerBlockSurfaceCount()).toBe(0);
+    panel.openAt(10, 10, document);
+    expect(document.body.contains(menu)).toBe(true);
+    panel.dispose();
+    expect(document.body.contains(menu)).toBe(false);
+  });
+
   it('should mount root menus on the anchor ownerDocument body for detached windows', () => {
     const popupRoot = document.createElement('div');
     document.body.appendChild(popupRoot);

@@ -154,7 +154,8 @@ export class HandlerClipPlane {
   /**
    * Ends an active marker drag from editor-routed pointer up.
    *
-   * @param syncViewports Whether to refresh 2D viewport clones.
+   * @param syncViewports Whether to refresh viewport selectables and selection
+   *   visuals.
    */
   onEditorPointerUp(syncViewports: boolean = true): void {
     this.endMarkerDrag(syncViewports);
@@ -344,9 +345,10 @@ export class HandlerClipPlane {
   }
 
   /**
-   * Ends an active marker drag and optionally syncs 2D clones.
+   * Ends an active marker drag and optionally refreshes viewport visuals.
    *
-   * @param syncViewports Whether to refresh 2D viewport clones.
+   * @param syncViewports Whether to refresh viewport selectables and selection
+   *   visuals.
    */
   private endMarkerDrag(syncViewports: boolean): void {
     if (this.boundDragMove) {

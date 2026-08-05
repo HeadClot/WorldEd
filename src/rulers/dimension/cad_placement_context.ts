@@ -143,17 +143,6 @@ export function writeDirectionTowardCamera(
 }
 
 /**
- * Returns whether a candidate face sign (±1) faces more toward the camera.
- *
- * @param faceNormal Unit face normal in world space.
- * @param toCamera Unit direction from bounds center toward the camera.
- * @returns Positive when the face is on the camera side.
- */
-export function faceCameraScore(faceNormal: THREE.Vector3, toCamera: THREE.Vector3): number {
-  return faceNormal.dot(toCamera);
-}
-
-/**
  * Clamps a world offset into a safe range.
  *
  * @param value Raw world units.

@@ -179,7 +179,6 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       transformExecutor: this.transformExecutor,
       gridSnap: this.gridSnap,
       inputManager: this.inputManager,
-      viewportSyncManager: this.viewportSyncManager,
       propertiesPanel: this.propertiesPanel,
       worldObject: this.worldObject,
       getUserSnapEnabled: () => this.userSnapEnabled,
@@ -249,7 +248,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
   /**
    * Shared post-transform visual refresh for inspector fields, gizmo commit,
    * and alignment. Solid CSG finalizes here once — not in
-   * {@link refreshAfterWorldMutation} — so structural reclones stay cheap.
+   * {@link refreshAfterWorldMutation} — so structural refreshes stay cheap.
    *
    * @param transformedObjects World objects whose local transforms changed.
    */
@@ -264,8 +263,6 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
    */
   private getTransformCommitVisualHost(): SceneTransformCommitVisualHost {
     return {
-      syncCloneTransformsForWorldObjects: (objects) =>
-        this.viewportSyncManager.syncCloneTransformsForWorldObjects(objects),
       syncSelectionVisualsDuringTransform: () => this.selectionVisualController.syncDuringTransform(),
       syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
       ensureWorldMatricesCurrent: () => this.worldObject.updateMatrixWorld(true),
@@ -301,8 +298,8 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       onAfterTransformCommit: (objects) => this.refreshVisualsAfterTransformCommit(objects),
       onTransformsLive: (meshes) => this.solidModelController?.onTransformsLive(meshes),
       onRulerTransformFeedback: (meshes, phase) => this.onCadRulerTransformFeedback(meshes, phase),
-      onLiveTransformOverlaySync: (transformTargets, selectedMeshes) => {
-        this.syncLiveTransformOverlay(transformTargets, selectedMeshes);
+      onLiveTransformOverlaySync: (_transformTargets, selectedMeshes) => {
+        this.syncLiveTransformOverlay(selectedMeshes);
       },
       getTransformInteractionBridge: () => this.transformInteractionBridge ?? null,
       getFaceModeCoordinator: () => this.faceModeCoordinator ?? null,
@@ -346,18 +343,13 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
   }
 
   /**
-   * Keeps clones and selection outlines live during transform. Skips gizmo pose
-   * updates while single-use is active (gizmos stay hidden like Shape Editor /
-   * Blender G/R/S).
+   * Keeps selection outlines live during transform. Skips gizmo pose updates
+   * while single-use is active (gizmos stay hidden like Shape Editor / Blender
+   * G/R/S).
    *
-   * @param transformTargets Objects receiving pose edits.
    * @param selectedMeshes Current selection meshes.
    */
-  private syncLiveTransformOverlay(
-    transformTargets: readonly THREE.Object3D[],
-    selectedMeshes: readonly THREE.Mesh[],
-  ): void {
-    this.viewportSyncManager.syncCloneTransformsForWorldObjects(transformTargets);
+  private syncLiveTransformOverlay(selectedMeshes: readonly THREE.Mesh[]): void {
     this.selectionVisualController.syncDuringTransform();
     if (this.transformHandler.isSingleUseDrag()) {
       return;
@@ -790,7 +782,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
   }
 
   /**
-   * Syncs world objects to all 2D viewport scenes and restores selection
+   * Syncs world selectables to all live viewports and restores selection
    * outlines. Shading refresh runs once here so callers avoid a second full
    * mesh walk.
    */

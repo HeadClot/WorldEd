@@ -34,13 +34,3 @@ export function createViewportLeafPayload(areaId: string, viewportKind: Viewport
     viewportKind,
   };
 }
-
-/**
- * Returns whether a payload hosts a viewport editor.
- *
- * @param payload Leaf payload to inspect.
- * @returns True when the editor type is viewport.
- */
-export function isViewportAreaPayload(payload: AreaLeafPayload): boolean {
-  return payload.editorType === 'viewport';
-}

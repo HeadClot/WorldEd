@@ -1,4 +1,3 @@
-import { Theme } from '@/theme.js';
 import { WindowPointerDragSession } from '@/utils/session_window_pointer_drag.js';
 import { listSharedBorders, type AreaSharedBorder } from './area_adjacency.js';
 import type { AreaLeafPlacement } from './area_leaf_placement.js';
@@ -203,14 +202,4 @@ export class AreaSplitterOverlay {
     }
     this.elements.length = 0;
   }
-}
-
-/** Exported for tests: hit size constant. */
-export function getAreaSplitterHitPx(): number {
-  return SPLITTER_HIT_PX;
-}
-
-/** Theme separator color available for future visible grips. */
-export function getAreaSplitterThemeColor(): number {
-  return Theme.separatorColor;
 }

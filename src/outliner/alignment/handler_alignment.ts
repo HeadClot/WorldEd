@@ -8,8 +8,7 @@ import { StatusBar } from '@/ui/status/status_bar.js';
 
 /**
  * Callback invoked after alignment writes object poses. Must run the shared
- * transform-commit refresh (solid CSG finalize + clones + overlays), not a bare
- * viewport reclone.
+ * transform-commit refresh (solid CSG finalize and overlays).
  *
  * @param objects Objects whose local transforms were written.
  */

@@ -558,12 +558,3 @@ export class AreaCornerGesture {
 function pointInRect(x: number, y: number, rect: { x: number; y: number; width: number; height: number }): boolean {
   return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
 }
-
-/**
- * Corner hit size for tests.
- *
- * @returns Hit size in pixels.
- */
-export function getAreaCornerHitPx(): number {
-  return CORNER_HIT_PX;
-}

@@ -2,22 +2,6 @@ import { Theme } from '@/theme.js';
 import { hexToRgb } from '@/utils/utils_color.js';
 
 /**
- * Applies fixed full-screen dimmer styles to the overlay root.
- *
- * @param root Overlay root element.
- */
-export function applyImportOverlayRootStyles(root: HTMLElement): void {
-  root.style.position = 'fixed';
-  root.style.inset = '0';
-  root.style.zIndex = '10000';
-  root.style.display = 'flex';
-  root.style.alignItems = 'center';
-  root.style.justifyContent = 'center';
-  root.style.background = 'rgba(0, 0, 0, 0.55)';
-  root.style.fontFamily = 'system-ui, sans-serif';
-}
-
-/**
  * Applies panel chrome styles for the progress dialog.
  *
  * @param panel Panel element.
@@ -30,6 +14,8 @@ export function applyImportOverlayPanelStyles(panel: HTMLElement): void {
   panel.style.background = hexToRgb(Theme.propertiesPanelBackground);
   panel.style.border = `1px solid ${hexToRgb(Theme.separatorColor)}`;
   panel.style.boxShadow = '0 8px 32px rgba(0,0,0,0.45)';
+  panel.style.boxSizing = 'border-box';
+  panel.style.fontFamily = 'system-ui, sans-serif';
 }
 
 /**

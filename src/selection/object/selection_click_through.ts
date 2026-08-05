@@ -65,7 +65,7 @@ export class SelectionClickThrough {
    * Builds a near-to-far list of unique meshes from raycast hits.
    *
    * @param hits Ray intersections sorted by distance (Three.js order).
-   * @param resolveMesh Maps a hit mesh (possibly a 2D clone) to world mesh.
+   * @param resolveMesh Maps a hit mesh to the authoritative world mesh.
    * @returns Deduplicated world meshes in hit order.
    */
   static uniqueMeshesFromHits(hits: THREE.Intersection[], resolveMesh: (mesh: THREE.Mesh) => THREE.Mesh): THREE.Mesh[] {

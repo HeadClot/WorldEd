@@ -317,10 +317,6 @@ describe('TransformInteractionBridge', () => {
       transformExecutor: new TransformExecutor(gridSnap),
       gridSnap,
       inputManager: { isShiftDown: options?.isShiftDown ?? (() => false) } as never,
-      viewportSyncManager: {
-        syncClonePositionsToWorldObject: () => undefined,
-        syncCloneTransformsForWorldObjects: () => undefined,
-      } as never,
       propertiesPanel: { refreshBoundObject: () => undefined } as never,
       worldObject: new THREE.Group(),
       getUserSnapEnabled: options?.getUserSnapEnabled ?? (() => false),

@@ -159,12 +159,24 @@ describe('ControllerAudioPlayback', () => {
     expect(rate).toBeLessThanOrEqual(1.15);
   });
 
-  it('pitches resize clicks from travel distance while scale stays default', () => {
+  it('pitches resize clicks from travel distance', () => {
     const softClick = createSoftClickMock();
     const softWhoosh = createSoftWhooshMock();
     const pageTurn = createPageTurnMock();
     const settings = new AudioSettings(new MemorySettingsStorage());
     notificationFrameEvents.raiseSelectionResizedWithSnapping(7);
+    notificationFrameEvents.beginFrame();
+    const controller = createController(settings, softClick, softWhoosh.player, pageTurn);
+    controller.endFrame();
+    expect(softClick.play).toHaveBeenCalledWith(1.45);
+  });
+
+  it('pitches scale clicks from travel distance the same way as resize', () => {
+    const softClick = createSoftClickMock();
+    const softWhoosh = createSoftWhooshMock();
+    const pageTurn = createPageTurnMock();
+    const settings = new AudioSettings(new MemorySettingsStorage());
+    notificationFrameEvents.raiseSelectionScaledWithSnapping(7);
     notificationFrameEvents.beginFrame();
     const controller = createController(settings, softClick, softWhoosh.player, pageTurn);
     controller.endFrame();

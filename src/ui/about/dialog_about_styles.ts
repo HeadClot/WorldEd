@@ -135,24 +135,6 @@ function buildClassRules(): string {
 }
 
 /**
- * Applies fixed full-viewport overlay styles to the backdrop.
- *
- * @param backdrop Backdrop element.
- */
-export function styleAboutBackdrop(backdrop: HTMLElement): void {
-  backdrop.classList.add('about-dialog-backdrop');
-  backdrop.style.position = 'fixed';
-  backdrop.style.inset = '0';
-  backdrop.style.zIndex = '12000';
-  backdrop.style.display = 'none';
-  backdrop.style.alignItems = 'center';
-  backdrop.style.justifyContent = 'center';
-  backdrop.style.padding = '24px';
-  backdrop.style.background = 'radial-gradient(ellipse at center, rgba(20,28,55,0.82) 0%, rgba(6,8,14,0.94) 70%)';
-  backdrop.style.backdropFilter = 'blur(6px)';
-}
-
-/**
  * Applies chrome styles to the dialog panel card.
  *
  * @param panel Panel element.
@@ -171,6 +153,7 @@ export function styleAboutPanel(panel: HTMLElement): void {
   panel.style.fontFamily = 'Segoe UI, system-ui, -apple-system, sans-serif';
   panel.style.color = '#e0e0e0';
   panel.style.overflowY = 'auto';
+  panel.style.boxSizing = 'border-box';
 }
 
 /**

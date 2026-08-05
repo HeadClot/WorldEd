@@ -14,13 +14,14 @@ import {
   SolidBrushPropertyHandlers,
 } from './panel_properties_solid_brush_section.js';
 import { PanelPropertiesColorSession } from './panel_properties_color_session.js';
+import { InputNumeric } from '@/ui/input/input_numeric.js';
 import {
   panelPropertiesAreObjectPositionsUnchanged,
   panelPropertiesAreObjectRotationsUnchanged,
   panelPropertiesAreObjectScalesUnchanged,
-  panelPropertiesAreValuesShared,
   panelPropertiesEulerDegrees,
-  panelPropertiesParseOptionalNumber,
+  panelPropertiesResolveAxisNumbers,
+  type PanelPropertiesAxisNumbers,
 } from './panel_properties_numbers.js';
 
 export type { SolidBrushPropertyHandlers };
@@ -32,9 +33,6 @@ interface AxisInputConfig {
   axis: 'x' | 'y' | 'z';
 }
 
-/** Display string for mixed multi-selection values (Unity-style). */
-const MIXED_VALUE_DISPLAY = '—';
-
 /**
  * Right-side properties panel with Position, Rotation, Scale, and Material.
  * Supports multi-selection: mixed fields show dashes; edits apply to all
@@ -45,21 +43,19 @@ export class PanelProperties {
   private theme: typeof Theme;
   private selectionManager: ManagerSelection;
   private boundObjects: THREE.Object3D[];
-  private positionInputs: Map<string, HTMLInputElement>;
-  private rotationInputs: Map<string, HTMLInputElement>;
-  private scaleInputs: Map<string, HTMLInputElement>;
+  private positionInputs: Map<string, InputNumeric>;
+  private rotationInputs: Map<string, InputNumeric>;
+  private scaleInputs: Map<string, InputNumeric>;
   private colorInput: HTMLInputElement | null;
   private commandStack: CommandStack | null;
   private textureLock: TextureLockSettings | null;
   private isDisposed: boolean;
   private sections: HTMLElement[];
-  private inputChangeHandlers: { input: HTMLInputElement; handler: () => void }[];
   private colorSession: PanelPropertiesColorSession;
   private solidBrushSection: PanelPropertiesSolidBrushSection;
   /**
-   * Layout callback after inspector transform commands. Must refresh 2D clones,
-   * selection outlines, brush hulls, CAD rulers, and gizmo (same contract as
-   * undo/redo).
+   * Layout callback after inspector transform commands. Must refresh selection
+   * outlines, brush hulls, CAD rulers, and gizmo (same contract as undo/redo).
    */
   private afterTransformCommit: ((objects: THREE.Object3D[]) => void) | null;
 
@@ -83,7 +79,6 @@ export class PanelProperties {
     this.textureLock = null;
     this.isDisposed = false;
     this.sections = [];
-    this.inputChangeHandlers = [];
     this.colorSession = new PanelPropertiesColorSession();
     this.afterTransformCommit = null;
     this.solidBrushSection = new PanelPropertiesSolidBrushSection(
@@ -119,7 +114,7 @@ export class PanelProperties {
   /**
    * Sets the callback invoked after position/rotation/scale commands commit.
    * Layout must refresh multi-viewport visuals here — transforms alone leave
-   * clones, outlines, hulls, and CAD rulers desynced.
+   * outlines, hulls, and CAD rulers desynced.
    *
    * @param callback Receives the objects that were transformed, or null.
    */
@@ -226,14 +221,25 @@ export class PanelProperties {
   dispose(): void {
     this.isDisposed = true;
     this.colorSession.finalize();
-    this.removeInputChangeListeners();
-    this.positionInputs.clear();
-    this.rotationInputs.clear();
-    this.scaleInputs.clear();
+    this.disposeNumericInputs(this.positionInputs);
+    this.disposeNumericInputs(this.rotationInputs);
+    this.disposeNumericInputs(this.scaleInputs);
     this.sections = [];
     if (this.container.parentNode) {
       this.container.parentNode.removeChild(this.container);
     }
+  }
+
+  /**
+   * Disposes every numeric field in a section map.
+   *
+   * @param inputMap Axis numeric fields.
+   */
+  private disposeNumericInputs(inputMap: Map<string, InputNumeric>): void {
+    for (const field of inputMap.values()) {
+      field.dispose();
+    }
+    inputMap.clear();
   }
 
   /**
@@ -252,7 +258,7 @@ export class PanelProperties {
    * @param vectors Per-object vector values (position/scale/degrees).
    * @param decimals Fixed decimal places for shared numbers.
    */
-  private writeVectorInputs(inputMap: Map<string, HTMLInputElement>, vectors: THREE.Vector3[], decimals: number): void {
+  private writeVectorInputs(inputMap: Map<string, InputNumeric>, vectors: THREE.Vector3[], decimals: number): void {
     this.writeAxisInput(
       inputMap,
       'x',
@@ -281,19 +287,12 @@ export class PanelProperties {
    * @param values Per-object values for this axis.
    * @param decimals Decimal places when shared.
    */
-  private writeAxisInput(
-    inputMap: Map<string, HTMLInputElement>,
-    axis: string,
-    values: number[],
-    decimals: number,
-  ): void {
-    const input = inputMap.get(axis);
-    if (!input) return;
-    if (panelPropertiesAreValuesShared(values)) {
-      input.value = values[0]!.toFixed(decimals);
+  private writeAxisInput(inputMap: Map<string, InputNumeric>, axis: string, values: number[], decimals: number): void {
+    const field = inputMap.get(axis);
+    if (!field) {
       return;
     }
-    input.value = MIXED_VALUE_DISPLAY;
+    field.setSharedValues(values, decimals);
   }
 
   /**
@@ -302,66 +301,192 @@ export class PanelProperties {
    */
   private applyPositionCommand(): void {
     const editable = this.getEditableBoundObjects();
-    if (editable.length === 0) return;
-    const x = panelPropertiesParseOptionalNumber(this.positionInputs.get('x')!.value);
-    const y = panelPropertiesParseOptionalNumber(this.positionInputs.get('y')!.value);
-    const z = panelPropertiesParseOptionalNumber(this.positionInputs.get('z')!.value);
-    if (x === null && y === null && z === null) return;
-    const positions = editable.map((object) => {
-      const next = object.position.clone();
-      if (x !== null) next.x = x;
-      if (y !== null) next.y = y;
-      if (z !== null) next.z = z;
-      return next;
-    });
-    if (panelPropertiesAreObjectPositionsUnchanged(editable, positions)) return;
+    if (editable.length === 0) {
+      return;
+    }
+    const axes = this.readSectionAxisNumbers(this.positionInputs);
+    if (!axes) {
+      return;
+    }
+    this.applyPositionFromAxisNumbers(editable, axes);
+  }
+
+  /**
+   * Writes resolved position axis numbers onto unlocked bound objects.
+   *
+   * @param editable Unlocked bound objects.
+   * @param axes Parsed axis numbers (null keeps the object value).
+   */
+  private applyPositionFromAxisNumbers(editable: THREE.Object3D[], axes: PanelPropertiesAxisNumbers): void {
+    const positions = editable.map((object) => this.buildPositionFromAxisNumbers(object, axes));
+    if (panelPropertiesAreObjectPositionsUnchanged(editable, positions)) {
+      this.refreshBoundObjectInputs();
+      return;
+    }
     this.pushOrExecute(new CommandTransformPositionSet(editable, positions));
     this.applyBoundContentTexturePolicy(true, false);
     this.commitTransformSideEffects(editable);
   }
 
+  /**
+   * Builds a next position from one object and optional axis overrides.
+   *
+   * @param object Source object.
+   * @param axes Axis overrides.
+   * @returns Cloned position with overrides applied.
+   */
+  private buildPositionFromAxisNumbers(object: THREE.Object3D, axes: PanelPropertiesAxisNumbers): THREE.Vector3 {
+    const next = object.position.clone();
+    if (axes.x !== null) {
+      next.x = axes.x;
+    }
+    if (axes.y !== null) {
+      next.y = axes.y;
+    }
+    if (axes.z !== null) {
+      next.z = axes.z;
+    }
+    return next;
+  }
+
   /** Applies rotation edits (degrees in the UI) to unlocked bound objects. */
   private applyRotationCommand(): void {
     const editable = this.getEditableBoundObjects();
-    if (editable.length === 0) return;
-    const x = panelPropertiesParseOptionalNumber(this.rotationInputs.get('x')!.value);
-    const y = panelPropertiesParseOptionalNumber(this.rotationInputs.get('y')!.value);
-    const z = panelPropertiesParseOptionalNumber(this.rotationInputs.get('z')!.value);
-    if (x === null && y === null && z === null) return;
-    const rotations = editable.map((object) => {
-      const rx = x !== null ? THREE.MathUtils.degToRad(x) : object.rotation.x;
-      const ry = y !== null ? THREE.MathUtils.degToRad(y) : object.rotation.y;
-      const rz = z !== null ? THREE.MathUtils.degToRad(z) : object.rotation.z;
-      return new THREE.Euler(rx, ry, rz, 'XYZ');
-    });
-    if (panelPropertiesAreObjectRotationsUnchanged(editable, rotations)) return;
+    if (editable.length === 0) {
+      return;
+    }
+    const axes = this.readSectionAxisNumbers(this.rotationInputs);
+    if (!axes) {
+      return;
+    }
+    this.applyRotationFromAxisNumbers(editable, axes);
+  }
+
+  /**
+   * Writes resolved rotation axis numbers (degrees) onto unlocked bound
+   * objects.
+   *
+   * @param editable Unlocked bound objects.
+   * @param axes Parsed degree axis numbers (null keeps the object value).
+   */
+  private applyRotationFromAxisNumbers(editable: THREE.Object3D[], axes: PanelPropertiesAxisNumbers): void {
+    const rotations = editable.map((object) => this.buildRotationFromAxisNumbers(object, axes));
+    if (panelPropertiesAreObjectRotationsUnchanged(editable, rotations)) {
+      this.refreshBoundObjectInputs();
+      return;
+    }
     this.pushOrExecute(new CommandTransformRotationSet(editable, rotations));
     this.applyBoundContentTexturePolicy(true, false);
     this.commitTransformSideEffects(editable);
   }
 
+  /**
+   * Builds a next Euler rotation from one object and optional degree overrides.
+   *
+   * @param object Source object.
+   * @param axes Degree axis overrides.
+   * @returns Euler rotation in radians.
+   */
+  private buildRotationFromAxisNumbers(object: THREE.Object3D, axes: PanelPropertiesAxisNumbers): THREE.Euler {
+    const rx = axes.x !== null ? THREE.MathUtils.degToRad(axes.x) : object.rotation.x;
+    const ry = axes.y !== null ? THREE.MathUtils.degToRad(axes.y) : object.rotation.y;
+    const rz = axes.z !== null ? THREE.MathUtils.degToRad(axes.z) : object.rotation.z;
+    return new THREE.Euler(rx, ry, rz, 'XYZ');
+  }
+
   /** Applies scale edits to unlocked bound objects. */
   private applyScaleCommand(): void {
     const editable = this.getEditableBoundObjects();
-    if (editable.length === 0) return;
-    const x = panelPropertiesParseOptionalNumber(this.scaleInputs.get('x')!.value);
-    const y = panelPropertiesParseOptionalNumber(this.scaleInputs.get('y')!.value);
-    const z = panelPropertiesParseOptionalNumber(this.scaleInputs.get('z')!.value);
-    if (x === null && y === null && z === null) return;
-    const scales = editable.map((object) => {
-      const next = object.scale.clone();
-      if (x !== null) next.x = x;
-      if (y !== null) next.y = y;
-      if (z !== null) next.z = z;
-      return next;
-    });
-    if (panelPropertiesAreObjectScalesUnchanged(editable, scales)) return;
-    // Heal stale world UV matrices at the pre-scale pose so world-density
-    // rebake after CommandTransformSetScale cannot collapse a UV axis.
+    if (editable.length === 0) {
+      return;
+    }
+    const axes = this.readSectionAxisNumbers(this.scaleInputs);
+    if (!axes) {
+      return;
+    }
+    this.applyScaleFromAxisNumbers(editable, axes);
+  }
+
+  /**
+   * Writes resolved scale axis numbers onto unlocked bound objects.
+   *
+   * @param editable Unlocked bound objects.
+   * @param axes Parsed axis numbers (null keeps the object value).
+   */
+  private applyScaleFromAxisNumbers(editable: THREE.Object3D[], axes: PanelPropertiesAxisNumbers): void {
+    const scales = editable.map((object) => this.buildScaleFromAxisNumbers(object, axes));
+    if (panelPropertiesAreObjectScalesUnchanged(editable, scales)) {
+      this.refreshBoundObjectInputs();
+      return;
+    }
     this.prepareBoundContentMeshesForTextureOps();
     this.pushOrExecute(new CommandTransformScaleSet(editable, scales));
     this.applyBoundContentTexturePolicy(false, true);
     this.commitTransformSideEffects(editable);
+  }
+
+  /**
+   * Builds a next scale from one object and optional axis overrides.
+   *
+   * @param object Source object.
+   * @param axes Axis overrides.
+   * @returns Cloned scale with overrides applied.
+   */
+  private buildScaleFromAxisNumbers(object: THREE.Object3D, axes: PanelPropertiesAxisNumbers): THREE.Vector3 {
+    const next = object.scale.clone();
+    if (axes.x !== null) {
+      next.x = axes.x;
+    }
+    if (axes.y !== null) {
+      next.y = axes.y;
+    }
+    if (axes.z !== null) {
+      next.z = axes.z;
+    }
+    return next;
+  }
+
+  /**
+   * Reads X/Y/Z text from a section. Invalid math resets the UI and returns
+   * null.
+   *
+   * @param inputMap Axis inputs for one transform section.
+   * @returns Resolved axis numbers, or null when invalid or all skipped.
+   */
+  private readSectionAxisNumbers(inputMap: Map<string, InputNumeric>): PanelPropertiesAxisNumbers | null {
+    const resolved = panelPropertiesResolveAxisNumbers(
+      this.axisInputText(inputMap, 'x'),
+      this.axisInputText(inputMap, 'y'),
+      this.axisInputText(inputMap, 'z'),
+    );
+    if (resolved.kind === 'invalid') {
+      this.refreshBoundObjectInputs();
+      return null;
+    }
+    if (resolved.kind === 'skip_all') {
+      return null;
+    }
+    return resolved.axes;
+  }
+
+  /**
+   * Returns the text of one axis input, or empty when missing.
+   *
+   * @param inputMap Axis inputs.
+   * @param axis Axis key.
+   * @returns Input value text.
+   */
+  private axisInputText(inputMap: Map<string, InputNumeric>, axis: string): string {
+    const field = inputMap.get(axis);
+    if (!field) {
+      return '';
+    }
+    return field.getText();
+  }
+
+  /** Re-reads bound object transforms into all inspector inputs. */
+  private refreshBoundObjectInputs(): void {
+    this.updateFromObjects(this.boundObjects);
   }
 
   /**
@@ -660,7 +785,7 @@ export class PanelProperties {
    * @param inputMap The map to store input references.
    * @returns The created section element.
    */
-  private createSection(title: string, axes: AxisInputConfig[], inputMap: Map<string, HTMLInputElement>): HTMLElement {
+  private createSection(title: string, axes: AxisInputConfig[], inputMap: Map<string, InputNumeric>): HTMLElement {
     const section = this.createSectionContainer();
     const header = this.createSectionHeader(title);
     section.appendChild(header);
@@ -707,7 +832,7 @@ export class PanelProperties {
    * @param inputMap The map to store input references.
    * @returns The styled content element.
    */
-  private createSectionContent(axes: AxisInputConfig[], inputMap: Map<string, HTMLInputElement>): HTMLElement {
+  private createSectionContent(axes: AxisInputConfig[], inputMap: Map<string, InputNumeric>): HTMLElement {
     const content = document.createElement('div');
     content.style.paddingLeft = '4px';
     axes.forEach((axisConfig) => {
@@ -726,17 +851,12 @@ export class PanelProperties {
    * @param inputMap The map to store the input reference.
    * @returns The row element.
    */
-  private createAxisRow(
-    label: string,
-    color: string,
-    axis: string,
-    inputMap: Map<string, HTMLInputElement>,
-  ): HTMLElement {
+  private createAxisRow(label: string, color: string, axis: string, inputMap: Map<string, InputNumeric>): HTMLElement {
     const row = this.createAxisRowContainer();
     const labelEl = this.createAxisLabel(label, color);
-    const input = this.createAxisInput(axis, inputMap);
+    const field = this.createAxisInput(axis, inputMap);
     row.appendChild(labelEl);
-    row.appendChild(input);
+    row.appendChild(field.getElement());
     return row;
   }
 
@@ -772,70 +892,41 @@ export class PanelProperties {
   }
 
   /**
-   * Creates the text input element for an axis (supports mixed "—" display).
+   * Creates a shared numeric field for an axis (supports mixed "—" display and
+   * arithmetic expressions).
    *
    * @param axis The axis identifier.
-   * @param inputMap The map to store the input reference.
-   * @returns The styled input element.
+   * @param inputMap The map to store the field reference.
+   * @returns The numeric field controller.
    */
-  private createAxisInput(axis: string, inputMap: Map<string, HTMLInputElement>): HTMLInputElement {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.inputMode = 'decimal';
-    input.placeholder = MIXED_VALUE_DISPLAY;
-    input.style.width = '100%';
-    input.style.padding = '2px 4px';
-    input.style.background = Theme.inputBackgroundColor;
-    input.style.color = Theme.inputTextColor;
-    input.style.border = `1px solid ${Theme.inputBorderColor}`;
-    input.style.borderRadius = '2px';
-    input.style.fontSize = '11px';
-    input.style.fontFamily = 'monospace';
-    inputMap.set(axis, input);
-    this.bindInputToChanges(input, inputMap);
-    this.bindMixedValueFocusClear(input);
-    return input;
+  private createAxisInput(axis: string, inputMap: Map<string, InputNumeric>): InputNumeric {
+    const field = new InputNumeric({ width: '100%' });
+    inputMap.set(axis, field);
+    this.bindNumericFieldCommit(field, inputMap);
+    return field;
   }
 
   /**
-   * Clears a mixed-value dash when the user focuses the field so typing
-   * replaces it.
+   * Binds a numeric field to apply multi-object changes on commit.
    *
-   * @param input Axis input element.
-   */
-  private bindMixedValueFocusClear(input: HTMLInputElement): void {
-    const handleFocus = () => {
-      if (input.value.trim() !== MIXED_VALUE_DISPLAY) return;
-      input.value = '';
-    };
-    input.addEventListener('focus', handleFocus);
-    this.inputChangeHandlers.push({ input, handler: handleFocus });
-  }
-
-  /**
-   * Binds an input element to apply multi-object changes on commit.
-   *
-   * @param input The input element.
+   * @param field Axis numeric field.
    * @param inputMap The input map this belongs to.
    */
-  private bindInputToChanges(input: HTMLInputElement, inputMap: Map<string, HTMLInputElement>): void {
-    const handleChange = () => {
-      if (this.boundObjects.length === 0) return;
-      if (inputMap === this.positionInputs) this.applyPositionCommand();
-      if (inputMap === this.rotationInputs) this.applyRotationCommand();
-      if (inputMap === this.scaleInputs) this.applyScaleCommand();
-    };
-    input.addEventListener('change', handleChange);
-    this.inputChangeHandlers.push({ input, handler: handleChange });
-  }
-
-  /** Removes all change and focus listeners from axis input elements. */
-  private removeInputChangeListeners(): void {
-    this.inputChangeHandlers.forEach(({ input, handler }) => {
-      input.removeEventListener('change', handler);
-      input.removeEventListener('focus', handler);
+  private bindNumericFieldCommit(field: InputNumeric, inputMap: Map<string, InputNumeric>): void {
+    field.bindCommit(() => {
+      if (this.boundObjects.length === 0) {
+        return;
+      }
+      if (inputMap === this.positionInputs) {
+        this.applyPositionCommand();
+      }
+      if (inputMap === this.rotationInputs) {
+        this.applyRotationCommand();
+      }
+      if (inputMap === this.scaleInputs) {
+        this.applyScaleCommand();
+      }
     });
-    this.inputChangeHandlers = [];
   }
 
   /** Binds selection change events to update the panel for multi-select. */
@@ -853,18 +944,23 @@ export class PanelProperties {
 
   /** Clears all input values to empty strings. */
   private clearAllInputs(): void {
-    this.positionInputs.forEach((input) => {
-      input.value = '';
-    });
-    this.rotationInputs.forEach((input) => {
-      input.value = '';
-    });
-    this.scaleInputs.forEach((input) => {
-      input.value = '';
-    });
+    this.clearNumericInputMap(this.positionInputs);
+    this.clearNumericInputMap(this.rotationInputs);
+    this.clearNumericInputMap(this.scaleInputs);
     if (this.colorInput) {
       this.colorInput.value = '#ffffff';
       this.colorInput.style.opacity = '1';
+    }
+  }
+
+  /**
+   * Clears every field in a numeric input map.
+   *
+   * @param inputMap Axis numeric fields.
+   */
+  private clearNumericInputMap(inputMap: Map<string, InputNumeric>): void {
+    for (const field of inputMap.values()) {
+      field.setText('');
     }
   }
 

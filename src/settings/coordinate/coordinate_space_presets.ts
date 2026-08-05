@@ -168,16 +168,6 @@ export function isAxisDirection(value: unknown): value is AxisDirection {
 }
 
 /**
- * Checks whether a value is a known handedness token.
- *
- * @param value Candidate value.
- * @returns True when value is right or left.
- */
-export function isHandedness(value: unknown): value is Handedness {
-  return value === 'right' || value === 'left';
-}
-
-/**
  * Parses and validates a coordinate space object from JSON. Handedness is
  * always re-derived from the three axes, normalizing legacy profiles whose
  * stored handedness did not match their basis.

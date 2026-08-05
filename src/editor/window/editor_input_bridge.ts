@@ -2,6 +2,7 @@ import { Vector2 } from 'three';
 import type { EditorWindow } from './editor_window.js';
 import { EditorExclusiveMouseShieldDomain } from './editor_exclusive_mouse_shield_domain.js';
 import { claimDomKeyboardFocus } from '@/utils/dom_focus.js';
+import { FloatingPanelStack } from '@/ui/floating_panel/panel_floating_stack.js';
 
 /**
  * Bridges browser pointer events into EditorWindow OnMouse* routing. Mirrors
@@ -198,6 +199,9 @@ export class EditorInputBridge {
   private handleDocumentPointerDown(event: PointerEvent): void {
     this.syncExclusiveShieldMount();
     if (this.isEventTargetExclusiveShield(event) || this.isExclusiveShieldMounted()) {
+      return;
+    }
+    if (this.isEventTargetFloatingWindow(event)) {
       return;
     }
     if (this.exclusiveViewportRoots.length === 0) {
@@ -637,6 +641,18 @@ export class EditorInputBridge {
       return false;
     }
     return this.exclusiveShieldDomain.getMountedShieldElement(ownerDocument) === target;
+  }
+
+  /**
+   * Returns whether the event landed on a floating editor window or open menu
+   * surface (tool panel, modal backdrop, toolbar dropdown, context menu).
+   * Coordinate viewport hits under those overlays must not start tool presses.
+   *
+   * @param event Browser pointer event.
+   * @returns True when the target belongs to a registered overlay surface.
+   */
+  private isEventTargetFloatingWindow(event: Event): boolean {
+    return FloatingPanelStack.containsEventTarget(event.target);
   }
 
   /**

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { CameraFlying } from '@/navigation/camera/camera_flying.js';
+import { ManagerInput } from '@/input/manager_input.js';
 
 describe('FlyingCamera', () => {
   it('should initialize with given yaw and pitch values', () => {
@@ -133,6 +134,41 @@ describe('FlyingCamera', () => {
     const before = camera.position.clone();
     flyingCamera.update(0.1);
     expect(camera.position.distanceTo(before)).toBeGreaterThan(0.01);
+  });
+
+  it('should fly forward when AZERTY produces w on physical KeyZ via ManagerInput', () => {
+    const inputManager = new ManagerInput();
+    const canvas = document.createElement('canvas');
+    (canvas as any).requestPointerLock = () => {
+      Object.defineProperty(document, 'pointerLockElement', { value: canvas, configurable: true });
+      document.dispatchEvent(new Event('pointerlockchange'));
+    };
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+    camera.position.set(0, 0, 0);
+    const flyingCamera = new CameraFlying(canvas, camera, inputManager, 0, 0);
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 2, pointerId: 1 }));
+    (flyingCamera as any).isRotating = true;
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ', key: 'w' }));
+    const before = camera.position.clone();
+    flyingCamera.update(0.1);
+    expect(camera.position.distanceTo(before)).toBeGreaterThan(0.01);
+    const movedForward = camera.position.z > before.z || camera.position.length() > 0.01;
+    expect(movedForward).toBe(true);
+    inputManager.dispose();
+  });
+
+  it('should not treat physical KeyZ as W when QWERTZ produces y', () => {
+    const inputManager = new ManagerInput();
+    const canvas = document.createElement('canvas');
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+    camera.position.set(0, 0, 0);
+    const flyingCamera = new CameraFlying(canvas, camera, inputManager, 0, 0);
+    (flyingCamera as any).isRotating = true;
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ', key: 'y' }));
+    const before = camera.position.clone();
+    flyingCamera.update(0.1);
+    expect(camera.position.distanceTo(before)).toBeLessThan(0.001);
+    inputManager.dispose();
   });
 
   it('should clamp pitch to valid range', () => {

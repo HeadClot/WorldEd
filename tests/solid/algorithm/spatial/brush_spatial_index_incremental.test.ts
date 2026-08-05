@@ -69,6 +69,37 @@ describe('BrushSpatialIndex incremental', () => {
     expect(index.getEntryCount()).toBe(0);
     expect(index.queryPoint(new THREE.Vector3(0, 0, 0))).toHaveLength(0);
   });
+
+  it('upsert of a heavily scaled unit brush does not throw or exhaust cells', () => {
+    const unit = new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5));
+    const index = new BrushSpatialIndex([{ bounds: unit.clone() }], 0.01);
+    const scaled = new THREE.Box3(new THREE.Vector3(-15.145, -9.9, -9.9), new THREE.Vector3(15.145, 9.9, 9.9));
+    expect(() => index.upsert(0, scaled)).not.toThrow();
+    expect(index.queryPoint(new THREE.Vector3(0, 0, 0))).toContain(0);
+    expect(index.queryBounds(scaled, 0)).toEqual([]);
+  });
+
+  it('rebuilds cell size when a single brush grows far past the original grid', () => {
+    const unit = new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5));
+    const index = new BrushSpatialIndex([{ bounds: unit.clone() }], 0.01);
+    const originalCellSize = index.getCellSize();
+    const huge = new THREE.Box3(new THREE.Vector3(-80, -80, -80), new THREE.Vector3(80, 80, 80));
+    index.upsert(0, huge);
+    expect(index.getCellSize()).toBeGreaterThan(originalCellSize * 1.5);
+    expect(index.getOversizedEntryCount()).toBe(0);
+    expect(index.queryPoint(new THREE.Vector3(0, 0, 0))).toContain(0);
+  });
+
+  it('keeps a giant brush queryable among many small neighbors without flooding', () => {
+    const entries = makeSparseGridEntries(64, 5, 1);
+    const pad = 0.01;
+    const index = new BrushSpatialIndex(entries, pad);
+    const giant = new THREE.Box3(new THREE.Vector3(-50, -50, -50), new THREE.Vector3(50, 50, 50));
+    index.upsert(0, giant);
+    const hits = index.queryBounds(entries[10]!.bounds, 10);
+    expect(hits).toContain(0);
+    expect(index.queryPoint(new THREE.Vector3(0, 0, 0))).toContain(0);
+  });
 });
 
 /** Unit tests for overlap graph using a persistent spatial index. */

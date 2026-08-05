@@ -53,15 +53,6 @@ export function setFaceTextureMapsShared(mesh: THREE.Mesh, entries: FaceTextureM
 }
 
 /**
- * Clears all stored face texture maps on a mesh.
- *
- * @param mesh Target mesh.
- */
-export function clearFaceTextureMaps(mesh: THREE.Mesh): void {
-  delete mesh.userData[FACE_TEXTURE_MAPS_USERDATA_KEY];
-}
-
-/**
  * Upserts a mapping entry for a triangle region, replacing overlaps.
  *
  * @param mesh Mesh owning the maps.

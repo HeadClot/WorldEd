@@ -111,20 +111,6 @@ export function bindFloatingPanelToViewports(
 }
 
 /**
- * Sets a snapshot anchor on a floating panel from the current viewport list.
- * Prefer {@link bindFloatingPanelToViewports} so re-open rescans viewports.
- *
- * @param panel Floating panel with setDefaultAnchor.
- * @param viewports Live editor viewports.
- */
-export function applyStartupFloatingPanelAnchor(
-  panel: { setDefaultAnchor: (anchor: HTMLElement | null) => void },
-  viewports: readonly ViewportEditor[],
-): void {
-  panel.setDefaultAnchor(resolveFloatingPanelAnchorElement(viewports));
-}
-
-/**
  * Re-resolves the anchor and repositions after pane geometry has been laid out.
  *
  * @param panel Visible floating panel.

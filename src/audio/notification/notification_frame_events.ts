@@ -61,21 +61,27 @@ export class NotificationFrameEvents {
     this.lastMoveRaiseMs = folded.nowMs;
   }
 
-  /** Raises scale-snap with default pitch (gizmo scale; not bounds travel). */
-  raiseSelectionScaledWithSnapping(): void {
+  /**
+   * Raises scale-snap (or resize-snap) using travel for pitch. Zero travel is
+   * default pitch; larger travel raises pitch the same way for gizmo scale and
+   * bounds face drag.
+   *
+   * @param travelDistance Absolute travel from drag start (scale steps or face
+   *   distance). Defaults to 0 for default pitch.
+   */
+  raiseSelectionScaledWithSnapping(travelDistance = 0): void {
     this.selectionScaledWithSnappingPending = true;
-    this.resizeTravelPending = 0;
+    this.resizeTravelPending = Math.abs(travelDistance);
   }
 
   /**
    * Raises bounds-resize snap using absolute face travel (ruler distance so
-   * far).
+   * far). Shares the scale channel and pitch mapping with gizmo scale.
    *
    * @param travelDistance Absolute applied face displacement from drag start.
    */
   raiseSelectionResizedWithSnapping(travelDistance: number): void {
-    this.selectionScaledWithSnappingPending = true;
-    this.resizeTravelPending = Math.abs(travelDistance);
+    this.raiseSelectionScaledWithSnapping(travelDistance);
   }
 
   /**
@@ -154,9 +160,9 @@ export class NotificationFrameEvents {
   }
 
   /**
-   * Returns absolute bounds face travel for resize pitch (0 = default pitch).
+   * Returns travel used for scale/resize pitch (0 = default pitch).
    *
-   * @returns Ruler-style distance so far, or 0 for plain scale snaps.
+   * @returns Bounds face distance or scale step-travel so far.
    */
   getSelectionResizeTravelSnapshot(): number {
     return this.resizeTravelSnapshot;

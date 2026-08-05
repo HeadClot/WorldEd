@@ -5,7 +5,6 @@ import { SolidModelPanel } from '@/solid/ui/panel/solid_model_panel.js';
 import { SolidModelController } from '@/solid/controller/solid_model_controller.js';
 import { PanelProperties } from '@/ui/properties/panel_properties.js';
 import { SolidOperation } from '@/solid/types/solid_operation.js';
-import { ManagerViewportSync } from '@/layout/viewport/manager_viewport_sync.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import { Viewport3D } from '@/viewports/core/viewport_3d.js';
 import { TextureLockSettings } from '@/texture/lock/texture_lock_settings.js';
@@ -18,7 +17,6 @@ export interface SolidModelLayoutHost {
   propertiesPanel: PanelProperties;
   toolbarContainer: HTMLElement;
   solidPanelAnchor: HTMLElement;
-  viewportSyncManager: ManagerViewportSync;
   /** Perspective viewport when present; solid spawn may fall back elsewhere. */
   viewport3D: Viewport3D | null;
   gridSnap: GridSnap;
@@ -80,9 +78,6 @@ function wireSolidModelController(host: SolidModelLayoutHost, controller: SolidM
   controller.setTextureLockSettings(host.textureLock);
   controller.setActiveCameraProvider(() => host.viewport3D?.getCamera() ?? null);
   controller.setGridIntervalProvider(() => host.gridSnap.getInterval());
-  controller.setOnLiveGeometryUpdated((resultMeshes) => {
-    host.viewportSyncManager.syncMeshGeometriesToClones(resultMeshes);
-  });
 }
 
 /**

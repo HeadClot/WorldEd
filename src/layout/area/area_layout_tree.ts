@@ -14,7 +14,6 @@ import {
   createAreaLeafNode,
   createAreaSplitNode,
   isAreaLeafNode,
-  isAreaSplitNode,
   type AreaLeafNode,
   type AreaSplitNode,
   type AreaTreeNode,
@@ -105,28 +104,6 @@ export function splitAreaLeaf(
   newPayload: AreaLeafPayload,
 ): AreaTreeNode {
   return replaceLeafWithSplit(root, areaId, direction, clampAreaSplitRatio(ratio), newPayload) ?? root;
-}
-
-/**
- * Updates the split ratio for the parent that has `areaId` as first or second
- * child. Prefer {@link setSplitRatioAtPath} for precise control; this walks and
- * sets the nearest split containing the leaf when used after a border drag on a
- * known split.
- *
- * @param root Layout tree root.
- * @param match Predicate selecting the split node to update.
- * @param ratio New ratio.
- * @returns Updated tree root.
- */
-export function updateMatchingSplitRatio(
-  root: AreaTreeNode,
-  match: (node: AreaSplitNode) => boolean,
-  ratio: number,
-): AreaTreeNode {
-  return mapTree(root, (node) => {
-    if (!isAreaSplitNode(node) || !match(node)) return node;
-    return createAreaSplitNode(node.direction, clampAreaSplitRatio(ratio), node.first, node.second);
-  });
 }
 
 /**
@@ -299,21 +276,6 @@ function replaceLeafWithSplit(
   const second = replaceLeafWithSplit(node.second, areaId, direction, ratio, newPayload);
   if (second) return createAreaSplitNode(node.direction, node.ratio, node.first, second);
   return null;
-}
-
-/**
- * Maps every node; match can replace a node in place.
- *
- * @param node Current node.
- * @param mapper Replacement function (return same node to keep).
- * @returns Mapped tree.
- */
-function mapTree(node: AreaTreeNode, mapper: (candidate: AreaTreeNode) => AreaTreeNode): AreaTreeNode {
-  if (isAreaLeafNode(node)) return mapper(node);
-  const mapped = mapper(
-    createAreaSplitNode(node.direction, node.ratio, mapTree(node.first, mapper), mapTree(node.second, mapper)),
-  );
-  return mapped;
 }
 
 /**

@@ -95,16 +95,6 @@ export function areRectsJoinable(first: AreaRect, second: AreaRect): boolean {
 }
 
 /**
- * Returns the absolute area of a rect.
- *
- * @param rect Source rect.
- * @returns Width * height.
- */
-export function areaRectArea(rect: AreaRect): number {
-  return Math.max(0, rect.width) * Math.max(0, rect.height);
-}
-
-/**
  * Clamps a value into an inclusive range.
  *
  * @param value Value to clamp.

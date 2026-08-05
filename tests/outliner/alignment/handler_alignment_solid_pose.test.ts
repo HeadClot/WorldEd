@@ -71,7 +71,6 @@ function createTransformCommitHost(
   finalizeSolidTransforms: (meshes: THREE.Mesh[]) => boolean,
 ): SceneTransformCommitVisualHost {
   return {
-    syncCloneTransformsForWorldObjects: () => undefined,
     syncSelectionVisualsDuringTransform: () => undefined,
     syncPrimitivesToViewports: () => undefined,
     ensureWorldMatricesCurrent: () => undefined,

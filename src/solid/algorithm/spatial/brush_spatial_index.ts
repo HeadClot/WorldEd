@@ -8,9 +8,28 @@ export interface SpatialBoundsEntry {
 }
 
 /**
+ * Maximum grid cells one brush may occupy. Larger AABBs skip the grid and are
+ * tracked as oversized so a single scale drag cannot exhaust Map capacity.
+ */
+const MAX_CELLS_PER_ENTRY = 4096;
+
+/**
+ * Maximum grid cells a bounds query may visit before falling back to a linear
+ * scan of all entries.
+ */
+const MAX_CELLS_PER_QUERY = 8192;
+
+/**
+ * Rebuilds the whole grid when an upsert would span this many cells along any
+ * axis relative to the current cell size, so average cell size can catch up.
+ */
+const REBUILD_SPAN_AXIS_THRESHOLD = 48;
+
+/**
  * Mutable uniform grid over brush AABBs for near-linear point and overlap
  * queries. Supports full rebuild and incremental upsert so live CSG edits do
- * not re-bin every brush each frame.
+ * not re-bin every brush each frame. Brushes that would flood the grid are kept
+ * in an oversized set and always tested by exact bounds.
  */
 export class BrushSpatialIndex {
   private entries: SpatialBoundsEntry[] = [];
@@ -18,6 +37,7 @@ export class BrushSpatialIndex {
   private pad = 0;
   private readonly cells = new Map<bigint, number[]>();
   private readonly cellKeysByIndex = new Map<number, bigint[]>();
+  private readonly oversizedIndices = new Set<number>();
 
   /**
    * Creates a spatial index, optionally populated from bounds entries.
@@ -51,11 +71,30 @@ export class BrushSpatialIndex {
     return this.pad;
   }
 
+  /**
+   * Returns the active grid cell edge length.
+   *
+   * @returns Positive cell size.
+   */
+  getCellSize(): number {
+    return this.cellSize;
+  }
+
+  /**
+   * Returns how many entries are tracked outside the uniform grid.
+   *
+   * @returns Oversized entry count.
+   */
+  getOversizedEntryCount(): number {
+    return this.oversizedIndices.size;
+  }
+
   /** Clears all cells and entries. */
   clear(): void {
     this.entries = [];
     this.cells.clear();
     this.cellKeysByIndex.clear();
+    this.oversizedIndices.clear();
     this.cellSize = 1;
   }
 
@@ -76,8 +115,9 @@ export class BrushSpatialIndex {
   }
 
   /**
-   * Replaces bounds for one prepared index and rebins only that entry. No-op
-   * when the index is out of range.
+   * Replaces bounds for one prepared index and rebins only that entry. Rebuilds
+   * the full grid when the new bounds would span far more cells than the
+   * current cell size allows. No-op when the index is out of range.
    *
    * @param index Prepared brush index.
    * @param bounds New model-space bounds.
@@ -88,6 +128,10 @@ export class BrushSpatialIndex {
     }
     this.removeEntryFromCells(index);
     this.entries[index] = { bounds };
+    if (this.shouldRebuildAfterBoundsChange(bounds)) {
+      this.rebuild(this.entries, this.pad);
+      return;
+    }
     this.insertEntry(index);
   }
 
@@ -126,37 +170,74 @@ export class BrushSpatialIndex {
   }
 
   /**
-   * Grid point query for larger scenes.
+   * Grid point query for larger scenes, always including oversized entries.
    *
    * @param point Sample point.
    * @returns Matching indices.
    */
   private queryPointGrid(point: THREE.Vector3): number[] {
+    const result: number[] = [];
+    const seen = new Set<number>();
+    this.appendOversizedPointHits(point, result, seen);
+    this.appendGridCellPointHits(point, result, seen);
+    return result;
+  }
+
+  /**
+   * Adds oversized entries that contain the point.
+   *
+   * @param point Sample point.
+   * @param result Output indices.
+   * @param seen Dedup set.
+   */
+  private appendOversizedPointHits(point: THREE.Vector3, result: number[], seen: Set<number>): void {
+    for (const index of this.oversizedIndices) {
+      if (this.boundsContainPoint(this.entries[index]!.bounds, point)) {
+        seen.add(index);
+        result.push(index);
+      }
+    }
+  }
+
+  /**
+   * Adds grid-bucket entries that contain the point.
+   *
+   * @param point Sample point.
+   * @param result Output indices.
+   * @param seen Dedup set.
+   */
+  private appendGridCellPointHits(point: THREE.Vector3, result: number[], seen: Set<number>): void {
     const cellX = Math.floor(point.x / this.cellSize);
     const cellY = Math.floor(point.y / this.cellSize);
     const cellZ = Math.floor(point.z / this.cellSize);
     const bucket = this.cells.get(packSpatialCellKey(cellX, cellY, cellZ));
     if (!bucket || bucket.length === 0) {
-      return [];
+      return;
     }
-    const result: number[] = [];
     for (const index of bucket) {
+      if (seen.has(index)) {
+        continue;
+      }
       if (this.boundsContainPoint(this.entries[index]!.bounds, point)) {
+        seen.add(index);
         result.push(index);
       }
     }
-    return result;
   }
 
   /**
-   * Grid bounds query for larger scenes.
+   * Grid bounds query for larger scenes, with linear fallback for huge spans.
    *
    * @param bounds Query bounds.
    * @param excludeIndex Index to skip.
    * @returns Matching indices.
    */
   private queryBoundsGrid(bounds: THREE.Box3, excludeIndex: number): number[] {
+    if (this.cellSpanExceedsLimit(bounds, MAX_CELLS_PER_QUERY)) {
+      return this.queryBoundsLinear(bounds, excludeIndex);
+    }
     const candidates = this.collectCellCandidates(bounds, excludeIndex);
+    this.appendOversizedCandidates(excludeIndex, candidates);
     const result: number[] = [];
     for (const index of candidates) {
       if (this.boundsOverlap(bounds, this.entries[index]!.bounds)) {
@@ -174,21 +255,33 @@ export class BrushSpatialIndex {
    * @returns Candidate indices.
    */
   private collectCellCandidates(bounds: THREE.Box3, excludeIndex: number): number[] {
-    const minX = Math.floor((bounds.min.x - this.pad) / this.cellSize);
-    const minY = Math.floor((bounds.min.y - this.pad) / this.cellSize);
-    const minZ = Math.floor((bounds.min.z - this.pad) / this.cellSize);
-    const maxX = Math.floor((bounds.max.x + this.pad) / this.cellSize);
-    const maxY = Math.floor((bounds.max.y + this.pad) / this.cellSize);
-    const maxZ = Math.floor((bounds.max.z + this.pad) / this.cellSize);
+    const range = this.computePaddedCellRange(bounds);
     const seen = new Set<number>();
-    for (let x = minX; x <= maxX; x++) {
-      for (let y = minY; y <= maxY; y++) {
-        for (let z = minZ; z <= maxZ; z++) {
+    for (let x = range.minX; x <= range.maxX; x++) {
+      for (let y = range.minY; y <= range.maxY; y++) {
+        for (let z = range.minZ; z <= range.maxZ; z++) {
           this.addBucketToSeen(packSpatialCellKey(x, y, z), excludeIndex, seen);
         }
       }
     }
     return Array.from(seen);
+  }
+
+  /**
+   * Adds oversized entry indices into a candidate list without duplicates.
+   *
+   * @param excludeIndex Index to skip.
+   * @param candidates Mutable candidate list.
+   */
+  private appendOversizedCandidates(excludeIndex: number, candidates: number[]): void {
+    const seen = new Set(candidates);
+    for (const index of this.oversizedIndices) {
+      if (index === excludeIndex || seen.has(index)) {
+        continue;
+      }
+      seen.add(index);
+      candidates.push(index);
+    }
   }
 
   /**
@@ -227,7 +320,7 @@ export class BrushSpatialIndex {
   }
 
   /**
-   * Linear bounds query for tiny scenes.
+   * Linear bounds query for tiny scenes or oversized query spans.
    *
    * @param bounds Query bounds.
    * @param excludeIndex Index to skip.
@@ -247,12 +340,17 @@ export class BrushSpatialIndex {
   }
 
   /**
-   * Inserts one entry into every overlapped grid cell.
+   * Inserts one entry into the grid or the oversized set.
    *
    * @param index Entry index.
    */
   private insertEntry(index: number): void {
     const bounds = this.entries[index]!.bounds;
+    if (this.cellSpanExceedsLimit(bounds, MAX_CELLS_PER_ENTRY)) {
+      this.oversizedIndices.add(index);
+      this.cellKeysByIndex.set(index, []);
+      return;
+    }
     const keys = this.enumerateCellKeys(bounds);
     this.cellKeysByIndex.set(index, keys);
     for (const key of keys) {
@@ -261,11 +359,13 @@ export class BrushSpatialIndex {
   }
 
   /**
-   * Removes one entry from every cell it currently occupies.
+   * Removes one entry from every cell it currently occupies and the oversized
+   * set.
    *
    * @param index Entry index.
    */
   private removeEntryFromCells(index: number): void {
+    this.oversizedIndices.delete(index);
     const keys = this.cellKeysByIndex.get(index);
     if (!keys) {
       return;
@@ -283,21 +383,77 @@ export class BrushSpatialIndex {
    * @returns Cell keys.
    */
   private enumerateCellKeys(bounds: THREE.Box3): bigint[] {
-    const minX = Math.floor((bounds.min.x - this.pad) / this.cellSize);
-    const minY = Math.floor((bounds.min.y - this.pad) / this.cellSize);
-    const minZ = Math.floor((bounds.min.z - this.pad) / this.cellSize);
-    const maxX = Math.floor((bounds.max.x + this.pad) / this.cellSize);
-    const maxY = Math.floor((bounds.max.y + this.pad) / this.cellSize);
-    const maxZ = Math.floor((bounds.max.z + this.pad) / this.cellSize);
+    const range = this.computePaddedCellRange(bounds);
     const keys: bigint[] = [];
-    for (let x = minX; x <= maxX; x++) {
-      for (let y = minY; y <= maxY; y++) {
-        for (let z = minZ; z <= maxZ; z++) {
+    for (let x = range.minX; x <= range.maxX; x++) {
+      for (let y = range.minY; y <= range.maxY; y++) {
+        for (let z = range.minZ; z <= range.maxZ; z++) {
           keys.push(packSpatialCellKey(x, y, z));
         }
       }
     }
     return keys;
+  }
+
+  /**
+   * Computes inclusive cell index ranges for padded bounds.
+   *
+   * @param bounds Source bounds.
+   * @returns Inclusive min/max cell indices per axis.
+   */
+  private computePaddedCellRange(bounds: THREE.Box3): {
+    minX: number;
+    minY: number;
+    minZ: number;
+    maxX: number;
+    maxY: number;
+    maxZ: number;
+  } {
+    return {
+      minX: Math.floor((bounds.min.x - this.pad) / this.cellSize),
+      minY: Math.floor((bounds.min.y - this.pad) / this.cellSize),
+      minZ: Math.floor((bounds.min.z - this.pad) / this.cellSize),
+      maxX: Math.floor((bounds.max.x + this.pad) / this.cellSize),
+      maxY: Math.floor((bounds.max.y + this.pad) / this.cellSize),
+      maxZ: Math.floor((bounds.max.z + this.pad) / this.cellSize),
+    };
+  }
+
+  /**
+   * Returns whether padded bounds would cover more than maxCells grid cells.
+   *
+   * @param bounds Brush or query bounds.
+   * @param maxCells Inclusive maximum cell count.
+   * @returns True when the span is too large for safe grid traversal.
+   */
+  private cellSpanExceedsLimit(bounds: THREE.Box3, maxCells: number): boolean {
+    const range = this.computePaddedCellRange(bounds);
+    const countX = range.maxX - range.minX + 1;
+    const countY = range.maxY - range.minY + 1;
+    const countZ = range.maxZ - range.minZ + 1;
+    if (countX <= 0 || countY <= 0 || countZ <= 0) {
+      return false;
+    }
+    if (countX > maxCells || countY > maxCells || countZ > maxCells) {
+      return true;
+    }
+    return countX * countY * countZ > maxCells;
+  }
+
+  /**
+   * Returns whether an upsert should rebuild the full grid so cell size can
+   * grow with a scaled brush.
+   *
+   * @param bounds New bounds for the upserted entry.
+   * @returns True when a full rebuild is cheaper and safer than fine binning.
+   */
+  private shouldRebuildAfterBoundsChange(bounds: THREE.Box3): boolean {
+    const extent = BrushSpatialIndex.boundsMaxExtent(bounds);
+    if (extent <= this.cellSize * REBUILD_SPAN_AXIS_THRESHOLD) {
+      return false;
+    }
+    const rebuiltCellSize = BrushSpatialIndex.chooseCellSize(this.entries);
+    return rebuiltCellSize > this.cellSize * 1.5;
   }
 
   /**
@@ -386,12 +542,21 @@ export class BrushSpatialIndex {
     }
     let totalExtent = 0;
     for (const entry of entries) {
-      const bounds = entry.bounds;
-      const extentX = bounds.max.x - bounds.min.x;
-      const extentY = bounds.max.y - bounds.min.y;
-      const extentZ = bounds.max.z - bounds.min.z;
-      totalExtent += Math.max(extentX, extentY, extentZ, 1e-3);
+      totalExtent += BrushSpatialIndex.boundsMaxExtent(entry.bounds);
     }
     return Math.max(totalExtent / entries.length, 1e-3);
+  }
+
+  /**
+   * Returns the largest axis extent of bounds, floored by a tiny epsilon.
+   *
+   * @param bounds Source bounds.
+   * @returns Positive max extent.
+   */
+  private static boundsMaxExtent(bounds: THREE.Box3): number {
+    const extentX = bounds.max.x - bounds.min.x;
+    const extentY = bounds.max.y - bounds.min.y;
+    const extentZ = bounds.max.z - bounds.min.z;
+    return Math.max(extentX, extentY, extentZ, 1e-3);
   }
 }

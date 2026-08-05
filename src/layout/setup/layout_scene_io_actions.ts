@@ -24,8 +24,8 @@ export interface LayoutSceneRefreshContext {
   worldObject: THREE.Object3D;
   propertiesPanel: PanelProperties;
   /**
-   * Full visual refresh (clones, selection/hulls, CAD rulers, gizmo, outliner).
-   * Must be the same path used after inspector transforms.
+   * Full visual refresh (selection/hulls, CAD rulers, gizmo, outliner). Must be
+   * the same path used after inspector transforms.
    */
   refreshAfterWorldMutation: () => void;
 }

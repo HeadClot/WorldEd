@@ -46,7 +46,7 @@ const BRUSH_DEFAULT_RENDER_ORDER = 2;
  */
 const HULL_FILL_POLYGON_OFFSET_FACTOR = -2;
 
-/** UserData key marking a brush preview that lives in an orthographic 2D clone. */
+/** UserData key marking a brush preview for orthographic always-on-top hulls. */
 export const SOLID_BRUSH_ORTHO_CLONE_USERDATA_KEY = 'solidBrushOrthoClone';
 
 /**
@@ -256,10 +256,11 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Marks a brush preview as a 2D orthographic clone and prepares its materials
-   * so selected hulls are not occluded by solid result depth.
+   * Marks a brush preview for orthographic always-on-top hull presentation and
+   * prepares its materials so selected hulls are not occluded by solid result
+   * depth.
    *
-   * @param mesh Cloned brush preview in a 2D viewport scene.
+   * @param mesh Brush preview mesh to prepare.
    */
   static prepareBrushMeshForOrthoClone(mesh: THREE.Mesh): void {
     if (!this.isBrushObject(mesh)) return;
@@ -270,10 +271,11 @@ export class SolidBrushVisual {
   }
 
   /**
-   * Returns whether a brush mesh is a 2D orthographic viewport clone.
+   * Returns whether a brush mesh uses orthographic always-on-top hull
+   * presentation.
    *
    * @param mesh Candidate brush mesh.
-   * @returns True for ortho clones.
+   * @returns True when the ortho hull presentation flag is set.
    */
   static isOrthoCloneBrush(mesh: THREE.Mesh): boolean {
     return mesh.userData[SOLID_BRUSH_ORTHO_CLONE_USERDATA_KEY] === true;
@@ -333,8 +335,7 @@ export class SolidBrushVisual {
 
   /**
    * Applies depth presentation for a selected or outline-only brush hull. Used
-   * for shared multi-view 2D panes, perspective panes, and legacy ortho
-   * clones.
+   * for shared multi-view orthographic panes and perspective panes.
    *
    * @param mesh Brush preview mesh.
    * @param material Fill material to adjust.

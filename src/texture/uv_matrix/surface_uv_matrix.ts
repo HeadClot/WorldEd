@@ -6,9 +6,6 @@ export const SURFACE_UV_MIN_SCALE = 1e-4;
 /** Quantization step for decomposed rotation (degrees). */
 const ROTATION_SNAP_STEP = 1e-4;
 
-/** Quantization step for decomposed scale. */
-const SCALE_SNAP_STEP = 1e-4;
-
 /** Quantization step for decomposed translation. */
 const TRANSLATION_SNAP_STEP = 1 / 32768;
 
@@ -58,8 +55,10 @@ export class SurfaceUvMatrix {
    * @param translation UV translation (added after scale/rotate).
    * @param faceNormal Unit face normal used to orient the plane basis.
    * @param rotationDeg Rotation of U/V around the face normal in degrees.
-   * @param scaleU Absolute UV scale along U (min SURFACE_UV_MIN_SCALE).
-   * @param scaleV Absolute UV scale along V (min SURFACE_UV_MIN_SCALE).
+   * @param scaleU Signed UV scale along U (min |scale| SURFACE_UV_MIN_SCALE;
+   *   negative mirrors U).
+   * @param scaleV Signed UV scale along V (min |scale| SURFACE_UV_MIN_SCALE;
+   *   negative mirrors V).
    * @returns New UV matrix.
    */
   static fromTrs(
@@ -156,7 +155,9 @@ export class SurfaceUvMatrix {
   }
 
   /**
-   * Unit normal implied by U × V (falls back to +Y when degenerate).
+   * Unit normal implied by U × V (falls back to +Y when degenerate). Negative U
+   * or V scale flips this normal; use {@link planeNormalAlignedTo} when the
+   * geometric face side must be preserved for TRS decompose.
    *
    * @returns Unit plane normal.
    */
@@ -173,43 +174,50 @@ export class SurfaceUvMatrix {
   }
 
   /**
-   * Decomposes this matrix into translation, rotation, and scale relative to a
-   * face normal. Scale is UV units per world unit (inverse of
-   * meters-per-tile).
+   * Returns the UV plane normal oriented onto the same side as a preferred face
+   * normal. Mirroring (negative scale) flips U×V; TRS extract must stay on the
+   * authored face side so scale signs round-trip (Chisel UVMatrix Decompose
+   * recovers signed scale against a stable orientation).
+   *
+   * @param preferredNormal Geometric face or projection normal.
+   * @returns Unit normal for TRS decompose.
+   */
+  planeNormalAlignedTo(preferredNormal: THREE.Vector3): THREE.Vector3 {
+    const preferred = preferredNormal.clone().normalize();
+    if (preferred.lengthSq() < 1e-20) {
+      return this.planeNormal();
+    }
+    const plane = this.planeNormal();
+    if (plane.dot(preferred) < 0) {
+      return plane.multiplyScalar(-1);
+    }
+    return plane;
+  }
+
+  /**
+   * Decomposes this matrix into translation, rotation, and signed scale
+   * relative to a face normal. Scale is UV units per world unit (inverse of
+   * meters-per-tile). Negative scale mirrors that axis (Chisel UVMatrix sign
+   * recovery: prefer rotation in (−90°, 90°] and put 180° flips into scale).
    *
    * @param faceNormal Face normal used for the plane orientation.
    * @returns Decomposed TRS parameters.
    */
   decompose(faceNormal: THREE.Vector3): SurfaceUvMatrixTrs {
-    const reference = buildStableFaceBasis(faceNormal, 0);
     const uDirection = new THREE.Vector3(this.u.x, this.u.y, this.u.z);
     const vDirection = new THREE.Vector3(this.v.x, this.v.y, this.v.z);
-    let scaleU = quantize(uDirection.length(), SCALE_SNAP_STEP);
-    let scaleV = quantize(vDirection.length(), SCALE_SNAP_STEP);
-    scaleU = enforceMinScale(scaleU);
-    scaleV = enforceMinScale(scaleV);
-    const uUnit = uDirection.clone().normalize();
-    const refU = reference.uAxis;
-    const refV = reference.vAxis;
-    const cos = Math.max(-1, Math.min(1, uUnit.dot(refU)));
-    const sin = uUnit.dot(refV);
-    let rotationDeg = quantize(THREE.MathUtils.radToDeg(Math.atan2(sin, cos)), ROTATION_SNAP_STEP);
-    const translationX = quantize(this.u.w, TRANSLATION_SNAP_STEP);
-    const translationY = quantize(this.v.w, TRANSLATION_SNAP_STEP);
-    const rebuilt = SurfaceUvMatrix.fromTrs(
-      new THREE.Vector2(translationX, translationY),
-      faceNormal,
-      rotationDeg,
-      scaleU,
-      scaleV,
-    );
-    if (dotRow(this.v, rebuilt.v) < 0) scaleV = -scaleV;
-    if (dotRow(this.u, rebuilt.u) < 0) scaleU = -scaleU;
+    const magnitudes = measureRowMagnitudes(uDirection, vDirection);
+    const fullRotationDeg = measureUAxisRotationDegrees(uDirection, faceNormal);
+    const folded = foldRotationIntoSignedScale(fullRotationDeg, magnitudes.scaleU);
+    const scaleV = signedScaleAgainstAxis(vDirection, faceNormal, folded.rotationDeg, 'v');
     return {
-      translation: new THREE.Vector2(translationX, translationY),
-      rotationDeg,
-      scaleU,
-      scaleV,
+      translation: new THREE.Vector2(
+        quantize(this.u.w, TRANSLATION_SNAP_STEP),
+        quantize(this.v.w, TRANSLATION_SNAP_STEP),
+      ),
+      rotationDeg: quantize(folded.rotationDeg, ROTATION_SNAP_STEP),
+      scaleU: enforceMinScale(folded.scaleU),
+      scaleV: enforceMinScale(scaleV),
     };
   }
 
@@ -269,7 +277,9 @@ export class SurfaceUvMatrix {
 export interface SurfaceUvMatrixTrs {
   translation: THREE.Vector2;
   rotationDeg: number;
+  /** Signed U matrix scale (negative mirrors U). */
   scaleU: number;
+  /** Signed V matrix scale (negative mirrors V). */
   scaleV: number;
 }
 
@@ -340,6 +350,91 @@ function enforceMinScale(scale: number): number {
 }
 
 /**
+ * Measures positive row magnitudes for U and V direction vectors.
+ *
+ * @param uDirection U row xyz.
+ * @param vDirection V row xyz.
+ * @returns Positive scales before sign recovery.
+ */
+function measureRowMagnitudes(
+  uDirection: THREE.Vector3,
+  vDirection: THREE.Vector3,
+): { scaleU: number; scaleV: number } {
+  return {
+    scaleU: enforceMinScale(uDirection.length()),
+    scaleV: enforceMinScale(vDirection.length()),
+  };
+}
+
+/**
+ * Measures full U-axis rotation relative to the unrotated face basis (−180°,
+ * 180°].
+ *
+ * @param uDirection U row xyz.
+ * @param faceNormal Face normal for the basis.
+ * @returns Rotation degrees of the U direction.
+ */
+function measureUAxisRotationDegrees(uDirection: THREE.Vector3, faceNormal: THREE.Vector3): number {
+  if (uDirection.lengthSq() < 1e-20) {
+    return 0;
+  }
+  const reference = buildStableFaceBasis(faceNormal, 0);
+  const uUnit = uDirection.clone().normalize();
+  const cos = Math.max(-1, Math.min(1, uUnit.dot(reference.uAxis)));
+  const sin = uUnit.dot(reference.vAxis);
+  return THREE.MathUtils.radToDeg(Math.atan2(sin, cos));
+}
+
+/**
+ * Folds 180° U flips into negative scale so rotation stays in (−90°, 90°],
+ * matching Chisel UVMatrix intent to recover negative scale instead of
+ * absorbing it into rotation.
+ *
+ * @param fullRotationDeg Full U-axis rotation (−180°, 180°].
+ * @param positiveScaleU Positive U magnitude.
+ * @returns Folded rotation and signed U scale.
+ */
+function foldRotationIntoSignedScale(
+  fullRotationDeg: number,
+  positiveScaleU: number,
+): { rotationDeg: number; scaleU: number } {
+  let rotationDeg = fullRotationDeg;
+  let scaleU = positiveScaleU;
+  if (rotationDeg > 90) {
+    rotationDeg -= 180;
+    scaleU = -scaleU;
+  } else if (rotationDeg <= -90) {
+    rotationDeg += 180;
+    scaleU = -scaleU;
+  }
+  return { rotationDeg, scaleU };
+}
+
+/**
+ * Returns signed scale for a row against the rotated face basis axis.
+ *
+ * @param direction Row xyz direction.
+ * @param faceNormal Face normal for the basis.
+ * @param rotationDeg Folded rotation degrees.
+ * @param axis Which basis axis to test.
+ * @returns Signed scale with magnitude of the direction.
+ */
+function signedScaleAgainstAxis(
+  direction: THREE.Vector3,
+  faceNormal: THREE.Vector3,
+  rotationDeg: number,
+  axis: 'u' | 'v',
+): number {
+  const magnitude = enforceMinScale(direction.length());
+  if (direction.lengthSq() < 1e-20) {
+    return magnitude;
+  }
+  const basis = buildStableFaceBasis(faceNormal, rotationDeg);
+  const axisVector = axis === 'u' ? basis.uAxis : basis.vAxis;
+  return direction.dot(axisVector) < 0 ? -magnitude : magnitude;
+}
+
+/**
  * Quantizes a value to a step size.
  *
  * @param value Input value.
@@ -348,17 +443,6 @@ function enforceMinScale(scale: number): number {
  */
 function quantize(value: number, step: number): number {
   return Math.round(value / step) * step;
-}
-
-/**
- * Dot product of the xyz parts of two Vector4 rows.
- *
- * @param a First row.
- * @param b Second row.
- * @returns Dot product of direction parts.
- */
-function dotRow(a: THREE.Vector4, b: THREE.Vector4): number {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
 /**

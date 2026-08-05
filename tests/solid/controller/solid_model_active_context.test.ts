@@ -61,6 +61,22 @@ describe('Solid model active context', () => {
     void first;
   });
 
+  it('places an imported solid model without selecting a brush', () => {
+    const world = new THREE.Group();
+    const selection = new ManagerSelection();
+    const panel = new MockSolidPanel();
+    const controller = new SolidModelController(world, new CommandStack(16), selection, panel as never);
+    const existing = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    world.add(existing);
+    selection.selectObject(existing);
+    const model = new SolidModel('VmfImport');
+    model.addBoxBrush(2, SolidOperation.Additive);
+    controller.placeImportedModel(model, 'Imported VMF');
+    expect(world.children.includes(model.root)).toBe(true);
+    expect(selection.getSelectedObjectCount()).toBe(0);
+    expect(panel.getModel()).toBe(model);
+  });
+
   it('adopts a startup solid model already in the world as the active context', () => {
     const world = new THREE.Group();
     const selection = new ManagerSelection();

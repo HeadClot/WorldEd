@@ -123,6 +123,117 @@ export class ManagerFaceSelection {
   }
 
   /**
+   * Selects face seeds in one batch. Ordinary mesh seeds still expand to
+   * coplanar units; solid seeds stay one region each.
+   *
+   * @param seeds Region seeds to select.
+   * @param addToSelection When false, clears the current selection first.
+   */
+  selectFaceSeeds(seeds: FaceSelection[], addToSelection: boolean): void {
+    if (!addToSelection) {
+      this.selectedFaces = [];
+      this.selectedRegionKeys.clear();
+    }
+    let changed = !addToSelection;
+    for (const seed of seeds) {
+      if (this.appendExpandedSeed(seed)) {
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.notifyChange();
+    }
+  }
+
+  /**
+   * Removes every matching face region seed in one batch.
+   *
+   * @param seeds Region seeds to remove.
+   */
+  removeFaceSeeds(seeds: FaceSelection[]): void {
+    let changed = false;
+    for (const seed of seeds) {
+      if (this.removeSeedSilently(seed)) {
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.notifyChange();
+    }
+  }
+
+  /**
+   * Expands and appends one seed without notifying listeners.
+   *
+   * @param seed Face seed from hierarchy or pick.
+   * @returns True when at least one region was newly selected.
+   */
+  private appendExpandedSeed(seed: FaceSelection): boolean {
+    if (this.isSolidResultMesh(seed.mesh)) {
+      return this.appendSolidRegionSilently(seed.mesh, seed.faceIndex);
+    }
+    return this.appendOrdinaryFaceSilently(seed.mesh, seed.faceIndex, true);
+  }
+
+  /**
+   * Removes one seed region without notifying listeners.
+   *
+   * @param seed Face seed to drop.
+   * @returns True when the region was present and removed.
+   */
+  private removeSeedSilently(seed: FaceSelection): boolean {
+    const regionKey = seed.regionKey ?? buildFacePickRegionKey(seed.mesh, seed.faceIndex);
+    if (!this.selectedRegionKeys.has(regionKey)) {
+      return false;
+    }
+    this.selectedRegionKeys.delete(regionKey);
+    this.selectedFaces = this.selectedFaces.filter(
+      (entry) => (entry.regionKey ?? buildFacePickRegionKey(entry.mesh, entry.faceIndex)) !== regionKey,
+    );
+    return true;
+  }
+
+  /**
+   * Adds one solid region when missing.
+   *
+   * @param mesh Solid result mesh.
+   * @param faceIndex Seed triangle.
+   * @returns True when the region was newly added.
+   */
+  private appendSolidRegionSilently(mesh: THREE.Mesh, faceIndex: number): boolean {
+    const regionKey = buildFacePickRegionKey(mesh, faceIndex);
+    if (this.selectedRegionKeys.has(regionKey)) {
+      return false;
+    }
+    this.selectedRegionKeys.add(regionKey);
+    this.selectedFaces.push({ mesh, faceIndex, regionKey });
+    return true;
+  }
+
+  /**
+   * Adds ordinary coplanar (or single) triangles when missing.
+   *
+   * @param mesh Ordinary mesh.
+   * @param faceIndex Seed triangle.
+   * @param expandFace Whether to expand to coplanar triangles.
+   * @returns True when any triangle was newly added.
+   */
+  private appendOrdinaryFaceSilently(mesh: THREE.Mesh, faceIndex: number, expandFace: boolean): boolean {
+    const faceIndices = expandFace ? expandFaceSelectionIndices(mesh, faceIndex) : [faceIndex];
+    let changed = false;
+    for (const index of faceIndices) {
+      const regionKey = buildFacePickRegionKey(mesh, index);
+      if (this.selectedRegionKeys.has(regionKey)) {
+        continue;
+      }
+      this.selectedRegionKeys.add(regionKey);
+      this.selectedFaces.push({ mesh, faceIndex: index, regionKey });
+      changed = true;
+    }
+    return changed;
+  }
+
+  /**
    * Returns the array of currently selected faces (region seeds for solids).
    *
    * @returns The array of face selection entries.
@@ -191,11 +302,9 @@ export class ManagerFaceSelection {
    * @param faceIndex Seed triangle on that region.
    */
   private selectSolidRegion(mesh: THREE.Mesh, faceIndex: number): void {
-    const regionKey = buildFacePickRegionKey(mesh, faceIndex);
-    if (this.selectedRegionKeys.has(regionKey)) return;
-    this.selectedRegionKeys.add(regionKey);
-    this.selectedFaces.push({ mesh, faceIndex, regionKey });
-    this.notifyChange();
+    if (this.appendSolidRegionSilently(mesh, faceIndex)) {
+      this.notifyChange();
+    }
   }
 
   /**
@@ -206,16 +315,7 @@ export class ManagerFaceSelection {
    * @param expandFace Whether to expand to coplanar triangles.
    */
   private selectOrdinaryFace(mesh: THREE.Mesh, faceIndex: number, expandFace: boolean): void {
-    const faceIndices = expandFace ? expandFaceSelectionIndices(mesh, faceIndex) : [faceIndex];
-    let changed = false;
-    for (const index of faceIndices) {
-      const regionKey = buildFacePickRegionKey(mesh, index);
-      if (this.selectedRegionKeys.has(regionKey)) continue;
-      this.selectedRegionKeys.add(regionKey);
-      this.selectedFaces.push({ mesh, faceIndex: index, regionKey });
-      changed = true;
-    }
-    if (changed) {
+    if (this.appendOrdinaryFaceSilently(mesh, faceIndex, expandFace)) {
       this.notifyChange();
     }
   }

@@ -32,15 +32,20 @@ describe('AboutDialog', () => {
 
   it('should start hidden until shown', () => {
     expect(dialog.isOpen()).toBe(false);
+    expect(dialog.isMountedInHost()).toBe(false);
     expect(dialog.getBackdropElement().style.display).toBe('none');
+    expect(host.contains(dialog.getBackdropElement())).toBe(false);
   });
 
   it('should open and close the modal overlay', () => {
     dialog.show();
     expect(dialog.isOpen()).toBe(true);
+    expect(host.contains(dialog.getBackdropElement())).toBe(true);
     expect(dialog.getBackdropElement().style.display).toBe('flex');
     dialog.hide();
     expect(dialog.isOpen()).toBe(false);
+    expect(dialog.isMountedInHost()).toBe(false);
+    expect(host.contains(dialog.getBackdropElement())).toBe(false);
     expect(dialog.getBackdropElement().style.display).toBe('none');
   });
 

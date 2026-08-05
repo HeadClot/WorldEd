@@ -85,7 +85,7 @@ export class HandlerTransform {
   }
 
   /**
-   * Sets a callback invoked after modal commit/cancel so clones and rulers
+   * Sets a callback invoked after modal commit/cancel so overlays and rulers
    * refresh without requiring another pointer event.
    *
    * @param callback Visual refresh hook, or null to clear.

@@ -95,22 +95,3 @@ export function deserializeFaceSurface(data: FaceSurfaceDescriptionSerialized): 
     uv: SurfaceUvMatrix.fromSerialized(data.uv),
   };
 }
-
-/**
- * Returns whether two surfaces match (texture + UV within epsilon).
- *
- * @param a First surface.
- * @param b Second surface.
- * @param epsilon UV component tolerance.
- * @returns True when equal.
- */
-export function faceSurfacesEqual(
-  a: FaceSurfaceDescription,
-  b: FaceSurfaceDescription,
-  epsilon: number = 1e-6,
-): boolean {
-  if ((a.textureId || DEFAULT_CHECKER_TEXTURE_ID) !== (b.textureId || DEFAULT_CHECKER_TEXTURE_ID)) {
-    return false;
-  }
-  return a.uv.equals(b.uv, epsilon);
-}

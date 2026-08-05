@@ -2,42 +2,42 @@ import {
   applyImportOverlayLabelStyles,
   applyImportOverlayPanelStyles,
   applyImportOverlayPercentStyles,
-  applyImportOverlayRootStyles,
   applyImportOverlayTitleStyles,
   buildImportOverlayTrack,
 } from './import_progress_overlay_styles.js';
+import { PanelFloating } from '@/ui/floating_panel/panel_floating.js';
 
 /**
- * Full-screen modal with a left-to-right progress bar for long imports.
- * Designed to update between async yields so the browser stays responsive.
+ * Modal progress dialog with a left-to-right bar for long imports. Windowing
+ * comes from {@link PanelFloating}.
  */
-export class ImportProgressOverlay {
-  private readonly root: HTMLElement;
+export class ImportProgressOverlay extends PanelFloating {
   private readonly titleEl: HTMLElement;
   private readonly labelEl: HTMLElement;
   private readonly barFill: HTMLElement;
   private readonly percentEl: HTMLElement;
-  private mounted = false;
 
   /**
-   * Creates an unmounted progress overlay.
+   * Creates an unopened progress overlay under document.body.
    *
    * @param title Heading text (e.g. "Importing VMF").
    */
   constructor(title: string = 'Importing…') {
-    this.root = document.createElement('div');
+    super(document.body, {
+      corner: 'top-left',
+      modal: true,
+      centered: true,
+      draggable: false,
+      closeOnEscape: false,
+      closeOnBackdropClick: false,
+      stackLayer: 'modal',
+      backdropClassName: 'editor-import-progress-backdrop',
+    });
     this.titleEl = document.createElement('div');
     this.labelEl = document.createElement('div');
     this.barFill = document.createElement('div');
     this.percentEl = document.createElement('div');
     this.buildDom(title);
-  }
-
-  /** Appends the overlay to document.body if not already mounted. */
-  show(): void {
-    if (this.mounted) return;
-    document.body.appendChild(this.root);
-    this.mounted = true;
   }
 
   /**
@@ -56,32 +56,21 @@ export class ImportProgressOverlay {
     }
   }
 
-  /** Removes the overlay from the document. */
-  hide(): void {
-    if (!this.mounted) return;
-    if (this.root.parentNode) {
-      this.root.parentNode.removeChild(this.root);
-    }
-    this.mounted = false;
-  }
-
   /**
-   * Builds overlay DOM structure and styles.
+   * Builds overlay panel chrome inside the floating shell.
    *
    * @param title Heading text.
    */
   private buildDom(title: string): void {
-    applyImportOverlayRootStyles(this.root);
-    const panel = document.createElement('div');
-    applyImportOverlayPanelStyles(panel);
+    applyImportOverlayPanelStyles(this.root);
+    this.root.style.display = 'none';
     applyImportOverlayTitleStyles(this.titleEl, title);
     applyImportOverlayLabelStyles(this.labelEl);
     const track = buildImportOverlayTrack(this.barFill);
     applyImportOverlayPercentStyles(this.percentEl);
-    panel.appendChild(this.titleEl);
-    panel.appendChild(this.labelEl);
-    panel.appendChild(track);
-    panel.appendChild(this.percentEl);
-    this.root.appendChild(panel);
+    this.root.appendChild(this.titleEl);
+    this.root.appendChild(this.labelEl);
+    this.root.appendChild(track);
+    this.root.appendChild(this.percentEl);
   }
 }

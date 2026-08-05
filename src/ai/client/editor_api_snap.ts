@@ -56,19 +56,6 @@ export function snapScaleIfEnabled(host: EditorApiHost, scale: THREE.Vector3): T
 }
 
 /**
- * Snaps a single angle in degrees using the editor rotation snap step.
- *
- * @param host Editor API host.
- * @param degrees Angle in degrees.
- * @returns Snapped angle in degrees (or original when snap is off).
- */
-export function snapDegreesIfEnabled(host: EditorApiHost, degrees: number): number {
-  const radians = THREE.MathUtils.degToRad(degrees);
-  if (!isEditorApiSnapActive(host)) return degrees;
-  return THREE.MathUtils.radToDeg(host.gridSnap.snapAngleRadians(radians));
-}
-
-/**
  * Builds Euler rotation from degrees DTO (preferred) or radians DTO.
  *
  * @param rotationDegrees Optional degrees vec3.

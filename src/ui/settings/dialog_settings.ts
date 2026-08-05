@@ -1,9 +1,9 @@
 import type { EditorSettingsStore } from '@/settings/store/editor_settings_store.js';
 import { SETTINGS_TAB_LABELS, SETTINGS_TAB_ORDER, type SettingsTabId } from '@/settings/store/settings_types.js';
 import { showMessageBox } from '@/ui/dialog/dialog_message_box.js';
+import { PanelFloating } from '@/ui/floating_panel/panel_floating.js';
 import {
   ensureSettingsDialogStyles,
-  styleSettingsBackdrop,
   styleSettingsCloseButton,
   styleSettingsContent,
   styleSettingsHeader,
@@ -29,13 +29,10 @@ export interface SettingsDialogOptions {
 }
 
 /**
- * Toggleable modal settings menu with Games, View, Mouse, Keyboard, and Update
- * tabs, plus a Reset action on the right of the tab bar.
+ * Modal settings window with Games, View, Mouse, Keyboard, and Update tabs.
+ * Windowing comes from {@link PanelFloating}.
  */
-export class DialogSettings {
-  private readonly host: HTMLElement;
-  private readonly backdrop: HTMLElement;
-  private readonly panel: HTMLElement;
+export class DialogSettings extends PanelFloating {
   private readonly tabBar: HTMLElement;
   private readonly contentHost: HTMLElement;
   private readonly tabButtons: Map<SettingsTabId, HTMLButtonElement>;
@@ -46,31 +43,34 @@ export class DialogSettings {
   private readonly updaterTab: SettingsUpdaterTab;
   private readonly onResetAllSettings: (() => void | Promise<void>) | null;
   private readonly unsubscribe: () => void;
-  private readonly boundKeyDown: (event: KeyboardEvent) => void;
   private activeTabId: SettingsTabId;
-  private isVisible: boolean;
   private isDisposed: boolean;
   private isResetInProgress: boolean;
 
   /**
-   * Creates the settings dialog and mounts it under the host.
+   * Creates the settings dialog under the host.
    *
    * @param host Parent element owning the modal overlay.
    * @param store Shared editor settings store.
    * @param options Optional host hooks (reset).
    */
   constructor(host: HTMLElement, store: EditorSettingsStore, options: SettingsDialogOptions = {}) {
-    this.host = host;
-    this.isVisible = false;
+    super(host, {
+      corner: 'top-left',
+      modal: true,
+      centered: true,
+      draggable: false,
+      closeOnEscape: true,
+      closeOnBackdropClick: true,
+      stackLayer: 'modal',
+      backdropClassName: 'settings-dialog-backdrop',
+    });
     this.isDisposed = false;
     this.isResetInProgress = false;
     this.activeTabId = 'games';
     this.tabButtons = new Map();
     this.onResetAllSettings = options.onResetAllSettings ?? null;
-    this.boundKeyDown = (event) => this.handleKeyDown(event);
     ensureSettingsDialogStyles();
-    this.backdrop = document.createElement('div');
-    this.panel = document.createElement('div');
     this.tabBar = document.createElement('div');
     this.contentHost = document.createElement('div');
     this.gamesTab = new SettingsGamesTab(store);
@@ -80,48 +80,20 @@ export class DialogSettings {
     this.updaterTab = new SettingsUpdaterTab(store);
     this.buildDialog();
     this.unsubscribe = store.subscribe(() => this.handleStoreChanged());
-    this.host.appendChild(this.backdrop);
     this.showTab('games');
   }
 
-  /** Shows the settings dialog. */
-  show(): void {
-    if (this.isDisposed || this.isVisible) {
-      return;
-    }
-    this.isVisible = true;
-    this.backdrop.style.display = 'flex';
-    this.restartEntranceAnimation();
-    this.refreshActiveTab();
-    document.addEventListener('keydown', this.boundKeyDown);
-  }
-
-  /** Hides the settings dialog. */
-  hide(): void {
-    if (!this.isVisible) {
-      return;
-    }
-    this.isVisible = false;
-    this.backdrop.style.display = 'none';
-    document.removeEventListener('keydown', this.boundKeyDown);
-  }
-
-  /** Toggles dialog visibility. */
-  toggle(): void {
-    if (this.isVisible) {
-      this.hide();
-      return;
-    }
-    this.show();
-  }
-
   /**
-   * Returns whether the dialog is open.
+   * Returns the modal backdrop element.
    *
-   * @returns True when visible.
+   * @returns Backdrop overlay.
    */
-  isOpen(): boolean {
-    return this.isVisible;
+  override getBackdropElement(): HTMLElement {
+    const backdrop = super.getBackdropElement();
+    if (!backdrop) {
+      throw new Error('Settings dialog requires a modal backdrop');
+    }
+    return backdrop;
   }
 
   /**
@@ -145,25 +117,18 @@ export class DialogSettings {
     });
     this.contentHost.replaceChildren(this.resolveTabElement(tabId));
     this.contentHost.setAttribute('aria-label', SETTINGS_TAB_LABELS[tabId]);
-    if (tabId === 'update') this.updaterTab.activate();
+    if (tabId === 'update') {
+      this.updaterTab.activate();
+    }
   }
 
   /**
-   * Returns the backdrop element for tests.
-   *
-   * @returns Backdrop overlay.
-   */
-  getBackdropElement(): HTMLElement {
-    return this.backdrop;
-  }
-
-  /**
-   * Returns the panel element for tests.
+   * Returns the panel card element for tests.
    *
    * @returns Panel card.
    */
   getPanelElement(): HTMLElement {
-    return this.panel;
+    return this.root;
   }
 
   /**
@@ -176,32 +141,33 @@ export class DialogSettings {
   }
 
   /** Removes the dialog and clears subscriptions. */
-  dispose(): void {
+  override dispose(): void {
     if (this.isDisposed) {
       return;
     }
-    this.hide();
     this.isDisposed = true;
     this.unsubscribe();
     this.updaterTab.dispose();
-    this.backdrop.remove();
+    super.dispose();
   }
 
-  /** Builds the full dialog DOM tree. */
+  /** Refreshes tabs and entrance animation when opened. */
+  protected override onAfterShow(): void {
+    this.refreshActiveTab();
+    this.restartEntranceAnimation();
+  }
+
+  /** Builds the full dialog DOM tree into the floating shell. */
   private buildDialog(): void {
-    styleSettingsBackdrop(this.backdrop);
-    this.backdrop.setAttribute('role', 'dialog');
-    this.backdrop.setAttribute('aria-modal', 'true');
-    this.backdrop.setAttribute('aria-label', 'Settings');
-    styleSettingsPanel(this.panel);
-    this.panel.appendChild(this.buildHeader());
-    this.panel.appendChild(this.buildTabBar());
+    this.root.setAttribute('role', 'dialog');
+    this.root.setAttribute('aria-modal', 'true');
+    this.root.setAttribute('aria-label', 'Settings');
+    styleSettingsPanel(this.root);
+    this.root.style.display = 'none';
+    this.root.appendChild(this.buildHeader());
+    this.root.appendChild(this.buildTabBar());
     styleSettingsContent(this.contentHost);
-    this.panel.appendChild(this.contentHost);
-    this.backdrop.appendChild(this.panel);
-    this.backdrop.addEventListener('pointerdown', (event) => {
-      this.handleBackdropPointerDown(event);
-    });
+    this.root.appendChild(this.contentHost);
   }
 
   /**
@@ -261,24 +227,39 @@ export class DialogSettings {
 
   /** Confirms and runs a full settings reset via the host callback. */
   private async onResetClicked(): Promise<void> {
-    if (this.isDisposed || this.isResetInProgress) return;
-    if (!this.onResetAllSettings) return;
+    if (this.isDisposed || this.isResetInProgress) {
+      return;
+    }
+    if (!this.onResetAllSettings) {
+      return;
+    }
     this.isResetInProgress = true;
     try {
-      const confirmed = await showMessageBox({
-        host: this.host,
-        title: 'Reset All Settings',
-        message:
-          'Are you sure you want to reset all settings to their defaults?\n\nThis permanently clears every saved preference: view options, keyboard/mouse, workspaces and viewport layouts, game profiles, coordinate presets, and related data. Nothing is kept. The editor will reload with factory defaults.',
-        boldMessage: 'Any unsaved changes will be permanently lost.',
-        confirmLabel: 'Yes',
-        cancelLabel: 'No',
-      });
-      if (!confirmed || this.isDisposed) return;
+      const confirmed = await this.confirmResetAllSettings();
+      if (!confirmed || this.isDisposed) {
+        return;
+      }
       await this.onResetAllSettings();
     } finally {
       this.isResetInProgress = false;
     }
+  }
+
+  /**
+   * Shows the reset confirmation message box.
+   *
+   * @returns True when the user confirmed.
+   */
+  private async confirmResetAllSettings(): Promise<boolean> {
+    return showMessageBox({
+      host: this.host,
+      title: 'Reset All Settings',
+      message:
+        'Are you sure you want to reset all settings to their defaults?\n\nThis permanently clears every saved preference: view options, keyboard/mouse, workspaces and viewport layouts, game profiles, coordinate presets, and related data. Nothing is kept. The editor will reload with factory defaults.',
+      boldMessage: 'Any unsaved changes will be permanently lost.',
+      confirmLabel: 'Yes',
+      cancelLabel: 'No',
+    });
   }
 
   /**
@@ -325,56 +306,38 @@ export class DialogSettings {
 
   /** Rebuilds the visible tab after store mutations. */
   private handleStoreChanged(): void {
-    if (!this.isVisible) {
-      this.gamesTab.rebuild();
-      this.viewTab.rebuild();
-      this.keyboardTab.rebuild();
-      this.mouseTab.rebuild();
-      this.updaterTab.rebuild();
+    if (!this.isOpen()) {
+      this.rebuildAllTabs();
       return;
     }
     this.refreshActiveTab();
   }
 
-  /** Rebuilds and re-shows the active tab contents. */
-  private refreshActiveTab(): void {
+  /** Rebuilds every tab without re-selecting content. */
+  private rebuildAllTabs(): void {
     this.gamesTab.rebuild();
     this.viewTab.rebuild();
     this.keyboardTab.rebuild();
     this.mouseTab.rebuild();
     this.updaterTab.rebuild();
+  }
+
+  /** Rebuilds and re-shows the active tab contents. */
+  private refreshActiveTab(): void {
+    this.rebuildAllTabs();
     this.showTab(this.activeTabId);
-  }
-
-  /**
-   * Closes on Escape.
-   *
-   * @param event Keyboard event.
-   */
-  private handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.hide();
-    }
-  }
-
-  /**
-   * Closes when clicking the dimmed backdrop outside the panel.
-   *
-   * @param event Pointer event.
-   */
-  private handleBackdropPointerDown(event: PointerEvent): void {
-    if (event.target === this.backdrop) {
-      this.hide();
-    }
   }
 
   /** Re-triggers entrance animations when reopening. */
   private restartEntranceAnimation(): void {
-    this.backdrop.classList.remove('settings-dialog-backdrop');
-    this.panel.classList.remove('settings-dialog-panel');
-    void this.backdrop.offsetWidth;
-    this.backdrop.classList.add('settings-dialog-backdrop');
-    this.panel.classList.add('settings-dialog-panel');
+    const backdrop = this.getBackdropElement();
+    if (backdrop) {
+      backdrop.classList.remove('settings-dialog-backdrop');
+      void backdrop.offsetWidth;
+      backdrop.classList.add('settings-dialog-backdrop');
+    }
+    this.root.classList.remove('settings-dialog-panel');
+    void this.root.offsetWidth;
+    this.root.classList.add('settings-dialog-panel');
   }
 }

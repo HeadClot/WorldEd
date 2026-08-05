@@ -13,6 +13,7 @@ import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
 import { computeRegionWorldNormal } from '@/texture/uv/planar_uv_projector.js';
 import { readMappingTrs } from '@/texture/uv/uv_trs_ops.js';
 import { isAlignCompatibleWithFace } from '@/texture/uv/uv_trs_ops.js';
+import { createFaceTextureMappingFromTrs, getFaceTextureMappingTrs } from '@/texture/uv/face_texture_mapping.js';
 import { createContentMaterial } from '@/materials/factory_content_material.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
 import { setStateTexturePaintForTests, StateTexturePaint } from '@/texture/paint/state_texture_paint.js';
@@ -66,6 +67,55 @@ describe('UV TRS ops and smart align', () => {
     const span = measureRegionUvSpans(mesh, after!.triangleIndices);
     expect(span.spanU).toBeGreaterThan(0.5);
     expect(span.spanV).toBeGreaterThan(0.5);
+  });
+
+  it('round-trips negative U scale as texture mirror and inverts projected U', () => {
+    const normal = new THREE.Vector3(0, 1, 0);
+    const positive = createFaceTextureMappingFromTrs(
+      DEFAULT_CHECKER_TEXTURE_ID,
+      normal,
+      { scaleU: 2, scaleV: 2, offsetU: 0.25, offsetV: -0.5, rotationDeg: 0 },
+      'face',
+    );
+    const mirrored = createFaceTextureMappingFromTrs(
+      DEFAULT_CHECKER_TEXTURE_ID,
+      normal,
+      { scaleU: -2, scaleV: 2, offsetU: 0.25, offsetV: -0.5, rotationDeg: 0 },
+      'face',
+    );
+    const readBack = getFaceTextureMappingTrs(mirrored, normal);
+    expect(readBack.scaleU).toBeCloseTo(-2, 4);
+    expect(readBack.scaleV).toBeCloseTo(2, 4);
+    expect(readBack.offsetU).toBeCloseTo(0.25, 4);
+    expect(readBack.offsetV).toBeCloseTo(-0.5, 4);
+    const sample = new THREE.Vector3(1, 0, 0.5);
+    const positiveUv = positive.uv.project(sample);
+    const mirroredUv = mirrored.uv.project(sample);
+    expect(mirroredUv.u).toBeCloseTo(-positiveUv.u, 4);
+    expect(mirroredUv.v).toBeCloseTo(positiveUv.v, 4);
+  });
+
+  it('keeps mirror when applying partial negative scale through UV ops', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), createContentMaterial(0x888888));
+    mesh.position.set(0, 1, 0);
+    mesh.updateMatrixWorld(true);
+    initializeMeshTextureUVs(mesh, DEFAULT_CHECKER_TEXTURE_ID);
+    const maps = getFaceTextureMaps(mesh);
+    const floor = maps.find((entry) => {
+      const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
+      return normal.y > 0.9;
+    });
+    expect(floor).toBeDefined();
+    const targets = buildTargetsFromFaceSelection(floor!.triangleIndices.map((faceIndex) => ({ mesh, faceIndex })));
+    applyPartialTrsToTargets(targets, { scaleU: -1.5, scaleV: 2 });
+    const after = getFaceTextureMaps(mesh).find((entry) => {
+      const normal = computeRegionWorldNormal(mesh, entry.triangleIndices);
+      return normal.y > 0.9;
+    });
+    const normal = computeRegionWorldNormal(mesh, after!.triangleIndices);
+    const trs = readMappingTrs(after!.mapping, normal);
+    expect(trs.scaleU).toBeCloseTo(-1.5, 4);
+    expect(trs.scaleV).toBeCloseTo(2, 4);
   });
 
   it('doubles scale independently on multi-selected faces', () => {

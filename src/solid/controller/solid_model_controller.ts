@@ -51,7 +51,7 @@ export class SolidModelController {
   private showStatus: ((message: string) => void) | null;
   private getActiveCamera: (() => THREE.Camera | null) | null;
   private getGridInterval: (() => number) | null;
-  private solidModelCounter: number;
+
   /** True while a live CSG flush is scheduled on requestAnimationFrame. */
   private liveRebuildQueued: boolean;
   /** True while rebuildLive is running (may span multiple frames of wall time). */
@@ -111,7 +111,6 @@ export class SolidModelController {
     this.showStatus = null;
     this.getActiveCamera = null;
     this.getGridInterval = null;
-    this.solidModelCounter = 0;
     this.liveRebuildQueued = false;
     this.liveRebuildInProgress = false;
     this.pendingLiveMeshes = null;
@@ -126,7 +125,7 @@ export class SolidModelController {
   }
 
   /**
-   * Sets a callback that pushes live result geometry into viewport clones.
+   * Sets a callback invoked after live result geometry updates.
    *
    * @param callback Receives updated result meshes after a live rebuild.
    */
@@ -209,24 +208,21 @@ export class SolidModelController {
 
   /** Creates a solid model with one additive box brush and selects that brush. */
   createSolidModel(): void {
-    this.solidModelCounter += 1;
-    const model = new SolidModel(`SolidModel${this.padNumber(this.solidModelCounter)}`);
+    const model = new SolidModel();
     const brush = model.addBoxBrush(SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE, SolidOperation.Additive);
     this.placeModelInScene(model, brush.mesh ?? model.root, `Created ${model.root.name}`);
   }
 
   /**
-   * Adds an already-built solid model (e.g. VMF import) with undo support.
+   * Adds an already-built solid model (e.g. VMF import) with undo support. Does
+   * not change selection so face/UV mode is not left on a random brush.
    *
    * @param model Solid model ready for the scene.
    * @param statusMessage Optional status text after placement.
    */
   placeImportedModel(model: SolidModel, statusMessage?: string): void {
-    this.solidModelCounter += 1;
-    const firstBrush = model.getBrushes()[0];
-    const selectTarget = firstBrush?.mesh ?? model.root;
     const message = statusMessage ?? `Imported ${model.root.name} (${model.getBrushCount()} brushes)`;
-    this.placeModelInScene(model, selectTarget, message);
+    this.placeModelInScene(model, null, message);
   }
 
   /**
@@ -244,22 +240,36 @@ export class SolidModelController {
   }
 
   /**
-   * Pushes a create command, selects a target, and refreshes UI.
+   * Pushes a create command, optionally selects a target, and refreshes UI.
    *
    * @param model Solid model to parent under the world.
-   * @param selectTarget Object to select after placement.
+   * @param selectTarget Mesh to select after placement, or null to clear
+   *   selection (imports).
    * @param statusMessage Status bar text.
    */
-  private placeModelInScene(model: SolidModel, selectTarget: THREE.Object3D, statusMessage: string): void {
+  private placeModelInScene(model: SolidModel, selectTarget: THREE.Object3D | null, statusMessage: string): void {
     const command = new CommandSolidModelCreate(model, this.worldObject);
     this.commandStack.push(command);
-    if (selectTarget instanceof THREE.Mesh) {
-      this.selectionManager.selectObject(selectTarget);
-    }
+    this.applyPlacementSelection(selectTarget);
     this.rememberActiveModel(model);
     this.syncViewports?.();
     this.refreshOutliner?.();
     this.showStatus?.(statusMessage);
+  }
+
+  /**
+   * Applies selection after placing a solid model in the scene.
+   *
+   * @param selectTarget Mesh to select, or null to clear the current selection.
+   */
+  private applyPlacementSelection(selectTarget: THREE.Object3D | null): void {
+    if (selectTarget instanceof THREE.Mesh) {
+      this.selectionManager.selectObject(selectTarget);
+      return;
+    }
+    if (selectTarget === null) {
+      this.selectionManager.clearSelection();
+    }
   }
 
   /** Toggles the solid model panel visibility. */
@@ -599,7 +609,7 @@ export class SolidModelController {
   /**
    * After transform tools or inspector edits finish, finalize affected solids.
    * Uses a light commit when live CSG already updated geometry (avoids a full
-   * second compile and full viewport reclone on pointer-up).
+   * second compile and full viewport visual refresh on pointer-up).
    *
    * @param selectedMeshes Meshes that were edited.
    * @returns True when only solid-model meshes were handled (caller may skip
@@ -1152,7 +1162,8 @@ export class SolidModelController {
    * Returns whether every selected mesh belongs to a solid model hierarchy.
    *
    * @param meshes Selection to inspect.
-   * @returns True when a full world reclone can be skipped after solid commit.
+   * @returns True when a full viewport visual refresh can be skipped after
+   *   solid commit.
    */
   private selectionIsSolidOnly(meshes: THREE.Mesh[]): boolean {
     if (meshes.length === 0) return false;
@@ -1182,15 +1193,5 @@ export class SolidModelController {
     });
     model.root.updateMatrixWorld(true);
     return model.root.worldToLocal(worldPosition.clone());
-  }
-
-  /**
-   * Pads a number to two digits.
-   *
-   * @param value Number to pad.
-   * @returns Zero-padded string.
-   */
-  private padNumber(value: number): string {
-    return value < 10 ? `0${value}` : String(value);
   }
 }

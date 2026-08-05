@@ -194,6 +194,60 @@ describe('PropertiesPanel', () => {
     expect(mesh.position.x).toBe(42.5);
   });
 
+  it('should evaluate math expressions on position submit', () => {
+    const mesh = new THREE.Mesh();
+    const startX = 3;
+    const startY = 7;
+    const startZ = -2;
+    mesh.position.set(startX, startY, startZ);
+    panel.bindObject(mesh);
+    const panelElement = container.children[0] as HTMLElement;
+    const inputs = panelElement.children[0]!.querySelectorAll('input');
+    inputs[0]!.value = '5+5';
+    inputs[0]!.dispatchEvent(new Event('change'));
+    expect(mesh.position.x).toBeCloseTo(10);
+    expect(mesh.position.y).toBeCloseTo(startY);
+    expect(mesh.position.z).toBeCloseTo(startZ);
+    expect(inputs[0]!.value).toBe('10.00');
+  });
+
+  it('should evaluate math expressions on rotation and scale submit', () => {
+    const mesh = new THREE.Mesh();
+    mesh.rotation.set(0, 0, 0);
+    mesh.scale.set(1, 1, 1);
+    panel.bindObject(mesh);
+    const panelElement = container.children[0] as HTMLElement;
+    const rotationInputs = panelElement.children[1]!.querySelectorAll('input');
+    const scaleInputs = panelElement.children[2]!.querySelectorAll('input');
+    rotationInputs[1]!.value = '45*2';
+    rotationInputs[1]!.dispatchEvent(new Event('change'));
+    scaleInputs[2]!.value = '1+1+1';
+    scaleInputs[2]!.dispatchEvent(new Event('change'));
+    expect(THREE.MathUtils.radToDeg(mesh.rotation.y)).toBeCloseTo(90);
+    expect(mesh.scale.z).toBeCloseTo(3);
+    expect(rotationInputs[1]!.value).toBe('90.0');
+    expect(scaleInputs[2]!.value).toBe('3.00');
+  });
+
+  it('should reset illegal position text without changing the scene', () => {
+    const mesh = new THREE.Mesh();
+    const startX = 4.25;
+    const startY = -1.5;
+    const startZ = 8;
+    mesh.position.set(startX, startY, startZ);
+    panel.bindObject(mesh);
+    const panelElement = container.children[0] as HTMLElement;
+    const inputs = panelElement.children[0]!.querySelectorAll('input');
+    inputs[0]!.value = 'not-valid-math';
+    inputs[0]!.dispatchEvent(new Event('change'));
+    expect(mesh.position.x).toBeCloseTo(startX);
+    expect(mesh.position.y).toBeCloseTo(startY);
+    expect(mesh.position.z).toBeCloseTo(startZ);
+    expect(inputs[0]!.value).toBe('4.25');
+    expect(inputs[1]!.value).toBe('-1.50');
+    expect(inputs[2]!.value).toBe('8.00');
+  });
+
   it('should update bound object scale from input change', () => {
     const mesh = new THREE.Mesh();
     mesh.scale.set(1, 1, 1);

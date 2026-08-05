@@ -35,9 +35,15 @@ export interface FaceTextureMapping {
 
 /** TRS fields shown in the UV editor (meters-per-tile scale convention). */
 export interface FaceTextureMappingTrs {
-  /** World meters covered by one texture tile on U. */
+  /**
+   * World meters covered by one texture tile on U. Negative values mirror the
+   * texture along U.
+   */
   scaleU: number;
-  /** World meters covered by one texture tile on V. */
+  /**
+   * World meters covered by one texture tile on V. Negative values mirror the
+   * texture along V.
+   */
   scaleV: number;
   /** UV phase shift along U (meters). */
   offsetU: number;
@@ -102,9 +108,9 @@ export function createDefaultFaceTextureMapping(
 
 /**
  * Builds a face mapping from UV editor TRS fields and a face normal. scaleU/V
- * are meters per tile (Hammer-style); converted to matrix scale. Empty
- * textureId is preserved so applyMappingToTargets can keep each region's
- * assigned texture (UV editor TRS-only edits).
+ * are meters per tile (Hammer-style; negative mirrors that axis); converted to
+ * matrix scale. Empty textureId is preserved so applyMappingToTargets can keep
+ * each region's assigned texture (UV editor TRS-only edits).
  *
  * @param textureId Texture identity, or empty to preserve existing on apply.
  * @param faceNormal Face normal in the matrix space.
@@ -118,14 +124,9 @@ export function createFaceTextureMappingFromTrs(
   trs: FaceTextureMappingTrs,
   align: FaceTextureAlign = 'face',
 ): FaceTextureMappingWithTrs {
-  const metersU = trs.scaleU === 0 ? 1 : trs.scaleU;
-  const metersV = trs.scaleV === 0 ? 1 : trs.scaleV;
-  const matrixScaleU = 1 / metersU;
-  const matrixScaleV = 1 / metersV;
-  const translation = new THREE.Vector2(-trs.offsetU * matrixScaleU, -trs.offsetV * matrixScaleV);
   return withTrsAccessors({
     textureId: normalizeOptionalTextureId(textureId),
-    uv: SurfaceUvMatrix.fromTrs(translation, faceNormal, trs.rotationDeg, matrixScaleU, matrixScaleV),
+    uv: buildUvMatrixFromTrsFields(trs, faceNormal),
     align,
   });
 }
@@ -156,7 +157,7 @@ export function withTrsAccessors(mapping: FaceTextureMapping): FaceTextureMappin
         prop === 'offsetV' ||
         prop === 'rotationDeg'
       ) {
-        return getFaceTextureMappingTrs(obj, DEFAULT_TRS_NORMAL)[prop];
+        return getFaceTextureMappingTrs(obj, resolveMappingTrsNormal(obj))[prop];
       }
       return Reflect.get(obj, prop);
     },
@@ -168,19 +169,10 @@ export function withTrsAccessors(mapping: FaceTextureMapping): FaceTextureMappin
         prop === 'offsetV' ||
         prop === 'rotationDeg'
       ) {
-        const trs = getFaceTextureMappingTrs(obj, DEFAULT_TRS_NORMAL);
+        const extractNormal = resolveMappingTrsNormal(obj);
+        const trs = getFaceTextureMappingTrs(obj, extractNormal);
         trs[prop as keyof FaceTextureMappingTrs] = value as number;
-        const metersU = trs.scaleU === 0 ? 1 : trs.scaleU;
-        const metersV = trs.scaleV === 0 ? 1 : trs.scaleV;
-        const matrixScaleU = 1 / metersU;
-        const matrixScaleV = 1 / metersV;
-        obj.uv = SurfaceUvMatrix.fromTrs(
-          new THREE.Vector2(-trs.offsetU * matrixScaleU, -trs.offsetV * matrixScaleV),
-          DEFAULT_TRS_NORMAL,
-          trs.rotationDeg,
-          matrixScaleU,
-          matrixScaleV,
-        );
+        obj.uv = buildUvMatrixFromTrsFields(trs, extractNormal);
         return true;
       }
       return Reflect.set(obj, prop, value);
@@ -189,7 +181,26 @@ export function withTrsAccessors(mapping: FaceTextureMapping): FaceTextureMappin
 }
 
 /**
+ * Picks the normal used for proxy TRS accessors: the UV matrix plane when
+ * available, otherwise +Y. Keeps wall/ceiling faces from being mis-read as
+ * floor-space scales (which can flip the U sign).
+ *
+ * @param mapping Mapping whose UV plane is used.
+ * @returns Unit normal for TRS extract/rebuild.
+ */
+function resolveMappingTrsNormal(mapping: FaceTextureMapping): THREE.Vector3 {
+  if (mapping.uv instanceof SurfaceUvMatrix) {
+    const planeNormal = mapping.uv.planeNormal();
+    if (planeNormal.lengthSq() > 1e-20) {
+      return planeNormal;
+    }
+  }
+  return DEFAULT_TRS_NORMAL.clone();
+}
+
+/**
  * Decomposes a mapping into UV editor TRS fields (meters-per-tile scale).
+ * Negative scale preserves texture mirroring along that axis.
  *
  * @param mapping Source mapping.
  * @param faceNormal Face normal for orientation.
@@ -199,11 +210,9 @@ export function getFaceTextureMappingTrs(
   mapping: FaceTextureMapping,
   faceNormal: THREE.Vector3,
 ): FaceTextureMappingTrs {
-  const uLen = Math.hypot(mapping.uv.u.x, mapping.uv.u.y, mapping.uv.u.z) || 1;
-  const vLen = Math.hypot(mapping.uv.v.x, mapping.uv.v.y, mapping.uv.v.z) || 1;
-  const metersU = 1 / uLen;
-  const metersV = 1 / vLen;
   const trs = mapping.uv.decompose(faceNormal);
+  const metersU = matrixScaleToMetersPerTile(trs.scaleU);
+  const metersV = matrixScaleToMetersPerTile(trs.scaleV);
   return {
     scaleU: metersU,
     scaleV: metersV,
@@ -211,6 +220,47 @@ export function getFaceTextureMappingTrs(
     offsetV: -mapping.uv.v.w * metersV,
     rotationDeg: trs.rotationDeg,
   };
+}
+
+/**
+ * Builds a UV matrix from editor meters-per-tile TRS fields.
+ *
+ * @param trs Editor TRS fields.
+ * @param faceNormal Face normal for plane orientation.
+ * @returns Surface UV matrix.
+ */
+function buildUvMatrixFromTrsFields(trs: FaceTextureMappingTrs, faceNormal: THREE.Vector3): SurfaceUvMatrix {
+  const matrixScaleU = metersPerTileToMatrixScale(trs.scaleU);
+  const matrixScaleV = metersPerTileToMatrixScale(trs.scaleV);
+  const translation = new THREE.Vector2(-trs.offsetU * matrixScaleU, -trs.offsetV * matrixScaleV);
+  return SurfaceUvMatrix.fromTrs(translation, faceNormal, trs.rotationDeg, matrixScaleU, matrixScaleV);
+}
+
+/**
+ * Converts meters-per-tile editor scale to matrix UV scale (1 / meters). Sign
+ * is preserved so negative meters-per-tile mirrors the texture.
+ *
+ * @param metersPerTile Editor scale (zero/non-finite becomes 1).
+ * @returns Matrix scale.
+ */
+function metersPerTileToMatrixScale(metersPerTile: number): number {
+  if (!Number.isFinite(metersPerTile) || metersPerTile === 0) {
+    return 1;
+  }
+  return 1 / metersPerTile;
+}
+
+/**
+ * Converts signed matrix UV scale back to meters-per-tile for the UV editor.
+ *
+ * @param matrixScale Matrix scale from decompose (zero/non-finite becomes 1).
+ * @returns Editor meters-per-tile scale with mirror sign preserved.
+ */
+function matrixScaleToMetersPerTile(matrixScale: number): number {
+  if (!Number.isFinite(matrixScale) || matrixScale === 0) {
+    return 1;
+  }
+  return 1 / matrixScale;
 }
 
 /**
@@ -294,25 +344,6 @@ export function deserializeFaceTextureMapping(
     return withTrsAccessors(restored);
   }
   return migrateLegacyPlanarMapping(record, faceNormal);
-}
-
-/**
- * Returns whether two mappings match (texture + UV within epsilon).
- *
- * @param a First mapping.
- * @param b Second mapping.
- * @param epsilon UV component tolerance.
- * @returns True when equal.
- */
-export function faceTextureMappingsEqual(
-  a: FaceTextureMapping,
-  b: FaceTextureMapping,
-  epsilon: number = 1e-6,
-): boolean {
-  if ((a.textureId || DEFAULT_CHECKER_TEXTURE_ID) !== (b.textureId || DEFAULT_CHECKER_TEXTURE_ID)) {
-    return false;
-  }
-  return a.uv.equals(b.uv, epsilon);
 }
 
 /**

@@ -23,27 +23,6 @@ export function isSkippedVolumeMaterial(materialName: string): boolean {
 }
 
 /**
- * Returns true when the material is collision / clip only.
- *
- * @param materialName Material path.
- * @returns True for clip-like tools textures.
- */
-export function isCollisionOnlyMaterial(materialName: string): boolean {
-  const name = normalizeVmfMaterialName(materialName);
-  return COLLISION_ONLY_MATERIALS.has(name);
-}
-
-/**
- * Returns true when the material is nodraw (still solid, not textured).
- *
- * @param materialName Material path.
- * @returns True for nodraw.
- */
-export function isNodrawMaterial(materialName: string): boolean {
-  return normalizeVmfMaterialName(materialName) === 'TOOLS/TOOLSNODRAW';
-}
-
-/**
  * Converts a VMF material path into a durable texture identity string.
  *
  * @param materialName Material path.
@@ -77,14 +56,5 @@ const SKIPPED_VOLUME_MATERIALS = new Set([
   'TOOLS/TOOLS2DSKYBOX',
   'TOOLS/TOOLSSKYFOG',
   'TOOLS/TOOLSFOGVOLUME',
-  'TOOLS/TOOLS_XOGVOLUME',
-]);
-
-const COLLISION_ONLY_MATERIALS = new Set([
-  'TOOLS/TOOLSCLIP',
-  'TOOLS/TOOLSNPCCLIP',
-  'TOOLS/TOOLSPLAYERCLIP',
-  'TOOLS/TOOLSGRENDADECLIP',
-  'TOOLS/TOOLSSTAIRS',
   'TOOLS/TOOLS_XOGVOLUME',
 ]);

@@ -6,7 +6,9 @@ import { SelectionClickThrough } from '@/selection/object/selection_click_throug
 /**
  * First-person flying camera for the 3D viewport. Look and WASD/QE movement
  * only apply while the right mouse button is held (or middle mouse for pan).
- * This prevents camera drift and tool-key conflicts.
+ * This prevents camera drift and tool-key conflicts. Movement keys are read
+ * through {@link ManagerInput.isKeyDown} layout-stable codes (same path as
+ * shortcuts and axis lock), so labeled W/A/S/D/Q/E work on QWERTZ and AZERTY.
  */
 export class CameraFlying {
   private canvas: HTMLElement;
@@ -344,7 +346,8 @@ export class CameraFlying {
   }
 
   /**
-   * Applies WASD/QE translation relative to the current view.
+   * Applies WASD/QE translation relative to the current view using
+   * layout-stable letter codes from the shared input manager.
    *
    * @param deltaTime Frame delta in seconds.
    * @param forward Current forward direction.
@@ -353,18 +356,48 @@ export class CameraFlying {
     const right = this.getRight();
     const worldUp = new THREE.Vector3(0, 1, 0);
     const moveAmount = this.resolveFlyMoveAmount(deltaTime);
+    this.applyFlyForwardBack(moveAmount, forward);
+    this.applyFlyStrafe(moveAmount, right);
+    this.applyFlyVertical(moveAmount, worldUp);
+  }
+
+  /**
+   * Applies forward and back fly translation for layout-stable W and S.
+   *
+   * @param moveAmount World units to move this frame.
+   * @param forward Current forward direction.
+   */
+  private applyFlyForwardBack(moveAmount: number, forward: THREE.Vector3): void {
     if (this.inputManager.isKeyDown('KeyW')) {
       this.camera.position.addScaledVector(forward, moveAmount);
     }
     if (this.inputManager.isKeyDown('KeyS')) {
       this.camera.position.addScaledVector(forward, -moveAmount);
     }
+  }
+
+  /**
+   * Applies left and right fly translation for layout-stable A and D.
+   *
+   * @param moveAmount World units to move this frame.
+   * @param right Current camera right direction.
+   */
+  private applyFlyStrafe(moveAmount: number, right: THREE.Vector3): void {
     if (this.inputManager.isKeyDown('KeyA')) {
       this.camera.position.addScaledVector(right, -moveAmount);
     }
     if (this.inputManager.isKeyDown('KeyD')) {
       this.camera.position.addScaledVector(right, moveAmount);
     }
+  }
+
+  /**
+   * Applies up and down fly translation for layout-stable Q and E.
+   *
+   * @param moveAmount World units to move this frame.
+   * @param worldUp World up direction.
+   */
+  private applyFlyVertical(moveAmount: number, worldUp: THREE.Vector3): void {
     if (this.inputManager.isKeyDown('KeyQ')) {
       this.camera.position.addScaledVector(worldUp, -moveAmount);
     }

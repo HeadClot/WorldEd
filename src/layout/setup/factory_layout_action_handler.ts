@@ -13,7 +13,7 @@ import { AlignmentAxis } from '@/types/alignment_axis.js';
 export interface ActionHandlerSharedCallbacks {
   syncViewports: () => void;
   /**
-   * Shared pose-commit refresh (solid CSG finalize + clones). Required for
+   * Shared pose-commit refresh (solid CSG finalize and overlays). Required for
    * alignment so brush wireframes cannot drift from compiled solid geometry.
    */
   afterTransformCommit: (objects: readonly THREE.Object3D[]) => void;

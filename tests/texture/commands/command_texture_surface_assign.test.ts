@@ -9,6 +9,7 @@ import {
   FaceTextureMappingTrs,
   getFaceTextureMappingTrs,
 } from '@/texture/uv/face_texture_mapping.js';
+import { computeRegionWorldNormal } from '@/texture/uv/planar_uv_projector.js';
 import { createContentMaterial } from '@/materials/factory_content_material.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
 import { setStateTexturePaintForTests, StateTexturePaint } from '@/texture/paint/state_texture_paint.js';
@@ -66,7 +67,8 @@ describe('CommandTextureSurfaceAssign', () => {
     command.execute();
     getFaceTextureMaps(mesh).forEach((entry) => {
       expect(entry.mapping.textureId).toBe('floor.png');
-      expect(getFaceTextureMappingTrs(entry.mapping, new THREE.Vector3(0, 1, 0)).scaleU).toBe(2.5);
+      const faceNormal = computeRegionWorldNormal(mesh, entry.triangleIndices);
+      expect(getFaceTextureMappingTrs(entry.mapping, faceNormal).scaleU).toBeCloseTo(2.5, 4);
     });
   });
 });

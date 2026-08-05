@@ -1,6 +1,5 @@
 /** Numeric tolerances for solid CSG classification and vertex welding. */
 export const SOLID_FAT_PLANE_EPSILON = 0.0006;
-export const SOLID_EDGE_EPSILON = 0.0006;
 /** Vertex equal epsilon: base 0.005 scaled by 2.5 (0.0125). */
 export const SOLID_VERTEX_EQUAL_EPSILON = 0.005 * 2.5;
 export const SOLID_SQR_VERTEX_EQUAL_EPSILON = SOLID_VERTEX_EQUAL_EPSILON * SOLID_VERTEX_EQUAL_EPSILON;

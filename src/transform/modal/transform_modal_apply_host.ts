@@ -64,10 +64,11 @@ export interface TransformModalApplyHost {
   reapplyMouseDrivenTransform(): void;
 
   /**
-   * Applies a typed numeric value along the effective axis.
+   * Applies a typed numeric value along the effective axis, or free uniform
+   * scale when the axis is None during single-use scale.
    *
    * @param value Parsed numeric value.
-   * @param axis Effective single axis.
+   * @param axis Effective single axis, or None for free scale.
    * @returns True when the value was applied.
    */
   applyNumericValue(value: number, axis: TransformModalAxis): boolean;

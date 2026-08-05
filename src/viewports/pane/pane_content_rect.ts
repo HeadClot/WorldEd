@@ -11,9 +11,6 @@ export interface PaneLogicalRect {
   height: number;
 }
 
-/** @deprecated Alias kept for call-site clarity; same as PaneLogicalRect. */
-export type PaneDeviceRect = PaneLogicalRect;
-
 /** Axis-aligned rectangle in CSS pixels relative to a reference top-left. */
 export interface PaneCssRect {
   left: number;
@@ -58,17 +55,6 @@ export function measureRelativeCssRectInto(
   out.width = Math.max(0, target.width);
   out.height = Math.max(0, target.height);
   return out;
-}
-
-/**
- * Measures a content element relative to a canvas in CSS pixels.
- *
- * @param contentElement Pane content hit target.
- * @param canvas Shared WebGL canvas.
- * @returns CSS rect relative to the canvas.
- */
-export function measurePaneCssRect(contentElement: HTMLElement, canvas: HTMLCanvasElement): PaneCssRect {
-  return measureRelativeCssRect(contentElement, canvas);
 }
 
 /**
@@ -166,46 +152,13 @@ export function measurePaneLogicalRectAgainst(
 }
 
 /**
- * Measures a pane content element as a logical scissor/viewport rect using the
- * canvas client box as origin and size.
- *
- * @param contentElement Pane content hit target.
- * @param canvas Shared WebGL canvas.
- * @returns Logical rect for setScissor / setViewport.
- */
-export function measurePaneLogicalRect(contentElement: HTMLElement, canvas: HTMLCanvasElement): PaneLogicalRect {
-  const width = Math.max(canvas.clientWidth, 1);
-  const height = Math.max(canvas.clientHeight, 1);
-  return cssRectToLogicalRect(measurePaneCssRect(contentElement, canvas), width, height);
-}
-
-/**
- * @deprecated Use {@link measurePaneLogicalRect}.
- * @param contentElement Pane content hit target.
- * @param canvas Shared WebGL canvas.
- * @returns Logical rect.
- */
-export function measurePaneDeviceRect(contentElement: HTMLElement, canvas: HTMLCanvasElement): PaneLogicalRect {
-  return measurePaneLogicalRect(contentElement, canvas);
-}
-
-/**
  * Returns whether a viewport rect has a positive drawable area.
  *
- * @param rect Logical or device rect to test.
+ * @param rect Logical rect to test.
  * @returns True when width and height are both positive.
  */
 export function isDrawableRect(rect: PaneLogicalRect): boolean {
   return rect.width > 0 && rect.height > 0;
-}
-
-/**
- * @deprecated Use {@link isDrawableRect}.
- * @param rect Rect to test.
- * @returns True when drawable.
- */
-export function isDrawableDeviceRect(rect: PaneLogicalRect): boolean {
-  return isDrawableRect(rect);
 }
 
 /**

@@ -40,7 +40,6 @@ class MockViewport {
  */
 function createSyncManagerStub(worldMeshes: THREE.Mesh[]): ManagerViewportSync {
   return {
-    findCloneMeshesForWorldUuid: () => [],
     getWorldSelectableMeshes: () => worldMeshes.slice(),
     getWorldObject: () => null,
   } as unknown as ManagerViewportSync;
@@ -86,7 +85,7 @@ describe('SelectionVisualController', () => {
     expect(outline.position.x).toBe(0);
   });
 
-  it('should reapply outlines after viewport clone rebuild', () => {
+  it('should reapply outlines after viewport selectable refresh', () => {
     selectionManager.selectObject(mesh);
     controller.reapplyAfterViewportSync();
     const hasOutline = mesh.children.some((child) => child.userData[SELECTION_HIGHLIGHT_USERDATA_KEY] === true);

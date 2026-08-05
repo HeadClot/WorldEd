@@ -22,9 +22,11 @@ export type MenuContextItem =
     };
 
 /**
- * Floating context menu built on the shared {@link MenuPanel} system used by
- * File / Edit toolbar menus (same chrome, separators, hover, and stacking).
- * Auto-hides after selection, outside click, or Escape.
+ * Floating context menu built on the shared {@link PanelMenu} base used by File
+ * / Edit toolbar menus (same chrome, separators, hover, stacking, and
+ * open/close mount lifecycle). Uses {@link PanelMenu.openAt} so the shell is
+ * mounted only while open and removed from the document when closed. Auto-hides
+ * after selection, outside click, or Escape.
  */
 export class MenuContext {
   private panel: PanelMenu;
@@ -37,8 +39,7 @@ export class MenuContext {
    * Creates a new context menu component.
    *
    * @param _container Legacy host argument retained for call-site
-   *   compatibility. The panel mounts on document.body when shown (same as
-   *   toolbar menus).
+   *   compatibility. Mount lifecycle is owned by {@link PanelMenu} via openAt.
    * @param items The menu items to display.
    */
   constructor(_container: HTMLElement, items: MenuContextItem[]) {

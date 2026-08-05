@@ -1,6 +1,9 @@
 import type * as THREE from 'three';
 
-/** Callbacks that keep solid geometry, clones, and rulers in sync during a drag. */
+/**
+ * Callbacks that keep solid geometry, outlines, and rulers in sync during a
+ * drag.
+ */
 export interface LayoutTransformLiveVisualsCallbacks {
   /**
    * Live solid CSG / brush geometry update for the current selection meshes.
@@ -9,7 +12,7 @@ export interface LayoutTransformLiveVisualsCallbacks {
    */
   onTransformsLive?: (meshes: THREE.Mesh[]) => void;
   /**
-   * Clone transforms, selection outlines, and related overlay sync.
+   * Selection outlines and related overlay sync during a live pose edit.
    *
    * @param transformTargets Objects receiving pose edits.
    * @param selectedMeshes Current selection meshes.
@@ -34,7 +37,7 @@ export interface LayoutTransformLiveVisualsSelection {
 }
 
 /**
- * Publishes live solid CSG, clone/outline sync, and ruler feedback after a pose
+ * Publishes live solid CSG, outline sync, and ruler feedback after a pose
  * sample (pointer move or modal keyboard axis/numeric edit).
  *
  * @param callbacks Layout live visual sinks.

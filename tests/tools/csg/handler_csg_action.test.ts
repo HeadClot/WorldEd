@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { HandlerCsgAction } from '@/tools/csg/handler_csg_action.js';
+import { HandlerCsgAction, resolveMeshCsgResultName } from '@/tools/csg/handler_csg_action.js';
 import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { CommandStack } from '@/commands/command_stack.js';
 import { CsgOperation } from '@/csg/csg_boolean_ops.js';
 import { SOLID_BRUSH_USERDATA_KEY } from '@/solid/model/solid_brush_visual.js';
 import { SOLID_MODEL_RESULT_USERDATA_KEY } from '@/solid/model/solid_model.js';
+import { hierarchyNameAllocator } from '@/utils/utils_hierarchy_name_allocator.js';
 
 describe('CsgActionHandler', () => {
   let world: THREE.Group;
@@ -23,6 +24,7 @@ describe('CsgActionHandler', () => {
     handler.setShowStatus((message) => {
       statusMessages.push(message);
     });
+    hierarchyNameAllocator.reset();
   });
 
   it('allows mesh CSG when two regular meshes are selected', () => {
@@ -82,6 +84,26 @@ describe('CsgActionHandler', () => {
     expect(handler.canRunMeshBoolean()).toBe(false);
     handler.runBoolean(CsgOperation.UNION);
     expect(commandStack.getUndoCount()).toBe(0);
+  });
+
+  it('keeps the primary mesh name on the boolean result', () => {
+    const meshA = createRegularMesh('House');
+    const meshB = createRegularMesh('Hole Thing');
+    meshB.position.set(0.25, 0, 0);
+    world.add(meshA);
+    world.add(meshB);
+    selectionManager.setSelection([meshA, meshB]);
+    handler.runBoolean(CsgOperation.SUBTRACT);
+    const result = world.children.find((child) => child instanceof THREE.Mesh);
+    expect(result).toBeDefined();
+    expect(result!.name).toBe('House');
+  });
+
+  it('resolves CSG result names from the primary mesh', () => {
+    const named = createRegularMesh('House');
+    expect(resolveMeshCsgResultName(named)).toBe('House');
+    const unnamed = createRegularMesh('');
+    expect(resolveMeshCsgResultName(unnamed)).toMatch(/^Object\.[0-9A-F]{3,5}$/);
   });
 });
 

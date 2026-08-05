@@ -137,19 +137,81 @@ export class TransformCommandPusher {
   }
 
   /**
-   * Creates and pushes a rotate command that commits the live final pose.
+   * Creates and pushes a rotate command that commits the live final pose. Pose
+   * change is the gate so exact typed angles still get undo when angle snap
+   * would round the stored metadata angle to zero.
    *
    * @param selectedObjects The objects that were rotated.
    */
   private pushRotateCommand(selectedObjects: THREE.Object3D[]): void {
-    const snappedAngle = this.transformExecutor.getGridSnap().snapAngleRadians(this.session.dragRotationAngle);
-    if (Math.abs(snappedAngle) < 1e-8) return;
     const snapshots = this.buildRotationSnapshots(selectedObjects);
+    if (!this.rotationSnapshotsHaveChange(snapshots)) {
+      return;
+    }
     const axisVector = this.resolveRotateCommandAxisVector();
+    const commandAngle = this.resolveRotateCommandAngleRadians();
     this.pushTextureAwareCommand(
-      new CommandTransformRotate(snapshots, this.session.dragPivot, axisVector, snappedAngle),
+      new CommandTransformRotate(snapshots, this.session.dragPivot, axisVector, commandAngle),
       selectedObjects,
     );
+  }
+
+  /**
+   * Returns whether any rotation snapshot differs from its pre-drag pose.
+   *
+   * @param snapshots Rotation snapshots with original and final poses.
+   * @returns True when at least one object rotated or orbited.
+   */
+  private rotationSnapshotsHaveChange(snapshots: ObjectRotationSnapshot[]): boolean {
+    return snapshots.some((snapshot) => this.rotationSnapshotHasChange(snapshot));
+  }
+
+  /**
+   * Returns whether one rotation snapshot differs from its pre-drag pose.
+   *
+   * @param snapshot Rotation snapshot with original and final poses.
+   * @returns True when position or orientation changed.
+   */
+  private rotationSnapshotHasChange(snapshot: ObjectRotationSnapshot): boolean {
+    const finalPosition = snapshot.finalPosition;
+    const finalQuaternion = snapshot.finalQuaternion;
+    if (!finalPosition || !finalQuaternion) {
+      return Math.abs(this.session.dragRotationAngle) > 1e-8;
+    }
+    if (snapshot.originalPosition.distanceToSquared(finalPosition) > 1e-12) {
+      return true;
+    }
+    return this.quaternionDistanceSquared(snapshot.originalQuaternion, finalQuaternion) > 1e-12;
+  }
+
+  /**
+   * Measures squared distance between two unit quaternions (shortest arc).
+   *
+   * @param a First quaternion.
+   * @param b Second quaternion.
+   * @returns Squared chord length between a and b on the unit sphere.
+   */
+  private quaternionDistanceSquared(a: THREE.Quaternion, b: THREE.Quaternion): number {
+    const dot = Math.abs(a.dot(b));
+    const clamped = Math.min(1, Math.max(0, dot));
+    const oneMinus = 1 - clamped;
+    return oneMinus * oneMinus;
+  }
+
+  /**
+   * Resolves the angle stored on the rotate undo command. Prefers grid-snapped
+   * angle for mouse drags; falls back to the live drag angle when snap would
+   * discard a real pose change (exact numeric entry with snap enabled).
+   *
+   * @returns Angle in radians for command metadata and axis-angle fallback.
+   */
+  private resolveRotateCommandAngleRadians(): number {
+    const liveAngle = this.session.dragRotationAngle;
+    const snappedAngle = this.transformExecutor.getGridSnap().snapAngleRadians(liveAngle);
+    if (Math.abs(snappedAngle) > 1e-8) {
+      return snappedAngle;
+    }
+    return liveAngle;
   }
 
   /**
@@ -168,17 +230,21 @@ export class TransformCommandPusher {
   }
 
   /**
-   * Creates and pushes a scale command that commits the live final pose.
+   * Creates and pushes a scale command that commits the live final pose. Pose
+   * change is the gate so exact typed factors still get undo when scale snap
+   * would round the stored metadata factor to one.
    *
    * @param pivot The scale pivot point (unused; drag pivot is committed).
    * @param selectedObjects The objects that were scaled.
    */
   private pushScaleCommand(pivot: THREE.Vector3, selectedObjects: THREE.Object3D[]): void {
     void pivot;
-    const snappedFactor = this.transformExecutor.getGridSnap().snapScaleFactor(this.session.dragScaleFactor);
-    if (Math.abs(snappedFactor - 1) < 1e-8) return;
     const snapshots = this.buildScaleSnapshots(selectedObjects);
+    if (!this.scaleSnapshotsHaveChange(snapshots)) {
+      return;
+    }
     const axisVector = this.resolveScaleCommandAxisVector();
+    const commandFactor = this.resolveScaleCommandFactor();
     const gizmoAxis =
       this.session.activeAxis === GizmoAxis.X ||
       this.session.activeAxis === GizmoAxis.Y ||
@@ -186,9 +252,53 @@ export class TransformCommandPusher {
         ? this.session.activeAxis
         : GizmoAxis.X;
     this.pushTextureAwareCommand(
-      new CommandTransformScale(snapshots, this.session.dragPivot, axisVector, snappedFactor, gizmoAxis),
+      new CommandTransformScale(snapshots, this.session.dragPivot, axisVector, commandFactor, gizmoAxis),
       selectedObjects,
     );
+  }
+
+  /**
+   * Returns whether any scale snapshot differs from its pre-drag pose.
+   *
+   * @param snapshots Scale snapshots with original and final poses.
+   * @returns True when at least one object scaled or moved from the pivot.
+   */
+  private scaleSnapshotsHaveChange(snapshots: ObjectScaleSnapshot[]): boolean {
+    return snapshots.some((snapshot) => this.scaleSnapshotHasChange(snapshot));
+  }
+
+  /**
+   * Returns whether one scale snapshot differs from its pre-drag pose.
+   *
+   * @param snapshot Scale snapshot with original and final poses.
+   * @returns True when position or scale changed.
+   */
+  private scaleSnapshotHasChange(snapshot: ObjectScaleSnapshot): boolean {
+    const finalPosition = snapshot.finalPosition;
+    const finalScale = snapshot.finalScale;
+    if (!finalPosition || !finalScale) {
+      return Math.abs(this.session.dragScaleFactor - 1) > 1e-8;
+    }
+    if (snapshot.originalPosition.distanceToSquared(finalPosition) > 1e-12) {
+      return true;
+    }
+    return snapshot.originalScale.distanceToSquared(finalScale) > 1e-12;
+  }
+
+  /**
+   * Resolves the scale factor stored on the scale undo command. Prefers
+   * grid-snapped factor for mouse drags; falls back to the live drag factor
+   * when snap would discard a real pose change (exact numeric entry).
+   *
+   * @returns Scale factor for command metadata and axis-factor fallback.
+   */
+  private resolveScaleCommandFactor(): number {
+    const liveFactor = this.session.dragScaleFactor;
+    const snappedFactor = this.transformExecutor.getGridSnap().snapScaleFactor(liveFactor);
+    if (Math.abs(snappedFactor - 1) > 1e-8) {
+      return snappedFactor;
+    }
+    return liveFactor;
   }
 
   /**

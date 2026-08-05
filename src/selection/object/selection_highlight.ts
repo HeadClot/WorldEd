@@ -5,7 +5,7 @@ import { GizmoVisualStyle } from '@/transform/gizmo/gizmo_visual_style.js';
 
 /**
  * UserData flag marking a LineSegments object as a selection outline. Used to
- * exclude outlines from viewport clones and raycast targets.
+ * exclude outlines from raycast targets and selection.
  */
 export const SELECTION_HIGHLIGHT_USERDATA_KEY = 'isSelectionHighlight';
 
@@ -128,7 +128,7 @@ export class SelectionHighlight {
   /**
    * Forces every active outline to match its parent mesh transform. Outlines
    * are mesh children so this is normally automatic; calling this after
-   * external transform updates keeps multi-viewport clones consistent.
+   * external transform updates keeps outlines aligned.
    */
   syncTransforms(): void {
     this.highlightMap.forEach((outlineGroup, mesh) => {

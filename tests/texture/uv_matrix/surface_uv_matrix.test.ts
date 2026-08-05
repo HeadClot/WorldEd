@@ -49,6 +49,16 @@ describe('SurfaceUvMatrix', () => {
     expect(trs.translation.y).toBeCloseTo(-0.5, 3);
   });
 
+  it('preserves negative scale signs for UV mirroring on decompose', () => {
+    const normal = new THREE.Vector3(0, 1, 0);
+    const built = SurfaceUvMatrix.fromTrs(new THREE.Vector2(0, 0), normal, 0, -2, 0.5);
+    const trs = built.decompose(normal);
+    expect(trs.scaleU).toBeCloseTo(-2, 3);
+    expect(trs.scaleV).toBeCloseTo(0.5, 3);
+    const rebuilt = SurfaceUvMatrix.fromTrs(trs.translation, normal, trs.rotationDeg, trs.scaleU, trs.scaleV);
+    expect(rebuilt.equals(built, 1e-4)).toBe(true);
+  });
+
   it('matches FaceTextureMapping projection for TRS-built mapping', () => {
     const normal = new THREE.Vector3(0, 0, 1);
     const mapping = createFaceTextureMappingFromTrs(

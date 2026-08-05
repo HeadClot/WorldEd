@@ -61,8 +61,8 @@ export interface LayoutToolEditorSetupDeps {
   onTransformsLive?: (meshes: THREE.Mesh[]) => void;
   onRulerTransformFeedback?: (meshes: THREE.Mesh[], phase: 'begin' | 'move' | 'end') => void;
   /**
-   * Keeps 2D clones, selection outlines, and gizmo glued during live single-use
-   * moves (same contract as gizmo pointer-move).
+   * Keeps selection outlines and gizmo glued during live single-use moves (same
+   * contract as gizmo pointer-move).
    *
    * @param transformTargets Objects receiving pose edits.
    * @param selectedMeshes Current selection meshes (solid live CSG keys off
@@ -1037,7 +1037,7 @@ function handleModalKeyDownWithLiveVisuals(deps: LayoutToolEditorSetupDeps, even
 }
 
 /**
- * Publishes live solid CSG, clone/outline sync, and ruler feedback after a pose
+ * Publishes live solid CSG, outline sync, and ruler feedback after a pose
  * sample (pointer or modal keyboard).
  *
  * @param deps Layout services.

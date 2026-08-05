@@ -19,14 +19,18 @@ export class NotificationGlobal {
 
   /**
    * Marks that the selection was scaled with grid snapping during this frame
-   * interval (gizmo scale; default pitch).
+   * interval. Optional travel drives pitch the same way as bounds resize.
+   *
+   * @param travelDistance Absolute travel from drag start (scale snap steps
+   *   from identity, or 0 for default pitch).
    */
-  static onSelectionScaledWithSnapping(): void {
-    this.raiseIfAudioEnabled(() => notificationFrameEvents.raiseSelectionScaledWithSnapping());
+  static onSelectionScaledWithSnapping(travelDistance = 0): void {
+    this.raiseIfAudioEnabled(() => notificationFrameEvents.raiseSelectionScaledWithSnapping(travelDistance));
   }
 
   /**
    * Marks that the selection was resized with grid snapping (bounds face drag).
+   * Shares the scale/resize pitch channel with gizmo scale.
    *
    * @param travelDistance Absolute face displacement so far (ruler distance).
    */

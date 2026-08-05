@@ -51,6 +51,13 @@ describe('NotificationFrameEvents', () => {
     expect(events.getSelectionResizeTravelSnapshot()).toBe(0);
   });
 
+  it('snapshots scale travel for pitch the same way as resize', () => {
+    events.raiseSelectionScaledWithSnapping(4.5);
+    events.beginFrame();
+    expect(events.hasSelectionScaledWithSnappingSnapshot()).toBe(true);
+    expect(events.getSelectionResizeTravelSnapshot()).toBe(4.5);
+  });
+
   it('snapshots rotate speed EMA after rapid angle steps', () => {
     events.raiseSelectionRotatedWithSnapping(0.15);
     events.raiseSelectionRotatedWithSnapping(0.15);
