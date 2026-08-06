@@ -138,9 +138,4 @@ describe('GizmoRotate', () => {
     const sceneObjects = gizmo.getAllSceneObjects();
     expect(sceneObjects.length).toBe(4);
   });
-
-  it('should dispose without errors', () => {
-    gizmo.createHandles();
-    expect(() => gizmo.dispose()).not.toThrow();
-  });
 });

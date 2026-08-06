@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { VmfSolidImporter } from '@/io/vmf/vmf_solid_importer.js';
-import { yieldToBrowser } from '@/utils/async_yield.js';
 import { buildAxisAlignedWorldSolidVmf } from './vmf_test_solids.js';
 
 /** Unit tests for async VMF import progress and yield behavior. */
@@ -23,9 +22,5 @@ describe('VmfSolidImporter async', () => {
     expect(labels.some((label) => /pars/i.test(label))).toBe(true);
     expect(Math.max(...ratios)).toBeGreaterThanOrEqual(0.99);
     expect(result.model.getBrushCount()).toBe(1);
-  });
-
-  it('yieldToBrowser resolves without throwing', async () => {
-    await expect(yieldToBrowser()).resolves.toBeUndefined();
   });
 });

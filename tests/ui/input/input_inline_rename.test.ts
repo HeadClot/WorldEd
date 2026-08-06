@@ -22,10 +22,6 @@ describe('InputInlineRename', () => {
     }
   });
 
-  it('should create without errors', () => {
-    expect(renameInput).toBeDefined();
-  });
-
   it('should activate and replace text span with input', () => {
     renameInput.activate();
     expect(textSpan.style.display).toBe('none');

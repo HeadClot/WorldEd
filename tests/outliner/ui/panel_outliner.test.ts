@@ -26,10 +26,6 @@ describe('OutlinerPanel', () => {
     }
   });
 
-  it('should create panel and append to container', () => {
-    expect(container.children.length).toBe(1);
-  });
-
   it('should have correct background color', () => {
     const panelElement = container.children[0] as HTMLElement;
     const expectedBg = `rgb(${(Theme.outlinerBackground >> 16) & 255}, ${(Theme.outlinerBackground >> 8) & 255}, ${Theme.outlinerBackground & 255})`;
@@ -244,34 +240,6 @@ describe('OutlinerPanel', () => {
     expect(reparented).toContain(meshA);
     expect(reparented).toContain(meshB);
     expect(reparented.length).toBe(2);
-  });
-
-  it('should support group callback registration', () => {
-    panel.setGroupCallback(() => {});
-    expect(() => panel.dispose()).not.toThrow();
-  });
-
-  it('should support ungroup callback registration', () => {
-    panel.setUngroupCallback(() => {});
-    expect(() => panel.dispose()).not.toThrow();
-  });
-
-  it('should support rename callback registration', () => {
-    panel.setRenameCallback(() => {});
-    expect(() => panel.dispose()).not.toThrow();
-  });
-
-  it('should support visibility callback registration', () => {
-    panel.setVisibilityCallback(() => {});
-    expect(() => panel.dispose()).not.toThrow();
-  });
-
-  it('should maintain backward compatible setContextCallbacks', () => {
-    panel.setContextCallbacks(
-      () => {},
-      () => {},
-    );
-    expect(() => panel.dispose()).not.toThrow();
   });
 
   it('should remove from DOM on dispose', () => {

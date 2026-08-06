@@ -22,11 +22,4 @@ describe('ShadingMode enum', () => {
   it('should contain WIREFRAME_OVERLAY with correct string value', () => {
     expect(ShadingMode.WIREFRAME_OVERLAY).toBe('Wireframe Overlay');
   });
-
-  it('should have enum keys matching expected names', () => {
-    expect(ShadingMode.SOLID).toBeDefined();
-    expect(ShadingMode.WIREFRAME).toBeDefined();
-    expect(ShadingMode.FLAT).toBeDefined();
-    expect(ShadingMode.WIREFRAME_OVERLAY).toBeDefined();
-  });
 });

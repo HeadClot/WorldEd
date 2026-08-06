@@ -2,15 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { HENRYS_TOOLS_DISCORD_URL, PROJECT_DISPLAY_NAME, getAboutLicenseText } from '@/ui/about/about_license_text.js';
 
 describe('about_license_text', () => {
-  it('should expose the project display name', () => {
+  it('should combine third-party MIT licenses with project branding constants', () => {
     expect(PROJECT_DISPLAY_NAME).toBe('AI World Editor');
-  });
-
-  it("should expose the Henry's Tools Discord invite URL", () => {
     expect(HENRYS_TOOLS_DISCORD_URL).toBe('https://discord.gg/sKEvrBwHtq');
-  });
-
-  it('should combine Chisel, RealtimeCSG, SabreCSG, and three.js MIT licenses', () => {
     const text = getAboutLicenseText();
     expect(text).toContain('=== Chisel Editor (MIT) ===');
     expect(text).toContain('=== RealtimeCSG (MIT) ===');

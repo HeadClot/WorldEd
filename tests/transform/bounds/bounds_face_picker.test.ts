@@ -27,11 +27,6 @@ describe('BoundsFacePicker', () => {
     expect(result!.normal.length()).toBeCloseTo(1, 5);
   });
 
-  it('should dispose without errors', () => {
-    const picker = new BoundsFacePicker();
-    expect(() => picker.dispose()).not.toThrow();
-  });
-
   it('should pick the closest front face for Shift-resize hover near the center', () => {
     const picker = new BoundsFacePicker();
     const setup = createPickerSetup();

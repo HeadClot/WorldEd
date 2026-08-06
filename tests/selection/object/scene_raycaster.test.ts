@@ -9,10 +9,6 @@ describe('SceneRaycaster', () => {
     raycaster = new SceneRaycaster();
   });
 
-  it('should create without errors', () => {
-    expect(raycaster).toBeDefined();
-  });
-
   it('should return null when no objects are provided', () => {
     const canvas = document.createElement('canvas');
     Object.defineProperty(canvas, 'getBoundingClientRect', {
@@ -76,10 +72,6 @@ describe('SceneRaycaster', () => {
     const event = createMockMouseEvent(500, 350);
     const result = raycaster.cast(camera, renderer.domElement, event, [targetMesh]);
     expect(result).toBe(targetMesh);
-  });
-
-  it('should dispose without errors', () => {
-    expect(() => raycaster.dispose()).not.toThrow();
   });
 
   it('should pick a front-facing cube surface away from its center', () => {

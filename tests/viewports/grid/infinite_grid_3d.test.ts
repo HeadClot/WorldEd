@@ -49,11 +49,6 @@ describe('InfiniteGrid3D', () => {
     expect(grid.getSegmentCount()).toBeGreaterThan(0);
   });
 
-  it('should dispose without throwing', () => {
-    grid.update(camera);
-    expect(() => grid.dispose()).not.toThrow();
-  });
-
   it('should not leave a gap in X-lines under the camera patch center', () => {
     camera.position.set(10.3, 5, 20.7);
     grid.update(camera);

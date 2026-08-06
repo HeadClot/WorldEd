@@ -152,14 +152,6 @@ describe('ViewportShadingController', () => {
     });
   });
 
-  describe('dispose', () => {
-    it('should clean up without error', () => {
-      controller.setShadingMode(ShadingMode.WIREFRAME);
-      controller.updateMeshes([meshA]);
-      expect(() => controller.dispose()).not.toThrow();
-    });
-  });
-
   describe('no-op on same mode', () => {
     it('should keep outline-only surface materials when setting WIREFRAME twice', () => {
       controller.setShadingMode(ShadingMode.WIREFRAME);

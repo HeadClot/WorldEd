@@ -30,10 +30,6 @@ describe('Toolbar', () => {
     document.querySelectorAll('.editor-toolbar-dropdown-menu').forEach((node) => node.remove());
   });
 
-  it('should create toolbar and append to container', () => {
-    expect(container.children.length).toBe(1);
-  });
-
   it('should add a button to the toolbar', () => {
     const button = toolbar.addButton('Test Button', () => {});
     expect(button).toBeInstanceOf(HTMLButtonElement);
@@ -81,13 +77,6 @@ describe('Toolbar', () => {
 
     expect(icon?.getAttribute('width')).toBe('25');
     expect(icon?.getAttribute('height')).toBe('25');
-  });
-
-  it('should track added buttons internally', () => {
-    const button1 = toolbar.addButton('Button 1', () => {});
-    const button2 = toolbar.addButton('Button 2', () => {});
-    expect(button1).toBeDefined();
-    expect(button2).toBeDefined();
   });
 
   it('should fire click callback when button is clicked', () => {

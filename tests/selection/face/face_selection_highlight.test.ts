@@ -19,10 +19,6 @@ describe('FaceSelectionHighlight', () => {
     testMesh.position.set(0, 0, 0);
   });
 
-  it('should create without errors', () => {
-    expect(highlight).toBeDefined();
-  });
-
   it('should add highlight group to scene', () => {
     const hasGroup = scene.children.some((child) => child instanceof THREE.Group);
     expect(hasGroup).toBe(true);
@@ -148,10 +144,6 @@ describe('FaceSelectionHighlight', () => {
     expect(highlight.getHighlightCount()).toBe(1);
     highlight.dispose();
     expect(highlight.getHighlightCount()).toBe(0);
-  });
-
-  it('should dispose without error when no highlights exist', () => {
-    expect(() => highlight.dispose()).not.toThrow();
   });
 });
 

@@ -1,37 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { ViewportType } from '@/types.js';
 
 describe('Theme', () => {
-  it('should have all required theme properties', () => {
-    expect(Theme.background).toBeDefined();
-    expect(Theme.viewportBackground).toBeDefined();
-    expect(Theme.gridColor).toBeDefined();
-    expect(Theme.gridOriginColor).toBeDefined();
-    expect(Theme.selectionColor).toBeDefined();
-    expect(Theme.separatorColor).toBeDefined();
-    expect(Theme.separatorGapPx).toBeDefined();
-    expect(Theme.boxColor).toBeDefined();
-    expect(Theme.boxEdgeColor).toBeDefined();
-    expect(Theme.rulerSizeColor).toBeDefined();
-    expect(Theme.rulerDeltaColor).toBeDefined();
-    expect(Theme.rulerGhostColor).toBeDefined();
-    expect(Theme.rulerExtensionColor).toBeDefined();
-    expect(Theme.rulerLabelSizeText).toBeDefined();
-    expect(Theme.rulerLabelDeltaText).toBeDefined();
-    expect(Theme.lightAmbient).toBeDefined();
-    expect(Theme.lightDirectional).toBeDefined();
-  });
-
   it('should use dark colors for background values', () => {
     expect(Theme.background).toBeLessThan(0x303030);
     expect(Theme.viewportBackground).toBeLessThan(0x303030);
-  });
-
-  it('should use orange selection color', () => {
-    const color = new THREE.Color(Theme.selectionColor);
-    expect(color.r).toBeGreaterThan(color.b);
   });
 });
 

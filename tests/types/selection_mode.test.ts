@@ -14,9 +14,4 @@ describe('SelectionMode enum', () => {
   it('should contain FACE with correct string value', () => {
     expect(SelectionMode.FACE).toBe('Face');
   });
-
-  it('should have enum keys matching expected names', () => {
-    expect(SelectionMode.OBJECT).toBeDefined();
-    expect(SelectionMode.FACE).toBeDefined();
-  });
 });

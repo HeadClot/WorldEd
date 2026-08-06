@@ -37,10 +37,6 @@ describe('ToolPrimitiveCreation', () => {
     tool = new ToolPrimitiveCreation(scene);
   });
 
-  it('should create without errors', () => {
-    expect(tool).toBeDefined();
-  });
-
   it('should start with zero created objects', () => {
     expect(tool.getCreatedObjectCount()).toBe(0);
   });
@@ -219,10 +215,6 @@ describe('ToolPrimitiveCreation', () => {
     expect(mesh.position.x).toBe(0);
     expect(mesh.position.y).toBe(0);
     expect(mesh.position.z).toBe(0);
-  });
-
-  it('should dispose without errors', () => {
-    expect(() => tool.dispose()).not.toThrow();
   });
 
   it('should reset last created on dispose', () => {

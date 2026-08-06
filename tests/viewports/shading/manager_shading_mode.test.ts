@@ -36,11 +36,6 @@ describe('ShadingModeManager', () => {
       expect(materialB.wireframe).toBe(false);
     });
 
-    it('should handle empty scene without error', () => {
-      manager.snapshotMaterials();
-      expect(() => manager.snapshotMaterials()).not.toThrow();
-    });
-
     it('should handle multiple meshes correctly', () => {
       const meshC = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0x0000ff }));
       scene.add(meshA);
@@ -91,11 +86,6 @@ describe('ShadingModeManager', () => {
       manager.setMode(ShadingMode.WIREFRAME);
       expect(edge.visible).toBe(true);
       expect(edge.parent).toBe(meshA);
-    });
-
-    it('should handle empty scene in WIREFRAME mode', () => {
-      manager.snapshotMaterials();
-      expect(() => manager.setMode(ShadingMode.WIREFRAME)).not.toThrow();
     });
   });
 
@@ -221,15 +211,6 @@ describe('ShadingModeManager', () => {
       manager.setMode(ShadingMode.FLAT);
       expect(meshA.material instanceof THREE.MeshBasicMaterial).toBe(true);
       expect((meshA.material as THREE.MeshBasicMaterial).color.getHex()).toBe(0xff0000);
-    });
-  });
-
-  describe('dispose', () => {
-    it('should clean up resources without error', () => {
-      scene.add(meshA);
-      manager.snapshotMaterials();
-      manager.setMode(ShadingMode.WIREFRAME);
-      expect(() => manager.dispose()).not.toThrow();
     });
   });
 

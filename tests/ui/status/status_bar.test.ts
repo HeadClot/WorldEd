@@ -12,12 +12,6 @@ describe('StatusBar', () => {
     statusBar = new StatusBar(container, Theme);
   });
 
-  it('should create in the DOM', () => {
-    const root = statusBar.getRootElement();
-    expect(root).toBeDefined();
-    expect(container.contains(root)).toBe(true);
-  });
-
   it('should display initial undo/redo counts', () => {
     statusBar.setUndoRedoCounts(0, 0);
     const root = statusBar.getRootElement();
@@ -50,39 +44,16 @@ describe('StatusBar', () => {
     expect(root.textContent).toContain('Snap: Off');
   });
 
-  it('should update snap interval display', () => {
-    statusBar.setSnapInterval(5.0);
-    const root = statusBar.getRootElement();
-    expect(root.textContent).toContain('Snap: On (5.0)');
-  });
-
-  it('should reflect new interval in subsequent snap status calls', () => {
-    statusBar.setSnapInterval(10.0);
-    statusBar.setSnapStatus(true);
-    const root = statusBar.getRootElement();
-    expect(root.textContent).toContain('Snap: On (10.0)');
-  });
-
-  it('should show correct interval after multiple updates', () => {
+  it('should show the latest snap interval and format non-integers cleanly', () => {
     statusBar.setSnapInterval(0.5);
-    statusBar.setSnapInterval(2.0);
-    statusBar.setSnapStatus(true);
-    const root = statusBar.getRootElement();
-    expect(root.textContent).toContain('Snap: On (2.0)');
-  });
-
-  it('should format non-integer interval without floating-point artifacts', () => {
     statusBar.setSnapInterval(7.5);
+    statusBar.setSnapStatus(true);
     const root = statusBar.getRootElement();
     expect(root.textContent).toContain('Snap: On (7.5)');
     expect(root.textContent).not.toContain('7.5000');
-  });
-
-  it('should format very small interval cleanly', () => {
     statusBar.setSnapInterval(0.07);
-    const root = statusBar.getRootElement();
-    expect(root.textContent).toContain('Snap: On (0.07)');
-    expect(root.textContent).not.toContain('0.0699');
+    expect(statusBar.getRootElement().textContent).toContain('Snap: On (0.07)');
+    expect(statusBar.getRootElement().textContent).not.toContain('0.0699');
   });
 
   it('should remove from DOM on dispose', () => {

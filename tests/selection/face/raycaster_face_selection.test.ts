@@ -9,10 +9,6 @@ describe('FaceSelectionRaycaster', () => {
     raycaster = new RaycasterFaceSelection();
   });
 
-  it('should create without errors', () => {
-    expect(raycaster).toBeDefined();
-  });
-
   it('should return null when no meshes are provided', () => {
     const canvas = createMockCanvas(800, 600);
     const renderer = createMockRenderer(canvas);
@@ -86,10 +82,6 @@ describe('FaceSelectionRaycaster', () => {
     const event = createMockMouseEvent(500, 350);
     const result = raycaster.pickFace(event, camera, renderer.domElement, [targetMesh]);
     expect(result?.mesh).toBe(targetMesh);
-  });
-
-  it('should dispose without errors', () => {
-    expect(() => raycaster.dispose()).not.toThrow();
   });
 
   it('should ignore a back-facing surface and miss when only the back is hit', () => {

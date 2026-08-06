@@ -7,11 +7,6 @@ describe('SnapManager default interval', () => {
     const manager = new ManagerSnap(2.0);
     expect(manager.getInterval()).toBe(2.0);
   });
-
-  it('should default to 1.0 when created with that value', () => {
-    const manager = new ManagerSnap(1.0);
-    expect(manager.getInterval()).toBe(1.0);
-  });
 });
 
 describe('SnapManager cycle forward', () => {

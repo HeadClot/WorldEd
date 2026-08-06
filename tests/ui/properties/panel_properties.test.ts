@@ -23,10 +23,6 @@ describe('PropertiesPanel', () => {
     }
   });
 
-  it('should create panel and append to container', () => {
-    expect(container.children.length).toBe(1);
-  });
-
   it('should return container element via getContainer', () => {
     const returnedContainer = panel.getContainer();
     expect(returnedContainer).toBeInstanceOf(HTMLElement);
@@ -43,15 +39,6 @@ describe('PropertiesPanel', () => {
     const panelElement = container.children[0] as HTMLElement;
     const sections = panelElement.children;
     expect(sections.length).toBe(5);
-  });
-
-  it('should bind object and update inputs from object data', () => {
-    const mesh = new THREE.Mesh();
-    mesh.position.set(5.5, -3.2, 10.0);
-    mesh.rotation.set(Math.PI / 4, Math.PI / 2, 0);
-    mesh.scale.set(2.0, 1.5, 0.5);
-    panel.bindObject(mesh);
-    expect(true).toBe(true);
   });
 
   it('should bind object and set position inputs correctly', () => {

@@ -31,21 +31,6 @@ describe('FileDialogManager', () => {
     vi.unstubAllGlobals();
   });
 
-  it('should create JSON blob with correct MIME type', async () => {
-    const jsonData = JSON.stringify({ test: true });
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    expect(blob.type).toBe('application/json');
-    const text = await blob.text();
-    expect(text).toBe(jsonData);
-  });
-
-  it('should create binary blob with correct MIME type', async () => {
-    const buffer = new ArrayBuffer(16);
-    const blob = new Blob([buffer], { type: 'model/gltf-binary' });
-    expect(blob.type).toBe('model/gltf-binary');
-    expect(blob.size).toBe(16);
-  });
-
   it('should saveJSON with fallback return suggested filename', async () => {
     const mockAnchor = {
       href: '',

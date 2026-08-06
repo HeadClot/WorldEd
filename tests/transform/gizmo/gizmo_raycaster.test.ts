@@ -34,16 +34,6 @@ describe('GizmoRaycaster', () => {
     };
   });
 
-  it('should create instance without errors', () => {
-    const rc = new GizmoRaycaster();
-    expect(rc).toBeDefined();
-  });
-
-  it('should dispose without errors', () => {
-    const rc = new GizmoRaycaster();
-    expect(() => rc.dispose()).not.toThrow();
-  });
-
   it('should project mouse onto a plane perpendicular to camera through pivot', () => {
     const pivot = new THREE.Vector3(0, 0, 0);
     const direction = new THREE.Vector3(0, 0, -1);

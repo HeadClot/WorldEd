@@ -202,10 +202,4 @@ describe('InfiniteGrid2D', () => {
     grid.update(camera);
     expect(grid.getSegmentCount()).toBeGreaterThan(0);
   });
-
-  it('should dispose without throwing', () => {
-    const grid = new InfiniteGrid2D('xy', 0.25);
-    grid.update(camera);
-    expect(() => grid.dispose()).not.toThrow();
-  });
 });

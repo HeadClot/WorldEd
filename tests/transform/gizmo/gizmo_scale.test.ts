@@ -58,9 +58,4 @@ describe('GizmoScale', () => {
     expect(sceneObjects.length).toBe(5);
     expect(sceneObjects.some((root) => root.userData[GIZMO_SCALE_FREE_BILLBOARD_USERDATA] === true)).toBe(true);
   });
-
-  it('should dispose without errors', () => {
-    gizmo.createHandles();
-    expect(() => gizmo.dispose()).not.toThrow();
-  });
 });

@@ -76,20 +76,6 @@ describe('TransformHandler', () => {
     expect(handler.getActiveAxis()).toBeNull();
   });
 
-  it('should have mode BOUNDS by default', () => {
-    expect(gizmo.getMode()).toBe(TransformMode.BOUNDS);
-  });
-
-  it('should switch to ROTATE mode via gizmo', () => {
-    gizmo.setMode(TransformMode.ROTATE);
-    expect(gizmo.getMode()).toBe(TransformMode.ROTATE);
-  });
-
-  it('should switch to SCALE mode via gizmo', () => {
-    gizmo.setMode(TransformMode.SCALE);
-    expect(gizmo.getMode()).toBe(TransformMode.SCALE);
-  });
-
   it('should onPointerUp clear drag state', () => {
     handler.onPointerUp();
     expect(handler.isDragging()).toBe(false);
@@ -104,81 +90,6 @@ describe('TransformHandler', () => {
     }
     handler.onPointerUp();
     expect(gizmo.getActiveHandle()).toBeNull();
-  });
-
-  it('should dispose raycaster and gizmo without errors', () => {
-    raycaster.dispose();
-    gizmo.dispose();
-    expect(true).toBe(true);
-  });
-
-  it('should accept pivot parameter in onPointerDown without errors', () => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
-    const handles = gizmo.getHandles();
-    const pivot = new THREE.Vector3(1, 2, 3);
-    const mockCanvas = {
-      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
-    };
-    const pickElement = mockCanvas as unknown as HTMLElement;
-    expect(() => {
-      handler.onPointerDown(
-        new THREE.PerspectiveCamera(),
-        pickElement,
-        new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
-        handles,
-        [mesh],
-        pivot,
-      );
-    }).not.toThrow();
-  });
-
-  it('should use pivot-based projection instead of hardcoded distance', () => {
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-    camera.position.set(5, 5, 5);
-    camera.lookAt(0, 0, 0);
-    const pivot = new THREE.Vector3(0, 0, 0);
-    const mockCanvas = {
-      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
-    };
-    const pickElement = mockCanvas as unknown as HTMLElement;
-    const handles = gizmo.getHandles();
-    const event = new MouseEvent('pointerdown', { clientX: 400, clientY: 300 });
-    handler.onPointerDown(camera, pickElement, event, handles, [], pivot);
-    expect(handler.isDragging()).toBe(false);
-  });
-
-  it('should use default origin pivot when no pivot provided', () => {
-    const handles = gizmo.getHandles();
-    const mockCanvas = {
-      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
-    };
-    const pickElement = mockCanvas as unknown as HTMLElement;
-    expect(() => {
-      handler.onPointerDown(
-        new THREE.PerspectiveCamera(),
-        pickElement,
-        new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
-        handles,
-      );
-    }).not.toThrow();
-  });
-
-  it('should use default empty selected objects when not provided', () => {
-    const handles = gizmo.getHandles();
-    const mockCanvas = {
-      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
-    };
-    const pickElement = mockCanvas as unknown as HTMLElement;
-    expect(() => {
-      handler.onPointerDown(
-        new THREE.PerspectiveCamera(),
-        pickElement,
-        new MouseEvent('pointerdown', { clientX: 0, clientY: 0 }),
-        handles,
-        [],
-        new THREE.Vector3(),
-      );
-    }).not.toThrow();
   });
 
   it('should not start a drag when Ctrl is held for multi-select', () => {

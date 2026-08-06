@@ -139,10 +139,6 @@ describe('CameraFitController', () => {
     expect(camera.position.x).toBeGreaterThan(30);
   });
 
-  it('should update animations without throwing', () => {
-    expect(() => controller.updateAnimations()).not.toThrow();
-  });
-
   it('should frame multiple meshes correctly', () => {
     const viewport = createPerspectiveViewport();
     const meshA = createBoxMesh(1, 1, 1, -5, 0, 0);

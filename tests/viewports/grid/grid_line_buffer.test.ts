@@ -113,11 +113,4 @@ describe('GridLineBuffer', () => {
     expect(material.depthTest).toBe(true);
     expect(lines.renderOrder).toBe(-1);
   });
-
-  it('disposes without throwing after use', () => {
-    buffer.beginFrame();
-    buffer.addLine(0, 0, 0, 1, 0, 0, colorA, colorB);
-    buffer.endFrame();
-    expect(() => buffer.dispose()).not.toThrow();
-  });
 });

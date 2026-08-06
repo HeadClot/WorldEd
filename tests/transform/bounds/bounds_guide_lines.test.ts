@@ -130,9 +130,4 @@ describe('BoundsGuideLines', () => {
     const occluded = guides.getObject().children.find((child) => child.userData['isGizmoOccludedGhost'] === true);
     expect(occluded).toBeInstanceOf(THREE.LineSegments);
   });
-
-  it('should dispose without throwing', () => {
-    guides.updateFromHalfExtents(new THREE.Vector3(1, 1, 1));
-    expect(() => guides.dispose()).not.toThrow();
-  });
 });

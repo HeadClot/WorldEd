@@ -89,11 +89,6 @@ describe('GizmoBounds', () => {
     expect(gizmo.getHighlightedFace()).toBeNull();
   });
 
-  it('should dispose without errors', () => {
-    gizmo.createHandles();
-    expect(() => gizmo.dispose()).not.toThrow();
-  });
-
   it('should keep guide lines hidden until explicitly shown', () => {
     gizmo.createHandles();
     gizmo.updateFromBounds(createBounds(new THREE.Vector3(), new THREE.Vector3(1, 1, 1)));

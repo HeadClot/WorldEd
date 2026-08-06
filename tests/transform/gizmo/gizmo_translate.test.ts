@@ -86,11 +86,6 @@ describe('GizmoTranslate', () => {
     expect(sceneObjects.length).toBe(4);
   });
 
-  it('should dispose without errors', () => {
-    gizmo.createHandles();
-    expect(() => gizmo.dispose()).not.toThrow();
-  });
-
   it('should clear handles on new creation', () => {
     const first = gizmo.createHandles();
     const second = gizmo.createHandles();

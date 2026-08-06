@@ -3,14 +3,6 @@ import * as THREE from 'three';
 import { HandlerOrthoPan } from '@/navigation/camera/handler_ortho_pan.js';
 
 describe('OrthoPanHandler', () => {
-  it('should be instantiable', () => {
-    const canvas = document.createElement('canvas');
-    const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
-    const zoomCallback = vi.fn();
-    const handler = new HandlerOrthoPan(canvas, camera, zoomCallback);
-    expect(handler).toBeDefined();
-  });
-
   it('should set and clear pan state on right click', () => {
     const canvas = document.createElement('canvas');
     const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);

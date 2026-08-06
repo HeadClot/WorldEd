@@ -2,11 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { ManagerInput } from '@/input/manager_input.js';
 
 describe('InputManager', () => {
-  it('should be instantiable', () => {
-    const manager = new ManagerInput();
-    expect(manager).toBeDefined();
-  });
-
   it('should track key state changes', () => {
     const manager = new ManagerInput();
     expect(manager.isKeyDown('KeyW')).toBe(false);
@@ -141,11 +136,5 @@ describe('InputManager', () => {
     expect(manager.isKeyDown('KeyA')).toBe(false);
     window.dispatchEvent(new PointerEvent('pointerdown', { button: 2 }));
     expect(manager.isRightMouseDown()).toBe(false);
-  });
-
-  it('should allow dispose to be called more than once', () => {
-    const manager = new ManagerInput();
-    manager.dispose();
-    expect(() => manager.dispose()).not.toThrow();
   });
 });

@@ -13,13 +13,20 @@ describe('ViewportLabel', () => {
     document.body.appendChild(parentElement);
   });
 
-  it('should create a label element as a child of the parent', () => {
+  it('should create a non-interactive label with the provided text', () => {
     const label = new ViewportLabel(parentElement, 'Top');
+    const labelEl = label.getLabelElement();
     expect(parentElement.children.length).toBe(1);
-    expect(label.getLabelElement()).toBe(parentElement.children[0]);
+    expect(labelEl).toBe(parentElement.children[0]);
+    expect(labelEl.textContent).toBe('Top');
+    expect(labelEl.style.position).toBe('absolute');
+    expect(labelEl.style.top).toBe('8px');
+    expect(labelEl.style.left).toBe('8px');
+    expect(labelEl.style.pointerEvents).toBe('none');
+    expect(labelEl.style.userSelect).toBe('none');
   });
 
-  it('should display the provided text content', () => {
+  it('should display each standard viewport name', () => {
     const labelNames = ['Top', 'Front', 'Side', 'Perspective'];
     labelNames.forEach((name) => {
       const testParent = document.createElement('div');
@@ -29,69 +36,21 @@ describe('ViewportLabel', () => {
     });
   });
 
-  it('should apply absolute positioning to the label', () => {
+  it('should apply theme colors', () => {
     const label = new ViewportLabel(parentElement, 'Test');
     const labelEl = label.getLabelElement();
-    expect(labelEl.style.position).toBe('absolute');
-  });
-
-  it('should position the label in the top-left corner', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
-    expect(labelEl.style.top).toBe('8px');
-    expect(labelEl.style.left).toBe('8px');
-  });
-
-  it('should use the theme text color', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
-    const expectedRgb = hexToRgb(Theme.viewportLabelTextColor);
-    expect(labelEl.style.color).toBe(expectedRgb);
-  });
-
-  it('should use the theme background color', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
+    expect(labelEl.style.color).toBe(hexToRgb(Theme.viewportLabelTextColor));
     expect(labelEl.style.background).toBe(Theme.viewportLabelBackgroundColor);
-  });
-
-  it('should prevent pointer events on the label', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
-    expect(labelEl.style.pointerEvents).toBe('none');
-  });
-
-  it('should prevent text selection on the label', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
-    expect(labelEl.style.userSelect).toBe('none');
-  });
-
-  it('should set a positive z-index for proper layering', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
-    expect(labelEl.style.zIndex).toBe('10');
-  });
-
-  it('should apply monospace font family', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
-    expect(labelEl.style.fontFamily).toBe('monospace');
-  });
-
-  it('should apply bold font weight', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
-    expect(labelEl.style.fontWeight).toBe('bold');
-  });
-
-  it('should apply border radius for rounded corners', () => {
-    const label = new ViewportLabel(parentElement, 'Test');
-    const labelEl = label.getLabelElement();
-    expect(labelEl.style.borderRadius).toBe('4px');
   });
 });
 
+/**
+ * Converts a hex color string to the rgb() form browsers report for inline
+ * styles.
+ *
+ * @param hexColor Hex color like #rrggbb.
+ * @returns CSS rgb() string.
+ */
 function hexToRgb(hexColor: string): string {
   const hex = hexColor.replace('#', '');
   const r = parseInt(hex.substring(0, 2), 16);

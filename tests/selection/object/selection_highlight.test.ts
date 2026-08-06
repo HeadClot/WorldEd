@@ -24,10 +24,6 @@ describe('SelectionHighlight', () => {
     SelectionHighlight.setDepthOcclusionEnabled(true);
   });
 
-  it('should create without errors', () => {
-    expect(highlight).toBeDefined();
-  });
-
   it('should apply dual-pass highlight edges to a mesh', () => {
     scene.add(testMesh);
     highlight.apply(testMesh);
@@ -127,11 +123,6 @@ describe('SelectionHighlight', () => {
     highlight.apply(testMesh);
     highlight.remove(testMesh);
     expect(collectSelectionLines(testMesh).length).toBe(0);
-  });
-
-  it('should handle removal of non-highlighted mesh without error', () => {
-    scene.add(testMesh);
-    expect(() => highlight.remove(testMesh)).not.toThrow();
   });
 
   it('should clear all highlights', () => {

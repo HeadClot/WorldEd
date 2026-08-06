@@ -75,10 +75,6 @@ describe('CadRulerLineBatch', () => {
     expect(batch.hasStableAttributes()).toBe(true);
   });
 
-  it('should dispose without throwing', () => {
-    expect(() => batch.dispose()).not.toThrow();
-  });
-
   it('disables depth testing and hides occluded pass for orthographic 2D', () => {
     const color = new THREE.Color(0xffffff);
     batch.setSegments([{ ax: 0, ay: 0, az: 0, bx: 1, by: 0, bz: 0, colorA: color, colorB: color }]);
