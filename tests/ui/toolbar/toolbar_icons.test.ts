@@ -38,4 +38,13 @@ describe('ToolbarIcons', () => {
     expect(circle?.getAttribute('cy')).toBe('12');
     expect(circle?.getAttribute('r')).toBe('3.8');
   });
+
+  it('renders content wireframe and projected grid viewport toggle icons', () => {
+    const wire = ToolbarIcons.contentWireframes();
+    const grid = ToolbarIcons.projectedGrid();
+    expect(wire).toContain('stroke="currentColor"');
+    expect(grid).toContain('stroke="currentColor"');
+    expect(wire).toContain('M4 7.5');
+    expect(grid).toContain('M4 7.5');
+  });
 });

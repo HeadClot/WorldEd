@@ -4,6 +4,8 @@ import { BaseViewport, type ViewportBaseOptions } from './viewport_base.js';
 import { Grids } from '@/viewports/grid/grids.js';
 import { ManagerInput } from '@/input/manager_input.js';
 import { CameraFlying } from '@/navigation/camera/camera_flying.js';
+import type { EditorOrientation } from '@/navigation/orientation/editor_orientation.js';
+import type { EditorPlaneFrame } from '@/navigation/orientation/editor_orientation_basis.js';
 import { CameraWidget } from '@/ui/camera/camera_widget.js';
 import type { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { SelectionHighlight } from '@/selection/object/selection_highlight.js';
@@ -54,6 +56,8 @@ export class Viewport3D extends BaseViewport {
   private meshResolveCallback!: MeshResolveCallback | null;
   private shadingController: ControllerViewportShading;
   private gridRoot: THREE.Object3D;
+  private gridOrientationStore: EditorOrientation | null;
+  private cameraOrientationStore: EditorOrientation | null;
 
   /**
    * Creates a new 3D perspective viewport pane on the shared scene/surface.
@@ -72,6 +76,8 @@ export class Viewport3D extends BaseViewport {
     this.scene.add(this.gridRoot);
     this.cameraWidget = new CameraWidget();
     this.shadingController = new ControllerViewportShading(this);
+    this.gridOrientationStore = null;
+    this.cameraOrientationStore = null;
   }
 
   /**
@@ -125,6 +131,15 @@ export class Viewport3D extends BaseViewport {
    */
   setWorldGroup(group: THREE.Group): void {
     this.worldGroup = group;
+  }
+
+  /**
+   * Returns the world group bound to this viewport, when present.
+   *
+   * @returns World group or null.
+   */
+  getWorldGroup(): THREE.Group | null {
+    return this.worldGroup;
   }
 
   /**
@@ -292,7 +307,8 @@ export class Viewport3D extends BaseViewport {
     showGizmoForRenderPass(this.gizmoGroup);
     this.grids.update(this.camera);
     this.updateBrushEdgeDistanceFade();
-    this.cameraWidget.syncOrientation(this.camera);
+    this.shadingController.applyDisplayOverlaysForRenderPass(this.worldGroup);
+    this.cameraWidget.syncOrientation(this.camera, this.gridOrientationStore, this.cameraOrientationStore);
   }
 
   /**
@@ -347,6 +363,39 @@ export class Viewport3D extends BaseViewport {
    */
   syncFlyingCameraOrientation(): void {
     this.flyingCamera.syncOrientationFromCamera();
+  }
+
+  /**
+   * Binds the shared editor working orientation to the flying camera.
+   *
+   * @param editorOrientation Shared orientation store.
+   */
+  setEditorOrientation(editorOrientation: EditorOrientation): void {
+    this.flyingCamera.setEditorOrientation(editorOrientation);
+    this.cameraOrientationStore = editorOrientation;
+  }
+
+  /**
+   * Binds the shared grid orientation for the corner camera widget triad.
+   *
+   * @param gridOrientation Shared grid orientation store.
+   */
+  setGridOrientationStore(gridOrientation: EditorOrientation): void {
+    this.gridOrientationStore = gridOrientation;
+  }
+
+  /**
+   * Applies a visual grid plane frame for the perspective floor grid.
+   *
+   * @param frame Plane origin, U/V axes, and normal.
+   */
+  setGridPlaneFrame(frame: EditorPlaneFrame): void {
+    this.grids.setPlaneFrame(frame);
+  }
+
+  /** Restores the default world XZ floor frame for the perspective grid. */
+  resetGridPlaneFrame(): void {
+    this.grids.resetPlaneFrame();
   }
 
   /**
@@ -440,6 +489,44 @@ export class Viewport3D extends BaseViewport {
    */
   getShadingMode(): ShadingMode {
     return this.shadingController.getShadingMode();
+  }
+
+  /**
+   * Sets whether permanent content and brush wireframes draw in this viewport.
+   *
+   * @param visible True to show wireframes.
+   */
+  setContentWireframesVisible(visible: boolean): void {
+    this.shadingController.setContentWireframesVisible(visible);
+    this.getViewportToolbar().setContentWireframesActive(visible);
+  }
+
+  /**
+   * Returns whether content and brush wireframes are enabled for this viewport.
+   *
+   * @returns True when wireframes should draw.
+   */
+  areContentWireframesVisible(): boolean {
+    return this.shadingController.areContentWireframesVisible();
+  }
+
+  /**
+   * Sets whether the projected surface grid draws in this viewport.
+   *
+   * @param visible True to show the projected grid.
+   */
+  setProjectedGridVisible(visible: boolean): void {
+    this.shadingController.setProjectedGridVisible(visible);
+    this.getViewportToolbar().setProjectedGridActive(visible);
+  }
+
+  /**
+   * Returns whether the projected surface grid is enabled for this viewport.
+   *
+   * @returns True when the projected grid should draw.
+   */
+  isProjectedGridVisible(): boolean {
+    return this.shadingController.isProjectedGridVisible();
   }
 
   /**

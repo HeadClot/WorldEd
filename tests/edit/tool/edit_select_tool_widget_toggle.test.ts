@@ -59,6 +59,10 @@ function createStubServices(initialMode: TransformMode): {
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isGridAlignPickArmed: () => false,
+    disarmGridAlignPick: () => undefined,
+    tryGridAlignPickAtPointer: () => false,
+    updateGridAlignHoverAtPointer: () => undefined,
     isEditModeActive: () => true,
     beginEditSelectPointerDown: vi.fn(() => true),
     setWidgetMode: (mode) => {

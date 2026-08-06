@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { ShadingMode } from '@/types/shading_mode.js';
 import { RendererWireframeOverlay } from './renderer_wireframe_overlay.js';
 import { applySharedShadingPass, invalidateSharedShadingPass } from '@/viewports/shared/shared_shading_pass.js';
+import { applyContentWireframeVisibilityForRenderPass } from './content_wireframe_visibility.js';
+import { ManagerProjectedGrid } from '@/viewports/grid/projected/manager_projected_grid.js';
 
 /** Base interface for viewports that support shading mode control. */
 export interface ShadableViewport {
@@ -9,14 +11,17 @@ export interface ShadableViewport {
 }
 
 /**
- * Controls per-viewport shading mode preference and wireframe overlays.
- * Material swaps on the shared scene go through {@link applySharedShadingPass}
- * so multi-view panes do not thrash materials every frame.
+ * Controls per-viewport shading mode preference, content wireframe visibility,
+ * projected grid preference, and orange wireframe overlays. Material swaps on
+ * the shared scene go through {@link applySharedShadingPass} so multi-view panes
+ * do not thrash materials every frame.
  */
 export class ControllerViewportShading {
   private readonly scene: THREE.Scene;
   private rendererWireframeOverlay: RendererWireframeOverlay;
   private currentMode: ShadingMode;
+  private contentWireframesVisible: boolean;
+  private projectedGridVisible: boolean;
 
   /**
    * Creates a new shading controller for the given viewport.
@@ -27,6 +32,8 @@ export class ControllerViewportShading {
     this.scene = viewport.getScene();
     this.rendererWireframeOverlay = new RendererWireframeOverlay(this.scene);
     this.currentMode = ShadingMode.SOLID;
+    this.contentWireframesVisible = true;
+    this.projectedGridVisible = true;
   }
 
   /**
@@ -62,6 +69,54 @@ export class ControllerViewportShading {
   applyForRenderPass(): void {
     applySharedShadingPass(this.scene, this.currentMode, false);
     this.updateOverlayVisibility(this.currentMode);
+  }
+
+  /**
+   * Applies content wireframe and projected-grid visibility for this pane pass.
+   *
+   * @param worldRoot World group containing content and brush wireframes.
+   */
+  applyDisplayOverlaysForRenderPass(worldRoot: THREE.Object3D | null): void {
+    if (worldRoot) {
+      applyContentWireframeVisibilityForRenderPass(worldRoot, this.contentWireframesVisible);
+    }
+    ManagerProjectedGrid.setVisibleForRenderPass(this.projectedGridVisible);
+  }
+
+  /**
+   * Sets whether permanent content and brush wireframes draw in this viewport.
+   *
+   * @param visible True to show wireframes.
+   */
+  setContentWireframesVisible(visible: boolean): void {
+    this.contentWireframesVisible = visible;
+  }
+
+  /**
+   * Returns whether content and brush wireframes are enabled for this viewport.
+   *
+   * @returns True when wireframes should draw.
+   */
+  areContentWireframesVisible(): boolean {
+    return this.contentWireframesVisible;
+  }
+
+  /**
+   * Sets whether the projected surface grid draws in this viewport.
+   *
+   * @param visible True to show the projected grid.
+   */
+  setProjectedGridVisible(visible: boolean): void {
+    this.projectedGridVisible = visible;
+  }
+
+  /**
+   * Returns whether the projected surface grid is enabled for this viewport.
+   *
+   * @returns True when the projected grid should draw.
+   */
+  isProjectedGridVisible(): boolean {
+    return this.projectedGridVisible;
   }
 
   /**

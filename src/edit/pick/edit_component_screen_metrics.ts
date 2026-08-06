@@ -81,6 +81,35 @@ export function pointerEventToPickPixels(
 }
 
 /**
+ * Clamped parameter of the closest point on a 2D segment to a point.
+ *
+ * @param px Point X.
+ * @param py Point Y.
+ * @param ax Segment A X.
+ * @param ay Segment A Y.
+ * @param bx Segment B X.
+ * @param by Segment B Y.
+ * @returns Parameter t in [0, 1] along A→B.
+ */
+export function closestParameterOnSegment2d(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const abx = bx - ax;
+  const aby = by - ay;
+  const lengthSq = abx * abx + aby * aby;
+  if (lengthSq <= 1e-12) {
+    return 0;
+  }
+  const t = ((px - ax) * abx + (py - ay) * aby) / lengthSq;
+  return Math.max(0, Math.min(1, t));
+}
+
+/**
  * Distance from a 2D point to a segment.
  *
  * @param px Point X.
@@ -99,13 +128,8 @@ export function distancePointToSegment2d(
   bx: number,
   by: number,
 ): number {
-  const abx = bx - ax;
-  const aby = by - ay;
-  const lengthSq = abx * abx + aby * aby;
-  if (lengthSq <= 1e-12) {
-    return Math.hypot(px - ax, py - ay);
-  }
-  let t = ((px - ax) * abx + (py - ay) * aby) / lengthSq;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(px - (ax + abx * t), py - (ay + aby * t));
+  const t = closestParameterOnSegment2d(px, py, ax, ay, bx, by);
+  const closestX = ax + (bx - ax) * t;
+  const closestY = ay + (by - ay) * t;
+  return Math.hypot(px - closestX, py - closestY);
 }

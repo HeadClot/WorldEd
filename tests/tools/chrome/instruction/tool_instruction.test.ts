@@ -26,6 +26,7 @@ describe('tool_instruction', () => {
     expect(toolInstructionForEditorTool(EditorToolId.FACE).shortcut).toBe('Shift+Tab');
     expect(toolInstructionForEditorTool(EditorToolId.OBJECT).shortcut).toBe('O');
     expect(toolInstructionForEditorTool(EditorToolId.CLIP_PLANE).title).toContain('Clip');
+    expect(toolInstructionForEditorTool(EditorToolId.GRID).title).toBe('Grid');
   });
 
   it('provides catalog entries for transform modes', () => {

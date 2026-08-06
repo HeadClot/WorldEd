@@ -20,10 +20,7 @@ export interface LayoutCadRulerHost {
   transformGizmo: GizmoTransform;
   selectionManager: ManagerSelection;
   statusBar: StatusBar | null;
-  /**
-   * Shared overlay policy; when CAD rulers are suppressed, selection dims
-   * clear.
-   */
+  /** Shared overlay policy; CAD rulers show only when a tool has opted in. */
   editorOverlayPolicy: PolicyEditorOverlay;
 }
 
@@ -69,7 +66,7 @@ export function reattachCadRulersToViewports(
 
 /**
  * Rebuilds CAD size dimensions for the current object selection, or clears them
- * when a tool has suppressed the CAD bounds overlay.
+ * when no tool has opted into the CAD bounds overlay.
  *
  * @param host CAD ruler host.
  */
@@ -94,6 +91,11 @@ export function onCadRulerTransformFeedback(
   meshes: THREE.Mesh[],
   phase: 'begin' | 'move' | 'end',
 ): void {
+  if (!host.editorOverlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)) {
+    host.cadRulerSystem.endDrag();
+    host.cadRulerSystem.setSelectionMeshes([]);
+    return;
+  }
   if (phase === 'end') {
     host.cadRulerSystem.endDrag();
     host.cadRulerSystem.setSelectionMeshes(meshes);

@@ -8,6 +8,8 @@ import { EditorComponentMode, getEditorComponentModeLabel } from '@/types/editor
 import { UiStackLayers } from '@/ui/stack/ui_stack_layers.js';
 import { formatToolInstructionTooltip, type ToolInstruction } from '@/tools/chrome/instruction/tool_instruction.js';
 import {
+  TOOL_INSTRUCTION_CAMERA_ALIGN_TO_FACE,
+  TOOL_INSTRUCTION_CAMERA_RESET,
   TOOL_INSTRUCTION_CLIP_COMMIT,
   TOOL_INSTRUCTION_CLIP_FLIP,
   TOOL_INSTRUCTION_CLIP_SPLIT,
@@ -15,9 +17,17 @@ import {
   TOOL_INSTRUCTION_COMPONENT_FACE,
   TOOL_INSTRUCTION_COMPONENT_VERTEX,
   TOOL_INSTRUCTION_EXTRUDE,
+  TOOL_INSTRUCTION_GRID_ALIGN_TO_FACE,
+  TOOL_INSTRUCTION_GRID_ALIGN_X,
+  TOOL_INSTRUCTION_GRID_ALIGN_Y,
+  TOOL_INSTRUCTION_GRID_ALIGN_Z,
+  TOOL_INSTRUCTION_GRID_ORIGIN_VERTEX,
+  TOOL_INSTRUCTION_GRID_RESET,
   TOOL_INSTRUCTION_UV_EDITOR,
   toolInstructionForTransformMode,
 } from '@/tools/chrome/instruction/tool_instruction_catalog.js';
+import type { EditorOrientationAxisId } from '@/navigation/orientation/editor_orientation_axis.js';
+import type { GridAlignPickMode } from '@/tools/grid/grid_align_pick_mode.js';
 import {
   createViewportToolRailButton,
   styleViewportToolRailButton,
@@ -38,6 +48,12 @@ export interface ViewportToolOptionsBarHandlers {
   onCommitSplit: () => void;
   onOpenUvEditor: () => void;
   onExtrudeFaces: () => void;
+  onGridReset: () => void;
+  onGridAlignToFace: () => void;
+  onGridAlignAxis: (axis: EditorOrientationAxisId) => void;
+  onGridOriginVertex: () => void;
+  onCameraReset: () => void;
+  onCameraAlignToFace: () => void;
   onInteractionMode: (mode: EditorInteractionMode) => void;
   onComponentMode: (mode: EditorComponentMode) => void;
   onApplyObjectTransform?: (kind: ObjectApplyTransformKind) => void;
@@ -59,10 +75,19 @@ export class ViewportToolOptionsBar {
   private splitButton: HTMLButtonElement;
   private uvButton: HTMLButtonElement;
   private extrudeButton: HTMLButtonElement;
+  private gridResetButton: HTMLButtonElement;
+  private gridAlignToFaceButton: HTMLButtonElement;
+  private gridAlignXButton: HTMLButtonElement;
+  private gridAlignYButton: HTMLButtonElement;
+  private gridAlignZButton: HTMLButtonElement;
+  private gridOriginVertexButton: HTMLButtonElement;
+  private cameraResetButton: HTMLButtonElement;
+  private cameraAlignToFaceButton: HTMLButtonElement;
   private activeTransformMode: TransformMode;
   private activeInteractionMode: EditorInteractionMode;
   private activeComponentMode: EditorComponentMode;
   private activeToolId: EditorToolId;
+  private activeGridPickMode: GridAlignPickMode;
   private readonly componentButtons: Map<EditorComponentMode, HTMLButtonElement>;
 
   /**
@@ -81,6 +106,7 @@ export class ViewportToolOptionsBar {
     this.activeInteractionMode = EditorInteractionMode.OBJECT_MODE;
     this.activeComponentMode = EditorComponentMode.VERTEX;
     this.activeToolId = EditorToolId.OBJECT;
+    this.activeGridPickMode = 'none';
     this.modeDropdown = new ViewportToolModeDropdown(this.actionsRow, (mode) => {
       this.handlers.onInteractionMode(mode);
     });
@@ -101,6 +127,30 @@ export class ViewportToolOptionsBar {
     });
     this.extrudeButton = this.createTextAction('Extrude', TOOL_INSTRUCTION_EXTRUDE, () => {
       this.handlers.onExtrudeFaces();
+    });
+    this.gridResetButton = this.createTextAction('Reset Grid', TOOL_INSTRUCTION_GRID_RESET, () => {
+      this.handlers.onGridReset();
+    });
+    this.gridAlignToFaceButton = this.createTextAction('Grid Face', TOOL_INSTRUCTION_GRID_ALIGN_TO_FACE, () => {
+      this.handlers.onGridAlignToFace();
+    });
+    this.gridAlignXButton = this.createTextAction('Align X', TOOL_INSTRUCTION_GRID_ALIGN_X, () => {
+      this.handlers.onGridAlignAxis('x');
+    });
+    this.gridAlignYButton = this.createTextAction('Align Y', TOOL_INSTRUCTION_GRID_ALIGN_Y, () => {
+      this.handlers.onGridAlignAxis('y');
+    });
+    this.gridAlignZButton = this.createTextAction('Align Z', TOOL_INSTRUCTION_GRID_ALIGN_Z, () => {
+      this.handlers.onGridAlignAxis('z');
+    });
+    this.gridOriginVertexButton = this.createTextAction('Zero Origin', TOOL_INSTRUCTION_GRID_ORIGIN_VERTEX, () => {
+      this.handlers.onGridOriginVertex();
+    });
+    this.cameraResetButton = this.createTextAction('Reset Cam', TOOL_INSTRUCTION_CAMERA_RESET, () => {
+      this.handlers.onCameraReset();
+    });
+    this.cameraAlignToFaceButton = this.createTextAction('Cam Face', TOOL_INSTRUCTION_CAMERA_ALIGN_TO_FACE, () => {
+      this.handlers.onCameraAlignToFace();
     });
     this.styleRoot();
     this.styleActionsRow();
@@ -145,6 +195,18 @@ export class ViewportToolOptionsBar {
   setActiveTool(toolId: EditorToolId): void {
     this.activeToolId = toolId;
     this.rebuildActionsForTool(toolId);
+    this.applyActiveGridPickModeStyles();
+  }
+
+  /**
+   * Highlights the armed single-use grid/camera pick action (orange) while
+   * active; clears when mode is none.
+   *
+   * @param mode Armed pick mode from the grid orientation handler.
+   */
+  setActiveGridPickMode(mode: GridAlignPickMode): void {
+    this.activeGridPickMode = mode;
+    this.applyActiveGridPickModeStyles();
   }
 
   /**
@@ -303,6 +365,18 @@ export class ViewportToolOptionsBar {
       this.actionsRow.appendChild(this.splitButton);
       return;
     }
+    if (toolId === EditorToolId.GRID) {
+      this.actionsRow.appendChild(this.gridResetButton);
+      this.actionsRow.appendChild(this.gridAlignToFaceButton);
+      this.actionsRow.appendChild(this.gridAlignXButton);
+      this.actionsRow.appendChild(this.gridAlignYButton);
+      this.actionsRow.appendChild(this.gridAlignZButton);
+      this.actionsRow.appendChild(this.gridOriginVertexButton);
+      this.actionsRow.appendChild(this.cameraResetButton);
+      this.actionsRow.appendChild(this.cameraAlignToFaceButton);
+      this.applyActiveGridPickModeStyles();
+      return;
+    }
     this.appendTransformModeButtons();
     this.actionsRow.appendChild(this.objectDropdown.getElement());
   }
@@ -367,5 +441,16 @@ export class ViewportToolOptionsBar {
       onClick();
     });
     return button;
+  }
+
+  /** Applies orange active styles to the armed single-use grid/camera button. */
+  private applyActiveGridPickModeStyles(): void {
+    const mode = this.activeGridPickMode;
+    styleViewportToolRailButton(this.gridAlignToFaceButton, mode === 'grid_face');
+    styleViewportToolRailButton(this.gridAlignXButton, mode === 'grid_edge_x');
+    styleViewportToolRailButton(this.gridAlignYButton, mode === 'grid_edge_y');
+    styleViewportToolRailButton(this.gridAlignZButton, mode === 'grid_edge_z');
+    styleViewportToolRailButton(this.gridOriginVertexButton, mode === 'grid_origin_vertex');
+    styleViewportToolRailButton(this.cameraAlignToFaceButton, mode === 'camera_face');
   }
 }

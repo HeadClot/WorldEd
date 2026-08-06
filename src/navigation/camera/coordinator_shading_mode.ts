@@ -163,10 +163,20 @@ export class CoordinatorShadingMode {
     viewports.forEach((viewport, index) => {
       const toolbar = viewport.getViewportToolbar();
       toolbar.setActiveShadingMode(viewport.getShadingMode());
+      toolbar.setContentWireframesActive(viewport.areContentWireframesVisible());
+      toolbar.setProjectedGridActive(viewport.isProjectedGridVisible());
       toolbar.setOnShadingMode((mode) => {
         this.activateViewportAtIndex(index);
         viewport.setShadingMode(mode);
         this.syncStatusBarShadingMode();
+      });
+      toolbar.setOnContentWireframesToggle((visible) => {
+        this.activateViewportAtIndex(index);
+        viewport.setContentWireframesVisible(visible);
+      });
+      toolbar.setOnProjectedGridToggle((visible) => {
+        this.activateViewportAtIndex(index);
+        viewport.setProjectedGridVisible(visible);
       });
       toolbar.setOnFit(() => onFitViewport(viewport));
     });

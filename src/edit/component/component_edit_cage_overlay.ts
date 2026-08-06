@@ -18,7 +18,7 @@ const FACE_FRONT_OPACITY = 0.38;
 const FACE_OCCLUDED_OPACITY = 0.16;
 
 /** Screen-pixel size for cage vertex dots (in front of wires, black/white). */
-const CAGE_VERTEX_POINT_SIZE = 4;
+export const EDIT_CAGE_VERTEX_POINT_SIZE = 4;
 
 /** Draw order for black cage wires (below selection edges and vertex dots). */
 const CAGE_EDGE_RENDER_ORDER = 1000;
@@ -69,7 +69,7 @@ export class ComponentEditCageOverlay {
       997,
     );
     this.selectedFaceFront = this.createFaceMesh(this.faceFillGeometry, FACE_FRONT_OPACITY, THREE.LessEqualDepth, 998);
-    this.cagePoints = this.createVertexPoints(CAGE_VERTEX_POINT_SIZE, CAGE_VERTEX_RENDER_ORDER);
+    this.cagePoints = this.createVertexPoints(EDIT_CAGE_VERTEX_POINT_SIZE, CAGE_VERTEX_RENDER_ORDER);
     this.group.add(this.cageEdges);
     this.group.add(this.selectedFaceOccluded);
     this.group.add(this.selectedFaceFront);

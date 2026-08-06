@@ -74,8 +74,17 @@ function createViewportStub(): ViewportEditor {
     getViewportToolbar: () => ({
       setOnFit: vi.fn(),
       setOnShadingMode: vi.fn(),
+      setOnContentWireframesToggle: vi.fn(),
+      setOnProjectedGridToggle: vi.fn(),
       setActiveShadingMode: vi.fn(),
+      setContentWireframesActive: vi.fn(),
+      setProjectedGridActive: vi.fn(),
     }),
+    areContentWireframesVisible: () => true,
+    isProjectedGridVisible: () => true,
+    setContentWireframesVisible: vi.fn(),
+    setProjectedGridVisible: vi.fn(),
+    getWorldGroup: () => null,
   } as unknown as ViewportEditor;
 }
 

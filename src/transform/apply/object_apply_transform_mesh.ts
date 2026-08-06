@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { meshDocumentToBufferGeometry } from '@/mesh/convert/mesh_to_buffer_geometry.js';
-import { writePersistentMeshDocument } from '@/mesh/document/mesh_document_binding.js';
+import { writeMeshDocumentDisplayGeometry } from '@/mesh/convert/mesh_document_display_write.js';
 import { readBoundMeshEditDocument } from '@/edit/mesh/mesh_edit_binding.js';
 import { rebuildDecorativeEdges } from '@/utils/mesh_edge_sync.js';
 import type { ObjectApplyTransformFlags } from './object_apply_transform_flags.js';
@@ -165,10 +164,8 @@ function rebuildMeshDisplay(mesh: THREE.Mesh, usedDocument: boolean): void {
     if (!document) {
       return;
     }
-    const previous = mesh.geometry;
-    mesh.geometry = meshDocumentToBufferGeometry(document);
-    previous.dispose();
-    writePersistentMeshDocument(mesh, document);
+    writeMeshDocumentDisplayGeometry(mesh, document);
+    return;
   }
   rebuildDecorativeEdges(mesh);
 }

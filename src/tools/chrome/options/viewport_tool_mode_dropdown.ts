@@ -1,6 +1,7 @@
 import { Theme } from '@/theme.js';
 import { PanelMenu } from '@/ui/menu/panel_menu.js';
 import { EditorInteractionMode, getEditorInteractionModeLabel } from '@/types/editor_interaction_mode.js';
+import { doesElementContainEventTarget } from '@/utils/dom_node_realm.js';
 import { applyViewportToolOptionsTextButtonMetrics } from './viewport_tool_options_control_style.js';
 import { buildViewportToolModeMenuEntries } from './viewport_tool_mode_menu.js';
 
@@ -162,6 +163,8 @@ export class ViewportToolModeDropdown {
     this.menuPanel = new PanelMenu(
       buildViewportToolModeMenuEntries(this.activeMode, (mode) => this.handleModeChosen(mode)),
       () => this.closeMenu(),
+      false,
+      this.ownerDocument,
     );
     this.wrapper.appendChild(this.menuPanel.getElement());
   }
@@ -182,14 +185,12 @@ export class ViewportToolModeDropdown {
    * @param event Capture-phase pointer event.
    */
   private handleOutsidePointerDown(event: PointerEvent): void {
-    const target = event.target as Node | null;
-    if (!target) {
+    const target = event.target;
+    if (doesElementContainEventTarget(this.wrapper, target)) {
       return;
     }
-    if (this.wrapper.contains(target)) {
-      return;
-    }
-    if (this.menuPanel?.getElement().contains(target)) {
+    const menuRoot = this.menuPanel?.getElement();
+    if (menuRoot && doesElementContainEventTarget(menuRoot, target)) {
       return;
     }
     this.closeMenu();

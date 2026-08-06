@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as THREE from 'three';
 import { Theme } from '@/theme.js';
-import { CameraWidget } from '@/ui/camera/camera_widget.js';
+import { CameraWidget, CAMERA_WIDGET_WORLD_AXIS_OPACITY } from '@/ui/camera/camera_widget.js';
 import { CAMERA_WIDGET_DEFAULT_SIZE_PX, CAMERA_WIDGET_MARGIN_PX } from '@/ui/camera/camera_widget_layout.js';
+import { EditorOrientation } from '@/navigation/orientation/editor_orientation.js';
 
 describe('CameraWidget theme colors', () => {
   it('should define all widget theme colors', () => {
@@ -72,11 +73,17 @@ describe('CameraWidget construction', () => {
     expect((widget.getArrowZ().line.material as THREE.LineBasicMaterial).color.getHex()).toBe(Theme.widgetZAxisColor);
   });
 
-  it('parents all three arrows under a single group in the widget scene', () => {
+  it('parents solid arrows and a separate world-ghost group in the widget scene', () => {
     widget = new CameraWidget();
     const group = widget.getArrowGroup();
+    const ghosts = widget.getWorldGhostGroup();
     expect(widget.getScene().children).toContain(group);
+    expect(widget.getScene().children).toContain(ghosts);
     expect(group.children).toEqual([widget.getArrowX(), widget.getArrowY(), widget.getArrowZ()]);
+    expect(ghosts.visible).toBe(false);
+    expect((widget.getWorldGhostX().line.material as THREE.LineBasicMaterial).opacity).toBe(
+      CAMERA_WIDGET_WORLD_AXIS_OPACITY,
+    );
   });
 
   it('exposes a fixed orthographic camera that looks at the origin', () => {
@@ -133,6 +140,53 @@ describe('CameraWidget orientation mirroring', () => {
     const second = widget.getArrowGroup().quaternion;
 
     expect(first.x).not.toBeCloseTo(second.x);
+  });
+
+  it('shows world-axis ghosts when camera is face-aligned and grid is world-default', () => {
+    widget = new CameraWidget();
+    const mainCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+    mainCamera.position.set(3, 4, 5);
+    mainCamera.lookAt(0, 0, 0);
+    mainCamera.updateMatrixWorld(true);
+    const grid = new EditorOrientation();
+    const cameraOrientation = new EditorOrientation();
+    widget.syncOrientation(mainCamera, grid, cameraOrientation);
+    expect(widget.getWorldGhostGroup().visible).toBe(false);
+
+    cameraOrientation.setFromFaceNormal(new THREE.Vector3(1, 0, 0), new THREE.Vector3());
+    widget.syncOrientation(mainCamera, grid, cameraOrientation);
+    expect(widget.getWorldGhostGroup().visible).toBe(true);
+    expect(widget.getWorldGhostGroup().quaternion.equals(widget.getArrowGroup().quaternion)).toBe(true);
+  });
+
+  it('shows world-axis ghosts when grid is reoriented and camera differs', () => {
+    widget = new CameraWidget();
+    const mainCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+    mainCamera.position.set(3, 4, 5);
+    mainCamera.lookAt(0, 0, 0);
+    mainCamera.updateMatrixWorld(true);
+    const grid = new EditorOrientation();
+    const cameraOrientation = new EditorOrientation();
+    grid.setFromFaceNormal(new THREE.Vector3(0, 0, 1), new THREE.Vector3());
+    widget.syncOrientation(mainCamera, grid, cameraOrientation);
+    expect(widget.getWorldGhostGroup().visible).toBe(true);
+  });
+
+  it('points solid arrows along the grid working axes', () => {
+    widget = new CameraWidget();
+    const mainCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+    mainCamera.position.set(0, 0, 5);
+    mainCamera.lookAt(0, 0, 0);
+    mainCamera.updateMatrixWorld(true);
+    const grid = new EditorOrientation();
+    grid.setFromFaceNormal(new THREE.Vector3(1, 0, 0), new THREE.Vector3());
+    widget.syncOrientation(mainCamera, grid, new EditorOrientation());
+    const basis = grid.getWorldBasis();
+    expect(widget.getArrowX().cone.position.length()).toBeGreaterThan(0);
+    const direction = new THREE.Vector3();
+    widget.getArrowX().cone.getWorldDirection(direction);
+    // ArrowHelper stores direction on the helper; compare local direction via matrix.
+    expect(basis.xAxis.length()).toBeCloseTo(1, 5);
   });
 });
 

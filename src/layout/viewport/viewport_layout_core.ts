@@ -38,6 +38,7 @@ import { audioContextHost } from '@/audio/context/audio_context_host.js';
 import { bindEditorAudioSpaceProbe } from '@/audio/space/audio_space_probe_bind.js';
 import { BuilderEditorShell } from '@/layout/shell/builder_editor_shell.js';
 import { filterUnlockedObjects } from '@/utils/object_lock.js';
+import { findPickSurfaceAtClientPoint } from '@/utils/pointer_client_hit.js';
 import { ViewportSceneBootstrap } from './viewport_scene_bootstrap.js';
 import { BridgeTransformInteraction } from '@/tools/bridge/bridge_transform_interaction.js';
 import type { LayoutToolEditorSystem } from '@/layout/setup/layout_tool_editor_setup.js';
@@ -51,6 +52,7 @@ import { RegistryModalToolSession } from '@/tools/session/registry_modal_tool_se
 import { ToolClipPlane } from '@/tools/clip_plane/tool_clip_plane.js';
 import { HandlerClipPlane } from '@/tools/clip_plane/handler_clip_plane.js';
 import { EditorToolId } from '@/types/editor_tool_id.js';
+import { EditorOverlayId } from '@/tools/overlay/editor_overlay_id.js';
 import { CoordinatorEditMode } from '@/edit/coordinator/coordinator_edit_mode.js';
 import { EditorComponentMode } from '@/types/editor_component_mode.js';
 import { DialogAbout } from '@/ui/about/dialog_about.js';
@@ -83,6 +85,8 @@ import {
   cancelClipToolSelection,
   refreshViewportToolChrome,
 } from '@/layout/setup/layout_coordinator_setup.js';
+import { CoordinatorEditorOrientation } from '@/navigation/orientation/coordinator_editor_orientation.js';
+import { HandlerGridOrientation } from '@/tools/grid/handler_grid_orientation.js';
 import {
   createLayoutSnapSettingsController,
   openLayoutDetachedViewport,
@@ -113,6 +117,7 @@ import { ViewportRegistry } from './viewport_registry.js';
 import { SharedWebGLSurface } from '@/viewports/shared/shared_webgl_surface.js';
 import { SharedWorldScene } from '@/viewports/shared/shared_world_scene.js';
 import { MultiViewComposer } from '@/viewports/core/multi_view_composer.js';
+import { ManagerProjectedGrid } from '@/viewports/grid/projected/manager_projected_grid.js';
 import { DetachedViewportWindow } from '@/viewports/detached/detached_viewport_window.js';
 import { AreaLayoutInteraction } from '@/layout/area/area_layout_interaction.js';
 import { WorkspaceStore } from '@/layout/workspace/workspace_store.js';
@@ -212,6 +217,9 @@ export abstract class ViewportLayoutCore {
   protected settingsUnsubscribe!: (() => void) | null;
   protected clipPlaneTool!: ToolClipPlane;
   protected clipPlaneHandler!: HandlerClipPlane | null;
+  protected editorOrientationCoordinator!:
+    import('@/navigation/orientation/coordinator_editor_orientation.js').CoordinatorEditorOrientation | null;
+  protected gridOrientationHandler!: import('@/tools/grid/handler_grid_orientation.js').HandlerGridOrientation | null;
   protected solidModelPanel!: SolidModelPanel | null;
   protected solidModelController!: SolidModelController | null;
   protected aiCaptureDebugPanel!: PanelAiCaptureDebug | null;
@@ -265,6 +273,8 @@ export abstract class ViewportLayoutCore {
     this.settingsApplicator = null;
     this.settingsUnsubscribe = null;
     this.clipPlaneHandler = null;
+    this.editorOrientationCoordinator = null;
+    this.gridOrientationHandler = null;
     this.solidModelPanel = null;
     this.solidModelController = null;
     this.aiCaptureDebugPanel = null;
@@ -359,6 +369,7 @@ export abstract class ViewportLayoutCore {
         this.toolEditorSystem?.editorWindow.lastPointerOwnerDocument ?? null,
       ),
     );
+    this.editorOrientationCoordinator?.bindViewports();
     this.toolEditorSystem?.refreshInteractiveViewportDomain();
     this.shadingModeCoordinator?.rebindViewportUi();
     this.attachCadRulers();
@@ -382,22 +393,18 @@ export abstract class ViewportLayoutCore {
     ownerDocument: Document | null = null,
   ):
     import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D | null {
-    for (const viewport of this.getAllInteractiveViewports()) {
-      const pickElement = viewport.getContentElement();
-      if (!pickElement) {
-        continue;
-      }
-      if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
-        continue;
-      }
-      const rect = pickElement.getBoundingClientRect();
-      if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-        continue;
-      }
-      return viewport as
-        import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D;
+    const hit = findPickSurfaceAtClientPoint(
+      this.getAllInteractiveViewports(),
+      (viewport) => viewport.getContentElement(),
+      clientX,
+      clientY,
+      ownerDocument,
+    );
+    if (!hit) {
+      return null;
     }
-    return null;
+    return hit as
+      import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D;
   }
 
   /** Creates viewports, sync manager, and shared scene objects. */
@@ -851,8 +858,23 @@ export abstract class ViewportLayoutCore {
     this.editModeCoordinator = new CoordinatorEditMode({
       getPrimaryScene: () => this.getPrimaryScene(),
       getSelectedObjects: () => this.selectionManager.getAllSelectedObjectsAsArray(),
+      getViewports: () => this.getAllInteractiveViewports(),
+      showStatusMessage: (message) => this.showStatusMessage(message),
+    });
+    this.editorOrientationCoordinator = new CoordinatorEditorOrientation({
       getViewports: () => this.getAllLiveViewports(),
       showStatusMessage: (message) => this.showStatusMessage(message),
+    });
+    this.editorOrientationCoordinator.bindViewports();
+    this.bindGridSnapToGridOrientation();
+    this.gridOrientationHandler = new HandlerGridOrientation({
+      worldObject: this.worldObject,
+      orientationCoordinator: this.editorOrientationCoordinator,
+      getViewports: () => this.getAllInteractiveViewports(),
+      getPrimaryScene: () => this.getPrimaryScene(),
+      showStatusMessage: (message) => this.showStatusMessage(message),
+      onPickModeChanged: (mode) => this.toolsPaletteController?.setActiveGridPickMode(mode),
+      isShiftPressed: () => this.toolEditorSystem?.editorWindow.getServices()?.isShiftPressed() === true,
     });
     const result = createToolsPaletteAndClip({
       worldObject: this.worldObject,
@@ -862,7 +884,7 @@ export abstract class ViewportLayoutCore {
       clipPlaneTool: this.clipPlaneTool,
       faceModeCoordinator: this.faceModeCoordinator,
       toolbarContainer: this.toolbarContainer,
-      getViewports: () => this.getAllLiveViewports(),
+      getViewports: () => this.getAllInteractiveViewports(),
       keyboardShortcutHandler: this.keyboardShortcutHandler,
       showStatusMessage: (message) => this.showStatusMessage(message),
       syncPrimitivesToViewports: () => this.syncPrimitivesToViewports(),
@@ -884,6 +906,39 @@ export abstract class ViewportLayoutCore {
       },
       switchToEditSelect: () => {
         this.toolEditorSystem?.switchToEditSelect();
+      },
+      switchToGridTool: () => {
+        this.toolEditorSystem?.switchToGridTool();
+      },
+      onGridReset: () => {
+        this.gridOrientationHandler?.resetOrientation();
+      },
+      onGridAlignToFace: () => {
+        this.toolEditorSystem?.switchToGridTool();
+        this.toolEditorSystem?.editorWindow.getServices()?.pinExclusiveViewport();
+        this.gridOrientationHandler?.armAlignPick();
+      },
+      onGridAlignAxis: (axis) => {
+        this.toolEditorSystem?.switchToGridTool();
+        this.toolEditorSystem?.editorWindow.getServices()?.pinExclusiveViewport();
+        this.gridOrientationHandler?.armEdgeAlignPick(axis);
+      },
+      onGridOriginVertex: () => {
+        this.toolEditorSystem?.switchToGridTool();
+        this.toolEditorSystem?.editorWindow.getServices()?.pinExclusiveViewport();
+        this.gridOrientationHandler?.armOriginVertexPick();
+      },
+      onCameraReset: () => {
+        this.gridOrientationHandler?.resetCameraOrientation();
+      },
+      onCameraAlignToFace: () => {
+        this.toolEditorSystem?.switchToGridTool();
+        this.toolEditorSystem?.editorWindow.getServices()?.pinExclusiveViewport();
+        this.gridOrientationHandler?.armCameraAlignPick();
+      },
+      onPrimaryToolChanged: () => {
+        this.updateGizmoVisibility();
+        this.updateGizmoPivot();
       },
       registerClipTool: (placement, handler) => {
         this.toolEditorSystem?.registerClipTool(placement, handler);
@@ -918,8 +973,40 @@ export abstract class ViewportLayoutCore {
       () => this.isEditModeActive(),
     );
     this.renderLoop.setClipPlaneHandler(result.clipPlaneHandler);
-    this.editorOverlayPolicy.addChangeListener(() => this.refreshCadRulersFromSelection());
-    refreshViewportToolChrome(this.toolsPaletteController, () => this.getAllLiveViewports());
+    this.renderLoop.setEditorOrientationCoordinator(this.editorOrientationCoordinator);
+    this.renderLoop.setGridOrientationHandler(this.gridOrientationHandler);
+    this.editorOverlayPolicy.addChangeListener(() => {
+      this.refreshCadRulersFromSelection();
+      this.updateGizmoVisibility();
+    });
+    refreshViewportToolChrome(this.toolsPaletteController, () => this.getAllInteractiveViewports());
+  }
+
+  /** Keeps translation snap aligned with the visual grid orientation. */
+  private bindGridSnapToGridOrientation(): void {
+    const coordinator = this.editorOrientationCoordinator;
+    if (!coordinator) {
+      return;
+    }
+    const gridOrientation = coordinator.getGridOrientation();
+    this.gridSnap.setPlaneFrame(gridOrientation.getPlaneFrame());
+    this.syncProjectedGridToSnapAndOrientation();
+    gridOrientation.subscribe(() => {
+      this.gridSnap.setPlaneFrame(gridOrientation.getPlaneFrame());
+      this.syncProjectedGridToSnapAndOrientation();
+    });
+  }
+
+  /**
+   * Pushes the active snap interval and grid orientation into the projected
+   * surface grid material.
+   */
+  private syncProjectedGridToSnapAndOrientation(): void {
+    ManagerProjectedGrid.setCellSize(this.gridSnap.getInterval());
+    const orientation = this.editorOrientationCoordinator?.getGridOrientation();
+    if (orientation) {
+      ManagerProjectedGrid.setPlaneFrame(orientation.getPlaneFrame());
+    }
   }
 
   /** Cancels the clip tool and returns to object select in tool chrome. */
@@ -933,9 +1020,16 @@ export abstract class ViewportLayoutCore {
     this.updateGizmoVisibility();
   }
 
-  /** Shows or hides transform/bounds gizmos based on selection and active tools. */
+  /**
+   * Shows or hides transform/bounds gizmos based on opt-in policy and
+   * selection.
+   */
   protected updateGizmoVisibility(): void {
     if (this.componentTransformHandler?.isDragging() || this.transformHandler.isSingleUseDrag()) {
+      this.transformGizmo.setVisible(false);
+      return;
+    }
+    if (!this.editorOverlayPolicy.isAllowed(EditorOverlayId.TRANSFORM_GIZMOS)) {
       this.transformGizmo.setVisible(false);
       return;
     }
@@ -944,14 +1038,12 @@ export abstract class ViewportLayoutCore {
       const mode = this.transformGizmo.getMode();
       const widgetsEnabled =
         mode === TransformMode.TRANSLATE || mode === TransformMode.ROTATE || mode === TransformMode.SCALE;
-      this.transformGizmo.setVisible(componentCount > 0 && widgetsEnabled && !this.isClipPlaneToolActive());
+      this.transformGizmo.setVisible(componentCount > 0 && widgetsEnabled);
       return;
     }
     const selected = this.selectionManager.getAllSelectedObjectsAsArray();
     const unlockedSelected = filterUnlockedObjects(selected);
-    this.transformGizmo.setVisible(
-      unlockedSelected.length > 0 && !this.isFaceSelectionModeActive() && !this.isClipPlaneToolActive(),
-    );
+    this.transformGizmo.setVisible(unlockedSelected.length > 0);
   }
 
   /**
@@ -1045,6 +1137,10 @@ export abstract class ViewportLayoutCore {
     this.solidModelController = setup.solidModelController;
     this.solidModelController.setTransformModeProvider(() => this.transformHandler.getMode());
     this.solidModelController.setActiveCameraProvider(() => this.getActiveSpawnCamera());
+    this.solidModelController.setGridSnapProvider(() => this.gridSnap);
+    this.solidModelController.setGridOrientationProvider(
+      () => this.editorOrientationCoordinator?.getGridOrientation() ?? null,
+    );
     this.solidModelController.adoptFirstSolidModelInWorld();
   }
 

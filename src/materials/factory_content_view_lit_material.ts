@@ -1,10 +1,9 @@
 import * as THREE from 'three';
+import { SHADER_CHUNK_PROJECTED_GRID } from './shader/chunk/shader_chunk_projected_grid.js';
+import { ShaderProgramGenerator } from './shader/generator/shader_program_generator.js';
+import { ShaderProgramContentViewLit } from './shader/program/shader_program_content_view_lit.js';
 
-/**
- * Soft ambient floor so silhouettes and backfaces stay readable at any
- * distance. Matches typical editor viewport fill (not physical night-black).
- */
-export const CONTENT_VIEW_LIT_AMBIENT = 0.18;
+export { CONTENT_VIEW_LIT_AMBIENT } from './content_view_lit_constants.js';
 
 /** UserData key marking content view-lit materials. */
 export const CONTENT_VIEW_LIT_USERDATA_KEY = 'isContentViewLitMaterial';
@@ -27,67 +26,8 @@ function getWhiteMap(): THREE.DataTexture {
 }
 
 /**
- * Builds the GLSL fragment shader for distance-independent viewport lighting.
- * Albedo is sampled in working (linear) space from sRGB textures; output uses
- * Three.js linearToOutputTexel so the renderer color pipeline is not
- * double-encoded.
- *
- * @returns Fragment shader source.
- */
-function buildContentViewLitFragmentShader(): string {
-  return /* glsl */ `
-		uniform vec3 diffuse;
-		uniform sampler2D map;
-		varying vec3 vViewNormal;
-		varying vec2 vUv;
-
-		float lambertTerm(vec3 normalUnit, vec3 lightUnit) {
-			return max(dot(normalUnit, lightUnit), 0.0);
-		}
-
-		float studioViewportLuminance(vec3 normalUnit) {
-			vec3 keyDir = normalize(vec3(0.45, 0.55, 0.70));
-			vec3 fillDir = normalize(vec3(-0.55, 0.28, 0.55));
-			vec3 topDir = normalize(vec3(0.08, 0.88, 0.40));
-			vec3 headDir = vec3(0.0, 0.0, 1.0);
-			float key = lambertTerm(normalUnit, keyDir) * 0.48;
-			float fill = lambertTerm(normalUnit, fillDir) * 0.22;
-			float top = lambertTerm(normalUnit, topDir) * 0.12;
-			float head = lambertTerm(normalUnit, headDir) * 0.20;
-			return min(${CONTENT_VIEW_LIT_AMBIENT.toFixed(3)} + key + fill + top + head, 1.0);
-		}
-
-		void main() {
-			vec3 normalUnit = normalize(vViewNormal);
-			float lit = studioViewportLuminance(normalUnit);
-			vec3 linearColor = lit * texture2D(map, vUv).rgb * diffuse;
-			gl_FragColor = linearToOutputTexel(vec4(linearColor, 1.0));
-		}
-	`;
-}
-
-/**
- * Builds the GLSL vertex shader that passes view-space normals.
- *
- * @returns Vertex shader source.
- */
-function buildContentViewLitVertexShader(): string {
-  return /* glsl */ `
-		varying vec3 vViewNormal;
-		varying vec2 vUv;
-		void main() {
-			vUv = uv;
-			vViewNormal = normalize(normalMatrix * normal);
-			gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-		}
-	`;
-}
-
-/**
- * Content material with camera-locked studio viewport lighting: lit =
- * min(ambient + key + fill + top + head, 1) * map * color Lights live in view
- * space so they follow the camera. No distance falloff — near and far keep
- * equal form contrast (editor solid / scene-view style).
+ * Content material with camera-locked studio viewport lighting and optional
+ * projected surface grid (shared chunk uniforms, no overlay meshes).
  */
 export class ContentViewLitMaterial extends THREE.ShaderMaterial {
   readonly color: THREE.Color;
@@ -105,16 +45,16 @@ export class ContentViewLitMaterial extends THREE.ShaderMaterial {
   ) {
     const tint = new THREE.Color(color);
     const resolvedMap = map ?? getWhiteMap();
+    const program = ShaderProgramGenerator.generate(new ShaderProgramContentViewLit(tint, resolvedMap), [
+      SHADER_CHUNK_PROJECTED_GRID,
+    ]);
     super({
       lights: false,
       toneMapped: false,
       side: options.side ?? THREE.FrontSide,
-      uniforms: {
-        diffuse: { value: tint },
-        map: { value: resolvedMap },
-      },
-      vertexShader: buildContentViewLitVertexShader(),
-      fragmentShader: buildContentViewLitFragmentShader(),
+      uniforms: program.uniforms,
+      vertexShader: program.vertexShader,
+      fragmentShader: program.fragmentShader,
     });
     this.color = tint;
     this._map = map;

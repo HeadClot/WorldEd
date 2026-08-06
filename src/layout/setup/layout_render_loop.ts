@@ -2,7 +2,9 @@ import type * as THREE from 'three';
 import type { ViewportEditor } from '@/viewports/core/viewport_editor.js';
 import { getCadViewPlaneForKind, isPerspectiveViewport } from '@/viewports/core/viewport_editor.js';
 import { CoordinatorCameraFit } from '@/navigation/camera/coordinator_camera_fit.js';
+import type { CoordinatorEditorOrientation } from '@/navigation/orientation/coordinator_editor_orientation.js';
 import { HandlerClipPlane } from '@/tools/clip_plane/handler_clip_plane.js';
+import type { HandlerGridOrientation } from '@/tools/grid/handler_grid_orientation.js';
 import { MultiViewComposer, type MultiViewPanePass } from '@/viewports/core/multi_view_composer.js';
 import type { SharedWorldScene } from '@/viewports/shared/shared_world_scene.js';
 import type { CadRulerSystem } from '@/rulers/system/cad_ruler_system.js';
@@ -30,7 +32,9 @@ export class LayoutRenderLoop {
   private resizeObserver: ResizeObserver | null;
   private getActiveViewports: (() => readonly ViewportEditor[]) | null;
   private cameraFitCoordinator: CoordinatorCameraFit | null;
+  private editorOrientationCoordinator: CoordinatorEditorOrientation | null;
   private clipPlaneHandler: HandlerClipPlane | null;
+  private gridOrientationHandler: HandlerGridOrientation | null;
   private cadRulerSystem: CadRulerSystem | null;
   private transformGizmo: GizmoTransform | null;
   private transformHandler: HandlerTransform | null;
@@ -50,7 +54,9 @@ export class LayoutRenderLoop {
     this.resizeObserver = null;
     this.getActiveViewports = null;
     this.cameraFitCoordinator = null;
+    this.editorOrientationCoordinator = null;
     this.clipPlaneHandler = null;
+    this.gridOrientationHandler = null;
     this.cadRulerSystem = null;
     this.transformGizmo = null;
     this.transformHandler = null;
@@ -72,6 +78,8 @@ export class LayoutRenderLoop {
     getActiveViewports: () => readonly ViewportEditor[];
     cameraFitCoordinator: CoordinatorCameraFit;
     clipPlaneHandler: HandlerClipPlane | null;
+    editorOrientationCoordinator?: CoordinatorEditorOrientation | null;
+    gridOrientationHandler?: HandlerGridOrientation | null;
     cadRulerSystem?: CadRulerSystem | null;
     transformGizmo?: GizmoTransform | null;
     transformHandler?: HandlerTransform | null;
@@ -82,12 +90,32 @@ export class LayoutRenderLoop {
     this.getActiveViewports = parts.getActiveViewports;
     this.cameraFitCoordinator = parts.cameraFitCoordinator;
     this.clipPlaneHandler = parts.clipPlaneHandler;
+    this.editorOrientationCoordinator = parts.editorOrientationCoordinator ?? null;
+    this.gridOrientationHandler = parts.gridOrientationHandler ?? null;
     this.cadRulerSystem = parts.cadRulerSystem ?? null;
     this.transformGizmo = parts.transformGizmo ?? null;
     this.transformHandler = parts.transformHandler ?? null;
     this.onBeforeRender = parts.onBeforeRender;
     this.multiViewComposer = parts.multiViewComposer;
     this.sharedScene = parts.sharedScene;
+  }
+
+  /**
+   * Updates the grid orientation handler used for align-preview scale.
+   *
+   * @param handler Grid orientation handler or null.
+   */
+  setGridOrientationHandler(handler: HandlerGridOrientation | null): void {
+    this.gridOrientationHandler = handler;
+  }
+
+  /**
+   * Updates the orientation coordinator used for reorientation animation.
+   *
+   * @param coordinator Orientation coordinator or null.
+   */
+  setEditorOrientationCoordinator(coordinator: CoordinatorEditorOrientation | null): void {
+    this.editorOrientationCoordinator = coordinator;
   }
 
   /**
@@ -172,8 +200,10 @@ export class LayoutRenderLoop {
     const activeViewports = this.getActiveViewports();
     this.updatePerspectiveViewports(activeViewports, delta);
     this.cameraFitCoordinator?.updateAnimations();
+    this.editorOrientationCoordinator?.updateAnimations();
     this.onBeforeRender?.();
     this.updateClipPreviewScales(activeViewports);
+    this.gridOrientationHandler?.updatePreviewScreenScales();
     this.renderMultiView(activeViewports);
     this.updateMouseCursorForFrame();
     controllerAudioPlayback.endFrame();

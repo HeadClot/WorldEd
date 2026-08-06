@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
+  closestParameterOnSegment2d,
+  distancePointToSegment2d,
   resolveEditComponentPickElementMetrics,
   resolveEditComponentPickRadius,
 } from '@/edit/pick/edit_component_screen_metrics.js';
@@ -33,6 +35,13 @@ describe('edit_component_screen_metrics', () => {
     const perspective = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     expect(resolveEditComponentPickRadius(ortho, 100)).toBeGreaterThan(100);
     expect(resolveEditComponentPickRadius(perspective, 100)).toBe(100);
+  });
+
+  it('returns the clamped parameter of the closest point on a 2D segment', () => {
+    expect(closestParameterOnSegment2d(5, 1, 0, 0, 10, 0)).toBeCloseTo(0.5, 6);
+    expect(closestParameterOnSegment2d(-2, 0, 0, 0, 10, 0)).toBeCloseTo(0, 6);
+    expect(closestParameterOnSegment2d(20, 0, 0, 0, 10, 0)).toBeCloseTo(1, 6);
+    expect(distancePointToSegment2d(5, 3, 0, 0, 10, 0)).toBeCloseTo(3, 6);
   });
 
   it('picks off-center vertices under an orthographic top-down camera', () => {

@@ -17,6 +17,11 @@ import { getDefaultSceneFocus } from '@/navigation/placement/default_camera_plac
 import { OrthoDepthRanger } from './ortho_depth_ranger.js';
 import { SolidBrushEdgeFader } from '@/solid/model/solid_brush_edge_fader.js';
 import { hideGizmoAfterRenderPass, showGizmoForRenderPass } from '@/transform/gizmo/gizmo_viewport_visibility.js';
+import type { EditorOrientation } from '@/navigation/orientation/editor_orientation.js';
+import {
+  buildOrthoGridPlaneFrame,
+  reorientOrthographicCamera,
+} from '@/navigation/orientation/ortho_viewport_orientation.js';
 
 /** Options for constructing a shared-scene orthographic pane. */
 export interface Viewport2DOptions extends ViewportBaseOptions {
@@ -74,6 +79,15 @@ export class Viewport2D extends BaseViewport {
    */
   setWorldGroup(group: THREE.Group): void {
     this.worldGroup = group;
+  }
+
+  /**
+   * Returns the world group bound to this viewport, when present.
+   *
+   * @returns World group or null.
+   */
+  getWorldGroup(): THREE.Group | null {
+    return this.worldGroup;
   }
 
   /**
@@ -306,6 +320,7 @@ export class Viewport2D extends BaseViewport {
     SelectionHighlight.setDepthOcclusionEnabled(false);
     OrthoDepthRanger.update(this.camera, this.scene);
     this.grids.update(this.camera);
+    this.shadingController.applyDisplayOverlaysForRenderPass(this.worldGroup);
   }
 
   /** Hides this pane's grid and gizmo after its multi-view pass completes. */
@@ -321,6 +336,20 @@ export class Viewport2D extends BaseViewport {
    */
   isCameraNavigating(): boolean {
     return this.panHandler?.isNavigating() ?? false;
+  }
+
+  /**
+   * Reorients this Top / Front / Side camera and grid lattice to the working
+   * grid frame while preserving the world point under the view center.
+   *
+   * @param orientation Shared grid orientation store.
+   */
+  applyGridOrientation(orientation: EditorOrientation): void {
+    const basis = orientation.getWorldBasis();
+    const planeFrame = orientation.getPlaneFrame();
+    reorientOrthographicCamera(this.camera, this.getViewportKind(), basis, planeFrame.origin);
+    const orthoFrame = buildOrthoGridPlaneFrame(this.getViewportKind(), basis, planeFrame.origin);
+    this.grids.setPlaneFrame(orthoFrame);
   }
 
   /**
@@ -372,6 +401,44 @@ export class Viewport2D extends BaseViewport {
    */
   getShadingMode(): ShadingMode {
     return this.shadingController.getShadingMode();
+  }
+
+  /**
+   * Sets whether permanent content and brush wireframes draw in this viewport.
+   *
+   * @param visible True to show wireframes.
+   */
+  setContentWireframesVisible(visible: boolean): void {
+    this.shadingController.setContentWireframesVisible(visible);
+    this.getViewportToolbar().setContentWireframesActive(visible);
+  }
+
+  /**
+   * Returns whether content and brush wireframes are enabled for this viewport.
+   *
+   * @returns True when wireframes should draw.
+   */
+  areContentWireframesVisible(): boolean {
+    return this.shadingController.areContentWireframesVisible();
+  }
+
+  /**
+   * Sets whether the projected surface grid draws in this viewport.
+   *
+   * @param visible True to show the projected grid.
+   */
+  setProjectedGridVisible(visible: boolean): void {
+    this.shadingController.setProjectedGridVisible(visible);
+    this.getViewportToolbar().setProjectedGridActive(visible);
+  }
+
+  /**
+   * Returns whether the projected surface grid is enabled for this viewport.
+   *
+   * @returns True when the projected grid should draw.
+   */
+  isProjectedGridVisible(): boolean {
+    return this.shadingController.isProjectedGridVisible();
   }
 
   /**

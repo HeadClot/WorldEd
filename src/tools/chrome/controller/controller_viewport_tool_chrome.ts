@@ -10,13 +10,18 @@ import { ManagerSelection } from '@/selection/object/manager_selection.js';
 import { EditorOverlayId } from '@/tools/overlay/editor_overlay_id.js';
 import type { PolicyEditorOverlay } from '@/tools/overlay/policy_editor_overlay.js';
 import type { RegistryModalToolSession } from '@/tools/session/registry_modal_tool_session.js';
-import { CLIP_PLANE_SESSION_KEY, EDIT_MODE_SESSION_KEY } from '@/tools/session/editor_tool_session_keys.js';
+import {
+  CLIP_PLANE_SESSION_KEY,
+  EDIT_MODE_SESSION_KEY,
+  OBJECT_TOOL_SESSION_KEY,
+} from '@/tools/session/editor_tool_session_keys.js';
 import {
   ViewportToolChromeHost,
   type ViewportToolChromeHandlers,
 } from '@/tools/chrome/host/viewport_tool_chrome_host.js';
 import { ViewportToolChromeHoverOwner } from '@/tools/chrome/focus/viewport_tool_chrome_hover_owner.js';
 import type { ObjectApplyTransformKind } from '@/types/object_apply_transform_kind.js';
+import type { GridAlignPickMode } from '@/tools/grid/grid_align_pick_mode.js';
 
 /** Dependencies for coordinating per-pane tool chrome with editor modes. */
 export interface ControllerViewportToolChromeDependencies {
@@ -48,6 +53,27 @@ export interface ControllerViewportToolChromeDependencies {
   onEditModePresentationChanged?: () => void;
   /** Object → Apply bake for mesh/brush transforms. */
   onApplyObjectTransform?: (kind: ObjectApplyTransformKind) => void;
+  /** Switches the editor tool stack to the grid tool. */
+  switchToGridTool?: () => void;
+  /** Resets grid orientation only. */
+  onGridReset?: () => void;
+  /** Arms single-use face pick to align the grid only. */
+  onGridAlignToFace?: () => void;
+  /** Arms single-use edge pick to align one grid axis. */
+  onGridAlignAxis?: (
+    axis: import('@/navigation/orientation/editor_orientation_axis.js').EditorOrientationAxisId,
+  ) => void;
+  /** Arms single-use vertex pick to zero the grid lattice origin. */
+  onGridOriginVertex?: () => void;
+  /** Resets camera orientation only. */
+  onCameraReset?: () => void;
+  /** Arms single-use face pick to align the camera only. */
+  onCameraAlignToFace?: () => void;
+  /**
+   * Refreshes gizmo / widget presentation after the primary rail tool changes
+   * (e.g. hide bounds widgets while Grid is active).
+   */
+  onPrimaryToolChanged?: () => void;
 }
 
 /**
@@ -60,6 +86,7 @@ export class ControllerViewportToolChrome {
   private activeTransformMode: TransformMode;
   private activeInteractionMode: EditorInteractionMode;
   private activeComponentMode: EditorComponentMode;
+  private activeGridPickMode: GridAlignPickMode;
   private readonly hosts: Set<ViewportToolChromeHost>;
   private readonly hostsByContainer: Map<HTMLElement, ViewportToolChromeHost>;
   private readonly hoverOwner: ViewportToolChromeHoverOwner;
@@ -75,9 +102,23 @@ export class ControllerViewportToolChrome {
     this.activeTransformMode = TransformMode.BOUNDS;
     this.activeInteractionMode = EditorInteractionMode.OBJECT_MODE;
     this.activeComponentMode = EditorComponentMode.VERTEX;
+    this.activeGridPickMode = 'none';
     this.hosts = new Set();
     this.hostsByContainer = new Map();
     this.hoverOwner = new ViewportToolChromeHoverOwner();
+    this.enableObjectToolOverlays();
+  }
+
+  /**
+   * Highlights the armed single-use grid/camera options button across panes.
+   *
+   * @param mode Armed pick mode, or none when idle.
+   */
+  setActiveGridPickMode(mode: GridAlignPickMode): void {
+    this.activeGridPickMode = mode;
+    this.hosts.forEach((host) => {
+      host.setActiveGridPickMode(mode);
+    });
   }
 
   /**
@@ -221,8 +262,8 @@ export class ControllerViewportToolChrome {
       return;
     }
     if (this.activeInteractionMode === EditorInteractionMode.EDIT_MODE) {
-      if (toolId === EditorToolId.FACE || toolId === EditorToolId.CLIP_PLANE) {
-        this.deps.showStatusMessage('Face Select and Clip are Object Mode tools');
+      if (toolId === EditorToolId.FACE || toolId === EditorToolId.CLIP_PLANE || toolId === EditorToolId.GRID) {
+        this.deps.showStatusMessage('Face Select, Clip, and Grid are Object Mode tools');
         return;
       }
       this.activateEditSelectTool();
@@ -234,6 +275,10 @@ export class ControllerViewportToolChrome {
     }
     if (toolId === EditorToolId.FACE) {
       this.activateFaceTool();
+      return;
+    }
+    if (toolId === EditorToolId.GRID) {
+      this.activateGridTool();
       return;
     }
     this.activateClipTool();
@@ -252,20 +297,24 @@ export class ControllerViewportToolChrome {
     }
     this.endClipSessionIfActive();
     if (mode === SelectionMode.FACE) {
+      this.clearObjectToolOverlays();
       if (this.activeTool !== EditorToolId.FACE) {
         this.activeTool = EditorToolId.FACE;
         this.deps.switchToFaceSelect?.();
       }
       this.broadcastActiveTool();
       this.refreshChromeContext();
+      this.notifyPrimaryToolChanged();
       return;
     }
     if (this.activeTool !== EditorToolId.OBJECT) {
       this.activeTool = EditorToolId.OBJECT;
       this.deps.switchToObjectSelect?.();
     }
+    this.enableObjectToolOverlays();
     this.broadcastActiveTool();
     this.refreshChromeContext();
+    this.notifyPrimaryToolChanged();
   }
 
   /**
@@ -311,26 +360,34 @@ export class ControllerViewportToolChrome {
   /** Activates object selection mode. */
   private activateObjectTool(): void {
     this.endClipSessionIfActive();
+    this.clearEditModeToolOverlays();
     this.deps.faceExtrusionController.setSelectionMode(SelectionMode.OBJECT);
     this.activeTool = EditorToolId.OBJECT;
     this.broadcastActiveTool();
     this.deps.switchToObjectSelect?.();
+    this.enableObjectToolOverlays();
     this.refreshChromeContext();
+    this.notifyPrimaryToolChanged();
     this.deps.showStatusMessage('Object select');
   }
 
   /** Keeps Edit Select active while Edit Mode is open. */
   private activateEditSelectTool(): void {
     this.endClipSessionIfActive();
+    this.clearObjectToolOverlays();
     this.activeTool = EditorToolId.OBJECT;
     this.broadcastActiveTool();
     this.deps.switchToEditSelect?.();
+    this.enableEditModeToolOverlays();
     this.refreshChromeContext();
+    this.notifyPrimaryToolChanged();
   }
 
   /** Activates face selection mode. */
   private activateFaceTool(): void {
     this.endClipSessionIfActive();
+    this.clearObjectToolOverlays();
+    this.clearEditModeToolOverlays();
     this.activeTool = EditorToolId.FACE;
     this.broadcastActiveTool();
     if (this.deps.switchToFaceSelect) {
@@ -339,7 +396,49 @@ export class ControllerViewportToolChrome {
       this.deps.faceExtrusionController.setSelectionMode(SelectionMode.FACE);
     }
     this.refreshChromeContext();
+    this.notifyPrimaryToolChanged();
     this.deps.showStatusMessage('Face select');
+  }
+
+  /** Activates the global grid orientation tool. */
+  private activateGridTool(): void {
+    this.endClipSessionIfActive();
+    this.clearObjectToolOverlays();
+    this.clearEditModeToolOverlays();
+    this.deps.faceExtrusionController.setSelectionMode(SelectionMode.OBJECT);
+    this.activeTool = EditorToolId.GRID;
+    this.broadcastActiveTool();
+    this.deps.switchToGridTool?.();
+    this.refreshChromeContext();
+    this.notifyPrimaryToolChanged();
+    this.deps.showStatusMessage('Grid tools');
+  }
+
+  /** Notifies layout that gizmo / widget presentation should refresh. */
+  private notifyPrimaryToolChanged(): void {
+    this.deps.onPrimaryToolChanged?.();
+  }
+
+  /** Opts into CAD rulers and transform gizmos for Object Select presentation. */
+  private enableObjectToolOverlays(): void {
+    this.deps.editorOverlayPolicy.enable(EditorOverlayId.CAD_BOUNDS_RULERS, OBJECT_TOOL_SESSION_KEY);
+    this.deps.editorOverlayPolicy.enable(EditorOverlayId.TRANSFORM_GIZMOS, OBJECT_TOOL_SESSION_KEY);
+  }
+
+  /** Releases Object Select overlay ownership. */
+  private clearObjectToolOverlays(): void {
+    this.deps.editorOverlayPolicy.release(EditorOverlayId.CAD_BOUNDS_RULERS, OBJECT_TOOL_SESSION_KEY);
+    this.deps.editorOverlayPolicy.release(EditorOverlayId.TRANSFORM_GIZMOS, OBJECT_TOOL_SESSION_KEY);
+  }
+
+  /** Opts into transform gizmos for Edit Mode component widgets (no CAD rulers). */
+  private enableEditModeToolOverlays(): void {
+    this.deps.editorOverlayPolicy.enable(EditorOverlayId.TRANSFORM_GIZMOS, EDIT_MODE_SESSION_KEY);
+  }
+
+  /** Releases Edit Mode overlay ownership. */
+  private clearEditModeToolOverlays(): void {
+    this.deps.editorOverlayPolicy.release(EditorOverlayId.TRANSFORM_GIZMOS, EDIT_MODE_SESSION_KEY);
   }
 
   /** Activates the clip plane tool when a mesh is selected. */
@@ -349,6 +448,8 @@ export class ControllerViewportToolChrome {
       this.deps.showStatusMessage('Select a mesh to clip');
       return;
     }
+    this.clearObjectToolOverlays();
+    this.clearEditModeToolOverlays();
     this.deps.faceExtrusionController.setSelectionMode(SelectionMode.OBJECT);
     this.beginClipSession();
     this.deps.showStatusMessage(this.deps.clipPlaneTool.getStatusMessage());
@@ -362,13 +463,13 @@ export class ControllerViewportToolChrome {
     }
     this.activeTool = EditorToolId.CLIP_PLANE;
     this.broadcastActiveTool();
-    this.deps.editorOverlayPolicy.suppress(EditorOverlayId.CAD_BOUNDS_RULERS, CLIP_PLANE_SESSION_KEY);
     this.deps.modalToolSessionRegistry.register({
       id: CLIP_PLANE_SESSION_KEY,
       endsOnSelectionChange: true,
       end: () => this.onClipSessionEndedBySelection(),
     });
     this.refreshChromeContext();
+    this.notifyPrimaryToolChanged();
   }
 
   /** Ends clip when selection changes externally. */
@@ -376,14 +477,15 @@ export class ControllerViewportToolChrome {
     if (this.activeTool !== EditorToolId.CLIP_PLANE && !this.deps.clipPlaneTool.isActive()) {
       return;
     }
-    this.deps.editorOverlayPolicy.release(EditorOverlayId.CAD_BOUNDS_RULERS, CLIP_PLANE_SESSION_KEY);
     this.deps.modalToolSessionRegistry.unregister(CLIP_PLANE_SESSION_KEY);
     this.deps.clipPlaneHandler.cancel();
     this.deps.switchToObjectSelect?.();
     this.activeTool = EditorToolId.OBJECT;
     this.deps.faceExtrusionController.setSelectionMode(SelectionMode.OBJECT);
+    this.enableObjectToolOverlays();
     this.broadcastActiveTool();
     this.refreshChromeContext();
+    this.notifyPrimaryToolChanged();
     this.deps.showStatusMessage('Clip cancelled · selection changed');
   }
 
@@ -397,7 +499,6 @@ export class ControllerViewportToolChrome {
       return;
     }
     this.deps.modalToolSessionRegistry.unregister(CLIP_PLANE_SESSION_KEY);
-    this.deps.editorOverlayPolicy.release(EditorOverlayId.CAD_BOUNDS_RULERS, CLIP_PLANE_SESSION_KEY);
     if (this.deps.clipPlaneTool.isActive()) {
       this.deps.clipPlaneTool.deactivate();
     }
@@ -418,6 +519,12 @@ export class ControllerViewportToolChrome {
       onCommitSplit: () => this.deps.clipPlaneHandler.commitSplit(),
       onOpenUvEditor: () => this.deps.onOpenUvEditor(),
       onExtrudeFaces: () => this.deps.onExtrudeFaces(),
+      onGridReset: () => this.deps.onGridReset?.(),
+      onGridAlignToFace: () => this.deps.onGridAlignToFace?.(),
+      onGridAlignAxis: (axis) => this.deps.onGridAlignAxis?.(axis),
+      onGridOriginVertex: () => this.deps.onGridOriginVertex?.(),
+      onCameraReset: () => this.deps.onCameraReset?.(),
+      onCameraAlignToFace: () => this.deps.onCameraAlignToFace?.(),
       onInteractionMode: (mode) => this.setInteractionMode(mode),
       onComponentMode: (mode) => this.setComponentMode(mode),
       onApplyObjectTransform: (kind) => this.deps.onApplyObjectTransform?.(kind),
@@ -435,6 +542,7 @@ export class ControllerViewportToolChrome {
     host.setActiveTransformMode(this.activeTransformMode);
     host.setActiveInteractionMode(this.activeInteractionMode);
     host.setActiveComponentMode(this.activeComponentMode);
+    host.setActiveGridPickMode(this.activeGridPickMode);
     this.refreshChromeContext();
   }
 
@@ -473,45 +581,42 @@ export class ControllerViewportToolChrome {
   /** Enters Object Mode and restores object-select chrome. */
   private enterObjectMode(): void {
     this.endClipSessionIfActive();
-    this.releaseEditModeOverlays();
+    this.clearEditModeToolOverlays();
     this.deps.onExitEditMode?.();
     this.activeInteractionMode = EditorInteractionMode.OBJECT_MODE;
     this.activeComponentMode = EditorComponentMode.VERTEX;
+    this.activeTool = EditorToolId.OBJECT;
     this.broadcastInteractionMode();
     this.broadcastComponentMode();
+    this.enableObjectToolOverlays();
     this.refreshChromeContext();
     this.deps.switchToObjectSelect?.();
     this.deps.onEditModePresentationChanged?.();
+    this.notifyPrimaryToolChanged();
     this.deps.showStatusMessage(getEditorInteractionModeLabel(EditorInteractionMode.OBJECT_MODE));
   }
 
   /** Enters Edit Mode when a domain session can open. */
   private enterEditMode(): void {
     this.endClipSessionIfActive();
+    this.clearObjectToolOverlays();
     const opened = this.deps.onEnterEditMode?.() !== false;
     if (!opened) {
       this.activeInteractionMode = EditorInteractionMode.OBJECT_MODE;
+      this.enableObjectToolOverlays();
       this.broadcastInteractionMode();
       this.refreshChromeContext();
+      this.notifyPrimaryToolChanged();
       return;
     }
     this.activeInteractionMode = EditorInteractionMode.EDIT_MODE;
     this.activeComponentMode = EditorComponentMode.VERTEX;
-    this.suppressEditModeOverlays();
+    this.enableEditModeToolOverlays();
     this.broadcastInteractionMode();
     this.broadcastComponentMode();
     this.refreshChromeContext();
     this.deps.switchToEditSelect?.();
     this.deps.onEditModePresentationChanged?.();
-  }
-
-  /** Hides CAD bounds rulers while Edit Mode is active. */
-  private suppressEditModeOverlays(): void {
-    this.deps.editorOverlayPolicy.suppress(EditorOverlayId.CAD_BOUNDS_RULERS, EDIT_MODE_SESSION_KEY);
-  }
-
-  /** Restores CAD bounds rulers after leaving Edit Mode. */
-  private releaseEditModeOverlays(): void {
-    this.deps.editorOverlayPolicy.release(EditorOverlayId.CAD_BOUNDS_RULERS, EDIT_MODE_SESSION_KEY);
+    this.notifyPrimaryToolChanged();
   }
 }

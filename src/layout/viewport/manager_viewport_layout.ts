@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { findPickSurfaceAtClientPoint } from '@/utils/pointer_client_hit.js';
 import { ViewportLayoutCore } from './viewport_layout_core.js';
 import { createOutlinerShellActions, createToolbarShellActions } from '@/layout/setup/layout_shell_action_builders.js';
 import { buildLayoutShellActionSource } from '@/layout/setup/layout_shell_source.js';
@@ -47,6 +48,7 @@ import {
   computeComponentTransformPivot,
   expandComponentSelectionToTransformVertices,
 } from '@/edit/transform/component_transform_selection.js';
+import { EditorOverlayId } from '@/tools/overlay/editor_overlay_id.js';
 
 /**
  * Root composition manager for the editor viewport layout. Builds UI shell,
@@ -191,8 +193,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       onDuplicateSelectedForDrag: () => this.objectActionHandler.onDuplicateSelected(),
       onAfterTransformCommit: (meshes) => this.refreshVisualsAfterTransformCommit(meshes),
       onTransformsLive: (meshes) => this.solidModelController?.onTransformsLive(meshes),
-      isInteractionEnabled: () =>
-        !this.isFaceSelectionModeActive() && !this.isEditModeActive() && !this.isClipPlaneToolActive(),
+      isInteractionEnabled: () => this.areObjectTransformWidgetsAllowed(),
       onRulerTransformFeedback: (meshes, phase) => this.onCadRulerTransformFeedback(meshes, phase),
       onPermanentGizmoHandleDragBegan: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragBegan(),
       onPermanentGizmoHandleDragEnded: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragEnded(),
@@ -223,22 +224,18 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
     ownerDocument: Document | null = null,
   ):
     import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D | null {
-    for (const viewport of this.getAllInteractiveViewports()) {
-      const pickElement = viewport.getContentElement();
-      if (!pickElement) {
-        continue;
-      }
-      if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
-        continue;
-      }
-      const rect = pickElement.getBoundingClientRect();
-      if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-        continue;
-      }
-      return viewport as
-        import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D;
+    const hit = findPickSurfaceAtClientPoint(
+      this.getAllInteractiveViewports(),
+      (viewport) => viewport.getContentElement(),
+      clientX,
+      clientY,
+      ownerDocument,
+    );
+    if (!hit) {
+      return null;
     }
-    return null;
+    return hit as
+      import('@/viewports/core/viewport_3d.js').Viewport3D | import('@/viewports/core/viewport_2d.js').Viewport2D;
   }
 
   /**
@@ -295,6 +292,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       getInteractiveViewports: () => this.getAllInteractiveViewports() as ReadonlyArray<Viewport3D | Viewport2D>,
       getLastPointerClientPositionForDocument: (ownerDocument) =>
         this.detachedViewportWindow.getLastPointerClientPositionForDocument(ownerDocument),
+      getDetachedInputManagers: () => this.detachedViewportWindow.getInputManagers(),
       getTransformPivot: () => this.computeGizmoPivotForTools(),
       setStatusMessage: (message) => this.statusBar?.setLastAction(message),
       refreshGizmoPresentation: () => {
@@ -311,6 +309,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       getTransformInteractionBridge: () => this.transformInteractionBridge ?? null,
       getFaceModeCoordinator: () => this.faceModeCoordinator ?? null,
       getEditModeCoordinator: () => this.editModeCoordinator ?? null,
+      getGridOrientationHandler: () => this.gridOrientationHandler ?? null,
       onPermanentGizmoHandleDragBegan: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragBegan(),
       onPermanentGizmoHandleDragEnded: () => this.toolEditorSystem?.editorWindow.onPermanentGizmoHandleDragEnded(),
     });
@@ -530,6 +529,19 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       return true;
     }
     return this.clipPlaneTool.isActive();
+  }
+
+  /**
+   * Returns whether object-mode transform widgets may interact (opt-in policy,
+   * not Edit Mode).
+   *
+   * @returns True when Object Select owns transform gizmos.
+   */
+  private areObjectTransformWidgetsAllowed(): boolean {
+    if (this.isEditModeActive()) {
+      return false;
+    }
+    return this.editorOverlayPolicy.isAllowed(EditorOverlayId.TRANSFORM_GIZMOS);
   }
 
   /** Updates the gizmo pivot to the selection center. */
@@ -909,6 +921,8 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       getActiveViewports: () => this.getActiveViewports(),
       cameraFitCoordinator: this.cameraFitCoordinator,
       clipPlaneHandler: this.clipPlaneHandler,
+      editorOrientationCoordinator: this.editorOrientationCoordinator,
+      gridOrientationHandler: this.gridOrientationHandler,
       cadRulerSystem: this.cadRulerSystem,
       transformGizmo: this.transformGizmo,
       transformHandler: this.transformHandler,
@@ -945,7 +959,7 @@ export class ManagerViewportLayout extends ViewportLayoutCore {
       }
     });
     this.toolsPaletteController?.syncPaneContainers(
-      this.getAllLiveViewports().map((viewport) => viewport.getContainer()),
+      this.getAllInteractiveViewports().map((viewport) => viewport.getContainer()),
     );
   }
 

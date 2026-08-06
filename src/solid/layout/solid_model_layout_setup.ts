@@ -78,6 +78,7 @@ function wireSolidModelController(host: SolidModelLayoutHost, controller: SolidM
   controller.setTextureLockSettings(host.textureLock);
   controller.setActiveCameraProvider(() => host.viewport3D?.getCamera() ?? null);
   controller.setGridIntervalProvider(() => host.gridSnap.getInterval());
+  controller.setGridSnapProvider(() => host.gridSnap);
 }
 
 /**

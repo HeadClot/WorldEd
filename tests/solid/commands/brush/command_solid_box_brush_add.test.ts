@@ -22,6 +22,28 @@ describe('CommandSolidBoxBrushAdd', () => {
     expect(model.findBrush(created!.id)).toBeUndefined();
   });
 
+  it('applies model-local rotation so the brush aligns to the working grid', () => {
+    const model = new SolidModel('AddBrushRotated');
+    const yaw = Math.PI / 4;
+    const command = new CommandSolidBoxBrushAdd(
+      model,
+      2,
+      SolidOperation.Additive,
+      new THREE.Vector3(0, 0, 0),
+      null,
+      new THREE.Euler(0, yaw, 0, 'XYZ'),
+    );
+    command.execute();
+    const created = command.getCreatedBrush();
+    expect(created).toBeTruthy();
+    expect(created!.rotation.y).toBeCloseTo(yaw, 5);
+    const mesh = created!.mesh!;
+    mesh.updateMatrixWorld(true);
+    const xAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(mesh.quaternion);
+    expect(xAxis.x).toBeCloseTo(Math.cos(yaw), 5);
+    expect(xAxis.z).toBeCloseTo(-Math.sin(yaw), 5);
+  });
+
   it('re-inserts the same brush on redo', () => {
     const model = new SolidModel('AddBrushRedo');
     const command = new CommandSolidBoxBrushAdd(model, 2, SolidOperation.Additive, new THREE.Vector3());

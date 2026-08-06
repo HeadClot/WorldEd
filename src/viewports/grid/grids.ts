@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GridPlane } from './grid_plane.js';
 import { InfiniteGrid2D } from './infinite_grid_2d.js';
 import { InfiniteGrid3D } from './infinite_grid_3d.js';
+import type { EditorPlaneFrame } from '@/navigation/orientation/editor_orientation_basis.js';
 
 export type { GridPlane } from './grid_plane.js';
 
@@ -82,6 +83,22 @@ export class Grids {
     if (this.grid2d) {
       this.grid2d.setSnapInterval(snapInterval);
     }
+  }
+
+  /**
+   * Sets the working plane frame for the perspective 3D grid or orthographic 2D
+   * lattice.
+   *
+   * @param frame Plane origin, U/V axes, and normal.
+   */
+  setPlaneFrame(frame: EditorPlaneFrame): void {
+    this.grid3d?.setPlaneFrame(frame);
+    this.grid2d?.setPlaneFrame(frame);
+  }
+
+  /** Restores the default world XZ floor frame for the perspective 3D grid. */
+  resetPlaneFrame(): void {
+    this.grid3d?.resetPlaneFrame();
   }
 
   /**

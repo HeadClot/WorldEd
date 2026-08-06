@@ -1,4 +1,5 @@
 import { UiStackLayers } from '@/ui/stack/ui_stack_layers.js';
+import { doesElementContainEventTarget } from '@/utils/dom_node_realm.js';
 
 /** Stacking band for floating tool windows versus modal/confirm dialogs. */
 export type FloatingPanelStackLayer = 'tool' | 'modal' | 'confirm';
@@ -164,15 +165,13 @@ export class FloatingPanelStack {
    * Returns whether a DOM event target lies inside any registered floating
    * window root (panel card or modal backdrop) or an open menu / chrome
    * pointer-block surface. Used so viewport tools do not treat coordinate hits
-   * under open windows or menus as scene picks.
+   * under open windows or menus as scene picks. Uses structural node checks so
+   * detached popup chrome (separate JS realm) still blocks viewport routing.
    *
    * @param target Event target from a browser pointer event.
    * @returns True when the target is inside a registered overlay surface.
    */
   static containsEventTarget(target: EventTarget | null): boolean {
-    if (!(target instanceof Node)) {
-      return false;
-    }
     if (this.listContainsEventTarget(this.registeredPanels, target)) {
       return true;
     }
@@ -180,19 +179,19 @@ export class FloatingPanelStack {
   }
 
   /**
-   * Returns whether a node lies inside any element of a surface list.
+   * Returns whether an event target lies inside any element of a surface list.
    *
    * @param surfaces Registered roots.
-   * @param target Event target node.
+   * @param target Event target from a browser pointer event.
    * @returns True when the target is inside one of the surfaces.
    */
-  private static listContainsEventTarget(surfaces: readonly HTMLElement[], target: Node): boolean {
+  private static listContainsEventTarget(surfaces: readonly HTMLElement[], target: EventTarget | null): boolean {
     for (let index = surfaces.length - 1; index >= 0; index--) {
       const surface = surfaces[index];
       if (!surface) {
         continue;
       }
-      if (surface === target || surface.contains(target)) {
+      if (doesElementContainEventTarget(surface, target)) {
         return true;
       }
     }

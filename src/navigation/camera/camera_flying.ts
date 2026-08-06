@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ManagerInput } from '@/input/manager_input.js';
 import { blurActiveFormField } from '@/utils/dom_focus.js';
 import { SelectionClickThrough } from '@/selection/object/selection_click_through.js';
+import { EditorOrientation } from '@/navigation/orientation/editor_orientation.js';
 
 /**
  * First-person flying camera for the 3D viewport. Look and WASD/QE movement
@@ -9,11 +10,13 @@ import { SelectionClickThrough } from '@/selection/object/selection_click_throug
  * This prevents camera drift and tool-key conflicts. Movement keys are read
  * through {@link ManagerInput.isKeyDown} layout-stable codes (same path as
  * shortcuts and axis lock), so labeled W/A/S/D/Q/E work on QWERTZ and AZERTY.
+ * Yaw and pitch are relative to the shared editor working orientation.
  */
 export class CameraFlying {
   private canvas: HTMLElement;
   private camera: THREE.PerspectiveCamera;
   private inputManager: ManagerInput;
+  private editorOrientation: EditorOrientation;
   private isRotating: boolean;
   private isPanning: boolean;
   private isPointerLocked: boolean;
@@ -27,6 +30,11 @@ export class CameraFlying {
   private panTarget: THREE.Vector3;
   private panDistance: number;
   private isDisposed: boolean;
+  private readonly scratchLocalForward: THREE.Vector3;
+  private readonly scratchWorldForward: THREE.Vector3;
+  private readonly scratchWorldRight: THREE.Vector3;
+  private readonly scratchWorldUp: THREE.Vector3;
+  private readonly scratchInverseOrientation: THREE.Quaternion;
   private readonly onContextMenu: (event: Event) => void;
   private readonly onPointerDownBound: (event: PointerEvent) => void;
   private readonly onPointerMoveBound: (event: PointerEvent) => void;
@@ -44,6 +52,7 @@ export class CameraFlying {
    * @param inputManager Shared input state for keyboard queries.
    * @param initialYaw Starting yaw angle in radians.
    * @param initialPitch Starting pitch angle in radians.
+   * @param editorOrientation Shared working orientation, or a private default.
    */
   constructor(
     canvas: HTMLElement,
@@ -51,10 +60,12 @@ export class CameraFlying {
     inputManager: ManagerInput,
     initialYaw: number,
     initialPitch: number,
+    editorOrientation?: EditorOrientation,
   ) {
     this.canvas = canvas;
     this.camera = camera;
     this.inputManager = inputManager;
+    this.editorOrientation = editorOrientation ?? new EditorOrientation();
     this.isRotating = false;
     this.isPanning = false;
     this.isPointerLocked = false;
@@ -67,6 +78,11 @@ export class CameraFlying {
     this.mouseSensitivity = 0.002;
     this.panTarget = new THREE.Vector3();
     this.panDistance = 1;
+    this.scratchLocalForward = new THREE.Vector3();
+    this.scratchWorldForward = new THREE.Vector3();
+    this.scratchWorldRight = new THREE.Vector3();
+    this.scratchWorldUp = new THREE.Vector3();
+    this.scratchInverseOrientation = new THREE.Quaternion();
     this.onContextMenu = (event) => event.preventDefault();
     this.onPointerDownBound = (event) => this.onPointerDown(event);
     this.onPointerMoveBound = (event) => this.onPointerMove(event);
@@ -76,6 +92,16 @@ export class CameraFlying {
     this.onPointerLockChangeBound = () => this.onPointerLockChange();
     this.onPointerLockErrorBound = () => this.onPointerLockError();
     this.setupEventListeners();
+  }
+
+  /**
+   * Replaces the shared editor orientation used for fly basis math.
+   *
+   * @param editorOrientation Shared working orientation.
+   */
+  setEditorOrientation(editorOrientation: EditorOrientation): void {
+    this.editorOrientation = editorOrientation;
+    this.syncOrientationFromCamera();
   }
 
   /** Wires pointer, wheel, and pointer-lock listeners on the canvas. */
@@ -182,10 +208,13 @@ export class CameraFlying {
    * after external camera moves such as fit-to-selection.
    */
   syncOrientationFromCamera(): void {
-    const forward = new THREE.Vector3();
-    this.camera.getWorldDirection(forward);
-    this.yaw = Math.atan2(forward.x, forward.z);
-    this.pitch = Math.asin(THREE.MathUtils.clamp(forward.y, -1, 1));
+    const worldForward = new THREE.Vector3();
+    this.camera.getWorldDirection(worldForward);
+    this.editorOrientation.copyQuaternionTo(this.scratchInverseOrientation);
+    this.scratchInverseOrientation.invert();
+    this.scratchLocalForward.copy(worldForward).applyQuaternion(this.scratchInverseOrientation);
+    this.yaw = Math.atan2(this.scratchLocalForward.x, this.scratchLocalForward.z);
+    this.pitch = Math.asin(THREE.MathUtils.clamp(this.scratchLocalForward.y, -1, 1));
   }
 
   /** Requests pointer lock when not already locked. */
@@ -286,38 +315,56 @@ export class CameraFlying {
   }
 
   /**
-   * Builds the current forward direction from yaw and pitch.
+   * Builds the current world-space forward direction from yaw and pitch.
    *
-   * @returns A unit forward vector.
+   * @returns A unit forward vector in world space.
    */
   private getForward(): THREE.Vector3 {
-    return new THREE.Vector3(
+    this.scratchLocalForward.set(
       Math.cos(this.pitch) * Math.sin(this.yaw),
       Math.sin(this.pitch),
       Math.cos(this.pitch) * Math.cos(this.yaw),
     );
+    this.editorOrientation.copyQuaternionTo(this.scratchInverseOrientation);
+    return this.scratchWorldForward
+      .copy(this.scratchLocalForward)
+      .applyQuaternion(this.scratchInverseOrientation)
+      .normalize();
   }
 
   /**
-   * Builds the camera right vector from forward and world up.
+   * Builds the camera right vector from forward and editor up.
    *
-   * @returns A unit right vector.
+   * @returns A unit right vector in world space.
    */
   private getRight(): THREE.Vector3 {
     const forward = this.getForward();
-    const worldUp = new THREE.Vector3(0, 1, 0);
-    return new THREE.Vector3().crossVectors(forward, worldUp).normalize();
+    const editorUp = this.getEditorUp();
+    this.scratchWorldRight.crossVectors(forward, editorUp);
+    if (this.scratchWorldRight.lengthSq() < 1e-12) {
+      this.scratchWorldRight.copy(this.editorOrientation.getRight());
+    }
+    return this.scratchWorldRight.normalize();
   }
 
   /**
    * Builds the camera up vector from right and forward.
    *
-   * @returns A unit up vector.
+   * @returns A unit up vector in world space.
    */
   private getCameraUp(): THREE.Vector3 {
     const forward = this.getForward();
     const right = this.getRight();
-    return new THREE.Vector3().crossVectors(right, forward).normalize();
+    return this.scratchWorldUp.crossVectors(right, forward).normalize();
+  }
+
+  /**
+   * Returns the current editor up direction in world space.
+   *
+   * @returns Unit editor up.
+   */
+  private getEditorUp(): THREE.Vector3 {
+    return this.scratchWorldUp.copy(this.editorOrientation.getUp());
   }
 
   /**
@@ -332,6 +379,7 @@ export class CameraFlying {
     if (this.shouldApplyFlyMovement()) {
       this.applyFlyMovement(deltaTime, forward);
     }
+    this.camera.up.copy(this.getEditorUp());
     const lookTarget = this.camera.position.clone().add(forward);
     this.camera.lookAt(lookTarget);
   }
@@ -354,11 +402,11 @@ export class CameraFlying {
    */
   private applyFlyMovement(deltaTime: number, forward: THREE.Vector3): void {
     const right = this.getRight();
-    const worldUp = new THREE.Vector3(0, 1, 0);
+    const editorUp = this.getEditorUp();
     const moveAmount = this.resolveFlyMoveAmount(deltaTime);
     this.applyFlyForwardBack(moveAmount, forward);
     this.applyFlyStrafe(moveAmount, right);
-    this.applyFlyVertical(moveAmount, worldUp);
+    this.applyFlyVertical(moveAmount, editorUp);
   }
 
   /**
@@ -395,14 +443,14 @@ export class CameraFlying {
    * Applies up and down fly translation for layout-stable Q and E.
    *
    * @param moveAmount World units to move this frame.
-   * @param worldUp World up direction.
+   * @param editorUp Editor up direction in world space.
    */
-  private applyFlyVertical(moveAmount: number, worldUp: THREE.Vector3): void {
+  private applyFlyVertical(moveAmount: number, editorUp: THREE.Vector3): void {
     if (this.inputManager.isKeyDown('KeyQ')) {
-      this.camera.position.addScaledVector(worldUp, -moveAmount);
+      this.camera.position.addScaledVector(editorUp, -moveAmount);
     }
     if (this.inputManager.isKeyDown('KeyE')) {
-      this.camera.position.addScaledVector(worldUp, moveAmount);
+      this.camera.position.addScaledVector(editorUp, moveAmount);
     }
   }
 

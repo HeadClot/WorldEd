@@ -1,4 +1,5 @@
 import { EditorExclusiveMouseShield } from './editor_exclusive_mouse_shield.js';
+import { findSmallestElementContainingClientPoint } from '@/utils/pointer_client_hit.js';
 
 /** Pointer and wheel listeners attached to every mounted exclusive shield. */
 export interface EditorExclusiveMouseShieldDomainListeners {
@@ -271,33 +272,7 @@ export class EditorExclusiveMouseShieldDomain {
     clientY: number,
     exclusiveRoots: readonly HTMLElement[],
   ): HTMLElement | null {
-    let best: HTMLElement | null = null;
-    let bestArea = Number.POSITIVE_INFINITY;
-    for (const root of exclusiveRoots) {
-      if (!this.isClientPointInsideElementBounds(clientX, clientY, root)) {
-        continue;
-      }
-      const rect = root.getBoundingClientRect();
-      const area = Math.max(rect.width, 0) * Math.max(rect.height, 0);
-      if (area < bestArea) {
-        best = root;
-        bestArea = area;
-      }
-    }
-    return best;
-  }
-
-  /**
-   * Geometry test for a client point against an element bounding box.
-   *
-   * @param clientX Pointer client X.
-   * @param clientY Pointer client Y.
-   * @param element Element whose bounds are tested.
-   * @returns True when the point is inside the element.
-   */
-  private isClientPointInsideElementBounds(clientX: number, clientY: number, element: HTMLElement): boolean {
-    const rect = element.getBoundingClientRect();
-    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    return findSmallestElementContainingClientPoint(clientX, clientY, exclusiveRoots);
   }
 
   /**

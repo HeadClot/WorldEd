@@ -94,7 +94,7 @@ export class ClipPlanePointDrag {
     if (!hit) return null;
     const result = hit.clone();
     if (applySnap) {
-      this.gridSnap.snapVector3(result);
+      this.gridSnap.snapWorldPosition(result);
     }
     return result;
   }

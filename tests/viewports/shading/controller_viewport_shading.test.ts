@@ -168,4 +168,18 @@ describe('ViewportShadingController', () => {
       expect((meshA.material as THREE.Material).colorWrite).toBe(false);
     });
   });
+
+  describe('display overlay preferences', () => {
+    it('defaults content wireframes and projected grid on', () => {
+      expect(controller.areContentWireframesVisible()).toBe(true);
+      expect(controller.isProjectedGridVisible()).toBe(true);
+    });
+
+    it('stores content wireframe and projected grid toggles', () => {
+      controller.setContentWireframesVisible(false);
+      controller.setProjectedGridVisible(false);
+      expect(controller.areContentWireframesVisible()).toBe(false);
+      expect(controller.isProjectedGridVisible()).toBe(false);
+    });
+  });
 });

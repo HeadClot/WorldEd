@@ -1,5 +1,8 @@
-/** Shared session / suppress reason keys for interactive tools. */
+/** Shared session / overlay owner keys for interactive tools. */
 export const CLIP_PLANE_SESSION_KEY = 'clip_plane';
 
-/** Suppress reason while Blender-style Edit Mode is active. */
+/** Overlay owner while Object Select (bounds / transform) presentation is live. */
+export const OBJECT_TOOL_SESSION_KEY = 'object_tool';
+
+/** Overlay owner while Blender-style Edit Mode needs component gizmos. */
 export const EDIT_MODE_SESSION_KEY = 'edit_mode';

@@ -174,6 +174,8 @@ PowerShell is janky, use cmd.
 25. Remove unused functions and unused variables.
 26. If a function is very complicated and difficult to understand, split it into easier functions with detailed documentation comments (but priority is performance).
 27. Code duplication is NOT ALLOWED, create a single function accessible from both code paths (static class, base class).
+28. Avoid anti-patterns, instead of disabling something case by case, make the ones that need them enable it and disable it by default.
+29. Never leave "Harmless" or "Compatibility Stub" code behind, delete and clean up properly, they are too confusing in the future.
 
 ## Coordinates
 

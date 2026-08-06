@@ -46,6 +46,12 @@ describe('viewport tool options control sizing', () => {
       onCommitSplit: () => undefined,
       onOpenUvEditor: () => undefined,
       onExtrudeFaces: () => undefined,
+      onGridReset: () => undefined,
+      onGridAlignToFace: () => undefined,
+      onGridAlignAxis: () => undefined,
+      onGridOriginVertex: () => undefined,
+      onCameraReset: () => undefined,
+      onCameraAlignToFace: () => undefined,
       onInteractionMode: (_mode: EditorInteractionMode) => undefined,
       onComponentMode: () => undefined,
     });

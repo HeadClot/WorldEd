@@ -43,6 +43,16 @@ export interface ClipToolsSetupDeps {
   switchToObjectSelect?: () => void;
   switchToFaceSelect?: () => void;
   switchToEditSelect?: () => void;
+  switchToGridTool?: () => void;
+  onGridReset?: () => void;
+  onGridAlignToFace?: () => void;
+  onGridAlignAxis?: (
+    axis: import('@/navigation/orientation/editor_orientation_axis.js').EditorOrientationAxisId,
+  ) => void;
+  onGridOriginVertex?: () => void;
+  onCameraReset?: () => void;
+  onCameraAlignToFace?: () => void;
+  onPrimaryToolChanged?: () => void;
   registerClipTool?: (placement: ToolClipPlane, handler: HandlerClipPlane) => void;
   onEnterEditMode?: () => boolean;
   onExitEditMode?: () => void;
@@ -137,6 +147,14 @@ function createViewportToolChromeController(
     ...(deps.switchToObjectSelect !== undefined ? { switchToObjectSelect: deps.switchToObjectSelect } : {}),
     ...(deps.switchToFaceSelect !== undefined ? { switchToFaceSelect: deps.switchToFaceSelect } : {}),
     ...(deps.switchToEditSelect !== undefined ? { switchToEditSelect: deps.switchToEditSelect } : {}),
+    ...(deps.switchToGridTool !== undefined ? { switchToGridTool: deps.switchToGridTool } : {}),
+    ...(deps.onGridReset !== undefined ? { onGridReset: deps.onGridReset } : {}),
+    ...(deps.onGridAlignToFace !== undefined ? { onGridAlignToFace: deps.onGridAlignToFace } : {}),
+    ...(deps.onGridAlignAxis !== undefined ? { onGridAlignAxis: deps.onGridAlignAxis } : {}),
+    ...(deps.onGridOriginVertex !== undefined ? { onGridOriginVertex: deps.onGridOriginVertex } : {}),
+    ...(deps.onCameraReset !== undefined ? { onCameraReset: deps.onCameraReset } : {}),
+    ...(deps.onCameraAlignToFace !== undefined ? { onCameraAlignToFace: deps.onCameraAlignToFace } : {}),
+    ...(deps.onPrimaryToolChanged !== undefined ? { onPrimaryToolChanged: deps.onPrimaryToolChanged } : {}),
     ...(deps.onEnterEditMode !== undefined ? { onEnterEditMode: deps.onEnterEditMode } : {}),
     ...(deps.onExitEditMode !== undefined ? { onExitEditMode: deps.onExitEditMode } : {}),
     ...(deps.onComponentMode !== undefined ? { onComponentMode: deps.onComponentMode } : {}),

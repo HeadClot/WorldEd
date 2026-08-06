@@ -691,7 +691,9 @@ export class EditorApiSolidWrites {
     const nextPosition = mesh.position.clone();
     if (axis === 'x') nextPosition.x = plane * 2 - nextPosition.x;
     else nextPosition.z = plane * 2 - nextPosition.z;
-    if (useSnap && isEditorApiSnapActive(this.host)) this.host.gridSnap.snapVector3(nextPosition);
+    if (useSnap && isEditorApiSnapActive(this.host)) {
+      this.host.gridSnap.snapWorldPosition(nextPosition);
+    }
     const nextRotation = mesh.rotation.clone();
     // Reflect yaw: X-mirror → -yaw; Z-mirror → π - yaw (not -yaw).
     nextRotation.y = axis === 'x' ? -nextRotation.y : Math.PI - nextRotation.y;

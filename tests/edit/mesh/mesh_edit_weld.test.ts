@@ -13,11 +13,11 @@ describe('mesh_edit_weld', () => {
     expect(welded.triangleIndices).toHaveLength(6);
   });
 
-  it('builds a welded MeshDocument from a box BufferGeometry', () => {
+  it('builds a welded MeshDocument from a box BufferGeometry with coplanar n-gons', () => {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const document = meshDocumentFromBufferGeometryWelded(geometry);
     expect(document.getTopology().getVertexCount()).toBe(8);
-    expect(document.getTopology().getFaceCount()).toBeGreaterThan(0);
+    expect(document.getTopology().getFaceCount()).toBe(6);
     geometry.dispose();
   });
 

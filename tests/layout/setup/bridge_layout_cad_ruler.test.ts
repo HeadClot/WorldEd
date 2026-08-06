@@ -93,12 +93,11 @@ describe('layout_cad_ruler_bridge', () => {
     container.remove();
   });
 
-  it('should clear CAD bounds rulers when the overlay policy suppresses them', () => {
+  it('should clear CAD bounds rulers until a tool opts into the overlay', () => {
     const mesh = createBoxMesh(new THREE.Vector3(2, 1, 3));
     const cadRulerSystem = new CadRulerSystem();
     const setSelectionMeshes = vi.spyOn(cadRulerSystem, 'setSelectionMeshes');
     const policy = new PolicyEditorOverlay();
-    policy.suppress(EditorOverlayId.CAD_BOUNDS_RULERS, 'clip_plane');
     const host = {
       cadRulerSystem,
       rulerBoundsBuilder: { buildFromMeshes: vi.fn() },
@@ -112,7 +111,7 @@ describe('layout_cad_ruler_bridge', () => {
     };
     refreshCadRulersFromSelection(host as never);
     expect(setSelectionMeshes).toHaveBeenCalledWith([]);
-    policy.release(EditorOverlayId.CAD_BOUNDS_RULERS, 'clip_plane');
+    policy.enable(EditorOverlayId.CAD_BOUNDS_RULERS, 'object_tool');
     refreshCadRulersFromSelection(host as never);
     expect(setSelectionMeshes).toHaveBeenLastCalledWith([mesh]);
   });

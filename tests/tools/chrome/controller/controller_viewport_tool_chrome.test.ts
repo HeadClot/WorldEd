@@ -64,6 +64,45 @@ describe('ControllerViewportToolChrome', () => {
     expect(controller.getActiveTool()).toBe(EditorToolId.OBJECT);
   });
 
+  it('should activate the grid tool without opening clip', () => {
+    const switchToGrid = vi.fn();
+    const onPrimaryToolChanged = vi.fn();
+    const gridController = new ControllerViewportToolChrome({
+      faceExtrusionController: faceController,
+      clipPlaneTool: clipTool,
+      clipPlaneHandler: {
+        flipPlane: () => undefined,
+        commitClip: () => undefined,
+        commitSplit: () => undefined,
+        cancel: () => {
+          clipTool.deactivate();
+        },
+      } as unknown as HandlerClipPlane,
+      selectionManager,
+      editorOverlayPolicy: overlayPolicy,
+      modalToolSessionRegistry: modalRegistry,
+      showStatusMessage: showStatus,
+      onTransformMode: () => undefined,
+      onOpenUvEditor: () => undefined,
+      onExtrudeFaces: () => undefined,
+      switchToGridTool: switchToGrid,
+      onGridReset: () => undefined,
+      onGridAlignToFace: () => undefined,
+      onGridAlignAxis: () => undefined,
+      onGridOriginVertex: () => undefined,
+      onCameraReset: () => undefined,
+      onCameraAlignToFace: () => undefined,
+      onPrimaryToolChanged,
+    });
+    gridController.attachPane(pane);
+    gridController.selectTool(EditorToolId.GRID);
+    expect(gridController.getActiveTool()).toBe(EditorToolId.GRID);
+    expect(switchToGrid).toHaveBeenCalled();
+    expect(onPrimaryToolChanged).toHaveBeenCalled();
+    expect(clipTool.isActive()).toBe(false);
+    gridController.dispose();
+  });
+
   it('should refuse tool switches while the editor tool is busy', () => {
     const busy = new ControllerViewportToolChrome({
       faceExtrusionController: faceController,
@@ -136,14 +175,24 @@ describe('ControllerViewportToolChrome', () => {
     expect(controller.getActiveTool()).toBe(EditorToolId.CLIP_PLANE);
     expect(clipTool.isActive()).toBe(true);
     expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(false);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.TRANSFORM_GIZMOS)).toBe(false);
     expect(modalRegistry.has(CLIP_PLANE_SESSION_KEY)).toBe(true);
   });
 
-  it('should suppress CAD bounds rulers while clip is active', () => {
+  it('should opt into CAD rulers and gizmos only for object select', () => {
+    expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(true);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.TRANSFORM_GIZMOS)).toBe(true);
+    controller.selectTool(EditorToolId.GRID);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(false);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.TRANSFORM_GIZMOS)).toBe(false);
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     selectionManager.selectObject(mesh);
     controller.selectTool(EditorToolId.CLIP_PLANE);
     expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(false);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.TRANSFORM_GIZMOS)).toBe(false);
+    controller.selectTool(EditorToolId.OBJECT);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.CAD_BOUNDS_RULERS)).toBe(true);
+    expect(overlayPolicy.isAllowed(EditorOverlayId.TRANSFORM_GIZMOS)).toBe(true);
   });
 
   it('should end clip when selection changes externally via modal registry', () => {
@@ -236,12 +285,12 @@ describe('ControllerViewportToolChrome', () => {
     controller.setInteractionMode(EditorInteractionMode.EDIT_MODE);
     controller.selectTool(EditorToolId.FACE);
     expect(controller.getActiveTool()).not.toBe(EditorToolId.FACE);
-    expect(showStatus).toHaveBeenCalledWith('Face Select and Clip are Object Mode tools');
+    expect(showStatus).toHaveBeenCalledWith('Face Select, Clip, and Grid are Object Mode tools');
     showStatus.mockClear();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     selectionManager.selectObject(mesh);
     controller.selectTool(EditorToolId.CLIP_PLANE);
     expect(controller.getActiveTool()).not.toBe(EditorToolId.CLIP_PLANE);
-    expect(showStatus).toHaveBeenCalledWith('Face Select and Clip are Object Mode tools');
+    expect(showStatus).toHaveBeenCalledWith('Face Select, Clip, and Grid are Object Mode tools');
   });
 });

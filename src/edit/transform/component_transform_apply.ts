@@ -1,7 +1,5 @@
 import * as THREE from 'three';
-import { meshDocumentToBufferGeometry } from '@/mesh/convert/mesh_to_buffer_geometry.js';
-import { writePersistentMeshDocument } from '@/mesh/document/mesh_document_binding.js';
-import { rebuildDecorativeEdges } from '@/utils/mesh_edge_sync.js';
+import { writeMeshDocumentDisplayGeometry } from '@/mesh/convert/mesh_document_display_write.js';
 import { SolidBrushValidator } from '@/solid/brush/solid_brush_validator.js';
 import type { SolidModel } from '@/solid/model/solid_model.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
@@ -156,12 +154,7 @@ function syncMeshDocumentDisplay(
   mesh: THREE.Mesh,
   document: import('@/mesh/document/mesh_document.js').MeshDocument,
 ): void {
-  document.markPositionsDirty();
-  const previous = mesh.geometry;
-  mesh.geometry = meshDocumentToBufferGeometry(document);
-  previous.dispose();
-  rebuildDecorativeEdges(mesh);
-  writePersistentMeshDocument(mesh, document);
+  writeMeshDocumentDisplayGeometry(mesh, document);
 }
 
 /**

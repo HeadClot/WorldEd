@@ -1,3 +1,4 @@
+import type { ManagerInput } from '@/input/manager_input.js';
 import type { ViewportEditor } from '@/viewports/core/viewport_editor.js';
 import { SharedWebGLSurface } from '@/viewports/shared/shared_webgl_surface.js';
 import {
@@ -164,6 +165,24 @@ export class DetachedViewportWindow {
       return session.getLastPointerClientPosition();
     }
     return null;
+  }
+
+  /**
+   * Returns input managers for every open detached popup so modifier queries
+   * (Shift/Ctrl multi-select) see keys held in those windows.
+   *
+   * @returns Live popup input managers in open order.
+   */
+  getInputManagers(): ManagerInput[] {
+    this.pruneClosedSessions();
+    const managers: ManagerInput[] = [];
+    for (const session of this.sessions.values()) {
+      const inputManager = session.getInputManager();
+      if (inputManager) {
+        managers.push(inputManager);
+      }
+    }
+    return managers;
   }
 
   /**

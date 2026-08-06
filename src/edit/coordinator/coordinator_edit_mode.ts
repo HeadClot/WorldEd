@@ -33,6 +33,7 @@ import {
   filterObjectsDeletableOutsideEditDomain,
   isObjectDeleteProtectedByEditDomain,
 } from '@/edit/session/edit_mode_domain_protection.js';
+import { findPickSurfaceAtClientPoint } from '@/utils/pointer_client_hit.js';
 
 /** Minimal viewport surface used for Edit Mode picking. */
 export interface EditModeViewportPickSurface {
@@ -236,13 +237,20 @@ export class CoordinatorEditMode {
    * @param clientY Pointer client Y.
    * @param addToSelection Shift-style additive select.
    * @param toggleSelection Ctrl-style toggle.
+   * @param ownerDocument Document that owns the client coordinates, or null.
    * @returns True when a component was selected or toggled.
    */
-  pickAtClientPoint(clientX: number, clientY: number, addToSelection: boolean, toggleSelection: boolean): boolean {
+  pickAtClientPoint(
+    clientX: number,
+    clientY: number,
+    addToSelection: boolean,
+    toggleSelection: boolean,
+    ownerDocument: Document | null = null,
+  ): boolean {
     if (!this.session.isActive()) {
       return false;
     }
-    const viewport = this.findViewportAtClientPoint(clientX, clientY);
+    const viewport = this.findViewportAtClientPoint(clientX, clientY, ownerDocument);
     if (!viewport) {
       return false;
     }
@@ -703,22 +711,27 @@ export class CoordinatorEditMode {
   }
 
   /**
-   * Finds a viewport under the pointer.
+   * Finds a viewport under the pointer. Client coordinates are window-local;
+   * when ownerDocument is set only panes in that document match so detached
+   * samples never hit main-window panes near (0, 0).
    *
    * @param clientX Client X.
    * @param clientY Client Y.
+   * @param ownerDocument Optional document that owns the client coordinates.
    * @returns Viewport or null.
    */
-  private findViewportAtClientPoint(clientX: number, clientY: number): EditModeViewportPickSurface | null {
-    for (const viewport of this.deps.getViewports()) {
-      const pickElement = viewport.getContentElement();
-      const rect = pickElement.getBoundingClientRect();
-      if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-        continue;
-      }
-      return viewport;
-    }
-    return null;
+  private findViewportAtClientPoint(
+    clientX: number,
+    clientY: number,
+    ownerDocument: Document | null = null,
+  ): EditModeViewportPickSurface | null {
+    return findPickSurfaceAtClientPoint(
+      this.deps.getViewports(),
+      (viewport) => viewport.getContentElement(),
+      clientX,
+      clientY,
+      ownerDocument,
+    );
   }
 
   /**

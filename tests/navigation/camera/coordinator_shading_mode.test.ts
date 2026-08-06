@@ -19,16 +19,25 @@ function createMockViewport(shadingMode: ShadingMode = ShadingMode.SOLID): Viewp
   } as unknown as ControllerViewportShading;
   const toolbar = {
     setActiveShadingMode: vi.fn(),
+    setContentWireframesActive: vi.fn(),
+    setProjectedGridActive: vi.fn(),
     setOnShadingMode: vi.fn(),
+    setOnContentWireframesToggle: vi.fn(),
+    setOnProjectedGridToggle: vi.fn(),
     setOnFit: vi.fn(),
   } as unknown as ViewportToolbar;
   return {
     getShadingController: () => shadingController,
     getShadingMode: () => shadingMode,
     setShadingMode: vi.fn(),
+    areContentWireframesVisible: () => true,
+    isProjectedGridVisible: () => true,
+    setContentWireframesVisible: vi.fn(),
+    setProjectedGridVisible: vi.fn(),
     getViewportToolbar: () => toolbar,
     updateShadingMeshes: vi.fn(),
     collectSelectableObjects: () => [],
+    getWorldGroup: () => null,
   } as unknown as ViewportEditor;
 }
 

@@ -26,7 +26,10 @@ import { SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE } from '@/solid/model/solid_mode
 import {
   computeOcclusionAwareSpawnPosition,
   DEFAULT_SPAWN_DISTANCE,
+  snapPositionToGrid,
 } from '@/navigation/placement/object_spawn_placement.js';
+import type { EditorOrientation } from '@/navigation/orientation/editor_orientation.js';
+import type { GridSnap } from '@/transform/snap/grid_snap.js';
 import { TextureLockSettings } from '@/texture/lock/texture_lock_settings.js';
 import type { TextureLockFlags } from '@/texture/lock/texture_lock_transform.js';
 import { TransformMode } from '@/types/transform_mode.js';
@@ -51,6 +54,12 @@ export class SolidModelController {
   private showStatus: ((message: string) => void) | null;
   private getActiveCamera: (() => THREE.Camera | null) | null;
   private getGridInterval: (() => number) | null;
+  private getGridSnap: (() => GridSnap | null) | null;
+  private getGridOrientation: (() => EditorOrientation | null) | null;
+  private readonly scratchRootWorldQuaternion: THREE.Quaternion;
+  private readonly scratchGridWorldQuaternion: THREE.Quaternion;
+  private readonly scratchModelLocalQuaternion: THREE.Quaternion;
+  private readonly scratchModelLocalEuler: THREE.Euler;
 
   /** True while a live CSG flush is scheduled on requestAnimationFrame. */
   private liveRebuildQueued: boolean;
@@ -111,6 +120,12 @@ export class SolidModelController {
     this.showStatus = null;
     this.getActiveCamera = null;
     this.getGridInterval = null;
+    this.getGridSnap = null;
+    this.getGridOrientation = null;
+    this.scratchRootWorldQuaternion = new THREE.Quaternion();
+    this.scratchGridWorldQuaternion = new THREE.Quaternion();
+    this.scratchModelLocalQuaternion = new THREE.Quaternion();
+    this.scratchModelLocalEuler = new THREE.Euler(0, 0, 0, 'XYZ');
     this.liveRebuildQueued = false;
     this.liveRebuildInProgress = false;
     this.pendingLiveMeshes = null;
@@ -206,6 +221,24 @@ export class SolidModelController {
     this.getGridInterval = callback;
   }
 
+  /**
+   * Provides the shared grid snap store (oriented lattice) for brush spawn.
+   *
+   * @param callback Returns the live grid snap instance, or null.
+   */
+  setGridSnapProvider(callback: (() => GridSnap | null) | null): void {
+    this.getGridSnap = callback;
+  }
+
+  /**
+   * Provides the working grid orientation for new brush rotation.
+   *
+   * @param callback Returns the live grid orientation, or null.
+   */
+  setGridOrientationProvider(callback: (() => EditorOrientation | null) | null): void {
+    this.getGridOrientation = callback;
+  }
+
   /** Creates a solid model with one additive box brush and selects that brush. */
   createSolidModel(): void {
     const model = new SolidModel();
@@ -297,12 +330,14 @@ export class SolidModelController {
     }
     const parent = this.resolveBrushInsertParent(model);
     const offset = this.computeNewBrushLocalPosition(model);
+    const rotation = this.computeNewBrushModelLocalRotation(model);
     const command = new CommandSolidBoxBrushAdd(
       model,
       SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE,
       SolidOperation.Additive,
       offset,
       parent,
+      rotation,
     );
     this.commandStack.push(command);
     const brush = command.getCreatedBrush();
@@ -1188,7 +1223,6 @@ export class SolidModelController {
    * @returns Local position relative to the solid model root.
    */
   private computeNewBrushLocalPosition(model: SolidModel): THREE.Vector3 {
-    const gridInterval = this.getGridInterval?.() ?? 1;
     const camera = this.getActiveCamera?.() ?? null;
     if (!camera) {
       return new THREE.Vector3(0, 0, 0);
@@ -1196,11 +1230,51 @@ export class SolidModelController {
     const worldPosition = computeOcclusionAwareSpawnPosition({
       camera,
       preferredDistance: DEFAULT_SPAWN_DISTANCE,
-      gridInterval,
+      gridInterval: 0,
       raycastRoot: this.worldObject,
       objectRadius: SOLID_MODEL_STARTUP_DEFAULT_BRUSH_SIZE * 0.5,
     });
+    this.snapWorldSpawnPosition(worldPosition);
     model.root.updateMatrixWorld(true);
     return model.root.worldToLocal(worldPosition.clone());
+  }
+
+  /**
+   * Snaps a world spawn position to the oriented grid lattice when available.
+   *
+   * @param worldPosition World position modified in place.
+   */
+  private snapWorldSpawnPosition(worldPosition: THREE.Vector3): void {
+    const gridSnap = this.getGridSnap?.() ?? null;
+    if (gridSnap && gridSnap.isEnabled()) {
+      gridSnap.snapWorldPosition(worldPosition);
+      return;
+    }
+    const gridInterval = this.getGridInterval?.() ?? 0;
+    if (gridInterval > 0) {
+      snapPositionToGrid(worldPosition, gridInterval);
+    }
+  }
+
+  /**
+   * Resolves model-local rotation so the brush X/Y/Z match the working grid.
+   *
+   * @param model Solid model that will own the brush.
+   * @returns Model-local Euler rotation.
+   */
+  private computeNewBrushModelLocalRotation(model: SolidModel): THREE.Euler {
+    const gridOrientation = this.getGridOrientation?.() ?? null;
+    if (!gridOrientation) {
+      return new THREE.Euler(0, 0, 0, 'XYZ');
+    }
+    model.root.updateMatrixWorld(true);
+    model.root.getWorldQuaternion(this.scratchRootWorldQuaternion);
+    gridOrientation.copyQuaternionTo(this.scratchGridWorldQuaternion);
+    this.scratchModelLocalQuaternion
+      .copy(this.scratchRootWorldQuaternion)
+      .invert()
+      .multiply(this.scratchGridWorldQuaternion);
+    this.scratchModelLocalEuler.setFromQuaternion(this.scratchModelLocalQuaternion, 'XYZ');
+    return this.scratchModelLocalEuler.clone();
   }
 }

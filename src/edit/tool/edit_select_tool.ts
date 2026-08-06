@@ -67,6 +67,7 @@ export class EditSelectTool extends Tool {
       this.editor.lastPointerClientY,
       this.editor.isShiftPressed,
       this.editor.isCtrlPressed,
+      this.editor.lastPointerOwnerDocument,
     );
   }
 

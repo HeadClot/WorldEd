@@ -37,6 +37,28 @@ export class ToolbarIcons {
   }
 
   /**
+   * Content and brush edge wireframe toggle icon (cube edges only).
+   *
+   * @returns SVG markup string.
+   */
+  static contentWireframes(): string {
+    return this.wrapSvg(
+      '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M12 3v18M4 7.5l8 4.5 8-4.5"/>',
+    );
+  }
+
+  /**
+   * Projected surface grid toggle icon (cube with lattice).
+   *
+   * @returns SVG markup string.
+   */
+  static projectedGrid(): string {
+    return this.wrapSvg(
+      '<path fill="none" stroke="currentColor" stroke-width="1.4" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path fill="none" stroke="currentColor" stroke-width="1.2" d="M6.5 9.2 12 12.2 17.5 9.2M8 14.5 12 16.7 16 14.5M12 12.2v4.5M7.2 11.6v4.2M16.8 11.6v4.2"/>',
+    );
+  }
+
+  /**
    * Fit / frame selection icon (bounding box with arrows).
    *
    * @returns SVG markup string.
@@ -124,6 +146,17 @@ export class ToolbarIcons {
   static toolClipPlane(): string {
     return this.wrapSvg(
       '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M5 7.5 12 3l7 4.5v9L12 21l-7-4.5v-9z"/><path fill="currentColor" opacity="0.4" d="M12 3v18l-7-4.5v-9L12 3z"/><path stroke="currentColor" stroke-width="1.8" d="M8 19 16 5"/>',
+    );
+  }
+
+  /**
+   * Global grid orientation tool icon.
+   *
+   * @returns SVG markup string.
+   */
+  static toolGrid(): string {
+    return this.wrapSvg(
+      '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M5 8h14M5 12h14M5 16h14M8 5v14M12 5v14M16 5v14"/><rect x="4" y="4" width="16" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/>',
     );
   }
 

@@ -234,6 +234,16 @@ export class DetachedViewportSession {
   }
 
   /**
+   * Returns the popup input manager that tracks keys and pointer state for this
+   * window.
+   *
+   * @returns Live ManagerInput, or null when the popup is closed.
+   */
+  getInputManager(): ManagerInput | null {
+    return this.popupInputManager;
+  }
+
+  /**
    * Focuses the popup when open.
    *
    * @returns True when a live popup was focused.

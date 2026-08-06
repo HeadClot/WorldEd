@@ -24,6 +24,13 @@ export function toolInstructionForEditorTool(toolId: EditorToolId): ToolInstruct
         'Place a cutting plane through the selected mesh. Flip keeps the other side, Clip discards one half, Split keeps both. Requires a selected mesh. Esc cancels.',
     };
   }
+  if (toolId === EditorToolId.GRID) {
+    return {
+      title: 'Grid',
+      description:
+        'Independent grid and camera orientations. Align the snap grid with a face or edge (X/Y/Z). Camera align and reset leave the grid alone.',
+    };
+  }
   return {
     title: 'Object Select',
     shortcut: 'O',
@@ -120,4 +127,57 @@ export const TOOL_INSTRUCTION_COMPONENT_FACE: ToolInstruction = {
   title: 'Face Select',
   shortcut: '3',
   description: 'Select faces on the edit domain. Available only in Edit Mode.',
+};
+
+/** Instruction for resetting global grid orientation only. */
+export const TOOL_INSTRUCTION_GRID_RESET: ToolInstruction = {
+  title: 'Reset Grid',
+  description: 'Restore the default world Y-up floor grid. Does not change camera orientation.',
+};
+
+/** Instruction for aligning the global grid to a face. */
+export const TOOL_INSTRUCTION_GRID_ALIGN_TO_FACE: ToolInstruction = {
+  title: 'Align Grid to Face',
+  description: 'Click a mesh face to make it the new floor. Only the snap/visual grid reorients. Esc cancels the pick.',
+};
+
+/** Instruction for aligning grid X to an edge. */
+export const TOOL_INSTRUCTION_GRID_ALIGN_X: ToolInstruction = {
+  title: 'Align Grid X',
+  description:
+    'Click a mesh edge to make it the working X axis. Y is preserved; Z is rebuilt. Hover shows a preview triad. Esc cancels.',
+};
+
+/** Instruction for aligning grid Y to an edge. */
+export const TOOL_INSTRUCTION_GRID_ALIGN_Y: ToolInstruction = {
+  title: 'Align Grid Y',
+  description:
+    'Click a mesh edge to make it the working Y (up) axis. Z is preserved; X is rebuilt. Hover shows a preview triad. Esc cancels.',
+};
+
+/** Instruction for aligning grid Z to an edge. */
+export const TOOL_INSTRUCTION_GRID_ALIGN_Z: ToolInstruction = {
+  title: 'Align Grid Z',
+  description:
+    'Click a mesh edge to make it the working Z axis (tunnel direction). Y is preserved; X is rebuilt. Hover shows a preview triad. Esc cancels.',
+};
+
+/** Instruction for zeroing the grid lattice origin to a vertex. */
+export const TOOL_INSTRUCTION_GRID_ORIGIN_VERTEX: ToolInstruction = {
+  title: 'Zero Origin to Vertex',
+  description:
+    'Click a mesh vertex to set the snap/visual grid origin (0,0,0) there. Axes stay the same; only the lattice phase moves. Esc cancels.',
+};
+
+/** Instruction for resetting camera orientation only. */
+export const TOOL_INSTRUCTION_CAMERA_RESET: ToolInstruction = {
+  title: 'Reset Camera',
+  description: 'Restore default camera working orientation (Y-up fly frame). Does not change the grid.',
+};
+
+/** Instruction for aligning the camera to a face. */
+export const TOOL_INSTRUCTION_CAMERA_ALIGN_TO_FACE: ToolInstruction = {
+  title: 'Align Camera to Face',
+  description:
+    'Click a mesh face so camera up matches that normal. Grid orientation is unchanged. Esc cancels the pick.',
 };

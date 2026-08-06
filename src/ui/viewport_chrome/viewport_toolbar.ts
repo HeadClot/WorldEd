@@ -20,15 +20,21 @@ export class ViewportToolbar {
   private typeMenuPanel: PanelMenu | null;
   private documentClickCloser: ((event: PointerEvent) => void) | null;
   private buttonRow: HTMLElement;
+  private contentWireframesButton: HTMLButtonElement;
+  private projectedGridButton: HTMLButtonElement;
   private shadingButtons: Map<ShadingMode, HTMLButtonElement>;
   private fitButton: HTMLButtonElement;
   private maximizeButton: HTMLButtonElement;
   private onShadingMode: ((mode: ShadingMode) => void) | null;
+  private onContentWireframesToggle: ((visible: boolean) => void) | null;
+  private onProjectedGridToggle: ((visible: boolean) => void) | null;
   private onFit: (() => void) | null;
   private onToggleMaximize: (() => void) | null;
   private onViewportKindChange: ((kind: ViewportKind) => void) | null;
   private currentMode: ShadingMode;
   private currentKind: ViewportKind;
+  private contentWireframesActive: boolean;
+  private projectedGridActive: boolean;
 
   /**
    * Creates a viewport toolbar and appends it to the given parent.
@@ -49,13 +55,25 @@ export class ViewportToolbar {
     this.buttonRow = this.ownerDocument.createElement('div');
     this.shadingButtons = new Map();
     this.onShadingMode = null;
+    this.onContentWireframesToggle = null;
+    this.onProjectedGridToggle = null;
     this.onFit = null;
     this.onToggleMaximize = null;
     this.onViewportKindChange = null;
     this.currentMode = initialMode;
     this.currentKind = ViewportKind.PERSPECTIVE;
+    this.contentWireframesActive = true;
+    this.projectedGridActive = true;
     this.applyContainerStyles();
     this.buildTitle(titleText);
+    this.contentWireframesButton = this.createToggleButton(
+      'Content and brush wireframes',
+      ToolbarIcons.contentWireframes(),
+      () => this.toggleContentWireframes(),
+    );
+    this.projectedGridButton = this.createToggleButton('Projected surface grid', ToolbarIcons.projectedGrid(), () =>
+      this.toggleProjectedGrid(),
+    );
     this.buildControls();
     this.fitButton = this.createFitButton();
     this.maximizeButton = this.createMaximizeButton();
@@ -66,6 +84,8 @@ export class ViewportToolbar {
     this.container.appendChild(this.buttonRow);
     parentElement.appendChild(this.container);
     this.setActiveShadingMode(initialMode);
+    this.setContentWireframesActive(true);
+    this.setProjectedGridActive(true);
   }
 
   /**
@@ -75,6 +95,24 @@ export class ViewportToolbar {
    */
   setOnShadingMode(callback: (mode: ShadingMode) => void): void {
     this.onShadingMode = callback;
+  }
+
+  /**
+   * Registers the callback invoked when content wireframes are toggled.
+   *
+   * @param callback Toggle handler receiving the new visibility.
+   */
+  setOnContentWireframesToggle(callback: (visible: boolean) => void): void {
+    this.onContentWireframesToggle = callback;
+  }
+
+  /**
+   * Registers the callback invoked when the projected grid is toggled.
+   *
+   * @param callback Toggle handler receiving the new visibility.
+   */
+  setOnProjectedGridToggle(callback: (visible: boolean) => void): void {
+    this.onProjectedGridToggle = callback;
   }
 
   /**
@@ -210,6 +248,62 @@ export class ViewportToolbar {
    */
   getShadingButton(mode: ShadingMode): HTMLButtonElement | undefined {
     return this.shadingButtons.get(mode);
+  }
+
+  /**
+   * Returns the content wireframes toggle button.
+   *
+   * @returns The toggle button element.
+   */
+  getContentWireframesButton(): HTMLButtonElement {
+    return this.contentWireframesButton;
+  }
+
+  /**
+   * Returns the projected grid toggle button.
+   *
+   * @returns The toggle button element.
+   */
+  getProjectedGridButton(): HTMLButtonElement {
+    return this.projectedGridButton;
+  }
+
+  /**
+   * Updates the active appearance of the content wireframes toggle.
+   *
+   * @param active Whether wireframes are enabled.
+   */
+  setContentWireframesActive(active: boolean): void {
+    this.contentWireframesActive = active;
+    this.applyActiveState(this.contentWireframesButton, active);
+  }
+
+  /**
+   * Returns whether the content wireframes toggle appears active.
+   *
+   * @returns True when the button is selected.
+   */
+  isContentWireframesActive(): boolean {
+    return this.contentWireframesActive;
+  }
+
+  /**
+   * Updates the active appearance of the projected grid toggle.
+   *
+   * @param active Whether the projected grid is enabled.
+   */
+  setProjectedGridActive(active: boolean): void {
+    this.projectedGridActive = active;
+    this.applyActiveState(this.projectedGridButton, active);
+  }
+
+  /**
+   * Returns whether the projected grid toggle appears active.
+   *
+   * @returns True when the button is selected.
+   */
+  isProjectedGridActive(): boolean {
+    return this.projectedGridActive;
   }
 
   /** Removes the toolbar from the DOM and closes the type menu. */
@@ -360,15 +454,49 @@ export class ViewportToolbar {
     }
   }
 
-  /** Creates the shading mode button group. */
+  /** Creates the overlay toggles, separator, and shading mode button group. */
   private buildControls(): void {
     this.buttonRow.style.display = 'flex';
     this.buttonRow.style.alignItems = 'center';
     this.buttonRow.style.gap = '2px';
     this.buttonRow.style.marginLeft = 'auto';
+    this.buttonRow.appendChild(this.contentWireframesButton);
+    this.buttonRow.appendChild(this.projectedGridButton);
+    this.buttonRow.appendChild(this.createSeparator());
     this.addShadingButton(ShadingMode.SOLID, 'Solid', ToolbarIcons.solid());
     this.addShadingButton(ShadingMode.WIREFRAME, 'Wireframe', ToolbarIcons.wireframe());
     this.addShadingButton(ShadingMode.FLAT, 'Flat', ToolbarIcons.flat());
+  }
+
+  /**
+   * Creates a compact toggle icon button.
+   *
+   * @param tooltip Title and aria label.
+   * @param iconSvg SVG markup for the button face.
+   * @param onClick Click handler.
+   * @returns The styled button element.
+   */
+  private createToggleButton(tooltip: string, iconSvg: string, onClick: () => void): HTMLButtonElement {
+    const button = this.createIconButton(tooltip, iconSvg);
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      onClick();
+    });
+    return button;
+  }
+
+  /** Toggles content wireframes and notifies the registered handler. */
+  private toggleContentWireframes(): void {
+    const next = !this.contentWireframesActive;
+    this.setContentWireframesActive(next);
+    this.onContentWireframesToggle?.(next);
+  }
+
+  /** Toggles the projected grid and notifies the registered handler. */
+  private toggleProjectedGrid(): void {
+    const next = !this.projectedGridActive;
+    this.setProjectedGridActive(next);
+    this.onProjectedGridToggle?.(next);
   }
 
   /**

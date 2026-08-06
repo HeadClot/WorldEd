@@ -21,7 +21,9 @@ export function isEditorApiSnapActive(host: EditorApiHost): boolean {
  * @returns The same position for chaining.
  */
 export function snapPositionIfEnabled(host: EditorApiHost, position: THREE.Vector3): THREE.Vector3 {
-  if (isEditorApiSnapActive(host)) host.gridSnap.snapVector3(position);
+  if (isEditorApiSnapActive(host)) {
+    host.gridSnap.snapWorldPosition(position);
+  }
   return position;
 }
 

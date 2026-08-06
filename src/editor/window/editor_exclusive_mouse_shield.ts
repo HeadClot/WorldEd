@@ -1,4 +1,8 @@
 import { claimDomKeyboardFocus } from '@/utils/dom_focus.js';
+import {
+  findSmallestElementContainingClientPoint,
+  isClientPointInsideElementBounds as clientPointIsInsideElementBounds,
+} from '@/utils/pointer_client_hit.js';
 
 /**
  * Full-screen pointer and keyboard shield used only while the active event
@@ -232,7 +236,7 @@ export class EditorExclusiveMouseShield {
    * @returns Root when the point is over it, otherwise null.
    */
   private resolveSingleRootAtClientPoint(clientX: number, clientY: number, root: HTMLElement): HTMLElement | null {
-    if (this.isClientPointInsideElementBounds(clientX, clientY, root)) {
+    if (clientPointIsInsideElementBounds(clientX, clientY, root)) {
       return root;
     }
     const under = this.elementFromPointUnderShield(clientX, clientY);
@@ -354,33 +358,7 @@ export class EditorExclusiveMouseShield {
     clientY: number,
     exclusiveRoots: readonly HTMLElement[],
   ): HTMLElement | null {
-    let best: HTMLElement | null = null;
-    let bestArea = Number.POSITIVE_INFINITY;
-    for (const root of exclusiveRoots) {
-      if (!this.isClientPointInsideElementBounds(clientX, clientY, root)) {
-        continue;
-      }
-      const rect = root.getBoundingClientRect();
-      const area = Math.max(rect.width, 0) * Math.max(rect.height, 0);
-      if (area < bestArea) {
-        best = root;
-        bestArea = area;
-      }
-    }
-    return best;
-  }
-
-  /**
-   * Geometry test for a client point against an element bounding box.
-   *
-   * @param clientX Pointer client X.
-   * @param clientY Pointer client Y.
-   * @param element Element whose bounding box is tested.
-   * @returns True when the point is inside the element bounds.
-   */
-  private isClientPointInsideElementBounds(clientX: number, clientY: number, element: HTMLElement): boolean {
-    const rect = element.getBoundingClientRect();
-    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    return findSmallestElementContainingClientPoint(clientX, clientY, exclusiveRoots);
   }
 
   /**

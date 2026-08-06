@@ -501,6 +501,7 @@ export class EditorInputBridge {
       event.button,
       true,
       this.resolveEventDocument(event),
+      this.resolveModifierFlagsFromEvent(event),
     );
     this.editor.onMouseDown(event.button);
   }
@@ -520,6 +521,7 @@ export class EditorInputBridge {
       event.button,
       false,
       this.resolveEventDocument(event),
+      this.resolveModifierFlagsFromEvent(event),
     );
     this.editor.onGlobalMouseUp(event.button);
     if (inViewport) {
@@ -542,6 +544,7 @@ export class EditorInputBridge {
       -1,
       false,
       this.resolveEventDocument(event),
+      this.resolveModifierFlagsFromEvent(event),
     );
     const screenDelta = this.editor.mousePosition.clone().sub(this.previousMousePosition);
     const gridDelta = this.editor.mouseGridPosition.clone().sub(this.previousMouseGridPosition);
@@ -569,7 +572,30 @@ export class EditorInputBridge {
       -1,
       false,
       this.resolveEventDocument(event),
+      this.resolveModifierFlagsFromEvent(event),
     );
+  }
+
+  /**
+   * Reads browser modifier flags from a pointer event. Detached popup samples
+   * carry window-local Shift/Ctrl that must reach isShiftPressed /
+   * isCtrlPressed.
+   *
+   * @param event Pointer event from main or detached document.
+   * @returns Modifier flags for the editor latch.
+   */
+  private resolveModifierFlagsFromEvent(event: PointerEvent): {
+    shiftKey: boolean;
+    ctrlKey: boolean;
+    altKey: boolean;
+    metaKey: boolean;
+  } {
+    return {
+      shiftKey: event.shiftKey === true,
+      ctrlKey: event.ctrlKey === true,
+      altKey: event.altKey === true,
+      metaKey: event.metaKey === true,
+    };
   }
 
   /**

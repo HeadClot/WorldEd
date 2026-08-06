@@ -91,7 +91,7 @@ export class ClipPlanePointPicker {
   private resolvePoint(point: THREE.Vector3, applySnap: boolean): THREE.Vector3 {
     const result = point.clone();
     if (applySnap) {
-      this.gridSnap.snapVector3(result);
+      this.gridSnap.snapWorldPosition(result);
     }
     return result;
   }

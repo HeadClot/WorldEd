@@ -8,6 +8,7 @@ import { StatusBar } from '@/ui/status/status_bar.js';
 import { HandlerKeyboardShortcut } from '@/input/handler_keyboard_shortcut.js';
 import { TextureLockSettings } from '@/texture/lock/texture_lock_settings.js';
 import { SolidModel } from '@/solid/model/solid_model.js';
+import { ManagerProjectedGrid } from '@/viewports/grid/projected/manager_projected_grid.js';
 
 /** Dependencies for snap interval, snap toggle, and texture lock controls. */
 export interface ControllerSnapSettingsDependencies {
@@ -142,6 +143,7 @@ export class ControllerSnapSettings {
     this.deps.gridSnap.setInterval(interval);
     this.deps.statusBar?.setSnapInterval(interval);
     this.updateAllViewportGrids(interval);
+    ManagerProjectedGrid.setCellSize(interval);
     this.deps.onSnapIntervalChanged?.(interval);
   }
 

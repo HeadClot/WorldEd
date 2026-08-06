@@ -136,11 +136,12 @@ export class ViewportToolRail {
     this.root.style.pointerEvents = 'auto';
   }
 
-  /** Builds Object / Face / Clip rail buttons. */
+  /** Builds Object / Face / Clip / Grid rail buttons. */
   private buildButtons(): void {
     this.addToolButton(EditorToolId.OBJECT, ToolbarIcons.toolObjectSelect());
     this.addToolButton(EditorToolId.FACE, ToolbarIcons.toolFaceSelect());
     this.addToolButton(EditorToolId.CLIP_PLANE, ToolbarIcons.toolClipPlane());
+    this.addToolButton(EditorToolId.GRID, ToolbarIcons.toolGrid());
   }
 
   /**

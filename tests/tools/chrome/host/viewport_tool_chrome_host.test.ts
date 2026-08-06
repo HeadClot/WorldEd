@@ -24,6 +24,12 @@ function createHostHandlers(
     onCommitSplit: () => undefined,
     onOpenUvEditor: () => undefined,
     onExtrudeFaces: () => undefined,
+    onGridReset: () => undefined,
+    onGridAlignToFace: () => undefined,
+    onGridAlignAxis: () => undefined,
+    onGridOriginVertex: () => undefined,
+    onCameraReset: () => undefined,
+    onCameraAlignToFace: () => undefined,
     onInteractionMode,
     onComponentMode: () => undefined,
   };

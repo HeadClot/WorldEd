@@ -129,6 +129,16 @@ export function setupToolsPaletteAndClipWiring(parts: {
   switchToObjectSelect?: () => void;
   switchToFaceSelect?: () => void;
   switchToEditSelect?: () => void;
+  switchToGridTool?: () => void;
+  onGridReset?: () => void;
+  onGridAlignToFace?: () => void;
+  onGridAlignAxis?: (
+    axis: import('@/navigation/orientation/editor_orientation_axis.js').EditorOrientationAxisId,
+  ) => void;
+  onGridOriginVertex?: () => void;
+  onCameraReset?: () => void;
+  onCameraAlignToFace?: () => void;
+  onPrimaryToolChanged?: () => void;
   registerClipTool?: (
     placement: import('@/tools/clip_plane/tool_clip_plane.js').ToolClipPlane,
     handler: HandlerClipPlane,
@@ -168,6 +178,14 @@ export function setupToolsPaletteAndClipWiring(parts: {
     ...(parts.switchToObjectSelect !== undefined ? { switchToObjectSelect: parts.switchToObjectSelect } : {}),
     ...(parts.switchToFaceSelect !== undefined ? { switchToFaceSelect: parts.switchToFaceSelect } : {}),
     ...(parts.switchToEditSelect !== undefined ? { switchToEditSelect: parts.switchToEditSelect } : {}),
+    ...(parts.switchToGridTool !== undefined ? { switchToGridTool: parts.switchToGridTool } : {}),
+    ...(parts.onGridReset !== undefined ? { onGridReset: parts.onGridReset } : {}),
+    ...(parts.onGridAlignToFace !== undefined ? { onGridAlignToFace: parts.onGridAlignToFace } : {}),
+    ...(parts.onGridAlignAxis !== undefined ? { onGridAlignAxis: parts.onGridAlignAxis } : {}),
+    ...(parts.onGridOriginVertex !== undefined ? { onGridOriginVertex: parts.onGridOriginVertex } : {}),
+    ...(parts.onCameraReset !== undefined ? { onCameraReset: parts.onCameraReset } : {}),
+    ...(parts.onCameraAlignToFace !== undefined ? { onCameraAlignToFace: parts.onCameraAlignToFace } : {}),
+    ...(parts.onPrimaryToolChanged !== undefined ? { onPrimaryToolChanged: parts.onPrimaryToolChanged } : {}),
     ...(parts.registerClipTool !== undefined ? { registerClipTool: parts.registerClipTool } : {}),
     ...(parts.onEnterEditMode !== undefined ? { onEnterEditMode: parts.onEnterEditMode } : {}),
     ...(parts.onExitEditMode !== undefined ? { onExitEditMode: parts.onExitEditMode } : {}),

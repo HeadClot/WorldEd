@@ -10,6 +10,7 @@ import { CommandStack } from '@/commands/command_stack.js';
 import { GridSnap } from '@/transform/snap/grid_snap.js';
 import { ControllerUvSmear } from '@/texture/controller/controller_uv_smear.js';
 import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
+import { findPickSurfaceAtClientPoint } from '@/utils/pointer_client_hit.js';
 
 /** Keyboard code that enables continuous UV smear while held. */
 const UV_SMEAR_KEY_CODE = 'KeyG';
@@ -149,21 +150,13 @@ export class CoordinatorFaceMode {
     clientY: number,
     ownerDocument: Document | null = null,
   ): Viewport3D | Viewport2D | null {
-    for (const viewport of this.deps.getViewports()) {
-      const pickElement = viewport.getContentElement();
-      if (!pickElement) {
-        continue;
-      }
-      if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
-        continue;
-      }
-      const rect = pickElement.getBoundingClientRect();
-      if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-        continue;
-      }
-      return viewport;
-    }
-    return null;
+    return findPickSurfaceAtClientPoint(
+      this.deps.getViewports(),
+      (viewport) => viewport.getContentElement(),
+      clientX,
+      clientY,
+      ownerDocument,
+    );
   }
 
   /**

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { GridLineBuffer } from './grid_line_buffer.js';
+import { buildDefaultPlaneFrame, type EditorPlaneFrame } from '@/navigation/orientation/editor_orientation_basis.js';
 
 /** Fixed half-extent of the 3D grid patch in world units. */
 const PATCH_HALF_EXTENT = 50;
@@ -31,7 +32,8 @@ const MAJOR_CENTER_STRENGTH = 1.0;
 /**
  * Camera-following infinite metric floor grid for the perspective viewport.
  * Minor lines, brighter section lines (x4), and strongest major lines (x8).
- * Patch size stays large; line colors fade into the viewport clear color.
+ * Patch size stays large; line colors fade into the viewport clear color. The
+ * floor plane can be reoriented via {@link setPlaneFrame}.
  */
 export class InfiniteGrid3D {
   private group: THREE.Group;
@@ -45,6 +47,13 @@ export class InfiniteGrid3D {
   private axisXColor: THREE.Color;
   private axisZColor: THREE.Color;
   private scratchCamPos: THREE.Vector3;
+  private planeOrigin: THREE.Vector3;
+  private planeUAxis: THREE.Vector3;
+  private planeVAxis: THREE.Vector3;
+  private planeNormal: THREE.Vector3;
+  private scratchOffset: THREE.Vector3;
+  private scratchPointA: THREE.Vector3;
+  private scratchPointB: THREE.Vector3;
   private displayCell: number;
   private displayLineCount: number;
 
@@ -70,8 +79,16 @@ export class InfiniteGrid3D {
     this.axisXColor = new THREE.Color(Theme.gridXAxisColor);
     this.axisZColor = new THREE.Color(Theme.gridZAxisColor);
     this.scratchCamPos = new THREE.Vector3();
+    this.planeOrigin = new THREE.Vector3();
+    this.planeUAxis = new THREE.Vector3(1, 0, 0);
+    this.planeVAxis = new THREE.Vector3(0, 0, 1);
+    this.planeNormal = new THREE.Vector3(0, 1, 0);
+    this.scratchOffset = new THREE.Vector3();
+    this.scratchPointA = new THREE.Vector3();
+    this.scratchPointB = new THREE.Vector3();
     this.displayCell = cellSize;
     this.displayLineCount = 0;
+    this.resetPlaneFrame();
   }
 
   /**
@@ -93,7 +110,38 @@ export class InfiniteGrid3D {
   }
 
   /**
-   * Rebuilds the grid centered under the camera on the XZ plane.
+   * Sets the working plane used to generate grid lines.
+   *
+   * @param frame Plane origin, U/V axes, and normal.
+   */
+  setPlaneFrame(frame: EditorPlaneFrame): void {
+    this.planeOrigin.copy(frame.origin);
+    this.planeUAxis.copy(frame.uAxis).normalize();
+    this.planeVAxis.copy(frame.vAxis).normalize();
+    this.planeNormal.copy(frame.normal).normalize();
+  }
+
+  /** Restores the default world XZ floor frame at the origin. */
+  resetPlaneFrame(): void {
+    this.setPlaneFrame(buildDefaultPlaneFrame());
+  }
+
+  /**
+   * Returns a copy of the active plane frame.
+   *
+   * @returns Current plane frame.
+   */
+  getPlaneFrame(): EditorPlaneFrame {
+    return {
+      origin: this.planeOrigin.clone(),
+      uAxis: this.planeUAxis.clone(),
+      vAxis: this.planeVAxis.clone(),
+      normal: this.planeNormal.clone(),
+    };
+  }
+
+  /**
+   * Rebuilds the grid centered under the camera on the active plane.
    *
    * @param camera The perspective camera driving the view.
    */
@@ -102,13 +150,15 @@ export class InfiniteGrid3D {
     this.resolveDisplayCell();
     const cell = this.displayCell;
     const lineCount = this.displayLineCount;
-    const offsetX = this.snapTowardCamera(this.scratchCamPos.x, cell);
-    const offsetZ = this.snapTowardCamera(this.scratchCamPos.z, cell);
+    const camU = this.projectCameraOntoU();
+    const camV = this.projectCameraOntoV();
+    const offsetU = this.snapTowardCamera(camU, cell);
+    const offsetV = this.snapTowardCamera(camV, cell);
     const halfWorld = PATCH_HALF_EXTENT;
-    const camDist = Math.hypot(this.scratchCamPos.x, this.scratchCamPos.z);
+    const camDist = Math.hypot(camU, camV);
     this.buffer.beginFrame();
-    this.appendMetricLines(offsetX, offsetZ, halfWorld, cell, lineCount);
-    this.appendWorldAxes(halfWorld + camDist);
+    this.appendMetricLines(offsetU, offsetV, halfWorld, cell, lineCount);
+    this.appendPlaneAxes(halfWorld + camDist);
     this.buffer.endFrame();
   }
 
@@ -128,9 +178,29 @@ export class InfiniteGrid3D {
   }
 
   /**
-   * Snaps a camera coordinate to the nearest display-cell boundary.
+   * Projects the camera onto the plane U axis relative to the plane origin.
    *
-   * @param value Camera X or Z.
+   * @returns Scalar U coordinate of the camera projection.
+   */
+  private projectCameraOntoU(): number {
+    this.scratchOffset.copy(this.scratchCamPos).sub(this.planeOrigin);
+    return this.scratchOffset.dot(this.planeUAxis);
+  }
+
+  /**
+   * Projects the camera onto the plane V axis relative to the plane origin.
+   *
+   * @returns Scalar V coordinate of the camera projection.
+   */
+  private projectCameraOntoV(): number {
+    this.scratchOffset.copy(this.scratchCamPos).sub(this.planeOrigin);
+    return this.scratchOffset.dot(this.planeVAxis);
+  }
+
+  /**
+   * Snaps a plane-space coordinate to the nearest display-cell boundary.
+   *
+   * @param value Plane U or V scalar.
    * @param cell Display cell size.
    * @returns Snapped origin for the patch.
    */
@@ -140,17 +210,17 @@ export class InfiniteGrid3D {
 
   /**
    * Draws minor, section, and major grid lines with edge fade. Section/major
-   * ranks use world coordinates so bright lines stay world-locked.
+   * ranks use plane U/V coordinates so bright lines stay plane-locked.
    *
-   * @param offsetX Snapped camera X.
-   * @param offsetZ Snapped camera Z.
+   * @param offsetU Snapped camera U.
+   * @param offsetV Snapped camera V.
    * @param halfWorld Half patch extent in world units.
    * @param cell Display cell size.
    * @param lineCount Number of lines along each axis.
    */
   private appendMetricLines(
-    offsetX: number,
-    offsetZ: number,
+    offsetU: number,
+    offsetV: number,
     halfWorld: number,
     cell: number,
     lineCount: number,
@@ -161,12 +231,12 @@ export class InfiniteGrid3D {
     for (let i = 0; i < lineCount; i++) {
       const index = start + i;
       const radial = this.computeRadialFalloff(index, lineCount);
-      const x = offsetX + index * cell;
-      const z = offsetZ + index * cell;
-      this.assignLineColors(this.classifyWorldRank(x, sectionStep, majorStep), radial);
-      this.appendSplitLineX(x, offsetZ, halfWorld);
-      this.assignLineColors(this.classifyWorldRank(z, sectionStep, majorStep), radial);
-      this.appendSplitLineZ(z, offsetX, halfWorld);
+      const u = offsetU + index * cell;
+      const v = offsetV + index * cell;
+      this.assignLineColors(this.classifyWorldRank(u, sectionStep, majorStep), radial);
+      this.appendSplitLineConstantU(u, offsetV, halfWorld);
+      this.assignLineColors(this.classifyWorldRank(v, sectionStep, majorStep), radial);
+      this.appendSplitLineConstantV(v, offsetU, halfWorld);
     }
   }
 
@@ -185,10 +255,8 @@ export class InfiniteGrid3D {
 
   /**
    * Sets center/edge colors for a line based on minor/section/major hierarchy.
-   * Minor uses minorColor; section and major share sectionColor, with major
-   * getting a stronger center blend (there is no separate majorColor).
    *
-   * @param rank World-locked line rank.
+   * @param rank Plane-locked line rank.
    * @param radial Edge falloff 0..1.
    */
   private assignLineColors(rank: 'minor' | 'section' | 'major', radial: number): void {
@@ -207,28 +275,27 @@ export class InfiniteGrid3D {
   }
 
   /**
-   * Classifies a world-space line coordinate as minor, section, or major. Uses
-   * world multiples so bright lines do not follow the camera.
+   * Classifies a plane-space line coordinate as minor, section, or major.
    *
-   * @param worldCoordinate World X or Z of the line.
-   * @param sectionStep World spacing for section lines.
-   * @param majorStep World spacing for major lines.
+   * @param planeCoordinate Plane U or V of the line.
+   * @param sectionStep Spacing for section lines.
+   * @param majorStep Spacing for major lines.
    * @returns Line hierarchy rank.
    */
   private classifyWorldRank(
-    worldCoordinate: number,
+    planeCoordinate: number,
     sectionStep: number,
     majorStep: number,
   ): 'minor' | 'section' | 'major' {
-    if (this.isMultipleOf(worldCoordinate, majorStep)) return 'major';
-    if (this.isMultipleOf(worldCoordinate, sectionStep)) return 'section';
+    if (this.isMultipleOf(planeCoordinate, majorStep)) return 'major';
+    if (this.isMultipleOf(planeCoordinate, sectionStep)) return 'section';
     return 'minor';
   }
 
   /**
    * Returns true when value is an integer multiple of step (float-safe).
    *
-   * @param value World coordinate.
+   * @param value Plane coordinate.
    * @param step Step size.
    * @returns Whether the coordinate sits on that step.
    */
@@ -239,39 +306,88 @@ export class InfiniteGrid3D {
   }
 
   /**
-   * Draws one X-constant line as two halves meeting at the patch center.
+   * Draws one constant-U line as two halves meeting at the patch center.
    *
-   * @param x World X of the line.
-   * @param centerZ Patch center Z.
+   * @param u Plane U of the line.
+   * @param centerV Patch center V.
    * @param halfWorld Half patch extent.
    */
-  private appendSplitLineX(x: number, centerZ: number, halfWorld: number): void {
-    this.buffer.addLine(x, 0, centerZ, x, 0, centerZ + halfWorld, this.centerColor, this.edgeColor);
-    this.buffer.addLine(x, 0, centerZ, x, 0, centerZ - halfWorld, this.centerColor, this.edgeColor);
+  private appendSplitLineConstantU(u: number, centerV: number, halfWorld: number): void {
+    this.planePointToWorld(u, centerV, this.scratchPointA);
+    this.planePointToWorld(u, centerV + halfWorld, this.scratchPointB);
+    this.addWorldLine(this.scratchPointA, this.scratchPointB);
+    this.planePointToWorld(u, centerV - halfWorld, this.scratchPointB);
+    this.addWorldLine(this.scratchPointA, this.scratchPointB);
   }
 
   /**
-   * Draws one Z-constant line as two halves meeting at the patch center.
+   * Draws one constant-V line as two halves meeting at the patch center.
    *
-   * @param z World Z of the line.
-   * @param centerX Patch center X.
+   * @param v Plane V of the line.
+   * @param centerU Patch center U.
    * @param halfWorld Half patch extent.
    */
-  private appendSplitLineZ(z: number, centerX: number, halfWorld: number): void {
-    this.buffer.addLine(centerX, 0, z, centerX + halfWorld, 0, z, this.centerColor, this.edgeColor);
-    this.buffer.addLine(centerX, 0, z, centerX - halfWorld, 0, z, this.centerColor, this.edgeColor);
+  private appendSplitLineConstantV(v: number, centerU: number, halfWorld: number): void {
+    this.planePointToWorld(centerU, v, this.scratchPointA);
+    this.planePointToWorld(centerU + halfWorld, v, this.scratchPointB);
+    this.addWorldLine(this.scratchPointA, this.scratchPointB);
+    this.planePointToWorld(centerU - halfWorld, v, this.scratchPointB);
+    this.addWorldLine(this.scratchPointA, this.scratchPointB);
   }
 
   /**
-   * Draws the global world X and Z axes through the origin.
+   * Maps plane U/V coordinates to world space.
+   *
+   * @param u Plane U scalar.
+   * @param v Plane V scalar.
+   * @param target Output world point.
+   */
+  private planePointToWorld(u: number, v: number, target: THREE.Vector3): void {
+    target.copy(this.planeOrigin).addScaledVector(this.planeUAxis, u).addScaledVector(this.planeVAxis, v);
+  }
+
+  /**
+   * Appends a world-space line segment using the current line colors.
+   *
+   * @param a Segment start.
+   * @param b Segment end.
+   */
+  private addWorldLine(a: THREE.Vector3, b: THREE.Vector3): void {
+    this.buffer.addLine(a.x, a.y, a.z, b.x, b.y, b.z, this.centerColor, this.edgeColor);
+  }
+
+  /**
+   * Draws plane U and V axes through the plane origin.
    *
    * @param axisLength Half-length of each axis line.
    */
-  private appendWorldAxes(axisLength: number): void {
-    this.buffer.addLine(0, 0, 0, axisLength, 0, 0, this.axisXColor, this.edgeColor);
-    this.buffer.addLine(0, 0, 0, -axisLength, 0, 0, this.axisXColor, this.edgeColor);
-    this.buffer.addLine(0, 0, 0, 0, 0, axisLength, this.axisZColor, this.edgeColor);
-    this.buffer.addLine(0, 0, 0, 0, 0, -axisLength, this.axisZColor, this.edgeColor);
+  private appendPlaneAxes(axisLength: number): void {
+    this.planePointToWorld(0, 0, this.scratchPointA);
+    this.appendAxisSegment(axisLength, 0, this.axisXColor);
+    this.appendAxisSegment(-axisLength, 0, this.axisXColor);
+    this.appendAxisSegment(0, axisLength, this.axisZColor);
+    this.appendAxisSegment(0, -axisLength, this.axisZColor);
+  }
+
+  /**
+   * Draws one axis segment from the plane origin to a plane U/V point.
+   *
+   * @param u Plane U of the segment end.
+   * @param v Plane V of the segment end.
+   * @param color Axis color.
+   */
+  private appendAxisSegment(u: number, v: number, color: THREE.Color): void {
+    this.planePointToWorld(u, v, this.scratchPointB);
+    this.buffer.addLine(
+      this.scratchPointA.x,
+      this.scratchPointA.y,
+      this.scratchPointA.z,
+      this.scratchPointB.x,
+      this.scratchPointB.y,
+      this.scratchPointB.z,
+      color,
+      this.edgeColor,
+    );
   }
 
   /**

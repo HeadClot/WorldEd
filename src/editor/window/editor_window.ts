@@ -12,8 +12,15 @@ import { RotateTool } from '../tools/rotate_tool.js';
 import { ScaleTool } from '../tools/scale_tool.js';
 import { FaceSelectTool } from '../tools/face_select/face_select_tool.js';
 import { EditSelectTool } from '@/edit/tool/edit_select_tool.js';
+import { GridTool } from '../tools/grid/grid_tool.js';
 import type { ClipTool } from '../tools/clip_tool.js';
 import { managerMouseCursor } from '@/input/manager_mouse_cursor.js';
+import {
+  isAnyModifierPressedOnDomFlags,
+  isCtrlOrMetaPressedOnDomFlags,
+  isShiftPressedOnDomFlags,
+  type DomModifierKeyFlags,
+} from '@/input/modifier_keys_query.js';
 import { TransformMode } from '@/types/transform_mode.js';
 
 /**
@@ -38,6 +45,7 @@ export class EditorWindow {
   private scaleTool: ScaleTool | null;
   private faceSelectTool: FaceSelectTool | null;
   private editSelectTool: EditSelectTool | null;
+  private gridTool: GridTool | null;
   private clipTool: ClipTool | null;
 
   /** Current mouse position in screen coordinates. */
@@ -76,6 +84,16 @@ export class EditorWindow {
    */
   lastPointerOwnerDocument: Document | null;
 
+  /**
+   * Modifier flags stamped by the input bridge from the last pointer or
+   * keyboard sample (main or detached). Browser event flags are window-local
+   * truth at sample time.
+   */
+  private latchedModifierFlags: DomModifierKeyFlags;
+
+  /** True after at least one DOM sample stamped latchedModifierFlags. */
+  private hasLatchedModifierFlags: boolean;
+
   /** Creates an empty editor window (call setServices then validateTools). */
   constructor() {
     this.activeTool = null;
@@ -90,6 +108,7 @@ export class EditorWindow {
     this.scaleTool = null;
     this.faceSelectTool = null;
     this.editSelectTool = null;
+    this.gridTool = null;
     this.clipTool = null;
     this.mousePosition = new Vector2();
     this.mouseGridPosition = new Vector2();
@@ -102,6 +121,13 @@ export class EditorWindow {
     this.lastPointerClientY = 0;
     this.hasLastPointerClient = false;
     this.lastPointerOwnerDocument = null;
+    this.latchedModifierFlags = {
+      shiftKey: false,
+      ctrlKey: false,
+      altKey: false,
+      metaKey: false,
+    };
+    this.hasLatchedModifierFlags = false;
   }
 
   /**
@@ -252,29 +278,42 @@ export class EditorWindow {
   }
 
   /**
-   * Returns whether shift is pressed.
+   * Returns whether shift is pressed. Prefers bridge-latched DOM flags from the
+   * last pointer/keyboard sample (correct for detached windows), then
+   * continuous input-manager state across main and detached windows.
    *
    * @returns True when shift is down.
    */
   get isShiftPressed(): boolean {
+    if (this.hasLatchedModifierFlags && isShiftPressedOnDomFlags(this.latchedModifierFlags)) {
+      return true;
+    }
     return this.services?.isShiftPressed() === true;
   }
 
   /**
-   * Returns whether ctrl is pressed.
+   * Returns whether ctrl (or meta) is pressed. Same multi-window rules as
+   * {@link isShiftPressed}.
    *
    * @returns True when ctrl is down.
    */
   get isCtrlPressed(): boolean {
+    if (this.hasLatchedModifierFlags && isCtrlOrMetaPressedOnDomFlags(this.latchedModifierFlags)) {
+      return true;
+    }
     return this.services?.isCtrlPressed() === true;
   }
 
   /**
-   * Returns whether any modifier is pressed.
+   * Returns whether any modifier is pressed. Same multi-window rules as
+   * {@link isShiftPressed}.
    *
    * @returns True when a modifier is down.
    */
   get isModifierPressed(): boolean {
+    if (this.hasLatchedModifierFlags && isAnyModifierPressedOnDomFlags(this.latchedModifierFlags)) {
+      return true;
+    }
     return this.services?.isModifierPressed() === true;
   }
 
@@ -334,6 +373,7 @@ export class EditorWindow {
       this.scaleTool = new ScaleTool();
       this.faceSelectTool = new FaceSelectTool();
       this.editSelectTool = new EditSelectTool();
+      this.gridTool = new GridTool();
     }
     if (this.activeTool === null) {
       this.switchTool(this.boundsTool as BoundsTool);
@@ -408,6 +448,16 @@ export class EditorWindow {
   getEditSelectTool(): EditSelectTool {
     this.validateTools();
     return this.editSelectTool as EditSelectTool;
+  }
+
+  /**
+   * Returns the permanent grid tool.
+   *
+   * @returns Grid tool instance.
+   */
+  getGridTool(): GridTool {
+    this.validateTools();
+    return this.gridTool as GridTool;
   }
 
   /**
@@ -760,6 +810,7 @@ export class EditorWindow {
    * @param isDown True on pointer down.
    * @param ownerDocument Document that owns the sample when target resolution
    *   fails across popup realms (main app or detached viewport).
+   * @param modifierFlags Optional browser modifier flags from the same event.
    */
   updateMouseStateFromPointer(
     clientX: number,
@@ -768,12 +819,16 @@ export class EditorWindow {
     button: number,
     isDown: boolean,
     ownerDocument: Document | null = null,
+    modifierFlags: DomModifierKeyFlags | null = null,
   ): void {
     this.lastEventTargetNode = targetNode;
     this.lastPointerClientX = clientX;
     this.lastPointerClientY = clientY;
     this.hasLastPointerClient = true;
     this.lastPointerOwnerDocument = this.resolveOwnerDocumentFromTarget(targetNode) ?? ownerDocument;
+    if (modifierFlags) {
+      this.updateModifiersFromDomEvent(modifierFlags);
+    }
     this.mousePosition.set(clientX, clientY);
     const grid = this.services?.screenPointToGrid(clientX, clientY) ?? { x: clientX, y: clientY };
     this.mouseGridPosition.set(grid.x, grid.y);
@@ -791,6 +846,40 @@ export class EditorWindow {
     if (button === 1 && !isDown) {
       this.isRightMousePressed = false;
     }
+  }
+
+  /**
+   * Latches modifier flags from a browser pointer or keyboard event so tools
+   * reading isShiftPressed / isCtrlPressed see the correct multi-window state.
+   *
+   * @param flags Browser event modifier flags.
+   */
+  updateModifiersFromDomEvent(flags: DomModifierKeyFlags): void {
+    this.latchedModifierFlags = {
+      shiftKey: flags.shiftKey === true,
+      ctrlKey: flags.ctrlKey === true,
+      altKey: flags.altKey === true,
+      metaKey: flags.metaKey === true,
+    };
+    this.hasLatchedModifierFlags = true;
+  }
+
+  /**
+   * Returns bridge-latched modifier flags from the last pointer/keyboard
+   * sample.
+   *
+   * @returns Flags when a sample has been stamped, otherwise null.
+   */
+  getLatchedModifierFlags(): DomModifierKeyFlags | null {
+    if (!this.hasLatchedModifierFlags) {
+      return null;
+    }
+    return {
+      shiftKey: this.latchedModifierFlags.shiftKey,
+      ctrlKey: this.latchedModifierFlags.ctrlKey,
+      altKey: this.latchedModifierFlags.altKey,
+      metaKey: this.latchedModifierFlags.metaKey,
+    };
   }
 
   /**
@@ -850,6 +939,11 @@ export class EditorWindow {
   /** User switches to the Edit Mode select tool unless already active. */
   userSwitchToEditSelectTool(): void {
     this.switchTool(this.getEditSelectTool());
+  }
+
+  /** User switches to the grid tool unless already active. */
+  userSwitchToGridTool(): void {
+    this.switchTool(this.getGridTool());
   }
 
   /** User switches to the translate tool unless already active. */
@@ -1038,6 +1132,12 @@ export class EditorWindow {
    * @param event Browser keyboard event.
    */
   private seedPointerStateFromKeyboardEvent(event: KeyboardEvent): void {
+    this.updateModifiersFromDomEvent({
+      shiftKey: event.shiftKey,
+      ctrlKey: event.ctrlKey,
+      altKey: event.altKey,
+      metaKey: event.metaKey,
+    });
     const ownerDocument = this.resolveOwnerDocumentFromKeyboardEvent(event);
     if (!ownerDocument) {
       return;

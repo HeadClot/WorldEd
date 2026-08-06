@@ -54,6 +54,10 @@ function createStubServices(overrides: Partial<EditorServices> = {}): EditorServ
     continueFaceSelectPointerMove: () => {},
     endFaceSelectPointerUp: () => {},
     isFaceSelectStrokeActive: () => false,
+    isGridAlignPickArmed: () => false,
+    disarmGridAlignPick: () => undefined,
+    tryGridAlignPickAtPointer: () => false,
+    updateGridAlignHoverAtPointer: () => undefined,
     isEditModeActive: () => true,
     beginEditSelectPointerDown: vi.fn(() => true),
     setWidgetMode: (mode) => {
@@ -90,7 +94,7 @@ describe('EditSelectTool', () => {
     editor.lastPointerClientX = 42;
     editor.lastPointerClientY = 84;
     editor.activeTool?.onMouseDown(0);
-    expect(beginPick).toHaveBeenCalledWith(42, 84, false, false);
+    expect(beginPick).toHaveBeenCalledWith(42, 84, false, false, null);
     expect(editor.activeTool).toBeInstanceOf(EditSelectTool);
   });
 

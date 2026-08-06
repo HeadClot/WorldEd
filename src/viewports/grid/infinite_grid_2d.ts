@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Theme } from '@/theme.js';
 import { GridPlane } from './grid_plane.js';
 import { GridLineBuffer } from './grid_line_buffer.js';
+import type { EditorPlaneFrame } from '@/navigation/orientation/editor_orientation_basis.js';
 
 /** Reusable orthographic view bounds on a grid plane. */
 interface GridViewBounds {
@@ -32,7 +33,6 @@ interface GridPlaneUv {
 export class InfiniteGrid2D {
   private group: THREE.Group;
   private buffer: GridLineBuffer;
-  private plane: GridPlane;
   private snapInterval: number;
   private minorColor: THREE.Color;
   private sectionColor: THREE.Color;
@@ -50,6 +50,11 @@ export class InfiniteGrid2D {
   private scratchViewBounds: GridViewBounds;
   private scratchLod: GridLodResult;
   private scratchUv: GridPlaneUv;
+  private readonly planeFrameOrigin: THREE.Vector3;
+  private readonly planeFrameUAxis: THREE.Vector3;
+  private readonly planeFrameVAxis: THREE.Vector3;
+  private readonly planeFrameNormal: THREE.Vector3;
+  private readonly scratchOffset: THREE.Vector3;
 
   /**
    * Creates a 2D infinite grid for the given plane.
@@ -63,7 +68,6 @@ export class InfiniteGrid2D {
     this.buffer = new GridLineBuffer();
     this.buffer.setDepthTest(false);
     this.group.add(this.buffer.getObject());
-    this.plane = plane;
     this.snapInterval = Math.max(snapInterval, 0.001);
     this.minorColor = new THREE.Color(Theme.gridColor);
     this.sectionColor = new THREE.Color(Theme.gridOriginColor);
@@ -81,6 +85,24 @@ export class InfiniteGrid2D {
     this.scratchViewBounds = { minU: 0, maxU: 0, minV: 0, maxV: 0 };
     this.scratchLod = { cell: 0, minorFade: 0 };
     this.scratchUv = { u: 0, v: 0 };
+    this.planeFrameOrigin = new THREE.Vector3();
+    this.planeFrameUAxis = new THREE.Vector3(1, 0, 0);
+    this.planeFrameVAxis = new THREE.Vector3(0, 0, 1);
+    this.planeFrameNormal = new THREE.Vector3(0, 1, 0);
+    this.scratchOffset = new THREE.Vector3();
+    this.applyDefaultPlaneFrame(plane);
+  }
+
+  /**
+   * Sets the working plane frame used for UV lattice placement.
+   *
+   * @param frame Plane origin plus U/V axes and normal.
+   */
+  setPlaneFrame(frame: EditorPlaneFrame): void {
+    this.planeFrameOrigin.copy(frame.origin);
+    this.planeFrameUAxis.copy(frame.uAxis).normalize();
+    this.planeFrameVAxis.copy(frame.vAxis).normalize();
+    this.planeFrameNormal.copy(frame.normal).normalize();
   }
 
   /**
@@ -118,30 +140,18 @@ export class InfiniteGrid2D {
   }
 
   /**
-   * Resolves the constant-axis world value for the grid plane so geometry sits
-   * inside the camera near/far volume (midway between near and far).
+   * Resolves lattice depth along the plane normal so geometry sits inside the
+   * camera near/far volume (midway between near and far).
    *
    * @param camera Orthographic camera after depth ranging.
-   * @returns World X (yz), Y (xz), or Z (xy) for the grid plane.
+   * @returns Signed distance along the plane normal from the plane origin.
    */
   private computePlaneDepth(camera: THREE.OrthographicCamera): number {
     camera.updateMatrixWorld(true);
     camera.getWorldDirection(this.scratchViewDirection);
     const midDistance = (camera.near + camera.far) * 0.5;
     this.scratchOrigin.copy(camera.position).addScaledVector(this.scratchViewDirection, midDistance);
-    return this.extractPlaneDepthComponent(this.scratchOrigin);
-  }
-
-  /**
-   * Reads the depth-axis component of a world point for this grid plane.
-   *
-   * @param point World position.
-   * @returns Plane constant (Y for top, Z for front, X for side).
-   */
-  private extractPlaneDepthComponent(point: THREE.Vector3): number {
-    if (this.plane === 'xz') return point.y;
-    if (this.plane === 'xy') return point.z;
-    return point.x;
+    return this.scratchOrigin.sub(this.planeFrameOrigin).dot(this.planeFrameNormal);
   }
 
   /**
@@ -193,40 +203,57 @@ export class InfiniteGrid2D {
   }
 
   /**
-   * Projects a world point onto plane UV coordinates.
+   * Projects a world point onto plane UV coordinates relative to the frame.
    *
    * @param point World position.
    * @returns Scratch UV object reused across calls.
    */
   private worldToPlaneUV(point: THREE.Vector3): GridPlaneUv {
-    if (this.plane === 'xz') {
-      this.scratchUv.u = point.x;
-      this.scratchUv.v = point.z;
-      return this.scratchUv;
-    }
-    if (this.plane === 'xy') {
-      this.scratchUv.u = point.x;
-      this.scratchUv.v = point.y;
-      return this.scratchUv;
-    }
-    this.scratchUv.u = point.z;
-    this.scratchUv.v = point.y;
+    this.scratchOffset.copy(point).sub(this.planeFrameOrigin);
+    this.scratchUv.u = this.scratchOffset.dot(this.planeFrameUAxis);
+    this.scratchUv.v = this.scratchOffset.dot(this.planeFrameVAxis);
     return this.scratchUv;
   }
 
   /**
    * Converts plane UV coordinates back to a world point on the grid plane at
-   * the given view-depth constant.
+   * the given normal-axis depth from the plane origin.
    *
    * @param u Plane U.
    * @param v Plane V.
-   * @param depth World constant for the plane normal axis.
+   * @param depth Signed distance along the plane normal from the origin.
    * @returns World position on the grid plane (reuses scratch vector).
    */
   private planeUVToWorld(u: number, v: number, depth: number): THREE.Vector3 {
-    if (this.plane === 'xz') return this.scratchWorldPoint.set(u, depth, v);
-    if (this.plane === 'xy') return this.scratchWorldPoint.set(u, v, depth);
-    return this.scratchWorldPoint.set(depth, v, u);
+    this.scratchWorldPoint.copy(this.planeFrameOrigin);
+    this.scratchWorldPoint.addScaledVector(this.planeFrameUAxis, u);
+    this.scratchWorldPoint.addScaledVector(this.planeFrameVAxis, v);
+    this.scratchWorldPoint.addScaledVector(this.planeFrameNormal, depth);
+    return this.scratchWorldPoint;
+  }
+
+  /**
+   * Applies the default world-aligned frame for a classic top/front/side plane.
+   *
+   * @param plane Orthographic plane id.
+   */
+  private applyDefaultPlaneFrame(plane: GridPlane): void {
+    this.planeFrameOrigin.set(0, 0, 0);
+    if (plane === 'xz') {
+      this.planeFrameUAxis.set(1, 0, 0);
+      this.planeFrameVAxis.set(0, 0, 1);
+      this.planeFrameNormal.set(0, 1, 0);
+      return;
+    }
+    if (plane === 'xy') {
+      this.planeFrameUAxis.set(1, 0, 0);
+      this.planeFrameVAxis.set(0, 1, 0);
+      this.planeFrameNormal.set(0, 0, 1);
+      return;
+    }
+    this.planeFrameUAxis.set(0, 0, 1);
+    this.planeFrameVAxis.set(0, 1, 0);
+    this.planeFrameNormal.set(1, 0, 0);
   }
 
   /**

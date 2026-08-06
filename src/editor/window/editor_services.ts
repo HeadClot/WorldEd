@@ -325,6 +325,7 @@ export interface EditorServices {
    * @param clientY Pointer client Y.
    * @param isShiftPressed Additive selection.
    * @param isCtrlPressed Toggle selection.
+   * @param ownerDocument Document that owns the client coordinates, or null.
    * @returns True when the pick path ran.
    */
   beginEditSelectPointerDown(
@@ -332,6 +333,7 @@ export interface EditorServices {
     clientY: number,
     isShiftPressed: boolean,
     isCtrlPressed: boolean,
+    ownerDocument?: Document | null,
   ): boolean;
 
   /**
@@ -370,6 +372,33 @@ export interface EditorServices {
    * @returns True while face tool should stay busy.
    */
   isFaceSelectStrokeActive(): boolean;
+
+  /**
+   * Returns whether grid face-align pick is armed.
+   *
+   * @returns True while waiting for a face click.
+   */
+  isGridAlignPickArmed(): boolean;
+
+  /** Disarms grid face-align pick without changing orientation. */
+  disarmGridAlignPick(): void;
+
+  /**
+   * Attempts a grid face-align pick at the given client point.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   * @returns True when a face was aligned.
+   */
+  tryGridAlignPickAtPointer(clientX: number, clientY: number): boolean;
+
+  /**
+   * Updates the orange face hover while grid align pick is armed.
+   *
+   * @param clientX Pointer client X.
+   * @param clientY Pointer client Y.
+   */
+  updateGridAlignHoverAtPointer(clientX: number, clientY: number): void;
 
   /**
    * Sets the persistent gizmo widget mode.

@@ -104,6 +104,40 @@ describe('ViewportToolbar', () => {
     expect(toolbar.getShadingButton(ShadingMode.FLAT)).toBeDefined();
   });
 
+  it('should place wireframe and projected-grid toggles left of shading with a separator', () => {
+    const row = toolbar.getContentWireframesButton().parentElement;
+    expect(row).not.toBeNull();
+    const children = Array.from(row!.children);
+    const wireIndex = children.indexOf(toolbar.getContentWireframesButton());
+    const gridIndex = children.indexOf(toolbar.getProjectedGridButton());
+    const solidIndex = children.indexOf(toolbar.getShadingButton(ShadingMode.SOLID)!);
+    expect(wireIndex).toBeLessThan(gridIndex);
+    expect(gridIndex).toBeLessThan(solidIndex);
+    const separator = children[gridIndex + 1] as HTMLElement;
+    expect(separator.style.width).toBe('1px');
+    expect(toolbar.isContentWireframesActive()).toBe(true);
+    expect(toolbar.isProjectedGridActive()).toBe(true);
+  });
+
+  it('should toggle content wireframes and notify the callback', () => {
+    const onToggle = vi.fn();
+    toolbar.setOnContentWireframesToggle(onToggle);
+    toolbar.getContentWireframesButton().click();
+    expect(toolbar.isContentWireframesActive()).toBe(false);
+    expect(onToggle).toHaveBeenCalledWith(false);
+    toolbar.getContentWireframesButton().click();
+    expect(toolbar.isContentWireframesActive()).toBe(true);
+    expect(onToggle).toHaveBeenCalledWith(true);
+  });
+
+  it('should toggle projected grid and notify the callback', () => {
+    const onToggle = vi.fn();
+    toolbar.setOnProjectedGridToggle(onToggle);
+    toolbar.getProjectedGridButton().click();
+    expect(toolbar.isProjectedGridActive()).toBe(false);
+    expect(onToggle).toHaveBeenCalledWith(false);
+  });
+
   it('should invoke shading callback and update active mode', () => {
     const onMode = vi.fn();
     toolbar.setOnShadingMode(onMode);

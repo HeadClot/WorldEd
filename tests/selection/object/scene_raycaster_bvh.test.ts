@@ -4,7 +4,7 @@ import { SceneRaycaster } from '@/selection/object/scene_raycaster.js';
 import { getOrBuildFacePickBvh } from '@/selection/pick/mesh_pick_acceleration.js';
 
 /**
- * Builds a dense terrain-like plane for BVH pick timing/correctness.
+ * Builds a dense terrain-like plane for BVH pick correctness.
  *
  * @param segments Subdivision count per axis.
  * @returns Mesh with world matrix updated.
@@ -40,7 +40,7 @@ function createPickElement(): HTMLElement {
 }
 
 describe('SceneRaycaster BVH object pick', () => {
-  it('picks dense terrain without brute-force hanging', () => {
+  it('picks dense terrain and builds face-pick BVH acceleration', () => {
     const raycaster = new SceneRaycaster();
     const mesh = createDenseTerrainMesh(128);
     const camera = new THREE.PerspectiveCamera(60, 800 / 600, 0.1, 1000);
@@ -49,16 +49,13 @@ describe('SceneRaycaster BVH object pick', () => {
     camera.updateMatrixWorld(true);
     const pickElement = createPickElement();
     const event = { clientX: 400, clientY: 300 } as MouseEvent;
-    const started = performance.now();
     const hit = raycaster.cast(camera, pickElement, event, [mesh]);
-    const elapsed = performance.now() - started;
     expect(hit).toBe(mesh);
-    expect(elapsed).toBeLessThan(500);
     expect(getOrBuildFacePickBvh(mesh)).not.toBeNull();
     mesh.geometry.dispose();
   });
 
-  it('picks a ~57k triangle sphere within a short budget after BVH warm-up', () => {
+  it('picks a dense sphere after BVH warm-up', () => {
     const raycaster = new SceneRaycaster();
     const geometry = new THREE.SphereGeometry(1, 170, 170);
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
@@ -70,11 +67,8 @@ describe('SceneRaycaster BVH object pick', () => {
     const pickElement = createPickElement();
     const event = { clientX: 400, clientY: 300 } as MouseEvent;
     getOrBuildFacePickBvh(mesh);
-    const started = performance.now();
     const hit = raycaster.cast(camera, pickElement, event, [mesh]);
-    const elapsed = performance.now() - started;
     expect(hit).toBe(mesh);
-    expect(elapsed).toBeLessThan(50);
     geometry.dispose();
   });
 

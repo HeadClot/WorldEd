@@ -10,11 +10,17 @@ export class CommandSolidBoxBrushAdd implements UndoCommand {
   private readonly size: number;
   private readonly operation: SolidOperation;
   private readonly offset: THREE.Vector3;
+  private readonly rotation: THREE.Euler;
   /** Hierarchy parent for the preview mesh (solid root or solid CSG group). */
   private readonly hierarchyParent: THREE.Object3D;
   private created: SolidBrushInstance | null;
   private listIndex: number;
   private executed: boolean;
+  private readonly scratchModelLocalQuaternion: THREE.Quaternion;
+  private readonly scratchRootWorldQuaternion: THREE.Quaternion;
+  private readonly scratchParentWorldQuaternion: THREE.Quaternion;
+  private readonly scratchWorldQuaternion: THREE.Quaternion;
+  private readonly scratchParentLocalQuaternion: THREE.Quaternion;
 
   /**
    * Creates an add-box-brush command.
@@ -24,6 +30,8 @@ export class CommandSolidBoxBrushAdd implements UndoCommand {
    * @param operation CSG operation for the new brush.
    * @param offset Model-local position applied after creation.
    * @param hierarchyParent Optional solid root or CSG group to append under.
+   * @param rotation Model-local rotation (grid axes in model space). Defaults
+   *   to identity.
    */
   constructor(
     model: SolidModel,
@@ -31,20 +39,29 @@ export class CommandSolidBoxBrushAdd implements UndoCommand {
     operation: SolidOperation,
     offset: THREE.Vector3,
     hierarchyParent: THREE.Object3D | null = null,
+    rotation: THREE.Euler | null = null,
   ) {
     this.model = model;
     this.size = size;
     this.operation = operation;
     this.offset = offset.clone();
+    this.rotation = rotation ? rotation.clone() : new THREE.Euler(0, 0, 0, 'XYZ');
     this.hierarchyParent = model.resolveBrushInsertParent(hierarchyParent);
     this.created = null;
     this.listIndex = -1;
     this.executed = false;
+    this.scratchModelLocalQuaternion = new THREE.Quaternion();
+    this.scratchRootWorldQuaternion = new THREE.Quaternion();
+    this.scratchParentWorldQuaternion = new THREE.Quaternion();
+    this.scratchWorldQuaternion = new THREE.Quaternion();
+    this.scratchParentLocalQuaternion = new THREE.Quaternion();
   }
 
   /** Creates the brush on first run, or re-inserts it on redo. */
   execute(): void {
-    if (this.executed) return;
+    if (this.executed) {
+      return;
+    }
     if (this.created) {
       this.reinsertCreatedBrush();
     } else {
@@ -55,7 +72,9 @@ export class CommandSolidBoxBrushAdd implements UndoCommand {
 
   /** Removes the created brush without disposing preview resources. */
   undo(): void {
-    if (!this.executed || !this.created) return;
+    if (!this.executed || !this.created) {
+      return;
+    }
     this.model.removeBrush(this.created.id, false);
     this.executed = false;
   }
@@ -75,7 +94,7 @@ export class CommandSolidBoxBrushAdd implements UndoCommand {
    */
   private createBrush(): void {
     const brush = this.model.addBoxBrush(this.size, this.operation, this.hierarchyParent, false);
-    this.applyModelLocalOffset(brush);
+    this.applySpawnPose(brush);
     this.model.markBrushesDirty([brush.id]);
     this.model.rebuild();
     this.created = brush;
@@ -84,14 +103,28 @@ export class CommandSolidBoxBrushAdd implements UndoCommand {
 
   /** Re-inserts a previously created brush at its recorded index and parent. */
   private reinsertCreatedBrush(): void {
-    if (!this.created) return;
-    if (this.model.findBrush(this.created.id)) return;
+    if (!this.created) {
+      return;
+    }
+    if (this.model.findBrush(this.created.id)) {
+      return;
+    }
     this.created.pushTransformToMesh();
     const hierarchy =
       this.hierarchyParent === this.model.root
         ? undefined
         : { parent: this.hierarchyParent, siblingIndex: this.hierarchyParent.children.length };
     this.model.insertBrushInstance(this.created, this.listIndex, this.size, hierarchy);
+  }
+
+  /**
+   * Applies spawn position and rotation for the new brush.
+   *
+   * @param brush Newly created brush instance.
+   */
+  private applySpawnPose(brush: SolidBrushInstance): void {
+    this.applyModelLocalOffset(brush);
+    this.applyModelLocalRotation(brush);
   }
 
   /**
@@ -116,5 +149,45 @@ export class CommandSolidBoxBrushAdd implements UndoCommand {
     const worldPosition = this.offset.clone().applyMatrix4(this.model.root.matrixWorld);
     mesh.position.copy(this.hierarchyParent.worldToLocal(worldPosition));
     brush.pullTransformFromMesh();
+  }
+
+  /**
+   * Applies model-local spawn rotation, converting into parent-local space when
+   * the brush lives under a nested solid CSG group.
+   *
+   * @param brush Newly created brush instance.
+   */
+  private applyModelLocalRotation(brush: SolidBrushInstance): void {
+    const mesh = brush.mesh;
+    if (!mesh) {
+      brush.rotation.copy(this.rotation);
+      return;
+    }
+    if (this.hierarchyParent === this.model.root) {
+      brush.rotation.copy(this.rotation);
+      brush.pushTransformToMesh();
+      return;
+    }
+    this.writeParentLocalRotationFromModelLocal(mesh);
+    brush.pullTransformFromMesh();
+  }
+
+  /**
+   * Writes mesh quaternion so model-local rotation becomes parent-local.
+   *
+   * @param mesh Brush preview mesh.
+   */
+  private writeParentLocalRotationFromModelLocal(mesh: THREE.Mesh): void {
+    this.model.root.updateWorldMatrix(true, false);
+    this.hierarchyParent.updateWorldMatrix(true, false);
+    this.scratchModelLocalQuaternion.setFromEuler(this.rotation);
+    this.model.root.getWorldQuaternion(this.scratchRootWorldQuaternion);
+    this.hierarchyParent.getWorldQuaternion(this.scratchParentWorldQuaternion);
+    this.scratchWorldQuaternion.copy(this.scratchRootWorldQuaternion).multiply(this.scratchModelLocalQuaternion);
+    this.scratchParentLocalQuaternion
+      .copy(this.scratchParentWorldQuaternion)
+      .invert()
+      .multiply(this.scratchWorldQuaternion);
+    mesh.quaternion.copy(this.scratchParentLocalQuaternion);
   }
 }

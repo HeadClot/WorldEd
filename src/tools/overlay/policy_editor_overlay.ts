@@ -4,60 +4,65 @@ import { EditorOverlayId } from './editor_overlay_id.js';
 export type ListenerPolicyEditorOverlay = () => void;
 
 /**
- * Shared allow/suppress registry for editor overlays (CAD rulers, etc.). Tools
- * suppress by a stable reason key and release on exit so multiple tools can
- * stack without fighting each other.
+ * Opt-in registry for editor overlays (CAD rulers, transform gizmos, etc.).
+ * Overlays are denied by default. Tools that need an overlay enable it with a
+ * stable reason key and release on exit so multiple owners can stack without
+ * case-by-case suppress hacks.
  */
 export class PolicyEditorOverlay {
-  private suppressions: Map<EditorOverlayId, Set<string>>;
-  private listeners: ListenerPolicyEditorOverlay[];
+  private readonly enablers: Map<EditorOverlayId, Set<string>>;
+  private readonly listeners: ListenerPolicyEditorOverlay[];
 
-  /** Creates an empty policy (all overlays allowed). */
+  /** Creates an empty policy (all overlays denied until enabled). */
   constructor() {
-    this.suppressions = new Map();
+    this.enablers = new Map();
     this.listeners = [];
   }
 
   /**
-   * Suppresses an overlay for the given reason. No-op when already suppressed
-   * under the same reason.
+   * Enables an overlay for the given owner. No-op when already enabled under
+   * the same reason.
    *
-   * @param overlayId Overlay to hide.
-   * @param reasonKey Stable tool/session id (e.g. `clip_plane`).
+   * @param overlayId Overlay to show when policy allows.
+   * @param reasonKey Stable tool/session id (e.g. `object_tool`).
    */
-  suppress(overlayId: EditorOverlayId, reasonKey: string): void {
+  enable(overlayId: EditorOverlayId, reasonKey: string): void {
     const reasons = this.ensureReasonSet(overlayId);
-    if (reasons.has(reasonKey)) return;
+    if (reasons.has(reasonKey)) {
+      return;
+    }
     reasons.add(reasonKey);
     this.notifyListeners();
   }
 
   /**
-   * Releases one suppress reason. The overlay becomes allowed again only when
-   * no reasons remain.
+   * Releases one enable reason. The overlay becomes denied again when no
+   * reasons remain.
    *
-   * @param overlayId Overlay that was suppressed.
-   * @param reasonKey Reason previously passed to {@link suppress}.
+   * @param overlayId Overlay that was enabled.
+   * @param reasonKey Reason previously passed to {@link enable}.
    */
   release(overlayId: EditorOverlayId, reasonKey: string): void {
-    const reasons = this.suppressions.get(overlayId);
-    if (!reasons || !reasons.has(reasonKey)) return;
+    const reasons = this.enablers.get(overlayId);
+    if (!reasons || !reasons.has(reasonKey)) {
+      return;
+    }
     reasons.delete(reasonKey);
     if (reasons.size === 0) {
-      this.suppressions.delete(overlayId);
+      this.enablers.delete(overlayId);
     }
     this.notifyListeners();
   }
 
   /**
-   * Returns whether the overlay may be shown (no active suppress reasons).
+   * Returns whether the overlay may be shown (at least one enable reason).
    *
    * @param overlayId Overlay to query.
-   * @returns True when nothing is suppressing the overlay.
+   * @returns True when a tool has opted into the overlay.
    */
   isAllowed(overlayId: EditorOverlayId): boolean {
-    const reasons = this.suppressions.get(overlayId);
-    return !reasons || reasons.size === 0;
+    const reasons = this.enablers.get(overlayId);
+    return !!reasons && reasons.size > 0;
   }
 
   /**
@@ -76,7 +81,9 @@ export class PolicyEditorOverlay {
    */
   removeChangeListener(listener: ListenerPolicyEditorOverlay): void {
     const index = this.listeners.indexOf(listener);
-    if (index >= 0) this.listeners.splice(index, 1);
+    if (index >= 0) {
+      this.listeners.splice(index, 1);
+    }
   }
 
   /**
@@ -86,16 +93,18 @@ export class PolicyEditorOverlay {
    * @returns Reason set for that overlay.
    */
   private ensureReasonSet(overlayId: EditorOverlayId): Set<string> {
-    let reasons = this.suppressions.get(overlayId);
+    let reasons = this.enablers.get(overlayId);
     if (!reasons) {
       reasons = new Set();
-      this.suppressions.set(overlayId, reasons);
+      this.enablers.set(overlayId, reasons);
     }
     return reasons;
   }
 
   /** Notifies all listeners of a policy change. */
   private notifyListeners(): void {
-    this.listeners.forEach((listener) => listener());
+    this.listeners.forEach((listener) => {
+      listener();
+    });
   }
 }

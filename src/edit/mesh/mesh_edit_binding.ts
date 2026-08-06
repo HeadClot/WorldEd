@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MeshDocument } from '@/mesh/document/mesh_document.js';
 import { readPersistentMeshDocument, writePersistentMeshDocument } from '@/mesh/document/mesh_document_binding.js';
+import { captureMeshDocumentFaceTexturesFromDisplay } from '@/mesh/convert/mesh_document_face_texture_sync.js';
 import { meshDocumentFromBufferGeometryWelded } from './mesh_edit_weld.js';
 
 /** UserData key storing a session MeshDocument on a content mesh. */
@@ -17,11 +18,13 @@ export const MESH_EDIT_DOCUMENT_USERDATA_KEY = 'meshEditDocument';
 export function ensureMeshEditDocument(mesh: THREE.Mesh): MeshDocument | null {
   const sessionDocument = readBoundMeshEditDocument(mesh);
   if (sessionDocument) {
+    captureMeshDocumentFaceTexturesFromDisplay(mesh, sessionDocument);
     return sessionDocument;
   }
   const persistent = readPersistentMeshDocument(mesh);
   if (persistent) {
     const sessionClone = persistent.clone();
+    captureMeshDocumentFaceTexturesFromDisplay(mesh, sessionClone);
     mesh.userData[MESH_EDIT_DOCUMENT_USERDATA_KEY] = sessionClone;
     return sessionClone;
   }
@@ -43,15 +46,15 @@ export function readBoundMeshEditDocument(mesh: THREE.Mesh): MeshDocument | null
 }
 
 /**
- * Clears a session MeshDocument binding from a mesh. When the session document
- * was derived from a persistent document, writes the session result back so
- * n-gon edits remain available after leaving Edit Mode.
+ * Clears a session MeshDocument binding from a mesh. Writes the session result
+ * back as the persistent document so n-gon topology (including coplanar merges
+ * recovered from GPU triangles) survives leaving Edit Mode and later re-entry.
  *
  * @param mesh Content mesh.
  */
 export function clearMeshEditDocumentBinding(mesh: THREE.Mesh): void {
   const sessionDocument = readBoundMeshEditDocument(mesh);
-  if (sessionDocument && readPersistentMeshDocument(mesh)) {
+  if (sessionDocument) {
     writePersistentMeshDocument(mesh, sessionDocument.clone());
   }
   delete mesh.userData[MESH_EDIT_DOCUMENT_USERDATA_KEY];
@@ -68,10 +71,11 @@ function bindWeldedDocumentFromGeometry(mesh: THREE.Mesh): MeshDocument | null {
   if (!(geometry instanceof THREE.BufferGeometry)) {
     return null;
   }
-  const document = meshDocumentFromBufferGeometryWelded(geometry);
+  const document = meshDocumentFromBufferGeometryWelded(geometry, undefined, mesh);
   if (document.getTopology().getVertexCount() === 0) {
     return null;
   }
   mesh.userData[MESH_EDIT_DOCUMENT_USERDATA_KEY] = document;
+  writePersistentMeshDocument(mesh, document.clone());
   return document;
 }

@@ -42,6 +42,7 @@ interface BoundMenuRow {
 const SUBMENU_CLOSE_DELAY_MS = 200;
 
 export class PanelMenu {
+  private readonly ownerDocument: Document;
   private readonly root: HTMLElement;
   private readonly rows: BoundMenuRow[];
   private readonly onRequestCloseRoot: () => void;
@@ -63,10 +64,17 @@ export class PanelMenu {
    * @param entries Menu rows to render.
    * @param onRequestCloseRoot Closes the entire toolbar dropdown tree.
    * @param isSubmenu Whether this panel is a nested flyout.
+   * @param ownerDocument Document that owns the menu DOM (main or detached).
    */
-  constructor(entries: ToolbarMenuEntry[], onRequestCloseRoot: () => void, isSubmenu = false) {
+  constructor(
+    entries: ToolbarMenuEntry[],
+    onRequestCloseRoot: () => void,
+    isSubmenu = false,
+    ownerDocument: Document = document,
+  ) {
     this.rows = [];
     this.isSubmenu = isSubmenu;
+    this.ownerDocument = ownerDocument;
     this.openChildPanel = null;
     this.activeRowButton = null;
     this.pendingCloseTimer = null;
@@ -74,7 +82,7 @@ export class PanelMenu {
     this.homeNextSibling = null;
     this.isEphemeralBodyMount = false;
     this.onRequestCloseRoot = onRequestCloseRoot;
-    this.root = document.createElement('div');
+    this.root = this.ownerDocument.createElement('div');
     this.root.classList.add(isSubmenu ? 'editor-toolbar-dropdown-submenu' : 'editor-toolbar-dropdown-menu');
     this.root.setAttribute('role', 'menu');
     styleMenuPanel(this.root, isSubmenu);
@@ -316,7 +324,7 @@ export class PanelMenu {
    * @returns Separator DOM node.
    */
   private createSeparatorElement(): HTMLElement {
-    const separator = document.createElement('div');
+    const separator = this.ownerDocument.createElement('div');
     styleMenuSeparator(separator);
     return separator;
   }
@@ -351,7 +359,7 @@ export class PanelMenu {
    * @returns Wrapper element containing the button and flyout.
    */
   private createSubmenuRow(entry: ToolbarMenuSubmenu): HTMLElement {
-    const host = document.createElement('div');
+    const host = this.ownerDocument.createElement('div');
     host.classList.add('editor-toolbar-dropdown-submenu-host');
     host.style.position = 'relative';
     host.style.width = '100%';
@@ -361,7 +369,7 @@ export class PanelMenu {
     button.setAttribute('aria-haspopup', 'menu');
     button.setAttribute('aria-expanded', 'false');
     this.appendSubmenuCaret(button);
-    const submenuPanel = new PanelMenu(entry.children, this.onRequestCloseRoot, true);
+    const submenuPanel = new PanelMenu(entry.children, this.onRequestCloseRoot, true, this.ownerDocument);
     host.appendChild(button);
     host.appendChild(submenuPanel.getElement());
     this.bindSubmenuRowHover(host, button, submenuPanel);
@@ -382,12 +390,12 @@ export class PanelMenu {
    * @returns Styled button with label span.
    */
   private createBaseRowButton(label: string): HTMLButtonElement {
-    const button = document.createElement('button');
+    const button = this.ownerDocument.createElement('button');
     button.classList.add('editor-toolbar-dropdown-item');
     button.type = 'button';
     button.setAttribute('role', 'menuitem');
     styleMenuActionRow(button);
-    const labelElement = document.createElement('span');
+    const labelElement = this.ownerDocument.createElement('span');
     labelElement.classList.add('editor-toolbar-dropdown-label');
     labelElement.textContent = label;
     styleMenuLabel(labelElement);
@@ -402,7 +410,7 @@ export class PanelMenu {
    * @returns Shortcut element.
    */
   private appendShortcutSlot(button: HTMLButtonElement): HTMLElement {
-    const shortcut = document.createElement('span');
+    const shortcut = this.ownerDocument.createElement('span');
     styleMenuShortcut(shortcut);
     shortcut.style.display = 'none';
     button.appendChild(shortcut);
@@ -415,7 +423,7 @@ export class PanelMenu {
    * @param button Parent row button.
    */
   private appendSubmenuCaret(button: HTMLButtonElement): void {
-    const caret = document.createElement('span');
+    const caret = this.ownerDocument.createElement('span');
     caret.textContent = '▸';
     caret.setAttribute('aria-hidden', 'true');
     styleMenuSubmenuCaret(caret);

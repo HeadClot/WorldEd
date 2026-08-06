@@ -49,6 +49,12 @@ export class ViewportToolChromeHost {
       onCommitSplit: () => handlers.onCommitSplit(),
       onOpenUvEditor: () => handlers.onOpenUvEditor(),
       onExtrudeFaces: () => handlers.onExtrudeFaces(),
+      onGridReset: () => handlers.onGridReset(),
+      onGridAlignToFace: () => handlers.onGridAlignToFace(),
+      onGridAlignAxis: (axis) => handlers.onGridAlignAxis(axis),
+      onGridOriginVertex: () => handlers.onGridOriginVertex(),
+      onCameraReset: () => handlers.onCameraReset(),
+      onCameraAlignToFace: () => handlers.onCameraAlignToFace(),
       onInteractionMode: (mode) => handlers.onInteractionMode(mode),
       onComponentMode: (mode) => handlers.onComponentMode(mode),
       onApplyObjectTransform: (kind) => handlers.onApplyObjectTransform?.(kind),
@@ -78,6 +84,12 @@ export class ViewportToolChromeHost {
       onCommitSplit: () => handlers.onCommitSplit(),
       onOpenUvEditor: () => handlers.onOpenUvEditor(),
       onExtrudeFaces: () => handlers.onExtrudeFaces(),
+      onGridReset: () => handlers.onGridReset(),
+      onGridAlignToFace: () => handlers.onGridAlignToFace(),
+      onGridAlignAxis: (axis) => handlers.onGridAlignAxis(axis),
+      onGridOriginVertex: () => handlers.onGridOriginVertex(),
+      onCameraReset: () => handlers.onCameraReset(),
+      onCameraAlignToFace: () => handlers.onCameraAlignToFace(),
       onInteractionMode: (mode) => handlers.onInteractionMode(mode),
       onComponentMode: (mode) => handlers.onComponentMode(mode),
       onApplyObjectTransform: (kind) => handlers.onApplyObjectTransform?.(kind),
@@ -92,6 +104,15 @@ export class ViewportToolChromeHost {
   setActiveTool(toolId: EditorToolId): void {
     this.rail.setActiveTool(toolId);
     this.optionsBar.setActiveTool(toolId);
+  }
+
+  /**
+   * Highlights the armed single-use grid/camera options button.
+   *
+   * @param mode Armed pick mode, or none when idle.
+   */
+  setActiveGridPickMode(mode: import('@/tools/grid/grid_align_pick_mode.js').GridAlignPickMode): void {
+    this.optionsBar.setActiveGridPickMode(mode);
   }
 
   /**
@@ -114,6 +135,7 @@ export class ViewportToolChromeHost {
     this.rail.setToolButtonVisible(EditorToolId.OBJECT, true);
     this.rail.setToolButtonVisible(EditorToolId.FACE, !showObjectOnly);
     this.rail.setToolButtonVisible(EditorToolId.CLIP_PLANE, !showObjectOnly);
+    this.rail.setToolButtonVisible(EditorToolId.GRID, !showObjectOnly);
   }
 
   /**

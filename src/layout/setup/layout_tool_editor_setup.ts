@@ -39,6 +39,18 @@ import {
   shouldPublishLiveVisualsAfterModalKey,
 } from './layout_transform_live_visuals.js';
 import { audioViewportFocus } from '@/audio/spatial/audio_viewport_focus.js';
+import {
+  isAltPressedOnDomFlags,
+  isAltPressedOnInputManagers,
+  isAnyModifierPressedOnDomFlags,
+  isAnyModifierPressedOnInputManagers,
+  isCtrlOrMetaPressedOnDomFlags,
+  isCtrlOrMetaPressedOnInputManagers,
+  isShiftPressedOnDomFlags,
+  isShiftPressedOnInputManagers,
+  type DomModifierKeyFlags,
+} from '@/input/modifier_keys_query.js';
+import { findPickSurfaceAtClientPoint } from '@/utils/pointer_client_hit.js';
 
 /** Dependencies for building the Shape Editor-style tool stack. */
 export interface LayoutToolEditorSetupDeps {
@@ -102,6 +114,13 @@ export interface LayoutToolEditorSetupDeps {
    */
   getLastPointerClientPositionForDocument?: (ownerDocument: Document) => { clientX: number; clientY: number } | null;
   /**
+   * Returns input managers for open detached popups so Shift/Ctrl multi-select
+   * sees keys held in those windows (main uses {@link inputManager}).
+   *
+   * @returns Detached popup input managers.
+   */
+  getDetachedInputManagers?: () => readonly ManagerInput[];
+  /**
    * Permanent gizmo interaction bridge (widget-driven; no viewport callbacks).
    *
    * @returns Bridge instance when the transform system exists.
@@ -119,6 +138,12 @@ export interface LayoutToolEditorSetupDeps {
    * @returns Coordinator when edit mode is set up.
    */
   getEditModeCoordinator?: () => CoordinatorEditMode | null;
+  /**
+   * Grid orientation handler for GridTool face-align picks.
+   *
+   * @returns Handler when grid tools are set up.
+   */
+  getGridOrientationHandler?: () => import('@/tools/grid/handler_grid_orientation.js').HandlerGridOrientation | null;
   /**
    * Called when a permanent gizmo handle drag begins so widgets latch
    * wantsActive.
@@ -160,6 +185,12 @@ export interface LayoutToolEditorSystem {
    * @returns True when edit-select is active.
    */
   switchToEditSelect: () => boolean;
+  /**
+   * Switches to the grid orientation tool.
+   *
+   * @returns True when grid tool is active.
+   */
+  switchToGridTool: () => boolean;
   /** Re-pins exclusive routing roots to every interactive pane content element. */
   refreshInteractiveViewportDomain: () => void;
   /**
@@ -261,6 +292,7 @@ export function createLayoutToolEditorSystem(deps: LayoutToolEditorSetupDeps): L
     () => navigationBlocks,
     inputBridge,
     () => editorWindow.lastPointerOwnerDocument,
+    () => editorWindow.getLatchedModifierFlags(),
   );
   editorWindow.setServices(services);
   editorWindow.validateTools();
@@ -287,6 +319,10 @@ export function createLayoutToolEditorSystem(deps: LayoutToolEditorSetupDeps): L
     },
     switchToEditSelect: () => {
       editorWindow.userSwitchToEditSelectTool();
+      return true;
+    },
+    switchToGridTool: () => {
+      editorWindow.userSwitchToGridTool();
       return true;
     },
     refreshInteractiveViewportDomain,
@@ -377,6 +413,8 @@ function cancelActiveSingleUseTool(editorWindow: EditorWindow): boolean {
  * @param getNavigationBlocks Navigation block getter.
  * @param inputBridge Input bridge for exclusive viewport root.
  * @param getPointerOwnerDocument Document that owns the last pointer sample.
+ * @param getLatchedModifierFlags Bridge-latched DOM modifiers from the last
+ *   sample.
  * @returns Services implementation.
  */
 function createEditorServices(
@@ -385,9 +423,10 @@ function createEditorServices(
   getNavigationBlocks: () => (() => boolean) | null,
   inputBridge: EditorInputBridge,
   getPointerOwnerDocument: () => Document | null,
+  getLatchedModifierFlags: () => DomModifierKeyFlags | null,
 ): EditorServices {
   const selectableCache = new Map<THREE.Object3D, ISelectable>();
-  const componentTransformBridge = createComponentTransformBridge(deps);
+  const componentTransformBridge = createComponentTransformBridge(deps, getPointerOwnerDocument);
   return {
     getTransformTargets: () => {
       const selected = filterUnlockedObjects(deps.selectionManager.getAllSelectedObjectsAsArray());
@@ -570,10 +609,33 @@ function createEditorServices(
     isFaceSelectStrokeActive: () => {
       return deps.getFaceModeCoordinator?.()?.isFaceSelectStrokeActive() === true;
     },
-    isEditModeActive: () => deps.getEditModeCoordinator?.()?.isActive() === true,
-    beginEditSelectPointerDown: (clientX, clientY, isShiftPressed, isCtrlPressed) => {
+    isGridAlignPickArmed: () => {
+      return deps.getGridOrientationHandler?.()?.isAlignPickArmed() === true;
+    },
+    disarmGridAlignPick: () => {
+      deps.getGridOrientationHandler?.()?.disarmAlignPick();
+    },
+    tryGridAlignPickAtPointer: (clientX, clientY) => {
       return (
-        deps.getEditModeCoordinator?.()?.pickAtClientPoint(clientX, clientY, isShiftPressed, isCtrlPressed) === true
+        deps.getGridOrientationHandler?.()?.tryAlignPickAtClientPoint(clientX, clientY, getPointerOwnerDocument()) ===
+        true
+      );
+    },
+    updateGridAlignHoverAtPointer: (clientX, clientY) => {
+      deps.getGridOrientationHandler?.()?.updateHoverAtClientPoint(clientX, clientY, getPointerOwnerDocument());
+    },
+    isEditModeActive: () => deps.getEditModeCoordinator?.()?.isActive() === true,
+    beginEditSelectPointerDown: (clientX, clientY, isShiftPressed, isCtrlPressed, ownerDocument) => {
+      return (
+        deps
+          .getEditModeCoordinator?.()
+          ?.pickAtClientPoint(
+            clientX,
+            clientY,
+            isShiftPressed,
+            isCtrlPressed,
+            ownerDocument ?? getPointerOwnerDocument(),
+          ) === true
       );
     },
     setWidgetMode: (mode) => {
@@ -588,25 +650,10 @@ function createEditorServices(
       deps.onAfterTransformCommit([...objects]);
     },
     getLastPointerClientPosition: (ownerDocument) => resolveLastPointerClientPosition(deps, ownerDocument),
-    isShiftPressed: () => deps.inputManager.isKeyDown('ShiftLeft') || deps.inputManager.isKeyDown('ShiftRight'),
-    isCtrlPressed: () =>
-      deps.inputManager.isKeyDown('ControlLeft') ||
-      deps.inputManager.isKeyDown('ControlRight') ||
-      deps.inputManager.isKeyDown('MetaLeft') ||
-      deps.inputManager.isKeyDown('MetaRight'),
-    isAltPressed: () => deps.inputManager.isKeyDown('AltLeft') || deps.inputManager.isKeyDown('AltRight'),
-    isModifierPressed: () => {
-      return (
-        deps.inputManager.isKeyDown('ShiftLeft') ||
-        deps.inputManager.isKeyDown('ShiftRight') ||
-        deps.inputManager.isKeyDown('ControlLeft') ||
-        deps.inputManager.isKeyDown('ControlRight') ||
-        deps.inputManager.isKeyDown('AltLeft') ||
-        deps.inputManager.isKeyDown('AltRight') ||
-        deps.inputManager.isKeyDown('MetaLeft') ||
-        deps.inputManager.isKeyDown('MetaRight')
-      );
-    },
+    isShiftPressed: () => resolveIsShiftPressed(deps, getLatchedModifierFlags),
+    isCtrlPressed: () => resolveIsCtrlPressed(deps, getLatchedModifierFlags),
+    isAltPressed: () => resolveIsAltPressed(deps, getLatchedModifierFlags),
+    isModifierPressed: () => resolveIsModifierPressed(deps, getLatchedModifierFlags),
     handleGlobalKeyDown: (_keyCode, event) => getGlobalKeyDown()?.(event) === true,
     isNavigationBlockingTools: () => getNavigationBlocks()?.() === true,
   };
@@ -822,21 +869,13 @@ function findInteractiveViewportAtClientPoint(
   clientY: number,
   ownerDocument: Document | null = null,
 ): Viewport3D | Viewport2D | null {
-  for (const viewport of deps.getInteractiveViewports()) {
-    const pickElement = viewport.getContentElement();
-    if (!pickElement) {
-      continue;
-    }
-    if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
-      continue;
-    }
-    const rect = pickElement.getBoundingClientRect();
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-      continue;
-    }
-    return viewport;
-  }
-  return null;
+  return findPickSurfaceAtClientPoint(
+    deps.getInteractiveViewports(),
+    (viewport) => viewport.getContentElement(),
+    clientX,
+    clientY,
+    ownerDocument,
+  );
 }
 
 /**
@@ -955,24 +994,18 @@ function resolveInteractiveViewportAtClientPoint(
   clientY: number,
   ownerDocument?: Document | null,
 ): { camera: THREE.Camera; pickElement: HTMLElement } | null {
-  for (const viewport of deps.getInteractiveViewports()) {
-    const pickElement = viewport.getContentElement();
-    if (!pickElement) {
-      continue;
-    }
-    if (ownerDocument && pickElement.ownerDocument !== ownerDocument) {
-      continue;
-    }
-    const rect = pickElement.getBoundingClientRect();
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-      continue;
-    }
-    return {
-      camera: viewport.getCamera(),
-      pickElement,
-    };
+  const viewport = findInteractiveViewportAtClientPoint(deps, clientX, clientY, ownerDocument ?? null);
+  if (!viewport) {
+    return null;
   }
-  return null;
+  const pickElement = viewport.getContentElement();
+  if (!pickElement) {
+    return null;
+  }
+  return {
+    camera: viewport.getCamera(),
+    pickElement,
+  };
 }
 
 /**
@@ -1021,12 +1054,103 @@ function resolveLastPointerClientPosition(
 }
 
 /**
+ * Collects main and detached input managers for multi-window modifier queries.
+ *
+ * @param deps Layout services.
+ * @returns Input managers in query order.
+ */
+function collectInputManagers(deps: LayoutToolEditorSetupDeps): ManagerInput[] {
+  const managers: ManagerInput[] = [deps.inputManager];
+  const detached = deps.getDetachedInputManagers?.() ?? [];
+  for (const manager of detached) {
+    managers.push(manager);
+  }
+  return managers;
+}
+
+/**
+ * Resolves Shift for tools and widgets (bridge latch, then all input managers).
+ *
+ * @param deps Layout services.
+ * @param getLatchedModifierFlags Bridge-latched DOM modifiers.
+ * @returns True when Shift is active.
+ */
+function resolveIsShiftPressed(
+  deps: LayoutToolEditorSetupDeps,
+  getLatchedModifierFlags: () => DomModifierKeyFlags | null,
+): boolean {
+  const latch = getLatchedModifierFlags();
+  if (latch && isShiftPressedOnDomFlags(latch)) {
+    return true;
+  }
+  return isShiftPressedOnInputManagers(collectInputManagers(deps));
+}
+
+/**
+ * Resolves Ctrl/Meta for tools and widgets.
+ *
+ * @param deps Layout services.
+ * @param getLatchedModifierFlags Bridge-latched DOM modifiers.
+ * @returns True when Ctrl or Meta is active.
+ */
+function resolveIsCtrlPressed(
+  deps: LayoutToolEditorSetupDeps,
+  getLatchedModifierFlags: () => DomModifierKeyFlags | null,
+): boolean {
+  const latch = getLatchedModifierFlags();
+  if (latch && isCtrlOrMetaPressedOnDomFlags(latch)) {
+    return true;
+  }
+  return isCtrlOrMetaPressedOnInputManagers(collectInputManagers(deps));
+}
+
+/**
+ * Resolves Alt for tools and widgets.
+ *
+ * @param deps Layout services.
+ * @param getLatchedModifierFlags Bridge-latched DOM modifiers.
+ * @returns True when Alt is active.
+ */
+function resolveIsAltPressed(
+  deps: LayoutToolEditorSetupDeps,
+  getLatchedModifierFlags: () => DomModifierKeyFlags | null,
+): boolean {
+  const latch = getLatchedModifierFlags();
+  if (latch && isAltPressedOnDomFlags(latch)) {
+    return true;
+  }
+  return isAltPressedOnInputManagers(collectInputManagers(deps));
+}
+
+/**
+ * Resolves any modifier for tools and widgets.
+ *
+ * @param deps Layout services.
+ * @param getLatchedModifierFlags Bridge-latched DOM modifiers.
+ * @returns True when any modifier is active.
+ */
+function resolveIsModifierPressed(
+  deps: LayoutToolEditorSetupDeps,
+  getLatchedModifierFlags: () => DomModifierKeyFlags | null,
+): boolean {
+  const latch = getLatchedModifierFlags();
+  if (latch && isAnyModifierPressedOnDomFlags(latch)) {
+    return true;
+  }
+  return isAnyModifierPressedOnInputManagers(collectInputManagers(deps));
+}
+
+/**
  * Builds the permanent component gizmo bridge for Edit Mode.
  *
  * @param deps Layout services.
+ * @param getPointerOwnerDocument Document that owns the last pointer sample.
  * @returns Component transform interaction bridge.
  */
-function createComponentTransformBridge(deps: LayoutToolEditorSetupDeps): BridgeComponentTransformInteraction {
+function createComponentTransformBridge(
+  deps: LayoutToolEditorSetupDeps,
+  getPointerOwnerDocument: () => Document | null,
+): BridgeComponentTransformInteraction {
   return new BridgeComponentTransformInteraction({
     transformGizmo: deps.transformGizmo,
     componentTransformHandler: deps.componentTransformHandler,
@@ -1035,7 +1159,7 @@ function createComponentTransformBridge(deps: LayoutToolEditorSetupDeps): Bridge
     getUserSnapEnabled: deps.getUserSnapEnabled,
     getEditModeCoordinator: () => deps.getEditModeCoordinator?.() ?? null,
     probeViewportAtClientPoint: (clientX, clientY) =>
-      resolveInteractiveViewportObjectAtClientPoint(deps, clientX, clientY),
+      resolveInteractiveViewportObjectAtClientPoint(deps, clientX, clientY, getPointerOwnerDocument()),
     onPermanentGizmoHandleDragBegan: () => deps.onPermanentGizmoHandleDragBegan?.(),
     onPermanentGizmoHandleDragEnded: () => deps.onPermanentGizmoHandleDragEnded?.(),
     onLiveComponentTransform: () => deps.refreshGizmoPresentation(),
@@ -1049,25 +1173,16 @@ function createComponentTransformBridge(deps: LayoutToolEditorSetupDeps): Bridge
  * @param deps Layout services.
  * @param clientX Pointer client X.
  * @param clientY Pointer client Y.
+ * @param ownerDocument Optional document that owns the client coordinates.
  * @returns Viewport under the pointer, or null.
  */
 function resolveInteractiveViewportObjectAtClientPoint(
   deps: LayoutToolEditorSetupDeps,
   clientX: number,
   clientY: number,
+  ownerDocument: Document | null = null,
 ): Viewport3D | Viewport2D | null {
-  for (const viewport of deps.getInteractiveViewports()) {
-    const pickElement = viewport.getContentElement();
-    if (!pickElement) {
-      continue;
-    }
-    const rect = pickElement.getBoundingClientRect();
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-      continue;
-    }
-    return viewport;
-  }
-  return null;
+  return findInteractiveViewportAtClientPoint(deps, clientX, clientY, ownerDocument);
 }
 
 /**
