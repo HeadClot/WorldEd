@@ -6,6 +6,7 @@ import { SolidBrushVisual } from '@/solid/model/solid_brush_visual.js';
 import { CommandTextureSolidBrushAssign } from '@/texture/commands/command_texture_solid_brush_assign.js';
 import { getFaceTextureMaps } from '@/texture/uv/face_texture_storage.js';
 import { DEFAULT_CHECKER_TEXTURE_ID } from '@/texture/library/texture_id.js';
+import { SurfaceUvMatrix } from '@/texture/uv_matrix/surface_uv_matrix.js';
 
 /** Per-brush surface textures bake into the CSG result, never helper previews. */
 describe('Solid brush surface textures', () => {
@@ -44,7 +45,7 @@ describe('Solid brush surface textures', () => {
     expect(brush.surfaceTextureId).toBe(DEFAULT_CHECKER_TEXTURE_ID);
   });
 
-  it('undo restores per-face overrides cleared by whole-brush paint', () => {
+  it('whole-brush paint updates every face texture id and undoes to prior ids', () => {
     const model = new SolidModel('UndoFaceTex');
     const brush = model.addBoxBrush(2, SolidOperation.Additive);
     brush.setFaceTextureId(0, 'folder/face0.png');
@@ -52,10 +53,55 @@ describe('Solid brush surface textures', () => {
     const command = new CommandTextureSolidBrushAssign([brush.mesh!], 'folder/whole.png');
     command.execute();
     expect(brush.surfaceTextureId).toBe('folder/whole.png');
-    expect(brush.serializeFaceTextureIds().filter(Boolean).length).toBe(0);
+    expect(brush.getSurfaceTextureId(0)).toBe('folder/whole.png');
+    expect(brush.getSurfaceTextureId(2)).toBe('folder/whole.png');
     command.undo();
     expect(brush.surfaceTextureId).toBe(DEFAULT_CHECKER_TEXTURE_ID);
     expect(brush.getSurfaceTextureId(0)).toBe('folder/face0.png');
     expect(brush.getSurfaceTextureId(2)).toBe('folder/face2.png');
   });
+
+  it('whole-brush texture assign preserves authored face UV matrices', () => {
+    const model = new SolidModel('PreserveUvOnAssign');
+    const brush = model.addBoxBrush(2, SolidOperation.Additive);
+    const faceIndex = 0;
+    const mapping = brush.getSurfaceMapping(faceIndex);
+    mapping.scaleU = 2.5;
+    mapping.scaleV = 0.75;
+    mapping.offsetU = 0.3;
+    mapping.offsetV = -0.2;
+    mapping.rotationDeg = 35;
+    brush.setFaceMapping(faceIndex, mapping);
+    const uvBefore = captureSurfaceUv(brush.getSurfaceMapping(faceIndex).uv);
+    const command = new CommandTextureSolidBrushAssign([brush.mesh!], 'folder/new_wall.png');
+    command.execute();
+    expect(brush.getSurfaceTextureId(faceIndex)).toBe('folder/new_wall.png');
+    expect(brush.surfaceTextureId).toBe('folder/new_wall.png');
+    const uvAfter = captureSurfaceUv(brush.getSurfaceMapping(faceIndex).uv);
+    expect(uvAfter).toEqual(uvBefore);
+  });
+
+  it('whole-brush texture assign preserves default surface UV matrix', () => {
+    const model = new SolidModel('PreserveDefaultUvOnAssign');
+    const brush = model.addBoxBrush(2, SolidOperation.Additive);
+    const customDefault = brush.serializeDefaultMapping();
+    customDefault.uv = SurfaceUvMatrix.fromTrs(new THREE.Vector2(0.25, -0.1), new THREE.Vector3(0, 1, 0), 15, 0.5, 2);
+    brush.restoreFaceMappings(customDefault, brush.serializeFaceMappings());
+    const uvBefore = captureSurfaceUv(brush.serializeDefaultMapping().uv);
+    const command = new CommandTextureSolidBrushAssign([brush.mesh!], 'folder/floor.png');
+    command.execute();
+    expect(brush.surfaceTextureId).toBe('folder/floor.png');
+    const uvAfter = captureSurfaceUv(brush.serializeDefaultMapping().uv);
+    expect(uvAfter).toEqual(uvBefore);
+  });
 });
+
+/**
+ * Flattens a surface UV matrix to comparable numbers.
+ *
+ * @param uv Surface UV matrix.
+ * @returns Twelve component values.
+ */
+function captureSurfaceUv(uv: SurfaceUvMatrix): number[] {
+  return [uv.u.x, uv.u.y, uv.u.z, uv.u.w, uv.v.x, uv.v.y, uv.v.z, uv.v.w];
+}

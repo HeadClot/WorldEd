@@ -171,14 +171,15 @@ export class SolidBrushInstance {
   }
 
   /**
-   * Sets the default texture for all faces and clears per-face overrides. UV
-   * matrices reset to identity with the new texture id.
+   * Sets the texture id on the default surface and every per-face override
+   * while preserving all existing UV matrices.
    *
    * @param textureId Texture identity.
    */
   setAllFacesTextureId(textureId: string): void {
-    this.defaultSurface = createDefaultFaceSurface(textureId || DEFAULT_CHECKER_TEXTURE_ID);
-    this.faceSurfaces = [];
+    const resolvedTextureId = textureId || DEFAULT_CHECKER_TEXTURE_ID;
+    this.defaultSurface.textureId = resolvedTextureId;
+    this.faceSurfacesTextureIdUpdateAll(resolvedTextureId);
   }
 
   /**
@@ -188,6 +189,21 @@ export class SolidBrushInstance {
    */
   setSurfaceTextureIdOnly(textureId: string): void {
     this.defaultSurface.textureId = textureId || DEFAULT_CHECKER_TEXTURE_ID;
+  }
+
+  /**
+   * Writes a texture id onto every existing per-face surface override.
+   *
+   * @param textureId Texture identity to apply.
+   */
+  private faceSurfacesTextureIdUpdateAll(textureId: string): void {
+    for (let faceIndex = 0; faceIndex < this.faceSurfaces.length; faceIndex++) {
+      const surface = this.faceSurfaces[faceIndex];
+      if (!surface) {
+        continue;
+      }
+      surface.textureId = textureId;
+    }
   }
 
   /**
